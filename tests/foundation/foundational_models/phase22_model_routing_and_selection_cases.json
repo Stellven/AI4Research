@@ -1,0 +1,309 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Foundational models",
+    "level_2": "Model Routing & Selection",
+    "description": "Match and select a model route using task needs, capability, quality, cost, policy, quota, and current health. Allow models to obtain tasks in their advantaged field"
+  },
+  "contract": {
+    "purpose_user_function": "Choose model/provider/operator routes based on configured scenario, role, availability, capabilities, model preference, and fallback.",
+    "valid_inputs": "Task/scenario/role, preferred model, registry, provider enablement, physical workers, capability/skill requirements, health/quota, and strictness.",
+    "expected_outputs": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
+    "state_side_effects": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+    "failure_rejection_behavior": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
+    "supported_boundaries_exclusions": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+    "success_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+    "granularity_atomic_contracts": "preferred exact; alias; scenario default; disabled provider; strict mismatch; quota; fallback; no route.",
+    "readme_product_docs": "README.md §What You Get and 'Choose or inspect models'; docs/solar-architecture-code-map.md §§2-4",
+    "cli_api_skill_interfaces": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), main(); harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/model_call_runtime.py: record_model_event(), main(); README.md: solar harness models show/set-main",
+    "config_schemas": "harness/config/model-registry.json; harness/config/model-scenario-routing.json; harness/config/physical-operators.json",
+    "implementation_entrypoints": "harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/graph_scheduler.py: _model_match(), assign_workers(); harness/config/model-scenario-routing.json",
+    "platform_provider_limitations": "Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "README.md",
+      "harness/config/model-registry.json",
+      "harness/config/model-scenario-routing.json",
+      "harness/config/physical-operators.json",
+      "harness/lib/graph_scheduler.py",
+      "harness/lib/model_call_runtime.py",
+      "harness/lib/model_registry.py",
+      "harness/lib/operator_model_selection.py",
+      "harness/tests/graph/test_graph_scheduler_model_matching.py"
+    ],
+    "entrypoints": "harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/graph_scheduler.py: _model_match(), assign_workers(); harness/config/model-scenario-routing.json",
+    "interfaces": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), main(); harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/model_call_runtime.py: record_model_event(), main(); README.md: solar harness models show/set-main",
+    "schemas_and_config": "harness/config/model-registry.json; harness/config/model-scenario-routing.json; harness/config/physical-operators.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-020-CORE-01",
+      "atomic_feature_id": "FN-020-CORE-01",
+      "test_name": "test_model_routing_selection_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-020-EVIDENCE-03",
+      "atomic_feature_id": "FN-020-EVIDENCE-03",
+      "test_name": "test_model_routing_selection_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-020-GUARD-02",
+      "atomic_feature_id": "FN-020-GUARD-02",
+      "test_name": "test_model_routing_selection_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-FN-020-CORE-01-01",
+      "test_name": "test_model_routing_and_selection__preferred_exact",
+      "case_type": "core_behavior",
+      "atomic_scenario": "preferred exact",
+      "source_seed_registry_id": "NTB-FN-020-CORE-01",
+      "source_atomic_feature_id": "FN-020-CORE-01",
+      "source_seed_test_name": "test_model_routing_selection_core_behavior_valid_scope",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"preferred exact\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: preferred exact.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: preferred exact.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-020-CORE-01-02",
+      "test_name": "test_model_routing_and_selection__alias",
+      "case_type": "core_behavior",
+      "atomic_scenario": "alias",
+      "source_seed_registry_id": "NTB-FN-020-CORE-01",
+      "source_atomic_feature_id": "FN-020-CORE-01",
+      "source_seed_test_name": "test_model_routing_selection_core_behavior_valid_scope",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"alias\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: alias.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: alias.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-020-CORE-01-03",
+      "test_name": "test_model_routing_and_selection__scenario_default",
+      "case_type": "core_behavior",
+      "atomic_scenario": "scenario default",
+      "source_seed_registry_id": "NTB-FN-020-CORE-01",
+      "source_atomic_feature_id": "FN-020-CORE-01",
+      "source_seed_test_name": "test_model_routing_selection_core_behavior_valid_scope",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"scenario default\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: scenario default.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: scenario default.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-020-GUARD-02-01",
+      "test_name": "test_model_routing_and_selection__disabled_provider",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "disabled provider",
+      "source_seed_registry_id": "NTB-FN-020-GUARD-02",
+      "source_atomic_feature_id": "FN-020-GUARD-02",
+      "source_seed_test_name": "test_model_routing_selection_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"disabled provider\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: disabled provider.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: disabled provider.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-020-GUARD-02-02",
+      "test_name": "test_model_routing_and_selection__strict_mismatch",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "strict mismatch",
+      "source_seed_registry_id": "NTB-FN-020-GUARD-02",
+      "source_atomic_feature_id": "FN-020-GUARD-02",
+      "source_seed_test_name": "test_model_routing_selection_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"strict mismatch\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: strict mismatch.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: strict mismatch.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-020-GUARD-02-03",
+      "test_name": "test_model_routing_and_selection__quota",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "quota",
+      "source_seed_registry_id": "NTB-FN-020-GUARD-02",
+      "source_atomic_feature_id": "FN-020-GUARD-02",
+      "source_seed_test_name": "test_model_routing_selection_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"quota\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: quota.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: quota.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-020-CORE-01-04",
+      "test_name": "test_model_routing_and_selection__fallback",
+      "case_type": "core_behavior",
+      "atomic_scenario": "fallback",
+      "source_seed_registry_id": "NTB-FN-020-CORE-01",
+      "source_atomic_feature_id": "FN-020-CORE-01",
+      "source_seed_test_name": "test_model_routing_selection_core_behavior_valid_scope",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"fallback\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: fallback.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: fallback.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-020-GUARD-02-04",
+      "test_name": "test_model_routing_and_selection__no_route",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "no route",
+      "source_seed_registry_id": "NTB-FN-020-GUARD-02",
+      "source_atomic_feature_id": "FN-020-GUARD-02",
+      "source_seed_test_name": "test_model_routing_selection_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"no route\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: no route.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: no route.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-020-EVIDENCE-03-01",
+      "test_name": "test_model_routing_and_selection__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-020-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-020-EVIDENCE-03",
+      "source_seed_test_name": "test_model_routing_selection_records_status_provenance_evidence",
+      "objective": "Verify Model Routing & Selection for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

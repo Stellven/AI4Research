@@ -1,0 +1,306 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Generate technical claims & hypothesis",
+    "level_2": "Falsifiability Screening & Hypothesis Contracting",
+    "description": "Determine if the hypothesis can be overthrowed by obtained data, or methods for the experiment. Also form the contract for testing the hypothesis"
+  },
+  "contract": {
+    "purpose_user_function": "Label extracted claims as heuristically testable and compile a governed experiment contract with metrics, procedure, baseline, artifacts, limits, and approval requirements.",
+    "valid_inputs": "Claim/hypothesis text, experiment objective, variables, metrics, procedure, baseline, allowed commands, resource limits, approvals, and expected artifacts.",
+    "expected_outputs": "Testability classification plus ExperimentPlan contract that defines how evidence could support, refute, or leave the hypothesis inconclusive.",
+    "state_side_effects": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+    "failure_rejection_behavior": "Non-testable or incomplete plans remain unverified/inconclusive; validation rejects missing required fields or unauthorized execution.",
+    "supported_boundaries_exclusions": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+    "success_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+    "granularity_atomic_contracts": "Test testable/non-testable heuristic, measurable outcome, refutation condition, inconclusive condition, baseline, approval, resource/command limits, and invalid contract.",
+    "readme_product_docs": "README.md#Appendix: AutoSci Commands (`/ingest`, `/ideate`, `/exp-design`, `/exp-eval`); docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "skills/exp-design/SKILL.md; harness/plugins/autosci/bin/autosci_bridge.py paper-claim, paper-method, and experiment-design actions",
+    "config_schemas": "harness/schemas/evidence/research_claims.v1.schema.json; harness/schemas/evidence/research_method.v1.schema.json; harness/schemas/evidence/experiment_plan.v1.schema.json; harness/schemas/evidence/claim_verdict.v1.schema.json",
+    "implementation_entrypoints": "harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability; harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert; harness/schemas/evidence/experiment_plan.v1.schema.json",
+    "platform_provider_limitations": "Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "harness/plugins/autosci/adapters/autosci_to_experiment_plan.py",
+      "harness/plugins/autosci/bin/autosci_bridge.py",
+      "harness/schemas/evidence/claim_verdict.v1.schema.json",
+      "harness/schemas/evidence/experiment_plan.v1.schema.json",
+      "harness/schemas/evidence/research_claims.v1.schema.json",
+      "harness/schemas/evidence/research_method.v1.schema.json"
+    ],
+    "entrypoints": "harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability; harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert; harness/schemas/evidence/experiment_plan.v1.schema.json",
+    "interfaces": "skills/exp-design/SKILL.md; harness/plugins/autosci/bin/autosci_bridge.py paper-claim, paper-method, and experiment-design actions",
+    "schemas_and_config": "harness/schemas/evidence/research_claims.v1.schema.json; harness/schemas/evidence/research_method.v1.schema.json; harness/schemas/evidence/experiment_plan.v1.schema.json; harness/schemas/evidence/claim_verdict.v1.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-034-CORE-01",
+      "atomic_feature_id": "WF-034-CORE-01",
+      "test_name": "test_falsifiability_screening_hypothesis_contracting_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-034-EVIDENCE-03",
+      "atomic_feature_id": "WF-034-EVIDENCE-03",
+      "test_name": "test_falsifiability_screening_hypothesis_contracting_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-034-GUARD-02",
+      "atomic_feature_id": "WF-034-GUARD-02",
+      "test_name": "test_falsifiability_screening_hypothesis_contracting_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-WF-034-CORE-01-01",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__testable_non_testable_heuristic",
+      "case_type": "core_behavior",
+      "atomic_scenario": "testable/non-testable heuristic",
+      "source_seed_registry_id": "NTB-WF-034-CORE-01",
+      "source_atomic_feature_id": "WF-034-CORE-01",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_core_behavior_valid_scope",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"testable/non-testable heuristic\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: testable/non-testable heuristic.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: testable/non-testable heuristic.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Testability classification plus ExperimentPlan contract that defines how evidence could support, refute, or leave the hypothesis inconclusive.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-034-CORE-01-02",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__measurable_outcome",
+      "case_type": "core_behavior",
+      "atomic_scenario": "measurable outcome",
+      "source_seed_registry_id": "NTB-WF-034-CORE-01",
+      "source_atomic_feature_id": "WF-034-CORE-01",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_core_behavior_valid_scope",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"measurable outcome\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: measurable outcome.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: measurable outcome.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Testability classification plus ExperimentPlan contract that defines how evidence could support, refute, or leave the hypothesis inconclusive.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-034-CORE-01-03",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__refutation_condition",
+      "case_type": "core_behavior",
+      "atomic_scenario": "refutation condition",
+      "source_seed_registry_id": "NTB-WF-034-CORE-01",
+      "source_atomic_feature_id": "WF-034-CORE-01",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_core_behavior_valid_scope",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"refutation condition\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: refutation condition.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: refutation condition.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Testability classification plus ExperimentPlan contract that defines how evidence could support, refute, or leave the hypothesis inconclusive.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-034-CORE-01-04",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__inconclusive_condition",
+      "case_type": "core_behavior",
+      "atomic_scenario": "inconclusive condition",
+      "source_seed_registry_id": "NTB-WF-034-CORE-01",
+      "source_atomic_feature_id": "WF-034-CORE-01",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_core_behavior_valid_scope",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"inconclusive condition\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: inconclusive condition.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: inconclusive condition.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Testability classification plus ExperimentPlan contract that defines how evidence could support, refute, or leave the hypothesis inconclusive.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-034-CORE-01-05",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__baseline",
+      "case_type": "core_behavior",
+      "atomic_scenario": "baseline",
+      "source_seed_registry_id": "NTB-WF-034-CORE-01",
+      "source_atomic_feature_id": "WF-034-CORE-01",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_core_behavior_valid_scope",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"baseline\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: baseline.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: baseline.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Testability classification plus ExperimentPlan contract that defines how evidence could support, refute, or leave the hypothesis inconclusive.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-034-CORE-01-06",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__approval",
+      "case_type": "core_behavior",
+      "atomic_scenario": "approval",
+      "source_seed_registry_id": "NTB-WF-034-CORE-01",
+      "source_atomic_feature_id": "WF-034-CORE-01",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_core_behavior_valid_scope",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"approval\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: approval.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: approval.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Testability classification plus ExperimentPlan contract that defines how evidence could support, refute, or leave the hypothesis inconclusive.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-034-CORE-01-07",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__resource_command_limits",
+      "case_type": "core_behavior",
+      "atomic_scenario": "resource/command limits",
+      "source_seed_registry_id": "NTB-WF-034-CORE-01",
+      "source_atomic_feature_id": "WF-034-CORE-01",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_core_behavior_valid_scope",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"resource/command limits\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: resource/command limits.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: resource/command limits.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Testability classification plus ExperimentPlan contract that defines how evidence could support, refute, or leave the hypothesis inconclusive.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-034-GUARD-02-01",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__invalid_contract",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "invalid contract",
+      "source_seed_registry_id": "NTB-WF-034-GUARD-02",
+      "source_atomic_feature_id": "WF-034-GUARD-02",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"invalid contract\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: invalid contract.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: invalid contract.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Non-testable or incomplete plans remain unverified/inconclusive; validation rejects missing required fields or unauthorized execution.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-034-EVIDENCE-03-01",
+      "test_name": "test_falsifiability_screening_and_hypothesis_contracting__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-WF-034-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-034-EVIDENCE-03",
+      "source_seed_test_name": "test_falsifiability_screening_hypothesis_contracting_records_status_provenance_evidence",
+      "objective": "Verify Falsifiability Screening & Hypothesis Contracting for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Claim extraction and testability are deterministic heuristics; they do not establish scientific truth. Live experiment/provider routes remain approval- and configuration-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "state_and_side_effect_oracle": "Writes/stamps experiment plan and constrains execution through command/resource/approval fields.",
+      "required_evidence": "`harness/plugins/autosci/bin/autosci_bridge.py::_claim_testability` classifies claims and `harness/plugins/autosci/adapters/autosci_to_experiment_plan.py::convert` emits the governed plan.",
+      "supported_boundary": "The testability check is a keyword heuristic, not a rigorous logical falsifiability proof; overturning conditions are represented indirectly through metrics/outcomes.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

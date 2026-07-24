@@ -1,0 +1,364 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Requirement compilation",
+    "level_2": "Constraint Resolution",
+    "description": "Identifies and reconciles authorization, scope, time, cost, data, safety, policy, tool, environment, and output-format constraints with the user’s intended outcome."
+  },
+  "contract": {
+    "purpose_user_function": "Compile authorization, scope, time, cost/resource, data, safety/policy, tool/environment, and output constraints into the plan and contracts.",
+    "valid_inputs": "User constraints, workspace binding, action policy, tool/runtime availability, resource limits, output format, write scopes, and command allowlists.",
+    "expected_outputs": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+    "state_side_effects": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+    "failure_rejection_behavior": "Fails closed on illegal writes, disallowed commands, missing approvals, graph invalidity, or incompatible workspace/environment constraints.",
+    "supported_boundaries_exclusions": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+    "success_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+    "granularity_atomic_contracts": "Separate contracts for authorization, scope/write paths, time, resource/cost, data access, safety/policy, tool/runtime, format, and conflicting constraints.",
+    "readme_product_docs": "README.md#Basic Workflow; README.md#Governed Planning; README.md#Appendix: AutoSci Commands; docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "harness/solar-harness.sh::intake_request; harness/tools/codex_pm_router.py CLI; README.md#Basic Workflow",
+    "config_schemas": "harness/schemas/requirement-ir.schema.json; harness/schemas/acceptance-verdict.schema.json; harness/schemas/coverage-report.schema.json; harness/schemas/requirement-trace.schema.json; harness/schemas/task-graph.schema.json",
+    "implementation_entrypoints": "harness/tools/codex_pm_router.py::_build_contracts, _default_stop_rules, _node_enrichment; harness/lib/plan_validator.py::compile_and_stamp; harness/lib/policy/action_policy.py",
+    "platform_provider_limitations": "Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "README.md",
+      "harness/lib/plan_validator.py",
+      "harness/lib/policy/action_policy.py",
+      "harness/schemas/acceptance-verdict.schema.json",
+      "harness/schemas/coverage-report.schema.json",
+      "harness/schemas/requirement-ir.schema.json",
+      "harness/schemas/requirement-trace.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "harness/solar-harness.sh",
+      "harness/tools/codex_pm_router.py"
+    ],
+    "entrypoints": "harness/tools/codex_pm_router.py::_build_contracts, _default_stop_rules, _node_enrichment; harness/lib/plan_validator.py::compile_and_stamp; harness/lib/policy/action_policy.py",
+    "interfaces": "harness/solar-harness.sh::intake_request; harness/tools/codex_pm_router.py CLI; README.md#Basic Workflow",
+    "schemas_and_config": "harness/schemas/requirement-ir.schema.json; harness/schemas/acceptance-verdict.schema.json; harness/schemas/coverage-report.schema.json; harness/schemas/requirement-trace.schema.json; harness/schemas/task-graph.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-012-CORE-01",
+      "atomic_feature_id": "WF-012-CORE-01",
+      "test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-012-EVIDENCE-03",
+      "atomic_feature_id": "WF-012-EVIDENCE-03",
+      "test_name": "test_constraint_resolution_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-012-GUARD-02",
+      "atomic_feature_id": "WF-012-GUARD-02",
+      "test_name": "test_constraint_resolution_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 11,
+  "cases": [
+    {
+      "case_id": "P22-WF-012-CORE-01-01",
+      "test_name": "test_constraint_resolution__authorization",
+      "case_type": "core_behavior",
+      "atomic_scenario": "authorization",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"authorization\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: authorization.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: authorization.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-CORE-01-02",
+      "test_name": "test_constraint_resolution__scope_write_paths",
+      "case_type": "core_behavior",
+      "atomic_scenario": "scope/write paths",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"scope/write paths\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: scope/write paths.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: scope/write paths.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-CORE-01-03",
+      "test_name": "test_constraint_resolution__time",
+      "case_type": "core_behavior",
+      "atomic_scenario": "time",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"time\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: time.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: time.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-CORE-01-04",
+      "test_name": "test_constraint_resolution__resource_cost",
+      "case_type": "core_behavior",
+      "atomic_scenario": "resource/cost",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"resource/cost\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: resource/cost.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: resource/cost.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-CORE-01-05",
+      "test_name": "test_constraint_resolution__data_access",
+      "case_type": "core_behavior",
+      "atomic_scenario": "data access",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"data access\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: data access.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: data access.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-CORE-01-06",
+      "test_name": "test_constraint_resolution__safety_policy",
+      "case_type": "core_behavior",
+      "atomic_scenario": "safety/policy",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"safety/policy\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: safety/policy.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: safety/policy.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-CORE-01-07",
+      "test_name": "test_constraint_resolution__tool_runtime",
+      "case_type": "core_behavior",
+      "atomic_scenario": "tool/runtime",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"tool/runtime\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: tool/runtime.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: tool/runtime.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-CORE-01-08",
+      "test_name": "test_constraint_resolution__format",
+      "case_type": "core_behavior",
+      "atomic_scenario": "format",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"format\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: format.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: format.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-CORE-01-09",
+      "test_name": "test_constraint_resolution__conflicting_constraints",
+      "case_type": "core_behavior",
+      "atomic_scenario": "conflicting constraints",
+      "source_seed_registry_id": "NTB-WF-012-CORE-01",
+      "source_atomic_feature_id": "WF-012-CORE-01",
+      "source_seed_test_name": "test_constraint_resolution_core_behavior_valid_scope",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"conflicting constraints\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: conflicting constraints.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: conflicting constraints.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Requirements/contracts/DAG nodes with constraints, write scopes, gates, resource rules, stop rules, and explicit limitations.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-GUARD-02-01",
+      "test_name": "test_constraint_resolution__invalid_or_out_of_scope_input_rejection",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "invalid or out-of-scope input rejection",
+      "source_seed_registry_id": "NTB-WF-012-GUARD-02",
+      "source_atomic_feature_id": "WF-012-GUARD-02",
+      "source_seed_test_name": "test_constraint_resolution_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"invalid or out-of-scope input rejection\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: invalid or out-of-scope input rejection.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: invalid or out-of-scope input rejection.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Fails closed on illegal writes, disallowed commands, missing approvals, graph invalidity, or incompatible workspace/environment constraints.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-012-EVIDENCE-03-01",
+      "test_name": "test_constraint_resolution__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-WF-012-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-012-EVIDENCE-03",
+      "source_seed_test_name": "test_constraint_resolution_records_status_provenance_evidence",
+      "objective": "Verify Constraint Resolution for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "state_and_side_effect_oracle": "Constrains executable graph nodes and allowed commands/writes; high-risk actions require approval or remain blocked.",
+      "required_evidence": "`harness/lib/plan_validator.py::compile_and_stamp` validates graph, write scope and gate allowlists; `harness/lib/policy/action_policy.py` classifies approval-sensitive actions.",
+      "supported_boundary": "Repository governance and action restrictions are concrete; cost and domain-specific policy tradeoff resolution may remain textual.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

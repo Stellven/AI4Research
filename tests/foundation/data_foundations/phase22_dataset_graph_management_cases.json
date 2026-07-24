@@ -1,0 +1,284 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Data foundations",
+    "level_2": "Dataset Graph Management",
+    "description": "Register datasets, schemas, fields, versions, sources, quality states, dependencies, and relationships to business concepts."
+  },
+  "contract": {
+    "purpose_user_function": "Register datasets, schemas, fields, versions, sources, quality states, and dependencies as a connected graph.",
+    "valid_inputs": "Dataset ID/version, schema/fields, source/provenance, quality status, concept links, and dependency edges.",
+    "expected_outputs": "Dataset node/edge records, validation findings, lineage/query result.",
+    "state_side_effects": "Writes dataset/graph metadata if an application-specific adapter is used.",
+    "failure_rejection_behavior": "Missing dataset identity/schema/source, invalid dependency, version conflict, or quality failure should reject/flag registration.",
+    "supported_boundaries_exclusions": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+    "success_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+    "granularity_atomic_contracts": "register; version; schema fields; concept link; dependency; quality state; invalid source/version.",
+    "readme_product_docs": "docs/AI_NATIVE_OS_ARCHITECTURE.md §Seamless long-term memory and semantic indexing; docs/MEMORY_SYSTEM_ARCHITECTURE.md; docs/solar-architecture-code-map.md §8",
+    "cli_api_skill_interfaces": "core/smi/query.ts: SMIQuery and quickSearch(); core/ontology/manager.ts: OntologyManager; harness/lib/task_graph_io.py; harness/lib/evidence_ledger.py: EvidenceLedger",
+    "config_schemas": "core/ontology/schema-v2.sql; core/smi/schema.sql; harness/schemas/experience-memory.schema.json; harness/schemas/task-graph.schema.json; harness/schemas/task-graph-state.schema.json",
+    "implementation_entrypoints": "Not found in current codebase. Adjacent generic surfaces: core/ontology/manager.ts and core/smi/indexer.ts",
+    "platform_provider_limitations": "File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+  },
+  "implementation": {
+    "status": "NOT_FOUND_IN_CURRENT_CODEBASE",
+    "tracked_surfaces": [
+      "VERSION",
+      "core/ontology/manager.ts",
+      "core/ontology/schema-v2.sql",
+      "core/smi/indexer.ts",
+      "core/smi/query.ts",
+      "core/smi/schema.sql",
+      "harness/lib/evidence_ledger.py",
+      "harness/lib/task_graph_io.py",
+      "harness/schemas/experience-memory.schema.json",
+      "harness/schemas/task-graph-state.schema.json",
+      "harness/schemas/task-graph.schema.json"
+    ],
+    "entrypoints": "Not found in current codebase. Adjacent generic surfaces: core/ontology/manager.ts and core/smi/indexer.ts",
+    "interfaces": "core/smi/query.ts: SMIQuery and quickSearch(); core/ontology/manager.ts: OntologyManager; harness/lib/task_graph_io.py; harness/lib/evidence_ledger.py: EvidenceLedger",
+    "schemas_and_config": "core/ontology/schema-v2.sql; core/smi/schema.sql; harness/schemas/experience-memory.schema.json; harness/schemas/task-graph.schema.json; harness/schemas/task-graph-state.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-032-CORE-01",
+      "atomic_feature_id": "FN-032-CORE-01",
+      "test_name": "test_dataset_graph_management_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-032-EVIDENCE-03",
+      "atomic_feature_id": "FN-032-EVIDENCE-03",
+      "test_name": "test_dataset_graph_management_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-032-GUARD-02",
+      "atomic_feature_id": "FN-032-GUARD-02",
+      "test_name": "test_dataset_graph_management_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-FN-032-CORE-01-01",
+      "test_name": "test_dataset_graph_management__register",
+      "case_type": "core_behavior",
+      "atomic_scenario": "register",
+      "source_seed_registry_id": "NTB-FN-032-CORE-01",
+      "source_atomic_feature_id": "FN-032-CORE-01",
+      "source_seed_test_name": "test_dataset_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Dataset Graph Management for the atomic scenario \"register\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: register.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: register.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Dataset node/edge records, validation findings, lineage/query result.",
+      "state_and_side_effect_oracle": "Writes dataset/graph metadata if an application-specific adapter is used.",
+      "required_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "supported_boundary": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-032-CORE-01-02",
+      "test_name": "test_dataset_graph_management__version",
+      "case_type": "core_behavior",
+      "atomic_scenario": "version",
+      "source_seed_registry_id": "NTB-FN-032-CORE-01",
+      "source_atomic_feature_id": "FN-032-CORE-01",
+      "source_seed_test_name": "test_dataset_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Dataset Graph Management for the atomic scenario \"version\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: version.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: version.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Dataset node/edge records, validation findings, lineage/query result.",
+      "state_and_side_effect_oracle": "Writes dataset/graph metadata if an application-specific adapter is used.",
+      "required_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "supported_boundary": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-032-CORE-01-03",
+      "test_name": "test_dataset_graph_management__schema_fields",
+      "case_type": "core_behavior",
+      "atomic_scenario": "schema fields",
+      "source_seed_registry_id": "NTB-FN-032-CORE-01",
+      "source_atomic_feature_id": "FN-032-CORE-01",
+      "source_seed_test_name": "test_dataset_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Dataset Graph Management for the atomic scenario \"schema fields\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: schema fields.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: schema fields.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Dataset node/edge records, validation findings, lineage/query result.",
+      "state_and_side_effect_oracle": "Writes dataset/graph metadata if an application-specific adapter is used.",
+      "required_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "supported_boundary": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-032-CORE-01-04",
+      "test_name": "test_dataset_graph_management__concept_link",
+      "case_type": "core_behavior",
+      "atomic_scenario": "concept link",
+      "source_seed_registry_id": "NTB-FN-032-CORE-01",
+      "source_atomic_feature_id": "FN-032-CORE-01",
+      "source_seed_test_name": "test_dataset_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Dataset Graph Management for the atomic scenario \"concept link\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: concept link.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: concept link.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Dataset node/edge records, validation findings, lineage/query result.",
+      "state_and_side_effect_oracle": "Writes dataset/graph metadata if an application-specific adapter is used.",
+      "required_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "supported_boundary": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-032-CORE-01-05",
+      "test_name": "test_dataset_graph_management__dependency",
+      "case_type": "core_behavior",
+      "atomic_scenario": "dependency",
+      "source_seed_registry_id": "NTB-FN-032-CORE-01",
+      "source_atomic_feature_id": "FN-032-CORE-01",
+      "source_seed_test_name": "test_dataset_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Dataset Graph Management for the atomic scenario \"dependency\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: dependency.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: dependency.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Dataset node/edge records, validation findings, lineage/query result.",
+      "state_and_side_effect_oracle": "Writes dataset/graph metadata if an application-specific adapter is used.",
+      "required_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "supported_boundary": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-032-CORE-01-06",
+      "test_name": "test_dataset_graph_management__quality_state",
+      "case_type": "core_behavior",
+      "atomic_scenario": "quality state",
+      "source_seed_registry_id": "NTB-FN-032-CORE-01",
+      "source_atomic_feature_id": "FN-032-CORE-01",
+      "source_seed_test_name": "test_dataset_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Dataset Graph Management for the atomic scenario \"quality state\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: quality state.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: quality state.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Dataset node/edge records, validation findings, lineage/query result.",
+      "state_and_side_effect_oracle": "Writes dataset/graph metadata if an application-specific adapter is used.",
+      "required_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "supported_boundary": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-032-GUARD-02-01",
+      "test_name": "test_dataset_graph_management__invalid_source_version",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "invalid source/version",
+      "source_seed_registry_id": "NTB-FN-032-GUARD-02",
+      "source_atomic_feature_id": "FN-032-GUARD-02",
+      "source_seed_test_name": "test_dataset_graph_management_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Dataset Graph Management for the atomic scenario \"invalid source/version\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: invalid source/version.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: invalid source/version.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing dataset identity/schema/source, invalid dependency, version conflict, or quality failure should reject/flag registration.",
+      "state_and_side_effect_oracle": "Writes dataset/graph metadata if an application-specific adapter is used.",
+      "required_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "supported_boundary": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-032-EVIDENCE-03-01",
+      "test_name": "test_dataset_graph_management__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-032-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-032-EVIDENCE-03",
+      "source_seed_test_name": "test_dataset_graph_management_records_status_provenance_evidence",
+      "objective": "Verify Dataset Graph Management for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "state_and_side_effect_oracle": "Writes dataset/graph metadata if an application-specific adapter is used.",
+      "required_evidence": "No current direct evidence. Future proof requires durable dataset nodes/edges with version, schema, quality, lineage, and query tests.",
+      "supported_boundary": "Not found in current codebase as a dedicated Dataset Graph service. Generic ontology/file/evidence stores are insufficient proof of the full feature.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    }
+  ]
+}

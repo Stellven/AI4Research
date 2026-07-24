@@ -1,0 +1,305 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Idea identification / screening / opportunity selection",
+    "level_2": "Opportunity Portfolio Prioritization",
+    "description": "Ranks and selects a bounded, diverse opportunity portfolio using transparent criteria and records why other directions were deferred or rejected."
+  },
+  "contract": {
+    "purpose_user_function": "Current code selects a bounded deterministic subset of non-blocked ideas; the described transparent multi-criteria diverse portfolio ranking is not fully implemented.",
+    "valid_inputs": "Candidate list, availability/duplicate status, source order, maximum idea count, and novelty/feasibility recommendations.",
+    "expected_outputs": "A bounded selected-candidate list with deterministic selection status; no rich portfolio scorecard or diversity objective is found.",
+    "state_side_effects": "Filters which candidates continue and records selected/not-selected status.",
+    "failure_rejection_behavior": "Blocked/duplicate candidates are excluded; empty eligible sets produce no portfolio. Multi-criteria conflict handling is not defined.",
+    "supported_boundaries_exclusions": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+    "success_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+    "granularity_atomic_contracts": "Test max size, rank ordering, diversity, tie, advance/revise/reject, deferred rationale, empty pool, and sensitivity to each future criterion.",
+    "readme_product_docs": "README.md#Appendix: AutoSci Commands (`/ideate`, `/novelty`); docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "skills/ideate/SKILL.md; skills/novelty/SKILL.md; harness/plugins/autosci/bin/autosci_bridge.py idea and novelty actions",
+    "config_schemas": "harness/schemas/evidence/idea_candidate.v1.schema.json; harness/schemas/evidence/idea_evaluation.v1.schema.json",
+    "implementation_entrypoints": "harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection; harness/plugins/autosci/backends/novelty_review.py::evaluate_novelty_and_review",
+    "platform_provider_limitations": "Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "harness/plugins/autosci/backends/idea_source.py",
+      "harness/plugins/autosci/backends/novelty_review.py",
+      "harness/plugins/autosci/bin/autosci_bridge.py",
+      "harness/schemas/evidence/idea_candidate.v1.schema.json",
+      "harness/schemas/evidence/idea_evaluation.v1.schema.json"
+    ],
+    "entrypoints": "harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection; harness/plugins/autosci/backends/novelty_review.py::evaluate_novelty_and_review",
+    "interfaces": "skills/ideate/SKILL.md; skills/novelty/SKILL.md; harness/plugins/autosci/bin/autosci_bridge.py idea and novelty actions",
+    "schemas_and_config": "harness/schemas/evidence/idea_candidate.v1.schema.json; harness/schemas/evidence/idea_evaluation.v1.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-030-CORE-01",
+      "atomic_feature_id": "WF-030-CORE-01",
+      "test_name": "test_opportunity_portfolio_prioritization_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-030-EVIDENCE-03",
+      "atomic_feature_id": "WF-030-EVIDENCE-03",
+      "test_name": "test_opportunity_portfolio_prioritization_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-030-GUARD-02",
+      "atomic_feature_id": "WF-030-GUARD-02",
+      "test_name": "test_opportunity_portfolio_prioritization_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-WF-030-CORE-01-01",
+      "test_name": "test_opportunity_portfolio_prioritization__max_size",
+      "case_type": "core_behavior",
+      "atomic_scenario": "max size",
+      "source_seed_registry_id": "NTB-WF-030-CORE-01",
+      "source_atomic_feature_id": "WF-030-CORE-01",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_core_behavior_valid_scope",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"max size\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: max size.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: max size.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A bounded selected-candidate list with deterministic selection status; no rich portfolio scorecard or diversity objective is found.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-030-CORE-01-02",
+      "test_name": "test_opportunity_portfolio_prioritization__rank_ordering",
+      "case_type": "core_behavior",
+      "atomic_scenario": "rank ordering",
+      "source_seed_registry_id": "NTB-WF-030-CORE-01",
+      "source_atomic_feature_id": "WF-030-CORE-01",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_core_behavior_valid_scope",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"rank ordering\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: rank ordering.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: rank ordering.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A bounded selected-candidate list with deterministic selection status; no rich portfolio scorecard or diversity objective is found.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-030-CORE-01-03",
+      "test_name": "test_opportunity_portfolio_prioritization__diversity",
+      "case_type": "core_behavior",
+      "atomic_scenario": "diversity",
+      "source_seed_registry_id": "NTB-WF-030-CORE-01",
+      "source_atomic_feature_id": "WF-030-CORE-01",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_core_behavior_valid_scope",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"diversity\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: diversity.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: diversity.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A bounded selected-candidate list with deterministic selection status; no rich portfolio scorecard or diversity objective is found.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-030-CORE-01-04",
+      "test_name": "test_opportunity_portfolio_prioritization__tie",
+      "case_type": "core_behavior",
+      "atomic_scenario": "tie",
+      "source_seed_registry_id": "NTB-WF-030-CORE-01",
+      "source_atomic_feature_id": "WF-030-CORE-01",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_core_behavior_valid_scope",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"tie\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: tie.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: tie.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A bounded selected-candidate list with deterministic selection status; no rich portfolio scorecard or diversity objective is found.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-030-GUARD-02-01",
+      "test_name": "test_opportunity_portfolio_prioritization__advance_revise_reject",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "advance/revise/reject",
+      "source_seed_registry_id": "NTB-WF-030-GUARD-02",
+      "source_atomic_feature_id": "WF-030-GUARD-02",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"advance/revise/reject\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: advance/revise/reject.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: advance/revise/reject.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Blocked/duplicate candidates are excluded; empty eligible sets produce no portfolio. Multi-criteria conflict handling is not defined.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-030-CORE-01-05",
+      "test_name": "test_opportunity_portfolio_prioritization__deferred_rationale",
+      "case_type": "core_behavior",
+      "atomic_scenario": "deferred rationale",
+      "source_seed_registry_id": "NTB-WF-030-CORE-01",
+      "source_atomic_feature_id": "WF-030-CORE-01",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_core_behavior_valid_scope",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"deferred rationale\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: deferred rationale.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: deferred rationale.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A bounded selected-candidate list with deterministic selection status; no rich portfolio scorecard or diversity objective is found.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-030-GUARD-02-02",
+      "test_name": "test_opportunity_portfolio_prioritization__empty_pool",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "empty pool",
+      "source_seed_registry_id": "NTB-WF-030-GUARD-02",
+      "source_atomic_feature_id": "WF-030-GUARD-02",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"empty pool\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: empty pool.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: empty pool.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Blocked/duplicate candidates are excluded; empty eligible sets produce no portfolio. Multi-criteria conflict handling is not defined.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-030-CORE-01-06",
+      "test_name": "test_opportunity_portfolio_prioritization__sensitivity_to_each_future_criterion",
+      "case_type": "core_behavior",
+      "atomic_scenario": "sensitivity to each future criterion",
+      "source_seed_registry_id": "NTB-WF-030-CORE-01",
+      "source_atomic_feature_id": "WF-030-CORE-01",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_core_behavior_valid_scope",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"sensitivity to each future criterion\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: sensitivity to each future criterion.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: sensitivity to each future criterion.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A bounded selected-candidate list with deterministic selection status; no rich portfolio scorecard or diversity objective is found.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-030-EVIDENCE-03-01",
+      "test_name": "test_opportunity_portfolio_prioritization__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-WF-030-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-030-EVIDENCE-03",
+      "source_seed_test_name": "test_opportunity_portfolio_prioritization_records_status_provenance_evidence",
+      "objective": "Verify Opportunity Portfolio Prioritization for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "state_and_side_effect_oracle": "Filters which candidates continue and records selected/not-selected status.",
+      "required_evidence": "Partial: `harness/plugins/autosci/backends/idea_source.py::_apply_max_ideas_selection` bounds selection; novelty review provides advance/revise/reject/inconclusive recommendations.",
+      "supported_boundary": "Supports maximum-count selection and screening recommendations; transparent strategic criteria, diversity optimization, and detailed defer/reject rationale are limited.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

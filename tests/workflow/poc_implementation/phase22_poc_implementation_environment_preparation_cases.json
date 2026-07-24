@@ -1,0 +1,333 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "POC implementation",
+    "level_2": "POC Implementation Environment Preparation",
+    "description": "Setup the environment needed for the POC (dependencies, data, runtime, access permissions, compute resources and configs)"
+  },
+  "contract": {
+    "purpose_user_function": "Plan and gate the runtime, dependencies, data, permissions, resource constraints, commands, and write locations needed before implementation.",
+    "valid_inputs": "Requirement/experiment plan, workspace root, runtime/tool dependencies, data references, command allowlist, permissions, configs, resource limits, and expected artifacts.",
+    "expected_outputs": "Validated graph nodes/contracts with environment-related inputs, write scopes, commands/gates, resource/approval rules, and handoff metadata.",
+    "state_side_effects": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+    "failure_rejection_behavior": "Plan validation or dispatch fails on missing dependencies/runtime, illegal command/write scope, absent approvals, inaccessible data, or invalid configuration.",
+    "supported_boundaries_exclusions": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+    "success_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+    "granularity_atomic_contracts": "Separate dependency, data, runtime, permission, compute/resource, configuration, workspace isolation, missing prerequisite, and cleanup contracts.",
+    "readme_product_docs": "README.md#Basic Workflow; README.md#Governed Planning; README.md#Appendix: AutoSci Commands; docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "harness/tools/codex_pm_router.py planner surface; harness/lib/graph_node_dispatcher.py runtime dispatch surface",
+    "config_schemas": "harness/schemas/task-graph.schema.json; harness/schemas/requirement-ir.schema.json; harness/schemas/evidence/experiment_plan.v1.schema.json",
+    "implementation_entrypoints": "harness/tools/codex_pm_router.py::_node_enrichment; harness/lib/plan_validator.py; harness/lib/graph_node_dispatcher.py",
+    "platform_provider_limitations": "The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "harness/lib/graph_node_dispatcher.py",
+      "harness/lib/plan_validator.py",
+      "harness/schemas/evidence/experiment_plan.v1.schema.json",
+      "harness/schemas/requirement-ir.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "harness/tools/codex_pm_router.py"
+    ],
+    "entrypoints": "harness/tools/codex_pm_router.py::_node_enrichment; harness/lib/plan_validator.py; harness/lib/graph_node_dispatcher.py",
+    "interfaces": "harness/tools/codex_pm_router.py planner surface; harness/lib/graph_node_dispatcher.py runtime dispatch surface",
+    "schemas_and_config": "harness/schemas/task-graph.schema.json; harness/schemas/requirement-ir.schema.json; harness/schemas/evidence/experiment_plan.v1.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-036-CORE-01",
+      "atomic_feature_id": "WF-036-CORE-01",
+      "test_name": "test_poc_implementation_environment_preparation_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-036-EVIDENCE-03",
+      "atomic_feature_id": "WF-036-EVIDENCE-03",
+      "test_name": "test_poc_implementation_environment_preparation_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-036-GUARD-02",
+      "atomic_feature_id": "WF-036-GUARD-02",
+      "test_name": "test_poc_implementation_environment_preparation_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 10,
+  "cases": [
+    {
+      "case_id": "P22-WF-036-CORE-01-01",
+      "test_name": "test_poc_implementation_environment_preparation__separate_dependency",
+      "case_type": "core_behavior",
+      "atomic_scenario": "Separate dependency",
+      "source_seed_registry_id": "NTB-WF-036-CORE-01",
+      "source_atomic_feature_id": "WF-036-CORE-01",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_core_behavior_valid_scope",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"Separate dependency\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: Separate dependency.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: Separate dependency.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated graph nodes/contracts with environment-related inputs, write scopes, commands/gates, resource/approval rules, and handoff metadata.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-CORE-01-02",
+      "test_name": "test_poc_implementation_environment_preparation__data",
+      "case_type": "core_behavior",
+      "atomic_scenario": "data",
+      "source_seed_registry_id": "NTB-WF-036-CORE-01",
+      "source_atomic_feature_id": "WF-036-CORE-01",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_core_behavior_valid_scope",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"data\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: data.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: data.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated graph nodes/contracts with environment-related inputs, write scopes, commands/gates, resource/approval rules, and handoff metadata.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-CORE-01-03",
+      "test_name": "test_poc_implementation_environment_preparation__runtime",
+      "case_type": "core_behavior",
+      "atomic_scenario": "runtime",
+      "source_seed_registry_id": "NTB-WF-036-CORE-01",
+      "source_atomic_feature_id": "WF-036-CORE-01",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_core_behavior_valid_scope",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"runtime\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: runtime.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: runtime.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated graph nodes/contracts with environment-related inputs, write scopes, commands/gates, resource/approval rules, and handoff metadata.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-CORE-01-04",
+      "test_name": "test_poc_implementation_environment_preparation__permission",
+      "case_type": "core_behavior",
+      "atomic_scenario": "permission",
+      "source_seed_registry_id": "NTB-WF-036-CORE-01",
+      "source_atomic_feature_id": "WF-036-CORE-01",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_core_behavior_valid_scope",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"permission\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: permission.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: permission.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated graph nodes/contracts with environment-related inputs, write scopes, commands/gates, resource/approval rules, and handoff metadata.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-CORE-01-05",
+      "test_name": "test_poc_implementation_environment_preparation__compute_resource",
+      "case_type": "core_behavior",
+      "atomic_scenario": "compute/resource",
+      "source_seed_registry_id": "NTB-WF-036-CORE-01",
+      "source_atomic_feature_id": "WF-036-CORE-01",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_core_behavior_valid_scope",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"compute/resource\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: compute/resource.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: compute/resource.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated graph nodes/contracts with environment-related inputs, write scopes, commands/gates, resource/approval rules, and handoff metadata.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-CORE-01-06",
+      "test_name": "test_poc_implementation_environment_preparation__configuration",
+      "case_type": "core_behavior",
+      "atomic_scenario": "configuration",
+      "source_seed_registry_id": "NTB-WF-036-CORE-01",
+      "source_atomic_feature_id": "WF-036-CORE-01",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_core_behavior_valid_scope",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"configuration\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: configuration.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: configuration.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated graph nodes/contracts with environment-related inputs, write scopes, commands/gates, resource/approval rules, and handoff metadata.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-CORE-01-07",
+      "test_name": "test_poc_implementation_environment_preparation__workspace_isolation",
+      "case_type": "core_behavior",
+      "atomic_scenario": "workspace isolation",
+      "source_seed_registry_id": "NTB-WF-036-CORE-01",
+      "source_atomic_feature_id": "WF-036-CORE-01",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_core_behavior_valid_scope",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"workspace isolation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: workspace isolation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: workspace isolation.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated graph nodes/contracts with environment-related inputs, write scopes, commands/gates, resource/approval rules, and handoff metadata.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-GUARD-02-01",
+      "test_name": "test_poc_implementation_environment_preparation__missing_prerequisite",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing prerequisite",
+      "source_seed_registry_id": "NTB-WF-036-GUARD-02",
+      "source_atomic_feature_id": "WF-036-GUARD-02",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"missing prerequisite\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing prerequisite.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing prerequisite.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Plan validation or dispatch fails on missing dependencies/runtime, illegal command/write scope, absent approvals, inaccessible data, or invalid configuration.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-GUARD-02-02",
+      "test_name": "test_poc_implementation_environment_preparation__cleanup_contracts",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "cleanup contracts",
+      "source_seed_registry_id": "NTB-WF-036-GUARD-02",
+      "source_atomic_feature_id": "WF-036-GUARD-02",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"cleanup contracts\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: cleanup contracts.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: cleanup contracts.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Plan validation or dispatch fails on missing dependencies/runtime, illegal command/write scope, absent approvals, inaccessible data, or invalid configuration.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-036-EVIDENCE-03-01",
+      "test_name": "test_poc_implementation_environment_preparation__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-WF-036-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-036-EVIDENCE-03",
+      "source_seed_test_name": "test_poc_implementation_environment_preparation_records_status_provenance_evidence",
+      "objective": "Verify POC Implementation Environment Preparation for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "state_and_side_effect_oracle": "May create workspace/sprint artifacts and, once authorized, invoke environment/dependency setup through generic worker nodes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_node_enrichment` and `harness/lib/plan_validator.py` accept an environment-aware task graph before dispatch.",
+      "supported_boundary": "Generic governed preparation exists; no first-class cross-domain POC environment preparer or standardized environment snapshot is found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

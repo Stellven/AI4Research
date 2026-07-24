@@ -1,0 +1,306 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "POC implementation",
+    "level_2": "POC Functional Readiness Validation",
+    "description": "Perform smoke test run, make sure POC runs, outputs are in the right format, and faliures can be observed."
+  },
+  "contract": {
+    "purpose_user_function": "Run planned smoke/tests and verifier gates to show the artifact starts, produces expected-format outputs, and exposes failures through logs/evidence.",
+    "valid_inputs": "Integrated artifact, approved test commands, expected outputs/formats, test paths, proof obligations, runtime/environment, and failure conditions.",
+    "expected_outputs": "Test report, session log, patch diff where relevant, artifact manifest, verifier result, and pass/fail/inconclusive evidence.",
+    "state_side_effects": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+    "failure_rejection_behavior": "Gate fails visibly on nonzero test/runtime result, missing output/evidence, invalid format, timeout, unauthorized command, or verifier rejection.",
+    "supported_boundaries_exclusions": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+    "success_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+    "granularity_atomic_contracts": "Test startup, expected output, schema/format, observable failure log, timeout, missing artifact, nonzero test, verifier rejection, and successful smoke run.",
+    "readme_product_docs": "README.md#Basic Workflow; README.md#Governed Planning; README.md#Appendix: AutoSci Commands; docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "harness/tools/codex_pm_router.py planner surface; harness/lib/graph_node_dispatcher.py runtime dispatch surface",
+    "config_schemas": "harness/schemas/task-graph.schema.json; harness/schemas/requirement-ir.schema.json; harness/schemas/evidence/experiment_plan.v1.schema.json",
+    "implementation_entrypoints": "harness/lib/graph_node_dispatcher.py::_node_evaluation_plan and artifact publication; harness/lib/plan_validator.py gate validation",
+    "platform_provider_limitations": "The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "harness/lib/graph_node_dispatcher.py",
+      "harness/lib/plan_validator.py",
+      "harness/schemas/evidence/experiment_plan.v1.schema.json",
+      "harness/schemas/requirement-ir.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "harness/tools/codex_pm_router.py"
+    ],
+    "entrypoints": "harness/lib/graph_node_dispatcher.py::_node_evaluation_plan and artifact publication; harness/lib/plan_validator.py gate validation",
+    "interfaces": "harness/tools/codex_pm_router.py planner surface; harness/lib/graph_node_dispatcher.py runtime dispatch surface",
+    "schemas_and_config": "harness/schemas/task-graph.schema.json; harness/schemas/requirement-ir.schema.json; harness/schemas/evidence/experiment_plan.v1.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-039-CORE-01",
+      "atomic_feature_id": "WF-039-CORE-01",
+      "test_name": "test_poc_functional_readiness_validation_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-039-EVIDENCE-03",
+      "atomic_feature_id": "WF-039-EVIDENCE-03",
+      "test_name": "test_poc_functional_readiness_validation_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-039-GUARD-02",
+      "atomic_feature_id": "WF-039-GUARD-02",
+      "test_name": "test_poc_functional_readiness_validation_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-WF-039-CORE-01-01",
+      "test_name": "test_poc_functional_readiness_validation__startup",
+      "case_type": "core_behavior",
+      "atomic_scenario": "startup",
+      "source_seed_registry_id": "NTB-WF-039-CORE-01",
+      "source_atomic_feature_id": "WF-039-CORE-01",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_core_behavior_valid_scope",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"startup\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: startup.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: startup.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Test report, session log, patch diff where relevant, artifact manifest, verifier result, and pass/fail/inconclusive evidence.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-039-CORE-01-02",
+      "test_name": "test_poc_functional_readiness_validation__expected_output",
+      "case_type": "core_behavior",
+      "atomic_scenario": "expected output",
+      "source_seed_registry_id": "NTB-WF-039-CORE-01",
+      "source_atomic_feature_id": "WF-039-CORE-01",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_core_behavior_valid_scope",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"expected output\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: expected output.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: expected output.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Test report, session log, patch diff where relevant, artifact manifest, verifier result, and pass/fail/inconclusive evidence.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-039-CORE-01-03",
+      "test_name": "test_poc_functional_readiness_validation__schema_format",
+      "case_type": "core_behavior",
+      "atomic_scenario": "schema/format",
+      "source_seed_registry_id": "NTB-WF-039-CORE-01",
+      "source_atomic_feature_id": "WF-039-CORE-01",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_core_behavior_valid_scope",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"schema/format\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: schema/format.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: schema/format.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Test report, session log, patch diff where relevant, artifact manifest, verifier result, and pass/fail/inconclusive evidence.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-039-EVIDENCE-03-01",
+      "test_name": "test_poc_functional_readiness_validation__observable_failure_log",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "observable failure log",
+      "source_seed_registry_id": "NTB-WF-039-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-039-EVIDENCE-03",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_records_status_provenance_evidence",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"observable failure log\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: observable failure log.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: observable failure log.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-039-GUARD-02-01",
+      "test_name": "test_poc_functional_readiness_validation__timeout",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "timeout",
+      "source_seed_registry_id": "NTB-WF-039-GUARD-02",
+      "source_atomic_feature_id": "WF-039-GUARD-02",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"timeout\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: timeout.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: timeout.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Gate fails visibly on nonzero test/runtime result, missing output/evidence, invalid format, timeout, unauthorized command, or verifier rejection.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-039-GUARD-02-02",
+      "test_name": "test_poc_functional_readiness_validation__missing_artifact",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing artifact",
+      "source_seed_registry_id": "NTB-WF-039-GUARD-02",
+      "source_atomic_feature_id": "WF-039-GUARD-02",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"missing artifact\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing artifact.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing artifact.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Gate fails visibly on nonzero test/runtime result, missing output/evidence, invalid format, timeout, unauthorized command, or verifier rejection.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-039-GUARD-02-03",
+      "test_name": "test_poc_functional_readiness_validation__nonzero_test",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "nonzero test",
+      "source_seed_registry_id": "NTB-WF-039-GUARD-02",
+      "source_atomic_feature_id": "WF-039-GUARD-02",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"nonzero test\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: nonzero test.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: nonzero test.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Gate fails visibly on nonzero test/runtime result, missing output/evidence, invalid format, timeout, unauthorized command, or verifier rejection.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-039-GUARD-02-04",
+      "test_name": "test_poc_functional_readiness_validation__verifier_rejection",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "verifier rejection",
+      "source_seed_registry_id": "NTB-WF-039-GUARD-02",
+      "source_atomic_feature_id": "WF-039-GUARD-02",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"verifier rejection\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: verifier rejection.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: verifier rejection.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Gate fails visibly on nonzero test/runtime result, missing output/evidence, invalid format, timeout, unauthorized command, or verifier rejection.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-039-CORE-01-04",
+      "test_name": "test_poc_functional_readiness_validation__successful_smoke_run",
+      "case_type": "core_behavior",
+      "atomic_scenario": "successful smoke run",
+      "source_seed_registry_id": "NTB-WF-039-CORE-01",
+      "source_atomic_feature_id": "WF-039-CORE-01",
+      "source_seed_test_name": "test_poc_functional_readiness_validation_core_behavior_valid_scope",
+      "objective": "Verify POC Functional Readiness Validation for the atomic scenario \"successful smoke run\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: successful smoke run.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: successful smoke run.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Test report, session log, patch diff where relevant, artifact manifest, verifier result, and pass/fail/inconclusive evidence.",
+      "state_and_side_effect_oracle": "Executes authorized tests, records node/gate status, and permits or blocks handoff.",
+      "required_evidence": "`harness/lib/graph_node_dispatcher.py` requires `handoff_md`, `session_log`, and for code/test tasks `patch_diff`/`test_report`, then publishes an artifact manifest.",
+      "supported_boundary": "Generic TestRunner/Verifier readiness is supported; domain-specific POC smoke semantics require explicit test definitions.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

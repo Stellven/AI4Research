@@ -1,0 +1,253 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "RSI",
+    "level_2": "Text-Based Artifacts (GEPA / MIPROv2 / TextGrad)",
+    "description": "Improves prompts, rules, and rubrics. Validate with holdout tasks, A/B tests, and regression checks."
+  },
+  "contract": {
+    "purpose_user_function": "Optimize text-based prompts/rules/rubrics as versioned candidates, evaluate them, and promote only passing candidates.",
+    "valid_inputs": "Source text artifact, task/golden/holdout cases, budget, candidate generator/backend, hard policies, evaluation metrics, and active version.",
+    "expected_outputs": "Candidate artifacts, evaluation comparison, budget/policy findings, promotion decision, and rollback-capable stored version.",
+    "state_side_effects": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
+    "failure_rejection_behavior": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
+    "supported_boundaries_exclusions": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
+    "success_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+    "granularity_atomic_contracts": "candidate schema; budget boundary; hard-policy rejection; holdout improvement/regression; promote; rollback/no-change.",
+    "readme_product_docs": "docs/SOLAR_EVOLUTION_ANALYSIS.md; docs/SELF_EVALUATION_SYSTEM_DESIGN.md; docs/solar-architecture-code-map.md §8",
+    "cli_api_skill_interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
+    "config_schemas": "harness/schemas/evidence/workflow_evolution.v1.schema.json; harness/evals/packs/**; harness/config/capability-capsules.registry.yaml",
+    "implementation_entrypoints": "harness/integrations/gepa_optimizer/adapter.py, evaluator.py, hard_policy_checker.py, promote.py, cli.py; MIPROv2/TextGrad: Not found in current codebase",
+    "platform_provider_limitations": "Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "VERSION",
+      "core/nerve/evolution-engine.ts",
+      "harness/config/capability-capsules.registry.yaml",
+      "harness/integrations/gepa_optimizer/adapter.py",
+      "harness/lib/evolution_engine.py",
+      "harness/schemas/evidence/workflow_evolution.v1.schema.json",
+      "harness/tools/skill_evolution_runner.py"
+    ],
+    "entrypoints": "harness/integrations/gepa_optimizer/adapter.py, evaluator.py, hard_policy_checker.py, promote.py, cli.py; MIPROv2/TextGrad: Not found in current codebase",
+    "interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
+    "schemas_and_config": "harness/schemas/evidence/workflow_evolution.v1.schema.json; harness/evals/packs/**; harness/config/capability-capsules.registry.yaml"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-022-CORE-01",
+      "atomic_feature_id": "FN-022-CORE-01",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-022-EVIDENCE-03",
+      "atomic_feature_id": "FN-022-EVIDENCE-03",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-022-GUARD-02",
+      "atomic_feature_id": "FN-022-GUARD-02",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "P22-FN-022-CORE-01-01",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad__candidate_schema",
+      "case_type": "core_behavior",
+      "atomic_scenario": "candidate schema",
+      "source_seed_registry_id": "NTB-FN-022-CORE-01",
+      "source_atomic_feature_id": "FN-022-CORE-01",
+      "source_seed_test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_core_behavior_valid_scope",
+      "objective": "Verify Text-Based Artifacts (GEPA / MIPROv2 / TextGrad) for the atomic scenario \"candidate schema\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: candidate schema.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: candidate schema.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Candidate artifacts, evaluation comparison, budget/policy findings, promotion decision, and rollback-capable stored version.",
+      "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-022-GUARD-02-01",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad__budget_boundary",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "budget boundary",
+      "source_seed_registry_id": "NTB-FN-022-GUARD-02",
+      "source_atomic_feature_id": "FN-022-GUARD-02",
+      "source_seed_test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Text-Based Artifacts (GEPA / MIPROv2 / TextGrad) for the atomic scenario \"budget boundary\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: budget boundary.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: budget boundary.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
+      "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-022-GUARD-02-02",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad__hard_policy_rejection",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "hard-policy rejection",
+      "source_seed_registry_id": "NTB-FN-022-GUARD-02",
+      "source_atomic_feature_id": "FN-022-GUARD-02",
+      "source_seed_test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Text-Based Artifacts (GEPA / MIPROv2 / TextGrad) for the atomic scenario \"hard-policy rejection\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: hard-policy rejection.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: hard-policy rejection.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
+      "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-022-GUARD-02-03",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad__holdout_improvement_regression",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "holdout improvement/regression",
+      "source_seed_registry_id": "NTB-FN-022-GUARD-02",
+      "source_atomic_feature_id": "FN-022-GUARD-02",
+      "source_seed_test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Text-Based Artifacts (GEPA / MIPROv2 / TextGrad) for the atomic scenario \"holdout improvement/regression\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: holdout improvement/regression.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: holdout improvement/regression.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
+      "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-022-CORE-01-02",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad__promote",
+      "case_type": "core_behavior",
+      "atomic_scenario": "promote",
+      "source_seed_registry_id": "NTB-FN-022-CORE-01",
+      "source_atomic_feature_id": "FN-022-CORE-01",
+      "source_seed_test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_core_behavior_valid_scope",
+      "objective": "Verify Text-Based Artifacts (GEPA / MIPROv2 / TextGrad) for the atomic scenario \"promote\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: promote.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: promote.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Candidate artifacts, evaluation comparison, budget/policy findings, promotion decision, and rollback-capable stored version.",
+      "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-022-GUARD-02-04",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad__rollback_no_change",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "rollback/no-change",
+      "source_seed_registry_id": "NTB-FN-022-GUARD-02",
+      "source_atomic_feature_id": "FN-022-GUARD-02",
+      "source_seed_test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Text-Based Artifacts (GEPA / MIPROv2 / TextGrad) for the atomic scenario \"rollback/no-change\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: rollback/no-change.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: rollback/no-change.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
+      "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-022-EVIDENCE-03-01",
+      "test_name": "test_text_based_artifacts_gepa_miprov2_textgrad__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-022-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-022-EVIDENCE-03",
+      "source_seed_test_name": "test_text_based_artifacts_gepa_miprov2_textgrad_records_status_provenance_evidence",
+      "objective": "Verify Text-Based Artifacts (GEPA / MIPROv2 / TextGrad) for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

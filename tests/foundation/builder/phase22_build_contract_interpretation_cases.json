@@ -1,0 +1,204 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Builder",
+    "level_2": "Build Contract Interpretation",
+    "description": "Translate the task or build contract into implementation goals, interfaces, write scope, acceptance conditions, and prohibited changes."
+  },
+  "contract": {
+    "purpose_user_function": "Present an executable builder with the contract goals, interfaces, write scope, acceptance conditions, and prohibitions.",
+    "valid_inputs": "Task/build contract, selected plan node, context, capsule/operator binding, allowed paths/effects, acceptance and evidence obligations.",
+    "expected_outputs": "Execution envelope/instruction and builder artifacts/result that preserve contract traceability.",
+    "state_side_effects": "Writes dispatch/envelope/prompt artifacts; actual builder may modify only authorized workspace scope.",
+    "failure_rejection_behavior": "Missing/invalid contract, unresolved binding, scope/prohibition conflict, or absent acceptance obligations blocks dispatch.",
+    "supported_boundaries_exclusions": "Envelope/plan compilation is shipped; no standalone generic BuildContractInterpreter class was found.",
+    "success_evidence": "Builder instruction contains exact goals/scope/prohibitions/acceptance and any out-of-scope write is rejected by gates.",
+    "granularity_atomic_contracts": "valid contract; missing field; scope allowed/denied; prohibited change; acceptance/evidence propagation.",
+    "readme_product_docs": "README.md §Basic Workflow and Appendix AutoSci Commands; docs/WORKFLOW_DESIGN.md Phases 2-5; AGENTS.md Scope and Local Workflow",
+    "cli_api_skill_interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "config_schemas": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt",
+    "implementation_entrypoints": "harness/lib/apo_plan_compiler.py: compile_execution_plan_for_node(); harness/tools/pm_dispatch.py; harness/tools/skill_dispatch_operator.py",
+    "platform_provider_limitations": "Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      ".agents/skills/exp-run/SKILL.md",
+      ".agents/skills/paper-compile/SKILL.md",
+      ".agents/skills/paper-draft/SKILL.md",
+      "harness/config/physical-operators.json",
+      "harness/lib/apo_plan_compiler.py",
+      "harness/lib/operator_runtime.py",
+      "harness/schemas/request-envelope.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "harness/tools/pm_dispatch.py",
+      "harness/tools/skill_dispatch_operator.py",
+      "package.json",
+      "skills/test/SKILL.md"
+    ],
+    "entrypoints": "harness/lib/apo_plan_compiler.py: compile_execution_plan_for_node(); harness/tools/pm_dispatch.py; harness/tools/skill_dispatch_operator.py",
+    "interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "schemas_and_config": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-053-CORE-01",
+      "atomic_feature_id": "FN-053-CORE-01",
+      "test_name": "test_build_contract_interpretation_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-053-EVIDENCE-03",
+      "atomic_feature_id": "FN-053-EVIDENCE-03",
+      "test_name": "test_build_contract_interpretation_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-053-GUARD-02",
+      "atomic_feature_id": "FN-053-GUARD-02",
+      "test_name": "test_build_contract_interpretation_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 5,
+  "cases": [
+    {
+      "case_id": "P22-FN-053-CORE-01-01",
+      "test_name": "test_build_contract_interpretation__valid_contract",
+      "case_type": "core_behavior",
+      "atomic_scenario": "valid contract",
+      "source_seed_registry_id": "NTB-FN-053-CORE-01",
+      "source_atomic_feature_id": "FN-053-CORE-01",
+      "source_seed_test_name": "test_build_contract_interpretation_core_behavior_valid_scope",
+      "objective": "Verify Build Contract Interpretation for the atomic scenario \"valid contract\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: valid contract.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: valid contract.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Execution envelope/instruction and builder artifacts/result that preserve contract traceability.",
+      "state_and_side_effect_oracle": "Writes dispatch/envelope/prompt artifacts; actual builder may modify only authorized workspace scope.",
+      "required_evidence": "Builder instruction contains exact goals/scope/prohibitions/acceptance and any out-of-scope write is rejected by gates.",
+      "supported_boundary": "Envelope/plan compilation is shipped; no standalone generic BuildContractInterpreter class was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-053-GUARD-02-01",
+      "test_name": "test_build_contract_interpretation__missing_field",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing field",
+      "source_seed_registry_id": "NTB-FN-053-GUARD-02",
+      "source_atomic_feature_id": "FN-053-GUARD-02",
+      "source_seed_test_name": "test_build_contract_interpretation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Build Contract Interpretation for the atomic scenario \"missing field\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing field.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing field.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing/invalid contract, unresolved binding, scope/prohibition conflict, or absent acceptance obligations blocks dispatch.",
+      "state_and_side_effect_oracle": "Writes dispatch/envelope/prompt artifacts; actual builder may modify only authorized workspace scope.",
+      "required_evidence": "Builder instruction contains exact goals/scope/prohibitions/acceptance and any out-of-scope write is rejected by gates.",
+      "supported_boundary": "Envelope/plan compilation is shipped; no standalone generic BuildContractInterpreter class was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-053-GUARD-02-02",
+      "test_name": "test_build_contract_interpretation__scope_allowed_denied",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "scope allowed/denied",
+      "source_seed_registry_id": "NTB-FN-053-GUARD-02",
+      "source_atomic_feature_id": "FN-053-GUARD-02",
+      "source_seed_test_name": "test_build_contract_interpretation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Build Contract Interpretation for the atomic scenario \"scope allowed/denied\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: scope allowed/denied.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: scope allowed/denied.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing/invalid contract, unresolved binding, scope/prohibition conflict, or absent acceptance obligations blocks dispatch.",
+      "state_and_side_effect_oracle": "Writes dispatch/envelope/prompt artifacts; actual builder may modify only authorized workspace scope.",
+      "required_evidence": "Builder instruction contains exact goals/scope/prohibitions/acceptance and any out-of-scope write is rejected by gates.",
+      "supported_boundary": "Envelope/plan compilation is shipped; no standalone generic BuildContractInterpreter class was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-053-CORE-01-02",
+      "test_name": "test_build_contract_interpretation__prohibited_change",
+      "case_type": "core_behavior",
+      "atomic_scenario": "prohibited change",
+      "source_seed_registry_id": "NTB-FN-053-CORE-01",
+      "source_atomic_feature_id": "FN-053-CORE-01",
+      "source_seed_test_name": "test_build_contract_interpretation_core_behavior_valid_scope",
+      "objective": "Verify Build Contract Interpretation for the atomic scenario \"prohibited change\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: prohibited change.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: prohibited change.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Execution envelope/instruction and builder artifacts/result that preserve contract traceability.",
+      "state_and_side_effect_oracle": "Writes dispatch/envelope/prompt artifacts; actual builder may modify only authorized workspace scope.",
+      "required_evidence": "Builder instruction contains exact goals/scope/prohibitions/acceptance and any out-of-scope write is rejected by gates.",
+      "supported_boundary": "Envelope/plan compilation is shipped; no standalone generic BuildContractInterpreter class was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-053-EVIDENCE-03-01",
+      "test_name": "test_build_contract_interpretation__acceptance_evidence_propagation",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "acceptance/evidence propagation",
+      "source_seed_registry_id": "NTB-FN-053-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-053-EVIDENCE-03",
+      "source_seed_test_name": "test_build_contract_interpretation_records_status_provenance_evidence",
+      "objective": "Verify Build Contract Interpretation for the atomic scenario \"acceptance/evidence propagation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: acceptance/evidence propagation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: acceptance/evidence propagation.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Builder instruction contains exact goals/scope/prohibitions/acceptance and any out-of-scope write is rejected by gates.",
+      "state_and_side_effect_oracle": "Writes dispatch/envelope/prompt artifacts; actual builder may modify only authorized workspace scope.",
+      "required_evidence": "Builder instruction contains exact goals/scope/prohibitions/acceptance and any out-of-scope write is rejected by gates.",
+      "supported_boundary": "Envelope/plan compilation is shipped; no standalone generic BuildContractInterpreter class was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

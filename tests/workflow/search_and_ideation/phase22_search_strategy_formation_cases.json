@@ -1,0 +1,306 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Search & ideation",
+    "level_2": "Search Strategy Formation",
+    "description": "Turns the requirement contract into technical themes, source families, queries, time horizons, counter-signals, diversity goals, and coverage targets."
+  },
+  "contract": {
+    "purpose_user_function": "Convert a research need into a literature-discovery mode, query/topic, anchors, venues, recency/ranking logic, and evidence coverage expectations.",
+    "valid_inputs": "Topic or query, optional anchor papers, wiki/venue mode, year/limit parameters, evidence profile, counter-evidence needs, and provider availability.",
+    "expected_outputs": "A discovery request/strategy and ranked candidate set with channel, score, rationale, dedup and fetch status.",
+    "state_side_effects": "May contact configured literature providers and writes discovery/evidence artifacts.",
+    "failure_rejection_behavior": "Returns failed or inconclusive when the request is invalid, provider access fails, or coverage cannot be established; fixture fallback may be used.",
+    "supported_boundaries_exclusions": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+    "success_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+    "granularity_atomic_contracts": "Test topic, query, anchor recommendation, citation/reference expansion, venue/wiki, recency/limit, counter-evidence request, provider failure, and offline fallback.",
+    "readme_product_docs": "README.md#Appendix: AutoSci Commands (`/discover`, `/research`, `/survey`); docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "skills/discover/SKILL.md; harness/plugins/autosci/bin/autosci_bridge.py discovery action; README.md#Appendix: AutoSci Commands",
+    "config_schemas": "harness/schemas/evidence/literature_discovery.v1.schema.json; harness/schemas/evidence/research_paper.v1.schema.json",
+    "implementation_entrypoints": "harness/plugins/autosci/backends/literature_discover.py::discover_literature, _score_candidate, _finalize_candidates; harness/lib/research/evaluator.py::source_requirements_for_profile",
+    "platform_provider_limitations": "Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "README.md",
+      "harness/lib/research/evaluator.py",
+      "harness/plugins/autosci/backends/literature_discover.py",
+      "harness/plugins/autosci/bin/autosci_bridge.py",
+      "harness/schemas/evidence/literature_discovery.v1.schema.json",
+      "harness/schemas/evidence/research_paper.v1.schema.json"
+    ],
+    "entrypoints": "harness/plugins/autosci/backends/literature_discover.py::discover_literature, _score_candidate, _finalize_candidates; harness/lib/research/evaluator.py::source_requirements_for_profile",
+    "interfaces": "skills/discover/SKILL.md; harness/plugins/autosci/bin/autosci_bridge.py discovery action; README.md#Appendix: AutoSci Commands",
+    "schemas_and_config": "harness/schemas/evidence/literature_discovery.v1.schema.json; harness/schemas/evidence/research_paper.v1.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-016-CORE-01",
+      "atomic_feature_id": "WF-016-CORE-01",
+      "test_name": "test_search_strategy_formation_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-016-EVIDENCE-03",
+      "atomic_feature_id": "WF-016-EVIDENCE-03",
+      "test_name": "test_search_strategy_formation_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-016-GUARD-02",
+      "atomic_feature_id": "WF-016-GUARD-02",
+      "test_name": "test_search_strategy_formation_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-WF-016-CORE-01-01",
+      "test_name": "test_search_strategy_formation__topic",
+      "case_type": "core_behavior",
+      "atomic_scenario": "topic",
+      "source_seed_registry_id": "NTB-WF-016-CORE-01",
+      "source_atomic_feature_id": "WF-016-CORE-01",
+      "source_seed_test_name": "test_search_strategy_formation_core_behavior_valid_scope",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"topic\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: topic.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: topic.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A discovery request/strategy and ranked candidate set with channel, score, rationale, dedup and fetch status.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-016-CORE-01-02",
+      "test_name": "test_search_strategy_formation__query",
+      "case_type": "core_behavior",
+      "atomic_scenario": "query",
+      "source_seed_registry_id": "NTB-WF-016-CORE-01",
+      "source_atomic_feature_id": "WF-016-CORE-01",
+      "source_seed_test_name": "test_search_strategy_formation_core_behavior_valid_scope",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"query\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: query.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: query.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A discovery request/strategy and ranked candidate set with channel, score, rationale, dedup and fetch status.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-016-CORE-01-03",
+      "test_name": "test_search_strategy_formation__anchor_recommendation",
+      "case_type": "core_behavior",
+      "atomic_scenario": "anchor recommendation",
+      "source_seed_registry_id": "NTB-WF-016-CORE-01",
+      "source_atomic_feature_id": "WF-016-CORE-01",
+      "source_seed_test_name": "test_search_strategy_formation_core_behavior_valid_scope",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"anchor recommendation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: anchor recommendation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: anchor recommendation.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A discovery request/strategy and ranked candidate set with channel, score, rationale, dedup and fetch status.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-016-EVIDENCE-03-01",
+      "test_name": "test_search_strategy_formation__citation_reference_expansion",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "citation/reference expansion",
+      "source_seed_registry_id": "NTB-WF-016-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-016-EVIDENCE-03",
+      "source_seed_test_name": "test_search_strategy_formation_records_status_provenance_evidence",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"citation/reference expansion\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: citation/reference expansion.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: citation/reference expansion.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-016-CORE-01-04",
+      "test_name": "test_search_strategy_formation__venue_wiki",
+      "case_type": "core_behavior",
+      "atomic_scenario": "venue/wiki",
+      "source_seed_registry_id": "NTB-WF-016-CORE-01",
+      "source_atomic_feature_id": "WF-016-CORE-01",
+      "source_seed_test_name": "test_search_strategy_formation_core_behavior_valid_scope",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"venue/wiki\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: venue/wiki.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: venue/wiki.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A discovery request/strategy and ranked candidate set with channel, score, rationale, dedup and fetch status.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-016-CORE-01-05",
+      "test_name": "test_search_strategy_formation__recency_limit",
+      "case_type": "core_behavior",
+      "atomic_scenario": "recency/limit",
+      "source_seed_registry_id": "NTB-WF-016-CORE-01",
+      "source_atomic_feature_id": "WF-016-CORE-01",
+      "source_seed_test_name": "test_search_strategy_formation_core_behavior_valid_scope",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"recency/limit\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: recency/limit.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: recency/limit.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "A discovery request/strategy and ranked candidate set with channel, score, rationale, dedup and fetch status.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-016-EVIDENCE-03-02",
+      "test_name": "test_search_strategy_formation__counter_evidence_request",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "counter-evidence request",
+      "source_seed_registry_id": "NTB-WF-016-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-016-EVIDENCE-03",
+      "source_seed_test_name": "test_search_strategy_formation_records_status_provenance_evidence",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"counter-evidence request\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: counter-evidence request.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: counter-evidence request.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-016-GUARD-02-01",
+      "test_name": "test_search_strategy_formation__provider_failure",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "provider failure",
+      "source_seed_registry_id": "NTB-WF-016-GUARD-02",
+      "source_atomic_feature_id": "WF-016-GUARD-02",
+      "source_seed_test_name": "test_search_strategy_formation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"provider failure\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: provider failure.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: provider failure.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Returns failed or inconclusive when the request is invalid, provider access fails, or coverage cannot be established; fixture fallback may be used.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-016-GUARD-02-02",
+      "test_name": "test_search_strategy_formation__offline_fallback",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "offline fallback",
+      "source_seed_registry_id": "NTB-WF-016-GUARD-02",
+      "source_atomic_feature_id": "WF-016-GUARD-02",
+      "source_seed_test_name": "test_search_strategy_formation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Search Strategy Formation for the atomic scenario \"offline fallback\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: offline fallback.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Networked discovery depends on configured providers and credentials; fixture fallback can be inconclusive. Current discovery is literature-centric rather than a complete multi-source intelligence system. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: offline fallback.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Returns failed or inconclusive when the request is invalid, provider access fails, or coverage cannot be established; fixture fallback may be used.",
+      "state_and_side_effect_oracle": "May contact configured literature providers and writes discovery/evidence artifacts.",
+      "required_evidence": "`harness/plugins/autosci/backends/literature_discover.py::discover_literature` accepts supported modes and emits candidates conforming to `harness/schemas/evidence/literature_discovery.v1.schema.json`.",
+      "supported_boundary": "Implements literature search strategy; source-family, geography, viewpoint, and general open-web strategy are not all first-class.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Capability capsule",
+    "level_2": "Capability Capsule Evolution & Version Promotion",
+    "description": "Improve capsules from runtime evidence, validate candidates, and promote or roll back versions."
+  },
+  "contract": {
+    "purpose_user_function": "Use evaluation evidence to propose and gate improved capability versions, then promote or roll back approved changes.",
+    "valid_inputs": "Capability scorecards, failures/events, candidate version/patch, evaluation pack, regression result, and approval decision.",
+    "expected_outputs": "Recommendation, evaluation evidence, promotion/demotion status, evolution event, or rollback indication.",
+    "state_side_effects": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+    "failure_rejection_behavior": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
+    "supported_boundaries_exclusions": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+    "success_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+    "granularity_atomic_contracts": "candidate generation; evaluation pass/fail; regression pass/fail; approval required; promotion; demotion/rollback; unchanged version on failure.",
+    "readme_product_docs": "README.md §Basic Workflow; docs/solar-architecture-code-map.md §7 Capability capsules; docs/CAPSULE_ARCHITECTURE.md §§2-6",
+    "cli_api_skill_interfaces": "harness/lib/capability_capsules.py: load_capability_capsule_registry(), validate_capability_capsule(), query_capability_capsules(), resolve_capability_capsule_for_task(); harness/lib/capability_registry.py CLI main() with sync/list/query/scorecard",
+    "config_schemas": "harness/config/capability-capsules.registry.yaml; harness/schemas/draft/capability-capsule.v1.draft.json; harness/config/capability-capsules/*.yaml",
+    "implementation_entrypoints": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), run_loop(); harness/tools/skill_evolution_runner.py: run_once()",
+    "platform_provider_limitations": "Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "VERSION",
+      "harness/config/capability-capsules.registry.yaml",
+      "harness/lib/capability_capsules.py",
+      "harness/lib/capability_registry.py",
+      "harness/lib/evolution_engine.py",
+      "harness/schemas/draft/capability-capsule.v1.draft.json",
+      "harness/tests/evolution/test-s5-evolution-engine.sh",
+      "harness/tools/skill_evolution_runner.py"
+    ],
+    "entrypoints": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), run_loop(); harness/tools/skill_evolution_runner.py: run_once()",
+    "interfaces": "harness/lib/capability_capsules.py: load_capability_capsule_registry(), validate_capability_capsule(), query_capability_capsules(), resolve_capability_capsule_for_task(); harness/lib/capability_registry.py CLI main() with sync/list/query/scorecard",
+    "schemas_and_config": "harness/config/capability-capsules.registry.yaml; harness/schemas/draft/capability-capsule.v1.draft.json; harness/config/capability-capsules/*.yaml"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-006-CORE-01",
+      "atomic_feature_id": "FN-006-CORE-01",
+      "test_name": "test_capability_capsule_evolution_version_promotion_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-006-EVIDENCE-03",
+      "atomic_feature_id": "FN-006-EVIDENCE-03",
+      "test_name": "test_capability_capsule_evolution_version_promotion_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-006-GUARD-02",
+      "atomic_feature_id": "FN-006-GUARD-02",
+      "test_name": "test_capability_capsule_evolution_version_promotion_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-FN-006-CORE-01-01",
+      "test_name": "test_capability_capsule_evolution_and_version_promotion__candidate_generation",
+      "case_type": "core_behavior",
+      "atomic_scenario": "candidate generation",
+      "source_seed_registry_id": "NTB-FN-006-CORE-01",
+      "source_atomic_feature_id": "FN-006-CORE-01",
+      "source_seed_test_name": "test_capability_capsule_evolution_version_promotion_core_behavior_valid_scope",
+      "objective": "Verify Capability Capsule Evolution & Version Promotion for the atomic scenario \"candidate generation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: candidate generation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: candidate generation.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Recommendation, evaluation evidence, promotion/demotion status, evolution event, or rollback indication.",
+      "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-006-GUARD-02-01",
+      "test_name": "test_capability_capsule_evolution_and_version_promotion__evaluation_pass_fail",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "evaluation pass/fail",
+      "source_seed_registry_id": "NTB-FN-006-GUARD-02",
+      "source_atomic_feature_id": "FN-006-GUARD-02",
+      "source_seed_test_name": "test_capability_capsule_evolution_version_promotion_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Capability Capsule Evolution & Version Promotion for the atomic scenario \"evaluation pass/fail\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: evaluation pass/fail.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: evaluation pass/fail.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
+      "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-006-GUARD-02-02",
+      "test_name": "test_capability_capsule_evolution_and_version_promotion__regression_pass_fail",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "regression pass/fail",
+      "source_seed_registry_id": "NTB-FN-006-GUARD-02",
+      "source_atomic_feature_id": "FN-006-GUARD-02",
+      "source_seed_test_name": "test_capability_capsule_evolution_version_promotion_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Capability Capsule Evolution & Version Promotion for the atomic scenario \"regression pass/fail\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: regression pass/fail.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: regression pass/fail.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
+      "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-006-CORE-01-02",
+      "test_name": "test_capability_capsule_evolution_and_version_promotion__approval_required",
+      "case_type": "core_behavior",
+      "atomic_scenario": "approval required",
+      "source_seed_registry_id": "NTB-FN-006-CORE-01",
+      "source_atomic_feature_id": "FN-006-CORE-01",
+      "source_seed_test_name": "test_capability_capsule_evolution_version_promotion_core_behavior_valid_scope",
+      "objective": "Verify Capability Capsule Evolution & Version Promotion for the atomic scenario \"approval required\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: approval required.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: approval required.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Recommendation, evaluation evidence, promotion/demotion status, evolution event, or rollback indication.",
+      "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-006-CORE-01-03",
+      "test_name": "test_capability_capsule_evolution_and_version_promotion__promotion",
+      "case_type": "core_behavior",
+      "atomic_scenario": "promotion",
+      "source_seed_registry_id": "NTB-FN-006-CORE-01",
+      "source_atomic_feature_id": "FN-006-CORE-01",
+      "source_seed_test_name": "test_capability_capsule_evolution_version_promotion_core_behavior_valid_scope",
+      "objective": "Verify Capability Capsule Evolution & Version Promotion for the atomic scenario \"promotion\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: promotion.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: promotion.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Recommendation, evaluation evidence, promotion/demotion status, evolution event, or rollback indication.",
+      "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-006-GUARD-02-03",
+      "test_name": "test_capability_capsule_evolution_and_version_promotion__demotion_rollback",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "demotion/rollback",
+      "source_seed_registry_id": "NTB-FN-006-GUARD-02",
+      "source_atomic_feature_id": "FN-006-GUARD-02",
+      "source_seed_test_name": "test_capability_capsule_evolution_version_promotion_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Capability Capsule Evolution & Version Promotion for the atomic scenario \"demotion/rollback\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: demotion/rollback.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: demotion/rollback.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
+      "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-006-GUARD-02-04",
+      "test_name": "test_capability_capsule_evolution_and_version_promotion__unchanged_version_on_failure",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "unchanged version on failure",
+      "source_seed_registry_id": "NTB-FN-006-GUARD-02",
+      "source_atomic_feature_id": "FN-006-GUARD-02",
+      "source_seed_test_name": "test_capability_capsule_evolution_version_promotion_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Capability Capsule Evolution & Version Promotion for the atomic scenario \"unchanged version on failure\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: unchanged version on failure.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: unchanged version on failure.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
+      "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-006-EVIDENCE-03-01",
+      "test_name": "test_capability_capsule_evolution_and_version_promotion__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-006-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-006-EVIDENCE-03",
+      "source_seed_test_name": "test_capability_capsule_evolution_version_promotion_records_status_provenance_evidence",
+      "objective": "Verify Capability Capsule Evolution & Version Promotion for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Manifest validation is local and cross-platform Python; actual bindings can require provider credentials, installed skills, MCP services, browser/CLI sessions, or host-specific runtimes."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
+      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

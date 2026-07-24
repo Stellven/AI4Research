@@ -1,0 +1,257 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Builder",
+    "level_2": "Build Evidence Generation",
+    "description": "Generate diffs, manifests, hashes, compile and test results, provenance, and acceptance evidence for the build."
+  },
+  "contract": {
+    "purpose_user_function": "Generate traceable build evidence including diffs, hashes, manifests, command/test results, provenance, and acceptance status.",
+    "valid_inputs": "Build outputs, repository diff, artifact paths, commands/logs, tests/compile results, task/sprint/node IDs, and acceptance obligations.",
+    "expected_outputs": "Evidence pack/ledger entries, manifests/hashes, result/handoff artifacts, and acceptance verdict references.",
+    "state_side_effects": "Writes manifests, evidence/ledger, reports, handoffs, and result sidecars.",
+    "failure_rejection_behavior": "Missing artifact, hash mismatch, uncorrelated result, failed mandatory check, unsupported pass claim, or write failure prevents accepted evidence.",
+    "supported_boundaries_exclusions": "Evidence ledger and benchmark manifests are shipped; exact build pack composition varies by capsule/workflow.",
+    "success_evidence": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+    "granularity_atomic_contracts": "diff; manifest/hash; command result; tests; provenance; missing/tampered artifact; acceptance link.",
+    "readme_product_docs": "README.md §Basic Workflow and Appendix AutoSci Commands; docs/WORKFLOW_DESIGN.md Phases 2-5; AGENTS.md Scope and Local Workflow",
+    "cli_api_skill_interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "config_schemas": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt",
+    "implementation_entrypoints": "harness/lib/evidence_ledger.py; harness/lib/benchmark/reports.py: write_run_artifacts(); harness/lib/operator_runtime.py: write_result()",
+    "platform_provider_limitations": "Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      ".agents/skills/exp-run/SKILL.md",
+      ".agents/skills/paper-compile/SKILL.md",
+      ".agents/skills/paper-draft/SKILL.md",
+      "harness/config/physical-operators.json",
+      "harness/lib/benchmark/reports.py",
+      "harness/lib/evidence_ledger.py",
+      "harness/lib/operator_runtime.py",
+      "harness/schemas/request-envelope.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "package.json",
+      "skills/test/SKILL.md"
+    ],
+    "entrypoints": "harness/lib/evidence_ledger.py; harness/lib/benchmark/reports.py: write_run_artifacts(); harness/lib/operator_runtime.py: write_result()",
+    "interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "schemas_and_config": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-064-CORE-01",
+      "atomic_feature_id": "FN-064-CORE-01",
+      "test_name": "test_build_evidence_generation_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-064-EVIDENCE-03",
+      "atomic_feature_id": "FN-064-EVIDENCE-03",
+      "test_name": "test_build_evidence_generation_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-064-GUARD-02",
+      "atomic_feature_id": "FN-064-GUARD-02",
+      "test_name": "test_build_evidence_generation_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "P22-FN-064-CORE-01-01",
+      "test_name": "test_build_evidence_generation__diff",
+      "case_type": "core_behavior",
+      "atomic_scenario": "diff",
+      "source_seed_registry_id": "NTB-FN-064-CORE-01",
+      "source_atomic_feature_id": "FN-064-CORE-01",
+      "source_seed_test_name": "test_build_evidence_generation_core_behavior_valid_scope",
+      "objective": "Verify Build Evidence Generation for the atomic scenario \"diff\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: diff.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: diff.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Evidence pack/ledger entries, manifests/hashes, result/handoff artifacts, and acceptance verdict references.",
+      "state_and_side_effect_oracle": "Writes manifests, evidence/ledger, reports, handoffs, and result sidecars.",
+      "required_evidence": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "supported_boundary": "Evidence ledger and benchmark manifests are shipped; exact build pack composition varies by capsule/workflow.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-064-EVIDENCE-03-01",
+      "test_name": "test_build_evidence_generation__manifest_hash",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "manifest/hash",
+      "source_seed_registry_id": "NTB-FN-064-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-064-EVIDENCE-03",
+      "source_seed_test_name": "test_build_evidence_generation_records_status_provenance_evidence",
+      "objective": "Verify Build Evidence Generation for the atomic scenario \"manifest/hash\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: manifest/hash.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: manifest/hash.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "state_and_side_effect_oracle": "Writes manifests, evidence/ledger, reports, handoffs, and result sidecars.",
+      "required_evidence": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "supported_boundary": "Evidence ledger and benchmark manifests are shipped; exact build pack composition varies by capsule/workflow.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-064-CORE-01-02",
+      "test_name": "test_build_evidence_generation__command_result",
+      "case_type": "core_behavior",
+      "atomic_scenario": "command result",
+      "source_seed_registry_id": "NTB-FN-064-CORE-01",
+      "source_atomic_feature_id": "FN-064-CORE-01",
+      "source_seed_test_name": "test_build_evidence_generation_core_behavior_valid_scope",
+      "objective": "Verify Build Evidence Generation for the atomic scenario \"command result\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: command result.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: command result.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Evidence pack/ledger entries, manifests/hashes, result/handoff artifacts, and acceptance verdict references.",
+      "state_and_side_effect_oracle": "Writes manifests, evidence/ledger, reports, handoffs, and result sidecars.",
+      "required_evidence": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "supported_boundary": "Evidence ledger and benchmark manifests are shipped; exact build pack composition varies by capsule/workflow.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-064-CORE-01-03",
+      "test_name": "test_build_evidence_generation__tests",
+      "case_type": "core_behavior",
+      "atomic_scenario": "tests",
+      "source_seed_registry_id": "NTB-FN-064-CORE-01",
+      "source_atomic_feature_id": "FN-064-CORE-01",
+      "source_seed_test_name": "test_build_evidence_generation_core_behavior_valid_scope",
+      "objective": "Verify Build Evidence Generation for the atomic scenario \"tests\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: tests.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: tests.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Evidence pack/ledger entries, manifests/hashes, result/handoff artifacts, and acceptance verdict references.",
+      "state_and_side_effect_oracle": "Writes manifests, evidence/ledger, reports, handoffs, and result sidecars.",
+      "required_evidence": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "supported_boundary": "Evidence ledger and benchmark manifests are shipped; exact build pack composition varies by capsule/workflow.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-064-EVIDENCE-03-02",
+      "test_name": "test_build_evidence_generation__provenance",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "provenance",
+      "source_seed_registry_id": "NTB-FN-064-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-064-EVIDENCE-03",
+      "source_seed_test_name": "test_build_evidence_generation_records_status_provenance_evidence",
+      "objective": "Verify Build Evidence Generation for the atomic scenario \"provenance\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: provenance.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: provenance.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "state_and_side_effect_oracle": "Writes manifests, evidence/ledger, reports, handoffs, and result sidecars.",
+      "required_evidence": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "supported_boundary": "Evidence ledger and benchmark manifests are shipped; exact build pack composition varies by capsule/workflow.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-064-GUARD-02-01",
+      "test_name": "test_build_evidence_generation__missing_tampered_artifact",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing/tampered artifact",
+      "source_seed_registry_id": "NTB-FN-064-GUARD-02",
+      "source_atomic_feature_id": "FN-064-GUARD-02",
+      "source_seed_test_name": "test_build_evidence_generation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Build Evidence Generation for the atomic scenario \"missing/tampered artifact\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing/tampered artifact.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing/tampered artifact.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing artifact, hash mismatch, uncorrelated result, failed mandatory check, unsupported pass claim, or write failure prevents accepted evidence.",
+      "state_and_side_effect_oracle": "Writes manifests, evidence/ledger, reports, handoffs, and result sidecars.",
+      "required_evidence": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "supported_boundary": "Evidence ledger and benchmark manifests are shipped; exact build pack composition varies by capsule/workflow.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-064-EVIDENCE-03-03",
+      "test_name": "test_build_evidence_generation__acceptance_link",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "acceptance link",
+      "source_seed_registry_id": "NTB-FN-064-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-064-EVIDENCE-03",
+      "source_seed_test_name": "test_build_evidence_generation_records_status_provenance_evidence",
+      "objective": "Verify Build Evidence Generation for the atomic scenario \"acceptance link\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: acceptance link.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: acceptance link.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "state_and_side_effect_oracle": "Writes manifests, evidence/ledger, reports, handoffs, and result sidecars.",
+      "required_evidence": "Every claimed output has stable path/hash/provenance and mandatory checks; tampering or missing artifacts invalidate pass.",
+      "supported_boundary": "Evidence ledger and benchmark manifests are shipped; exact build pack composition varies by capsule/workflow.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

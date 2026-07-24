@@ -1,0 +1,373 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Vertical Features",
+    "level_1": "System Configurations",
+    "level_2": "Cluster setting",
+    "description": "Declare local and remote execution hosts, host types, addresses, lifecycle settings, heartbeat and probe rules, and capacity or concurrency limits, and expose the validated cluster topology to operator binding and scheduling."
+  },
+  "contract": {
+    "purpose_user_function": "Register physical actor hosts and local/remote execution surfaces, validate host metadata, discover or probe peers, bind actors/operators to hosts, and expose capacity/availability to routing and scheduling.",
+    "valid_inputs": "Actor-host registry entries with host_id/type, address/carrier metadata, lifecycle, heartbeat and probe configuration; remote dispatch target/config; HIVE node identity/capabilities; concurrency policies.",
+    "expected_outputs": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
+    "state_side_effects": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+    "failure_rejection_behavior": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
+    "supported_boundaries_exclusions": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+    "success_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+    "granularity_atomic_contracts": "Host type/address validation; local versus SSH/managed/tmux host; heartbeat fresh/stale; probe pass/fail; offline/degraded lifecycle; actor binding; concurrency available/exhausted; peer discovery; remote dispatch success/failure; stub topology not live.",
+    "readme_product_docs": "core/hive/README.md: Phase 2, CLI, coordinator election and architecture; core/hive/QUICKSTART.md; docs/DISTRIBUTED_DEPLOYMENT_ANALYSIS.md; docs/migration-physical-operators-to-actor-hosts.md.",
+    "cli_api_skill_interfaces": "core/hive CLI start/status/peers; harness remote-dispatch CLI/library; status-server physical-operator summary; actor/operator registry tools.",
+    "config_schemas": "harness/config/actor-hosts.schema.json; harness/config/actor-hosts.json; harness/config/agent-actors.schema.json; harness/config/concurrency-policy.json; harness/config/physical-operators.schema.json is deprecated/read-only compatibility.",
+    "implementation_entrypoints": "core/hive/node.ts; core/hive/discovery/mdns.ts; core/hive/transport/p2p.ts; core/hive/scheduler.ts; core/hive/cli/node.ts; harness/lib/remote_dispatch.py; harness/lib/operator_flow_control.py; harness/lib/symphony/status-server.py: _physical_operator_summary.",
+    "platform_provider_limitations": "mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "README.md",
+      "core/hive/QUICKSTART.md",
+      "core/hive/README.md",
+      "core/hive/cli/node.ts",
+      "core/hive/discovery/mdns.ts",
+      "core/hive/node.ts",
+      "core/hive/scheduler.ts",
+      "core/hive/transport/p2p.ts",
+      "harness/config/actor-hosts.json",
+      "harness/config/actor-hosts.schema.json",
+      "harness/config/agent-actors.schema.json",
+      "harness/config/concurrency-policy.json",
+      "harness/config/physical-operators.schema.json",
+      "harness/lib/operator_flow_control.py",
+      "harness/lib/remote_dispatch.py",
+      "harness/lib/symphony/status-server.py",
+      "harness/tests/integrations/test-remote-dispatch-productization.sh",
+      "harness/tests/remote/test_remote_dispatch_cli.py",
+      "harness/tests/remote/test_remote_dispatch_core.py"
+    ],
+    "entrypoints": "core/hive/node.ts; core/hive/discovery/mdns.ts; core/hive/transport/p2p.ts; core/hive/scheduler.ts; core/hive/cli/node.ts; harness/lib/remote_dispatch.py; harness/lib/operator_flow_control.py; harness/lib/symphony/status-server.py: _physical_operator_summary.",
+    "interfaces": "core/hive CLI start/status/peers; harness remote-dispatch CLI/library; status-server physical-operator summary; actor/operator registry tools.",
+    "schemas_and_config": "harness/config/actor-hosts.schema.json; harness/config/actor-hosts.json; harness/config/agent-actors.schema.json; harness/config/concurrency-policy.json; harness/config/physical-operators.schema.json is deprecated/read-only compatibility."
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-VF-024-CORE-01",
+      "atomic_feature_id": "VF-024-CORE-01",
+      "test_name": "test_cluster_setting_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-VF-024-EVIDENCE-03",
+      "atomic_feature_id": "VF-024-EVIDENCE-03",
+      "test_name": "test_cluster_setting_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-VF-024-GUARD-02",
+      "atomic_feature_id": "VF-024-GUARD-02",
+      "test_name": "test_cluster_setting_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 11,
+  "cases": [
+    {
+      "case_id": "P22-VF-024-CORE-01-01",
+      "test_name": "test_cluster_setting__host_type_address_validation",
+      "case_type": "core_behavior",
+      "atomic_scenario": "Host type/address validation",
+      "source_seed_registry_id": "NTB-VF-024-CORE-01",
+      "source_atomic_feature_id": "VF-024-CORE-01",
+      "source_seed_test_name": "test_cluster_setting_core_behavior_valid_scope",
+      "objective": "Verify Cluster setting for the atomic scenario \"Host type/address validation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: Host type/address validation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: Host type/address validation.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-CORE-01-02",
+      "test_name": "test_cluster_setting__local_versus_ssh_managed_tmux_host",
+      "case_type": "core_behavior",
+      "atomic_scenario": "local versus SSH/managed/tmux host",
+      "source_seed_registry_id": "NTB-VF-024-CORE-01",
+      "source_atomic_feature_id": "VF-024-CORE-01",
+      "source_seed_test_name": "test_cluster_setting_core_behavior_valid_scope",
+      "objective": "Verify Cluster setting for the atomic scenario \"local versus SSH/managed/tmux host\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: local versus SSH/managed/tmux host.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: local versus SSH/managed/tmux host.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-GUARD-02-01",
+      "test_name": "test_cluster_setting__heartbeat_fresh_stale",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "heartbeat fresh/stale",
+      "source_seed_registry_id": "NTB-VF-024-GUARD-02",
+      "source_atomic_feature_id": "VF-024-GUARD-02",
+      "source_seed_test_name": "test_cluster_setting_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Cluster setting for the atomic scenario \"heartbeat fresh/stale\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: heartbeat fresh/stale.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: heartbeat fresh/stale.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-GUARD-02-02",
+      "test_name": "test_cluster_setting__probe_pass_fail",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "probe pass/fail",
+      "source_seed_registry_id": "NTB-VF-024-GUARD-02",
+      "source_atomic_feature_id": "VF-024-GUARD-02",
+      "source_seed_test_name": "test_cluster_setting_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Cluster setting for the atomic scenario \"probe pass/fail\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: probe pass/fail.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: probe pass/fail.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-GUARD-02-03",
+      "test_name": "test_cluster_setting__offline_degraded_lifecycle",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "offline/degraded lifecycle",
+      "source_seed_registry_id": "NTB-VF-024-GUARD-02",
+      "source_atomic_feature_id": "VF-024-GUARD-02",
+      "source_seed_test_name": "test_cluster_setting_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Cluster setting for the atomic scenario \"offline/degraded lifecycle\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: offline/degraded lifecycle.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: offline/degraded lifecycle.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-CORE-01-03",
+      "test_name": "test_cluster_setting__actor_binding",
+      "case_type": "core_behavior",
+      "atomic_scenario": "actor binding",
+      "source_seed_registry_id": "NTB-VF-024-CORE-01",
+      "source_atomic_feature_id": "VF-024-CORE-01",
+      "source_seed_test_name": "test_cluster_setting_core_behavior_valid_scope",
+      "objective": "Verify Cluster setting for the atomic scenario \"actor binding\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: actor binding.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: actor binding.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-GUARD-02-04",
+      "test_name": "test_cluster_setting__concurrency_available_exhausted",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "concurrency available/exhausted",
+      "source_seed_registry_id": "NTB-VF-024-GUARD-02",
+      "source_atomic_feature_id": "VF-024-GUARD-02",
+      "source_seed_test_name": "test_cluster_setting_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Cluster setting for the atomic scenario \"concurrency available/exhausted\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: concurrency available/exhausted.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: concurrency available/exhausted.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-CORE-01-04",
+      "test_name": "test_cluster_setting__peer_discovery",
+      "case_type": "core_behavior",
+      "atomic_scenario": "peer discovery",
+      "source_seed_registry_id": "NTB-VF-024-CORE-01",
+      "source_atomic_feature_id": "VF-024-CORE-01",
+      "source_seed_test_name": "test_cluster_setting_core_behavior_valid_scope",
+      "objective": "Verify Cluster setting for the atomic scenario \"peer discovery\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: peer discovery.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: peer discovery.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-GUARD-02-05",
+      "test_name": "test_cluster_setting__remote_dispatch_success_failure",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "remote dispatch success/failure",
+      "source_seed_registry_id": "NTB-VF-024-GUARD-02",
+      "source_atomic_feature_id": "VF-024-GUARD-02",
+      "source_seed_test_name": "test_cluster_setting_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Cluster setting for the atomic scenario \"remote dispatch success/failure\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: remote dispatch success/failure.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: remote dispatch success/failure.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-CORE-01-05",
+      "test_name": "test_cluster_setting__stub_topology_not_live",
+      "case_type": "core_behavior",
+      "atomic_scenario": "stub topology not live",
+      "source_seed_registry_id": "NTB-VF-024-CORE-01",
+      "source_atomic_feature_id": "VF-024-CORE-01",
+      "source_seed_test_name": "test_cluster_setting_core_behavior_valid_scope",
+      "objective": "Verify Cluster setting for the atomic scenario \"stub topology not live\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: stub topology not live.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: stub topology not live.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-024-EVIDENCE-03-01",
+      "test_name": "test_cluster_setting__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-VF-024-EVIDENCE-03",
+      "source_atomic_feature_id": "VF-024-EVIDENCE-03",
+      "source_seed_test_name": "test_cluster_setting_records_status_provenance_evidence",
+      "objective": "Verify Cluster setting for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: mDNS/SSH/network reachability and credentials are environment-dependent; many registry hosts are stubs/examples; tmux hosts require POSIX/WSL; managed/cloud host adapters require their external runtimes."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "RSI",
+    "level_2": "Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training)",
+    "description": "Improves storage, retrieval, citation, and evidence binding. Validate with recall, precision, citation accuracy, and provenance checks."
+  },
+  "contract": {
+    "purpose_user_function": "Improve memory storage, retrieval ranking, citations, and evidence binding using measured retrieval quality.",
+    "valid_inputs": "Memory corpus/index, queries, relevance/citation labels, provenance, candidate retrieval/reranking policy, metrics, and holdout cases.",
+    "expected_outputs": "Candidate memory/retrieval configuration or model, recall/precision/citation/provenance metrics, and gated recommendation.",
+    "state_side_effects": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+    "failure_rejection_behavior": "Provenance loss, contamination, citation mismatch, recall/precision regression, or policy failure rejects candidate.",
+    "supported_boundaries_exclusions": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+    "success_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+    "granularity_atomic_contracts": "index/write; retrieval; provenance; recall; precision; citation accuracy; contamination; candidate regression.",
+    "readme_product_docs": "docs/SOLAR_EVOLUTION_ANALYSIS.md; docs/SELF_EVALUATION_SYSTEM_DESIGN.md; docs/solar-architecture-code-map.md §8",
+    "cli_api_skill_interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
+    "config_schemas": "harness/schemas/evidence/workflow_evolution.v1.schema.json; harness/evals/packs/**; harness/config/capability-capsules.registry.yaml",
+    "implementation_entrypoints": "core/smi/indexer.ts and query.ts; core/memory/auto-semantic.ts; harness/lib/evidence_ledger.py; Self-RAG/reranker training: Not found in current codebase",
+    "platform_provider_limitations": "Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "core/memory/auto-semantic.ts",
+      "core/nerve/evolution-engine.ts",
+      "core/smi/indexer.ts",
+      "harness/config/capability-capsules.registry.yaml",
+      "harness/lib/evidence_ledger.py",
+      "harness/lib/evolution_engine.py",
+      "harness/schemas/evidence/workflow_evolution.v1.schema.json",
+      "harness/tools/skill_evolution_runner.py"
+    ],
+    "entrypoints": "core/smi/indexer.ts and query.ts; core/memory/auto-semantic.ts; harness/lib/evidence_ledger.py; Self-RAG/reranker training: Not found in current codebase",
+    "interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
+    "schemas_and_config": "harness/schemas/evidence/workflow_evolution.v1.schema.json; harness/evals/packs/**; harness/config/capability-capsules.registry.yaml"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-027-CORE-01",
+      "atomic_feature_id": "FN-027-CORE-01",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-027-EVIDENCE-03",
+      "atomic_feature_id": "FN-027-EVIDENCE-03",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-027-GUARD-02",
+      "atomic_feature_id": "FN-027-GUARD-02",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-FN-027-CORE-01-01",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_reranker_training__index_write",
+      "case_type": "core_behavior",
+      "atomic_scenario": "index/write",
+      "source_seed_registry_id": "NTB-FN-027-CORE-01",
+      "source_atomic_feature_id": "FN-027-CORE-01",
+      "source_seed_test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_core_behavior_valid_scope",
+      "objective": "Verify Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training) for the atomic scenario \"index/write\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: index/write.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: index/write.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Candidate memory/retrieval configuration or model, recall/precision/citation/provenance metrics, and gated recommendation.",
+      "state_and_side_effect_oracle": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+      "required_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "supported_boundary": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-027-CORE-01-02",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_reranker_training__retrieval",
+      "case_type": "core_behavior",
+      "atomic_scenario": "retrieval",
+      "source_seed_registry_id": "NTB-FN-027-CORE-01",
+      "source_atomic_feature_id": "FN-027-CORE-01",
+      "source_seed_test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_core_behavior_valid_scope",
+      "objective": "Verify Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training) for the atomic scenario \"retrieval\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: retrieval.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: retrieval.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Candidate memory/retrieval configuration or model, recall/precision/citation/provenance metrics, and gated recommendation.",
+      "state_and_side_effect_oracle": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+      "required_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "supported_boundary": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-027-EVIDENCE-03-01",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_reranker_training__provenance",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "provenance",
+      "source_seed_registry_id": "NTB-FN-027-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-027-EVIDENCE-03",
+      "source_seed_test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_records_status_provenance_evidence",
+      "objective": "Verify Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training) for the atomic scenario \"provenance\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: provenance.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: provenance.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "state_and_side_effect_oracle": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+      "required_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "supported_boundary": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-027-CORE-01-03",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_reranker_training__recall",
+      "case_type": "core_behavior",
+      "atomic_scenario": "recall",
+      "source_seed_registry_id": "NTB-FN-027-CORE-01",
+      "source_atomic_feature_id": "FN-027-CORE-01",
+      "source_seed_test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_core_behavior_valid_scope",
+      "objective": "Verify Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training) for the atomic scenario \"recall\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: recall.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: recall.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Candidate memory/retrieval configuration or model, recall/precision/citation/provenance metrics, and gated recommendation.",
+      "state_and_side_effect_oracle": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+      "required_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "supported_boundary": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-027-CORE-01-04",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_reranker_training__precision",
+      "case_type": "core_behavior",
+      "atomic_scenario": "precision",
+      "source_seed_registry_id": "NTB-FN-027-CORE-01",
+      "source_atomic_feature_id": "FN-027-CORE-01",
+      "source_seed_test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_core_behavior_valid_scope",
+      "objective": "Verify Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training) for the atomic scenario \"precision\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: precision.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: precision.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Candidate memory/retrieval configuration or model, recall/precision/citation/provenance metrics, and gated recommendation.",
+      "state_and_side_effect_oracle": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+      "required_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "supported_boundary": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-027-EVIDENCE-03-02",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_reranker_training__citation_accuracy",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "citation accuracy",
+      "source_seed_registry_id": "NTB-FN-027-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-027-EVIDENCE-03",
+      "source_seed_test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_records_status_provenance_evidence",
+      "objective": "Verify Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training) for the atomic scenario \"citation accuracy\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: citation accuracy.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: citation accuracy.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "state_and_side_effect_oracle": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+      "required_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "supported_boundary": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-027-GUARD-02-01",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_reranker_training__contamination",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "contamination",
+      "source_seed_registry_id": "NTB-FN-027-GUARD-02",
+      "source_atomic_feature_id": "FN-027-GUARD-02",
+      "source_seed_test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training) for the atomic scenario \"contamination\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: contamination.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: contamination.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Provenance loss, contamination, citation mismatch, recall/precision regression, or policy failure rejects candidate.",
+      "state_and_side_effect_oracle": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+      "required_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "supported_boundary": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-027-GUARD-02-02",
+      "test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_reranker_training__candidate_regression",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "candidate regression",
+      "source_seed_registry_id": "NTB-FN-027-GUARD-02",
+      "source_atomic_feature_id": "FN-027-GUARD-02",
+      "source_seed_test_name": "test_memory_retrieval_and_evidence_memory_learning_self_rag_r_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training) for the atomic scenario \"candidate regression\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: candidate regression.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: candidate regression.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Provenance loss, contamination, citation mismatch, recall/precision regression, or policy failure rejects candidate.",
+      "state_and_side_effect_oracle": "May update indexes or approved retrieval configuration and writes evaluation/evolution evidence.",
+      "required_evidence": "Holdout retrieval metrics improve while every returned item retains valid provenance/citation references.",
+      "supported_boundary": "Memory/index/evidence systems exist; Self-RAG and reranker training implementations were not found as shipped training pipelines.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

@@ -1,0 +1,301 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Vertical Features",
+    "level_1": "Account management",
+    "level_2": "Account Registration",
+    "description": "Create an individual product account with verified identity, accepted terms, and initial personal settings."
+  },
+  "contract": {
+    "purpose_user_function": "Proposed capability to create a Solar product account. No shipped product-account registration function was found in current codebase.",
+    "valid_inputs": "Not found in current codebase.",
+    "expected_outputs": "Not found in current codebase.",
+    "state_side_effects": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+    "failure_rejection_behavior": "Not found in current codebase.",
+    "supported_boundaries_exclusions": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+    "success_evidence": "Not found in current codebase.",
+    "granularity_atomic_contracts": "Before implementation: decide identity-verification method, terms/version acceptance, duplicate identity, invalid/expired verification, initial settings, cancellation, privacy retention, and offline/local-only account boundary.",
+    "readme_product_docs": "Not found in current codebase; README.md and INSTALL.md describe local installation and provider authentication, not Solar account creation.",
+    "cli_api_skill_interfaces": "Not found in current codebase.",
+    "config_schemas": "Not found in current codebase; harness/config/solar-user-config.json is a local preference file, not an account schema.",
+    "implementation_entrypoints": "Not found in current codebase.",
+    "platform_provider_limitations": "No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+  },
+  "implementation": {
+    "status": "NOT_FOUND_IN_CURRENT_CODEBASE",
+    "tracked_surfaces": [
+      "harness/config/solar-user-config.json"
+    ],
+    "entrypoints": "Not found in current codebase.",
+    "interfaces": "Not found in current codebase.",
+    "schemas_and_config": "Not found in current codebase; harness/config/solar-user-config.json is a local preference file, not an account schema."
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-VF-014-CORE-01",
+      "atomic_feature_id": "VF-014-CORE-01",
+      "test_name": "test_account_registration_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-VF-014-EVIDENCE-03",
+      "atomic_feature_id": "VF-014-EVIDENCE-03",
+      "test_name": "test_account_registration_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-VF-014-GUARD-02",
+      "atomic_feature_id": "VF-014-GUARD-02",
+      "test_name": "test_account_registration_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-VF-014-CORE-01-01",
+      "test_name": "test_account_registration__identity_verification_method",
+      "case_type": "core_behavior",
+      "atomic_scenario": "identity-verification method",
+      "source_seed_registry_id": "NTB-VF-014-CORE-01",
+      "source_atomic_feature_id": "VF-014-CORE-01",
+      "source_seed_test_name": "test_account_registration_core_behavior_valid_scope",
+      "objective": "Verify Account Registration for the atomic scenario \"identity-verification method\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: identity-verification method.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: identity-verification method.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-VF-014-CORE-01-02",
+      "test_name": "test_account_registration__terms_version_acceptance",
+      "case_type": "core_behavior",
+      "atomic_scenario": "terms/version acceptance",
+      "source_seed_registry_id": "NTB-VF-014-CORE-01",
+      "source_atomic_feature_id": "VF-014-CORE-01",
+      "source_seed_test_name": "test_account_registration_core_behavior_valid_scope",
+      "objective": "Verify Account Registration for the atomic scenario \"terms/version acceptance\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: terms/version acceptance.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: terms/version acceptance.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-VF-014-GUARD-02-01",
+      "test_name": "test_account_registration__duplicate_identity",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "duplicate identity",
+      "source_seed_registry_id": "NTB-VF-014-GUARD-02",
+      "source_atomic_feature_id": "VF-014-GUARD-02",
+      "source_seed_test_name": "test_account_registration_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Account Registration for the atomic scenario \"duplicate identity\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: duplicate identity.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: duplicate identity.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-VF-014-GUARD-02-02",
+      "test_name": "test_account_registration__invalid_expired_verification",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "invalid/expired verification",
+      "source_seed_registry_id": "NTB-VF-014-GUARD-02",
+      "source_atomic_feature_id": "VF-014-GUARD-02",
+      "source_seed_test_name": "test_account_registration_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Account Registration for the atomic scenario \"invalid/expired verification\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: invalid/expired verification.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: invalid/expired verification.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-VF-014-CORE-01-03",
+      "test_name": "test_account_registration__initial_settings",
+      "case_type": "core_behavior",
+      "atomic_scenario": "initial settings",
+      "source_seed_registry_id": "NTB-VF-014-CORE-01",
+      "source_atomic_feature_id": "VF-014-CORE-01",
+      "source_seed_test_name": "test_account_registration_core_behavior_valid_scope",
+      "objective": "Verify Account Registration for the atomic scenario \"initial settings\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: initial settings.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: initial settings.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-VF-014-GUARD-02-03",
+      "test_name": "test_account_registration__cancellation",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "cancellation",
+      "source_seed_registry_id": "NTB-VF-014-GUARD-02",
+      "source_atomic_feature_id": "VF-014-GUARD-02",
+      "source_seed_test_name": "test_account_registration_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Account Registration for the atomic scenario \"cancellation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: cancellation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: cancellation.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-VF-014-CORE-01-04",
+      "test_name": "test_account_registration__privacy_retention",
+      "case_type": "core_behavior",
+      "atomic_scenario": "privacy retention",
+      "source_seed_registry_id": "NTB-VF-014-CORE-01",
+      "source_atomic_feature_id": "VF-014-CORE-01",
+      "source_seed_test_name": "test_account_registration_core_behavior_valid_scope",
+      "objective": "Verify Account Registration for the atomic scenario \"privacy retention\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: privacy retention.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: privacy retention.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-VF-014-GUARD-02-04",
+      "test_name": "test_account_registration__offline_local_only_account_boundary",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "offline/local-only account boundary",
+      "source_seed_registry_id": "NTB-VF-014-GUARD-02",
+      "source_atomic_feature_id": "VF-014-GUARD-02",
+      "source_seed_test_name": "test_account_registration_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Account Registration for the atomic scenario \"offline/local-only account boundary\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: offline/local-only account boundary.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: offline/local-only account boundary.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-VF-014-EVIDENCE-03-01",
+      "test_name": "test_account_registration__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-VF-014-EVIDENCE-03",
+      "source_atomic_feature_id": "VF-014-EVIDENCE-03",
+      "source_seed_test_name": "test_account_registration_records_status_provenance_evidence",
+      "objective": "Verify Account Registration for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: No product identity backend or verified-account provider is present. Provider accounts remain external to Solar."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Not found in current codebase.",
+      "state_and_side_effect_oracle": "Not found in current codebase; current setup creates local configuration, not a verified product-account record.",
+      "required_evidence": "Not found in current codebase.",
+      "supported_boundary": "Provider CLI authentication, local display-name settings, agent registration, capability registration, and OS autostart registration are not product-account registration.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    }
+  ]
+}

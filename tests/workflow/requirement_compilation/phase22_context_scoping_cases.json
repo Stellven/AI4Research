@@ -1,0 +1,283 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Requirement compilation",
+    "level_2": "Context Scoping",
+    "description": "Resolves applicable context, affected entities, time horizon, inclusions, exclusions, and the boundary of the decision to support."
+  },
+  "contract": {
+    "purpose_user_function": "Define affected entities, workspace/repository, time horizon, inclusions, exclusions, non-goals, and the decision boundary.",
+    "valid_inputs": "Normalized request, captured repo/workspace context, source inputs, explicit scope constraints, non-goals, and prior selected artifacts.",
+    "expected_outputs": "Scoped Requirement IR/PRD with boundaries, non-goals, assumptions, dependencies, and a graph/write scope aligned to the workspace.",
+    "state_side_effects": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+    "failure_rejection_behavior": "Plan validation fails on illegal graph/write scope or workspace mismatch; unspecified context is recorded as an assumption/open question.",
+    "supported_boundaries_exclusions": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+    "success_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+    "granularity_atomic_contracts": "Test inclusions, exclusions/non-goals, entity scope, temporal scope, write scope, selected prior artifacts, and out-of-scope request rejection.",
+    "readme_product_docs": "README.md#Basic Workflow; README.md#Governed Planning; README.md#Appendix: AutoSci Commands; docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "harness/solar-harness.sh::intake_request; harness/tools/codex_pm_router.py CLI; README.md#Basic Workflow",
+    "config_schemas": "harness/schemas/requirement-ir.schema.json; harness/schemas/acceptance-verdict.schema.json; harness/schemas/coverage-report.schema.json; harness/schemas/requirement-trace.schema.json; harness/schemas/task-graph.schema.json",
+    "implementation_entrypoints": "harness/tools/codex_pm_router.py::build_pm_intake, _default_non_goals, _node_enrichment; harness/lib/workspace_binding.py; harness/lib/plan_validator.py",
+    "platform_provider_limitations": "Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "README.md",
+      "harness/lib/plan_validator.py",
+      "harness/lib/workspace_binding.py",
+      "harness/schemas/acceptance-verdict.schema.json",
+      "harness/schemas/coverage-report.schema.json",
+      "harness/schemas/requirement-ir.schema.json",
+      "harness/schemas/requirement-trace.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "harness/solar-harness.sh",
+      "harness/tools/codex_pm_router.py"
+    ],
+    "entrypoints": "harness/tools/codex_pm_router.py::build_pm_intake, _default_non_goals, _node_enrichment; harness/lib/workspace_binding.py; harness/lib/plan_validator.py",
+    "interfaces": "harness/solar-harness.sh::intake_request; harness/tools/codex_pm_router.py CLI; README.md#Basic Workflow",
+    "schemas_and_config": "harness/schemas/requirement-ir.schema.json; harness/schemas/acceptance-verdict.schema.json; harness/schemas/coverage-report.schema.json; harness/schemas/requirement-trace.schema.json; harness/schemas/task-graph.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-010-CORE-01",
+      "atomic_feature_id": "WF-010-CORE-01",
+      "test_name": "test_context_scoping_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-010-EVIDENCE-03",
+      "atomic_feature_id": "WF-010-EVIDENCE-03",
+      "test_name": "test_context_scoping_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-010-GUARD-02",
+      "atomic_feature_id": "WF-010-GUARD-02",
+      "test_name": "test_context_scoping_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-WF-010-CORE-01-01",
+      "test_name": "test_context_scoping__inclusions",
+      "case_type": "core_behavior",
+      "atomic_scenario": "inclusions",
+      "source_seed_registry_id": "NTB-WF-010-CORE-01",
+      "source_atomic_feature_id": "WF-010-CORE-01",
+      "source_seed_test_name": "test_context_scoping_core_behavior_valid_scope",
+      "objective": "Verify Context Scoping for the atomic scenario \"inclusions\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: inclusions.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: inclusions.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Scoped Requirement IR/PRD with boundaries, non-goals, assumptions, dependencies, and a graph/write scope aligned to the workspace.",
+      "state_and_side_effect_oracle": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "supported_boundary": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-010-CORE-01-02",
+      "test_name": "test_context_scoping__exclusions_non_goals",
+      "case_type": "core_behavior",
+      "atomic_scenario": "exclusions/non-goals",
+      "source_seed_registry_id": "NTB-WF-010-CORE-01",
+      "source_atomic_feature_id": "WF-010-CORE-01",
+      "source_seed_test_name": "test_context_scoping_core_behavior_valid_scope",
+      "objective": "Verify Context Scoping for the atomic scenario \"exclusions/non-goals\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: exclusions/non-goals.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: exclusions/non-goals.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Scoped Requirement IR/PRD with boundaries, non-goals, assumptions, dependencies, and a graph/write scope aligned to the workspace.",
+      "state_and_side_effect_oracle": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "supported_boundary": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-010-CORE-01-03",
+      "test_name": "test_context_scoping__entity_scope",
+      "case_type": "core_behavior",
+      "atomic_scenario": "entity scope",
+      "source_seed_registry_id": "NTB-WF-010-CORE-01",
+      "source_atomic_feature_id": "WF-010-CORE-01",
+      "source_seed_test_name": "test_context_scoping_core_behavior_valid_scope",
+      "objective": "Verify Context Scoping for the atomic scenario \"entity scope\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: entity scope.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: entity scope.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Scoped Requirement IR/PRD with boundaries, non-goals, assumptions, dependencies, and a graph/write scope aligned to the workspace.",
+      "state_and_side_effect_oracle": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "supported_boundary": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-010-CORE-01-04",
+      "test_name": "test_context_scoping__temporal_scope",
+      "case_type": "core_behavior",
+      "atomic_scenario": "temporal scope",
+      "source_seed_registry_id": "NTB-WF-010-CORE-01",
+      "source_atomic_feature_id": "WF-010-CORE-01",
+      "source_seed_test_name": "test_context_scoping_core_behavior_valid_scope",
+      "objective": "Verify Context Scoping for the atomic scenario \"temporal scope\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: temporal scope.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: temporal scope.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Scoped Requirement IR/PRD with boundaries, non-goals, assumptions, dependencies, and a graph/write scope aligned to the workspace.",
+      "state_and_side_effect_oracle": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "supported_boundary": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-010-CORE-01-05",
+      "test_name": "test_context_scoping__write_scope",
+      "case_type": "core_behavior",
+      "atomic_scenario": "write scope",
+      "source_seed_registry_id": "NTB-WF-010-CORE-01",
+      "source_atomic_feature_id": "WF-010-CORE-01",
+      "source_seed_test_name": "test_context_scoping_core_behavior_valid_scope",
+      "objective": "Verify Context Scoping for the atomic scenario \"write scope\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: write scope.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: write scope.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Scoped Requirement IR/PRD with boundaries, non-goals, assumptions, dependencies, and a graph/write scope aligned to the workspace.",
+      "state_and_side_effect_oracle": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "supported_boundary": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-010-CORE-01-06",
+      "test_name": "test_context_scoping__selected_prior_artifacts",
+      "case_type": "core_behavior",
+      "atomic_scenario": "selected prior artifacts",
+      "source_seed_registry_id": "NTB-WF-010-CORE-01",
+      "source_atomic_feature_id": "WF-010-CORE-01",
+      "source_seed_test_name": "test_context_scoping_core_behavior_valid_scope",
+      "objective": "Verify Context Scoping for the atomic scenario \"selected prior artifacts\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: selected prior artifacts.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: selected prior artifacts.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Scoped Requirement IR/PRD with boundaries, non-goals, assumptions, dependencies, and a graph/write scope aligned to the workspace.",
+      "state_and_side_effect_oracle": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "supported_boundary": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-010-GUARD-02-01",
+      "test_name": "test_context_scoping__out_of_scope_request_rejection",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "out-of-scope request rejection",
+      "source_seed_registry_id": "NTB-WF-010-GUARD-02",
+      "source_atomic_feature_id": "WF-010-GUARD-02",
+      "source_seed_test_name": "test_context_scoping_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Context Scoping for the atomic scenario \"out-of-scope request rejection\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: out-of-scope request rejection.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: out-of-scope request rejection.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Plan validation fails on illegal graph/write scope or workspace mismatch; unspecified context is recorded as an assumption/open question.",
+      "state_and_side_effect_oracle": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "supported_boundary": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-010-EVIDENCE-03-01",
+      "test_name": "test_context_scoping__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-WF-010-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-010-EVIDENCE-03",
+      "source_seed_test_name": "test_context_scoping_records_status_provenance_evidence",
+      "objective": "Verify Context Scoping for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "state_and_side_effect_oracle": "Persists scope and constrains planned nodes, artifact paths, and allowed writes.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_default_non_goals, _build_requirement_items, _node_enrichment` and `harness/lib/plan_validator.py` produce a valid scoped plan.",
+      "supported_boundary": "Current scoping is strong for repository/workspace and task boundaries; rich domain entity/time-horizon modeling is mostly free text.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

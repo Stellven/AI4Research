@@ -1,0 +1,305 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Vertical Features",
+    "level_1": "Message Channels",
+    "level_2": "Wechat",
+    "description": "Accept user-authorized WeChat article links or copied content through the supported intake path; fetch and normalize permitted content, preserve provenance, deduplicate revisions, redact sensitive data, and dispatch qualified material to ingestion."
+  },
+  "contract": {
+    "purpose_user_function": "Ingest WeChat article URLs embedded in authorized Apple Notes input, fetch and parse article HTML, normalize/redact content, deduplicate by note/content hash, preserve source metadata, and create wiki-ingest dispatch artifacts.",
+    "valid_inputs": "Apple Notes records or test fixtures containing a WeChat mp.weixin.qq.com URL, optional copied note body/source URL, apple-notes-ingest config, fetch timeout, dry-run/full/force-dispatch flags.",
+    "expected_outputs": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
+    "state_side_effects": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+    "failure_rejection_behavior": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
+    "supported_boundaries_exclusions": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+    "success_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+    "granularity_atomic_contracts": "Valid article fixture; copied body with/without URL; fetch disabled/dry-run; timeout/network/parser/body failure; redaction versus full; new/changed/unchanged/duplicate content; provenance fields; dispatch creation/force; unsupported non-Apple-Notes intake.",
+    "readme_product_docs": "README.md: /ingest command description; harness/config/apple-notes-ingest.json; docs/APPENDIX_B_CONFIG_FILES.md ingestion/config context.",
+    "cli_api_skill_interfaces": "harness/lib/apple_notes_ingest.py commands doctor, scan, status, install-scheduler and uninstall-scheduler; wiki-ingest dispatch file interface; /ingest AutoSci skill is downstream, not direct WeChat transport.",
+    "config_schemas": "harness/config/apple-notes-ingest.json: fetch_wechat, wechat_timeout_seconds, folder/tags/raw_dir; manifest version/content_index is implemented in apple_notes_ingest.py without a separate schema.",
+    "implementation_entrypoints": "harness/lib/apple_notes_ingest.py: cmd_scan/main and WeChat parsing/fetch helpers; harness/tools/apple_notes_ingest.py mirrored tool surface; write_wiki_ingest_dispatch.",
+    "platform_provider_limitations": "Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "VERSION",
+      "harness/config/apple-notes-ingest.json",
+      "harness/lib/apple_notes_ingest.py",
+      "harness/tests/test-apple-notes-ingest.sh",
+      "harness/tools/apple_notes_ingest.py"
+    ],
+    "entrypoints": "harness/lib/apple_notes_ingest.py: cmd_scan/main and WeChat parsing/fetch helpers; harness/tools/apple_notes_ingest.py mirrored tool surface; write_wiki_ingest_dispatch.",
+    "interfaces": "harness/lib/apple_notes_ingest.py commands doctor, scan, status, install-scheduler and uninstall-scheduler; wiki-ingest dispatch file interface; /ingest AutoSci skill is downstream, not direct WeChat transport.",
+    "schemas_and_config": "harness/config/apple-notes-ingest.json: fetch_wechat, wechat_timeout_seconds, folder/tags/raw_dir; manifest version/content_index is implemented in apple_notes_ingest.py without a separate schema."
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-VF-018-CORE-01",
+      "atomic_feature_id": "VF-018-CORE-01",
+      "test_name": "test_wechat_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-VF-018-EVIDENCE-03",
+      "atomic_feature_id": "VF-018-EVIDENCE-03",
+      "test_name": "test_wechat_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-VF-018-GUARD-02",
+      "atomic_feature_id": "VF-018-GUARD-02",
+      "test_name": "test_wechat_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-VF-018-CORE-01-01",
+      "test_name": "test_wechat__valid_article_fixture",
+      "case_type": "core_behavior",
+      "atomic_scenario": "Valid article fixture",
+      "source_seed_registry_id": "NTB-VF-018-CORE-01",
+      "source_atomic_feature_id": "VF-018-CORE-01",
+      "source_seed_test_name": "test_wechat_core_behavior_valid_scope",
+      "objective": "Verify Wechat for the atomic scenario \"Valid article fixture\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: Valid article fixture.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: Valid article fixture.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-018-CORE-01-02",
+      "test_name": "test_wechat__copied_body_with_without_url",
+      "case_type": "core_behavior",
+      "atomic_scenario": "copied body with/without URL",
+      "source_seed_registry_id": "NTB-VF-018-CORE-01",
+      "source_atomic_feature_id": "VF-018-CORE-01",
+      "source_seed_test_name": "test_wechat_core_behavior_valid_scope",
+      "objective": "Verify Wechat for the atomic scenario \"copied body with/without URL\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: copied body with/without URL.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: copied body with/without URL.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-018-GUARD-02-01",
+      "test_name": "test_wechat__fetch_disabled_dry_run",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "fetch disabled/dry-run",
+      "source_seed_registry_id": "NTB-VF-018-GUARD-02",
+      "source_atomic_feature_id": "VF-018-GUARD-02",
+      "source_seed_test_name": "test_wechat_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Wechat for the atomic scenario \"fetch disabled/dry-run\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: fetch disabled/dry-run.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: fetch disabled/dry-run.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-018-GUARD-02-02",
+      "test_name": "test_wechat__timeout_network_parser_body_failure",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "timeout/network/parser/body failure",
+      "source_seed_registry_id": "NTB-VF-018-GUARD-02",
+      "source_atomic_feature_id": "VF-018-GUARD-02",
+      "source_seed_test_name": "test_wechat_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Wechat for the atomic scenario \"timeout/network/parser/body failure\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: timeout/network/parser/body failure.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: timeout/network/parser/body failure.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-018-CORE-01-03",
+      "test_name": "test_wechat__redaction_versus_full",
+      "case_type": "core_behavior",
+      "atomic_scenario": "redaction versus full",
+      "source_seed_registry_id": "NTB-VF-018-CORE-01",
+      "source_atomic_feature_id": "VF-018-CORE-01",
+      "source_seed_test_name": "test_wechat_core_behavior_valid_scope",
+      "objective": "Verify Wechat for the atomic scenario \"redaction versus full\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: redaction versus full.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: redaction versus full.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-018-GUARD-02-03",
+      "test_name": "test_wechat__new_changed_unchanged_duplicate_content",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "new/changed/unchanged/duplicate content",
+      "source_seed_registry_id": "NTB-VF-018-GUARD-02",
+      "source_atomic_feature_id": "VF-018-GUARD-02",
+      "source_seed_test_name": "test_wechat_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Wechat for the atomic scenario \"new/changed/unchanged/duplicate content\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: new/changed/unchanged/duplicate content.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: new/changed/unchanged/duplicate content.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-018-EVIDENCE-03-01",
+      "test_name": "test_wechat__provenance_fields",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "provenance fields",
+      "source_seed_registry_id": "NTB-VF-018-EVIDENCE-03",
+      "source_atomic_feature_id": "VF-018-EVIDENCE-03",
+      "source_seed_test_name": "test_wechat_records_status_provenance_evidence",
+      "objective": "Verify Wechat for the atomic scenario \"provenance fields\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: provenance fields.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: provenance fields.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-018-CORE-01-04",
+      "test_name": "test_wechat__dispatch_creation_force",
+      "case_type": "core_behavior",
+      "atomic_scenario": "dispatch creation/force",
+      "source_seed_registry_id": "NTB-VF-018-CORE-01",
+      "source_atomic_feature_id": "VF-018-CORE-01",
+      "source_seed_test_name": "test_wechat_core_behavior_valid_scope",
+      "objective": "Verify Wechat for the atomic scenario \"dispatch creation/force\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: dispatch creation/force.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: dispatch creation/force.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-018-GUARD-02-04",
+      "test_name": "test_wechat__unsupported_non_apple_notes_intake",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "unsupported non-Apple-Notes intake",
+      "source_seed_registry_id": "NTB-VF-018-GUARD-02",
+      "source_atomic_feature_id": "VF-018-GUARD-02",
+      "source_seed_test_name": "test_wechat_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Wechat for the atomic scenario \"unsupported non-Apple-Notes intake\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: unsupported non-Apple-Notes intake.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Live Apple Notes extraction and scheduler require macOS/AppleScript permissions; live WeChat fetch needs network access and page structure may change; fixture mode is deterministic."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: unsupported non-Apple-Notes intake.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
+      "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

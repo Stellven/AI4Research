@@ -1,0 +1,284 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Builder",
+    "level_2": "Decision Artifact Construction",
+    "description": "Create opportunity cards, decision records, trade-off matrices, and recommendation packets for decision-making."
+  },
+  "contract": {
+    "purpose_user_function": "Create decision records, opportunity cards, trade-off matrices, and recommendation packets from evidence.",
+    "valid_inputs": "Problem/opportunity, alternatives, criteria, evidence, risks, feasibility/impact, stakeholders, and decision status.",
+    "expected_outputs": "Structured decision/opportunity artifact with alternatives, rationale, evidence links, risks, and next action.",
+    "state_side_effects": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+    "failure_rejection_behavior": "Missing alternatives/evidence, unsupported recommendation, hidden trade-off, or policy conflict yields inconclusive/review-required artifact.",
+    "supported_boundaries_exclusions": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+    "success_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+    "granularity_atomic_contracts": "opportunity; alternatives; criteria scoring; evidence gap; recommendation; human review; revision.",
+    "readme_product_docs": "README.md §Basic Workflow and Appendix AutoSci Commands; docs/WORKFLOW_DESIGN.md Phases 2-5; AGENTS.md Scope and Local Workflow",
+    "cli_api_skill_interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "config_schemas": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt",
+    "implementation_entrypoints": ".agents/skills/ideate/SKILL.md, novelty/SKILL.md, review/SKILL.md; harness/schemas/evidence/idea_candidate.v1.schema.json and idea_evaluation.v1.schema.json",
+    "platform_provider_limitations": "Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      ".agents/skills/exp-run/SKILL.md",
+      ".agents/skills/ideate/SKILL.md",
+      ".agents/skills/paper-compile/SKILL.md",
+      ".agents/skills/paper-draft/SKILL.md",
+      "harness/config/physical-operators.json",
+      "harness/lib/operator_runtime.py",
+      "harness/schemas/evidence/idea_candidate.v1.schema.json",
+      "harness/schemas/request-envelope.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "package.json",
+      "skills/test/SKILL.md"
+    ],
+    "entrypoints": ".agents/skills/ideate/SKILL.md, novelty/SKILL.md, review/SKILL.md; harness/schemas/evidence/idea_candidate.v1.schema.json and idea_evaluation.v1.schema.json",
+    "interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "schemas_and_config": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-060-CORE-01",
+      "atomic_feature_id": "FN-060-CORE-01",
+      "test_name": "test_decision_artifact_construction_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-060-EVIDENCE-03",
+      "atomic_feature_id": "FN-060-EVIDENCE-03",
+      "test_name": "test_decision_artifact_construction_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-060-GUARD-02",
+      "atomic_feature_id": "FN-060-GUARD-02",
+      "test_name": "test_decision_artifact_construction_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-FN-060-CORE-01-01",
+      "test_name": "test_decision_artifact_construction__opportunity",
+      "case_type": "core_behavior",
+      "atomic_scenario": "opportunity",
+      "source_seed_registry_id": "NTB-FN-060-CORE-01",
+      "source_atomic_feature_id": "FN-060-CORE-01",
+      "source_seed_test_name": "test_decision_artifact_construction_core_behavior_valid_scope",
+      "objective": "Verify Decision Artifact Construction for the atomic scenario \"opportunity\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: opportunity.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: opportunity.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Structured decision/opportunity artifact with alternatives, rationale, evidence links, risks, and next action.",
+      "state_and_side_effect_oracle": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+      "required_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "supported_boundary": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-060-CORE-01-02",
+      "test_name": "test_decision_artifact_construction__alternatives",
+      "case_type": "core_behavior",
+      "atomic_scenario": "alternatives",
+      "source_seed_registry_id": "NTB-FN-060-CORE-01",
+      "source_atomic_feature_id": "FN-060-CORE-01",
+      "source_seed_test_name": "test_decision_artifact_construction_core_behavior_valid_scope",
+      "objective": "Verify Decision Artifact Construction for the atomic scenario \"alternatives\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: alternatives.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: alternatives.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Structured decision/opportunity artifact with alternatives, rationale, evidence links, risks, and next action.",
+      "state_and_side_effect_oracle": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+      "required_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "supported_boundary": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-060-CORE-01-03",
+      "test_name": "test_decision_artifact_construction__criteria_scoring",
+      "case_type": "core_behavior",
+      "atomic_scenario": "criteria scoring",
+      "source_seed_registry_id": "NTB-FN-060-CORE-01",
+      "source_atomic_feature_id": "FN-060-CORE-01",
+      "source_seed_test_name": "test_decision_artifact_construction_core_behavior_valid_scope",
+      "objective": "Verify Decision Artifact Construction for the atomic scenario \"criteria scoring\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: criteria scoring.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: criteria scoring.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Structured decision/opportunity artifact with alternatives, rationale, evidence links, risks, and next action.",
+      "state_and_side_effect_oracle": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+      "required_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "supported_boundary": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-060-EVIDENCE-03-01",
+      "test_name": "test_decision_artifact_construction__evidence_gap",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "evidence gap",
+      "source_seed_registry_id": "NTB-FN-060-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-060-EVIDENCE-03",
+      "source_seed_test_name": "test_decision_artifact_construction_records_status_provenance_evidence",
+      "objective": "Verify Decision Artifact Construction for the atomic scenario \"evidence gap\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: evidence gap.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: evidence gap.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "state_and_side_effect_oracle": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+      "required_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "supported_boundary": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-060-CORE-01-04",
+      "test_name": "test_decision_artifact_construction__recommendation",
+      "case_type": "core_behavior",
+      "atomic_scenario": "recommendation",
+      "source_seed_registry_id": "NTB-FN-060-CORE-01",
+      "source_atomic_feature_id": "FN-060-CORE-01",
+      "source_seed_test_name": "test_decision_artifact_construction_core_behavior_valid_scope",
+      "objective": "Verify Decision Artifact Construction for the atomic scenario \"recommendation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: recommendation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: recommendation.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Structured decision/opportunity artifact with alternatives, rationale, evidence links, risks, and next action.",
+      "state_and_side_effect_oracle": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+      "required_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "supported_boundary": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-060-CORE-01-05",
+      "test_name": "test_decision_artifact_construction__human_review",
+      "case_type": "core_behavior",
+      "atomic_scenario": "human review",
+      "source_seed_registry_id": "NTB-FN-060-CORE-01",
+      "source_atomic_feature_id": "FN-060-CORE-01",
+      "source_seed_test_name": "test_decision_artifact_construction_core_behavior_valid_scope",
+      "objective": "Verify Decision Artifact Construction for the atomic scenario \"human review\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: human review.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: human review.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Structured decision/opportunity artifact with alternatives, rationale, evidence links, risks, and next action.",
+      "state_and_side_effect_oracle": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+      "required_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "supported_boundary": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-060-CORE-01-06",
+      "test_name": "test_decision_artifact_construction__revision",
+      "case_type": "core_behavior",
+      "atomic_scenario": "revision",
+      "source_seed_registry_id": "NTB-FN-060-CORE-01",
+      "source_atomic_feature_id": "FN-060-CORE-01",
+      "source_seed_test_name": "test_decision_artifact_construction_core_behavior_valid_scope",
+      "objective": "Verify Decision Artifact Construction for the atomic scenario \"revision\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: revision.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: revision.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Structured decision/opportunity artifact with alternatives, rationale, evidence links, risks, and next action.",
+      "state_and_side_effect_oracle": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+      "required_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "supported_boundary": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-060-GUARD-02-01",
+      "test_name": "test_decision_artifact_construction__invalid_or_out_of_scope_input_rejection",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "invalid or out-of-scope input rejection",
+      "source_seed_registry_id": "NTB-FN-060-GUARD-02",
+      "source_atomic_feature_id": "FN-060-GUARD-02",
+      "source_seed_test_name": "test_decision_artifact_construction_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Decision Artifact Construction for the atomic scenario \"invalid or out-of-scope input rejection\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: invalid or out-of-scope input rejection.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: invalid or out-of-scope input rejection.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing alternatives/evidence, unsupported recommendation, hidden trade-off, or policy conflict yields inconclusive/review-required artifact.",
+      "state_and_side_effect_oracle": "Writes markdown/JSON/report artifacts; should not execute the chosen action automatically.",
+      "required_evidence": "Recommendation traces to explicit criteria/evidence and records limitations and unresolved review items.",
+      "supported_boundary": "Research/ideation/report skills can produce these artifacts; no single canonical decision-artifact constructor/schema was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

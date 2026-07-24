@@ -1,0 +1,312 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Builder",
+    "level_2": "Runtime Deliverable Construction",
+    "description": "Build executable or deployable services, packages, containers, workflow bundles, and deployment configuration."
+  },
+  "contract": {
+    "purpose_user_function": "Construct executable/deployable services, packages, containers, workflow bundles, and deployment configuration.",
+    "valid_inputs": "Verified source/artifacts, runtime/dependency manifest, target platform, package/container/workflow spec, configuration/secrets references, health checks, and release criteria.",
+    "expected_outputs": "Package/service/container/workflow bundle, install/deploy config, manifest/hashes, smoke/health evidence, and rollback instructions.",
+    "state_side_effects": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+    "failure_rejection_behavior": "Build failure, missing dependency, secret inclusion, platform mismatch, failed smoke/health, unsafe deploy, or missing rollback blocks delivery.",
+    "supported_boundaries_exclusions": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+    "success_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+    "granularity_atomic_contracts": "package; container; workflow bundle; install smoke; platform mismatch; secret scan; health; rollback.",
+    "readme_product_docs": "README.md §Basic Workflow and Appendix AutoSci Commands; docs/WORKFLOW_DESIGN.md Phases 2-5; AGENTS.md Scope and Local Workflow",
+    "cli_api_skill_interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "config_schemas": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt",
+    "implementation_entrypoints": "install.sh/install.ps1; distribution/pipx/; harness/docker/Dockerfile; deploy/; harness/workflows/",
+    "platform_provider_limitations": "Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      ".agents/skills/exp-run/SKILL.md",
+      ".agents/skills/paper-compile/SKILL.md",
+      ".agents/skills/paper-draft/SKILL.md",
+      "harness/config/physical-operators.json",
+      "harness/docker/Dockerfile",
+      "harness/lib/operator_runtime.py",
+      "harness/schemas/request-envelope.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "install.ps1",
+      "install.sh",
+      "package.json",
+      "skills/test/SKILL.md"
+    ],
+    "entrypoints": "install.sh/install.ps1; distribution/pipx/; harness/docker/Dockerfile; deploy/; harness/workflows/",
+    "interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "schemas_and_config": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-066-CORE-01",
+      "atomic_feature_id": "FN-066-CORE-01",
+      "test_name": "test_runtime_deliverable_construction_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-066-EVIDENCE-03",
+      "atomic_feature_id": "FN-066-EVIDENCE-03",
+      "test_name": "test_runtime_deliverable_construction_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-066-GUARD-02",
+      "atomic_feature_id": "FN-066-GUARD-02",
+      "test_name": "test_runtime_deliverable_construction_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-FN-066-CORE-01-01",
+      "test_name": "test_runtime_deliverable_construction__package",
+      "case_type": "core_behavior",
+      "atomic_scenario": "package",
+      "source_seed_registry_id": "NTB-FN-066-CORE-01",
+      "source_atomic_feature_id": "FN-066-CORE-01",
+      "source_seed_test_name": "test_runtime_deliverable_construction_core_behavior_valid_scope",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"package\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: package.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: package.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Package/service/container/workflow bundle, install/deploy config, manifest/hashes, smoke/health evidence, and rollback instructions.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-066-CORE-01-02",
+      "test_name": "test_runtime_deliverable_construction__container",
+      "case_type": "core_behavior",
+      "atomic_scenario": "container",
+      "source_seed_registry_id": "NTB-FN-066-CORE-01",
+      "source_atomic_feature_id": "FN-066-CORE-01",
+      "source_seed_test_name": "test_runtime_deliverable_construction_core_behavior_valid_scope",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"container\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: container.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: container.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Package/service/container/workflow bundle, install/deploy config, manifest/hashes, smoke/health evidence, and rollback instructions.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-066-CORE-01-03",
+      "test_name": "test_runtime_deliverable_construction__workflow_bundle",
+      "case_type": "core_behavior",
+      "atomic_scenario": "workflow bundle",
+      "source_seed_registry_id": "NTB-FN-066-CORE-01",
+      "source_atomic_feature_id": "FN-066-CORE-01",
+      "source_seed_test_name": "test_runtime_deliverable_construction_core_behavior_valid_scope",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"workflow bundle\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: workflow bundle.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: workflow bundle.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Package/service/container/workflow bundle, install/deploy config, manifest/hashes, smoke/health evidence, and rollback instructions.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-066-CORE-01-04",
+      "test_name": "test_runtime_deliverable_construction__install_smoke",
+      "case_type": "core_behavior",
+      "atomic_scenario": "install smoke",
+      "source_seed_registry_id": "NTB-FN-066-CORE-01",
+      "source_atomic_feature_id": "FN-066-CORE-01",
+      "source_seed_test_name": "test_runtime_deliverable_construction_core_behavior_valid_scope",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"install smoke\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: install smoke.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: install smoke.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Package/service/container/workflow bundle, install/deploy config, manifest/hashes, smoke/health evidence, and rollback instructions.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-066-GUARD-02-01",
+      "test_name": "test_runtime_deliverable_construction__platform_mismatch",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "platform mismatch",
+      "source_seed_registry_id": "NTB-FN-066-GUARD-02",
+      "source_atomic_feature_id": "FN-066-GUARD-02",
+      "source_seed_test_name": "test_runtime_deliverable_construction_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"platform mismatch\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: platform mismatch.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: platform mismatch.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Build failure, missing dependency, secret inclusion, platform mismatch, failed smoke/health, unsafe deploy, or missing rollback blocks delivery.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-066-GUARD-02-02",
+      "test_name": "test_runtime_deliverable_construction__secret_scan",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "secret scan",
+      "source_seed_registry_id": "NTB-FN-066-GUARD-02",
+      "source_atomic_feature_id": "FN-066-GUARD-02",
+      "source_seed_test_name": "test_runtime_deliverable_construction_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"secret scan\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: secret scan.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: secret scan.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Build failure, missing dependency, secret inclusion, platform mismatch, failed smoke/health, unsafe deploy, or missing rollback blocks delivery.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-066-CORE-01-05",
+      "test_name": "test_runtime_deliverable_construction__health",
+      "case_type": "core_behavior",
+      "atomic_scenario": "health",
+      "source_seed_registry_id": "NTB-FN-066-CORE-01",
+      "source_atomic_feature_id": "FN-066-CORE-01",
+      "source_seed_test_name": "test_runtime_deliverable_construction_core_behavior_valid_scope",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"health\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: health.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: health.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Package/service/container/workflow bundle, install/deploy config, manifest/hashes, smoke/health evidence, and rollback instructions.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-066-GUARD-02-03",
+      "test_name": "test_runtime_deliverable_construction__rollback",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "rollback",
+      "source_seed_registry_id": "NTB-FN-066-GUARD-02",
+      "source_atomic_feature_id": "FN-066-GUARD-02",
+      "source_seed_test_name": "test_runtime_deliverable_construction_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"rollback\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: rollback.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: rollback.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Build failure, missing dependency, secret inclusion, platform mismatch, failed smoke/health, unsafe deploy, or missing rollback blocks delivery.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-066-EVIDENCE-03-01",
+      "test_name": "test_runtime_deliverable_construction__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-066-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-066-EVIDENCE-03",
+      "source_seed_test_name": "test_runtime_deliverable_construction_records_status_provenance_evidence",
+      "objective": "Verify Runtime Deliverable Construction for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "state_and_side_effect_oracle": "Builds package/container/bundle and may install/deploy only to approved isolated/target environments.",
+      "required_evidence": "Artifact installs/starts in clean sandbox, health/smoke passes, manifest excludes secrets, and uninstall/rollback is documented and verified.",
+      "supported_boundary": "Installer, distribution/pipx, Dockerfile, launchd and workflow artifacts exist; no universal runtime-deliverable builder covers all targets.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Requirement compilation",
+    "level_2": "Ambiguity Resolution",
+    "description": "Finds missing information, conflicting instructions, undefined terms, and consequential assumptions and resolves them through focused questions or explicit defaults."
+  },
+  "contract": {
+    "purpose_user_function": "Surface missing data, conflicting instructions, undefined terms, and consequential assumptions as explicit open questions or defaults.",
+    "valid_inputs": "Normalized goal, raw request, context, existing assumptions, conflicts, undefined terms, and policy-approved defaults.",
+    "expected_outputs": "Assumptions and open-question lists embedded in PM intake/Requirement IR, with blocked or conditional planning where needed.",
+    "state_side_effects": "Persists ambiguity records and may keep downstream work conditional or rejected until a valid package can be formed.",
+    "failure_rejection_behavior": "Structural ambiguity that prevents a valid plan causes compilation/validation failure; current code does not autonomously conduct a full interactive clarification loop.",
+    "supported_boundaries_exclusions": "Explicit assumption/open-question generation exists; focused user questioning and conflict-resolution dialogue are not fully automated as a standalone feature.",
+    "success_evidence": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+    "granularity_atomic_contracts": "Test missing information, conflicting instructions, undefined terminology, safe default, consequential assumption requiring confirmation, and irresolvable ambiguity.",
+    "readme_product_docs": "README.md#Basic Workflow; README.md#Governed Planning; README.md#Appendix: AutoSci Commands; docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "harness/solar-harness.sh::intake_request; harness/tools/codex_pm_router.py CLI; README.md#Basic Workflow",
+    "config_schemas": "harness/schemas/requirement-ir.schema.json; harness/schemas/acceptance-verdict.schema.json; harness/schemas/coverage-report.schema.json; harness/schemas/requirement-trace.schema.json; harness/schemas/task-graph.schema.json",
+    "implementation_entrypoints": "harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions, build_pm_intake, validate_compiled_package",
+    "platform_provider_limitations": "Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "README.md",
+      "harness/schemas/acceptance-verdict.schema.json",
+      "harness/schemas/coverage-report.schema.json",
+      "harness/schemas/requirement-ir.schema.json",
+      "harness/schemas/requirement-trace.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "harness/solar-harness.sh",
+      "harness/tools/codex_pm_router.py"
+    ],
+    "entrypoints": "harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions, build_pm_intake, validate_compiled_package",
+    "interfaces": "harness/solar-harness.sh::intake_request; harness/tools/codex_pm_router.py CLI; README.md#Basic Workflow",
+    "schemas_and_config": "harness/schemas/requirement-ir.schema.json; harness/schemas/acceptance-verdict.schema.json; harness/schemas/coverage-report.schema.json; harness/schemas/requirement-trace.schema.json; harness/schemas/task-graph.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-011-CORE-01",
+      "atomic_feature_id": "WF-011-CORE-01",
+      "test_name": "test_ambiguity_resolution_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-011-EVIDENCE-03",
+      "atomic_feature_id": "WF-011-EVIDENCE-03",
+      "test_name": "test_ambiguity_resolution_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-011-GUARD-02",
+      "atomic_feature_id": "WF-011-GUARD-02",
+      "test_name": "test_ambiguity_resolution_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "P22-WF-011-GUARD-02-01",
+      "test_name": "test_ambiguity_resolution__missing_information",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing information",
+      "source_seed_registry_id": "NTB-WF-011-GUARD-02",
+      "source_atomic_feature_id": "WF-011-GUARD-02",
+      "source_seed_test_name": "test_ambiguity_resolution_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Ambiguity Resolution for the atomic scenario \"missing information\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing information.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing information.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Structural ambiguity that prevents a valid plan causes compilation/validation failure; current code does not autonomously conduct a full interactive clarification loop.",
+      "state_and_side_effect_oracle": "Persists ambiguity records and may keep downstream work conditional or rejected until a valid package can be formed.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+      "supported_boundary": "Explicit assumption/open-question generation exists; focused user questioning and conflict-resolution dialogue are not fully automated as a standalone feature.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-011-CORE-01-01",
+      "test_name": "test_ambiguity_resolution__conflicting_instructions",
+      "case_type": "core_behavior",
+      "atomic_scenario": "conflicting instructions",
+      "source_seed_registry_id": "NTB-WF-011-CORE-01",
+      "source_atomic_feature_id": "WF-011-CORE-01",
+      "source_seed_test_name": "test_ambiguity_resolution_core_behavior_valid_scope",
+      "objective": "Verify Ambiguity Resolution for the atomic scenario \"conflicting instructions\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: conflicting instructions.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: conflicting instructions.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Assumptions and open-question lists embedded in PM intake/Requirement IR, with blocked or conditional planning where needed.",
+      "state_and_side_effect_oracle": "Persists ambiguity records and may keep downstream work conditional or rejected until a valid package can be formed.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+      "supported_boundary": "Explicit assumption/open-question generation exists; focused user questioning and conflict-resolution dialogue are not fully automated as a standalone feature.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-011-CORE-01-02",
+      "test_name": "test_ambiguity_resolution__undefined_terminology",
+      "case_type": "core_behavior",
+      "atomic_scenario": "undefined terminology",
+      "source_seed_registry_id": "NTB-WF-011-CORE-01",
+      "source_atomic_feature_id": "WF-011-CORE-01",
+      "source_seed_test_name": "test_ambiguity_resolution_core_behavior_valid_scope",
+      "objective": "Verify Ambiguity Resolution for the atomic scenario \"undefined terminology\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: undefined terminology.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: undefined terminology.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Assumptions and open-question lists embedded in PM intake/Requirement IR, with blocked or conditional planning where needed.",
+      "state_and_side_effect_oracle": "Persists ambiguity records and may keep downstream work conditional or rejected until a valid package can be formed.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+      "supported_boundary": "Explicit assumption/open-question generation exists; focused user questioning and conflict-resolution dialogue are not fully automated as a standalone feature.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-011-CORE-01-03",
+      "test_name": "test_ambiguity_resolution__safe_default",
+      "case_type": "core_behavior",
+      "atomic_scenario": "safe default",
+      "source_seed_registry_id": "NTB-WF-011-CORE-01",
+      "source_atomic_feature_id": "WF-011-CORE-01",
+      "source_seed_test_name": "test_ambiguity_resolution_core_behavior_valid_scope",
+      "objective": "Verify Ambiguity Resolution for the atomic scenario \"safe default\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: safe default.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: safe default.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Assumptions and open-question lists embedded in PM intake/Requirement IR, with blocked or conditional planning where needed.",
+      "state_and_side_effect_oracle": "Persists ambiguity records and may keep downstream work conditional or rejected until a valid package can be formed.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+      "supported_boundary": "Explicit assumption/open-question generation exists; focused user questioning and conflict-resolution dialogue are not fully automated as a standalone feature.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-011-CORE-01-04",
+      "test_name": "test_ambiguity_resolution__consequential_assumption_requiring_confirmation",
+      "case_type": "core_behavior",
+      "atomic_scenario": "consequential assumption requiring confirmation",
+      "source_seed_registry_id": "NTB-WF-011-CORE-01",
+      "source_atomic_feature_id": "WF-011-CORE-01",
+      "source_seed_test_name": "test_ambiguity_resolution_core_behavior_valid_scope",
+      "objective": "Verify Ambiguity Resolution for the atomic scenario \"consequential assumption requiring confirmation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: consequential assumption requiring confirmation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: consequential assumption requiring confirmation.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Assumptions and open-question lists embedded in PM intake/Requirement IR, with blocked or conditional planning where needed.",
+      "state_and_side_effect_oracle": "Persists ambiguity records and may keep downstream work conditional or rejected until a valid package can be formed.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+      "supported_boundary": "Explicit assumption/open-question generation exists; focused user questioning and conflict-resolution dialogue are not fully automated as a standalone feature.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-011-CORE-01-05",
+      "test_name": "test_ambiguity_resolution__irresolvable_ambiguity",
+      "case_type": "core_behavior",
+      "atomic_scenario": "irresolvable ambiguity",
+      "source_seed_registry_id": "NTB-WF-011-CORE-01",
+      "source_atomic_feature_id": "WF-011-CORE-01",
+      "source_seed_test_name": "test_ambiguity_resolution_core_behavior_valid_scope",
+      "objective": "Verify Ambiguity Resolution for the atomic scenario \"irresolvable ambiguity\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: irresolvable ambiguity.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: irresolvable ambiguity.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Assumptions and open-question lists embedded in PM intake/Requirement IR, with blocked or conditional planning where needed.",
+      "state_and_side_effect_oracle": "Persists ambiguity records and may keep downstream work conditional or rejected until a valid package can be formed.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+      "supported_boundary": "Explicit assumption/open-question generation exists; focused user questioning and conflict-resolution dialogue are not fully automated as a standalone feature.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-011-EVIDENCE-03-01",
+      "test_name": "test_ambiguity_resolution__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-WF-011-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-011-EVIDENCE-03",
+      "source_seed_test_name": "test_ambiguity_resolution_records_status_provenance_evidence",
+      "objective": "Verify Ambiguity Resolution for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Compilation is deterministic/local, but confirmation and consequential ambiguity resolution still depend on a user or authorized policy decision. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+      "state_and_side_effect_oracle": "Persists ambiguity records and may keep downstream work conditional or rejected until a valid package can be formed.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_derive_assumptions, _derive_open_questions` populate the compiled package and `validate_compiled_package` enforces its shape.",
+      "supported_boundary": "Explicit assumption/open-question generation exists; focused user questioning and conflict-resolution dialogue are not fully automated as a standalone feature.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

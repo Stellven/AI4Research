@@ -1,0 +1,306 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "POC implementation",
+    "level_2": "POC Component Integration & Configuration",
+    "description": "Connect each part into a POC workable E2E, and prepare for the smoke test."
+  },
+  "contract": {
+    "purpose_user_function": "Sequence implementation, integration, test, and verification nodes so authorized components/configuration form an end-to-end runnable artifact.",
+    "valid_inputs": "Component artifacts, configuration, dependency graph, interfaces, runtime environment, write scopes, and planned test/verification gates.",
+    "expected_outputs": "Integrated workspace artifacts plus task-node outputs and an evaluation-ready handoff.",
+    "state_side_effects": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+    "failure_rejection_behavior": "Blocks or fails on missing dependency artifacts, incompatible configuration/interfaces, graph errors, gate failures, or unauthorized writes.",
+    "supported_boundaries_exclusions": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+    "success_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+    "granularity_atomic_contracts": "Test component dependency, config injection, interface mismatch, missing component, end-to-end wiring, graph order, unauthorized integration, and repeatability.",
+    "readme_product_docs": "README.md#Basic Workflow; README.md#Governed Planning; README.md#Appendix: AutoSci Commands; docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "harness/tools/codex_pm_router.py planner surface; harness/lib/graph_node_dispatcher.py runtime dispatch surface",
+    "config_schemas": "harness/schemas/task-graph.schema.json; harness/schemas/requirement-ir.schema.json; harness/schemas/evidence/experiment_plan.v1.schema.json",
+    "implementation_entrypoints": "harness/tools/codex_pm_router.py::_standard_task_graph, _node_enrichment; harness/lib/plan_validator.py; harness/lib/graph_node_dispatcher.py",
+    "platform_provider_limitations": "The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "harness/lib/graph_node_dispatcher.py",
+      "harness/lib/plan_validator.py",
+      "harness/schemas/evidence/experiment_plan.v1.schema.json",
+      "harness/schemas/requirement-ir.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "harness/tools/codex_pm_router.py"
+    ],
+    "entrypoints": "harness/tools/codex_pm_router.py::_standard_task_graph, _node_enrichment; harness/lib/plan_validator.py; harness/lib/graph_node_dispatcher.py",
+    "interfaces": "harness/tools/codex_pm_router.py planner surface; harness/lib/graph_node_dispatcher.py runtime dispatch surface",
+    "schemas_and_config": "harness/schemas/task-graph.schema.json; harness/schemas/requirement-ir.schema.json; harness/schemas/evidence/experiment_plan.v1.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-038-CORE-01",
+      "atomic_feature_id": "WF-038-CORE-01",
+      "test_name": "test_poc_component_integration_configuration_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-038-EVIDENCE-03",
+      "atomic_feature_id": "WF-038-EVIDENCE-03",
+      "test_name": "test_poc_component_integration_configuration_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-038-GUARD-02",
+      "atomic_feature_id": "WF-038-GUARD-02",
+      "test_name": "test_poc_component_integration_configuration_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-WF-038-CORE-01-01",
+      "test_name": "test_poc_component_integration_and_configuration__component_dependency",
+      "case_type": "core_behavior",
+      "atomic_scenario": "component dependency",
+      "source_seed_registry_id": "NTB-WF-038-CORE-01",
+      "source_atomic_feature_id": "WF-038-CORE-01",
+      "source_seed_test_name": "test_poc_component_integration_configuration_core_behavior_valid_scope",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"component dependency\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: component dependency.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: component dependency.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Integrated workspace artifacts plus task-node outputs and an evaluation-ready handoff.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-038-CORE-01-02",
+      "test_name": "test_poc_component_integration_and_configuration__config_injection",
+      "case_type": "core_behavior",
+      "atomic_scenario": "config injection",
+      "source_seed_registry_id": "NTB-WF-038-CORE-01",
+      "source_atomic_feature_id": "WF-038-CORE-01",
+      "source_seed_test_name": "test_poc_component_integration_configuration_core_behavior_valid_scope",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"config injection\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: config injection.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: config injection.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Integrated workspace artifacts plus task-node outputs and an evaluation-ready handoff.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-038-GUARD-02-01",
+      "test_name": "test_poc_component_integration_and_configuration__interface_mismatch",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "interface mismatch",
+      "source_seed_registry_id": "NTB-WF-038-GUARD-02",
+      "source_atomic_feature_id": "WF-038-GUARD-02",
+      "source_seed_test_name": "test_poc_component_integration_configuration_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"interface mismatch\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: interface mismatch.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: interface mismatch.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Blocks or fails on missing dependency artifacts, incompatible configuration/interfaces, graph errors, gate failures, or unauthorized writes.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-038-GUARD-02-02",
+      "test_name": "test_poc_component_integration_and_configuration__missing_component",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing component",
+      "source_seed_registry_id": "NTB-WF-038-GUARD-02",
+      "source_atomic_feature_id": "WF-038-GUARD-02",
+      "source_seed_test_name": "test_poc_component_integration_configuration_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"missing component\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing component.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing component.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Blocks or fails on missing dependency artifacts, incompatible configuration/interfaces, graph errors, gate failures, or unauthorized writes.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-038-CORE-01-03",
+      "test_name": "test_poc_component_integration_and_configuration__end_to_end_wiring",
+      "case_type": "core_behavior",
+      "atomic_scenario": "end-to-end wiring",
+      "source_seed_registry_id": "NTB-WF-038-CORE-01",
+      "source_atomic_feature_id": "WF-038-CORE-01",
+      "source_seed_test_name": "test_poc_component_integration_configuration_core_behavior_valid_scope",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"end-to-end wiring\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: end-to-end wiring.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: end-to-end wiring.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Integrated workspace artifacts plus task-node outputs and an evaluation-ready handoff.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-038-CORE-01-04",
+      "test_name": "test_poc_component_integration_and_configuration__graph_order",
+      "case_type": "core_behavior",
+      "atomic_scenario": "graph order",
+      "source_seed_registry_id": "NTB-WF-038-CORE-01",
+      "source_atomic_feature_id": "WF-038-CORE-01",
+      "source_seed_test_name": "test_poc_component_integration_configuration_core_behavior_valid_scope",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"graph order\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: graph order.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: graph order.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Integrated workspace artifacts plus task-node outputs and an evaluation-ready handoff.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-038-GUARD-02-03",
+      "test_name": "test_poc_component_integration_and_configuration__unauthorized_integration",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "unauthorized integration",
+      "source_seed_registry_id": "NTB-WF-038-GUARD-02",
+      "source_atomic_feature_id": "WF-038-GUARD-02",
+      "source_seed_test_name": "test_poc_component_integration_configuration_rejects_invalid_or_unscoped_input",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"unauthorized integration\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: unauthorized integration.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: unauthorized integration.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Blocks or fails on missing dependency artifacts, incompatible configuration/interfaces, graph errors, gate failures, or unauthorized writes.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-038-CORE-01-05",
+      "test_name": "test_poc_component_integration_and_configuration__repeatability",
+      "case_type": "core_behavior",
+      "atomic_scenario": "repeatability",
+      "source_seed_registry_id": "NTB-WF-038-CORE-01",
+      "source_atomic_feature_id": "WF-038-CORE-01",
+      "source_seed_test_name": "test_poc_component_integration_configuration_core_behavior_valid_scope",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"repeatability\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: repeatability.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: repeatability.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Integrated workspace artifacts plus task-node outputs and an evaluation-ready handoff.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-038-EVIDENCE-03-01",
+      "test_name": "test_poc_component_integration_and_configuration__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-WF-038-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-038-EVIDENCE-03",
+      "source_seed_test_name": "test_poc_component_integration_configuration_records_status_provenance_evidence",
+      "objective": "Verify POC Component Integration & Configuration for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: The repository has a generic governed coding/test graph, not a domain-general first-class POC lifecycle or `poc_bundle` schema. Runtime actions remain permission-, dependency-, and provider-gated. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "state_and_side_effect_oracle": "Connects artifacts in the workspace and advances graph state when dependencies and proofs are satisfied.",
+      "required_evidence": "`harness/tools/codex_pm_router.py::_standard_task_graph` orders ImplementationWorker→TestRunner→Verifier and `harness/lib/plan_validator.py` validates graph legality.",
+      "supported_boundary": "Dependency-aware generic graph integration exists; there is no POC-specific integration schema or universal interface compatibility checker.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

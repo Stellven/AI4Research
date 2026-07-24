@@ -1,0 +1,249 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Ingestion",
+    "level_2": "Qualified Channel Signal Intake",
+    "description": "Accepts a V-05-qualified Slack or internal-tool clue with its permitted context, sensitivity, relevance, and provenance; raw channel traffic remains outside Workflow."
+  },
+  "contract": {
+    "purpose_user_function": "Target behavior is to admit only V-05-qualified Slack/internal clues with sensitivity, relevance, permission, and provenance metadata.",
+    "valid_inputs": "Target input would be a qualified channel signal plus context, identity, sensitivity, relevance, and provenance. Current webhook only accepts a raw Slack-style `{text}` payload.",
+    "expected_outputs": "Not found in current codebase as a qualified intake package. The closest surface forwards raw webhook text into the existing workflow.",
+    "state_side_effects": "No V-05 qualification state or decision record was found; the raw webhook can trigger downstream handling.",
+    "failure_rejection_behavior": "No feature-specific rejection/quarantine path for unqualified, sensitive, irrelevant, or unauthorized channel traffic was found.",
+    "supported_boundaries_exclusions": "Raw Slack webhook intake exists, but V-05 qualification and permitted-context filtering are absent; raw traffic must not be treated as satisfying this L2.",
+    "success_evidence": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+    "granularity_atomic_contracts": "Define separate contracts for qualified acceptance, insufficient provenance, unauthorized context, sensitive content, irrelevant signal, duplicate signal, and raw/unqualified traffic rejection.",
+    "readme_product_docs": "README.md#Basic Workflow; README.md#Governed Planning; README.md#Appendix: AutoSci Commands; docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "Not found in current codebase as a V-05 workflow. Closest interface: `harness/webhook-server.ts` raw Slack-compatible webhook.",
+    "config_schemas": "Not found in current codebase for V-05 qualification. Closest schemas: `harness/lib/livework/schemas.py::RequirementIntakePayload`; policy surface in `harness/lib/policy/action_policy.py`.",
+    "implementation_entrypoints": "Not found in current codebase. Closest surfaces: `harness/webhook-server.ts`; `harness/lib/policy/action_policy.py`.",
+    "platform_provider_limitations": "README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "NOT_FOUND_IN_CURRENT_CODEBASE",
+    "tracked_surfaces": [
+      "harness/lib/livework/schemas.py",
+      "harness/lib/policy/action_policy.py",
+      "harness/webhook-server.ts"
+    ],
+    "entrypoints": "Not found in current codebase. Closest surfaces: `harness/webhook-server.ts`; `harness/lib/policy/action_policy.py`.",
+    "interfaces": "Not found in current codebase as a V-05 workflow. Closest interface: `harness/webhook-server.ts` raw Slack-compatible webhook.",
+    "schemas_and_config": "Not found in current codebase for V-05 qualification. Closest schemas: `harness/lib/livework/schemas.py::RequirementIntakePayload`; policy surface in `harness/lib/policy/action_policy.py`."
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-003-CORE-01",
+      "atomic_feature_id": "WF-003-CORE-01",
+      "test_name": "test_qualified_channel_signal_intake_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-003-EVIDENCE-03",
+      "atomic_feature_id": "WF-003-EVIDENCE-03",
+      "test_name": "test_qualified_channel_signal_intake_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-003-GUARD-02",
+      "atomic_feature_id": "WF-003-GUARD-02",
+      "test_name": "test_qualified_channel_signal_intake_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "P22-WF-003-CORE-01-01",
+      "test_name": "test_qualified_channel_signal_intake__qualified_acceptance",
+      "case_type": "core_behavior",
+      "atomic_scenario": "qualified acceptance",
+      "source_seed_registry_id": "NTB-WF-003-CORE-01",
+      "source_atomic_feature_id": "WF-003-CORE-01",
+      "source_seed_test_name": "test_qualified_channel_signal_intake_core_behavior_valid_scope",
+      "objective": "Verify Qualified Channel Signal Intake for the atomic scenario \"qualified acceptance\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: qualified acceptance.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: qualified acceptance.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Not found in current codebase as a qualified intake package. The closest surface forwards raw webhook text into the existing workflow.",
+      "state_and_side_effect_oracle": "No V-05 qualification state or decision record was found; the raw webhook can trigger downstream handling.",
+      "required_evidence": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+      "supported_boundary": "Raw Slack webhook intake exists, but V-05 qualification and permitted-context filtering are absent; raw traffic must not be treated as satisfying this L2.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-WF-003-EVIDENCE-03-01",
+      "test_name": "test_qualified_channel_signal_intake__insufficient_provenance",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "insufficient provenance",
+      "source_seed_registry_id": "NTB-WF-003-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-003-EVIDENCE-03",
+      "source_seed_test_name": "test_qualified_channel_signal_intake_records_status_provenance_evidence",
+      "objective": "Verify Qualified Channel Signal Intake for the atomic scenario \"insufficient provenance\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: insufficient provenance.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: insufficient provenance.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+      "state_and_side_effect_oracle": "No V-05 qualification state or decision record was found; the raw webhook can trigger downstream handling.",
+      "required_evidence": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+      "supported_boundary": "Raw Slack webhook intake exists, but V-05 qualification and permitted-context filtering are absent; raw traffic must not be treated as satisfying this L2.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-WF-003-GUARD-02-01",
+      "test_name": "test_qualified_channel_signal_intake__unauthorized_context",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "unauthorized context",
+      "source_seed_registry_id": "NTB-WF-003-GUARD-02",
+      "source_atomic_feature_id": "WF-003-GUARD-02",
+      "source_seed_test_name": "test_qualified_channel_signal_intake_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Qualified Channel Signal Intake for the atomic scenario \"unauthorized context\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: unauthorized context.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: unauthorized context.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "No feature-specific rejection/quarantine path for unqualified, sensitive, irrelevant, or unauthorized channel traffic was found.",
+      "state_and_side_effect_oracle": "No V-05 qualification state or decision record was found; the raw webhook can trigger downstream handling.",
+      "required_evidence": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+      "supported_boundary": "Raw Slack webhook intake exists, but V-05 qualification and permitted-context filtering are absent; raw traffic must not be treated as satisfying this L2.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-WF-003-GUARD-02-02",
+      "test_name": "test_qualified_channel_signal_intake__sensitive_content",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "sensitive content",
+      "source_seed_registry_id": "NTB-WF-003-GUARD-02",
+      "source_atomic_feature_id": "WF-003-GUARD-02",
+      "source_seed_test_name": "test_qualified_channel_signal_intake_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Qualified Channel Signal Intake for the atomic scenario \"sensitive content\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: sensitive content.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: sensitive content.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "No feature-specific rejection/quarantine path for unqualified, sensitive, irrelevant, or unauthorized channel traffic was found.",
+      "state_and_side_effect_oracle": "No V-05 qualification state or decision record was found; the raw webhook can trigger downstream handling.",
+      "required_evidence": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+      "supported_boundary": "Raw Slack webhook intake exists, but V-05 qualification and permitted-context filtering are absent; raw traffic must not be treated as satisfying this L2.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-WF-003-GUARD-02-03",
+      "test_name": "test_qualified_channel_signal_intake__irrelevant_signal",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "irrelevant signal",
+      "source_seed_registry_id": "NTB-WF-003-GUARD-02",
+      "source_atomic_feature_id": "WF-003-GUARD-02",
+      "source_seed_test_name": "test_qualified_channel_signal_intake_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Qualified Channel Signal Intake for the atomic scenario \"irrelevant signal\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: irrelevant signal.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: irrelevant signal.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "No feature-specific rejection/quarantine path for unqualified, sensitive, irrelevant, or unauthorized channel traffic was found.",
+      "state_and_side_effect_oracle": "No V-05 qualification state or decision record was found; the raw webhook can trigger downstream handling.",
+      "required_evidence": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+      "supported_boundary": "Raw Slack webhook intake exists, but V-05 qualification and permitted-context filtering are absent; raw traffic must not be treated as satisfying this L2.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-WF-003-GUARD-02-04",
+      "test_name": "test_qualified_channel_signal_intake__duplicate_signal",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "duplicate signal",
+      "source_seed_registry_id": "NTB-WF-003-GUARD-02",
+      "source_atomic_feature_id": "WF-003-GUARD-02",
+      "source_seed_test_name": "test_qualified_channel_signal_intake_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Qualified Channel Signal Intake for the atomic scenario \"duplicate signal\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: duplicate signal.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: duplicate signal.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "No feature-specific rejection/quarantine path for unqualified, sensitive, irrelevant, or unauthorized channel traffic was found.",
+      "state_and_side_effect_oracle": "No V-05 qualification state or decision record was found; the raw webhook can trigger downstream handling.",
+      "required_evidence": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+      "supported_boundary": "Raw Slack webhook intake exists, but V-05 qualification and permitted-context filtering are absent; raw traffic must not be treated as satisfying this L2.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-WF-003-GUARD-02-05",
+      "test_name": "test_qualified_channel_signal_intake__raw_unqualified_traffic_rejection",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "raw/unqualified traffic rejection",
+      "source_seed_registry_id": "NTB-WF-003-GUARD-02",
+      "source_atomic_feature_id": "WF-003-GUARD-02",
+      "source_seed_test_name": "test_qualified_channel_signal_intake_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Qualified Channel Signal Intake for the atomic scenario \"raw/unqualified traffic rejection\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: raw/unqualified traffic rejection.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: raw/unqualified traffic rejection.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "No feature-specific rejection/quarantine path for unqualified, sensitive, irrelevant, or unauthorized channel traffic was found.",
+      "state_and_side_effect_oracle": "No V-05 qualification state or decision record was found; the raw webhook can trigger downstream handling.",
+      "required_evidence": "Not found in current codebase. Closest evidence is `harness/webhook-server.ts` accepting `{text}` and `harness/lib/policy/action_policy.py` classifying Slack/external messaging as high risk.",
+      "supported_boundary": "Raw Slack webhook intake exists, but V-05 qualification and permitted-context filtering are absent; raw traffic must not be treated as satisfying this L2.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    }
+  ]
+}

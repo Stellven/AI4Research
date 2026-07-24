@@ -1,0 +1,254 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Intention compilers",
+    "level_2": "Task Contract & Acceptance Compilation",
+    "description": "Produce a stable, versioned task contract containing normalized inputs and outputs, objectives, constraints, acceptance criteria and required evidence."
+  },
+  "contract": {
+    "purpose_user_function": "Produce a stable task/requirement contract with normalized IO, objectives, constraints, acceptance criteria, and evidence requirements.",
+    "valid_inputs": "Intent/Requirement IR, selected lane/template, goals/scope, constraints, acceptance criteria, source trace, and optional workflow trigger.",
+    "expected_outputs": "Versioned requirement/task contract artifacts and bindings to sprint/plan IDs.",
+    "state_side_effects": "Writes raw intent, requirement IR, product brief/contract and traceability bindings.",
+    "failure_rejection_behavior": "Schema failure, missing objective/acceptance, conflicting scope, or unbindable workflow prevents ready contract.",
+    "supported_boundaries_exclusions": "Requirement IR and workflow contracts are shipped; terminology 'task contract' spans several artifact schemas.",
+    "success_evidence": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+    "granularity_atomic_contracts": "minimal contract; rich contract; missing objective; invalid acceptance; version/hash; source trace; sprint binding.",
+    "readme_product_docs": "README.md §Basic Workflow; docs/solar-architecture-code-map.md §§1 and 5; docs/UNIFIED_ORCHESTRATOR_DESIGN.md §2.1 Intent parser",
+    "cli_api_skill_interfaces": "harness/lib/intent_gateway.py: infer_mode(), deterministic_rewrite(), build_requirement_ir(), capture(); harness/lib/intent_engine_adapter.py: match(), learn(), main()",
+    "config_schemas": "harness/schemas/request-envelope.schema.json; harness/schemas/requirement-ir.schema.json; harness/schemas/requirement-ir.schema.v1.draft.json; harness/config/task-taxonomy.json",
+    "implementation_entrypoints": "harness/lib/intent_gateway.py: build_requirement_ir(), capture(), bind_intent_artifacts(); harness/lib/autosci_intake_contract.py: build_autosci_product_brief()",
+    "platform_provider_limitations": "Deterministic matching is local; optional model rewriting depends on configured model access. Natural-language completeness and clarification policy remain partly heuristic."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "VERSION",
+      "harness/config/task-taxonomy.json",
+      "harness/lib/autosci_intake_contract.py",
+      "harness/lib/intent_engine_adapter.py",
+      "harness/lib/intent_gateway.py",
+      "harness/schemas/request-envelope.schema.json",
+      "harness/schemas/requirement-ir.schema.json",
+      "harness/schemas/requirement-ir.schema.v1.draft.json"
+    ],
+    "entrypoints": "harness/lib/intent_gateway.py: build_requirement_ir(), capture(), bind_intent_artifacts(); harness/lib/autosci_intake_contract.py: build_autosci_product_brief()",
+    "interfaces": "harness/lib/intent_gateway.py: infer_mode(), deterministic_rewrite(), build_requirement_ir(), capture(); harness/lib/intent_engine_adapter.py: match(), learn(), main()",
+    "schemas_and_config": "harness/schemas/request-envelope.schema.json; harness/schemas/requirement-ir.schema.json; harness/schemas/requirement-ir.schema.v1.draft.json; harness/config/task-taxonomy.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-049-CORE-01",
+      "atomic_feature_id": "FN-049-CORE-01",
+      "test_name": "test_task_contract_acceptance_compilation_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-049-EVIDENCE-03",
+      "atomic_feature_id": "FN-049-EVIDENCE-03",
+      "test_name": "test_task_contract_acceptance_compilation_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-049-GUARD-02",
+      "atomic_feature_id": "FN-049-GUARD-02",
+      "test_name": "test_task_contract_acceptance_compilation_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "P22-FN-049-CORE-01-01",
+      "test_name": "test_task_contract_and_acceptance_compilation__minimal_contract",
+      "case_type": "core_behavior",
+      "atomic_scenario": "minimal contract",
+      "source_seed_registry_id": "NTB-FN-049-CORE-01",
+      "source_atomic_feature_id": "FN-049-CORE-01",
+      "source_seed_test_name": "test_task_contract_acceptance_compilation_core_behavior_valid_scope",
+      "objective": "Verify Task Contract & Acceptance Compilation for the atomic scenario \"minimal contract\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: minimal contract.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic matching is local; optional model rewriting depends on configured model access. Natural-language completeness and clarification policy remain partly heuristic."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: minimal contract.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned requirement/task contract artifacts and bindings to sprint/plan IDs.",
+      "state_and_side_effect_oracle": "Writes raw intent, requirement IR, product brief/contract and traceability bindings.",
+      "required_evidence": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "supported_boundary": "Requirement IR and workflow contracts are shipped; terminology 'task contract' spans several artifact schemas.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-049-CORE-01-02",
+      "test_name": "test_task_contract_and_acceptance_compilation__rich_contract",
+      "case_type": "core_behavior",
+      "atomic_scenario": "rich contract",
+      "source_seed_registry_id": "NTB-FN-049-CORE-01",
+      "source_atomic_feature_id": "FN-049-CORE-01",
+      "source_seed_test_name": "test_task_contract_acceptance_compilation_core_behavior_valid_scope",
+      "objective": "Verify Task Contract & Acceptance Compilation for the atomic scenario \"rich contract\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: rich contract.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic matching is local; optional model rewriting depends on configured model access. Natural-language completeness and clarification policy remain partly heuristic."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: rich contract.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned requirement/task contract artifacts and bindings to sprint/plan IDs.",
+      "state_and_side_effect_oracle": "Writes raw intent, requirement IR, product brief/contract and traceability bindings.",
+      "required_evidence": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "supported_boundary": "Requirement IR and workflow contracts are shipped; terminology 'task contract' spans several artifact schemas.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-049-GUARD-02-01",
+      "test_name": "test_task_contract_and_acceptance_compilation__missing_objective",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing objective",
+      "source_seed_registry_id": "NTB-FN-049-GUARD-02",
+      "source_atomic_feature_id": "FN-049-GUARD-02",
+      "source_seed_test_name": "test_task_contract_acceptance_compilation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Task Contract & Acceptance Compilation for the atomic scenario \"missing objective\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing objective.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic matching is local; optional model rewriting depends on configured model access. Natural-language completeness and clarification policy remain partly heuristic."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing objective.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Schema failure, missing objective/acceptance, conflicting scope, or unbindable workflow prevents ready contract.",
+      "state_and_side_effect_oracle": "Writes raw intent, requirement IR, product brief/contract and traceability bindings.",
+      "required_evidence": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "supported_boundary": "Requirement IR and workflow contracts are shipped; terminology 'task contract' spans several artifact schemas.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-049-GUARD-02-02",
+      "test_name": "test_task_contract_and_acceptance_compilation__invalid_acceptance",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "invalid acceptance",
+      "source_seed_registry_id": "NTB-FN-049-GUARD-02",
+      "source_atomic_feature_id": "FN-049-GUARD-02",
+      "source_seed_test_name": "test_task_contract_acceptance_compilation_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Task Contract & Acceptance Compilation for the atomic scenario \"invalid acceptance\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: invalid acceptance.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic matching is local; optional model rewriting depends on configured model access. Natural-language completeness and clarification policy remain partly heuristic."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: invalid acceptance.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Schema failure, missing objective/acceptance, conflicting scope, or unbindable workflow prevents ready contract.",
+      "state_and_side_effect_oracle": "Writes raw intent, requirement IR, product brief/contract and traceability bindings.",
+      "required_evidence": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "supported_boundary": "Requirement IR and workflow contracts are shipped; terminology 'task contract' spans several artifact schemas.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-049-EVIDENCE-03-01",
+      "test_name": "test_task_contract_and_acceptance_compilation__version_hash",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "version/hash",
+      "source_seed_registry_id": "NTB-FN-049-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-049-EVIDENCE-03",
+      "source_seed_test_name": "test_task_contract_acceptance_compilation_records_status_provenance_evidence",
+      "objective": "Verify Task Contract & Acceptance Compilation for the atomic scenario \"version/hash\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: version/hash.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic matching is local; optional model rewriting depends on configured model access. Natural-language completeness and clarification policy remain partly heuristic."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: version/hash.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "state_and_side_effect_oracle": "Writes raw intent, requirement IR, product brief/contract and traceability bindings.",
+      "required_evidence": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "supported_boundary": "Requirement IR and workflow contracts are shipped; terminology 'task contract' spans several artifact schemas.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-049-EVIDENCE-03-02",
+      "test_name": "test_task_contract_and_acceptance_compilation__source_trace",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "source trace",
+      "source_seed_registry_id": "NTB-FN-049-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-049-EVIDENCE-03",
+      "source_seed_test_name": "test_task_contract_acceptance_compilation_records_status_provenance_evidence",
+      "objective": "Verify Task Contract & Acceptance Compilation for the atomic scenario \"source trace\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: source trace.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic matching is local; optional model rewriting depends on configured model access. Natural-language completeness and clarification policy remain partly heuristic."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: source trace.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "state_and_side_effect_oracle": "Writes raw intent, requirement IR, product brief/contract and traceability bindings.",
+      "required_evidence": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "supported_boundary": "Requirement IR and workflow contracts are shipped; terminology 'task contract' spans several artifact schemas.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-049-CORE-01-03",
+      "test_name": "test_task_contract_and_acceptance_compilation__sprint_binding",
+      "case_type": "core_behavior",
+      "atomic_scenario": "sprint binding",
+      "source_seed_registry_id": "NTB-FN-049-CORE-01",
+      "source_atomic_feature_id": "FN-049-CORE-01",
+      "source_seed_test_name": "test_task_contract_acceptance_compilation_core_behavior_valid_scope",
+      "objective": "Verify Task Contract & Acceptance Compilation for the atomic scenario \"sprint binding\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: sprint binding.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic matching is local; optional model rewriting depends on configured model access. Natural-language completeness and clarification policy remain partly heuristic."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: sprint binding.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned requirement/task contract artifacts and bindings to sprint/plan IDs.",
+      "state_and_side_effect_oracle": "Writes raw intent, requirement IR, product brief/contract and traceability bindings.",
+      "required_evidence": "Contract validates, preserves raw-input trace, has stable identity/version, and is consumed by planner without hidden fields.",
+      "supported_boundary": "Requirement IR and workflow contracts are shipped; terminology 'task contract' spans several artifact schemas.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

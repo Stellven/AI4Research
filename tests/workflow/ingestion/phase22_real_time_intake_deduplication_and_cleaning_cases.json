@@ -1,0 +1,280 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Ingestion",
+    "level_2": "Real-Time Intake Deduplication & Cleaning",
+    "description": "Canonicalizes incoming candidates, filters malformed or noisy content, and merges replays, exact duplicates, and near-duplicates while preserving meaningful revisions and independent corroboration."
+  },
+  "contract": {
+    "purpose_user_function": "Current code normalizes basic text and prevents repeated consumption of the same intent ID; the described cross-intake exact/near-duplicate merge is not implemented.",
+    "valid_inputs": "Captured intent records and normalized request text. Same-intent replay can be recognized only when the identical intent ID is reused.",
+    "expected_outputs": "Whitespace-normalized text and idempotent same-intent consumption; no verified merged candidate or corroboration/revision record exists across separately captured intents.",
+    "state_side_effects": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+    "failure_rejection_behavior": "Malformed/empty input is rejected upstream, but no semantic duplicate threshold, merge conflict, or quarantine decision was found.",
+    "supported_boundaries_exclusions": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+    "success_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+    "granularity_atomic_contracts": "Separate contracts for whitespace cleaning, same-ID replay, identical text with different IDs, near duplicate, meaningful revision, independent corroboration, malformed/noisy input, and merge provenance.",
+    "readme_product_docs": "README.md#Basic Workflow; README.md#Governed Planning; README.md#Appendix: AutoSci Commands; docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "harness/solar-harness.sh::intake_request; README.md#Basic Workflow (`solar harness intake`)",
+    "config_schemas": "harness/schemas/requirement-ir.schema.json; harness/lib/livework/schemas.py::RequirementIntakePayload, RequirementIntake",
+    "implementation_entrypoints": "harness/lib/intent_consumer.py::consume_one; harness/tools/codex_pm_router.py::_normalized_text; harness/lib/intent_gateway.py::capture",
+    "platform_provider_limitations": "README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "README.md",
+      "harness/lib/intent_consumer.py",
+      "harness/lib/intent_gateway.py",
+      "harness/lib/livework/schemas.py",
+      "harness/schemas/requirement-ir.schema.json",
+      "harness/solar-harness.sh",
+      "harness/tools/codex_pm_router.py"
+    ],
+    "entrypoints": "harness/lib/intent_consumer.py::consume_one; harness/tools/codex_pm_router.py::_normalized_text; harness/lib/intent_gateway.py::capture",
+    "interfaces": "harness/solar-harness.sh::intake_request; README.md#Basic Workflow (`solar harness intake`)",
+    "schemas_and_config": "harness/schemas/requirement-ir.schema.json; harness/lib/livework/schemas.py::RequirementIntakePayload, RequirementIntake"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-006-CORE-01",
+      "atomic_feature_id": "WF-006-CORE-01",
+      "test_name": "test_real_time_intake_deduplication_cleaning_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-006-EVIDENCE-03",
+      "atomic_feature_id": "WF-006-EVIDENCE-03",
+      "test_name": "test_real_time_intake_deduplication_cleaning_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-006-GUARD-02",
+      "atomic_feature_id": "WF-006-GUARD-02",
+      "test_name": "test_real_time_intake_deduplication_cleaning_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-WF-006-CORE-01-01",
+      "test_name": "test_real_time_intake_deduplication_and_cleaning__whitespace_cleaning",
+      "case_type": "core_behavior",
+      "atomic_scenario": "whitespace cleaning",
+      "source_seed_registry_id": "NTB-WF-006-CORE-01",
+      "source_atomic_feature_id": "WF-006-CORE-01",
+      "source_seed_test_name": "test_real_time_intake_deduplication_cleaning_core_behavior_valid_scope",
+      "objective": "Verify Real-Time Intake Deduplication & Cleaning for the atomic scenario \"whitespace cleaning\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: whitespace cleaning.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: whitespace cleaning.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Whitespace-normalized text and idempotent same-intent consumption; no verified merged candidate or corroboration/revision record exists across separately captured intents.",
+      "state_and_side_effect_oracle": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+      "required_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "supported_boundary": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-006-CORE-01-02",
+      "test_name": "test_real_time_intake_deduplication_and_cleaning__same_id_replay",
+      "case_type": "core_behavior",
+      "atomic_scenario": "same-ID replay",
+      "source_seed_registry_id": "NTB-WF-006-CORE-01",
+      "source_atomic_feature_id": "WF-006-CORE-01",
+      "source_seed_test_name": "test_real_time_intake_deduplication_cleaning_core_behavior_valid_scope",
+      "objective": "Verify Real-Time Intake Deduplication & Cleaning for the atomic scenario \"same-ID replay\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: same-ID replay.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: same-ID replay.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Whitespace-normalized text and idempotent same-intent consumption; no verified merged candidate or corroboration/revision record exists across separately captured intents.",
+      "state_and_side_effect_oracle": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+      "required_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "supported_boundary": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-006-CORE-01-03",
+      "test_name": "test_real_time_intake_deduplication_and_cleaning__identical_text_with_different_ids",
+      "case_type": "core_behavior",
+      "atomic_scenario": "identical text with different IDs",
+      "source_seed_registry_id": "NTB-WF-006-CORE-01",
+      "source_atomic_feature_id": "WF-006-CORE-01",
+      "source_seed_test_name": "test_real_time_intake_deduplication_cleaning_core_behavior_valid_scope",
+      "objective": "Verify Real-Time Intake Deduplication & Cleaning for the atomic scenario \"identical text with different IDs\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: identical text with different IDs.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: identical text with different IDs.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Whitespace-normalized text and idempotent same-intent consumption; no verified merged candidate or corroboration/revision record exists across separately captured intents.",
+      "state_and_side_effect_oracle": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+      "required_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "supported_boundary": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-006-GUARD-02-01",
+      "test_name": "test_real_time_intake_deduplication_and_cleaning__near_duplicate",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "near duplicate",
+      "source_seed_registry_id": "NTB-WF-006-GUARD-02",
+      "source_atomic_feature_id": "WF-006-GUARD-02",
+      "source_seed_test_name": "test_real_time_intake_deduplication_cleaning_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Real-Time Intake Deduplication & Cleaning for the atomic scenario \"near duplicate\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: near duplicate.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: near duplicate.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Malformed/empty input is rejected upstream, but no semantic duplicate threshold, merge conflict, or quarantine decision was found.",
+      "state_and_side_effect_oracle": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+      "required_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "supported_boundary": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-006-CORE-01-04",
+      "test_name": "test_real_time_intake_deduplication_and_cleaning__meaningful_revision",
+      "case_type": "core_behavior",
+      "atomic_scenario": "meaningful revision",
+      "source_seed_registry_id": "NTB-WF-006-CORE-01",
+      "source_atomic_feature_id": "WF-006-CORE-01",
+      "source_seed_test_name": "test_real_time_intake_deduplication_cleaning_core_behavior_valid_scope",
+      "objective": "Verify Real-Time Intake Deduplication & Cleaning for the atomic scenario \"meaningful revision\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: meaningful revision.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: meaningful revision.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Whitespace-normalized text and idempotent same-intent consumption; no verified merged candidate or corroboration/revision record exists across separately captured intents.",
+      "state_and_side_effect_oracle": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+      "required_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "supported_boundary": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-006-CORE-01-05",
+      "test_name": "test_real_time_intake_deduplication_and_cleaning__independent_corroboration",
+      "case_type": "core_behavior",
+      "atomic_scenario": "independent corroboration",
+      "source_seed_registry_id": "NTB-WF-006-CORE-01",
+      "source_atomic_feature_id": "WF-006-CORE-01",
+      "source_seed_test_name": "test_real_time_intake_deduplication_cleaning_core_behavior_valid_scope",
+      "objective": "Verify Real-Time Intake Deduplication & Cleaning for the atomic scenario \"independent corroboration\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: independent corroboration.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: independent corroboration.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Whitespace-normalized text and idempotent same-intent consumption; no verified merged candidate or corroboration/revision record exists across separately captured intents.",
+      "state_and_side_effect_oracle": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+      "required_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "supported_boundary": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-006-GUARD-02-02",
+      "test_name": "test_real_time_intake_deduplication_and_cleaning__malformed_noisy_input",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "malformed/noisy input",
+      "source_seed_registry_id": "NTB-WF-006-GUARD-02",
+      "source_atomic_feature_id": "WF-006-GUARD-02",
+      "source_seed_test_name": "test_real_time_intake_deduplication_cleaning_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Real-Time Intake Deduplication & Cleaning for the atomic scenario \"malformed/noisy input\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: malformed/noisy input.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: malformed/noisy input.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Malformed/empty input is rejected upstream, but no semantic duplicate threshold, merge conflict, or quarantine decision was found.",
+      "state_and_side_effect_oracle": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+      "required_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "supported_boundary": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-006-EVIDENCE-03-01",
+      "test_name": "test_real_time_intake_deduplication_and_cleaning__merge_provenance",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "merge provenance",
+      "source_seed_registry_id": "NTB-WF-006-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-006-EVIDENCE-03",
+      "source_seed_test_name": "test_real_time_intake_deduplication_cleaning_records_status_provenance_evidence",
+      "objective": "Verify Real-Time Intake Deduplication & Cleaning for the atomic scenario \"merge provenance\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: merge provenance.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: merge provenance.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "state_and_side_effect_oracle": "Marks an intent as consumed and binds it once. A fresh capture receives a timestamped digest and is generally a new intent even if text repeats.",
+      "required_evidence": "Partial only: `harness/lib/intent_consumer.py::consume_one` avoids re-consuming an existing intent ID and `harness/tools/codex_pm_router.py::_normalized_text` normalizes whitespace.",
+      "supported_boundary": "Same-intent idempotence is supported. Cross-intent replay detection, exact/near duplicate merging, revision preservation, and corroboration tracking are not found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

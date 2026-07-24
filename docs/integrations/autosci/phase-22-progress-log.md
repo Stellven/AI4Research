@@ -235,3 +235,187 @@ against the current repository.
 The severity interpretation remains a working rubric until confirmed for the
 full test report. The next recorded work should identify execution-ready tests,
 test gaps, required environments, and the first smoke-test batch.
+
+## Contract-Gated Missing-Test Case Design
+
+Logged: 2026-07-23 EDT
+
+Intent: convert the 180 generic seed tests for the 60 previously uncovered
+Level 2 features into observable atomic test-case designs while the generated
+L2 contracts are under user review.
+
+### Eligibility And Scope
+
+| Item | Result | Evidence / interpretation |
+|---|---:|---|
+| Current L2 contracts inspected | 142 | Workflow 54, Foundation 65, and Vertical 23 in `outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/AI4RnD Feature List - L2 what annotated.xlsx`. |
+| Previously uncovered L2 features needing concrete cases | 60 | This is the historical-coverage gap recorded in `Uncovered L2 Resolution`, not the larger set of L2s that still lack a finished current-file binding. |
+| Eligible L2s with a generated contract | 60 | Every previously uncovered L2 matched a nonblank generated contract after ordinal-prefix normalization. |
+| Contract-less eligible L2s skipped | 0 | The contract gate excluded no member of the 60-L2 set. |
+| Generic seed tests represented | 180 | All core-behavior, input-guardrail, and evidence/auditability seed registry IDs are referenced by at least one generated scenario. |
+| Observable atomic scenarios designed | 490 | The contract `Granularity / Separate Atomic Contracts` field was expanded into named scenario-level cases; a fallback core, guardrail, or evidence case was added only when a contract list did not explicitly contain that seed category. |
+
+### Generated Case Inventory
+
+| Category | L2 manifests | Atomic scenario cases |
+|---|---:|---:|
+| Workflow | 21 | 178 |
+| Foundation | 31 | 237 |
+| Vertical | 8 | 75 |
+| **Total** | **60** | **490** |
+
+Each L2 has one JSON case manifest under its required categorized root:
+`tests/workflow/<level-1-slug>/`, `tests/foundation/<level-1-slug>/`, or
+`tests/vertical/<level-1-slug>/`. Each case records a stable case ID, a readable
+`test_*` name, its source seed registry ID, input focus, prerequisites, steps,
+expected result, state/side-effect oracle, required evidence, supported
+boundary, current implementation surfaces, and execution status.
+
+The cross-category explanation and validator are stored in
+`tests/platform/phase22/README.md` and
+`tests/platform/phase22/test_l2_case_specifications.py`.
+
+### Implementation And Execution Status
+
+| Status | L2 count | Interpretation |
+|---|---:|---|
+| Current surface identified | 52 | At least one current tracked implementation/interface/schema/evidence file referenced by the contract was resolved. The cases remain `DESIGNED_NOT_YET_IMPLEMENTED` until a behavioral adapter invokes the surface and asserts the oracle. |
+| No current implementation | 8 | Cases are retained for traceability but marked `BLOCKED_NO_CURRENT_IMPLEMENTATION`; no passing result is implied. |
+
+The eight implementation-absent L2s are `Qualified Channel Signal Intake`,
+`Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL)`, `Dataset
+Graph Management`, `Policy Graph Management`, `Model Construction`, `Prototype
+Assembly`, `Account Registration`, and `Discord`.
+
+No product capability result was assigned in this step. These are concrete
+test-case specifications, not behavioral pass evidence. This separation avoids
+treating AI-generated structure or the existence of a referenced source file as
+proof that the underlying feature works.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| Validator command | `python tests/platform/phase22/test_l2_case_specifications.py` |
+| Standard-library validator | PASS: 4 tests in 0.433 seconds. |
+| Manifest count | PASS: 60 unique L2 manifests. |
+| Case identity | PASS: 490 unique case IDs and `test_*` names. |
+| Seed traceability | PASS: all 180 unique seed registry IDs represented. |
+| Contract gate | PASS: every manifest contains all 13 nonblank contract/evidence fields. |
+| Current-surface check | PASS: all referenced surfaces for the 52 surface-identified L2s resolve to files in the current repository. |
+| Missing-implementation guard | PASS: all cases for the eight implementation-absent L2s are marked blocked. |
+
+Next step: after the corresponding L2 contracts are approved or revised,
+implement behavioral adapters for the approved scenarios in small batches,
+starting with deterministic local surfaces. Bind only executed cases and retain
+current-repository evidence before assigning pass/fail status.
+
+## Implemented-L2 Execution Audit Checkpoint
+
+Logged: 2026-07-23 EDT
+
+Intent: shift the Phase 22 report from design-only coverage to an executable
+three-state audit of every Level 2 feature.
+
+### Classification Rule
+
+| Result | Working definition |
+|---|---|
+| Function implemented and test passed | A direct current implementation performs a meaningful core part of the L2 and its feature-relevant executable probe passes. |
+| Function implemented but test failed | A direct current implementation exists, but its executable probe fails, including current-machine dependency or platform failures that prevent the behavior from running. |
+| Function not implemented and test blocked | No direct core implementation exists. Adjacent or similarly named surfaces do not count as implementation evidence. |
+
+Ten L2s are currently classified as implementation-blocked by the contract and
+code-surface review: the eight previously explicit gaps plus `Strategic
+Opportunity Screening` and `Hypothesis Pool & Mechanism Formation`, whose
+contracts identify only adjacent/partial surfaces rather than their direct core
+behavior. Partial umbrella L2s with a meaningful current subset remain eligible
+for execution, with the tested subset recorded as a limitation.
+
+### Work Completed Before Pause
+
+| Area | Result |
+|---|---|
+| Intake and requirement compilation | Representative capture, binding, consumption, qualification, compilation, and rejection probes pass after using an isolated UTF-8 test environment. |
+| Search and ingestion | Paper preparation and local/provider-retry literature discovery probes pass. |
+| Ideation | Deduplication passes; the mixed wiki/discovery ideation probe fails because the provider-source proof omits the expected method evidence reference. |
+| Claims and experiment workflow | Claim/converter probes pass. Experiment-design and pilot-run probes fail on their current expected evidence/execution boundaries. |
+| Evaluation and delivery | Grounded synthesis, artifact evaluation, claim-verdict, artifact-review, status-next, paper-draft, and publication/deliverable probes pass. |
+| Capability capsules | Definition, registry, and resolution probes pass. |
+| GEPA promotion | Capsule evolution/promotion probes fail on Windows because the tests use POSIX `/tmp` paths that are unavailable to the Windows Python runtime. |
+| Benchmarking | Registry and report-schema probes pass; the Terminal-Bench dry-run execution probe returns `pending` where the test expects `ok`. New direct core benchmark tests pass under Node's TypeScript loader. |
+| TypeScript runtime adapters | Added passing executable Node tests for benchmark metadata/results, the agent message bus, and Hive cluster registration/capability matching. |
+| Windows portability findings | Existing operator-selection/model-audit probes cannot collect because `fcntl` is unavailable; the Apple Notes/WeChat shell probe fails because Windows Python cannot resolve the MSYS `/tmp` fixture path. These remain implemented/test-failed candidates, not implementation-blocked features. |
+
+New executable test support added under the required root test hierarchy:
+
+- `tests/platform/phase22/node_typescript_loader.mjs`
+- `tests/platform/phase22/bin/python3`
+- `tests/workflow/benchmarking/test_core_benchmark_behavior.mjs`
+- `tests/foundation/harness_core/test_agent_bus_behavior.mjs`
+- `tests/foundation/data_foundations/test_bun_data_foundation_behavior.test.ts`
+- `tests/vertical/system_configurations/test_hive_cluster_behavior.mjs`
+
+Pause state: the complete 142-row execution matrix, full run, final three-state
+counts, and classified workbook export are not yet complete. No commit or push
+was performed at this checkpoint.
+
+## Implemented-L2 Execution Audit Completion
+
+Logged: 2026-07-23 EDT
+
+The paused audit was resumed and completed against the same checkout. The
+classification uses one representative, feature-relevant core probe per L2;
+shared probes are executed once and their evidence is bound to each applicable
+L2. This is an executable smoke classification, not exhaustive proof of every
+atomic contract scenario.
+
+### Final Classification
+
+| Category | Implemented / passed | Implemented / failed | Not implemented / blocked | Total |
+|---|---:|---:|---:|---:|
+| Workflow | 41 | 10 | 3 | 54 |
+| Foundation | 43 | 17 | 5 | 65 |
+| Vertical | 10 | 11 | 2 | 23 |
+| **Total** | **94** | **38** | **10** | **142** |
+
+The 132 implemented L2s resolve to 79 unique executable probes. The run
+completed with 58 passing probes and 21 failing probes. Every one of the 142
+L2 rows has exactly one final classification; the ten no-implementation rows
+have explicit blockers and no fabricated executable result.
+
+### Execution And Evidence Artifacts
+
+- Matrix builder: `tests/platform/phase22/build_l2_execution_matrix.py`
+- Complete binding matrix: `tests/platform/phase22/l2_execution_matrix.json`
+- Matrix runner: `tests/platform/phase22/run_l2_execution_matrix.py`
+- Structural validators: `tests/platform/phase22/test_l2_execution_matrix.py` and `tests/platform/phase22/test_l2_case_specifications.py`
+- Machine-readable results: `outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/phase22_l2_execution/phase22_l2_execution_results.json`
+- Review tables: `outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/phase22_l2_execution/phase22_l2_classification.csv` and `.md`
+- Classified workbook: `outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/AI4RnD Feature List - L2 execution classified.xlsx`
+
+The runner isolates `HOME` and `USERPROFILE`, enables UTF-8 Python I/O, and
+records commands, return codes, durations, stdout/stderr tails, implementation
+entrypoints, tested boundaries, and blocker or failure summaries. Supported
+runners are pytest, Python script, Node, Node with the local TypeScript loader,
+Git Bash, and Bun; an unavailable required runner is recorded as a test failure
+for an implemented capability rather than as an unimplemented feature.
+
+### Principal Failure Groups
+
+- Several Python runtime/operator probes cannot import `fcntl` on Windows.
+- Bun-backed ontology/SMI tests cannot run because Bun is unavailable.
+- Desktop GUI coverage cannot run because `desktop/node_modules/playwright` is missing.
+- Some existing tests use POSIX `/tmp` paths that Windows Python cannot resolve.
+- Remaining behavioral mismatches include logical-schema validation, macOS
+  release gating, status-dashboard write support, benchmark dry-run verdicts,
+  experiment evidence/parity, and ideation evidence references.
+
+These class-2 results are retained as evidence of current implementation that
+did not pass on this machine; they are not reclassified as missing features.
+The class-3 set is limited to Qualified Channel Signal Intake, Strategic
+Opportunity Screening, Hypothesis Pool & Mechanism Formation, Model Policies
+and Weights, Dataset Graph Management, Policy Graph Management, Model
+Construction, Prototype Assembly, Account Registration, and Discord.
+
+No commit or push was performed as part of this audit.

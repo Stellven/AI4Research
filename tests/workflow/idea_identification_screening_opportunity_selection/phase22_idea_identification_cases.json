@@ -1,0 +1,251 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Idea identification / screening / opportunity selection",
+    "level_2": "Idea Identification",
+    "description": "Converts meaningful signal combinations and gaps into discrete candidate ideas with a recognizable technical or user value proposition."
+  },
+  "contract": {
+    "purpose_user_function": "Turn evidence-backed gaps, method changes, combinations, and cross-source relationships into discrete technical/user-value candidate ideas.",
+    "valid_inputs": "Idea-source records, evidence IDs, gaps, methods/claims, prior idea memory, and generation/selection limits.",
+    "expected_outputs": "Discrete IdeaCandidate records with title, hypothesis, approach, origin evidence, novelty hypothesis, and status.",
+    "state_side_effects": "Creates candidate artifacts and feeds novelty/feasibility screening.",
+    "failure_rejection_behavior": "Produces blocked/inconclusive or no candidate when evidence sources are missing, content is duplicate, or generation paths cannot form a meaningful idea.",
+    "supported_boundaries_exclusions": "Recognizable technical candidates are implemented; explicit user-value proposition fields are mostly embedded in text rather than separately typed.",
+    "success_evidence": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+    "granularity_atomic_contracts": "Test one candidate per meaningful signal, gap-based value, combination value, missing evidence, duplicate, empty source set, and candidate ID stability.",
+    "readme_product_docs": "README.md#Appendix: AutoSci Commands (`/ideate`, `/novelty`); docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "skills/ideate/SKILL.md; skills/novelty/SKILL.md; harness/plugins/autosci/bin/autosci_bridge.py idea and novelty actions",
+    "config_schemas": "harness/schemas/evidence/idea_candidate.v1.schema.json; harness/schemas/evidence/idea_evaluation.v1.schema.json",
+    "implementation_entrypoints": "harness/plugins/autosci/backends/idea_source.py::build_idea_candidates; harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert",
+    "platform_provider_limitations": "Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "harness/plugins/autosci/adapters/autosci_to_idea_candidate.py",
+      "harness/plugins/autosci/backends/idea_source.py",
+      "harness/plugins/autosci/bin/autosci_bridge.py",
+      "harness/schemas/evidence/idea_candidate.v1.schema.json",
+      "harness/schemas/evidence/idea_evaluation.v1.schema.json"
+    ],
+    "entrypoints": "harness/plugins/autosci/backends/idea_source.py::build_idea_candidates; harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert",
+    "interfaces": "skills/ideate/SKILL.md; skills/novelty/SKILL.md; harness/plugins/autosci/bin/autosci_bridge.py idea and novelty actions",
+    "schemas_and_config": "harness/schemas/evidence/idea_candidate.v1.schema.json; harness/schemas/evidence/idea_evaluation.v1.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-025-CORE-01",
+      "atomic_feature_id": "WF-025-CORE-01",
+      "test_name": "test_idea_identification_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-025-EVIDENCE-03",
+      "atomic_feature_id": "WF-025-EVIDENCE-03",
+      "test_name": "test_idea_identification_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-025-GUARD-02",
+      "atomic_feature_id": "WF-025-GUARD-02",
+      "test_name": "test_idea_identification_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "P22-WF-025-CORE-01-01",
+      "test_name": "test_idea_identification__one_candidate_per_meaningful_signal",
+      "case_type": "core_behavior",
+      "atomic_scenario": "one candidate per meaningful signal",
+      "source_seed_registry_id": "NTB-WF-025-CORE-01",
+      "source_atomic_feature_id": "WF-025-CORE-01",
+      "source_seed_test_name": "test_idea_identification_core_behavior_valid_scope",
+      "objective": "Verify Idea Identification for the atomic scenario \"one candidate per meaningful signal\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: one candidate per meaningful signal.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: one candidate per meaningful signal.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Discrete IdeaCandidate records with title, hypothesis, approach, origin evidence, novelty hypothesis, and status.",
+      "state_and_side_effect_oracle": "Creates candidate artifacts and feeds novelty/feasibility screening.",
+      "required_evidence": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+      "supported_boundary": "Recognizable technical candidates are implemented; explicit user-value proposition fields are mostly embedded in text rather than separately typed.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-025-CORE-01-02",
+      "test_name": "test_idea_identification__gap_based_value",
+      "case_type": "core_behavior",
+      "atomic_scenario": "gap-based value",
+      "source_seed_registry_id": "NTB-WF-025-CORE-01",
+      "source_atomic_feature_id": "WF-025-CORE-01",
+      "source_seed_test_name": "test_idea_identification_core_behavior_valid_scope",
+      "objective": "Verify Idea Identification for the atomic scenario \"gap-based value\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: gap-based value.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: gap-based value.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Discrete IdeaCandidate records with title, hypothesis, approach, origin evidence, novelty hypothesis, and status.",
+      "state_and_side_effect_oracle": "Creates candidate artifacts and feeds novelty/feasibility screening.",
+      "required_evidence": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+      "supported_boundary": "Recognizable technical candidates are implemented; explicit user-value proposition fields are mostly embedded in text rather than separately typed.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-025-CORE-01-03",
+      "test_name": "test_idea_identification__combination_value",
+      "case_type": "core_behavior",
+      "atomic_scenario": "combination value",
+      "source_seed_registry_id": "NTB-WF-025-CORE-01",
+      "source_atomic_feature_id": "WF-025-CORE-01",
+      "source_seed_test_name": "test_idea_identification_core_behavior_valid_scope",
+      "objective": "Verify Idea Identification for the atomic scenario \"combination value\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: combination value.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: combination value.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Discrete IdeaCandidate records with title, hypothesis, approach, origin evidence, novelty hypothesis, and status.",
+      "state_and_side_effect_oracle": "Creates candidate artifacts and feeds novelty/feasibility screening.",
+      "required_evidence": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+      "supported_boundary": "Recognizable technical candidates are implemented; explicit user-value proposition fields are mostly embedded in text rather than separately typed.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-025-EVIDENCE-03-01",
+      "test_name": "test_idea_identification__missing_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "missing evidence",
+      "source_seed_registry_id": "NTB-WF-025-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-025-EVIDENCE-03",
+      "source_seed_test_name": "test_idea_identification_records_status_provenance_evidence",
+      "objective": "Verify Idea Identification for the atomic scenario \"missing evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: missing evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+      "state_and_side_effect_oracle": "Creates candidate artifacts and feeds novelty/feasibility screening.",
+      "required_evidence": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+      "supported_boundary": "Recognizable technical candidates are implemented; explicit user-value proposition fields are mostly embedded in text rather than separately typed.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-025-GUARD-02-01",
+      "test_name": "test_idea_identification__duplicate",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "duplicate",
+      "source_seed_registry_id": "NTB-WF-025-GUARD-02",
+      "source_atomic_feature_id": "WF-025-GUARD-02",
+      "source_seed_test_name": "test_idea_identification_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Idea Identification for the atomic scenario \"duplicate\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: duplicate.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: duplicate.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Produces blocked/inconclusive or no candidate when evidence sources are missing, content is duplicate, or generation paths cannot form a meaningful idea.",
+      "state_and_side_effect_oracle": "Creates candidate artifacts and feeds novelty/feasibility screening.",
+      "required_evidence": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+      "supported_boundary": "Recognizable technical candidates are implemented; explicit user-value proposition fields are mostly embedded in text rather than separately typed.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-025-GUARD-02-02",
+      "test_name": "test_idea_identification__empty_source_set",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "empty source set",
+      "source_seed_registry_id": "NTB-WF-025-GUARD-02",
+      "source_atomic_feature_id": "WF-025-GUARD-02",
+      "source_seed_test_name": "test_idea_identification_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Idea Identification for the atomic scenario \"empty source set\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: empty source set.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: empty source set.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Produces blocked/inconclusive or no candidate when evidence sources are missing, content is duplicate, or generation paths cannot form a meaningful idea.",
+      "state_and_side_effect_oracle": "Creates candidate artifacts and feeds novelty/feasibility screening.",
+      "required_evidence": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+      "supported_boundary": "Recognizable technical candidates are implemented; explicit user-value proposition fields are mostly embedded in text rather than separately typed.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-025-CORE-01-04",
+      "test_name": "test_idea_identification__candidate_id_stability",
+      "case_type": "core_behavior",
+      "atomic_scenario": "candidate ID stability",
+      "source_seed_registry_id": "NTB-WF-025-CORE-01",
+      "source_atomic_feature_id": "WF-025-CORE-01",
+      "source_seed_test_name": "test_idea_identification_core_behavior_valid_scope",
+      "objective": "Verify Idea Identification for the atomic scenario \"candidate ID stability\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: candidate ID stability.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Final novelty promotion requires external evidence or Review LLM availability; offline/local overlap is only a surrogate. Strategic and portfolio criteria are not fully modeled. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: candidate ID stability.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Discrete IdeaCandidate records with title, hypothesis, approach, origin evidence, novelty hypothesis, and status.",
+      "state_and_side_effect_oracle": "Creates candidate artifacts and feeds novelty/feasibility screening.",
+      "required_evidence": "`harness/plugins/autosci/backends/idea_source.py::build_idea_candidates` and `harness/plugins/autosci/adapters/autosci_to_idea_candidate.py::convert` emit schema-valid candidates.",
+      "supported_boundary": "Recognizable technical candidates are implemented; explicit user-value proposition fields are mostly embedded in text rather than separately typed.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Foundational models",
+    "level_2": "Model Usage Auditing",
+    "description": "Record model calls, routes, users, tokens, cost, quota consumption, and policy decisions for audit and accounting."
+  },
+  "contract": {
+    "purpose_user_function": "Record model invocation metadata for audit, usage visibility, and later routing/evaluation.",
+    "valid_inputs": "Pane/operator, provider/model, event/status, timestamps/duration, usage/tokens/cost where available, task/sprint/node IDs, and result metadata.",
+    "expected_outputs": "Structured model event appended to runtime telemetry/ledger and visible to status/reporting.",
+    "state_side_effects": "Appends event records and may update pane/runtime metadata; does not itself execute the model request.",
+    "failure_rejection_behavior": "Invalid/missing identifiers, unreadable pane metadata, absent usage fields, or write failure yields incomplete/error telemetry and must not invent usage.",
+    "supported_boundaries_exclusions": "Call/provider/model/status capture is shipped; consistent user identity, exact cost, quota consumption, and policy-decision accounting are partial.",
+    "success_evidence": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
+    "granularity_atomic_contracts": "start/success/failure; provider/model normalization; token/cost present/absent; task correlation; duplicate event; write failure.",
+    "readme_product_docs": "README.md §What You Get and 'Choose or inspect models'; docs/solar-architecture-code-map.md §§2-4",
+    "cli_api_skill_interfaces": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), main(); harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/model_call_runtime.py: record_model_event(), main(); README.md: solar harness models show/set-main",
+    "config_schemas": "harness/config/model-registry.json; harness/config/model-scenario-routing.json; harness/config/physical-operators.json",
+    "implementation_entrypoints": "harness/lib/model_call_runtime.py: pane_runtime_metadata(), record_model_event(), main(); harness/tests/runtime/test_model_call_runtime.py",
+    "platform_provider_limitations": "Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "README.md",
+      "harness/config/model-registry.json",
+      "harness/config/model-scenario-routing.json",
+      "harness/config/physical-operators.json",
+      "harness/lib/model_call_runtime.py",
+      "harness/lib/model_registry.py",
+      "harness/lib/operator_model_selection.py",
+      "harness/tests/runtime/test_model_call_runtime.py"
+    ],
+    "entrypoints": "harness/lib/model_call_runtime.py: pane_runtime_metadata(), record_model_event(), main(); harness/tests/runtime/test_model_call_runtime.py",
+    "interfaces": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), main(); harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/model_call_runtime.py: record_model_event(), main(); README.md: solar harness models show/set-main",
+    "schemas_and_config": "harness/config/model-registry.json; harness/config/model-scenario-routing.json; harness/config/physical-operators.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-021-CORE-01",
+      "atomic_feature_id": "FN-021-CORE-01",
+      "test_name": "test_model_usage_auditing_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-021-EVIDENCE-03",
+      "atomic_feature_id": "FN-021-EVIDENCE-03",
+      "test_name": "test_model_usage_auditing_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-021-GUARD-02",
+      "atomic_feature_id": "FN-021-GUARD-02",
+      "test_name": "test_model_usage_auditing_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 6,
+  "cases": [
+    {
+      "case_id": "P22-FN-021-GUARD-02-01",
+      "test_name": "test_model_usage_auditing__start_success_failure",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "start/success/failure",
+      "source_seed_registry_id": "NTB-FN-021-GUARD-02",
+      "source_atomic_feature_id": "FN-021-GUARD-02",
+      "source_seed_test_name": "test_model_usage_auditing_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Usage Auditing for the atomic scenario \"start/success/failure\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: start/success/failure.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: start/success/failure.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Invalid/missing identifiers, unreadable pane metadata, absent usage fields, or write failure yields incomplete/error telemetry and must not invent usage.",
+      "state_and_side_effect_oracle": "Appends event records and may update pane/runtime metadata; does not itself execute the model request.",
+      "required_evidence": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
+      "supported_boundary": "Call/provider/model/status capture is shipped; consistent user identity, exact cost, quota consumption, and policy-decision accounting are partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-021-CORE-01-01",
+      "test_name": "test_model_usage_auditing__provider_model_normalization",
+      "case_type": "core_behavior",
+      "atomic_scenario": "provider/model normalization",
+      "source_seed_registry_id": "NTB-FN-021-CORE-01",
+      "source_atomic_feature_id": "FN-021-CORE-01",
+      "source_seed_test_name": "test_model_usage_auditing_core_behavior_valid_scope",
+      "objective": "Verify Model Usage Auditing for the atomic scenario \"provider/model normalization\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: provider/model normalization.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: provider/model normalization.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Structured model event appended to runtime telemetry/ledger and visible to status/reporting.",
+      "state_and_side_effect_oracle": "Appends event records and may update pane/runtime metadata; does not itself execute the model request.",
+      "required_evidence": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
+      "supported_boundary": "Call/provider/model/status capture is shipped; consistent user identity, exact cost, quota consumption, and policy-decision accounting are partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-021-GUARD-02-02",
+      "test_name": "test_model_usage_auditing__token_cost_present_absent",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "token/cost present/absent",
+      "source_seed_registry_id": "NTB-FN-021-GUARD-02",
+      "source_atomic_feature_id": "FN-021-GUARD-02",
+      "source_seed_test_name": "test_model_usage_auditing_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Usage Auditing for the atomic scenario \"token/cost present/absent\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: token/cost present/absent.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: token/cost present/absent.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Invalid/missing identifiers, unreadable pane metadata, absent usage fields, or write failure yields incomplete/error telemetry and must not invent usage.",
+      "state_and_side_effect_oracle": "Appends event records and may update pane/runtime metadata; does not itself execute the model request.",
+      "required_evidence": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
+      "supported_boundary": "Call/provider/model/status capture is shipped; consistent user identity, exact cost, quota consumption, and policy-decision accounting are partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-021-EVIDENCE-03-01",
+      "test_name": "test_model_usage_auditing__task_correlation",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "task correlation",
+      "source_seed_registry_id": "NTB-FN-021-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-021-EVIDENCE-03",
+      "source_seed_test_name": "test_model_usage_auditing_records_status_provenance_evidence",
+      "objective": "Verify Model Usage Auditing for the atomic scenario \"task correlation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: task correlation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: task correlation.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
+      "state_and_side_effect_oracle": "Appends event records and may update pane/runtime metadata; does not itself execute the model request.",
+      "required_evidence": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
+      "supported_boundary": "Call/provider/model/status capture is shipped; consistent user identity, exact cost, quota consumption, and policy-decision accounting are partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-021-GUARD-02-03",
+      "test_name": "test_model_usage_auditing__duplicate_event",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "duplicate event",
+      "source_seed_registry_id": "NTB-FN-021-GUARD-02",
+      "source_atomic_feature_id": "FN-021-GUARD-02",
+      "source_seed_test_name": "test_model_usage_auditing_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Usage Auditing for the atomic scenario \"duplicate event\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: duplicate event.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: duplicate event.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Invalid/missing identifiers, unreadable pane metadata, absent usage fields, or write failure yields incomplete/error telemetry and must not invent usage.",
+      "state_and_side_effect_oracle": "Appends event records and may update pane/runtime metadata; does not itself execute the model request.",
+      "required_evidence": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
+      "supported_boundary": "Call/provider/model/status capture is shipped; consistent user identity, exact cost, quota consumption, and policy-decision accounting are partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-021-GUARD-02-04",
+      "test_name": "test_model_usage_auditing__write_failure",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "write failure",
+      "source_seed_registry_id": "NTB-FN-021-GUARD-02",
+      "source_atomic_feature_id": "FN-021-GUARD-02",
+      "source_seed_test_name": "test_model_usage_auditing_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Usage Auditing for the atomic scenario \"write failure\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: write failure.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: write failure.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Invalid/missing identifiers, unreadable pane metadata, absent usage fields, or write failure yields incomplete/error telemetry and must not invent usage.",
+      "state_and_side_effect_oracle": "Appends event records and may update pane/runtime metadata; does not itself execute the model request.",
+      "required_evidence": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
+      "supported_boundary": "Call/provider/model/status capture is shipped; consistent user identity, exact cost, quota consumption, and policy-decision accounting are partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

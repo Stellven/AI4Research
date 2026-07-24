@@ -1,0 +1,311 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Builder",
+    "level_2": "Code Construction",
+    "description": "Create or modify deterministic source code, scripts, tests, and configuration to implement the required technical function."
+  },
+  "contract": {
+    "purpose_user_function": "Create or modify deterministic code, scripts, tests, and configuration through an assigned coding operator.",
+    "valid_inputs": "Compiled node/envelope, repository files, specifications, write scope, toolchain, tests, and selected physical coding operator.",
+    "expected_outputs": "Source/config/test changes plus result, diff, logs, and evidence.",
+    "state_side_effects": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+    "failure_rejection_behavior": "Unresolved operator, denied write scope, build/test failure, conflict, timeout, or unsafe command returns failed/blocked evidence.",
+    "supported_boundaries_exclusions": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+    "success_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+    "granularity_atomic_contracts": "new file; modify; config; test creation; scope denial; compile/test fail; conflict; rollback/no-change.",
+    "readme_product_docs": "README.md §Basic Workflow and Appendix AutoSci Commands; docs/WORKFLOW_DESIGN.md Phases 2-5; AGENTS.md Scope and Local Workflow",
+    "cli_api_skill_interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "config_schemas": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt",
+    "implementation_entrypoints": "harness/lib/operator_runtime.py and harness/tools/codex_operator.py; agents/coder.md; no generic deterministic code-generation function",
+    "platform_provider_limitations": "Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      ".agents/skills/exp-run/SKILL.md",
+      ".agents/skills/paper-compile/SKILL.md",
+      ".agents/skills/paper-draft/SKILL.md",
+      "agents/coder.md",
+      "harness/config/physical-operators.json",
+      "harness/lib/operator_runtime.py",
+      "harness/schemas/request-envelope.schema.json",
+      "harness/schemas/task-graph.schema.json",
+      "harness/tools/codex_operator.py",
+      "package.json",
+      "skills/test/SKILL.md"
+    ],
+    "entrypoints": "harness/lib/operator_runtime.py and harness/tools/codex_operator.py; agents/coder.md; no generic deterministic code-generation function",
+    "interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
+    "schemas_and_config": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-055-CORE-01",
+      "atomic_feature_id": "FN-055-CORE-01",
+      "test_name": "test_code_construction_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-055-EVIDENCE-03",
+      "atomic_feature_id": "FN-055-EVIDENCE-03",
+      "test_name": "test_code_construction_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-055-GUARD-02",
+      "atomic_feature_id": "FN-055-GUARD-02",
+      "test_name": "test_code_construction_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-FN-055-CORE-01-01",
+      "test_name": "test_code_construction__new_file",
+      "case_type": "core_behavior",
+      "atomic_scenario": "new file",
+      "source_seed_registry_id": "NTB-FN-055-CORE-01",
+      "source_atomic_feature_id": "FN-055-CORE-01",
+      "source_seed_test_name": "test_code_construction_core_behavior_valid_scope",
+      "objective": "Verify Code Construction for the atomic scenario \"new file\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: new file.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: new file.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Source/config/test changes plus result, diff, logs, and evidence.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-055-CORE-01-02",
+      "test_name": "test_code_construction__modify",
+      "case_type": "core_behavior",
+      "atomic_scenario": "modify",
+      "source_seed_registry_id": "NTB-FN-055-CORE-01",
+      "source_atomic_feature_id": "FN-055-CORE-01",
+      "source_seed_test_name": "test_code_construction_core_behavior_valid_scope",
+      "objective": "Verify Code Construction for the atomic scenario \"modify\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: modify.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: modify.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Source/config/test changes plus result, diff, logs, and evidence.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-055-CORE-01-03",
+      "test_name": "test_code_construction__config",
+      "case_type": "core_behavior",
+      "atomic_scenario": "config",
+      "source_seed_registry_id": "NTB-FN-055-CORE-01",
+      "source_atomic_feature_id": "FN-055-CORE-01",
+      "source_seed_test_name": "test_code_construction_core_behavior_valid_scope",
+      "objective": "Verify Code Construction for the atomic scenario \"config\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: config.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: config.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Source/config/test changes plus result, diff, logs, and evidence.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-055-CORE-01-04",
+      "test_name": "test_code_construction__test_creation",
+      "case_type": "core_behavior",
+      "atomic_scenario": "test creation",
+      "source_seed_registry_id": "NTB-FN-055-CORE-01",
+      "source_atomic_feature_id": "FN-055-CORE-01",
+      "source_seed_test_name": "test_code_construction_core_behavior_valid_scope",
+      "objective": "Verify Code Construction for the atomic scenario \"test creation\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: test creation.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: test creation.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Source/config/test changes plus result, diff, logs, and evidence.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-055-CORE-01-05",
+      "test_name": "test_code_construction__scope_denial",
+      "case_type": "core_behavior",
+      "atomic_scenario": "scope denial",
+      "source_seed_registry_id": "NTB-FN-055-CORE-01",
+      "source_atomic_feature_id": "FN-055-CORE-01",
+      "source_seed_test_name": "test_code_construction_core_behavior_valid_scope",
+      "objective": "Verify Code Construction for the atomic scenario \"scope denial\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: scope denial.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: scope denial.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Source/config/test changes plus result, diff, logs, and evidence.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-055-GUARD-02-01",
+      "test_name": "test_code_construction__compile_test_fail",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "compile/test fail",
+      "source_seed_registry_id": "NTB-FN-055-GUARD-02",
+      "source_atomic_feature_id": "FN-055-GUARD-02",
+      "source_seed_test_name": "test_code_construction_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Code Construction for the atomic scenario \"compile/test fail\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: compile/test fail.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: compile/test fail.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Unresolved operator, denied write scope, build/test failure, conflict, timeout, or unsafe command returns failed/blocked evidence.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-055-GUARD-02-02",
+      "test_name": "test_code_construction__conflict",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "conflict",
+      "source_seed_registry_id": "NTB-FN-055-GUARD-02",
+      "source_atomic_feature_id": "FN-055-GUARD-02",
+      "source_seed_test_name": "test_code_construction_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Code Construction for the atomic scenario \"conflict\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: conflict.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: conflict.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Unresolved operator, denied write scope, build/test failure, conflict, timeout, or unsafe command returns failed/blocked evidence.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-055-GUARD-02-03",
+      "test_name": "test_code_construction__rollback_no_change",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "rollback/no-change",
+      "source_seed_registry_id": "NTB-FN-055-GUARD-02",
+      "source_atomic_feature_id": "FN-055-GUARD-02",
+      "source_seed_test_name": "test_code_construction_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Code Construction for the atomic scenario \"rollback/no-change\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: rollback/no-change.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: rollback/no-change.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Unresolved operator, denied write scope, build/test failure, conflict, timeout, or unsafe command returns failed/blocked evidence.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-055-EVIDENCE-03-01",
+      "test_name": "test_code_construction__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-055-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-055-EVIDENCE-03",
+      "source_seed_test_name": "test_code_construction_records_status_provenance_evidence",
+      "objective": "Verify Code Construction for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "state_and_side_effect_oracle": "Authorized filesystem edits and subprocess/tool invocations occur in the builder workspace.",
+      "required_evidence": "Diff stays in scope, requested interface works, mandatory checks pass, and build evidence links to exact changes.",
+      "supported_boundary": "Solar orchestrates external code agents; AGENTS.md states shipped runtime remains a Claude Code overlay, not an in-process code generator.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

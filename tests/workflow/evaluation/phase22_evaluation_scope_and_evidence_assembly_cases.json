@@ -1,0 +1,278 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Workflow Features",
+    "level_1": "Evaluation",
+    "level_2": "Evaluation Scope & Evidence Assembly",
+    "description": "Clarify the strategy and standard used for this evaluation, collect benchmark results, claims, and reletive evidence"
+  },
+  "contract": {
+    "purpose_user_function": "Select an evaluation profile/standard and assemble claims, experiment/benchmark results, sources, evidence links, artifacts, and limitations.",
+    "valid_inputs": "Research artifacts, claims, evidence, benchmark/experiment results, required evidence profile/source types, review focus, and acceptance context.",
+    "expected_outputs": "An evaluation input set plus coverage/source/claim metrics and a review or closeout verdict.",
+    "state_side_effects": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+    "failure_rejection_behavior": "Returns failure/repair/inconclusive when artifacts are missing, schema-invalid, unreadable, or below configured evidence/coverage requirements.",
+    "supported_boundaries_exclusions": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+    "success_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+    "granularity_atomic_contracts": "Test evaluation profile, standard/threshold, claim set, benchmark/experiment result, evidence assembly, limitation inclusion, missing artifact, and incompatible artifact.",
+    "readme_product_docs": "README.md#Appendix: AutoSci Commands (`/exp-eval`, `/review`, `/survey`); docs/integrations/autosci/full-parity-progress-report.md#Remaining Partial/Gated Routes documents incomplete global parity, provider-gated routes, and remaining semantic-proof gaps.",
+    "cli_api_skill_interfaces": "skills/exp-eval/SKILL.md; skills/review/SKILL.md; harness/plugins/autosci evaluation adapters",
+    "config_schemas": "harness/schemas/evidence/artifact_review.v1.schema.json; harness/schemas/evidence/claim_verdict.v1.schema.json; harness/schemas/evidence/experiment_result.v1.schema.json",
+    "implementation_entrypoints": "harness/lib/research/evaluator.py::evaluate_artifacts, evaluate_final_closeout; harness/plugins/autosci adapters",
+    "platform_provider_limitations": "Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "harness/lib/research/evaluator.py",
+      "harness/schemas/evidence/artifact_review.v1.schema.json",
+      "harness/schemas/evidence/claim_verdict.v1.schema.json",
+      "harness/schemas/evidence/experiment_result.v1.schema.json",
+      "skills/review/SKILL.md"
+    ],
+    "entrypoints": "harness/lib/research/evaluator.py::evaluate_artifacts, evaluate_final_closeout; harness/plugins/autosci adapters",
+    "interfaces": "skills/exp-eval/SKILL.md; skills/review/SKILL.md; harness/plugins/autosci evaluation adapters",
+    "schemas_and_config": "harness/schemas/evidence/artifact_review.v1.schema.json; harness/schemas/evidence/claim_verdict.v1.schema.json; harness/schemas/evidence/experiment_result.v1.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-WF-046-CORE-01",
+      "atomic_feature_id": "WF-046-CORE-01",
+      "test_name": "test_evaluation_scope_evidence_assembly_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-WF-046-EVIDENCE-03",
+      "atomic_feature_id": "WF-046-EVIDENCE-03",
+      "test_name": "test_evaluation_scope_evidence_assembly_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-WF-046-GUARD-02",
+      "atomic_feature_id": "WF-046-GUARD-02",
+      "test_name": "test_evaluation_scope_evidence_assembly_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-WF-046-CORE-01-01",
+      "test_name": "test_evaluation_scope_and_evidence_assembly__evaluation_profile",
+      "case_type": "core_behavior",
+      "atomic_scenario": "evaluation profile",
+      "source_seed_registry_id": "NTB-WF-046-CORE-01",
+      "source_atomic_feature_id": "WF-046-CORE-01",
+      "source_seed_test_name": "test_evaluation_scope_evidence_assembly_core_behavior_valid_scope",
+      "objective": "Verify Evaluation Scope & Evidence Assembly for the atomic scenario \"evaluation profile\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: evaluation profile.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: evaluation profile.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "An evaluation input set plus coverage/source/claim metrics and a review or closeout verdict.",
+      "state_and_side_effect_oracle": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+      "required_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "supported_boundary": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-046-CORE-01-02",
+      "test_name": "test_evaluation_scope_and_evidence_assembly__standard_threshold",
+      "case_type": "core_behavior",
+      "atomic_scenario": "standard/threshold",
+      "source_seed_registry_id": "NTB-WF-046-CORE-01",
+      "source_atomic_feature_id": "WF-046-CORE-01",
+      "source_seed_test_name": "test_evaluation_scope_evidence_assembly_core_behavior_valid_scope",
+      "objective": "Verify Evaluation Scope & Evidence Assembly for the atomic scenario \"standard/threshold\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: standard/threshold.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: standard/threshold.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "An evaluation input set plus coverage/source/claim metrics and a review or closeout verdict.",
+      "state_and_side_effect_oracle": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+      "required_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "supported_boundary": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-046-CORE-01-03",
+      "test_name": "test_evaluation_scope_and_evidence_assembly__claim_set",
+      "case_type": "core_behavior",
+      "atomic_scenario": "claim set",
+      "source_seed_registry_id": "NTB-WF-046-CORE-01",
+      "source_atomic_feature_id": "WF-046-CORE-01",
+      "source_seed_test_name": "test_evaluation_scope_evidence_assembly_core_behavior_valid_scope",
+      "objective": "Verify Evaluation Scope & Evidence Assembly for the atomic scenario \"claim set\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: claim set.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: claim set.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "An evaluation input set plus coverage/source/claim metrics and a review or closeout verdict.",
+      "state_and_side_effect_oracle": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+      "required_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "supported_boundary": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-046-CORE-01-04",
+      "test_name": "test_evaluation_scope_and_evidence_assembly__benchmark_experiment_result",
+      "case_type": "core_behavior",
+      "atomic_scenario": "benchmark/experiment result",
+      "source_seed_registry_id": "NTB-WF-046-CORE-01",
+      "source_atomic_feature_id": "WF-046-CORE-01",
+      "source_seed_test_name": "test_evaluation_scope_evidence_assembly_core_behavior_valid_scope",
+      "objective": "Verify Evaluation Scope & Evidence Assembly for the atomic scenario \"benchmark/experiment result\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: benchmark/experiment result.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: benchmark/experiment result.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "An evaluation input set plus coverage/source/claim metrics and a review or closeout verdict.",
+      "state_and_side_effect_oracle": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+      "required_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "supported_boundary": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-046-EVIDENCE-03-01",
+      "test_name": "test_evaluation_scope_and_evidence_assembly__evidence_assembly",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "evidence assembly",
+      "source_seed_registry_id": "NTB-WF-046-EVIDENCE-03",
+      "source_atomic_feature_id": "WF-046-EVIDENCE-03",
+      "source_seed_test_name": "test_evaluation_scope_evidence_assembly_records_status_provenance_evidence",
+      "objective": "Verify Evaluation Scope & Evidence Assembly for the atomic scenario \"evidence assembly\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: evidence assembly.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: evidence assembly.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "state_and_side_effect_oracle": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+      "required_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "supported_boundary": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-046-CORE-01-05",
+      "test_name": "test_evaluation_scope_and_evidence_assembly__limitation_inclusion",
+      "case_type": "core_behavior",
+      "atomic_scenario": "limitation inclusion",
+      "source_seed_registry_id": "NTB-WF-046-CORE-01",
+      "source_atomic_feature_id": "WF-046-CORE-01",
+      "source_seed_test_name": "test_evaluation_scope_evidence_assembly_core_behavior_valid_scope",
+      "objective": "Verify Evaluation Scope & Evidence Assembly for the atomic scenario \"limitation inclusion\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: limitation inclusion.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: limitation inclusion.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "An evaluation input set plus coverage/source/claim metrics and a review or closeout verdict.",
+      "state_and_side_effect_oracle": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+      "required_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "supported_boundary": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-046-GUARD-02-01",
+      "test_name": "test_evaluation_scope_and_evidence_assembly__missing_artifact",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing artifact",
+      "source_seed_registry_id": "NTB-WF-046-GUARD-02",
+      "source_atomic_feature_id": "WF-046-GUARD-02",
+      "source_seed_test_name": "test_evaluation_scope_evidence_assembly_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Evaluation Scope & Evidence Assembly for the atomic scenario \"missing artifact\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing artifact.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing artifact.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Returns failure/repair/inconclusive when artifacts are missing, schema-invalid, unreadable, or below configured evidence/coverage requirements.",
+      "state_and_side_effect_oracle": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+      "required_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "supported_boundary": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-WF-046-CORE-01-06",
+      "test_name": "test_evaluation_scope_and_evidence_assembly__incompatible_artifact",
+      "case_type": "core_behavior",
+      "atomic_scenario": "incompatible artifact",
+      "source_seed_registry_id": "NTB-WF-046-CORE-01",
+      "source_atomic_feature_id": "WF-046-CORE-01",
+      "source_seed_test_name": "test_evaluation_scope_evidence_assembly_core_behavior_valid_scope",
+      "objective": "Verify Evaluation Scope & Evidence Assembly for the atomic scenario \"incompatible artifact\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: incompatible artifact.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Deterministic checks validate evidence structure and traceability, not real-world external validity; Review LLM or human judgment remains necessary for broader reasoning. README.md#Platform Support states macOS is primary, Linux supported, and Windows/WSL2 experimental; live provider authentication, trust, network, quota, and approval boundaries still apply."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: incompatible artifact.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "An evaluation input set plus coverage/source/claim metrics and a review or closeout verdict.",
+      "state_and_side_effect_oracle": "Writes evaluation/review evidence and may move the workflow to pass, repair, hard-fail, or inconclusive state.",
+      "required_evidence": "`harness/lib/research/evaluator.py::evaluate_artifacts` accepts artifacts and calculates evidence/claim/citation/coverage/source metrics.",
+      "supported_boundary": "Research evaluation assembly is implemented; generic benchmark-to-requirement assembly relies on external orchestration/IDs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

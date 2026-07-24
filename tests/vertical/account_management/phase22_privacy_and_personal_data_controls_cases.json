@@ -1,0 +1,279 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Vertical Features",
+    "level_1": "Account management",
+    "level_2": "Privacy & Personal Data Controls",
+    "description": "Let users inspect, export, retain, or delete personal settings and supplied data and manage consent for message-derived information."
+  },
+  "contract": {
+    "purpose_user_function": "Current code offers local backup/restore, keep-data versus deletion on uninstall, selected content redaction, secret-safe config helpers, and repository privacy scans; it is not a unified personal-data control center.",
+    "valid_inputs": "solar backup/restore/uninstall flags and archive paths, local config/secrets/database, ingestion text subject to redaction, and environment-backed notification/guardian identifiers.",
+    "expected_outputs": "Backup archive, restored local data, retained or removed Solar data, redacted ingestion artifacts, neutral privacy/config values, and privacy-scan pass/fail evidence.",
+    "state_side_effects": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+    "failure_rejection_behavior": "Uninstall refuses without --yes, dry-run avoids deletion, missing archive fails restore, privacy scan fails on tracked owner-identifying tokens, and absent identity env values use neutral fallbacks.",
+    "supported_boundaries_exclusions": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+    "success_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+    "granularity_atomic_contracts": "Backup contents and permissions; restore; uninstall delete versus keep-data/dry-run; neutral secret-free fallback; content redaction/full override; privacy scan positive/negative; unsupported consent and selective-retention paths.",
+    "readme_product_docs": "docs/UNINSTALL.md: What gets removed, Keep your data, Dry run and Back up before removing; INSTALL.md: config.env/.env and Lifecycle; AGENTS.md: privacy scan requirement.",
+    "cli_api_skill_interfaces": "bin/solar: backup, restore, uninstall --keep-data/--dry-run; scripts/check-privacy.sh; no dedicated personal-data/consent API found.",
+    "config_schemas": "core/config/privacy.ts environment-backed notification/guardian identifiers; install receipt/config layout in INSTALL.md; no consent or retention schema found.",
+    "implementation_entrypoints": "bin/solar do_backup/do_restore/uninstall; core/config/privacy.ts getters; harness/lib/apple_notes_ingest.py redact; scripts/check-privacy.sh.",
+    "platform_provider_limitations": "Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "INSTALL.md",
+      "bin/solar",
+      "core/config/privacy.ts",
+      "docs/UNINSTALL.md",
+      "harness/lib/apple_notes_ingest.py",
+      "scripts/check-privacy.sh"
+    ],
+    "entrypoints": "bin/solar do_backup/do_restore/uninstall; core/config/privacy.ts getters; harness/lib/apple_notes_ingest.py redact; scripts/check-privacy.sh.",
+    "interfaces": "bin/solar: backup, restore, uninstall --keep-data/--dry-run; scripts/check-privacy.sh; no dedicated personal-data/consent API found.",
+    "schemas_and_config": "core/config/privacy.ts environment-backed notification/guardian identifiers; install receipt/config layout in INSTALL.md; no consent or retention schema found."
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-VF-017-CORE-01",
+      "atomic_feature_id": "VF-017-CORE-01",
+      "test_name": "test_privacy_personal_data_controls_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-VF-017-EVIDENCE-03",
+      "atomic_feature_id": "VF-017-EVIDENCE-03",
+      "test_name": "test_privacy_personal_data_controls_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-VF-017-GUARD-02",
+      "atomic_feature_id": "VF-017-GUARD-02",
+      "test_name": "test_privacy_personal_data_controls_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-VF-017-CORE-01-01",
+      "test_name": "test_privacy_and_personal_data_controls__backup_contents_and_permissions",
+      "case_type": "core_behavior",
+      "atomic_scenario": "Backup contents and permissions",
+      "source_seed_registry_id": "NTB-VF-017-CORE-01",
+      "source_atomic_feature_id": "VF-017-CORE-01",
+      "source_seed_test_name": "test_privacy_personal_data_controls_core_behavior_valid_scope",
+      "objective": "Verify Privacy & Personal Data Controls for the atomic scenario \"Backup contents and permissions\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: Backup contents and permissions.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: Backup contents and permissions.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Backup archive, restored local data, retained or removed Solar data, redacted ingestion artifacts, neutral privacy/config values, and privacy-scan pass/fail evidence.",
+      "state_and_side_effect_oracle": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+      "required_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "supported_boundary": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-017-CORE-01-02",
+      "test_name": "test_privacy_and_personal_data_controls__restore",
+      "case_type": "core_behavior",
+      "atomic_scenario": "restore",
+      "source_seed_registry_id": "NTB-VF-017-CORE-01",
+      "source_atomic_feature_id": "VF-017-CORE-01",
+      "source_seed_test_name": "test_privacy_personal_data_controls_core_behavior_valid_scope",
+      "objective": "Verify Privacy & Personal Data Controls for the atomic scenario \"restore\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: restore.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: restore.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Backup archive, restored local data, retained or removed Solar data, redacted ingestion artifacts, neutral privacy/config values, and privacy-scan pass/fail evidence.",
+      "state_and_side_effect_oracle": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+      "required_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "supported_boundary": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-017-CORE-01-03",
+      "test_name": "test_privacy_and_personal_data_controls__uninstall_delete_versus_keep_data_dry_run",
+      "case_type": "core_behavior",
+      "atomic_scenario": "uninstall delete versus keep-data/dry-run",
+      "source_seed_registry_id": "NTB-VF-017-CORE-01",
+      "source_atomic_feature_id": "VF-017-CORE-01",
+      "source_seed_test_name": "test_privacy_personal_data_controls_core_behavior_valid_scope",
+      "objective": "Verify Privacy & Personal Data Controls for the atomic scenario \"uninstall delete versus keep-data/dry-run\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: uninstall delete versus keep-data/dry-run.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: uninstall delete versus keep-data/dry-run.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Backup archive, restored local data, retained or removed Solar data, redacted ingestion artifacts, neutral privacy/config values, and privacy-scan pass/fail evidence.",
+      "state_and_side_effect_oracle": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+      "required_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "supported_boundary": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-017-GUARD-02-01",
+      "test_name": "test_privacy_and_personal_data_controls__neutral_secret_free_fallback",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "neutral secret-free fallback",
+      "source_seed_registry_id": "NTB-VF-017-GUARD-02",
+      "source_atomic_feature_id": "VF-017-GUARD-02",
+      "source_seed_test_name": "test_privacy_personal_data_controls_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Privacy & Personal Data Controls for the atomic scenario \"neutral secret-free fallback\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: neutral secret-free fallback.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: neutral secret-free fallback.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Uninstall refuses without --yes, dry-run avoids deletion, missing archive fails restore, privacy scan fails on tracked owner-identifying tokens, and absent identity env values use neutral fallbacks.",
+      "state_and_side_effect_oracle": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+      "required_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "supported_boundary": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-017-CORE-01-04",
+      "test_name": "test_privacy_and_personal_data_controls__content_redaction_full_override",
+      "case_type": "core_behavior",
+      "atomic_scenario": "content redaction/full override",
+      "source_seed_registry_id": "NTB-VF-017-CORE-01",
+      "source_atomic_feature_id": "VF-017-CORE-01",
+      "source_seed_test_name": "test_privacy_personal_data_controls_core_behavior_valid_scope",
+      "objective": "Verify Privacy & Personal Data Controls for the atomic scenario \"content redaction/full override\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: content redaction/full override.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: content redaction/full override.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Backup archive, restored local data, retained or removed Solar data, redacted ingestion artifacts, neutral privacy/config values, and privacy-scan pass/fail evidence.",
+      "state_and_side_effect_oracle": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+      "required_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "supported_boundary": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-017-GUARD-02-02",
+      "test_name": "test_privacy_and_personal_data_controls__privacy_scan_positive_negative",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "privacy scan positive/negative",
+      "source_seed_registry_id": "NTB-VF-017-GUARD-02",
+      "source_atomic_feature_id": "VF-017-GUARD-02",
+      "source_seed_test_name": "test_privacy_personal_data_controls_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Privacy & Personal Data Controls for the atomic scenario \"privacy scan positive/negative\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: privacy scan positive/negative.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: privacy scan positive/negative.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Uninstall refuses without --yes, dry-run avoids deletion, missing archive fails restore, privacy scan fails on tracked owner-identifying tokens, and absent identity env values use neutral fallbacks.",
+      "state_and_side_effect_oracle": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+      "required_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "supported_boundary": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-017-GUARD-02-03",
+      "test_name": "test_privacy_and_personal_data_controls__unsupported_consent_and_selective_retention_paths",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "unsupported consent and selective-retention paths",
+      "source_seed_registry_id": "NTB-VF-017-GUARD-02",
+      "source_atomic_feature_id": "VF-017-GUARD-02",
+      "source_seed_test_name": "test_privacy_personal_data_controls_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Privacy & Personal Data Controls for the atomic scenario \"unsupported consent and selective-retention paths\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: unsupported consent and selective-retention paths.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: unsupported consent and selective-retention paths.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Uninstall refuses without --yes, dry-run avoids deletion, missing archive fails restore, privacy scan fails on tracked owner-identifying tokens, and absent identity env values use neutral fallbacks.",
+      "state_and_side_effect_oracle": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+      "required_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "supported_boundary": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-017-EVIDENCE-03-01",
+      "test_name": "test_privacy_and_personal_data_controls__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-VF-017-EVIDENCE-03",
+      "source_atomic_feature_id": "VF-017-EVIDENCE-03",
+      "source_seed_test_name": "test_privacy_personal_data_controls_records_status_provenance_evidence",
+      "objective": "Verify Privacy & Personal Data Controls for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Controls operate on local Solar-managed files only; external provider/OS credential stores and data held by message platforms are outside current implementation."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "state_and_side_effect_oracle": "Backup creates an archive containing selected config/secrets/receipt/database; restore writes data; uninstall deletes or retains user data according to --keep-data; ingestion redaction changes exported text.",
+      "required_evidence": "bin/solar: do_backup, do_restore and uninstall; docs/UNINSTALL.md: Keep your data/Back up before removing; core/config/privacy.ts; scripts/check-privacy.sh; harness/lib/apple_notes_ingest.py: redact.",
+      "supported_boundary": "No UI/API for data-subject inspection/export scope, retention schedules, selective deletion, consent records, or revocation of message-derived consent was found.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

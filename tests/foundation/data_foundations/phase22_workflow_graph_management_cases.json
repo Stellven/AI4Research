@@ -1,0 +1,283 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "Data foundations",
+    "level_2": "Workflow Graph Management",
+    "description": "Model reusable processes, SOPs, approval chains, workflow stages, transitions, and their required inputs, outputs, policies, and capabilities."
+  },
+  "contract": {
+    "purpose_user_function": "Persist reusable workflow stages, dependencies, transitions, gates, roles, inputs/outputs, policies, and capabilities.",
+    "valid_inputs": "Workflow contract/template JSON, stages, dependencies, triggers, inputs, outputs, roles, capsules, gates, and constraints.",
+    "expected_outputs": "Validated workflow contract and instantiated TaskGraph/Plan IR.",
+    "state_side_effects": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+    "failure_rejection_behavior": "Schema error, cycle, missing stage/dependency, unresolvable role/capsule, illegal scope, or policy conflict rejects compilation.",
+    "supported_boundaries_exclusions": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+    "success_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+    "granularity_atomic_contracts": "load; trigger match; instantiate; dependency cycle; missing role/capsule; gate/policy; version.",
+    "readme_product_docs": "docs/AI_NATIVE_OS_ARCHITECTURE.md §Seamless long-term memory and semantic indexing; docs/MEMORY_SYSTEM_ARCHITECTURE.md; docs/solar-architecture-code-map.md §8",
+    "cli_api_skill_interfaces": "core/smi/query.ts: SMIQuery and quickSearch(); core/ontology/manager.ts: OntologyManager; harness/lib/task_graph_io.py; harness/lib/evidence_ledger.py: EvidenceLedger",
+    "config_schemas": "core/ontology/schema-v2.sql; core/smi/schema.sql; harness/schemas/experience-memory.schema.json; harness/schemas/task-graph.schema.json; harness/schemas/task-graph-state.schema.json",
+    "implementation_entrypoints": "harness/lib/workflow_contract.py: load_contract(), validate_contract_schema(), instantiate(), compile_checks(); harness/config/workflows/*.workflow.json",
+    "platform_provider_limitations": "File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "core/ontology/manager.ts",
+      "core/ontology/schema-v2.sql",
+      "core/smi/query.ts",
+      "core/smi/schema.sql",
+      "harness/lib/evidence_ledger.py",
+      "harness/lib/task_graph_io.py",
+      "harness/lib/workflow_contract.py",
+      "harness/schemas/experience-memory.schema.json",
+      "harness/schemas/task-graph-state.schema.json",
+      "harness/schemas/task-graph.schema.json"
+    ],
+    "entrypoints": "harness/lib/workflow_contract.py: load_contract(), validate_contract_schema(), instantiate(), compile_checks(); harness/config/workflows/*.workflow.json",
+    "interfaces": "core/smi/query.ts: SMIQuery and quickSearch(); core/ontology/manager.ts: OntologyManager; harness/lib/task_graph_io.py; harness/lib/evidence_ledger.py: EvidenceLedger",
+    "schemas_and_config": "core/ontology/schema-v2.sql; core/smi/schema.sql; harness/schemas/experience-memory.schema.json; harness/schemas/task-graph.schema.json; harness/schemas/task-graph-state.schema.json"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-035-CORE-01",
+      "atomic_feature_id": "FN-035-CORE-01",
+      "test_name": "test_workflow_graph_management_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-035-EVIDENCE-03",
+      "atomic_feature_id": "FN-035-EVIDENCE-03",
+      "test_name": "test_workflow_graph_management_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-035-GUARD-02",
+      "atomic_feature_id": "FN-035-GUARD-02",
+      "test_name": "test_workflow_graph_management_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-FN-035-CORE-01-01",
+      "test_name": "test_workflow_graph_management__load",
+      "case_type": "core_behavior",
+      "atomic_scenario": "load",
+      "source_seed_registry_id": "NTB-FN-035-CORE-01",
+      "source_atomic_feature_id": "FN-035-CORE-01",
+      "source_seed_test_name": "test_workflow_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Workflow Graph Management for the atomic scenario \"load\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: load.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: load.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated workflow contract and instantiated TaskGraph/Plan IR.",
+      "state_and_side_effect_oracle": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+      "required_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "supported_boundary": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-035-CORE-01-02",
+      "test_name": "test_workflow_graph_management__trigger_match",
+      "case_type": "core_behavior",
+      "atomic_scenario": "trigger match",
+      "source_seed_registry_id": "NTB-FN-035-CORE-01",
+      "source_atomic_feature_id": "FN-035-CORE-01",
+      "source_seed_test_name": "test_workflow_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Workflow Graph Management for the atomic scenario \"trigger match\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: trigger match.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: trigger match.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated workflow contract and instantiated TaskGraph/Plan IR.",
+      "state_and_side_effect_oracle": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+      "required_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "supported_boundary": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-035-CORE-01-03",
+      "test_name": "test_workflow_graph_management__instantiate",
+      "case_type": "core_behavior",
+      "atomic_scenario": "instantiate",
+      "source_seed_registry_id": "NTB-FN-035-CORE-01",
+      "source_atomic_feature_id": "FN-035-CORE-01",
+      "source_seed_test_name": "test_workflow_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Workflow Graph Management for the atomic scenario \"instantiate\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: instantiate.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: instantiate.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated workflow contract and instantiated TaskGraph/Plan IR.",
+      "state_and_side_effect_oracle": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+      "required_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "supported_boundary": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-035-CORE-01-04",
+      "test_name": "test_workflow_graph_management__dependency_cycle",
+      "case_type": "core_behavior",
+      "atomic_scenario": "dependency cycle",
+      "source_seed_registry_id": "NTB-FN-035-CORE-01",
+      "source_atomic_feature_id": "FN-035-CORE-01",
+      "source_seed_test_name": "test_workflow_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Workflow Graph Management for the atomic scenario \"dependency cycle\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: dependency cycle.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: dependency cycle.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated workflow contract and instantiated TaskGraph/Plan IR.",
+      "state_and_side_effect_oracle": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+      "required_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "supported_boundary": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-035-GUARD-02-01",
+      "test_name": "test_workflow_graph_management__missing_role_capsule",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "missing role/capsule",
+      "source_seed_registry_id": "NTB-FN-035-GUARD-02",
+      "source_atomic_feature_id": "FN-035-GUARD-02",
+      "source_seed_test_name": "test_workflow_graph_management_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Workflow Graph Management for the atomic scenario \"missing role/capsule\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: missing role/capsule.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: missing role/capsule.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Schema error, cycle, missing stage/dependency, unresolvable role/capsule, illegal scope, or policy conflict rejects compilation.",
+      "state_and_side_effect_oracle": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+      "required_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "supported_boundary": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-035-CORE-01-05",
+      "test_name": "test_workflow_graph_management__gate_policy",
+      "case_type": "core_behavior",
+      "atomic_scenario": "gate/policy",
+      "source_seed_registry_id": "NTB-FN-035-CORE-01",
+      "source_atomic_feature_id": "FN-035-CORE-01",
+      "source_seed_test_name": "test_workflow_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Workflow Graph Management for the atomic scenario \"gate/policy\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: gate/policy.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: gate/policy.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated workflow contract and instantiated TaskGraph/Plan IR.",
+      "state_and_side_effect_oracle": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+      "required_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "supported_boundary": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-035-CORE-01-06",
+      "test_name": "test_workflow_graph_management__version",
+      "case_type": "core_behavior",
+      "atomic_scenario": "version",
+      "source_seed_registry_id": "NTB-FN-035-CORE-01",
+      "source_atomic_feature_id": "FN-035-CORE-01",
+      "source_seed_test_name": "test_workflow_graph_management_core_behavior_valid_scope",
+      "objective": "Verify Workflow Graph Management for the atomic scenario \"version\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: version.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: version.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Validated workflow contract and instantiated TaskGraph/Plan IR.",
+      "state_and_side_effect_oracle": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+      "required_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "supported_boundary": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-035-EVIDENCE-03-01",
+      "test_name": "test_workflow_graph_management__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-035-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-035-EVIDENCE-03",
+      "source_seed_test_name": "test_workflow_graph_management_records_status_provenance_evidence",
+      "objective": "Verify Workflow Graph Management for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: File/SQLite-backed operations are local; optional semantic/vector, wiki, Mirage/QMD, and external source services require their configured processes, indexes, mounts, or credentials."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "state_and_side_effect_oracle": "Reads workflow/config files and produces instantiated graph artifacts; authoring changes workflow files.",
+      "required_evidence": "Workflow validates, instantiates deterministically, and produces resolvable nodes/dependencies/gates; negative workflow-contract tests reject invalid graphs.",
+      "supported_boundary": "Workflow contracts and task graphs are shipped; a general cross-domain SOP knowledge graph/query service is partial.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

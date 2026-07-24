@@ -1,0 +1,279 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Vertical Features",
+    "level_1": "Account management",
+    "level_2": "Authentication & Session Security",
+    "description": "Support secure sign-in, sign-out, session establishment, reauthentication, recovery, session revocation, and suspicious-access visibility."
+  },
+  "contract": {
+    "purpose_user_function": "Current code protects the local status API with a generated bearer token when required and guides authentication to external Codex/Claude CLI sessions; it does not implement Solar product-account sessions.",
+    "valid_inputs": "Loopback bearer token or injected X-Solar-Token/Authorization header; selected provider name; locally installed Codex/Claude CLI credential/session state; explicit login/reuse-host-credentials request.",
+    "expected_outputs": "Authorized/403 API response, provider auth-readiness JSON, device-login subprocess status, and recovery guidance without returning raw provider tokens.",
+    "state_side_effects": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+    "failure_rejection_behavior": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
+    "supported_boundaries_exclusions": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+    "success_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+    "granularity_atomic_contracts": "API token absent/correct/incorrect; loopback versus NAT protection; provider authenticated/unauthenticated/expired; login start/status; unsupported provider/CLI missing; raw-secret non-disclosure; auth blocker prevents dispatch; distinguish provider session from product account.",
+    "readme_product_docs": "README.md: selected-runtime authentication and fail-closed routing; INSTALL.md: provider readiness and Settings > Runtime; docs/WINDOWS.md: WSL reachability/security boundary.",
+    "cli_api_skill_interfaces": "harness/lib/symphony/status-server.py: GET /auth/status, GET /auth/login/status, POST /auth/login, POST /auth/reuse-host-creds; codex login --device-auth or claude setup-token external CLI.",
+    "config_schemas": "harness/config/physical-operators.schema.json: auth mode, secret_ref and expose_raw_key_to_pane=false; harness/config/model-scenario-routing.json provider key references; no Solar user-session schema found.",
+    "implementation_entrypoints": "harness/lib/symphony/status-server.py: _authorized, _auth_status_payload, _auth_login_start, _auth_reuse_host_creds and StatusHandler; harness/lib/operator_flow_control.py auth-failure classification.",
+    "platform_provider_limitations": "Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "harness/config/model-scenario-routing.json",
+      "harness/config/physical-operators.schema.json",
+      "harness/lib/operator_flow_control.py",
+      "harness/lib/symphony/status-server.py",
+      "harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json",
+      "harness/tests/test_antigravity_auth_bootstrap.py"
+    ],
+    "entrypoints": "harness/lib/symphony/status-server.py: _authorized, _auth_status_payload, _auth_login_start, _auth_reuse_host_creds and StatusHandler; harness/lib/operator_flow_control.py auth-failure classification.",
+    "interfaces": "harness/lib/symphony/status-server.py: GET /auth/status, GET /auth/login/status, POST /auth/login, POST /auth/reuse-host-creds; codex login --device-auth or claude setup-token external CLI.",
+    "schemas_and_config": "harness/config/physical-operators.schema.json: auth mode, secret_ref and expose_raw_key_to_pane=false; harness/config/model-scenario-routing.json provider key references; no Solar user-session schema found."
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-VF-015-CORE-01",
+      "atomic_feature_id": "VF-015-CORE-01",
+      "test_name": "test_authentication_session_security_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-VF-015-EVIDENCE-03",
+      "atomic_feature_id": "VF-015-EVIDENCE-03",
+      "test_name": "test_authentication_session_security_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-VF-015-GUARD-02",
+      "atomic_feature_id": "VF-015-GUARD-02",
+      "test_name": "test_authentication_session_security_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 8,
+  "cases": [
+    {
+      "case_id": "P22-VF-015-GUARD-02-01",
+      "test_name": "test_authentication_and_session_security__api_token_absent_correct_incorrect",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "API token absent/correct/incorrect",
+      "source_seed_registry_id": "NTB-VF-015-GUARD-02",
+      "source_atomic_feature_id": "VF-015-GUARD-02",
+      "source_seed_test_name": "test_authentication_session_security_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Authentication & Session Security for the atomic scenario \"API token absent/correct/incorrect\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: API token absent/correct/incorrect.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: API token absent/correct/incorrect.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
+      "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-015-CORE-01-01",
+      "test_name": "test_authentication_and_session_security__loopback_versus_nat_protection",
+      "case_type": "core_behavior",
+      "atomic_scenario": "loopback versus NAT protection",
+      "source_seed_registry_id": "NTB-VF-015-CORE-01",
+      "source_atomic_feature_id": "VF-015-CORE-01",
+      "source_seed_test_name": "test_authentication_session_security_core_behavior_valid_scope",
+      "objective": "Verify Authentication & Session Security for the atomic scenario \"loopback versus NAT protection\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: loopback versus NAT protection.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: loopback versus NAT protection.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Authorized/403 API response, provider auth-readiness JSON, device-login subprocess status, and recovery guidance without returning raw provider tokens.",
+      "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-015-GUARD-02-02",
+      "test_name": "test_authentication_and_session_security__provider_authenticated_unauthenticated_expired",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "provider authenticated/unauthenticated/expired",
+      "source_seed_registry_id": "NTB-VF-015-GUARD-02",
+      "source_atomic_feature_id": "VF-015-GUARD-02",
+      "source_seed_test_name": "test_authentication_session_security_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Authentication & Session Security for the atomic scenario \"provider authenticated/unauthenticated/expired\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: provider authenticated/unauthenticated/expired.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: provider authenticated/unauthenticated/expired.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
+      "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-015-EVIDENCE-03-01",
+      "test_name": "test_authentication_and_session_security__login_start_status",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "login start/status",
+      "source_seed_registry_id": "NTB-VF-015-EVIDENCE-03",
+      "source_atomic_feature_id": "VF-015-EVIDENCE-03",
+      "source_seed_test_name": "test_authentication_session_security_records_status_provenance_evidence",
+      "objective": "Verify Authentication & Session Security for the atomic scenario \"login start/status\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: login start/status.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: login start/status.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-015-GUARD-02-03",
+      "test_name": "test_authentication_and_session_security__unsupported_provider_cli_missing",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "unsupported provider/CLI missing",
+      "source_seed_registry_id": "NTB-VF-015-GUARD-02",
+      "source_atomic_feature_id": "VF-015-GUARD-02",
+      "source_seed_test_name": "test_authentication_session_security_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Authentication & Session Security for the atomic scenario \"unsupported provider/CLI missing\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: unsupported provider/CLI missing.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: unsupported provider/CLI missing.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
+      "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-015-GUARD-02-04",
+      "test_name": "test_authentication_and_session_security__raw_secret_non_disclosure",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "raw-secret non-disclosure",
+      "source_seed_registry_id": "NTB-VF-015-GUARD-02",
+      "source_atomic_feature_id": "VF-015-GUARD-02",
+      "source_seed_test_name": "test_authentication_session_security_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Authentication & Session Security for the atomic scenario \"raw-secret non-disclosure\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: raw-secret non-disclosure.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: raw-secret non-disclosure.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
+      "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-015-CORE-01-02",
+      "test_name": "test_authentication_and_session_security__auth_blocker_prevents_dispatch",
+      "case_type": "core_behavior",
+      "atomic_scenario": "auth blocker prevents dispatch",
+      "source_seed_registry_id": "NTB-VF-015-CORE-01",
+      "source_atomic_feature_id": "VF-015-CORE-01",
+      "source_seed_test_name": "test_authentication_session_security_core_behavior_valid_scope",
+      "objective": "Verify Authentication & Session Security for the atomic scenario \"auth blocker prevents dispatch\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: auth blocker prevents dispatch.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: auth blocker prevents dispatch.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Authorized/403 API response, provider auth-readiness JSON, device-login subprocess status, and recovery guidance without returning raw provider tokens.",
+      "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-VF-015-CORE-01-03",
+      "test_name": "test_authentication_and_session_security__distinguish_provider_session_from_product_account",
+      "case_type": "core_behavior",
+      "atomic_scenario": "distinguish provider session from product account",
+      "source_seed_registry_id": "NTB-VF-015-CORE-01",
+      "source_atomic_feature_id": "VF-015-CORE-01",
+      "source_seed_test_name": "test_authentication_session_security_core_behavior_valid_scope",
+      "objective": "Verify Authentication & Session Security for the atomic scenario \"distinguish provider session from product account\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: distinguish provider session from product account.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Login launch is local-platform/runtime dependent; Windows runs through WSL/host credential reuse; provider trust/quota/auth semantics are external; no multi-user session service."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: distinguish provider session from product account.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Authorized/403 API response, provider auth-readiness JSON, device-login subprocess status, and recovery guidance without returning raw provider tokens.",
+      "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

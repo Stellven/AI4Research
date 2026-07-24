@@ -1,0 +1,253 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "RSI",
+    "level_2": "Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS)",
+    "description": "Improves acceptance rules, rewards, gates, and policies. Validate with golden sets, agreement rates, and violation tests."
+  },
+  "contract": {
+    "purpose_user_function": "Calibrate evaluator contracts, thresholds, rewards, and governance policies using labeled/golden cases and violation evidence.",
+    "valid_inputs": "Evaluator/rule version, golden cases, reviewer/verdict history, thresholds/rewards, policy constraints, agreement/error metrics, and candidate change.",
+    "expected_outputs": "Calibration metrics, candidate contract/policy, agreement/violation comparison, and approval-gated adoption decision.",
+    "state_side_effects": "Writes evaluation/evolution artifacts and may promote approved policy/config versions.",
+    "failure_rejection_behavior": "Agreement degradation, golden-case error, violation, reward hacking signal, missing independence, or approval denial rejects candidate.",
+    "supported_boundaries_exclusions": "Eval packs, verification gates, and generic evolution exist; dedicated judge-calibration/reward-model training and CEGIS policy synthesis are not unified.",
+    "success_evidence": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+    "granularity_atomic_contracts": "golden pass/fail; inter-review agreement; threshold boundary; violation suite; reward-hacking negative; promote/rollback.",
+    "readme_product_docs": "docs/SOLAR_EVOLUTION_ANALYSIS.md; docs/SELF_EVALUATION_SYSTEM_DESIGN.md; docs/solar-architecture-code-map.md §8",
+    "cli_api_skill_interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
+    "config_schemas": "harness/schemas/evidence/workflow_evolution.v1.schema.json; harness/evals/packs/**; harness/config/capability-capsules.registry.yaml",
+    "implementation_entrypoints": "harness/lib/eval_runner.py; harness/lib/verification_gate.py; harness/lib/evolution_engine.py; dedicated reward-model/judge-calibration trainer: Not found in current codebase",
+    "platform_provider_limitations": "Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+  },
+  "implementation": {
+    "status": "CURRENT_SURFACE_IDENTIFIED",
+    "tracked_surfaces": [
+      "core/nerve/evolution-engine.ts",
+      "harness/config/capability-capsules.registry.yaml",
+      "harness/lib/eval_runner.py",
+      "harness/lib/evolution_engine.py",
+      "harness/lib/verification_gate.py",
+      "harness/schemas/evidence/workflow_evolution.v1.schema.json",
+      "harness/tools/skill_evolution_runner.py"
+    ],
+    "entrypoints": "harness/lib/eval_runner.py; harness/lib/verification_gate.py; harness/lib/evolution_engine.py; dedicated reward-model/judge-calibration trainer: Not found in current codebase",
+    "interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
+    "schemas_and_config": "harness/schemas/evidence/workflow_evolution.v1.schema.json; harness/evals/packs/**; harness/config/capability-capsules.registry.yaml"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-026-CORE-01",
+      "atomic_feature_id": "FN-026-CORE-01",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-026-EVIDENCE-03",
+      "atomic_feature_id": "FN-026-EVIDENCE-03",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-026-GUARD-02",
+      "atomic_feature_id": "FN-026-GUARD-02",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 7,
+  "cases": [
+    {
+      "case_id": "P22-FN-026-GUARD-02-01",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibration_reward_modeling_cegis__golden_pass_fail",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "golden pass/fail",
+      "source_seed_registry_id": "NTB-FN-026-GUARD-02",
+      "source_atomic_feature_id": "FN-026-GUARD-02",
+      "source_seed_test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS) for the atomic scenario \"golden pass/fail\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: golden pass/fail.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: golden pass/fail.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Agreement degradation, golden-case error, violation, reward hacking signal, missing independence, or approval denial rejects candidate.",
+      "state_and_side_effect_oracle": "Writes evaluation/evolution artifacts and may promote approved policy/config versions.",
+      "required_evidence": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+      "supported_boundary": "Eval packs, verification gates, and generic evolution exist; dedicated judge-calibration/reward-model training and CEGIS policy synthesis are not unified.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-026-CORE-01-01",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibration_reward_modeling_cegis__inter_review_agreement",
+      "case_type": "core_behavior",
+      "atomic_scenario": "inter-review agreement",
+      "source_seed_registry_id": "NTB-FN-026-CORE-01",
+      "source_atomic_feature_id": "FN-026-CORE-01",
+      "source_seed_test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_core_behavior_valid_scope",
+      "objective": "Verify Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS) for the atomic scenario \"inter-review agreement\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: inter-review agreement.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: inter-review agreement.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Calibration metrics, candidate contract/policy, agreement/violation comparison, and approval-gated adoption decision.",
+      "state_and_side_effect_oracle": "Writes evaluation/evolution artifacts and may promote approved policy/config versions.",
+      "required_evidence": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+      "supported_boundary": "Eval packs, verification gates, and generic evolution exist; dedicated judge-calibration/reward-model training and CEGIS policy synthesis are not unified.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-026-GUARD-02-02",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibration_reward_modeling_cegis__threshold_boundary",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "threshold boundary",
+      "source_seed_registry_id": "NTB-FN-026-GUARD-02",
+      "source_atomic_feature_id": "FN-026-GUARD-02",
+      "source_seed_test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS) for the atomic scenario \"threshold boundary\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: threshold boundary.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: threshold boundary.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Agreement degradation, golden-case error, violation, reward hacking signal, missing independence, or approval denial rejects candidate.",
+      "state_and_side_effect_oracle": "Writes evaluation/evolution artifacts and may promote approved policy/config versions.",
+      "required_evidence": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+      "supported_boundary": "Eval packs, verification gates, and generic evolution exist; dedicated judge-calibration/reward-model training and CEGIS policy synthesis are not unified.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-026-CORE-01-02",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibration_reward_modeling_cegis__violation_suite",
+      "case_type": "core_behavior",
+      "atomic_scenario": "violation suite",
+      "source_seed_registry_id": "NTB-FN-026-CORE-01",
+      "source_atomic_feature_id": "FN-026-CORE-01",
+      "source_seed_test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_core_behavior_valid_scope",
+      "objective": "Verify Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS) for the atomic scenario \"violation suite\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: violation suite.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: violation suite.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Calibration metrics, candidate contract/policy, agreement/violation comparison, and approval-gated adoption decision.",
+      "state_and_side_effect_oracle": "Writes evaluation/evolution artifacts and may promote approved policy/config versions.",
+      "required_evidence": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+      "supported_boundary": "Eval packs, verification gates, and generic evolution exist; dedicated judge-calibration/reward-model training and CEGIS policy synthesis are not unified.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-026-GUARD-02-03",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibration_reward_modeling_cegis__reward_hacking_negative",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "reward-hacking negative",
+      "source_seed_registry_id": "NTB-FN-026-GUARD-02",
+      "source_atomic_feature_id": "FN-026-GUARD-02",
+      "source_seed_test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS) for the atomic scenario \"reward-hacking negative\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: reward-hacking negative.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: reward-hacking negative.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Agreement degradation, golden-case error, violation, reward hacking signal, missing independence, or approval denial rejects candidate.",
+      "state_and_side_effect_oracle": "Writes evaluation/evolution artifacts and may promote approved policy/config versions.",
+      "required_evidence": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+      "supported_boundary": "Eval packs, verification gates, and generic evolution exist; dedicated judge-calibration/reward-model training and CEGIS policy synthesis are not unified.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-026-GUARD-02-04",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibration_reward_modeling_cegis__promote_rollback",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "promote/rollback",
+      "source_seed_registry_id": "NTB-FN-026-GUARD-02",
+      "source_atomic_feature_id": "FN-026-GUARD-02",
+      "source_seed_test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS) for the atomic scenario \"promote/rollback\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: promote/rollback.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: promote/rollback.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Agreement degradation, golden-case error, violation, reward hacking signal, missing independence, or approval denial rejects candidate.",
+      "state_and_side_effect_oracle": "Writes evaluation/evolution artifacts and may promote approved policy/config versions.",
+      "required_evidence": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+      "supported_boundary": "Eval packs, verification gates, and generic evolution exist; dedicated judge-calibration/reward-model training and CEGIS policy synthesis are not unified.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    },
+    {
+      "case_id": "P22-FN-026-EVIDENCE-03-01",
+      "test_name": "test_evaluator_reward_contract_and_governance_judge_calibration_reward_modeling_cegis__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-026-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-026-EVIDENCE-03",
+      "source_seed_test_name": "test_evaluator_reward_contract_and_governance_judge_calibrati_records_status_provenance_evidence",
+      "objective": "Verify Evaluator, Reward, Contract, and Governance (Judge Calibration / Reward Modeling / CEGIS) for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+      "state_and_side_effect_oracle": "Writes evaluation/evolution artifacts and may promote approved policy/config versions.",
+      "required_evidence": "Candidate beats predefined golden/agreement metrics and passes violation tests while preserving independent evaluation.",
+      "supported_boundary": "Eval packs, verification gates, and generic evolution exist; dedicated judge-calibration/reward-model training and CEGIS policy synthesis are not unified.",
+      "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
+    }
+  ]
+}

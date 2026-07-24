@@ -1,0 +1,307 @@
+{
+  "schema_version": "phase22-l2-case-spec/v1",
+  "generated_on": "2026-07-23",
+  "generation_policy": "Contract-gated: generated only for previously uncovered L2 features with a nonblank L2 what contract; contract contents are treated as provisionally correct per user instruction.",
+  "feature": {
+    "sheet": "Foundation Features",
+    "level_1": "RSI",
+    "level_2": "Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL)",
+    "description": "Learns stronger planning, tool use, and evaluation behavior. Validate with holdout benchmarks, robustness tests, and regressions."
+  },
+  "contract": {
+    "purpose_user_function": "Train or adapt model policies/weights for planning, tool use, or evaluation, then gate them on holdout and robustness evidence.",
+    "valid_inputs": "Training dataset, base model/checkpoint, method/config, compute environment, reward/preferences, holdout benchmarks, safety policy, and budget.",
+    "expected_outputs": "Versioned checkpoint/adapter, training manifest/logs, benchmark/robustness/regression report, and promotion decision.",
+    "state_side_effects": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+    "failure_rejection_behavior": "Missing data/model/license, unsupported hardware, training failure, unsafe behavior, contamination, holdout regression, or approval denial blocks promotion.",
+    "supported_boundaries_exclusions": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+    "success_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+    "granularity_atomic_contracts": "dataset/license; train smoke; checkpoint integrity; holdout; robustness; safety; regression; promote/rollback.",
+    "readme_product_docs": "docs/SOLAR_EVOLUTION_ANALYSIS.md; docs/SELF_EVALUATION_SYSTEM_DESIGN.md; docs/solar-architecture-code-map.md §8",
+    "cli_api_skill_interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
+    "config_schemas": "harness/schemas/evidence/workflow_evolution.v1.schema.json; harness/evals/packs/**; harness/config/capability-capsules.registry.yaml",
+    "implementation_entrypoints": "Not found in current codebase. Related model routing only: harness/config/model-registry.json and harness/lib/model_registry.py",
+    "platform_provider_limitations": "Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+  },
+  "implementation": {
+    "status": "NOT_FOUND_IN_CURRENT_CODEBASE",
+    "tracked_surfaces": [
+      "core/nerve/evolution-engine.ts",
+      "harness/config/capability-capsules.registry.yaml",
+      "harness/config/model-registry.json",
+      "harness/lib/evolution_engine.py",
+      "harness/lib/model_registry.py",
+      "harness/schemas/evidence/workflow_evolution.v1.schema.json",
+      "harness/tools/skill_evolution_runner.py"
+    ],
+    "entrypoints": "Not found in current codebase. Related model routing only: harness/config/model-registry.json and harness/lib/model_registry.py",
+    "interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
+    "schemas_and_config": "harness/schemas/evidence/workflow_evolution.v1.schema.json; harness/evals/packs/**; harness/config/capability-capsules.registry.yaml"
+  },
+  "source_seed_tests": [
+    {
+      "registry_id": "NTB-FN-028-CORE-01",
+      "atomic_feature_id": "FN-028-CORE-01",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_core_behavior_valid_scope",
+      "test_type": "Positive / core behavior"
+    },
+    {
+      "registry_id": "NTB-FN-028-EVIDENCE-03",
+      "atomic_feature_id": "FN-028-EVIDENCE-03",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_records_status_provenance_evidence",
+      "test_type": "Evidence / auditability"
+    },
+    {
+      "registry_id": "NTB-FN-028-GUARD-02",
+      "atomic_feature_id": "FN-028-GUARD-02",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_rejects_invalid_or_unscoped_input",
+      "test_type": "Negative / guardrail"
+    }
+  ],
+  "case_count": 9,
+  "cases": [
+    {
+      "case_id": "P22-FN-028-CORE-01-01",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__dataset_license",
+      "case_type": "core_behavior",
+      "atomic_scenario": "dataset/license",
+      "source_seed_registry_id": "NTB-FN-028-CORE-01",
+      "source_atomic_feature_id": "FN-028-CORE-01",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_core_behavior_valid_scope",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"dataset/license\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: dataset/license.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: dataset/license.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned checkpoint/adapter, training manifest/logs, benchmark/robustness/regression report, and promotion decision.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-028-CORE-01-02",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__train_smoke",
+      "case_type": "core_behavior",
+      "atomic_scenario": "train smoke",
+      "source_seed_registry_id": "NTB-FN-028-CORE-01",
+      "source_atomic_feature_id": "FN-028-CORE-01",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_core_behavior_valid_scope",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"train smoke\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: train smoke.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: train smoke.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned checkpoint/adapter, training manifest/logs, benchmark/robustness/regression report, and promotion decision.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-028-CORE-01-03",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__checkpoint_integrity",
+      "case_type": "core_behavior",
+      "atomic_scenario": "checkpoint integrity",
+      "source_seed_registry_id": "NTB-FN-028-CORE-01",
+      "source_atomic_feature_id": "FN-028-CORE-01",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_core_behavior_valid_scope",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"checkpoint integrity\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: checkpoint integrity.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: checkpoint integrity.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned checkpoint/adapter, training manifest/logs, benchmark/robustness/regression report, and promotion decision.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-028-CORE-01-04",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__holdout",
+      "case_type": "core_behavior",
+      "atomic_scenario": "holdout",
+      "source_seed_registry_id": "NTB-FN-028-CORE-01",
+      "source_atomic_feature_id": "FN-028-CORE-01",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_core_behavior_valid_scope",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"holdout\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: holdout.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: holdout.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned checkpoint/adapter, training manifest/logs, benchmark/robustness/regression report, and promotion decision.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-028-CORE-01-05",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__robustness",
+      "case_type": "core_behavior",
+      "atomic_scenario": "robustness",
+      "source_seed_registry_id": "NTB-FN-028-CORE-01",
+      "source_atomic_feature_id": "FN-028-CORE-01",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_core_behavior_valid_scope",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"robustness\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: robustness.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: robustness.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned checkpoint/adapter, training manifest/logs, benchmark/robustness/regression report, and promotion decision.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-028-CORE-01-06",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__safety",
+      "case_type": "core_behavior",
+      "atomic_scenario": "safety",
+      "source_seed_registry_id": "NTB-FN-028-CORE-01",
+      "source_atomic_feature_id": "FN-028-CORE-01",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_core_behavior_valid_scope",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"safety\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: safety.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create the smallest isolated valid fixture that exercises: safety.",
+        "Invoke the declared CLI, API, skill, or implementation entrypoint.",
+        "Capture the returned value, produced artifacts, and contract-declared state changes.",
+        "Assert the expected output and the supported-boundary behavior without relying on unrelated downstream features."
+      ],
+      "expected_result": "Versioned checkpoint/adapter, training manifest/logs, benchmark/robustness/regression report, and promotion decision.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-028-GUARD-02-01",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__regression",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "regression",
+      "source_seed_registry_id": "NTB-FN-028-GUARD-02",
+      "source_atomic_feature_id": "FN-028-GUARD-02",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"regression\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: regression.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: regression.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing data/model/license, unsupported hardware, training failure, unsafe behavior, contamination, holdout regression, or approval denial blocks promotion.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-028-GUARD-02-02",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__promote_rollback",
+      "case_type": "input_guardrail",
+      "atomic_scenario": "promote/rollback",
+      "source_seed_registry_id": "NTB-FN-028-GUARD-02",
+      "source_atomic_feature_id": "FN-028-GUARD-02",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_rejects_invalid_or_unscoped_input",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"promote/rollback\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: promote/rollback.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated fixture that exercises the guardrail scenario: promote/rollback.",
+        "Snapshot the relevant state and side-effect locations before invocation.",
+        "Invoke the declared interface or closest implementation entrypoint with the contract-defined invalid, missing, unauthorized, or out-of-scope condition.",
+        "Assert the explicit rejection result and verify that no unintended state transition or external side effect occurred."
+      ],
+      "expected_result": "Missing data/model/license, unsupported hardware, training failure, unsafe behavior, contamination, holdout regression, or approval denial blocks promotion.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    },
+    {
+      "case_id": "P22-FN-028-EVIDENCE-03-01",
+      "test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl__status_provenance_and_audit_evidence",
+      "case_type": "evidence_auditability",
+      "atomic_scenario": "status, provenance, and audit evidence",
+      "source_seed_registry_id": "NTB-FN-028-EVIDENCE-03",
+      "source_atomic_feature_id": "FN-028-EVIDENCE-03",
+      "source_seed_test_name": "test_model_policies_and_weights_sft_lora_dpo_grpo_agent_rl_records_status_provenance_evidence",
+      "objective": "Verify Model Policies and Weights (SFT / LoRA / DPO / GRPO / Agent RL) for the atomic scenario \"status, provenance, and audit evidence\" against the current L2 contract.",
+      "focused_input": "Specialize the Valid Inputs contract for: status, provenance, and audit evidence.",
+      "preconditions": [
+        "Run in an isolated temporary workspace/home when the implementation writes state.",
+        "Use deterministic local fixtures; live providers, credentials, network, tmux, or external side effects require explicit opt-in.",
+        "Honor the platform/provider boundary: Generic evidence, scorecard, evaluation-pack, promotion, and rollback controls are local; named optimization/training algorithms may need optional integrations, datasets, model providers, accelerators, or are absent."
+      ],
+      "procedure": [
+        "Create an isolated valid fixture focused on the evidence scenario: status, provenance, and audit evidence.",
+        "Invoke the declared interface or inspect the completed operation through the current implementation surface.",
+        "Collect the contract-required status, provenance, artifact, and audit evidence.",
+        "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
+      ],
+      "expected_result": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "state_and_side_effect_oracle": "Would create large model/checkpoint artifacts and consume accelerator resources.",
+      "required_evidence": "Would require reproducible training manifest/checkpoint plus independent holdout, safety, and regression evidence; no current proof exists.",
+      "supported_boundary": "Not found in current codebase: no general SFT, LoRA, DPO, GRPO, or agent-RL training pipeline is shipped.",
+      "execution_status": "BLOCKED_NO_CURRENT_IMPLEMENTATION"
+    }
+  ]
+}
