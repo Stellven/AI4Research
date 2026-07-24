@@ -28,9 +28,12 @@ name in a workbook is not a current PASS result.
 
 ## 2. Current Planning Baseline
 
-The current planning workbook is:
+The canonical planning and execution-report workbook is:
 
-`outputs/019f706d-a7ff-7f63-8b69-abcc7bb68135/AI4RnD Feature List - atomic coverage resolved.xlsx`
+`docs/integrations/autosci/phase-22-test-report.xlsx`
+
+Update this workbook in place after each mapping or test-execution batch. Do
+not create numbered or thread-specific report copies.
 
 At the time this plan was written, its static inspection reported:
 

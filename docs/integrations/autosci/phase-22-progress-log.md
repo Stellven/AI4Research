@@ -115,7 +115,7 @@ into concrete repository-specific test cases.
 
 | Artifact | Purpose |
 |---|---|
-| `outputs/019f706d-a7ff-7f63-8b69-abcc7bb68135/AI4RnD Feature List - atomic coverage resolved.xlsx` | Current mapping and test-report planning workbook, including atomic-feature names and the complete atomic-test registry. |
+| `docs/integrations/autosci/phase-22-test-report.xlsx` | Canonical mapping and test-report workbook, including atomic-feature names, the complete atomic-test registry, L2 contracts, and current executable classifications. |
 | Commit `718aae9a`, path `docs/testing/test-runs/20260710-0121-qa-full-audit/ai4research_recursive_feature_split_qa_execution_colored.xlsx` | Historical colored test workbook and old test inventory; retained in Git history rather than the current source tree. |
 | `outputs/019f706d-a7ff-7f63-8b69-abcc7bb68135/unmapped_historical_tests.md` | Detailed list of historical tests that do not map to the current hierarchy. |
 
@@ -248,7 +248,7 @@ L2 contracts are under user review.
 
 | Item | Result | Evidence / interpretation |
 |---|---:|---|
-| Current L2 contracts inspected | 142 | Workflow 54, Foundation 65, and Vertical 23 in `outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/AI4RnD Feature List - L2 what annotated.xlsx`. |
+| Current L2 contracts inspected | 142 | Workflow 54, Foundation 65, and Vertical 23 in the canonical `docs/integrations/autosci/phase-22-test-report.xlsx`. |
 | Previously uncovered L2 features needing concrete cases | 60 | This is the historical-coverage gap recorded in `Uncovered L2 Resolution`, not the larger set of L2s that still lack a finished current-file binding. |
 | Eligible L2s with a generated contract | 60 | Every previously uncovered L2 matched a nonblank generated contract after ordinal-prefix normalization. |
 | Contract-less eligible L2s skipped | 0 | The contract gate excluded no member of the 60-L2 set. |
@@ -392,7 +392,7 @@ have explicit blockers and no fabricated executable result.
 - Structural validators: `tests/platform/phase22/test_l2_execution_matrix.py` and `tests/platform/phase22/test_l2_case_specifications.py`
 - Machine-readable results: `outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/phase22_l2_execution/phase22_l2_execution_results.json`
 - Review tables: `outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/phase22_l2_execution/phase22_l2_classification.csv` and `.md`
-- Classified workbook: `outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/AI4RnD Feature List - L2 execution classified.xlsx`
+- Canonical classified workbook: `docs/integrations/autosci/phase-22-test-report.xlsx`
 
 The runner isolates `HOME` and `USERPROFILE`, enables UTF-8 Python I/O, and
 records commands, return codes, durations, stdout/stderr tails, implementation
@@ -419,3 +419,24 @@ and Weights, Dataset Graph Management, Policy Graph Management, Model
 Construction, Prototype Assembly, Account Registration, and Discord.
 
 No commit or push was performed as part of this audit.
+
+## Canonical Report Consolidation
+
+Logged: 2026-07-24 EDT
+
+The sequential Phase 22 workbook versions were consolidated into one stable
+report at `docs/integrations/autosci/phase-22-test-report.xlsx`. The workbook
+contains the official Workflow, Foundation, and Vertical feature sheets;
+coverage and mapping summaries; atomic feature/test registries; test-file and
+source inventories; the generated L2 WHAT contracts; the executable L2
+classification; and a `Report Control` tab that links to the live 142/94/38/10
+summary formulas.
+
+Future Phase 22 mapping and execution batches must update this canonical
+workbook in place. Thread-specific or numbered report copies must not be
+created. Independent source-data and QA-inventory workbooks remain separate
+inputs and are not treated as report-version duplicates.
+
+Before consolidation, the complete pre-consolidation state was committed and
+pushed to `origin/openJiuwen-Solar` at `8d48deba`, so removed report versions
+remain recoverable from Git history.
