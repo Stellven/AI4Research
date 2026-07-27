@@ -44,7 +44,16 @@ def test_cli_doctor_reports_selected_codex_runtime(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     (claude_dir / "solar" / "SOLAR.md").write_text("# Solar kernel fixture\n", encoding="utf-8")
-    (fake_bin / "codex").write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
+    # ``bin/solar`` is launched by Git Bash, but its doctor helper runs under
+    # the native Python interpreter.  On Windows, ``shutil.which`` only treats
+    # PATHEXT-suffixed files as executables, so the provider fixture must have
+    # a Windows executable suffix even though Bash supplies the surrounding
+    # test environment.
+    codex_cli = fake_bin / ("codex.cmd" if os.name == "nt" else "codex")
+    codex_cli.write_text(
+        "@exit /b 0\r\n" if os.name == "nt" else "#!/usr/bin/env sh\nexit 0\n",
+        encoding="utf-8",
+    )
     (fake_bin / "python3").write_text(
         f'#!/usr/bin/env bash\nexec "{Path(sys.executable).as_posix()}" "$@"\n',
         encoding="utf-8",
@@ -52,7 +61,7 @@ def test_cli_doctor_reports_selected_codex_runtime(tmp_path: Path) -> None:
 
     command = " ".join(
         [
-            f'chmod +x "{_bash_path(fake_bin / "codex")}" "{_bash_path(fake_bin / "python3")}";',
+            f'chmod +x "{_bash_path(codex_cli)}" "{_bash_path(fake_bin / "python3")}";',
             f'HOME="{_bash_path(home)}"',
             f'SOLAR_HOME="{_bash_path(solar_home)}"',
             f'CLAUDE_DIR="{_bash_path(claude_dir)}"',

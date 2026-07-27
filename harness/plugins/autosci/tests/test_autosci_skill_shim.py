@@ -12511,6 +12511,7 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
     request_payload = captured["payload"]
     assert isinstance(request_payload, dict)
     assert request_payload["model"] == "gpt-5.5"
+    assert "response_format" not in request_payload
 
     summary = json.loads(proc.stdout)
     payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
@@ -12545,6 +12546,122 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
         "provider_source_evidence",
     ]
     assert proof_entry["provenance"]["source"] == "openai_compatible"
+
+
+def test_autosci_skill_shim_review_normalizes_flat_openai_payload_without_status(tmp_path: Path) -> None:
+    wiki_root = tmp_path / "artifacts/autosci/workspace/wiki"
+    (wiki_root / "outputs").mkdir(parents=True)
+    review_target = wiki_root / "outputs/flat-openai-review-provider.md"
+    review_target.write_text(
+        "---\ntitle: Flat OpenAI Review Target\n---\n# Flat OpenAI Review Target\n\n"
+        "The method uses a dataset, metric, baseline, evidence artifact, and claim-linked result table.\n",
+        encoding="utf-8",
+    )
+    captured: dict[str, object] = {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802
+            length = int(self.headers.get("content-length", "0"))
+            body = self.rfile.read(length).decode("utf-8")
+            captured["authorization"] = self.headers.get("authorization", "")
+            captured["payload"] = json.loads(body)
+            content = json.dumps(
+                {
+                    "review": {
+                        "review_mode": "review_llm",
+                        "review_available": True,
+                        "difficulty": "hard",
+                        "focus": "method",
+                        "score": 0.12,
+                        "recommendation": "revise_required",
+                        "evidence_ids": ["review-llm:flat-openai-response"],
+                    },
+                    "findings": [
+                        {
+                            "finding_id": "review-llm.flat-openai-response",
+                            "severity": "high",
+                            "category": "method",
+                            "evidence": "The response contains a valid review but no top-level status envelope.",
+                            "suggestion": "Normalize the otherwise valid provider response with an audit warning.",
+                        }
+                    ],
+                }
+            )
+            response = json.dumps(
+                {
+                    "choices": [{"message": {"content": content}}],
+                    "model": "gpt-5.5-test",
+                    "usage": {"prompt_tokens": 20, "completion_tokens": 40, "total_tokens": 60},
+                }
+            ).encode("utf-8")
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(response)))
+            self.end_headers()
+            self.wfile.write(response)
+
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        endpoint = f"http://127.0.0.1:{server.server_address[1]}/v1/chat/completions"
+        proc = run_shim(
+            tmp_path,
+            "$review",
+            "flat-openai-review-provider",
+            "--from-wiki",
+            "--review",
+            "--difficulty",
+            "hard",
+            "--focus",
+            "method",
+            "--review-llm-provider",
+            "openai",
+            "--review-llm-model",
+            "gpt-5.5",
+            "--review-llm-endpoint",
+            endpoint,
+            "--run-id",
+            "shim-flat-openai-review-provider",
+            extra_env={"OPENAI_API_KEY": "test-provider-key", "OPENROUTER_API_KEY": ""},
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert proc.returncode == 0, proc.stderr
+    assert captured["authorization"] == "Bearer test-provider-key"
+    request_payload = captured["payload"]
+    assert isinstance(request_payload, dict)
+    response_format = request_payload["response_format"]
+    assert response_format["type"] == "json_schema"
+    assert response_format["json_schema"]["strict"] is True
+    response_schema = response_format["json_schema"]["schema"]
+    assert response_schema["required"] == ["schema", "status", "outputs"]
+    assert response_schema["properties"]["status"]["enum"] == ["completed", "inconclusive"]
+    assert "test-provider-key" not in json.dumps(request_payload)
+
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    review_evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    review = review_evidence["outputs"]["review"]
+    review_llm = review["review_llm"]
+    assert review["review_mode"] == "review_llm"
+    assert review["review_available"] is True
+    assert review_llm["status"] == "completed"
+    assert review_llm["invocation_mode"] == "provider"
+    assert review_llm["provider"] == "openai"
+    assert review_llm["normalization_warnings"] == [
+        "Review LLM response omitted top-level status; inferred completed from a valid review envelope."
+    ]
+    boundary = review_evidence["outputs"]["final_acceptance_boundary"]
+    assert boundary["final_acceptance_ready"] is True
+    assert boundary["status"] == "final_acceptance_ready"
 
 
 def test_autosci_skill_shim_keeps_setup_gated(tmp_path: Path) -> None:
@@ -12593,7 +12710,7 @@ def test_autosci_skill_shim_keeps_setup_gated(tmp_path: Path) -> None:
 
 
 def test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_secret_leakage(tmp_path: Path) -> None:
-    secret_value = "sk-test-autosci-native-setup-secret"
+    secret_value = "phase22-test-autosci-native-setup-secret"
     approved_env = tmp_path / "approved-setup.env"
     dotenv_path = tmp_path / "runtime/.env"
     approved_env.write_text(

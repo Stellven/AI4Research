@@ -13,6 +13,8 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const http = require("http");
+const PYTHON =
+  process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
 
 let chromium;
 try {
@@ -498,7 +500,7 @@ const log = (k, ok, extra = "") => {
 };
 
 (async () => {
-  const backend = spawn("python3", [STATUS_SERVER], {
+  const backend = spawn(PYTHON, [STATUS_SERVER], {
     cwd: TMP,
     env: {
       ...process.env,

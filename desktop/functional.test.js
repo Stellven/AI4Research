@@ -9,6 +9,8 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const http = require("http");
+const PYTHON =
+  process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
 
 const REPO_HARNESS = path.join(__dirname, "..", "harness");
 const STATUS_SERVER = path.join(
@@ -61,7 +63,7 @@ const check = (name, ok) => {
 };
 
 (async () => {
-  const backend = spawn("python3", [STATUS_SERVER], {
+  const backend = spawn(PYTHON, [STATUS_SERVER], {
     cwd: TMP,
     env: {
       ...process.env,

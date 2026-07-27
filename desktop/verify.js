@@ -6,6 +6,8 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
+const PYTHON =
+  process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
 
 const HARNESS_DIR =
   process.env.HARNESS_DIR || path.join(__dirname, "..", "harness");
@@ -59,7 +61,7 @@ function waitHealthy(timeoutMs) {
     fs.unlinkSync(PORT_FILE);
   } catch {}
   fs.mkdirSync(path.dirname(PORT_FILE), { recursive: true });
-  const backend = spawn("python3", [STATUS_SERVER], {
+  const backend = spawn(PYTHON, [STATUS_SERVER], {
     cwd: HARNESS_DIR,
     env: { ...process.env, HARNESS_DIR },
     stdio: ["ignore", "ignore", "ignore"],

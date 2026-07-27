@@ -8,6 +8,7 @@ harness/status-server/static/p0-app/assets/** -diff linguist-generated
 *.zsh text eol=lf
 bin/solar text eol=lf
 bin/solar-daemon text eol=lf
+harness/hooks/* text eol=lf
 
 # Binary deliverables must never receive line-ending conversion.
 *.xlsx binary

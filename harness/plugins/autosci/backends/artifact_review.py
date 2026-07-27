@@ -342,6 +342,95 @@ def _review_llm_provider_config(inputs: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _review_llm_response_json_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "schema": {"type": "string", "enum": ["artifact_review.v1"]},
+            "status": {"type": "string", "enum": ["completed", "inconclusive"]},
+            "outputs": {
+                "type": "object",
+                "properties": {
+                    "review": {
+                        "type": "object",
+                        "properties": {
+                            "review_mode": {"type": "string", "enum": ["review_llm"]},
+                            "review_available": {"type": "boolean", "enum": [True]},
+                            "difficulty": {"type": "string"},
+                            "focus": {"type": "string"},
+                            "score": {"type": "number", "minimum": 0, "maximum": 1},
+                            "recommendation": {
+                                "type": "string",
+                                "enum": [
+                                    "pass_with_review_required",
+                                    "revise",
+                                    "revise_required",
+                                    "inconclusive",
+                                ],
+                            },
+                            "evidence_ids": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                        },
+                        "required": [
+                            "review_mode",
+                            "review_available",
+                            "difficulty",
+                            "focus",
+                            "score",
+                            "recommendation",
+                            "evidence_ids",
+                        ],
+                        "additionalProperties": False,
+                    },
+                    "findings": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "finding_id": {"type": "string"},
+                                "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+                                "category": {
+                                    "type": "string",
+                                    "enum": ["method", "evidence", "writing", "completeness", "review"],
+                                },
+                                "evidence": {"type": "string"},
+                                "suggestion": {"type": "string"},
+                            },
+                            "required": ["finding_id", "severity", "category", "evidence", "suggestion"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "required": ["review", "findings"],
+                "additionalProperties": False,
+            },
+        },
+        "required": ["schema", "status", "outputs"],
+        "additionalProperties": False,
+    }
+
+
+def _review_llm_structured_outputs_enabled(provider: str) -> bool:
+    override = os.environ.get("AUTOSCI_REVIEW_LLM_STRUCTURED_OUTPUTS")
+    if override is not None:
+        return _truthy(override)
+    return provider == "openai"
+
+
+def _review_llm_response_format() -> dict[str, Any]:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "artifact_review",
+            "description": "A source-grounded AutoSci artifact review with a stable acceptance envelope.",
+            "strict": True,
+            "schema": _review_llm_response_json_schema(),
+        },
+    }
+
+
 def _review_llm_prompt_payload(inputs: dict[str, Any], *, difficulty: str, focus: str) -> dict[str, Any]:
     target = inputs.get("review_target") if isinstance(inputs.get("review_target"), dict) else {}
     clean_target = dict(target)
@@ -503,19 +592,23 @@ def _invoke_review_llm_provider(
             "endpoint": config["endpoint"],
         }
     prompt_payload = _review_llm_prompt_payload(inputs, difficulty=difficulty, focus=focus)
-    request_payload = {
+    request_payload: dict[str, Any] = {
         "model": config["model"],
         "messages": [
             {
                 "role": "system",
                 "content": (
                     "You are the independent AutoSci Review LLM. Review the supplied research artifact. "
-                    "Return only JSON matching artifact_review.v1. Do not use markdown or prose outside JSON."
+                    "Return only one JSON object matching artifact_review.v1. Preserve the exact top-level "
+                    "schema, status, and outputs envelope; do not flatten review or findings. Do not use "
+                    "markdown or prose outside JSON."
                 ),
             },
             {"role": "user", "content": json.dumps(prompt_payload, ensure_ascii=False, sort_keys=True)},
         ],
     }
+    if _review_llm_structured_outputs_enabled(config["provider"]):
+        request_payload["response_format"] = _review_llm_response_format()
     headers = {
         "Authorization": f"Bearer {config['api_key']}",
         "Content-Type": "application/json",
@@ -594,6 +687,7 @@ def _invoke_review_llm_provider(
         archive_path or Path("review-llm-provider"),
         difficulty=difficulty,
         focus=focus,
+        allow_missing_status=True,
     )
     normalized["invocation_mode"] = "provider"
     normalized["provider"] = config["provider"]
@@ -706,7 +800,14 @@ def _normalize_llm_finding(value: Any, index: int) -> dict[str, Any] | None:
     }
 
 
-def _normalize_review_llm_payload(payload: dict[str, Any], path: Path, *, difficulty: str, focus: str) -> dict[str, Any]:
+def _normalize_review_llm_payload(
+    payload: dict[str, Any],
+    path: Path,
+    *,
+    difficulty: str,
+    focus: str,
+    allow_missing_status: bool = False,
+) -> dict[str, Any]:
     outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
     review = outputs.get("review") if isinstance(outputs.get("review"), dict) else payload.get("review")
     review = review if isinstance(review, dict) else {}
@@ -727,13 +828,6 @@ def _normalize_review_llm_payload(payload: dict[str, Any], path: Path, *, diffic
     evidence_ids = review.get("evidence_ids")
     if not isinstance(evidence_ids, list) or not evidence_ids:
         evidence_ids = [f"review-llm:{_slug(path.stem)}"]
-    if payload.get("status") not in {"completed", "inconclusive"}:
-        return {
-            "status": "invalid",
-            "tool": "mcp__llm-review__chat",
-            "source_path": str(path),
-            "reason": f"Review LLM evidence status is not completed/inconclusive: {payload.get('status')}",
-        }
     if review.get("review_mode") not in {"review_llm", "llm_review", "external_review"} or review.get("review_available") is not True:
         return {
             "status": "invalid",
@@ -741,8 +835,29 @@ def _normalize_review_llm_payload(payload: dict[str, Any], path: Path, *, diffic
             "source_path": str(path),
             "reason": "Review LLM evidence must declare review_mode=review_llm and review_available=true.",
         }
-    return {
-        "status": "completed" if payload.get("status") == "completed" else "inconclusive",
+    payload_status = str(payload.get("status") or "").strip().lower()
+    normalization_warnings: list[str] = []
+    if not payload_status:
+        if not allow_missing_status:
+            return {
+                "status": "invalid",
+                "tool": "mcp__llm-review__chat",
+                "source_path": str(path),
+                "reason": "Review LLM evidence status is not completed/inconclusive: missing",
+            }
+        payload_status = "completed"
+        normalization_warnings.append(
+            "Review LLM response omitted top-level status; inferred completed from a valid review envelope."
+        )
+    elif payload_status not in {"completed", "inconclusive"}:
+        return {
+            "status": "invalid",
+            "tool": "mcp__llm-review__chat",
+            "source_path": str(path),
+            "reason": f"Review LLM evidence status is not completed/inconclusive: {payload.get('status')}",
+        }
+    normalized = {
+        "status": payload_status,
         "tool": "mcp__llm-review__chat",
         "source_path": str(path),
         "score": score,
@@ -752,6 +867,9 @@ def _normalize_review_llm_payload(payload: dict[str, Any], path: Path, *, diffic
         "evidence_ids": [str(item) for item in evidence_ids if str(item).strip()],
         "findings": findings,
     }
+    if normalization_warnings:
+        normalized["normalization_warnings"] = normalization_warnings
+    return normalized
 
 
 def _review_llm_assessment(inputs: dict[str, Any], *, workspace_root: Path, difficulty: str, focus: str) -> dict[str, Any]:

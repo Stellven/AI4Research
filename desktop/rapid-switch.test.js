@@ -22,6 +22,8 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const http = require("http");
+const PYTHON =
+  process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
 
 const REPO_HARNESS = path.join(__dirname, "..", "harness");
 const STATUS_SERVER =
@@ -92,7 +94,7 @@ const result = (key, ok) =>
   console.log(`RESULT ${key} ${ok ? "PASS" : "FAIL"}`);
 
 (async () => {
-  const backend = spawn("python3", [STATUS_SERVER], {
+  const backend = spawn(PYTHON, [STATUS_SERVER], {
     cwd: TMP,
     env: {
       ...process.env,

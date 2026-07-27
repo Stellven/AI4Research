@@ -18,6 +18,31 @@ from pane_clear_manager import PaneClearManager
 FIXTURE_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "tmux_capture_samples"
 
 
+@pytest.fixture
+def tui_registry(tmp_path):
+    """Create the isolated pane pool required by every integration scenario."""
+    registry = PaneHygieneRegistry(str(tmp_path / "pane-hygiene.json"))
+    for pane_id, role in (
+        ("solar-harness-lab:0.0", "builder"),
+        ("solar-harness:0.3", "evaluator"),
+        ("solar-harness-lab:0.1", "evaluator"),
+        ("solar-harness-lab:0.2", "evaluator"),
+    ):
+        registry.register_pane(pane_id, role)
+    return registry
+
+
+@pytest.fixture
+def tui_ledger(tmp_path):
+    """Keep JSONL and SQLite audit evidence inside pytest's temp directory."""
+    from ledger_writer import LedgerWriter
+
+    return LedgerWriter(
+        str(tmp_path / "dispatch-ledger.jsonl"),
+        str(tmp_path / "model-call-ledger.sqlite"),
+    )
+
+
 def _load_fixture(name: str) -> str:
     return (FIXTURE_DIR / name).read_text()
 
@@ -107,7 +132,7 @@ class TestV5Reinject:
         captures = {"solar-harness-lab:0.0": "You are a Solar Builder.\nBuild code.Definition of Done: 7 rules.\nNo optimistic words.Sprint context.\nGoal: implement X."}
 
         class FakeLedger:
-            def record_reinject(self, pane_id, *, success, components, reason=""):
+            def record_reinject(self, pane_id, **kwargs):
                 pass
 
         reinj = PersonaReinjector(
@@ -137,7 +162,7 @@ class TestV6Spillover:
                 return R()
 
         class FakeLedger:
-            def record_reinject(self, pane_id, *, success, components, reason=""):
+            def record_reinject(self, pane_id, **kwargs):
                 pass
             def record_reassign(self, pane_id, **kw):
                 pass
@@ -176,7 +201,7 @@ class TestV7PaneQuarantine:
         )
         history = tui_ledger.query_history("solar-harness-lab:0.0")
         assert len(history) >= 1
-        assert history[0]["action"] == "clear"
+        assert history[0].action == "clear"
 
 
 # ── Full chain: proceed → recover → clear → reinject → spillover ──
@@ -214,7 +239,7 @@ class TestFullChain:
         (base / "solar_context_sp1.md").write_text("Sprint context.\nGoal: test.")
 
         class FakeLedger:
-            def record_reinject(self, pane_id, *, success, components, reason=""):
+            def record_reinject(self, pane_id, **kwargs):
                 pass
             def record_reassign(self, pane_id, **kw):
                 pass

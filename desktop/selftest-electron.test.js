@@ -8,6 +8,8 @@ const os = require("os");
 const path = require("path");
 const { spawn } = require("child_process");
 const { _electron: electron } = require("playwright");
+const PYTHON =
+  process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
 
 const DESKTOP = __dirname;
 const SOURCE_HARNESS = path.resolve(DESKTOP, "..", "harness");
@@ -80,7 +82,7 @@ async function startRealRuntime() {
   copyRuntimeFixture();
   const portFile = path.join(tempHarness, "run", "status-server.port");
   const child = spawn(
-    "python3",
+    PYTHON,
     [path.join(tempHarness, "lib", "symphony", "status-server.py")],
     {
       cwd: tempHarness,

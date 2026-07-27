@@ -26,3 +26,15 @@ codex-budget.json
 kpi.json
 low-quality-capabilities.json
 pending-improvements.jsonl
+
+# Local credentials and private key material.  Keep the distributable empty
+# template tracked while ignoring every populated environment file.
+.env
+.env*
+!.env.example
+*.key
+*.pem
+
+# Explicit installer/runtime path (also covered by the general *.db rule in
+# the repository root, but retained here as an auditable package boundary).
+run/state.db

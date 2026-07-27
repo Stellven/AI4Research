@@ -23,7 +23,13 @@ const app = read("../harness/status-server/react-app/src/App.tsx");
 const pkg = JSON.parse(read("package.json"));
 const autotest = read("autotest.sh");
 const selftestElectron = read("selftest-electron.test.js");
-const desktopWorkflow = read("../.github/workflows/desktop-build.yml");
+// Keep static workflow assertions portable across Git's CRLF/LF checkout
+// policy. The contract is structural; line-ending normalization must not turn
+// a valid Windows checkout into a false release-gate failure.
+const desktopWorkflow = read("../.github/workflows/desktop-build.yml").replace(
+  /\r\n/g,
+  "\n",
+);
 const desktopGateJob = desktopWorkflow.split("\n  gate:\n")[1] || "";
 const macResources = (pkg.build.mac.extraResources || []).map((entry) => entry.to);
 

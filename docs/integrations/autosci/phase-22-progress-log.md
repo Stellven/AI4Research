@@ -440,3 +440,581 @@ inputs and are not treated as report-version duplicates.
 Before consolidation, the complete pre-consolidation state was committed and
 pushed to `origin/openJiuwen-Solar` at `8d48deba`, so removed report versions
 remain recoverable from Git history.
+
+## Four-Sheet Report Simplification
+
+Logged: 2026-07-24 EDT
+
+At the report owner's request, the canonical workbook was simplified to retain
+only these four review-facing worksheets:
+
+- `Workflow Features`
+- `Foundation Features`
+- `Vertical Features`
+- `Coverage Summary`
+
+The nine supporting registry, mapping, inventory, execution-detail, and control
+worksheets listed below were removed after their decision-relevant information
+was migrated into this log. The complete row-level pre-removal workbook remains
+recoverable from Git commit `012e7a20` (`WS22: consolidate canonical test
+report`). This commit is the authoritative archive for any deleted cell-level
+detail, formatting, or provenance that is too large to duplicate in Markdown.
+
+### Migrated Coverage And Registry Snapshot
+
+| Removed worksheet | Data rows | Migrated information |
+|---|---:|---|
+| `Atomic Test Binding` | 2,047 | One atomic test per atomic feature: 1,867 historical bindings and 180 newly required seed tests. Result/planned-status mix: 713 `PASS`, 574 `SKIPPED_NA`, 341 `INCONCLUSIVE_EXPECTED`, 180 `NOT_RUN`, 102 `FAIL`, 101 `SKIPPED_ENV`, and 36 `BLOCKED_EXPECTED`. Historical mapping confidence values were 1.00, 0.95, or 0.90. |
+| `Uncovered L2 Resolution` | 180 | All 60 previously uncovered L2 capabilities received three generated atomic scenarios: core behavior, evidence/auditability, and invalid-input guardrail. All rows carried `NEEDS_NEW_TESTS`; they were planning seeds rather than proof that an implementation or executable test existed. |
+| `Unmapped Historical Tests` | 250 | Legacy tests intentionally excluded from the current feature hierarchy. Historical results: 130 `PASS`, 45 `SKIPPED_NA`, 40 `INCONCLUSIVE_EXPECTED`, 25 `SKIPPED_ENV`, and 10 `FAIL`. Exclusion groups: 88 QA meta-inventory, 70 installable-component assurance, 30 packaging/release assurance, 20 generic hook safety checks, 16 desktop packaging build checks, 12 CI pipeline checks, 8 reset/destructive maintenance checks, and 6 install/migration/reset checks. |
+| `Atomic Feature Registry` | 2,047 | 1,867 historical contextual atomic features plus 180 newly required features. Review state: 1,738 retained at mapping confidence 1.00, 129 requiring semantic mapping review, and 180 generated/new-required features with no historical-confidence claim. Every feature had one bound atomic-test record in this planning snapshot. |
+| `Atomic Test Registry` | 2,297 | 2,047 tests draft-bound to atomic features plus 250 unmapped historical tests. Coverage relationship: 18 `DIRECT`, 6 `SHARED_DIRECT`, 6 `INDIRECT`, and 2,267 `UNRESOLVED`. Implementation-readiness state: 19 requiring pytest, 6 indirect/review-gated, 4 requiring Bash or WSL, 1 platform-blocked, and 2,267 missing a verified test implementation. These registry figures describe the earlier static mapping audit and are not the later 142-L2 executable smoke classification. |
+| `Test File Binding` | 263 | File/case-level bindings: 18 `DIRECT`, 6 `SHARED_DIRECT`, 6 `INDIRECT`, and 233 `UNRESOLVED`. Readiness: 19 requiring pytest, 6 indirect/review-gated, 4 requiring Bash or WSL, 1 platform-blocked, and 233 unresolved file mappings. Recorded platforms included cross-platform candidates, Windows PowerShell, Windows with WSL, and POSIX-only lanes. |
+| `Test Source Inventory` | 55 | Tracked sources comprised Python, TypeScript, PowerShell, and shell tests. File mapping classification: 1 source with direct mapping, 3 with indirect/structural-only mapping, and 51 unresolved. The inventory was static inspection only; it did not represent an execution run. |
+| `Phase 22 L2 Test Summary` | 142 L2 rows | Final representative-core classification: 94 implemented/passed, 38 implemented/failed, and 10 not implemented/blocked. The 132 implemented L2s resolved to 79 unique probes, of which 58 passed and 21 failed on the 2026-07-23 checkout and machine. The detailed row evidence remains in `tests/platform/phase22/l2_execution_matrix.json` and the machine-readable execution results documented in the preceding audit section. |
+| `Report Control` | 13 populated rows | Canonical path and update policy, progress-log path, safety snapshot `8d48deba`, latest execution counts, and the former workbook-area index. The continuing policy is to update `docs/integrations/autosci/phase-22-test-report.xlsx` in place and not create numbered report copies. |
+
+### Interpretation After Simplification
+
+The three feature worksheets remain the review surface for L1/L2 hierarchy,
+atomic features, generated WHAT contracts, implementation evidence, and the
+current L2 classification. `Coverage Summary` remains the workbook-level count
+and navigation surface. Supporting mapping/audit detail is now split between
+this progress log, the tracked Phase 22 matrix and test files, and the archived
+pre-removal workbook at commit `012e7a20`.
+
+The older static registry counts must not be confused with the later execution
+audit: `MISSING_TEST_IMPLEMENTATION = 2,267` came from the early atomic-registry
+file-binding pass, whereas `94 / 38 / 10` is the later executable representative
+L2 classification produced after direct test work and matrix execution.
+
+## Preliminary L2 Status Report
+
+Logged: 2026-07-24 EDT
+
+A compact preliminary report was generated at
+`outputs/019f8b0a-6f79-7900-9b1a-cb3fc9f875d3/phase22_l2_status_report/phase-22-l2-status-preliminary-report.xlsx`.
+It contains one worksheet and one filterable table only, with the columns
+`Level 2 Feature`, `Category`, and `Status`. The 142 rows come from the completed
+Phase 22 execution classification rather than the earlier static registry audit.
+
+| Category | Function implemented and test passed | Function implemented but test failed | Function not implemented and test blocked | Total |
+|---|---:|---:|---:|---:|
+| Workflow | 41 | 10 | 3 | 54 |
+| Foundation | 43 | 17 | 5 | 65 |
+| Vertical | 10 | 11 | 2 | 23 |
+| **Total** | **94** | **38** | **10** | **142** |
+
+The workbook was reconciled to the classification CSV, re-imported after export,
+scanned for formula errors, and visually checked for clipped feature names and
+status legibility. No commit or push was performed for this report.
+
+## AI4RnD Source Feature List Status Annotation
+
+Logged: 2026-07-24 EDT
+
+The user-supplied workbook at
+`C:/Users/j50058254/Downloads/AI4RnD Feature List.xlsx` was updated in place.
+The source workbook did not yet contain an `Atomic Coverage Resolution` column,
+so that column was restored from the previously resolved workbook convention and
+a new `Test Result` column was added immediately to its right. Existing Notes,
+Notes 2, level-3 bundles, blank extension columns, merged L1 groups, and feature
+descriptions were preserved.
+
+Column placement after the update:
+
+- Workflow Features: `F = Atomic Coverage Resolution`, `G = Test Result`
+- Foundation Features: `H = Atomic Coverage Resolution`, `I = Test Result`
+- Vertical Features: `J = Atomic Coverage Resolution`, `K = Test Result`
+
+Atomic coverage resolution now records `COMPLETE` for the 132 implemented L2s
+that have a representative executable probe and `BLOCKED — FUNCTION NOT
+IMPLEMENTED` for the ten unimplemented L2s. The adjacent test-result cells use
+the final three-state classification and conditional color formatting: green for
+implemented/passed, red for implemented/failed, and yellow for
+not-implemented/blocked.
+
+| Category | Implemented / passed | Implemented / failed | Not implemented / blocked | Total |
+|---|---:|---:|---:|---:|
+| Workflow | 41 | 10 | 3 | 54 |
+| Foundation | 43 | 17 | 5 | 65 |
+| Vertical | 10 | 11 | 2 | 23 |
+| **Total** | **94** | **38** | **10** | **142** |
+
+The edited workbook was exported to a workspace staging path, re-imported,
+reconciled row-for-row to the Phase 22 classification CSV, visually checked on
+all three sheets, copied over the unlocked Downloads file, hash-verified, and
+then re-imported from the final Downloads path. No commit or push was performed.
+
+## AI4RnD Workbook Static Color Compatibility Fix
+
+Logged: 2026-07-24 EDT
+
+The status colors in `C:/Users/j50058254/Downloads/AI4RnD Feature List.xlsx`
+were changed from conditional formatting to direct cell fills so that the
+colors remain visible when the workbook is opened in desktop Excel without a
+conditional-format recalculation. The three-state legend is now:
+
+- green (`#C6EFCE`): function implemented and test passed
+- red (`#FFC7CE`): function implemented but test failed
+- yellow (`#FFEB9C`): function not implemented and test blocked
+
+Matching direct fills were also applied to `Atomic Coverage Resolution`: green
+for `COMPLETE` and yellow for `BLOCKED - FUNCTION NOT IMPLEMENTED`. The result
+counts remain unchanged at 94 passed, 38 failed, and 10 blocked across all 142
+L2 features. The final Downloads workbook was re-imported, its static computed
+styles were verified for each status on every sheet, its status counts were
+reconciled, and the copied file hash matched the verified export. No commit or
+push was performed.
+
+## AI4RnD L2 Row Color Extension
+
+Logged: 2026-07-24 EDT
+
+The direct status fill in `C:/Users/j50058254/Downloads/AI4RnD Feature List.xlsx`
+was extended horizontally across each independently classified L2 row. The
+colored spans are `C:G` on Workflow Features, `C:I` on Foundation Features, and
+`C:K` on Vertical Features. Columns A and B retain their original merged L1
+grouping because those cells span several L2 rows that can have different test
+results; coloring those merged cells from any one child status would create a
+misleading group-level result.
+
+The green, red, and yellow palette and all 142 classifications remain unchanged
+at 94 passed, 38 failed, and 10 blocked. All three sheets were rendered before
+and after the change, representative full-row styles were verified after
+re-import, the formula-error scan returned no matches, and the final Downloads
+file hash matched the verified export. No commit or push was performed.
+
+## Atomic Granularity Review And Executable-Test Generation
+
+Logged: 2026-07-24 EDT
+
+The canonical four-sheet report was rebuilt in place from the workbook's L2
+descriptions/WHAT contracts and the current repository implementation evidence.
+Historical atomic rows were treated as provenance rather than an approved
+hierarchy. The review rule is now one independently observable behavior,
+rejection branch, evidence obligation, or explicitly named technology/platform
+variant per atomic feature. Slash-delimited state and platform alternatives were
+expanded into independently classifiable variants; the compound
+`duplicate identity/version` uniqueness key was intentionally kept together.
+
+| Review measure | Count |
+|---|---:|
+| L2 features | 142 |
+| Historical atomic rows | 2,047 |
+| Reviewed atomic features | 1,502 |
+| Net historical rows removed | 545 |
+| Repository executable test files inventoried | 971 |
+| Repository executable selectors/cases inventoried | 6,462 |
+
+The inventory is assertion/name/code-surface aware, but discovery alone is not
+coverage. Fuzzy mappings were rejected unless the selector first matched the L2
+implementation surface and then the atomic behavior. Generic matches such as
+`file`, `HTML`, `runtime`, or `registry` were not accepted across unrelated
+features. A representative L2 probe is bound to at most one closest atomic
+behavior and is never copied across every child.
+
+| Atomic test-generation decision | Count |
+|---|---:|
+| Newly generated executable selector | 14 |
+| Reused existing direct/curated selector | 24 |
+| L2 representative anchor only | 120 |
+| Tagged: manual behavior oracle required | 909 |
+| Tagged: environment/provider/platform oracle required | 295 |
+| Blocked: required behavior not implemented | 140 |
+| **Total reviewed atomic features** | **1,502** |
+
+Every atomic feature now has an explicit generation decision. No
+`NEEDS_TEST_IMPLEMENTATION` placeholder remains. Tagged rows have no fabricated
+selector: they record that exact generated-selector discovery, curated review,
+and conservative current-test matching were attempted, but a defensible
+assertion-level oracle was not available. Implementation-blocked rows likewise
+carry no adjacent-surface test masquerading as feature coverage.
+
+### Generated And Executed Test Batches
+
+1. `tests/workflow/ingestion/test_request_capture_atomic.py` plus its isolated
+   shell driver cover all eight Request Capture behaviors: direct text, file,
+   stdin, no-dispatch, successful dispatch, empty input, missing file, and
+   workspace mismatch. The suite uses a temporary WSL HOME and copied harness;
+   result: **8 passed in 86.41s**.
+2. `tests/foundation/taskgraph/test_task_graph_persistence_atomic.py` adds the
+   missing corrupt-JSON behavior. Together with exact existing TaskGraph IO
+   selectors, all eleven reviewed persistence/lifecycle atomics are bound;
+   current suite result: **27 passed in 4.27s**.
+3. `tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py`
+   adds five missing definition/validation cases and reuses two exact resource
+   resolution cases. Result: **6 passed, 1 failed in 1.27s**. The failure is a
+   concrete contract defect: `load_capability_capsule_registry` accepts a
+   duplicate `(capability_capsule_id, version)` entry instead of raising
+   `CapsuleRegistryError`.
+
+Current atomic execution evidence therefore contains 25 PASS and 1 FAIL. Strict
+L2 roll-up no longer inherits the older representative-core 94/38/10 result:
+
+| Strict L2 atomic roll-up | Count |
+|---|---:|
+| Function implemented; all required atomic tests passed | 2 |
+| Function implemented; at least one atomic test failed | 1 |
+| Required atomic behavior not implemented; test blocked | 22 |
+| Implemented atomic behavior still lacks executable oracle | 117 |
+| **Total** | **142** |
+
+The two strict PASS L2s are Request Capture and TaskGraph Persistence &
+Lifecycle Management. Capability Capsule Definition & Assembly is strict FAIL
+because of duplicate versioned identity acceptance. All other L2s remain
+blocked by an implementation gap or an executable-test gap; they are not
+reported as passed merely because a representative probe passed.
+
+The canonical workbook at
+`docs/integrations/autosci/phase-22-test-report.xlsx` still contains only
+Workflow Features, Foundation Features, Vertical Features, and Coverage
+Summary. It now contains the reviewed atomic list, exact test path/selector/
+runner/evidence fields, strict L2 roll-up, updated Atomic Coverage Resolution,
+and static full-row colors: green for current atomic PASS, red for FAIL, gray
+for not implemented, amber for environment-gated, yellow for manual-oracle
+tags, and blue for bound/not-currently-run. The verified export was re-imported,
+formula-scanned with zero error matches, visually checked on all four sheets,
+and hash-matched to the canonical workbook. A temporary pre-rebuild copy is at
+`.codex-tmp/phase22-atomic-executable/pre_atomic_rebuild.xlsx`. No commit or push
+was performed.
+
+## Environment / Provider Gate Configuration And Execution Audit
+
+Logged: 2026-07-24 EDT
+
+The 295 atomic rows previously tagged
+`TAGGED_NOT_GENERATED_ENVIRONMENT_GATED` were audited individually. That tag
+was originally assigned by a deliberately broad keyword heuristic (for terms
+such as provider, resource, cost, app, tmux, Windows, and macOS); it was not
+proof that a credential or dependency was actually missing. The reviewed audit
+is reproducible from:
+
+- `tests/platform/phase22/audit_environment_provider_gates.py`
+- `tests/platform/phase22/environment_provider_gate_audit.json`
+- `tests/platform/phase22/test_environment_provider_gate_audit.py`
+
+Audit integrity result: **3 passed in 0.05s**.
+
+| Reviewed gate disposition | Atomic features |
+|---|---:|
+| Local configuration resolved; related executable evidence is available | 179 |
+| Local configuration resolved; relevant test still failed | 39 |
+| Atomic selector/binding gap, not a configuration gate | 10 |
+| External provider credential/account still required | 4 |
+| Native platform, packaged application, GUI session, or real hardware required | 44 |
+| Manual scientific/validity oracle required, not a configuration gate | 9 |
+| Explicit implementation boundary, not a configuration gate | 10 |
+| **Total reviewed heuristic environment/provider tags** | **295** |
+
+Passing a related suite only proves that the environment gate is no longer the
+blocker. It does not automatically promote every sibling atomic row to PASS;
+an exact assertion-level selector must still be accepted for each atomic
+behavior.
+
+### Configuration and portability gaps repaired
+
+- Installed `pytest` plus `requirements/harness.txt` into the temporary WSL
+  environment `/tmp/opensolar-phase22-venv`; all WSL runs used
+  `HOME=/tmp/opensolar-phase22-home`.
+- Installed desktop Electron/Playwright dependencies and Chromium under
+  repository-local ignored/temp paths. No browser payload was installed into
+  the real user profile.
+- Installed Pester 5.7.1 under `.codex-tmp/powershell-modules` and ran it with a
+  process-scoped execution-policy bypass; system PowerShell modules were not
+  changed.
+- Added `harness/.env.example` with empty optional provider fields, and added
+  explicit secret/runtime exclusions to `harness/.gitignore`.
+- Added an LF policy for `harness/hooks/*` and normalized the executable
+  `bin/solar`, `bin/solar-daemon`, and secret-scan hooks so WSL no longer sees
+  `bash\r` or false end-of-file syntax errors.
+- Made desktop test/verification scripts honor `PYTHON` and default to
+  `python.exe` on Windows instead of hard-coding `python3`.
+- Made the desktop bootstrap contract normalize CRLF before checking GitHub
+  Actions workflow structure.
+- Repaired the tmux/TUI integration suite's missing isolated registry/ledger
+  fixtures and stale fake-ledger method signatures.
+- Fixed the Windows CLI provider-onboarding fixture to expose a PATHEXT-aware
+  fake `codex.cmd`.
+- Used the repository's recorded Node 24 TypeScript loader for extensionless
+  TypeScript imports; Bun was confirmed unnecessary for these probes.
+
+### Representative execution evidence after configuration
+
+- Windows CLI provider onboarding: **1 passed**.
+- Resource/quota/operator/model/remote batches: **245 passed, 1 failed**. The
+  failure is the Terminal-Bench dry-run verdict (`pending` returned where the
+  contract expects `ok`), not an environment failure.
+- Core benchmark and HIVE cluster TypeScript probes: **4 passed**.
+- Headless Chromium GUI/Web gates: functional **9/9**, rapid session switching
+  **2/2**, frontend scenarios **3/3**, and the full desktop/mobile/gate/error
+  visual gate green.
+- Desktop static/runtime contracts: runtime detection **10/10**, selftest
+  verdict **7/7**, and bootstrap/package contract **18/18**.
+- Linux installer/config suite: **38/38**; provider-aware onboarding passed.
+- Windows installer Pester suite: **15/15**.
+- tmux/TUI evidence: path-safety **4/4**, TUI integration **11/11**,
+  notification bridge **3/3**, and pane-hygiene **4/4**.
+- Web/status projections and deliverables: **34 passed** plus the standalone
+  asset-package test passed.
+- Scientific validity fixture/negative-control suites: **30 passed** after
+  configuring `PYTHONPATH=harness:harness/lib`.
+- Capability, scheduler, quota, routing, and search-provider suites: **52
+  passed**.
+- WeChat/Apple Notes controlled-fixture suite: **35 passed** (no live WeChat or
+  Apple Notes account used).
+
+### Failures or external gates that configuration cannot honestly erase
+
+- `harness/tests/benchmark/test_terminal_bench_adapter.py`: **12 passed, 1
+  failed**; dry-run verdict mismatch.
+- `harness/tests/test_provider_actor_generation.py`: **4 failed**; current
+  physical/provider/actor registries and schema have drifted (unknown browser
+  provider, unsupported backend/provider pairs, removed expected operator,
+  top-level provenance schema mismatch, and unresolved fallback targets).
+- Model single-source/registry/live-route shell gates fail because the checked-in
+  user model matrix and UI registry no longer match the GLM-oriented assertions;
+  this is current configuration/contract drift, not missing credentials.
+- `harness/tests/test_no_direct_tmux_send_keys.py`: **10 passed, 1 failed**;
+  direct `tmux send-keys` call sites remain outside the policy allowlist.
+- Electron process launch still exits before Playwright can attach in the
+  current Codex Windows GUI session. Headless Web/GUI tests pass, but packaged
+  Electron attachment/recovery screens remain a platform gate.
+- Native macOS DMG, launchd, Apple Notes permission, macOS CLI lifecycle, and
+  signed-package checks require a Mac runner.
+- Four live-provider/login atomic behaviors require an explicitly authorized
+  provider account/credential and permission to make live calls. No provider
+  secret was present or read during this audit.
+- The optional TVS doctor gate skipped because no `SOLAR_TVS_ROOT`/TVS checkout
+  exists in the sandbox HOME.
+
+The canonical workbook was not overwritten during this audit because Excel is
+still holding `docs/integrations/autosci/phase-22-test-report.xlsx` open (the
+`~$phase-22-test-report.xlsx` lock file is present). No commit or push was
+performed.
+
+### Canonical workbook sync after Excel lock release
+
+Logged: 2026-07-27 EDT
+
+Excel was closed and the lock file was no longer present. The audit results
+above were therefore written directly into the single canonical workbook at
+`docs/integrations/autosci/phase-22-test-report.xlsx`; no new report workbook
+was created.
+
+- All 295 formerly generic environment/provider-gated atomic rows were updated
+  with their reviewed gate disposition, coverage relationship, current result,
+  blocker reason, and disposition-specific row color.
+- The saved disposition counts reconcile exactly to the audit JSON: 179 local
+  configuration resolved with related executable evidence, 39 related-suite
+  failures, 10 pure atomic-binding gaps, 4 external credential/account gates,
+  44 platform/hardware gates, 9 manual-oracle cases, and 10 current
+  implementation boundaries.
+- The 10 implementation-boundary atomics changed the strict L2 roll-up for five
+  L2 features. Final L2 distribution is 2 all-atomic PASS, 1 atomic-test FAIL,
+  27 implementation blocked, and 112 executable-test-gap blocked (142 total).
+- The Coverage Summary now distinguishes all seven audited dispositions. It
+  reports 918 manual-oracle atomics, 48 external/provider/platform blocks (4
+  credential/account plus 44 platform/hardware), and 150 not-implemented
+  atomics.
+- Workbook verification re-imported all four sheets, reconciled 1,502 atomic
+  rows and 142 L2 groups, verified all 295 saved audit mappings, found zero
+  spreadsheet formula-error strings, and visually rendered every sheet plus
+  external-provider and implementation-boundary row samples.
+- Audit integrity was rerun after the workbook sync: **3 passed in 0.05s**.
+
+The macOS runner remains intentionally classified as platform blocked at the
+user's request. No Mac tests were started.
+
+For the four remaining live account/provider atomics, the code supports either
+`OPENAI_API_KEY` or `OPENROUTER_API_KEY` for the AutoSci Review LLM live-opt-in
+test. `OPENAI_API_KEY` is the broader single choice because the Codex runtime
+doctor also recognizes it as provider authentication. OpenRouter does not
+satisfy the Codex login-start/login-status contract: those two behaviors require
+an actual `codex login --device-auth` session. No secret was requested in chat,
+written to a tracked file, printed, or read during this sync, and no billable
+provider call was made. A live call remains pending explicit user authorization
+and local secret configuration. No commit or push was performed.
+
+### Authorized AutoSci live-provider execution
+
+Logged: 2026-07-27 EDT
+
+The user populated the ignored local `harness/.env` and explicitly authorized
+one live-provider test. The key value was never printed, copied into a tracked
+file, or written to the progress log.
+
+- Exact selector:
+  `harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py::test_autosci_live_review_llm_provider_produces_runtime_proof`
+- The first pytest attempt failed during `tmp_path` setup because the default
+  Windows pytest temp root was not accessible. It never entered the test
+  function and made no provider call.
+- The retry used a new repository-local `.codex-tmp` basetemp, disabled pytest
+  cache writes, entered the test, and reached
+  `https://api.openai.com/v1/chat/completions` with provider `openai` and model
+  `gpt-5.5`.
+- Result: **FAIL**. OpenAI returned **HTTP 429 Too Many Requests**. This is
+  classified as an external provider quota/rate-limit/account-state failure;
+  it is not evidence of a local assertion crash or an absent implementation.
+- The generated JSON/JSONL evidence was scanned for an exact match of the local
+  API key. Result: **no key found**.
+- No automatic retry or OpenRouter fallback was attempted after the real 429
+  response, so the single authorized provider invocation boundary was
+  respected.
+
+The canonical workbook now binds atomic `P22-AF-FN-058-08` (Provider
+live-opt-in) directly to the exact selector above with
+`REUSED_EXISTING_EXECUTABLE`, records atomic result `FAIL`, and colors that
+atomic row red. The strict `Verification Asset Construction` L2 roll-up is now
+`FUNCTION_IMPLEMENTED_ATOMIC_TEST_FAILED`. Workbook totals reconcile to 25
+atomic PASS, 2 atomic FAIL, 3 still credential/account blocked, 44
+platform/hardware blocked, and 1,502 total atomics. Strict L2 totals are 2 all
+atomic PASS, 2 atomic-test FAIL, 27 implementation blocked, and 111
+executable-test-gap blocked (142 total). The workbook was re-imported, all four
+sheets were rendered, and zero spreadsheet formula-error strings were found.
+No commit or push was performed.
+
+### Authorized AutoSci live-provider retry with replacement key
+
+Logged: 2026-07-27 EDT
+
+The user replaced the locally configured OpenAI credential and explicitly
+authorized one additional live-provider test. The ignored `harness/.env` was
+loaded into the test process without printing or copying the key.
+
+- Exact selector:
+  `harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py::test_autosci_live_review_llm_provider_produces_runtime_proof`
+- The single authorized call reached OpenAI and returned a Chat Completions
+  model response from `gpt-5.5-2026-04-23`; the provider/authentication path was
+  therefore live for this run.
+- Result: **FAIL** (`1 failed in 10.60s`). The returned model JSON contained
+  usable `findings` and `review` content but omitted the top-level `status`
+  required by `_normalize_review_llm_payload` (`completed` or `inconclusive`).
+  AutoSci consequently classified `review_llm` as `invalid`, fell back to
+  `local_surrogate`, and failed the runtime-proof contract.
+- This supersedes the previous HTTP 429 explanation. It is now classified as
+  an executable response-contract failure after a successful provider call,
+  not an external provider availability or credential failure.
+- The generated JSON/JSONL evidence was scanned for an exact match of the new
+  local API key. Result: **no key found**.
+- No automatic retry and no OpenRouter/fallback-provider call was made after
+  the response, preserving the one-call authorization boundary.
+
+The canonical workbook was overwritten in place. Atomic `P22-AF-FN-058-08`
+remains `FAIL`, and its `Verification Asset Construction` L2 remains
+`FUNCTION_IMPLEMENTED_ATOMIC_TEST_FAILED`; the explanatory cells and Coverage
+Summary now describe the missing top-level `status` contract instead of HTTP
+429. Counts remain 25 atomic PASS, 2 atomic FAIL, 3 credential/account blocked,
+44 platform/hardware blocked, and 1,502 reviewed atomics. macOS remains
+intentionally platform blocked. Workbook verification found zero spreadsheet
+formula-error strings and retained the red failure styling. No commit or push
+was performed.
+
+### Review LLM provider response-contract repair
+
+Logged: 2026-07-27 EDT
+
+After the replacement-key live run showed that OpenAI returned useful review
+content without the required top-level `status`, the provider integration was
+repaired without making another live call.
+
+- Native OpenAI requests now include a strict `json_schema` response format
+  requiring the `schema`, `status`, and `outputs` envelope and the complete
+  `review`/`findings` contract.
+- The system prompt now explicitly prohibits flattening `review` or `findings`
+  out of the top-level envelope.
+- `openai_compatible` providers remain unchanged by default to avoid assuming
+  that every third-party endpoint implements Structured Outputs. The
+  `AUTOSCI_REVIEW_LLM_STRUCTURED_OUTPUTS` environment variable can explicitly
+  override the default.
+- Provider responses that omit only top-level `status` can now be normalized to
+  `completed` when `review_mode` and `review_available` prove that the review
+  envelope is otherwise valid. The normalization is recorded as an audit
+  warning. This fallback is provider-only; manually supplied evidence and
+  command bridges retain the strict status requirement.
+- Added a regression test reproducing the actual flattened OpenAI response
+  shape. It also asserts that native OpenAI sends strict JSON Schema and that
+  the API key is absent from the request body.
+
+Verification:
+
+- Final targeted provider/command regression set: **3 passed in 3.69s**.
+- An expanded Windows run reached **5 passed, 4 failed, 1 skipped**. All four
+  failures were pre-existing path-normalization assertions expecting `/` while
+  generated evidence references used `\\`; they occur outside the modified
+  provider/normalizer behavior.
+- Python compilation and `git diff --check` passed. The only Git messages were
+  existing LF-to-CRLF working-copy warnings.
+
+The canonical workbook intentionally remains at atomic/L2 `FAIL` because no
+post-repair live provider test has been authorized or executed. No commit or
+push was performed.
+
+### Environment/provider gate resolution and execution
+
+Logged: 2026-07-27 EDT
+
+The remaining true credential/account gates were configured or converted to
+controlled exact tests, then executed. macOS and other native-platform items
+remain intentionally platform blocked.
+
+- `harness/auth-helpers.sh status` confirmed the currently configured Codex
+  authentication state (`codex=ok`, `codex_auth_json=true`) without returning a
+  token or API key. Claude remains unavailable because its CLI is not installed;
+  GLM remains unavailable because no key is configured. Neither is required by
+  the three exact authentication atomics resolved here.
+- Added
+  `tests/vertical/account_management/test_authentication_session_security_env_gated.py`
+  with exact selectors for provider-authenticated status, login start, and login
+  status. The opt-in run with `SOLAR_LIVE_AUTH_STATUS_TEST=1` passed all three
+  selectors: **3 passed in 1.82s**. Login start/status use controlled subprocess
+  seams and do not mutate a real external account.
+- The first post-repair Review LLM execution received and archived a valid
+  OpenAI Structured Outputs response with `status=completed`, one finding, and
+  normal `finish_reason=stop`. Its final sidecar write failed only because the
+  deliberately unique pytest basetemp exceeded the Windows path-length limit.
+- Re-running the same exact live-provider selector with short basetemp
+  `.codex-tmp/lp2` passed: **1 passed in 11.23s**. No retry or provider fallback
+  occurred within that run.
+- The final live evidence tree was scanned for an exact match of the configured
+  OpenAI key. Result: **no key found; zero read errors**. `harness/.env` remains
+  ignored by `harness/.gitignore` and is not reported by `git status`. A second
+  Unicode-safe scan covered both post-repair live evidence trees plus all files
+  listed by Git as tracked or non-ignored; it also found **zero matches, zero
+  read errors, and zero path errors**.
+- The gate audit now records four rows as
+  `CONFIG_RESOLVED_ATOMIC_TEST_PASSED`: `P22-AF-FN-058-08`,
+  `P22-AF-VT-014-05`, `P22-AF-VT-014-08`, and `P22-AF-VT-014-09`.
+  An initial non-opt-in audit/integrity run completed with **6 passed, 1
+  skipped**; the skip was the intentionally opt-in live auth-status selector,
+  not a failed or blocked selector. The final combined run set
+  `SOLAR_LIVE_AUTH_STATUS_TEST=1` and completed with **7 passed in 0.35s**.
+- The three focused Review LLM provider/command regression selectors completed
+  with **3 passed in 3.78s**. Python compilation and `git diff --check` also
+  passed; Git reported only existing LF-to-CRLF working-copy warnings.
+
+The canonical workbook was overwritten in place with exact bindings, selectors,
+commands, PASS results, and green atomic-row styling for all four resolved rows.
+Strict roll-up totals now reconcile to 29 atomic PASS, 1 atomic FAIL, 0
+credential/account blockers, 44 platform/hardware blockers, and 1,502 reviewed
+atomics. L2 totals are 2 all-atomic PASS, 1 atomic-test FAIL, 27 implementation
+blocked, and 112 executable-test-gap blocked (142 total). `Verification Asset
+Construction` moved from atomic-test FAIL to `IMPLEMENTED_TEST_GAP_BLOCKED`
+because seven sibling atomics still lack accepted executable bindings;
+`Authentication & Session Security` remains implementation blocked because two
+required sibling behaviors are outside the current implementation boundary.
+All four workbook sheets were re-imported and rendered, and zero spreadsheet
+formula-error strings were found. No commit or push was performed.
+
+## L2 status synchronization
+Logged: 2026-07-27 12:04:42
+- Full source: C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\docs\integrations\autosci\phase-22-test-report.xlsx
+- Brief synchronized in-place: C:\Users\j50058254\Downloads\AI4RnD Feature List.xlsx
+- Matched and updated rows: 142
+- Mapping run from full L2 atomic rollup status using explicit four-state mapping
+- No atomic rows added or removed; row identity preserved by sheet + normalized L2 key.
+
+- COMPLETE_FAIL: expected 1 / actual 1
+- COMPLETE_PASS: expected 2 / actual 2
+- IMPLEMENTATION_BLOCKED: expected 27 / actual 27
+- TEST_GAPS_TAGGED: expected 112 / actual 112
