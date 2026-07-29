@@ -290,7 +290,8 @@ class WorkerJourney:
             "tests/journeys/phase22/code/test_j13_local_interaction_interface.py",
             "tests/journeys/phase22/code/test_j14_wechat_identity.py",
             "tests/journeys/phase22/code/test_j15_cross_platform_install_matrix.py",
-            ".codex-tmp/phase22-worker-results/overnight-phase22/D/result.json",
+            f".codex-tmp/phase22-worker-results/{BATCH_ID}/result.json",
+            f".codex-tmp/phase22-worker-results/{BATCH_ID}/D/result.json",
         ]
         result = {
             "schema_version": "phase22.worker_result.v3",
@@ -309,7 +310,9 @@ class WorkerJourney:
             "unresolved_items": sorted({lim for item in journeys for lim in item.get("unresolved_items", [])}),
             "ready_for_integration": all(item.get("product_status") != "NOT_RUN_BY_WORKER_D" for item in journeys),
         }
-        write_json(self.repo_root / ".codex-tmp" / "phase22-worker-results" / "overnight-phase22" / "D" / "result.json", result)
+        result_root = self.repo_root / ".codex-tmp" / "phase22-worker-results" / BATCH_ID
+        write_json(result_root / "result.json", result)
+        write_json(result_root / "D" / "result.json", result)
 
 
 def test_p22_j11_capsule_and_operator(repo_root: Path, phase22_python: str) -> None:
