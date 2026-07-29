@@ -21,7 +21,7 @@ copy_allowlist() {
     dry_run_note "copy allowlisted files from $src_dir to $dst_dir" && return 0
     mkdir -p "$dst_dir"
     while IFS= read -r name; do
-        name="$(printf '%s' "$name" | awk '{$1=$1; print}')"
+        name="$(printf '%s' "$name" | tr -d '\r' | awk '{$1=$1; print}')"
         case "$name" in
             ''|'#'*) continue ;;
         esac

@@ -63,8 +63,8 @@ kernel_assemble() {
     } > "$tmp"
 
     while IFS='|' read -r frag req; do
-        frag="$(printf '%s' "$frag" | awk '{$1=$1; print}')"
-        req="$(printf '%s' "$req" | awk '{$1=$1; print}')"
+        frag="$(printf '%s' "$frag" | tr -d '\r' | awk '{$1=$1; print}')"
+        req="$(printf '%s' "$req" | tr -d '\r' | awk '{$1=$1; print}')"
         case "$frag" in
             ''|'#'*) continue ;;
         esac

@@ -1,212 +1,204 @@
 # OpenSolar Agent Guide
 
-This file applies to the whole repository. Its purpose is to keep concurrent
-coding agents aligned on the current Phase 22 verification work. A task-specific
-user instruction still takes precedence, but an agent must not silently invent
-different status names, evidence standards, or ownership boundaries.
+This file applies to the whole repository. It aligns agents on the current
+Phase 22 verification strategy. A task-specific user instruction takes
+precedence.
 
 ## Current Objective
 
-Phase 22 is establishing executable, atomic-level evidence for the Level 2
-feature hierarchy. The feature list is both **as-is** and **to-be**: some
-contracts describe behavior that is intentionally not implemented yet.
+Phase 22 now uses a three-layer test strategy. The goal is to show which real
+user tasks OpenSolar can complete, while retaining the earlier atomic work for
+regression and diagnosis.
 
-The workflow is:
+1. **Real-task journey tests are the primary acceptance evidence.** A small set
+   of end-to-end tasks uses realistic inputs, runs production entrypoints, and
+   retains user-visible outputs and logs.
+2. **Reliable existing tests are the regression layer.** They run before or
+   after journeys to detect breakage and help localize failures. They do not by
+   themselves establish the final product verdict.
+3. **The atomic inventory is the diagnostic layer.** The full workbook and
+   atomic matrix preserve detailed behavior, test, implementation, platform,
+   and known-limitation evidence. Phase 22 no longer requires every atomic row
+   to have an exact executable selector before the journey report can finish.
 
-1. Understand the intended L2 behavior and its atomic granularity.
-2. Determine whether each atomic behavior exists in the current codebase.
-3. Bind an exact existing test or generate a deterministic executable test when
-   the behavior can be automated.
-4. Run the accepted selector and retain real execution evidence.
-5. Let the integration owner regenerate the matrix, full workbook, and strict L2
-   roll-up. Worker agents do not edit those shared artifacts directly.
+Do not resume a campaign to complete all atomic bindings unless the user
+explicitly requests it.
+
+## Canonical Artifacts
+
+- Human-readable journey plan:
+  `tests/journeys/phase22/journey-test-plan.md`
+- Journey test code:
+  `tests/journeys/phase22/code/`
+- Reusable journey fixtures:
+  `tests/journeys/phase22/fixtures/`
+- Local raw run evidence:
+  `outputs/phase22-real-journeys/<run-id>/`
+- Final journey report:
+  `docs/integrations/autosci/phase-22-journey-test-report.md`
+- Detailed diagnostic workbook, called the **full report**:
+  `docs/integrations/autosci/phase-22-test-report.xlsx`
+- Historical decision and execution log:
+  `docs/integrations/autosci/phase-22-progress-log.md`
+- Level-2 stakeholder summary, called the **brief report**:
+  `C:/Users/j50058254/Downloads/AI4RnD Feature List.xlsx`
+
+The brief report remains part of the required reporting workflow. It contains
+Level 2 results only and must never contain atomic rows. It is synchronized from
+accepted journey results, not used as a source of atomic definitions.
 
 ## Sources of Truth
 
-Use these sources in this order:
+Use these sources in order:
 
-1. The current user/task instruction and explicitly assigned atomic IDs.
-2. `docs/integrations/autosci/phase-22-test-report.xlsx` (the **full report**):
-   its L2 description and WHAT-contract fields define intended behavior,
-   boundaries, inputs, outputs, failure behavior, and approved granularity.
-3. The current production code, schemas, entrypoints, and configuration: these
-   determine whether the intended behavior is actually implemented.
-4. Existing executable tests and their assertions: these determine whether an
-   exact reusable binding already exists.
-5. `tests/platform/phase22/atomic_feature_matrix.json`: this is a generated work
-   queue/report, not an authority that overrides the contract or current code.
-6. `docs/integrations/autosci/phase-22-progress-log.md`: this is historical audit
-   context. Newer verified evidence supersedes stale counts or conclusions.
+1. Current user/task instruction.
+2. The journey plan and its stated task, input, success conditions, and mapped
+   Level 2 features.
+3. Current production code, schemas, entrypoints, and configuration.
+4. Current journey run evidence: commands, exit codes, outputs, logs, generated
+   artifacts, environment, and Git commit.
+5. Reliable regression tests and their actual execution evidence.
+6. The full report and atomic matrix as diagnostic references.
+7. The progress log as historical context.
 
-The L2-only **brief report** is a derivative status view. Never add atomic rows
-to it and never use it as the source of atomic definitions or bindings.
+When sources disagree, preserve and report the disagreement. Do not weaken a
+success condition or delete a known limitation merely to turn a result green.
 
-When sources disagree, record the mismatch in the worker result. Do not change
-the contract merely to make the current implementation or a convenient test
-pass.
+## Journey Result States
 
-## Three Independent Questions
+Use these conceptual states in the journey report and brief report:
 
-Keep these separate for every atomic feature:
+- `PASS`: the realistic task completed and its minimum observable success
+  conditions were met.
+- `PASS_WITH_KNOWN_LIMITATIONS`: the core task completed, but a real non-core
+  variant, edge case, or limitation remains.
+- `FAIL`: an implemented path failed or the produced result did not meet the
+  task's minimum success conditions.
+- `NOT_TESTED`: no accepted journey exercised the feature or variant.
+- `ENVIRONMENT_BLOCKED`: a specifically named platform, hardware, credential,
+  account, permission, or provider prevented execution.
+- `NOT_AVAILABLE`: the required product behavior is not implemented.
 
-- **Implementation status:** does production code implement the contracted
-  behavior? Test code is not implementation evidence.
-- **Test-generation status:** is there an accepted existing selector, a newly
-  generated selector, a genuine manual oracle, an implementation blocker, or a
-  real platform/provider gate?
-- **Coverage relationship/result:** does an exact assertion-level binding exist,
-  and what happened when that selector was actually run?
+A journey may prove only the feature paths that it actually exercised. Never
+copy a green result to file formats, platforms, providers, failure branches, or
+other variants that the journey did not use.
 
-An implemented behavior may have no test. A test may exist but fail. A passing
-adjacent or representative L2 test does not prove its sibling atomic behaviors.
+## Minimum Journey Evidence
 
-## Atomic Classification Rules
+Every accepted journey must record:
 
-Classify each assigned atomic behavior into one conceptual bucket. Serialize it
-with the exact enum accepted by the current Phase 22 validator; do not invent a
-near-synonym.
+- journey ID and task description;
+- realistic input or fixture;
+- exact production command or entrypoint;
+- required environment and configuration, without secrets;
+- minimum observable success conditions;
+- Level 2 features actually exercised;
+- exit code and concise stdout/stderr evidence;
+- generated artifact paths and basic usability checks;
+- Git commit and run ID;
+- final result and known limitations.
 
-### Automatable with an existing test
+Do not pass a journey merely because a process started or a file exists. Check
+that the intended input was processed and that the resulting artifact is
+non-empty, structurally usable, and relevant to the requested task.
 
-Use only when the selector existed before the current batch and its assertions
-directly exercise the atomic input, output, state change, or rejection branch.
-Set the coverage relationship to `DIRECT`, or `SHARED_DIRECT` only when one
-selector genuinely asserts every listed atomic behavior.
+## How Old Atomic Failures Affect Journeys
 
-### Automatable with a new test
+An old atomic failure does not automatically fail a successful journey, but it
+must not be silently ignored. Triage it once:
 
-Generate a focused executable test against a production seam. A test created in
-the current batch is new, not "existing." Run it before delivery. A legitimate
-contract-revealing failure is recorded as `FAIL`; do not weaken the oracle to
-turn current behavior green.
+1. If it affects a core journey step, data integrity, privacy, security, or the
+   truthfulness of the result, the journey is `FAIL`.
+2. If it is a real edge case or unexercised variant, the journey may be
+   `PASS_WITH_KNOWN_LIMITATIONS`; retain the limitation in the full report and
+   summarize it in the journey report.
+3. If the old test has a broken fixture, runner, path assumption, or incorrect
+   expected result, quarantine or repair the test. Do not record it as a product
+   failure.
+4. If the journey did not exercise the behavior, record that behavior as
+   `NOT_TESTED`; do not infer a pass.
 
-### Manual oracle required
+Use the old atomic tests after a journey failure to narrow the cause. Add a
+small regression test when fixing a journey-blocking defect so the same defect
+does not return.
 
-Use only when success inherently requires human or domain judgment that cannot
-be reduced to a stable automated assertion. Supply a concrete manual protocol:
-input/fixture, steps, required evidence artifact, reviewer decision rule, and
-pass/fail criteria. Do not leave it as generic `UNRESOLVED` or `NOT_RUN`.
+## Full Report and Atomic Evidence
 
-### Blocked because implementation is absent
+The full report remains the detailed known-limitation and diagnostic record. It
+keeps the existing independent fields for implementation, test generation,
+coverage relationship, and current result. Existing atomic enums remain valid
+inside that report and its generator; journey statuses do not overwrite their
+meaning.
 
-Use `BLOCKED_NOT_IMPLEMENTED` only after tracing the named production entrypoints
-and showing that the contracted behavior or rejection branch is absent. Cite the
-closest implementation and the exact missing behavior. "No existing test" is
-not evidence that the function is unimplemented.
+Only integrate worker evidence that has been reviewed and actually run. A test
+or worker-result file is not accepted evidence merely because it exists. Record
+unaccepted attempts as review notes rather than converting them into product
+PASS or FAIL results.
 
-### Platform/provider gated
-
-Use a platform/provider gate only when the behavior exists but cannot execute
-without a specifically named OS, hardware device, external service, account,
-credential, permission, or live provider. Record the exact requirement and the
-command needed once it is available. Prefer controlled fakes for deterministic
-contract tests when they can prove the behavior without misrepresenting a live
-integration.
-
-Configuration already present is not a gate. A missing exact binding after
-configuration resolution is a test-binding task, not an environment blocker.
-
-## Implementation and Test Evidence
-
-Every atomic result must distinguish production evidence from test evidence:
-
-- `implementation_file` and `implementation_symbol` point to real product code,
-  schemas, or runtime entrypoints.
-- `test_file` and `test_selector` point to the assertion-bearing executable
-  test.
-- `implementation_evidence` explains how the production seam satisfies or fails
-  the contract.
-- `decision_rationale` explains why the chosen classification and binding are
-  exact.
-
-Do not use the generated test file or test function as implementation evidence.
-Do not accept tests that merely check file existence, search for symbols, inspect
-source text, or duplicate the implementation in the test.
-
-Test oracles must come from the L2 contract. Avoid permissive assertions such as
-accepting both success and failure, arbitrary hard-coded values, or assertions
-that only prove the fixture ran. For rejection atomics, assert the observable
-failure status/reason and absence of forbidden side effects.
+The generated atomic matrix is a diagnostic work queue/report. It does not
+override the journey plan, current code, or actual journey evidence.
 
 ## Test Execution Rules
 
-- Collect and run every new or newly bound selector before calling the batch
-  complete.
-- Prefer the repository `.venv` and the runner recorded by the existing suite.
+- Prefer the repository `.venv` and the runner used by the existing suite.
 - Give parallel pytest runs unique `--basetemp` and cache directories.
-- Never redirect stdout/stderr into the same `--basetemp`; pytest deletes that
-  directory at startup and Windows will raise `WinError 32` on open log files.
-- Record the exact selector, command, exit code, duration, outcome, and concise
-  stdout/stderr tail.
-- Record `repo_head` with `git rev-parse HEAD`, not by reading `.git/HEAD`.
-
-Classify failures by evidence:
-
-- Assertion reached and failed: `FAIL`.
-- Test collection, fixture setup, path construction, or result-recorder bug:
-  runner/test-harness error; repair and rerun, not environment blocked.
-- A test hard-codes a Unix path on Windows: first treat it as a test portability
-  defect unless the product contract itself is platform-specific.
-- A specifically proven missing provider/platform requirement: gated with the
-  exact requirement.
-- Never report `PASS` without exit-code-zero evidence from the named selector.
+- Never redirect logs into the same `--basetemp` directory.
+- Use sandbox homes for install, uninstall, privacy, and configuration tests.
+- Record exact commands, exit codes, durations, and concise output tails.
+- Record `repo_head` with `git rev-parse HEAD`.
+- An assertion failure is `FAIL`; a broken fixture or runner must be repaired
+  and rerun rather than mislabeled as an environment block.
+- A Unix-only path in a cross-platform test is first a test portability defect
+  unless the product requirement is explicitly platform-specific.
+- Live-provider tests require explicit user authorization and must never print,
+  archive, or commit credentials.
 
 ## Parallel Work and Shared Artifacts
 
-This repository commonly has a dirty worktree and multiple active agents.
-Preserve changes outside the assigned scope.
+This repository commonly has a dirty worktree and concurrent agents. Preserve
+changes outside the assigned scope.
 
-Only the explicitly assigned integration owner may edit or regenerate these
-shared artifacts during a parallel run:
+Only the explicitly assigned integration owner may edit or regenerate:
 
 - `tests/platform/phase22/atomic_feature_matrix.json`
-- `tests/platform/phase22/build_atomic_feature_matrix.py`
-- Phase 22 matrix validators under `tests/platform/phase22/`
-- `docs/integrations/autosci/phase-22-test-report.xlsx`
-- `docs/integrations/autosci/phase-22-progress-log.md`
-- the L2-only brief workbook
+- the Phase 22 matrix/workbook generators and validators;
+- `docs/integrations/autosci/phase-22-test-report.xlsx`;
+- `docs/integrations/autosci/phase-22-progress-log.md`;
+- `docs/integrations/autosci/phase-22-journey-test-report.md`;
+- the brief report.
 
-Worker agents instead write their assigned tests and one isolated result file,
-normally under:
+Worker agents write only their assigned journey tests, fixtures, and isolated
+result files unless explicitly given integration ownership. A normal worker
+result belongs under `.codex-tmp/phase22-worker-results/<batch-id>/result.json`.
 
-`.codex-tmp/phase22-worker-results/<batch-id>/result.json`
+Before editing, inspect `git status` and current ownership. Do not copy, rename,
+or overwrite shared workbooks from a worker batch.
 
-Do not copy, rename, overwrite, or synchronize the workbooks from a worker
-batch. Do not run a global formatter over shared files. Before editing, inspect
-`git status` and the current task ownership; if another agent owns the target,
-stop and report the collision.
-
-## Worker Result Quality Gate
+## Worker Quality Gate
 
 Before handoff, verify:
 
-- Assigned atomic IDs are present exactly once and no out-of-scope IDs were
-  added.
-- Selectors are unique and every selector maps back to its atomic ID(s).
-- Existing/new/manual/not-implemented/gated classifications use evidence, not
-  absence-of-test guesses.
-- All executable selectors were actually run; `NOT_RUN` is truthful and never
-  substitutes for a failed runner.
-- Generated tests exercise production behavior and have deterministic oracles.
-- `git diff --check` passes for changed text files.
-- No credentials, `.env` contents, local paths containing secrets, Excel lock
-  files, output copies, or scratch artifacts are staged.
+- assigned journeys or diagnostic IDs are present exactly once;
+- generated tests exercise production behavior through defensible assertions;
+- all claimed executable tests were actually run;
+- failures are separated into product, test/runner, platform/provider, and
+  not-implemented causes;
+- outputs and limitations are recorded truthfully;
+- `git diff --check` passes for changed text files;
+- no credentials, `.env` contents, Excel lock files, local output copies, or
+  scratch artifacts are staged.
+
+The final worker message must state what changed, what was run, exact counts,
+remaining limitations, and the isolated result path. It must not claim that a
+shared report is synchronized unless the integration owner has regenerated and
+validated it.
 
 ## Git and Safety
 
-- Use the current checked-out branch unless the user explicitly requests
-  another one. Do not assume the obsolete `pkg/migration` branch.
+- Use the current checked-out branch unless the user asks otherwise.
 - Do not push without explicit user approval.
-- Stage only the files assigned to the task. Never use destructive resets or
-  history rewrites to clean a shared worktree.
-- Keep `.codex-tmp/`, rendered inspection output, temporary spreadsheets, Excel
-  `~$` lock files, local environments, and credentials out of commits.
-- Never touch a real home directory during install/uninstall tests; use an
-  isolated temporary home.
-- Live-provider tests require explicit authorization and must never print,
-  archive, or commit API keys.
-
-The final worker message must state what changed, what was run, exact counts,
-remaining blockers, and the path to its isolated result. It must not claim that
-the matrix/workbook is synchronized unless the integration owner has completed
-and validated that separate step.
+- Stage only files assigned to the current task.
+- Never use destructive resets or history rewrites to clean a shared worktree.
+- Keep `.codex-tmp/`, rendered inspections, temporary spreadsheets, Excel
+  `~$` files, local environments, and credentials out of commits.
+- Never touch the real home directory during install or uninstall tests.

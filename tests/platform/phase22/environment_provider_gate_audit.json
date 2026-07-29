@@ -1,0 +1,2747 @@
+{
+  "schema": "phase22.environment_provider_gate_audit.v1",
+  "audited_at": "2026-07-27",
+  "source": "tests/platform/phase22/atomic_feature_matrix.json",
+  "policy": "A keyword-derived environment/provider tag is not proof of a missing configuration. Passing related suites only resolves the environment gate; it does not fabricate an assertion-level atomic binding.",
+  "counts": {
+    "ATOMIC_BINDING_GAP_NOT_CONFIG": 10,
+    "CONFIG_RESOLVED_ATOMIC_TEST_PASSED": 4,
+    "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE": 179,
+    "CONFIG_RESOLVED_TEST_FAILED": 39,
+    "IMPLEMENTATION_BOUNDARY_NOT_CONFIG": 10,
+    "MANUAL_ORACLE_NOT_CONFIG": 9,
+    "PLATFORM_OR_HARDWARE_REQUIRED": 44
+  },
+  "l2_features_by_disposition": {
+    "ATOMIC_BINDING_GAP_NOT_CONFIG": [
+      "Constraint Resolution",
+      "DAG and Agent Organization (AFlow / MCTS / ADAS)",
+      "Defect Repair",
+      "Evaluator-Driven Operator Evolution",
+      "POC Implementation Environment Preparation",
+      "Privacy & Personal Data Controls",
+      "Technical Opportunity Screening"
+    ],
+    "CONFIG_RESOLVED_ATOMIC_TEST_PASSED": [
+      "Authentication & Session Security",
+      "Verification Asset Construction"
+    ],
+    "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE": [
+      "Authentication & Session Security",
+      "Authorized Distribution, Knowledge Transfer & Lifecycle Closure",
+      "Benchmark Protocol & Asset Preparation",
+      "Build Preparation",
+      "CLI",
+      "Capsule Invocation & Composition",
+      "Cluster setting",
+      "Constraint Compilation",
+      "Cost/Budget Settings",
+      "DAG Scheduler, TaskGraph Readiness & Operator Binding",
+      "Delivery Planning & Evidence Handoff",
+      "Execution Admission, Lease & Concurrency Control",
+      "Falsifiability Screening & Hypothesis Contracting",
+      "GUI",
+      "Linux Cli",
+      "Logical-to-Physical Matching, Selection & Binding",
+      "Main Loop Dispatch & Runtime Supervision",
+      "Metrics & Run Evidence Collection",
+      "Model Usage Auditing",
+      "Operator Runtime Evaluation & Capability Profiling",
+      "Resource Usage, Cost & Capacity Management",
+      "Runtime Deliverable Construction",
+      "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "Runtime status visibility",
+      "Search Strategy Formation",
+      "Signal Organization",
+      "TUI",
+      "Text-Based Artifacts (GEPA / MIPROv2 / TextGrad)",
+      "User-Facing Deliverable Generation",
+      "Verification Asset Construction",
+      "Web Application & Status Service",
+      "Wechat",
+      "Windows App"
+    ],
+    "CONFIG_RESOLVED_TEST_FAILED": [
+      "Benchmark Execution",
+      "LLM Config",
+      "Model Routing & Selection",
+      "Performance, Cost & Benchmark Evaluator",
+      "TMUX"
+    ],
+    "IMPLEMENTATION_BOUNDARY_NOT_CONFIG": [
+      "Authentication & Session Security",
+      "Cluster setting",
+      "Cost/Budget Settings",
+      "Resource Usage, Cost & Capacity Management",
+      "Runtime status visibility"
+    ],
+    "MANUAL_ORACLE_NOT_CONFIG": [
+      "Experimental, Reasoning & External Validity Review"
+    ],
+    "PLATFORM_OR_HARDWARE_REQUIRED": [
+      "GUI",
+      "MacOS App",
+      "MacOS CLI",
+      "Verification Asset Construction",
+      "Web Application & Status Service",
+      "Windows App"
+    ]
+  },
+  "atomic_features": [
+    {
+      "atomic_feature_id": "P22-AF-WF-011-05",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Constraint Resolution",
+      "atomic_feature_name": "Resource",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-011-06",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Constraint Resolution",
+      "atomic_feature_name": "Cost",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-015-11",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Search Strategy Formation",
+      "atomic_feature_name": "Provider failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-019-04",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Signal Organization",
+      "atomic_feature_name": "Cluster",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-027-08",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Technical Opportunity Screening",
+      "atomic_feature_name": "External conflict",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-027-09",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Technical Opportunity Screening",
+      "atomic_feature_name": "Provider unavailable",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-033-08",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Falsifiability Screening & Hypothesis Contracting",
+      "atomic_feature_name": "Resource limits",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-035-06",
+      "sheet": "Workflow Features",
+      "level_2_feature": "POC Implementation Environment Preparation",
+      "atomic_feature_name": "Resource",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-041-08",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Benchmark Protocol & Asset Preparation",
+      "atomic_feature_name": "Resource limit",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-041-09",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Benchmark Protocol & Asset Preparation",
+      "atomic_feature_name": "Resource context",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-042-06",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Benchmark Execution",
+      "atomic_feature_name": "Resource exhaustion",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-043-14",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Metrics & Run Evidence Collection",
+      "atomic_feature_name": "Resource use",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-01",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "Design validity",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-02",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "Measurement validity",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-04",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "Confound",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-05",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "Limitation",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-06",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "Reproducibility",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-07",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "External population",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-08",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "External context",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-09",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "Reviewer unavailable",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-047-10",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Experimental, Reasoning & External Validity Review",
+      "atomic_feature_name": "And contradictory evidence",
+      "gate_disposition": "MANUAL_ORACLE_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "Scientific/external validity needs domain evidence and reviewer judgment; installing a dependency cannot create a reliable automated oracle."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-051-11",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Delivery Planning & Evidence Handoff",
+      "atomic_feature_name": "Unavailable provider",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-052-13",
+      "sheet": "Workflow Features",
+      "level_2_feature": "User-Facing Deliverable Generation",
+      "atomic_feature_name": "And provider failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-WF-054-05",
+      "sheet": "Workflow Features",
+      "level_2_feature": "Authorized Distribution, Knowledge Transfer & Lifecycle Closure",
+      "atomic_feature_name": "Provider failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-004-03",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Capsule Invocation & Composition",
+      "atomic_feature_name": "Resource attachment",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-008-05",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Logical-to-Physical Matching, Selection & Binding",
+      "atomic_feature_name": "Quota",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-010-04",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Operator Runtime Evaluation & Capability Profiling",
+      "atomic_feature_name": "Cost capture",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-011-04",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Evaluator-Driven Operator Evolution",
+      "atomic_feature_name": "Cost-risk trade-off",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-01",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "Doctor",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-02",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "List",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-03",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "Plan",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-05",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "Run failure",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-06",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "Repeated metrics",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-07",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "Baseline regression",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-08",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "Cost budget",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-09",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "Latency budget",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-014-10",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Performance, Cost & Benchmark Evaluator",
+      "atomic_feature_name": "Report integrity",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-019-04",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Model Routing & Selection",
+      "atomic_feature_name": "Disabled provider",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-019-06",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Model Routing & Selection",
+      "atomic_feature_name": "Quota",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-020-04",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Model Usage Auditing",
+      "atomic_feature_name": "Provider normalization",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-020-06",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Model Usage Auditing",
+      "atomic_feature_name": "Token present",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-020-07",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Model Usage Auditing",
+      "atomic_feature_name": "Token absent",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-020-08",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Model Usage Auditing",
+      "atomic_feature_name": "Cost present",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-020-09",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Model Usage Auditing",
+      "atomic_feature_name": "Cost absent",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-021-02",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Text-Based Artifacts (GEPA / MIPROv2 / TextGrad)",
+      "atomic_feature_name": "Budget boundary",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-02",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Candidate",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-03",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Cost improvement",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-04",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Latency improvement",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-05",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Quality guardrail",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-06",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Quota",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-07",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Load",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-08",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Regression",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-09",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Promote",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-022-10",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime and Resource Routing (Bayesian Optimization / Bandits / Cost-Aware RL)",
+      "atomic_feature_name": "Rollback",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-024-06",
+      "sheet": "Foundation Features",
+      "level_2_feature": "DAG and Agent Organization (AFlow / MCTS / ADAS)",
+      "atomic_feature_name": "Cost comparison",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-040-04",
+      "sheet": "Foundation Features",
+      "level_2_feature": "DAG Scheduler, TaskGraph Readiness & Operator Binding",
+      "atomic_feature_name": "External wait",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-041-09",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Execution Admission, Lease & Concurrency Control",
+      "atomic_feature_name": "Quota",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-042-07",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Main Loop Dispatch & Runtime Supervision",
+      "atomic_feature_name": "Provider failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-047-01",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Constraint Compilation",
+      "atomic_feature_name": "Budget",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-053-04",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Build Preparation",
+      "atomic_feature_name": "Install success",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-053-05",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Build Preparation",
+      "atomic_feature_name": "Install failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-058-06",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Verification Asset Construction",
+      "atomic_feature_name": "Platform live-opt-in",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-058-07",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Verification Asset Construction",
+      "atomic_feature_name": "Provider mocked",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-058-08",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Verification Asset Construction",
+      "atomic_feature_name": "Provider live-opt-in",
+      "gate_disposition": "CONFIG_RESOLVED_ATOMIC_TEST_PASSED",
+      "atomic_result": "PASS",
+      "reason": "The required local/provider configuration was supplied or controlled, and an exact executable atomic selector passed without exposing credentials."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-062-07",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Defect Repair",
+      "atomic_feature_name": "External blocker",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-FN-065-04",
+      "sheet": "Foundation Features",
+      "level_2_feature": "Runtime Deliverable Construction",
+      "atomic_feature_name": "Install smoke",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-003-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Runtime status visibility",
+      "atomic_feature_name": "Tmux session present",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-003-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Runtime status visibility",
+      "atomic_feature_name": "Tmux session absent",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-003-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Runtime status visibility",
+      "atomic_feature_name": "Provider blocker state",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-003-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Runtime status visibility",
+      "atomic_feature_name": "Unsupported live CPU telemetry explicitly unavailable",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-003-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Runtime status visibility",
+      "atomic_feature_name": "Unsupported live GPU telemetry explicitly unavailable",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Budget below limit",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Budget at limit",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Budget above limit",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Hard-stop on",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Hard-stop off",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Atomic consumption",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Atomic reset",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Missing usage source",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Provider auth cooldown",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Capacity aggregation",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Per-run token evidence",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Unsupported monetary attribution",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-004-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Resource Usage, Cost & Capacity Management",
+      "atomic_feature_name": "Unsupported storage attribution",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Portable package contents",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "WSL stopped",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "WSL ready",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "No distro",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "First-run install",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Reboot-resume",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Backend launch",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Backend attach",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Localhost",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "WSL-IP fallback",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Autostart install",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Autostart remove",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Repair",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Sync",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-16",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Keep-data uninstall",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Diagnostics",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-18",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Redaction",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-005-19",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Windows App",
+      "atomic_feature_name": "Real-hardware manual gate",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "DMG contents",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Existing-runtime attach",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Bundled-runtime upgrade",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Bundled-runtime sync",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Launchd install",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Launchd uninstall",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Backend healthy",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Backend unhealthy",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Provider setup boundary",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Preserve-data repair",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Preserve-data uninstall",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-006-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS App",
+      "atomic_feature_name": "Unsigned versus release-signed package gate",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Interactive install",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Unattended install",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Component selection",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Missing dependency",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Bootstrapped dependency",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "PATH",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Config",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Receipt",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Status JSON",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Doctor JSON",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Backup",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Restore",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Update rollback",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Update failure",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-16",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Repair",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Keep-data uninstall",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-18",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Dry-run uninstall",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-007-19",
+      "sheet": "Vertical Features",
+      "level_2_feature": "MacOS CLI",
+      "atomic_feature_name": "Clean residue check",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Supported Linux package manager",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Supported unknown package manager",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Dependency present",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Dependency missing",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Dependency bootstrap",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "User-local install",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Systemd available",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Systemd unavailable",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Doctor",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Status",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Backup",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Restore",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Update",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Repair",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-16",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Keep-data",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-008-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Linux Cli",
+      "atomic_feature_name": "Clean uninstall",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Build assets",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Package assets",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Root page",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Healthz",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Runtime-info",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Authorized API",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Unauthorized API",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Intake",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Settings write",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Auth status",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Auth start",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Status",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Projection",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "SSE",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-16",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Artifact allowlist",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Empty state",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-18",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Degraded state",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-19",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Error state",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-009-20",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Web Application & Status Service",
+      "atomic_feature_name": "Packaged Electron attachment",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-010-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "CLI",
+      "atomic_feature_name": "Auth blocker",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-010-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "CLI",
+      "atomic_feature_name": "Quota blocker",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Setup states",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Backend loading",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Backend healthy",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Backend error",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Intake form",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Settings",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Auth",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Workflow display",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Gate display",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Event display",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Empty data",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Artifact view",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Deliverable view",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Unauthorized navigation",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-16",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Unsafe navigation",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Keyboard basics",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-18",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Accessibility basics",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-011-19",
+      "sheet": "Vertical Features",
+      "level_2_feature": "GUI",
+      "atomic_feature_name": "Responsive packaged view",
+      "gate_disposition": "PLATFORM_OR_HARDWARE_REQUIRED",
+      "atomic_result": "BLOCKED_EXTERNAL",
+      "reason": "This behavior requires a native platform, packaged application, GUI session, or real-hardware runner not available in the current test host."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Once",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Watch",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "No-color",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Dependency present",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Dependency missing",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Tmux session",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Tmux panes",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Queue artifacts",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Recent artifacts",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Auth blocker",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Quota blocker",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Keyboard navigation in core UI",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Keyboard rendering in core UI",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-012-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TUI",
+      "atomic_feature_name": "Explicit assertion that installed UI-lite performs no control mutation",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "API token absent",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "API token correct",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "API token incorrect",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Loopback versus NAT protection",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Provider authenticated",
+      "gate_disposition": "CONFIG_RESOLVED_ATOMIC_TEST_PASSED",
+      "atomic_result": "PASS",
+      "reason": "The required local/provider configuration was supplied or controlled, and an exact executable atomic selector passed without exposing credentials."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Provider unauthenticated",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Provider expired",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Login start",
+      "gate_disposition": "CONFIG_RESOLVED_ATOMIC_TEST_PASSED",
+      "atomic_result": "PASS",
+      "reason": "The required local/provider configuration was supplied or controlled, and an exact executable atomic selector passed without exposing credentials."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Login status",
+      "gate_disposition": "CONFIG_RESOLVED_ATOMIC_TEST_PASSED",
+      "atomic_result": "PASS",
+      "reason": "The required local/provider configuration was supplied or controlled, and an exact executable atomic selector passed without exposing credentials."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Unsupported provider missing",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Unsupported CLI missing",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Raw-secret non-disclosure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-014-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Authentication & Session Security",
+      "atomic_feature_name": "Distinguish provider session from product account",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-016-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Privacy & Personal Data Controls",
+      "atomic_feature_name": "Uninstall delete versus keep-data",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-016-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Privacy & Personal Data Controls",
+      "atomic_feature_name": "Uninstall delete versus dry-run",
+      "gate_disposition": "ATOMIC_BINDING_GAP_NOT_CONFIG",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The keyword-based environment tag was a false positive. The remaining gap is an assertion-level atomic binding or behavior test, not machine configuration."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Valid article fixture",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Copied body with URL",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Copied body without URL",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Fetch disabled",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Fetch dry-run",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Timeout failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Network failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Parser failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Body failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Redaction versus full",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "New content",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Changed content",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Unchanged content",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Duplicate content",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Provenance fields",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-16",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Dispatch creation",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-017-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Wechat",
+      "atomic_feature_name": "Dispatch force",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Session create",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Session existing",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Session absent",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Pane ownership",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Pane isolation",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Attach",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Detach",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Literal dispatch",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Verification",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Busy blocker",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Modal blocker",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Auth blocker",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Quota blocker",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Capture inspection",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Log inspection",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Crash",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-18",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Recovery",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-19",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Respawn",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-20",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Cleanup without cross-run teardown",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-21",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "Windows path",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-019-22",
+      "sheet": "Vertical Features",
+      "level_2_feature": "TMUX",
+      "atomic_feature_name": "WSL path",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-020-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "LLM Config",
+      "atomic_feature_name": "Provider endpoint",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-020-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "LLM Config",
+      "atomic_feature_name": "Provider reference",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-020-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "LLM Config",
+      "atomic_feature_name": "Enabled provider",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-020-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "LLM Config",
+      "atomic_feature_name": "Disabled provider",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-020-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "LLM Config",
+      "atomic_feature_name": "Missing auth",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-020-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "LLM Config",
+      "atomic_feature_name": "Missing quota",
+      "gate_disposition": "CONFIG_RESOLVED_TEST_FAILED",
+      "atomic_result": "FAIL",
+      "reason": "The required runtime/dependencies were configured and the relevant suite executed, but at least one assertion failed; this is not an environment blocker."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Counter defaults",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Counter reset",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Consume",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Hard-stop on",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Hard-stop off",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "At token",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Below token",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Above token",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Call limits",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Operator quota classification",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Operator auth classification",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Operator capacity classification",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Cooldown expiry",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Fallback policy",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-15",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Reroute policy",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Unsupported monetary dimension",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-18",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Unsupported compute dimension",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-022-19",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cost/Budget Settings",
+      "atomic_feature_name": "Unsupported storage dimension",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-01",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Host type validation",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-02",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Host address validation",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-03",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Local versus SSH host",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-04",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Local versus managed host",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-05",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Local versus tmux host",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-06",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Heartbeat fresh",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-07",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Heartbeat stale",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-08",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Probe pass",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-09",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Probe fail",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-10",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Offline lifecycle",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-11",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Degraded lifecycle",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-12",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Actor binding",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-13",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Concurrency available",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-14",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Concurrency exhausted",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-16",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Remote dispatch success",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-17",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Remote dispatch failure",
+      "gate_disposition": "CONFIG_RESOLVED_EXECUTABLE_EVIDENCE_AVAILABLE",
+      "atomic_result": "NEEDS_EXACT_ATOMIC_BINDING",
+      "reason": "The relevant suite executed with an isolated HOME and local fake/mock configuration; exact atomic selector review may still be required."
+    },
+    {
+      "atomic_feature_id": "P22-AF-VT-023-18",
+      "sheet": "Vertical Features",
+      "level_2_feature": "Cluster setting",
+      "atomic_feature_name": "Stub topology not live",
+      "gate_disposition": "IMPLEMENTATION_BOUNDARY_NOT_CONFIG",
+      "atomic_result": "BLOCKED_IMPLEMENTATION",
+      "reason": "The L2 contract explicitly calls this dimension unsupported or a stub; it must be classified as an implementation boundary, not a config gap."
+    }
+  ]
+}

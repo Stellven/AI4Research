@@ -1,0 +1,9 @@
+﻿{
+  "run_id": "p22-j02-live-coding",
+  "runtime": "codex",
+  "expected_modified_files": [
+    "calculator.py"
+  ],
+  "baseline_command": ["-q"],
+  "max_modified_files": 2
+}

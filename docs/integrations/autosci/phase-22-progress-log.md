@@ -1018,3 +1018,126 @@ Logged: 2026-07-27 12:04:42
 - COMPLETE_PASS: expected 2 / actual 2
 - IMPLEMENTATION_BLOCKED: expected 27 / actual 27
 - TEST_GAPS_TAGGED: expected 112 / actual 112
+
+## Phase 22 overnight journey integration closure
+Logged: 2026-07-29 01:01:31 -04:00
+
+Integration owner role: Phase 22 Overnight Verification Integration Owner.
+Run ID: `overnight-phase22-20260729T044000Z`.
+Repo head: `fd1d52684f340cdec16351c05228ce54569ea0e9`.
+
+The overnight campaign converted the brief-report Level 2 inventory from a
+journey-evidence gap state to a complete journey ledger. The starting brief
+workbook contained 142 Level 2 rows: 6 `PASS_WITH_KNOWN_LIMITATIONS`, 3 `FAIL`,
+7 `ENVIRONMENT_BLOCKED`, 100 `NOT_TESTED`, and 26 `NOT_AVAILABLE`. Starting
+evidence-basis gaps were 67 `Journey planned; no direct L2 evidence` and 33
+`No accepted journey evidence`.
+
+Accepted final Level 2 ledger counts:
+
+- `PASS`: 0
+- `PASS_WITH_KNOWN_LIMITATIONS`: 7
+- `FAIL`: 53
+- `ENVIRONMENT_BLOCKED`: 24
+- `NOT_AVAILABLE`: 58
+- `NOT_TESTED`: 0
+- `UNRESOLVED`: 0
+
+Completion checks from
+`outputs/phase22-real-journeys/overnight-phase22-20260729T044000Z/l2-evidence-ledger.json`:
+142 brief L2 keys present, 142 ledger L2 keys present, zero duplicate keys,
+zero unmatched observed Level 2 labels, zero planned-without-direct-evidence
+rows, and zero rows with no accepted journey evidence.
+
+Journey execution summary:
+
+- `P22-J01`: `ENVIRONMENT_BLOCKED`; Git Bash/MINGW install probe returned
+  unsupported OS, and WSL enumeration returned access denied.
+- `P22-J02`: `ENVIRONMENT_BLOCKED`; live coding preflight found `bash` and
+  `tmux` missing from PATH before sprint/provider execution.
+- `P22-J03`: `FAIL`; official platform benchmark ran and scored below the
+  acceptance threshold.
+- `P22-J04`: `PASS_WITH_KNOWN_LIMITATIONS`; local ingest/re-ingest worked, with
+  wiki registration still incomplete.
+- `P22-J05`: `FAIL`; live/network discovery commands ran but produced zero
+  candidates and no provider-backed source channel.
+- `P22-J06`: `FAIL`; idea generation produced candidates but no
+  verification-ready/falsifiable idea card.
+- `P22-J07`: `PASS_WITH_KNOWN_LIMITATIONS`; local experiment execution and
+  metrics passed, with terminal runtime/audit state limitations.
+- `P22-J08`: `FAIL`; the evaluator supported a deliberately overbroad claim.
+- `P22-J09`: `PASS_WITH_KNOWN_LIMITATIONS`; markdown report and evidence bundle
+  were produced, with Review LLM/writeback/HITL compile boundaries limited.
+- `P22-J10`: `ENVIRONMENT_BLOCKED`; Git Bash/MINGW lifecycle probe returned
+  unsupported OS.
+- `P22-J11`: `PASS_WITH_KNOWN_LIMITATIONS`; capsule/operator/model registry
+  probes passed with version/governance limitations.
+- `P22-J12`: `ENVIRONMENT_BLOCKED`; failure-recovery queue path imports
+  Unix-only `fcntl`, and WSL access was denied.
+- `P22-J13`: `FAIL`; local UI path crashes on Windows because
+  `signal.SIGPIPE` is unavailable.
+- `P22-J14`: `NOT_AVAILABLE`; no implemented WeChat channel intake entrypoint
+  was found.
+- `P22-J15`: `PASS_WITH_KNOWN_LIMITATIONS`; Windows/package lanes were
+  recorded, while macOS app and CLI lanes remain platform blocked.
+
+Command evidence:
+
+- Initial collect-only for J01-J10: 10 tests collected, exit 0.
+- Final collect-only for J01-J15: 15 tests collected, exit 0.
+- Full non-live journeys: 13 selected, 5 passed, 4 skipped, 4 failed, exit 1.
+- Live/provider journeys: 2 selected, J02 skipped, J05 failed, exit 1.
+- Worker B J03/J04/J06: 1 passed, 2 failed.
+- Worker C J07/J08/J09: 2 passed, 1 failed.
+- Worker D J11-J15: 2 passed, 2 skipped, 1 failed.
+- Workbook render and formula-error scans: 0 formula errors in the canonical
+  full report and the staged synchronized brief report.
+- `git diff --check`: exit 0.
+
+Canonical and staged artifacts:
+
+- Human-readable journey report:
+  `docs/integrations/autosci/phase-22-journey-test-report.md`.
+- Canonical full report workbook synchronized in place:
+  `docs/integrations/autosci/phase-22-test-report.xlsx`.
+- Staged synchronized brief report:
+  `.codex-tmp/phase22-worker-results/overnight-phase22/staged-reports/AI4RnD Feature List.xlsx`.
+- Brief workbook pre-sync backup:
+  `.codex-tmp/phase22-worker-results/overnight-phase22/backups/AI4RnD Feature List.before-overnight-sync.xlsx`.
+- Brief sync blocker record:
+  `.codex-tmp/phase22-worker-results/overnight-phase22/brief-sync-blocker.json`.
+- Final validator:
+  `.codex-tmp/phase22-worker-results/overnight-phase22/final-validator.json`.
+
+At this checkpoint, the final validator confirmed ledger completeness, valid
+terminal statuses, formula-error count 0 for the full report and staged brief
+report, staged brief counts matching the ledger, and `git diff --check` exit 0.
+It failed only because the live brief workbook at
+`C:\Users\j50058254\Downloads\AI4RnD Feature List.xlsx` was held by Excel PID
+35768 with lock file
+`C:\Users\j50058254\Downloads\~$AI4RnD Feature List.xlsx`, so the current
+Downloads workbook remained at old baseline counts. The synchronized
+replacement file was staged and ready to copy as soon as Excel released the
+workbook. No git commit or push was performed.
+
+### Brief workbook final synchronization after lock release
+Logged: 2026-07-29 08:23:28 -04:00
+
+Excel was no longer running, the brief workbook lock file was no longer
+present, and the verified staged workbook was copied over
+`C:\Users\j50058254\Downloads\AI4RnD Feature List.xlsx`.
+
+The final validator passed after the copy. It confirms:
+
+- current Downloads brief counts match the ledger:
+  7 `PASS_WITH_KNOWN_LIMITATIONS`, 53 `FAIL`, 24 `ENVIRONMENT_BLOCKED`, and 58
+  `NOT_AVAILABLE`;
+- no current brief lock file is present;
+- canonical full report formula-error scan: 0;
+- staged brief formula-error scan: 0;
+- ledger completeness: 142 of 142 brief Level 2 rows resolved, with 0
+  `NOT_TESTED`, 0 unresolved, 0 planned-without-direct-evidence rows, and 0
+  no-accepted-evidence rows;
+- `git diff --check` exit 0.
+
+No git commit or push was performed.

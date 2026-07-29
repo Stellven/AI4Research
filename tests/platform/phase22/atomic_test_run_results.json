@@ -1,0 +1,134 @@
+{
+  "schema": "phase22.atomic_test_run_results.v1",
+  "run_at": "2026-07-24",
+  "command": "Two verified suites: Request Capture (8 cases) and TaskGraph persistence (27 cases, 11 bound atomic behaviors).",
+  "suite_result": "PASS",
+  "duration_seconds": 91.95,
+  "results": [
+    {
+      "selector": "tests/workflow/ingestion/test_request_capture_atomic.py::test_atomic_request_capture__direct_text",
+      "result": "PASS",
+      "evidence": "PASS in the isolated WSL fixture; direct text was preserved in raw_intent.json."
+    },
+    {
+      "selector": "tests/workflow/ingestion/test_request_capture_atomic.py::test_atomic_request_capture__file",
+      "result": "PASS",
+      "evidence": "PASS in the isolated WSL fixture; --file content was preserved in raw_intent.json."
+    },
+    {
+      "selector": "tests/workflow/ingestion/test_request_capture_atomic.py::test_atomic_request_capture__stdin",
+      "result": "PASS",
+      "evidence": "PASS in the isolated WSL fixture; stdin content was preserved in raw_intent.json."
+    },
+    {
+      "selector": "tests/workflow/ingestion/test_request_capture_atomic.py::test_atomic_request_capture__no_dispatch",
+      "result": "PASS",
+      "evidence": "PASS in the isolated WSL fixture; dispatch_requested was false and the mock autopilot marker was absent."
+    },
+    {
+      "selector": "tests/workflow/ingestion/test_request_capture_atomic.py::test_atomic_request_capture__successful_dispatch",
+      "result": "PASS",
+      "evidence": "PASS in the isolated WSL fixture; dispatch_requested was true, autopilot returned 0, and the dispatch marker was written."
+    },
+    {
+      "selector": "tests/workflow/ingestion/test_request_capture_atomic.py::test_atomic_request_capture__empty_input",
+      "result": "PASS",
+      "evidence": "PASS in the isolated WSL fixture; empty input failed before creating an intent artifact."
+    },
+    {
+      "selector": "tests/workflow/ingestion/test_request_capture_atomic.py::test_atomic_request_capture__missing_file",
+      "result": "PASS",
+      "evidence": "PASS in the isolated WSL fixture; a missing file failed explicitly without creating an intent artifact."
+    },
+    {
+      "selector": "tests/workflow/ingestion/test_request_capture_atomic.py::test_atomic_request_capture__and_workspace_mismatch",
+      "result": "PASS",
+      "evidence": "PASS in the isolated WSL fixture; intake from the harness directory failed closed with workspace guidance."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_save_and_load_spec",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); round-trip spec persistence verified."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_patch_state",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); state patch persisted."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_set_node_result_in_state",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); node result persisted."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_set_gate_result_in_state",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); gate result persisted."
+    },
+    {
+      "selector": "tests/foundation/taskgraph/test_task_graph_persistence_atomic.py::test_atomic_taskgraph_persistence_lifecycle_management__corrupt",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); corrupt JSON returns an empty load and parse_error validation."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_spec_valid_missing",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); missing spec returns the explicit missing verdict."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_compile_mirror_merges_spec_and_state",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); mirror compilation merged spec and state."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_backfill_state_from_legacy",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); legacy state backfill persisted provenance."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_closure_complete_true",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); complete closure returns true."
+    },
+    {
+      "selector": "harness/tests/graph/test_task_graph_io.py::test_closure_complete_false",
+      "result": "PASS",
+      "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); incomplete closure returns false."
+    },
+    {
+      "selector": "tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py::test_atomic_capability_capsule_definition_assembly__valid_minimal_manifest",
+      "result": "PASS",
+      "evidence": "PASS in the current capability-capsule atomic suite (1.27s); a minimal manifest validates against schema and semantics."
+    },
+    {
+      "selector": "tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py::test_atomic_capability_capsule_definition_assembly__rich_manifest",
+      "result": "PASS",
+      "evidence": "PASS in the current capability-capsule atomic suite (1.27s); the shipped rich manifest retains resource and verification contracts."
+    },
+    {
+      "selector": "tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py::test_atomic_capability_capsule_definition_assembly__missing_fields",
+      "result": "PASS",
+      "evidence": "PASS in the current capability-capsule atomic suite (1.27s); a missing capsule identity is rejected explicitly."
+    },
+    {
+      "selector": "tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py::test_atomic_capability_capsule_definition_assembly__invalid_fields",
+      "result": "PASS",
+      "evidence": "PASS in the current capability-capsule atomic suite (1.27s); invalid contract semantics return a validation error."
+    },
+    {
+      "selector": "harness/tests/test_capability_capsules.py::test_resolution_gate_attaches_guard_and_resource_capsules",
+      "result": "PASS",
+      "evidence": "PASS in the current capability-capsule atomic suite (1.27s); referenced guard and resource capsules resolve and attach."
+    },
+    {
+      "selector": "harness/tests/test_capability_capsules.py::test_resolution_gate_blocks_missing_resource",
+      "result": "PASS",
+      "evidence": "PASS in the current capability-capsule atomic suite (1.27s); a missing referenced resource blocks resolution."
+    },
+    {
+      "selector": "tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py::test_atomic_capability_capsule_definition_assembly__duplicate_identity_version",
+      "result": "FAIL",
+      "evidence": "FAIL in the current capability-capsule atomic suite (1.27s): load_capability_capsule_registry accepted a duplicate (capability_capsule_id, version) entry instead of raising CapsuleRegistryError."
+    }
+  ]
+}

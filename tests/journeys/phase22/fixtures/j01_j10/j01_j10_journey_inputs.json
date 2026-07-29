@@ -1,0 +1,20 @@
+﻿{
+  "j01": {
+    "settings_payload": {
+      "role_models": {
+        "planner": {
+          "model": "claude-sonnet"
+        }
+      }
+    }
+  },
+  "j10": {
+    "db_initial": "phase22-db-initial\n",
+    "db_mutated": "phase22-db-mutated\n",
+    "db_post_reinstall_mutated": "phase22-db-post-reinstall-mutated\n",
+    "config_env": "PHASE22_CONFIG=1",
+    "solar_env": "PHASE22_SOLAR_ENV=1",
+    "claude_md": "User-owned CLAUDE.md fixture content",
+    "backup_archive_name": "phase22-j10-backup.tar.gz"
+  }
+}
