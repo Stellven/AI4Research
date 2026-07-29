@@ -20,6 +20,15 @@ Final L2 status counts:
 | NOT_AVAILABLE | 58 |
 | Total | 142 |
 
+Post-checkpoint J02 live rerun addendum: on 2026-07-29, Windows/WSL batch
+`phase22-j02-live-windows-008` reran P22-J02 with authorized live Codex
+provider execution and produced `PASS_WITH_KNOWN_LIMITATIONS` evidence for all
+22 planned J02 L2s. This supersedes the earlier J02 environment block. The
+J02-only status delta is `ENVIRONMENT_BLOCKED -22` and
+`PASS_WITH_KNOWN_LIMITATIONS +22`; the full workbook/brief workbook ledger must
+still be regenerated before these addendum counts are treated as the synchronized
+global totals.
+
 Completion checks:
 
 | Check | Result |
@@ -50,7 +59,7 @@ and 33 `No accepted journey evidence`. The baseline is recorded at
 | Journey | Result | Evidence |
 |---|---|---|
 | P22-J01 | ENVIRONMENT_BLOCKED | Git Bash/MINGW install probe returned unsupported OS; WSL enumeration was access denied. |
-| P22-J02 | ENVIRONMENT_BLOCKED | Live coding preflight found `bash` and `tmux` missing from PATH before sprint/provider execution. |
+| P22-J02 | PASS_WITH_KNOWN_LIMITATIONS | Windows/WSL live Codex rerun passed: Planner and Builder operator-result artifacts were recorded, the isolated repo diff changed `calculator.py`, target pytest passed, and `eval-verdict` moved the sprint to `passed`; known limitation: legacy `eval.md` sidecar was not emitted. Evidence: `outputs/phase22-real-journeys/p22j02-20260729T163246Z-126196/journey-result.json`. |
 | P22-J03 | FAIL | Official platform benchmark ran and scored below threshold 80. |
 | P22-J04 | PASS_WITH_KNOWN_LIMITATIONS | Local paper ingest/re-ingest worked; wiki registration boundary incomplete. |
 | P22-J05 | FAIL | Topic and anchor live/network discovery ran but returned zero candidates and no provider-backed source channel. |
@@ -73,6 +82,7 @@ and 33 `No accepted journey evidence`. The baseline is recorded at
 | Final collect-only for J01-J15 | 15 tests collected, exit 0 |
 | Full non-live journeys | 13 selected: 5 passed, 4 skipped, 4 failed, exit 1 |
 | Live/provider journeys | 2 selected: J02 skipped, J05 failed, exit 1 |
+| J02 Windows/WSL live rerun | 1 selected: P22-J02 passed as `PASS_WITH_KNOWN_LIMITATIONS`, 22/22 planned L2s supported, exit 0 |
 | Worker B J03/J04/J06 | 1 passed, 2 failed |
 | Worker C J07/J08/J09 | 2 passed, 1 failed |
 | Worker D J11-J15 | 2 passed, 2 skipped, 1 failed |
@@ -91,8 +101,10 @@ and 33 `No accepted journey evidence`. The baseline is recorded at
 
 - Linux/WSL install lifecycle: Git Bash/MINGW unsupported OS; WSL enumeration
   returned `Wsl/EnumerateDistros/Service/E_ACCESSDENIED`.
-- J02 live coding: `bash` and `tmux` missing from PATH before provider/runtime
-  execution.
+- J02 live coding: resolved by Windows/WSL batch
+  `phase22-j02-live-windows-008`; no J02 environment blocker remains. The only
+  retained limitation is the missing legacy `eval.md` sidecar after
+  `eval-verdict` accepted the sprint.
 - J12 failure recovery: Unix-only `fcntl` path blocked on Windows.
 - J14 WeChat identity: no current production entrypoint.
 - J15 macOS App and macOS CLI: Mac runner intentionally not used in this phase.

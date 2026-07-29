@@ -1141,3 +1141,58 @@ The final validator passed after the copy. It confirms:
 - `git diff --check` exit 0.
 
 No git commit or push was performed.
+
+### P22-J02 Windows/WSL live provider rerun
+Logged: 2026-07-29 12:47:17 -04:00
+
+P22-J02 was rerun on the Windows machine through the `SolarUbuntu` WSL2 distro
+after dependency and routing setup. The run used the existing Windows Codex auth
+via `CODEX_HOME=/mnt/c/Users/j50058254/.codex`, added the WSL Codex CLI path
+(`/home/solar/.local/bin`) to `PATH`, and explicitly enabled provider-mode
+planner role spillover for the Codex/OpenAI provider route. No credentials were
+printed or archived.
+
+Dependency/setup changes made for the rerun:
+
+- created a WSL-local pytest environment at `.codex-tmp/wsl-pytest-venv`;
+- installed `pytest` and `requirements/harness.txt` into that environment;
+- fixed `lib/installer/py-deps.sh` so an interpreter inside a virtualenv does
+  not receive `pip install --user`;
+- fixed `harness/bin/python3` line endings so the installed harness shim works
+  under WSL;
+- fixed the P22-J02 journey test so it waits for live Planner and Builder
+  operator-result artifacts, refuses to submit `eval-verdict pass` until
+  independent repair checks succeed, and binds the natural request to the
+  isolated fixture repo.
+
+Executed command:
+
+`wsl.exe -d SolarUbuntu -- bash /mnt/c/Users/j50058254/Desktop/Github\ repo/OpenSolar-Canonical/.codex-tmp/run_j02_live_008.sh`
+
+Result:
+
+- Pytest: 1 selected, 1 passed, duration 825.41s.
+- Worker batch: `phase22-j02-live-windows-008`.
+- Journey evidence:
+  `outputs/phase22-real-journeys/p22j02-20260729T163246Z-126196/journey-result.json`.
+- Product status: `PASS_WITH_KNOWN_LIMITATIONS`.
+- Planned J02 L2 support: 22/22.
+- Durable artifacts: 20; artifact durability complete.
+- Provider path: live Codex/OpenAI operator pool. Planner result from
+  `mini-codex-gpt55-medium-planner-1`; Builder result from
+  `mini-codex-gpt53-spark-builder-1`.
+- Core assertions: baseline target test failed before repair; live planner
+  produced design/plan/task graph; plan approval succeeded; live builder
+  repaired the isolated repo; post-repair pytest passed; real git diff changed
+  `calculator.py`; `eval-verdict` exited 0 and moved the sprint to `passed`.
+
+Known limitation retained:
+
+- `eval-verdict` accepted the sprint and status evidence is durable, but the
+  legacy `eval.md` sidecar was not emitted. The J02 result is therefore
+  `PASS_WITH_KNOWN_LIMITATIONS`, not plain `PASS`.
+
+J02 is no longer an environment/provider blocker. The J02-only status delta is
+22 L2s moved from `ENVIRONMENT_BLOCKED` to
+`PASS_WITH_KNOWN_LIMITATIONS`; full workbook and brief workbook regeneration is
+still required before the global counts are synchronized.

@@ -39,6 +39,11 @@ pip_install_reqs() {
             || die "pip install failed for $reqs"
         return 0
     fi
+    if python_is_virtualenv "$py"; then
+        "$py" -m pip install -r "$reqs" \
+            || die "pip install failed for $reqs using virtualenv interpreter $py"
+        return 0
+    fi
 
     before_user_dists="$SOLAR_HOME/cache/python-user-dists-before.$$"
     after_user_dists="$SOLAR_HOME/cache/python-user-dists-after.$$"
@@ -79,6 +84,10 @@ Install pip for this interpreter, then re-run the installer:
 
 python_is_externally_managed() {
     "$1" -c 'import os, sysconfig; stdlib = sysconfig.get_path("stdlib"); raise SystemExit(0 if stdlib and os.path.exists(os.path.join(stdlib, "EXTERNALLY-MANAGED")) else 1)' >/dev/null 2>&1
+}
+
+python_is_virtualenv() {
+    "$1" -c 'import sys; raise SystemExit(0 if sys.prefix != getattr(sys, "base_prefix", sys.prefix) else 1)' >/dev/null 2>&1
 }
 
 pip_supports_break_system_packages() {

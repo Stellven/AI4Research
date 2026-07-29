@@ -2334,10 +2334,14 @@ else:
       target_task="Sprint ${sid} 恢复：建设者已提交计划，请审批。cat ~/.solar/harness/sprints/${sid}.plan.md"
       ;;
     approved)
-      target_pane="$LIVE_BUILDER"
-      dispatch_role="builder"
-      dispatch_task_type="implementation"
-      target_task="Sprint ${sid} 恢复：计划已批准，请继续实现。cat ~/.solar/harness/sprints/${sid}.plan.md"
+      if [[ "$workflow_role" != "builder" && "$workflow_role" != "builder_main" ]]; then
+        route_by_workflow_guard || return 0
+      else
+        target_pane="$LIVE_BUILDER"
+        dispatch_role="builder"
+        dispatch_task_type="implementation"
+        target_task="Sprint ${sid} 恢复：计划已批准，请继续实现。cat ~/.solar/harness/sprints/${sid}.plan.md"
+      fi
       ;;
     reviewing|ready_for_review)
       target_pane="$LIVE_EVALUATOR"
