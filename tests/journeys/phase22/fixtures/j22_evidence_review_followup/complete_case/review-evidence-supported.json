@@ -1,0 +1,38 @@
+{
+  "schema": "artifact_review.v1",
+  "status": "completed",
+  "outputs": {
+    "review": {
+      "artifact_id": "artifact:complete-local-review",
+      "target": "complete-local-review",
+      "review_mode": "review_llm",
+      "review_available": true,
+      "score": 0.91,
+      "recommendation": "pass_with_review_required",
+      "evidence_ids": [
+        "review:complete-local",
+        "claim:complete-local-result",
+        "exp:complete-local-run"
+      ],
+      "review_llm": {
+        "status": "completed",
+        "provider": "local_fixture",
+        "model": "phase22-deterministic-review",
+        "recommendation": "pass_with_review_required",
+        "score": 0.91,
+        "evidence_ids": [
+          "review-llm:complete-local"
+        ]
+      }
+    },
+    "findings": []
+  },
+  "provenance": {
+    "operator_id": "phase22-fixture",
+    "implementation_package": "tests.journeys.phase22.fixtures",
+    "timestamp": "2026-07-30T00:00:00Z"
+  },
+  "limitations": [
+    "Deterministic local review evidence used to avoid live-provider dependence."
+  ]
+}

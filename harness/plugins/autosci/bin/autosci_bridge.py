@@ -1254,6 +1254,7 @@ def _candidate_from_runtime(raw: dict[str, Any], index: int) -> dict[str, Any] |
     channels = raw.get("source_channels") if isinstance(raw.get("source_channels"), list) else []
     if not channels:
         channels = ["arxiv"] if raw.get("arxiv_id") or "arxiv" in source_ref.lower() else ["approved_runtime"]
+    normalized_channels = ["search_s2" if str(item).strip() == "s2_search" else str(item).strip() for item in channels]
     try:
         score = float(raw.get("ranking_score", 1.0))
     except (TypeError, ValueError):
@@ -1261,12 +1262,15 @@ def _candidate_from_runtime(raw: dict[str, Any], index: int) -> dict[str, Any] |
     candidate = {
         "candidate_id": str(raw.get("candidate_id") or raw.get("paper_id") or raw.get("arxiv_id") or f"runtime-candidate-{index:03d}"),
         "title": title,
-        "source_channels": [str(item) for item in channels if str(item).strip()],
+        "source_channels": [item for item in normalized_channels if item],
         "ranking_score": score,
         "ranking_rationale": str(raw.get("ranking_rationale") or "Approved runtime evidence supplied this discovery candidate."),
         "dedup_status": str(raw.get("dedup_status") or "unknown"),
         "fetch_status": str(raw.get("fetch_status") or "fetched"),
     }
+    year = raw.get("year") or raw.get("published_year") or raw.get("publication_year")
+    if year:
+        candidate["year"] = str(year)
     if source_ref:
         candidate["source_ref"] = source_ref
     if raw.get("abstract"):

@@ -1,0 +1,43 @@
+{
+  "schema": "experiment_result.v1",
+  "task_id": "phase22-j22-complete-result",
+  "sprint_id": "phase22-real-journeys",
+  "node_id": "phase22-j22-experiment-complete",
+  "status": "completed",
+  "inputs": {
+    "source": "local deterministic benchmark"
+  },
+  "outputs": {
+    "result": {
+      "experiment_id": "exp-phase22-complete-local",
+      "outcome": "supports",
+      "metrics": [
+        {
+          "name": "baseline_accuracy",
+          "value": 0.5
+        },
+        {
+          "name": "variant_accuracy",
+          "value": 0.83
+        },
+        {
+          "name": "accuracy_uplift",
+          "value": 0.33
+        }
+      ],
+      "evidence_ids": [
+        "exp:complete-local-run",
+        "runtime:complete-local-run"
+      ]
+    }
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "phase22-fixture",
+    "implementation_package": "tests.journeys.phase22.fixtures",
+    "timestamp": "2026-07-30T00:00:00Z"
+  },
+  "limitations": [
+    "Local six-row benchmark only."
+  ]
+}

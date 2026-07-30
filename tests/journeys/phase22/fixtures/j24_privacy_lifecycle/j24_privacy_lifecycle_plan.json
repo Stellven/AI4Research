@@ -1,0 +1,43 @@
+{
+  "journey_id": "P22-J24",
+  "selector": "tests/journeys/phase22/code/test_j24_privacy_lifecycle.py::test_p22_j24_real_privacy_lifecycle",
+  "product_entrypoints": {
+    "solar_cli": "bin/solar",
+    "apple_notes_ingest": "harness/lib/apple_notes_ingest.py",
+    "check_privacy_script": "scripts/check-privacy.sh"
+  },
+  "seed": {
+    "sandbox_db_file": "phase22_j24_user_profile.json",
+    "db_record": {
+      "subject_id": "phase22-j24-subject",
+      "full_name": "Alex Q. Synthetic",
+      "email": "phase22+privacy.user@example.invalid",
+      "phone": "13800001111",
+      "note_id": "P22-J24-ID-001",
+      "team": "Privacy Lifecycle Sandbox"
+    },
+    "config_values": [
+      "PHASE22_J24_CONFIG=enabled",
+      "PHASE22_J24_TEST_MODE=privacy-lifecycle"
+    ],
+    "env_values": [
+      "PHASE22_J24_ENV_SECRET=masked-token-0000"
+    ]
+  },
+  "privacy_markers": [
+    "phase22+privacy.user@example.invalid",
+    "13800001111",
+    "Bearer J24-SECRET-TOKEN-VALIDATION-CASE-2026"
+  ],
+  "note_seed": {
+    "note_id": "j24-privacy-note-001",
+    "title": "Phase22 Privacy Lifecycle Note",
+    "body": "Contact Alex at phase22+privacy.user@example.invalid, phone 13800001111, and message includes Bearer J24-SECRET-TOKEN-VALIDATION-CASE-2026 for retention tests."
+  },
+  "expected_redaction_tags": [
+    "[EMAIL]",
+    "[PHONE]",
+    "[TOKEN]"
+  ],
+  "backup_archive_name": "p22-j24-privacy-lifecycle.tar.gz"
+}

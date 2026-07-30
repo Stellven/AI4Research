@@ -1,4 +1,4 @@
-# AI4Research Phase 22 Test Report Progress Log
+﻿# AI4Research Phase 22 Test Report Progress Log
 
 Phase 22 tracks preparation, execution, and reporting for a full test report of
 the current AI4Research repository. The official feature hierarchy is the
@@ -528,7 +528,7 @@ Column placement after the update:
 - Vertical Features: `J = Atomic Coverage Resolution`, `K = Test Result`
 
 Atomic coverage resolution now records `COMPLETE` for the 132 implemented L2s
-that have a representative executable probe and `BLOCKED — FUNCTION NOT
+that have a representative executable probe and `BLOCKED â€” FUNCTION NOT
 IMPLEMENTED` for the ten unimplemented L2s. The adjacent test-result cells use
 the final three-state classification and conditional color formatting: green for
 implemented/passed, red for implemented/failed, and yellow for
@@ -1196,3 +1196,294 @@ J02 is no longer an environment/provider blocker. The J02-only status delta is
 22 L2s moved from `ENVIRONMENT_BLOCKED` to
 `PASS_WITH_KNOWN_LIMITATIONS`; full workbook and brief workbook regeneration is
 still required before the global counts are synchronized.
+
+### P22-J15 macOS evidence portability clarification
+Logged: 2026-07-29 14:05:12 -04:00
+
+A macOS runner agent reported `MacOS CLI` as `PASS` and `MacOS App` as
+`PASS_WITH_KNOWN_LIMITATIONS`. A later review on the Windows integration
+machine initially treated the absence of the corresponding local run directory
+as evidence that the macOS results could not pass. That inference was too
+strong and is corrected here.
+
+The Mac runner's raw and temporary artifacts were not transferred to the
+Windows checkout. In particular, no files under `.codex-tmp/`,
+`desktop/.npm-cache/`, or `outputs/phase22-real-journeys/` are tracked in the
+current repository, so a Git pull cannot reproduce those local artifacts.
+Whether this resulted from an ignore rule on the Mac runner or simply from the
+files never being committed, absence on Windows does not establish that the Mac
+execution failed.
+
+The correct interpretation is therefore:
+
+- the reported `MacOS CLI = PASS` and
+  `MacOS App = PASS_WITH_KNOWN_LIMITATIONS` results may be valid Mac-platform
+  results;
+- the current Windows checkout cannot independently audit those results from
+  the raw run artifacts presently available to it;
+- this is an evidence-transfer and report-portability gap, not evidence of a
+  macOS product failure;
+- a hard-coded run ID or prose assertion in a synchronization script is not, by
+  itself, sufficient durable execution evidence.
+
+To close the audit gap without committing caches or large raw output trees, the
+Mac runner should export a small, sanitized, tracked evidence summary. It must
+contain at least the macOS version and architecture, Git commit, run ID, exact
+commands or selectors, exit codes, checks performed for each L2, relevant
+artifact names plus sizes or hashes, final statuses, and known limitations. It
+must not contain credentials. After that summary is reviewed, the full and
+brief reports should reference the portable evidence record instead of a
+machine-local ignored output path. No J15 tests were rerun during this
+clarification.
+
+## Phase 22 report integration â€” J05 and J16â€“J19 evidence review
+
+Logged: 2026-07-29
+
+The primary agent acted as the single report integration owner. No tests were
+rerun in this integration step. The following worker results were reviewed:
+
+- `.codex-tmp/phase22-worker-results/J05-repair-001/result.json`
+- `.codex-tmp/phase22-worker-results/TMUX-serial-001/result.json`
+- the J16â€“J19 journey tests and their referenced evidence artifacts
+- the latest accepted J06, J07, and J08 journey-result files recorded by the
+  journey-failure repair batch
+
+### Evidence acceptance decisions
+
+- J05 remains `ENVIRONMENT_BLOCKED` for its seven search/discovery L2s. Live
+  commands exited 0, but the product evidence still reported an incomplete
+  literature-provider boundary and no accepted provider-backed source channel.
+  `Model Routing & Selection` and `Model Usage Auditing` are `NOT_TESTED`
+  because execution stopped before those features.
+- J06 is no longer copied as a blanket failure. Seven mapped L2s are
+  `PASS_WITH_KNOWN_LIMITATIONS`; `Falsifiability Screening & Hypothesis
+  Contracting` and `Verification-Ready POC Design` remain `FAIL`.
+- J07 is `PASS_WITH_KNOWN_LIMITATIONS` at journey level. The local experiment
+  process and metric checks completed, while the lifecycle state remained
+  unknown/inconclusive. Seven planned L2s without direct assertions were reset
+  to `NOT_TESTED`; the earlier blanket J07 failure was removed. The observed
+  label `Experiment Status & Evaluation` is not one of the canonical 142 L2
+  rows and is retained as unmatched evidence metadata.
+- J08 retains one direct product failure: `Claim & Acceptance-Criteria
+  Comparison`. The other eight planned L2s are `NOT_TESTED` because the test
+  did not execute their direct assertions or the planned artifact-review stage.
+- J16 and J17 are `ENVIRONMENT_BLOCKED`. Their final pytest outcomes were
+  successful skips, not product passes. The accepted blocker is the absence of
+  tmux on the Windows host; the unset live-journey gate is a runner
+  configuration detail and was not reported as a product defect.
+- J18/J19 worker green labels were reviewed individually. Static code markers,
+  non-empty error output, and fixture-only JSON roundtrips were not accepted as
+  positive real-task evidence. Accepted positive results are limited to CLI,
+  LLM Config, and User Settings where production handlers or entrypoints
+  produced usable output.
+
+### Integrated L2 counts
+
+The canonical 142-L2 ledger now contains:
+
+- `PASS`: 2
+- `PASS_WITH_KNOWN_LIMITATIONS`: 38
+- `FAIL`: 19
+- `ENVIRONMENT_BLOCKED`: 35
+- `NOT_AVAILABLE`: 27
+- `NOT_TESTED`: 21
+
+Every status other than `PASS` remains an open issue, so the issue register has
+140 open L2 issues. The human-readable register is
+`docs/integrations/autosci/phase-22-l2-issue-register.md`.
+
+### Report synchronization state
+
+- `docs/integrations/autosci/phase-22-test-report.xlsx` was updated in place.
+- Atomic Coverage Resolution and Atomic Test Result content was verified
+  unchanged; journey columns and L2-level colors were synchronized from the
+  reviewed ledger.
+- The brief report was regenerated with the same 142 rows and counts, while
+  preserving its atomic diagnostic columns. Its staged, validated file is
+  `outputs/phase22-report-integration-20260729/AI4RnD Feature List.xlsx`.
+- After the user closed Excel, the validated workbook was copied to the
+  canonical brief-report path at
+  `C:/Users/j50058254/Downloads/AI4RnD Feature List.xlsx`. The copied file's
+  SHA-256 matched the staged workbook.
+- Formula-error scans found no `#REF!`, `#DIV/0!`, `#VALUE!`, `#NAME?`, or
+  `#N/A` cells in either generated workbook.
+- Final cross-artifact validation passed for all 142 L2 rows, all six status
+  totals, and all 142 issue-register rows. Validator:
+  `outputs/phase22-report-integration-20260729/final-validator.json`.
+
+## Phase 22 final report integration audit
+
+Logged: 2026-07-29 17:24:16 -04:00
+
+Integration role: Phase 22 final report integration Agent.
+
+The final integration audit reviewed the accepted report-integration state,
+worker result files, journey-result files, issue register, full workbook, and
+brief workbook. No product implementation code, journey test code, atomic test,
+worker `result.json`, or raw journey evidence was changed.
+
+Final synchronized 142-L2 counts:
+
+- `PASS`: 2
+- `PASS_WITH_KNOWN_LIMITATIONS`: 38
+- `FAIL`: 19
+- `ENVIRONMENT_BLOCKED`: 35
+- `NOT_AVAILABLE`: 27
+- `NOT_TESTED`: 21
+
+Worker evidence reconciliation:
+
+- `ACCEPTED`: 4
+- `PARTIALLY_ACCEPTED`: 10
+- `REJECTED_INSUFFICIENT_EVIDENCE`: 19
+- `REJECTED_FALSE_POSITIVE`: 0
+- `REJECTED_NAME_MAPPING_ERROR`: 0
+- `SUPERSEDED`: 7
+
+Generated final-integration artifacts:
+
+- Final L2 ledger:
+  `outputs/phase22-final-integration-20260729T172416/final-l2-ledger.json`.
+- Worker evidence reconciliation:
+  `outputs/phase22-final-integration-20260729T172416/worker-evidence-reconciliation.json`.
+- Final validator:
+  `outputs/phase22-final-integration-20260729T172416/final-validator.json`.
+
+Validator result: `ok=true`. It confirmed 142 canonical L2 rows, zero duplicate
+L2 keys, valid final statuses, non-empty issue statements, non-empty evidence,
+142 issue-register rows, full/brief status consistency through the prior
+integration validator, no formula-error markers in the full or brief workbook,
+preserved atomic diagnostic columns, and successful rendered visual checks for
+the brief summary, brief feature sheets, and full feature-sheet samples.
+
+The Downloads brief workbook was readable and validated, but the Excel lock
+file `C:\Users\j50058254\Downloads\~$AI4RnD Feature List.xlsx` was present
+during this audit. The audit therefore did not overwrite the Downloads
+workbook. The prior report-integration validator already records the canonical
+brief overwrite as complete; this audit only revalidated the current readable
+workbook state and reported the active lock boundary.
+
+No status was changed merely to make the report greener. Static markers,
+fixture-only roundtrips, unexecuted selectors, and superseded worker attempts
+remained rejected or superseded in the reconciliation output.
+
+## Final integration audit correction
+
+Logged: 2026-07-29 17:44:08 -04:00
+
+The previous final integration validator output at `outputs/phase22-final-integration-20260729T172416/final-validator.json` is superseded for audit purposes because it accepted non-empty evidence text without requiring existing evidence paths, inherited full/brief consistency from an older validator, marked color and visual checks as complete without direct row-by-row style comparison or image inspection, and classified worker batches through hard-coded batch-name lists.
+
+This correction rebuilt the 142-L2 ledger from the full workbook, raw journey result files, worker result files, issue register context, and atomic diagnostic workbook evidence. It preserved the frozen final status counts: `PASS=2`, `PASS_WITH_KNOWN_LIMITATIONS=38`, `FAIL=19`, `ENVIRONMENT_BLOCKED=35`, `NOT_AVAILABLE=27`, and `NOT_TESTED=21`.
+
+The worker reconciliation was regenerated from claim-level content rather than batch names. `TMUX-serial-001` is now treated through per-claim decisions, with the known worker/report conflicts explicitly rejected or downgraded for static-marker evidence, fixture-only roundtrips, non-empty error output, missing UI/TMUX/provider execution, product unavailability, platform blockers, or real product failure boundaries.
+
+Known workbook gaps were repaired in the full report: one missing `Journey Evidence Path` for `Evaluator-Driven Operator Evolution`, plus seven missing `Journey Assertion` cells for P22-J09 deliverable/security/report rows. The brief workbook was not rewritten because it has no corresponding assertion/path columns and its existing L2 status/evidence text already matched the frozen ledger.
+
+New final validator: `outputs/phase22-final-integration-rework-20260729T174408/final-validator.json`.
+
+Missing evidence after correction: `Vertical::MacOS CLI` still lacks a current-machine direct journey evidence path. The macOS runner result remains status-frozen, but the portable raw evidence summary required for independent audit is not present in this Windows checkout.
+
+## Overnight environment blocker resolution
+
+Logged: 2026-07-30 08:20:00 -04:00
+
+User explicitly approved J16/J17 live-provider execution. J16 and J17 were rerun in SolarUbuntu/WSL with live-provider gates enabled. J16 produced 7 PASS, 2 PASS_WITH_KNOWN_LIMITATIONS, and 2 FAIL L2 outcomes; the journey-level result is FAIL because harness/eval and scoped repair acceptance criteria were not met. J17 produced 12 PASS and 1 PASS_WITH_KNOWN_LIMITATIONS L2 outcomes; the journey-level result is FAIL because harness start/restart/eval-verdict tmux commands returned inner exit 1.
+
+J18 and J19 were accepted as PASS_WITH_KNOWN_LIMITATIONS from local SolarUbuntu/status-dashboard evidence. J05 remained ENVIRONMENT_BLOCKED after seven low-frequency live Semantic Scholar preflight attempts returned HTTP 429 with no Retry-After and no API key variable present. Synchronized counts are PASS=20, PASS_WITH_KNOWN_LIMITATIONS=46, FAIL=21, ENVIRONMENT_BLOCKED=7, NOT_AVAILABLE=27, NOT_TESTED=21.
+
+New validator: outputs/phase22-overnight-environment-resolution-20260730T122000Z/final-validator.json.
+
+## Final J05 live-provider report synchronization
+
+Logged: 2026-07-30 09:45 -04:00
+
+The accepted J05 worker result at
+`.codex-tmp/phase22-worker-results/J05-live-provider-001/result.json` was
+reviewed against the raw journey evidence at
+`outputs/phase22-real-journeys/p22j05-20260730T125408Z-13396/journey-result.json`.
+The exact selector passed with exit code 0. Topic search and anchor-reference
+discovery each returned five unique, non-fixture Semantic Scholar candidates,
+with stable identities, source-channel provenance, completed provider
+boundaries, and durable artifacts. Earlier HTTP 429/500 responses are retained
+as provider-stability limitations.
+
+The seven formerly environment-blocked J05 L2 rows were reconciled as follows:
+
+- `PASS_WITH_KNOWN_LIMITATIONS`: Search Strategy Formation, Multi-Source Signal
+  Discovery, Source Qualification, Signal Organization, Search Coverage Review.
+- `NOT_TESTED`: Technical Signal Extraction, Trend & Gap Analysis. The accepted
+  J05 evidence did not produce technical-signal or trend/gap outputs, so these
+  rows were not inferred green.
+
+The full report, brief report, L2 issue register, and journey report were
+synchronized. Atomic diagnostic values were hash-checked before and after the
+workbook edits and remained unchanged. Final counts are `PASS=20`,
+`PASS_WITH_KNOWN_LIMITATIONS=51`, `FAIL=21`, `ENVIRONMENT_BLOCKED=0`,
+`NOT_AVAILABLE=27`, and `NOT_TESTED=23`, totaling 142 L2 rows. Formula-error
+scans returned zero matches in both workbooks. Final validator:
+`outputs/phase22-final-sync-20260730T132000Z/final-validator.json`.
+
+## Unified J03 benchmark and J23 live-provider synchronization
+
+Logged: 2026-07-30
+
+The J03 acceptance rule was corrected to test whether the benchmarking process
+ran completely and reported the target result consistently, rather than
+requiring the target under evaluation to score above the configured quality
+threshold. The exact selector
+`tests/journeys/phase22/code/test_j03_platform_benchmark.py::test_p22_j03_real_platform_workflow_benchmark`
+passed. Accepted evidence:
+`outputs/phase22-real-journeys/p22j03-20260730T183907Z-30832/journey-result.json`.
+The 25/100 target score remains recorded as a product-quality finding. J03 now
+contributes one `PASS` L2 and seven `PASS_WITH_KNOWN_LIMITATIONS` L2 results.
+
+The latest J23 worker result
+`.codex-tmp/phase22-worker-results/J23-model-routing-retry-007/result.json` was
+reviewed against
+`outputs/phase22-real-journeys/p22-j23-20260730T193026Z-398/journey-result.json`.
+The exact WSL2 selector passed with exit code 0. A real OpenRouter `gpt-5.5`
+request completed through the production AutoSci review entrypoint; the
+requested and observed routes matched, request and response hashes were
+retained, and prompt/completion/total token plus cost fields were recorded.
+Provider latency was not returned. The successful route used WSL2 because the
+Windows attempt encountered outbound socket error 10013. `Model Routing &
+Selection` and `Model Usage Auditing` are therefore both
+`PASS_WITH_KNOWN_LIMITATIONS`, not environment-blocked.
+
+The full report, brief report, journey report, and 142-row L2 issue register
+were synchronized. The current counts are `PASS=24`,
+`PASS_WITH_KNOWN_LIMITATIONS=68`, `FAIL=22`, `ENVIRONMENT_BLOCKED=0`,
+`NOT_AVAILABLE=28`, and `NOT_TESTED=0`. Eight management-requested likely-state
+conclusions remain explicitly labeled as inferences rather than direct journey
+proof. Atomic diagnostic columns were hash-checked and were unchanged. Both
+workbooks contain zero formula-error markers. Final validation output:
+`outputs/phase22-unified-sync-20260730/final-validator.json`.
+
+## J23 final PASS criteria update and three-report synchronization
+
+Logged: 2026-07-30
+
+The user removed the requirement that a provider must return latency fields.
+This requirement was not reliable because the provider can omit latency even
+when the routed request and usage audit are otherwise complete. J23 still
+requires a completed provider invocation, exact requested/observed
+provider-model matching, no fallback, request/response hashes, and token/cost
+usage evidence.
+
+Worker result
+`.codex-tmp/phase22-worker-results/J23-model-routing-retry-008/result.json` and
+raw evidence
+`outputs/phase22-real-journeys/p22-j23-20260730T203137Z-277/journey-result.json`
+were reviewed. The exact selector passed in WSL2 with exit code 0. OpenRouter
+`gpt-5.5` completed on the requested route with no fallback; request and
+response hashes plus prompt, completion, total-token, and cost fields were
+retained. `Model Routing & Selection` and `Model Usage Auditing` are both
+`PASS`.
+
+The full report, brief report, and user-created ultra-brief report were
+synchronized. The ultra-brief report intentionally contains no atomic feature
+columns, so its stale atomic-summary formulas were removed. Current L2 counts
+are `PASS=26`, `PASS_WITH_KNOWN_LIMITATIONS=66`, `FAIL=22`,
+`ENVIRONMENT_BLOCKED=0`, `NOT_AVAILABLE=28`, and `NOT_TESTED=0`. Final
+validator: `outputs/phase22-j23-pass-sync-20260730/final-validator.json`.

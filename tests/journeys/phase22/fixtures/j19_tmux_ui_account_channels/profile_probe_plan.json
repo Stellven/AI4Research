@@ -1,0 +1,18 @@
+{
+  "profile_id": "j19-tmux-ui-account",
+  "session": "p22-j19-session",
+  "initial_profile": {
+    "profile_id": "j19-tmux-ui-account",
+    "display_name": "J19 PM Sandbox",
+    "timezone": "America/Toronto",
+    "preferences": {
+      "editor_theme": "sandbox",
+      "telemetry_enabled": false
+    }
+  },
+  "profile_updates": {
+    "display_name": "J19 PM Sandbox (updated)",
+    "timezone": "America/New_York"
+  },
+  "note": "Local sandbox-only profile lifecycle check; do not map to real account."
+}

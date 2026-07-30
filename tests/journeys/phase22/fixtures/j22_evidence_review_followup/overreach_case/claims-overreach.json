@@ -1,0 +1,35 @@
+{
+  "schema": "research_claims.v1",
+  "task_id": "phase22-j22-overreach-claims",
+  "sprint_id": "phase22-real-journeys",
+  "node_id": "phase22-j22-overreach-claims",
+  "status": "completed",
+  "inputs": {
+    "source": "overreach packet"
+  },
+  "outputs": {
+    "claims": [
+      {
+        "claim_id": "claim-overreach",
+        "text": "The normalization variant achieves reliable accuracy for all hospitals worldwide and every future dataset.",
+        "claim_type": "result",
+        "source_anchor": "overreach-case#claim",
+        "testability": "testable",
+        "verification_status": "unverified",
+        "evidence_ids": [
+          "claim:overreach",
+          "exp:overreach-local-run"
+        ]
+      }
+    ]
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "phase22-fixture",
+    "implementation_package": "tests.journeys.phase22.fixtures",
+    "timestamp": "2026-07-30T00:00:00Z"
+  },
+  "limitations": [
+    "The claim intentionally overgeneralizes beyond the measured evidence."
+  ]
+}

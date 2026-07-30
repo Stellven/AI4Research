@@ -1,0 +1,33 @@
+{
+  "provider": "WeChat",
+  "routing_rules": [
+    {
+      "prefix": "wechat://",
+      "target": "local-route-parser"
+    },
+    {
+      "prefix": "wx://",
+      "target": "local-route-parser"
+    },
+    {
+      "prefix": "wxa://",
+      "target": "local-route-parser"
+    }
+  ],
+  "sample_inputs": [
+    {
+      "input": "wechat://message?type=text&route=notification",
+      "expected_target": "local-route-parser"
+    },
+    {
+      "input": "wx://login?code=dummy",
+      "expected_target": "local-route-parser"
+    }
+  ],
+  "integration_state": {
+    "has_real_account_token": false,
+    "has_local_router_parse": true,
+    "requires_user_oauth": true
+  },
+  "notes": "Only local route parsing is validated in this prep batch; no real WeChat token/account is used."
+}

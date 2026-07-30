@@ -1,0 +1,18 @@
+{
+  "journey_id": "P22-J17",
+  "required_serial_gate": "PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS",
+  "production_tmux_entrypoint": "bash harness/solar-harness.sh",
+  "planned_user_task": "Run a TMUX/harness user journey that asks Solar to select and invoke multiple capability/operator paths for a bounded local solar candidate pipeline, generate graph and durable task evidence, inject an interruption after planning, then resume through the same user entrypoint.",
+  "commands_planned": [
+    "bash harness/solar-harness.sh start --skip-doctor --clean <workspace>",
+    "bash harness/solar-harness.sh intake --file <rendered-user-task> --no-dispatch",
+    "bash harness/solar-harness.sh wake <sprint-id>",
+    "bash harness/solar-harness.sh plan-verdict <sprint-id> approve <reason>",
+    "tmux kill-session -t <product-session>",
+    "bash harness/solar-harness.sh start --skip-doctor <workspace>",
+    "bash harness/solar-harness.sh wake <sprint-id>",
+    "bash harness/solar-harness.sh status <sprint-id>",
+    "bash harness/solar-harness.sh eval-verdict <sprint-id> pass <reason>"
+  ],
+  "safe_collection_contract": "The pytest test skips before any TMUX command unless PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS=1."
+}

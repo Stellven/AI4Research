@@ -1,0 +1,23 @@
+{
+  "schema": "autosci_model_response.v1",
+  "status": "completed",
+  "provider": "local_fixture",
+  "model": "phase22-deterministic-check",
+  "outputs": {
+    "answer": "The wiki contains the required directories, valid graph edges, and explicit evidence links for the local packet.",
+    "confidence": 0.88,
+    "evidence_ids": [
+      "model:check-complete",
+      "wiki:complete-local"
+    ],
+    "findings": [
+      {
+        "finding_id": "check-complete.local-scope",
+        "severity": "low",
+        "category": "scope",
+        "evidence": "The packet is complete for the local benchmark and correctly scoped to that benchmark.",
+        "suggestion": "Keep the claim scoped to the evaluated local dataset."
+      }
+    ]
+  }
+}

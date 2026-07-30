@@ -1,0 +1,80 @@
+{
+  "schema": "artifact_review.v1",
+  "status": "completed",
+  "outputs": {
+    "review": {
+      "artifact_id": "artifact:overreach-review",
+      "target": "overreach-review",
+      "review_mode": "review_llm",
+      "review_available": true,
+      "score": 0.31,
+      "recommendation": "revise_required",
+      "evidence_ids": [
+        "review:overreach",
+        "claim:overreach",
+        "exp:overreach-local-run"
+      ],
+      "actionable_items": [
+        {
+          "issue": "Replace the universal claim with a local-dataset claim.",
+          "description": "The packet overgeneralizes from a six-row local benchmark to all hospitals worldwide.",
+          "evidence_refs": [
+            "claim:overreach",
+            "review.finding.external-validity"
+          ]
+        },
+        {
+          "issue": "Add out-of-sample validation before making deployment claims.",
+          "description": "No external or multi-site evidence supports the worldwide deployment statement.",
+          "evidence_refs": [
+            "exp:overreach-local-run",
+            "review.finding.unsupported-assumption"
+          ]
+        }
+      ],
+      "review_llm": {
+        "status": "completed",
+        "provider": "local_fixture",
+        "model": "phase22-deterministic-review",
+        "recommendation": "revise_required",
+        "score": 0.31,
+        "evidence_ids": [
+          "review-llm:overreach"
+        ]
+      }
+    },
+    "findings": [
+      {
+        "finding_id": "review.finding.external-validity",
+        "severity": "high",
+        "category": "external_validity",
+        "evidence": "The packet claims worldwide deployment, but the only measured result is a six-row local sample.",
+        "suggestion": "Restrict the claim to the evaluated local dataset or add broader out-of-sample validation.",
+        "line_refs": [
+          1,
+          2,
+          4
+        ]
+      },
+      {
+        "finding_id": "review.finding.unsupported-assumption",
+        "severity": "high",
+        "category": "reasoning",
+        "evidence": "The packet assumes future datasets behave like the local benchmark without providing supporting evidence.",
+        "suggestion": "State the assumption explicitly and mark it unsupported until external evidence exists.",
+        "line_refs": [
+          2,
+          4
+        ]
+      }
+    ]
+  },
+  "provenance": {
+    "operator_id": "phase22-fixture",
+    "implementation_package": "tests.journeys.phase22.fixtures",
+    "timestamp": "2026-07-30T00:00:00Z"
+  },
+  "limitations": [
+    "Deterministic local review evidence used to avoid live-provider dependence."
+  ]
+}

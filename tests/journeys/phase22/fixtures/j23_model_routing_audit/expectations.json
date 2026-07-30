@@ -1,0 +1,6 @@
+﻿{
+  "routing": {
+    "runtime_hint": "low_latency",
+    "strict": false
+  }
+}

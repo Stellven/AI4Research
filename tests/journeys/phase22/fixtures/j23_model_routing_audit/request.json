@@ -1,0 +1,12 @@
+﻿{
+  "target_filename": "j23-model-routing-audit-target.md",
+  "review_prompt": "Critique the following method brief for internal consistency and suggest 1-step verification checks.",
+  "review_focus": "method",
+  "review_difficulty": "standard",
+  "review_llm_provider": "",
+  "review_llm_model": "",
+  "review_llm_endpoint": "",
+  "runtime_constraint": "low_latency",
+  "requested_capability": "reasoning",
+  "requested_cost_tier": "low"
+}

@@ -10,6 +10,75 @@ from typing import Any
 from evidence import JourneyRecorder, utc_now
 
 
+_LIVE_ENV_ALLOWLIST = {
+    "AUTOSCI_LIVE_PROVIDER_TESTS",
+    "AUTOSCI_LIVE_REVIEW_LLM_TEST",
+    "AUTOSCI_LIVE_REVIEW_LLM_PROVIDER",
+    "AUTOSCI_LIVE_REVIEW_LLM_MODEL",
+    "OPENAI_API_KEY",
+    "OPENROUTER_API_KEY",
+    "SOLAR_PANE_RUNTIME",
+    "PHASE22_ENABLE_NETWORK_JOURNEYS",
+    "SOLAR_AUTOSCI_ALLOW_NETWORK",
+}
+
+
+def _is_truthy_flag(value: str | None) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _read_allowed_harness_env(repo_root: Path) -> dict[str, str]:
+    env_file = repo_root / "harness" / ".env"
+    if not env_file.exists():
+        return {}
+    loaded: dict[str, str] = {}
+    for raw_line in env_file.read_text(encoding="utf-8-sig", errors="replace").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.lower().startswith("export "):
+            line = line[7:].strip()
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key not in _LIVE_ENV_ALLOWLIST:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and ((value[0] == '"' and value[-1] == '"') or (value[0] == "'" and value[-1] == "'")):
+            value = value[1:-1]
+        loaded[key] = value
+    return loaded
+
+
+def bootstrap_live_environment(repo_root: Path, env: dict[str, str] | None = None) -> dict[str, str]:
+    base_env = dict(env or os.environ)
+    file_env = _read_allowed_harness_env(repo_root)
+    for key in _LIVE_ENV_ALLOWLIST:
+        if key in file_env and key not in base_env:
+            base_env[key] = file_env[key]
+
+    network_enabled = (
+        _is_truthy_flag(base_env.get("PHASE22_ENABLE_NETWORK_JOURNEYS"))
+        or _is_truthy_flag(base_env.get("SOLAR_AUTOSCI_ALLOW_NETWORK"))
+    )
+    file_network_enabled = _is_truthy_flag(file_env.get("AUTOSCI_LIVE_PROVIDER_TESTS"))
+
+    if (
+        not network_enabled
+        and "PHASE22_ENABLE_NETWORK_JOURNEYS" not in base_env
+        and "SOLAR_AUTOSCI_ALLOW_NETWORK" not in base_env
+        and file_network_enabled
+    ):
+        network_enabled = True
+
+    if network_enabled:
+        base_env["PHASE22_ENABLE_NETWORK_JOURNEYS"] = "1"
+        base_env["SOLAR_AUTOSCI_ALLOW_NETWORK"] = "1"
+
+    return base_env
+
+
 def repo_root_from(path: Path) -> Path:
     return path.resolve().parents[4]
 
@@ -29,6 +98,8 @@ def python_executable(repo_root: Path) -> str:
 
 def base_env(repo_root: Path, sandbox: Path, *, allow_live: bool = False) -> dict[str, str]:
     env = dict(os.environ)
+    if allow_live:
+        env = bootstrap_live_environment(repo_root, env)
     env.update(
         {
             "HOME": str(sandbox / "home"),
@@ -305,7 +376,11 @@ def has_live_authorization() -> bool:
 
 
 def has_network_authorization() -> bool:
-    return os.environ.get("PHASE22_ENABLE_NETWORK_JOURNEYS") == "1"
+    if os.environ.get("PHASE22_ENABLE_NETWORK_JOURNEYS") == "1":
+        return True
+    if os.environ.get("SOLAR_AUTOSCI_ALLOW_NETWORK") == "1":
+        return True
+    return False
 
 
 def find_bash(repo_root: Path | None = None) -> Path | None:

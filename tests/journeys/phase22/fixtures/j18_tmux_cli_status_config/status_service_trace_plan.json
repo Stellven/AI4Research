@@ -1,0 +1,24 @@
+﻿{
+  "status_endpoints": [
+    "/",
+    "/healthz",
+    "/status",
+    "/events",
+    "/settings",
+    "/runtime-info",
+    "/integrations",
+    "/assets",
+    "/usage"
+  ],
+  "static_assets": {
+    "dashboard": "harness/lib/symphony/status-server/static/p0-app/index.html",
+    "template": "harness/lib/symphony/status-server/templates/p0_dashboard.html",
+    "mermaid": "harness/lib/symphony/status-server/static/mermaid-viewer/index.html"
+  },
+  "execution_trace_markers": {
+    "status_script": "/events",
+    "task_events_file": "events.jsonl",
+    "bg_status_command": "bg status",
+    "sprint_status_file": "sprints/*.status.json"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "export_policy": {
+    "allow_export": true,
+    "allow_clear": true
+  },
+  "redacted_fields": [
+    "oauth_token",
+    "refresh_token",
+    "id_token"
+  ],
+  "seed_data": {
+    "identity": {
+      "account_alias": "j19-local-sandbox",
+      "email": "user+j19@localhost.invalid",
+      "timezone": "America/Toronto",
+      "last_seen": "2026-07-29T00:00:00Z"
+    },
+    "oauth_token": "fixture-token-000",
+    "refresh_token": "fixture-refresh-000"
+  },
+  "notes": "Synthetic seed; export should strip redacted fields and clear should only affect local sandbox artifacts."
+}

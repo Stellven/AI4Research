@@ -1,0 +1,33 @@
+{
+  "schema": "code_evidence_map.v1",
+  "task_id": "phase22-j22-code-overreach",
+  "sprint_id": "phase22-real-journeys",
+  "node_id": "phase22-j22-code-overreach",
+  "status": "completed",
+  "inputs": {
+    "source": "local experiment runner"
+  },
+  "outputs": {
+    "mappings": [
+      {
+        "mapping_id": "phase22-j22-code-overreach-map",
+        "claim_id": "claim-overreach",
+        "files": [
+          "tests/journeys/phase22/fixtures/j22_evidence_review_followup/overreach_case/review-target.md"
+        ],
+        "evidence_ids": [
+          "code:claim-overreach"
+        ]
+      }
+    ]
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "phase22-fixture",
+    "implementation_package": "tests.journeys.phase22.fixtures",
+    "timestamp": "2026-07-30T00:00:00Z"
+  },
+  "limitations": [
+    "Code evidence exists, but the claim scope still exceeds the measured evidence."
+  ]
+}

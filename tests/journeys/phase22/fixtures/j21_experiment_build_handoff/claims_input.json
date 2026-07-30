@@ -1,0 +1,22 @@
+{
+  "supported_claim": {
+    "claim_id": "p22-j21-claim-supported",
+    "text": "The experimental runtime improved exact-match classification accuracy by at least 20 percentage points on the local sample.",
+    "source_anchor": "phase22-local-experiment#results",
+    "testability": "testable",
+    "verification_status": "unverified",
+    "evidence_ids": [
+      "claim:phase22-j21-supported"
+    ]
+  },
+  "unsupported_claim": {
+    "claim_id": "p22-j21-claim-overbroad",
+    "text": "The experiment reaches 100% accuracy on all domains and all environments.",
+    "source_anchor": "phase22-local-experiment#limitations",
+    "testability": "testable",
+    "verification_status": "unverified",
+    "evidence_ids": [
+      "claim:phase22-j21-overbroad"
+    ]
+  }
+}

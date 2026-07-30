@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import re
+import os
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from evidence import JourneyRecorder
-from journey_runner import action_evidence, has_network_authorization, run_autosci
+from journey_runner import action_evidence, bootstrap_live_environment, has_network_authorization, run_autosci
 
 
 def _read_payload(path: Path) -> dict[str, Any]:
@@ -76,6 +77,10 @@ def _json_contains_token(payload: Any, token: str) -> bool:
     return needle in _normalize(str(payload)).lower()
 
 
+def _present(token: str | None) -> str:
+    return "present" if _normalize(token) else "absent"
+
+
 def _run_discovery(
     rec: JourneyRecorder,
     sandbox: Path,
@@ -117,21 +122,53 @@ def _provider_blocker(summary: dict[str, Any], payload: dict[str, Any]) -> str:
     outputs = payload.get("outputs", {}) if isinstance(payload, dict) else {}
     boundary = outputs.get("source_provider_boundary", {}) if isinstance(outputs, dict) else {}
     provider_status = _normalize(str(boundary.get("status", boundary.get("state", "")))).lower() if isinstance(boundary, dict) else ""
-    lower = " ".join([message.lower(), provider_status])
+    invalid_reasons = [
+        _normalize(str(item)).lower()
+        for item in (boundary.get("invalid_reasons") or [])
+        if isinstance(boundary, dict) and _normalize(str(item))
+    ]
+    provider_channels = [
+        _normalize(str(item)).lower()
+        for item in (boundary.get("provider_channels") or boundary.get("source_channels") or [])
+        if isinstance(boundary, dict) and _normalize(str(item))
+    ]
+    final_boundary = boundary.get("final_shortlist_boundary", {}) if isinstance(boundary, dict) else {}
+    final_status = _normalize(str(final_boundary.get("status", ""))).lower() if isinstance(final_boundary, dict) else ""
+    lower = " ".join([message.lower(), provider_status, final_status, *invalid_reasons])
+    provider_unproven = provider_status in {"incomplete", "pending"} and not provider_channels
+    provider_missing_reason = any("provider" in reason and "channel" in reason for reason in invalid_reasons)
     if any(token in lower for token in ("provider", "network", "connection", "timeout", "dns", "unreachable", "requests", "429", "503", "blocked", "unavailable")):
         return message or f"Provider boundary was not available: {provider_status}"
+    if provider_unproven and provider_missing_reason:
+        return (
+            "Provider-backed source channel was not proven by discovery evidence "
+            f"(status={provider_status or 'missing'}, final_status={final_status or 'missing'})."
+        )
     return ""
 
 
 @pytest.mark.live_provider
 def test_p22_j05_literature_discovery(repo_root: Path, tmp_path: Path) -> None:
     rec = JourneyRecorder(repo_root, "P22-J05")
+    os.environ.update(bootstrap_live_environment(repo_root))
+    network_discovery_authorized = has_network_authorization()
+    rec.add_assertion(
+        "network_discovery_authorized",
+        network_discovery_authorized,
+        {
+            "PHASE22_ENABLE_NETWORK_JOURNEYS": _present(os.environ.get("PHASE22_ENABLE_NETWORK_JOURNEYS")),
+            "SOLAR_AUTOSCI_ALLOW_NETWORK": _present(os.environ.get("SOLAR_AUTOSCI_ALLOW_NETWORK")),
+            "AUTOSCI_LIVE_PROVIDER_TESTS": _present(os.environ.get("AUTOSCI_LIVE_PROVIDER_TESTS")),
+            "OPENAI_API_KEY": _present(os.environ.get("OPENAI_API_KEY")),
+            "OPENROUTER_API_KEY": _present(os.environ.get("OPENROUTER_API_KEY")),
+        },
+    )
 
     if not has_network_authorization():
         blocker = (
-            "PHASE22_ENABLE_NETWORK_JOURNEYS=1 was not set; provider-backed literature discovery was not authorized."
+            "Live network authorization was not enabled. "
+            "Set PHASE22_ENABLE_NETWORK_JOURNEYS=1 and SOLAR_AUTOSCI_ALLOW_NETWORK=1, or enable AUTOSCI_LIVE_PROVIDER_TESTS in harness/.env."
         )
-        rec.add_assertion("network_discovery_authorized", False, blocker)
         rec.finalize("ENVIRONMENT_BLOCKED", blockers=[blocker])
         return
 
@@ -160,7 +197,8 @@ def test_p22_j05_literature_discovery(repo_root: Path, tmp_path: Path) -> None:
         rec.finalize("NOT_AVAILABLE", blockers=["Missing J05 discovery topic in fixtures."])
         return
 
-    sandbox = tmp_path / "p22-j05"
+    sandbox_override = _normalize(os.environ.get("PHASE22_J05_SANDBOX"))
+    sandbox = Path(sandbox_override) if sandbox_override else tmp_path / "p22-j05"
     topic_summary, topic_path, topic_payload, topic_candidates = _run_discovery(
         rec,
         sandbox,
@@ -278,16 +316,27 @@ def test_p22_j05_literature_discovery(repo_root: Path, tmp_path: Path) -> None:
         set(observed_anchors).issuperset(set(anchors)),
         {"requested": anchors, "observed": observed_anchors},
     )
-    anchor_hit = {
-        anchor: any(
-            anchor.lower() in _normalize(ids[i]).lower()
-            or anchor.lower() in _normalize(urls[i]).lower()
-            or anchor.lower() in _normalize(titles[i]).lower()
-            for i in range(len(candidates))
-        )
-        for anchor in anchors
-    }
-    rec.add_assertion("anchor_influence_observed", any(anchor_hit.values()), {"anchors": anchor_hit})
+    anchor_candidate_channels = [
+        channel for item in anchor_candidates for channel in _candidate_channels(item)
+    ]
+    anchor_rationales = [
+        _normalize(str(item.get("ranking_rationale") or item.get("rationale") or "")).lower()
+        for item in anchor_candidates
+    ]
+    anchor_provenance_observed = bool(anchor_candidates) and (
+        any(channel in {"s2_reference", "s2_citation", "s2_recommend"} for channel in anchor_candidate_channels)
+        or any("anchor" in rationale for rationale in anchor_rationales)
+    )
+    rec.add_assertion(
+        "anchor_influence_observed",
+        anchor_provenance_observed,
+        {
+            "requested_anchors": anchors,
+            "observed_anchors": observed_anchors,
+            "anchor_candidate_channels": sorted(set(anchor_candidate_channels)),
+            "anchor_rationale_count": sum(1 for rationale in anchor_rationales if "anchor" in rationale),
+        },
+    )
 
     rec.add_assertion(
         "negative_candidates_excluded",

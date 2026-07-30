@@ -1,0 +1,67 @@
+﻿{
+  "journey_id": "P22-J18",
+  "selector": "tests/journeys/phase22/code/test_j18_tmux_cli_status_config.py::test_p22_j18_tmux_cli_status_config",
+  "required_serial_gate": "PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS",
+  "required_platform": {
+    "windows": "preferred",
+    "linux_wsl": "additional",
+    "unix_path_assertion": "only when PLATFORM == Linux/WSL"
+  },
+  "entrypoints": {
+    "shell_script": "harness/solar-harness.sh",
+    "launcher_script": "bin/solar",
+    "status_server": "harness/lib/symphony/status-server.py",
+    "ui_script": "harness/lib/cli/solar_ui_lite.py"
+  },
+  "planned_user_tasks": {
+    "Workflow & Platform Status Visibility": [
+      "启动或检查 Solar harness 预检状态（preflight/status）",
+      "记录启动/运维命令入口与参数支持情况"
+    ],
+    "Execution Trace Search & Inspection": [
+      "通过命令读取 bg/task/事件轨迹输出",
+      "核验执行轨迹检索能力（status/events 路由）"
+    ],
+    "Linux Cli": [
+      "在 Linux/WSL 上执行 shell/CLI 健康探测（不触发运行时启动）",
+      "记录命令路径与返回码供后续真实跑测"
+    ],
+    "Web Application & Status Service": [
+      "确认 dashboard 页面 + 健康 + status/settings/auth/ events 接口文本存在",
+      "验证 status-server stop/start/status 指令可被 shell 入口解析"
+    ],
+    "CLI": [
+      "校验 solar --help 与关键子命令存在",
+      "确认 CLI 运行在 sandbox HOME 下可调用且未触发真实服务启动"
+    ],
+    "TUI": [
+      "校验 solar_ui_lite 与 monitor tui 相关可见内容与发送输入点",
+      "检查会话响应链路中的可读内容与捕获逻辑"
+    ],
+    "TMUX": [
+      "检查 tmux 入口、attach、pane 管理与清理命令声明",
+      "验证会话清理由命令文本与 cleanup plan 覆盖"
+    ],
+    "LLM Config": [
+      "在 sandbox 配置文件中写入并回读模型别名",
+      "验证回读源为 solar-user-config.json 且可见"
+    ],
+    "User Settings": [
+      "在 sandbox 的用户设置内写入 runtime 与 codex 设置",
+      "验证回读结果体现在设置读面（settings）观测路径"
+    ]
+  },
+  "entrypoint_command_plan": [
+    "bash harness/solar-harness.sh preflight",
+    "bash harness/solar-harness.sh status",
+    "bash harness/solar-harness.sh status-server status",
+    "bash harness/solar-harness.sh bg status",
+    "bash harness/solar-harness.sh --help",
+    "bash bin/solar --help",
+    "bash bin/solar harness --help",
+    "bash bin/solar status --help",
+    "bash bin/solar doctor --help",
+    "bash bin/solar ui --once",
+    "python harness/lib/cli/solar_ui_lite.py --once"
+  ]
+}

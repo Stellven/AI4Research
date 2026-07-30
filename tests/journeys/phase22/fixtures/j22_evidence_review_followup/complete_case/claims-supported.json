@@ -1,0 +1,35 @@
+{
+  "schema": "research_claims.v1",
+  "task_id": "phase22-j22-complete-claims",
+  "sprint_id": "phase22-real-journeys",
+  "node_id": "phase22-j22-complete-claims",
+  "status": "completed",
+  "inputs": {
+    "source": "local review packet"
+  },
+  "outputs": {
+    "claims": [
+      {
+        "claim_id": "claim-supported",
+        "text": "On the evaluated six-row local dataset, the normalization variant improves exact-match accuracy from 0.50 to 0.83.",
+        "claim_type": "result",
+        "source_anchor": "complete-case#result",
+        "testability": "testable",
+        "verification_status": "unverified",
+        "evidence_ids": [
+          "claim:complete-local-result",
+          "exp:complete-local-run"
+        ]
+      }
+    ]
+  },
+  "artifacts": [],
+  "provenance": {
+    "operator_id": "phase22-fixture",
+    "implementation_package": "tests.journeys.phase22.fixtures",
+    "timestamp": "2026-07-30T00:00:00Z"
+  },
+  "limitations": [
+    "Bounded to the local dataset named in the claim."
+  ]
+}

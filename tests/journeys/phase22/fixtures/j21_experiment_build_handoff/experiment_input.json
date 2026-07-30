@@ -1,0 +1,16 @@
+{
+  "journey": "P22-J21",
+  "experiment_id": "p22-j21-local-experiment",
+  "target": "local punctuation-aware normalization experiment",
+  "run_dir_name": "phase22-j21",
+  "runtime_command": [
+    "python",
+    "run_text_experiment.py"
+  ],
+  "threshold": 0.2,
+  "artifact_components": [
+    "experiment_definition",
+    "runtime_result",
+    "claims"
+  ]
+}

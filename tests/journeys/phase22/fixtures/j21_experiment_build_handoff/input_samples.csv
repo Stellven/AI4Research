@@ -1,0 +1,7 @@
+﻿id,text,label
+pass: normalized verbatim,positive
+PASS - verifier returns positive,positive
+fail: missing reference,negative
+FAIL - no citation,negative
+pass with caveat,positive
+failure without source,negative

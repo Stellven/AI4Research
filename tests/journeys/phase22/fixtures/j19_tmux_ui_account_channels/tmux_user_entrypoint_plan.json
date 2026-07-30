@@ -1,0 +1,19 @@
+{
+  "journey_id": "P22-J19",
+  "tmux_commands": [
+    "bash harness/solar-harness.sh preflight",
+    "bash harness/solar-harness.sh status",
+    "bash harness/solar-harness.sh start --skip-doctor",
+    "bash harness/solar-harness.sh attach"
+  ],
+  "serial_gate_env": "PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS",
+  "command_plan_notes": [
+    "Prepare probe only: no tmux session should be started in this phase.",
+    "Real execution path must be validated in a follow-up live run."
+  ],
+  "entry_checks": {
+    "require_harness_preflight": true,
+    "require_harness_start": true,
+    "require_harness_status": true
+  }
+}

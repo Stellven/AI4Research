@@ -1,0 +1,20 @@
+﻿{
+  "llm_models": {
+    "pm": "claude-opus",
+    "planner": "sonnet",
+    "builder": "opus",
+    "evaluator": "anthropic-sonnet"
+  },
+  "user_settings": {
+    "runtime": "codex",
+    "codex": {
+      "search": true,
+      "effort": "high"
+    }
+  },
+  "expected_assertions": {
+    "required_aliases": ["claude-opus", "sonnet", "opus", "anthropic-sonnet"],
+    "runtime_value": "codex",
+    "codex_effort": "high"
+  }
+}

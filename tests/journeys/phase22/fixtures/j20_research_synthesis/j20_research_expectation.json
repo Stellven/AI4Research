@@ -1,0 +1,17 @@
+﻿{
+  "run_id_prefix": "p22-j20",
+  "topic": "retrieval-augmented generation evaluation methods",
+  "min_sources": 3,
+  "min_technical_signal_types": 2,
+  "min_trend_observations": 1,
+  "min_gap_observations": 1,
+  "discovery": {
+    "limit": 8
+  },
+  "survey": {
+    "max_papers": 8
+  },
+  "research": {
+    "max_sources": 8
+  }
+}

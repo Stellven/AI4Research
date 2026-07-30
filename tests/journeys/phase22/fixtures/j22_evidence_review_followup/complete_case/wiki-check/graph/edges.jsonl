@@ -1,0 +1,3 @@
+{"from":"papers/study","to":"methods/normalization","type":"supports","evidence":"paper describes the local normalization method"}
+{"from":"ideas/normalization-idea","to":"experiments/phase22-j22","type":"tested_by","evidence":"the idea is evaluated by experiment J22"}
+{"from":"experiments/phase22-j22","to":"methods/normalization","type":"supports","evidence":"the experiment result supports the normalization method in local scope"}
