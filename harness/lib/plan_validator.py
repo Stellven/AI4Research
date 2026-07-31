@@ -206,6 +206,12 @@ ERROR_PLAN_GENERIC_CONTRACT_MISSING = "PLAN_GENERIC_CONTRACT_MISSING"
 ERROR_PLAN_GRAPH_MISSING = "PLAN_GRAPH_MISSING"
 
 PLAN_CERTIFICATE_SCHEMA = "solar.plan_certificate.v1"
+REQUEST_GOVERNANCE_FIELDS = (
+    "source_request_excerpt",
+    "source_policy",
+    "research_deliverable_contract",
+    "pass_conditions",
+)
 
 # canonical_executable_node is the single source for the GOVERNED node subset
 # the certificate hashes. Runtime fields (status, pane, dispatch_id,
@@ -587,7 +593,7 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
     def governed_node(node: Dict[str, Any]) -> Dict[str, Any]:
         canonical = canonical_executable_node(node)
         materialized = node.get("executable_node")
-        return {
+        governed_record = {
             "canonical": canonical,
             # Stamp writes this projection into the graph so UI/evidence
             # readers consume the same identity.  Hash it independently from
@@ -598,6 +604,14 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
                 else canonical
             ),
         }
+        request_contract = {
+            field: copy.deepcopy(node.get(field))
+            for field in REQUEST_GOVERNANCE_FIELDS
+            if field in node
+        }
+        if request_contract:
+            governed_record["request_contract"] = request_contract
+        return governed_record
 
     governed = {
         # sprint_id binds the certificate to ONE sprint — a PASS stamped for
@@ -621,6 +635,13 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
             )
         ],
     }
+    request_contract = {
+        field: copy.deepcopy(task_graph.get(field))
+        for field in REQUEST_GOVERNANCE_FIELDS
+        if field in task_graph
+    }
+    if request_contract:
+        governed["request_contract"] = request_contract
     canonical = json.dumps(governed, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -1239,10 +1260,30 @@ def compile_planner_graph(
         planner_stage.update({"status": "reviewed", "completed_by": "compiled_sprint_planner"})
         candidate["planner_stage"] = planner_stage
         candidate["planner_artifacts"] = planner_artifacts
+        requirement_ir_path = sprints / f"{sid}.requirement_ir.json"
+        expected_request_text = ""
+        try:
+            requirement_ir = json.loads(requirement_ir_path.read_text(encoding="utf-8"))
+            source_inputs = requirement_ir.get("source_inputs") if isinstance(requirement_ir, dict) else {}
+            if isinstance(source_inputs, dict):
+                expected_request_text = str(source_inputs.get("raw_request") or "").strip()
+            if not expected_request_text and isinstance(requirement_ir, dict):
+                expected_request_text = str(requirement_ir.get("user_intent") or "").strip()
+        except (OSError, ValueError, TypeError):
+            expected_request_text = ""
+        if not expected_request_text:
+            errors.append(
+                _error(
+                    "AUTOSCI_SOURCE_REQUEST_MISSING",
+                    "N0",
+                    f"Immutable AutoSci source request is missing from {requirement_ir_path}",
+                )
+            )
         errors.extend(validate_autosci_planner_graph(
             candidate,
             harness_dir=wc.harness_dir(),
             expected_sprint_id=sid,
+            expected_request_text=expected_request_text,
         ))
     else:
         errors = validate_plan(

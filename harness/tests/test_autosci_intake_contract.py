@@ -24,7 +24,11 @@ from autosci_intake_contract import (  # noqa: E402
     build_autosci_task_graph,
     is_autosci_research_intake_text,
 )
-from plan_validator import check_planner_graph_dispatchable, compile_planner_graph  # noqa: E402
+from plan_validator import (  # noqa: E402
+    check_plan_certificate,
+    check_planner_graph_dispatchable,
+    compile_planner_graph,
+)
 
 
 AUTOSCI_REQUEST = (
@@ -32,6 +36,13 @@ AUTOSCI_REQUEST = (
     "Do not call a manual autosci shim. The workflow must ingest papers, extract claims, "
     "generate ideas, run exp-design, exp-run, exp-eval, and produce a report so we can "
     "verify whether AutoSci autonomously participates in the runtime."
+)
+
+REAL_DATA_REQUEST = (
+    "$research Read https://example.org/anchor and search current public Internet sources. "
+    "Produce a Chinese Markdown report with at least 4 technical trends and at least 8 "
+    "traceable public links. Separate claims, external evidence, and inference; cover "
+    "mechanism, counter-evidence, maturity, bottlenecks, risks, and outlook."
 )
 
 
@@ -121,6 +132,54 @@ def test_autosci_contract_task_graph_selects_autosci_physical_workers() -> None:
     assert selected["claim_verify"] == "autosci-claim-verify-worker"
 
 
+def test_real_data_request_is_compiled_into_governed_live_source_acceptance() -> None:
+    graph = build_autosci_task_graph(
+        sprint_id="sprint-test-autosci-real-data",
+        title="Real-data research",
+        request_text=REAL_DATA_REQUEST,
+        harness_dir=ROOT,
+    )
+    assert graph["source_policy"] == {
+        "mode": "live_public_required",
+        "online_retrieval_required": True,
+        "fixture_only_sufficient": False,
+        "anchor_urls": ["https://example.org/anchor"],
+        "minimum_traceable_sources": 8,
+        "freshness_required": True,
+        "preferred_source_kinds": [
+            "research_paper",
+            "standard",
+            "official_technical_documentation",
+            "institutional_material",
+        ],
+    }
+    assert graph["research_deliverable_contract"]["language"] == "zh-CN"
+    assert graph["research_deliverable_contract"]["format"] == "markdown"
+    assert graph["research_deliverable_contract"]["minimum_trends"] == 4
+    literature = next(node for node in graph["nodes"] if node["id"] == "literature_discover")
+    assert literature["source_policy"]["online_retrieval_required"] is True
+    assert literature["evidence_policy"]["allow_inconclusive"] is False
+    assert literature["evidence_policy"]["fixture_only_sufficient"] is False
+    assert any("Fixture-only" in item for item in literature["acceptance"])
+    report = next(node for node in graph["nodes"] if node["id"] == "report_draft")
+    assert report["research_deliverable_contract"]["minimum_traceable_sources"] == 8
+
+    chinese_graph = build_autosci_task_graph(
+        sprint_id="sprint-test-autosci-real-data-zh",
+        title="Chinese real-data research",
+        request_text=(
+            "$research \u8bf7\u5b9e\u9645\u8bfb\u53d6\u516c\u5f00\u7f51\u9875 https://example.org/zh \uff0c"
+            "\u68c0\u7d22\u622a\u81f3\u5f53\u524d\u7684\u4e92\u8054\u7f51\u516c\u5f00\u8d44\u6599\uff0c\u751f\u6210\u4e2d\u6587 Markdown \u62a5\u544a\uff1b"
+            "\u81f3\u5c11\u8986\u76d6 4 \u9879\u8d8b\u52bf\uff0c\u81f3\u5c11\u63d0\u4f9b 8 \u4e2a\u53ef\u8ffd\u6eaf\u6765\u6e90\u3002"
+        ),
+        harness_dir=ROOT,
+    )
+    assert chinese_graph["source_policy"]["online_retrieval_required"] is True
+    assert chinese_graph["source_policy"]["minimum_traceable_sources"] == 8
+    assert chinese_graph["research_deliverable_contract"]["minimum_trends"] == 4
+    assert chinese_graph["research_deliverable_contract"]["language"] == "zh-CN"
+
+
 def test_autosci_builder_dispatch_requires_planner_artifacts_and_certificate(tmp_path: Path) -> None:
     sid = "sprint-test-autosci-governance"
     sprints = tmp_path / "sprints"
@@ -137,6 +196,10 @@ def test_autosci_builder_dispatch_requires_planner_artifacts_and_certificate(tmp
     )
     (sprints / f"{sid}.status.json").write_text(
         json.dumps({"id": sid, "sprint_id": sid, "plan_compile_required": True}),
+        encoding="utf-8",
+    )
+    (sprints / f"{sid}.requirement_ir.json").write_text(
+        json.dumps({"source_inputs": {"raw_request": AUTOSCI_REQUEST}}),
         encoding="utf-8",
     )
 
@@ -163,6 +226,84 @@ def test_autosci_builder_dispatch_requires_planner_artifacts_and_certificate(tmp
     tampered = check_planner_graph_dispatchable(certified, sprints_dir=sprints, sid=sid)
     assert tampered["ok"] is False
     assert tampered["errors"][0]["code"] == "AUTOSCI_PLANNER_ARTIFACT_HASH_MISMATCH"
+
+
+def test_plan_validator_rejects_real_data_graph_downgraded_to_fixture_semantics(tmp_path: Path) -> None:
+    sid = "sprint-test-autosci-real-data-governance"
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph = build_autosci_task_graph(
+        sprint_id=sid,
+        title="Real-data governance",
+        request_text=REAL_DATA_REQUEST,
+        harness_dir=ROOT,
+    )
+    graph["source_request_excerpt"] = "$research offline fixture research"
+    graph["source_policy"] = {
+        "mode": "provider_optional",
+        "online_retrieval_required": False,
+        "fixture_only_sufficient": True,
+        "anchor_urls": [],
+        "minimum_traceable_sources": 0,
+        "freshness_required": False,
+        "preferred_source_kinds": [],
+    }
+    literature = next(node for node in graph["nodes"] if node["id"] == "literature_discover")
+    literature["source_policy"] = dict(graph["source_policy"])
+    literature["pass_conditions"] = ["Fixture discovery is sufficient."]
+    (sprints / f"{sid}.task_graph.json").write_text(
+        json.dumps(graph, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (sprints / f"{sid}.status.json").write_text(
+        json.dumps({"id": sid, "sprint_id": sid, "plan_compile_required": True}), encoding="utf-8"
+    )
+    (sprints / f"{sid}.requirement_ir.json").write_text(
+        json.dumps({"source_inputs": {"raw_request": REAL_DATA_REQUEST}}), encoding="utf-8"
+    )
+    (sprints / f"{sid}.design.md").write_text("# Design\n", encoding="utf-8")
+    (sprints / f"{sid}.plan.md").write_text("# Plan\n", encoding="utf-8")
+
+    result = compile_planner_graph(sprints, sid)
+
+    assert result["ok"] is False
+    assert result["stamped"] is False
+    codes = {error["code"] for error in result["errors"]}
+    assert "AUTOSCI_GRAPH_CONTRACT_MISMATCH" in codes
+    assert "AUTOSCI_GRAPH_NODE_CONTRACT_MISMATCH" in codes
+    persisted = json.loads((sprints / f"{sid}.task_graph.json").read_text(encoding="utf-8"))
+    assert "plan_certificate" not in persisted
+
+
+def test_plan_certificate_hash_covers_real_data_source_contract(tmp_path: Path) -> None:
+    sid = "sprint-test-autosci-real-data-certificate"
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph = build_autosci_task_graph(
+        sprint_id=sid,
+        title="Real-data certificate",
+        request_text=REAL_DATA_REQUEST,
+        harness_dir=ROOT,
+    )
+    (sprints / f"{sid}.task_graph.json").write_text(
+        json.dumps(graph, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (sprints / f"{sid}.status.json").write_text(
+        json.dumps({"id": sid, "sprint_id": sid, "plan_compile_required": True}), encoding="utf-8"
+    )
+    (sprints / f"{sid}.requirement_ir.json").write_text(
+        json.dumps({"source_inputs": {"raw_request": REAL_DATA_REQUEST}}), encoding="utf-8"
+    )
+    (sprints / f"{sid}.design.md").write_text("# Design\n", encoding="utf-8")
+    (sprints / f"{sid}.plan.md").write_text("# Plan\n", encoding="utf-8")
+
+    compiled = compile_planner_graph(sprints, sid)
+    assert compiled["ok"] is True
+    certified = json.loads((sprints / f"{sid}.task_graph.json").read_text(encoding="utf-8"))
+    assert check_plan_certificate(certified) == []
+
+    certified["source_policy"]["fixture_only_sufficient"] = True
+    errors = check_plan_certificate(certified)
+    assert {error["code"] for error in errors} == {"PLAN_CERTIFICATE_HASH_MISMATCH"}
 
 
 def test_rawintent_consumer_compiles_autosci_request_to_graph_ready_package(tmp_path: Path) -> None:
