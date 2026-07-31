@@ -86,11 +86,13 @@ def test_autosci_contract_task_graph_selects_autosci_physical_workers() -> None:
     assert graph["workflow_contract_id"] == WORKFLOW_CONTRACT_ID
     assert graph["workflow_contract_version"] == WORKFLOW_CONTRACT_VERSION
     assert graph["plan_compile_required"] is True
+    assert graph["strict_role_boundaries"] is True
     assert graph["planner_stage"] == {
         "node_id": "N0",
         "role": "planner",
         "status": "required",
         "next_role": "builder",
+        "spillover_allowed": False,
     }
     assert "planner_bypass_reason" not in graph["intake_contract"]
     assert "plan_certificate" not in graph

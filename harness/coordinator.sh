@@ -485,22 +485,38 @@ choose_lab_observer_pane() {
   discover_pane_by_persona "$LAB_SESSION_NAME" 0 "observer" "$PANE_LAB_OBSERVER"
 }
 
+strict_role_boundary_required() {
+  local sid="${1:-}" graph="$SPRINTS_DIR/${1:-}.task_graph.json"
+  [[ -n "$sid" && -f "$graph" ]] || return 1
+  python3 - "$graph" <<'PY' >/dev/null 2>&1
+import json, sys
+try:
+    graph = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(0 if graph.get("strict_role_boundaries") is True else 1)
+PY
+}
+
 role_pool_candidates_via_python() {
-  local role="$1"
+  local role="$1" strict="${2:-0}"
   local helper="$HARNESS_DIR/lib/pane_role_pool.py"
   [[ -f "$helper" ]] || return 1
-  python3 "$helper" discover-role-pool --role "$role" 2>/dev/null | \
+  local args=(discover-role-pool --role "$role")
+  [[ "$strict" == "1" ]] && args+=(--strict-role-boundary)
+  python3 "$helper" "${args[@]}" 2>/dev/null | \
     python3 -c 'import json,sys; data=json.load(sys.stdin); [print(item.get("pane","")) for item in data.get("panes",[]) if item.get("pane")]' 2>/dev/null
 }
 
 role_candidate_panes() {
-  local role="$1" seen="" pane
+  local role="$1" sid="${2:-}" seen="" pane strict=0
+  strict_role_boundary_required "$sid" && strict=1
   while IFS= read -r pane; do
     [[ -z "$pane" ]] && continue
     case "$seen" in *" $pane "*) continue ;; esac
     printf '%s\n' "$pane"
     seen+=" $pane "
-  done < <(role_pool_candidates_via_python "$role" 2>/dev/null || true)
+  done < <(role_pool_candidates_via_python "$role" "$strict" 2>/dev/null || true)
   case "$role" in
     builder)
       pane="$(choose_builder_pane)"
@@ -543,21 +559,20 @@ role_candidate_panes() {
       if [[ -n "$pane" ]]; then
         case "$seen" in *" $pane "*) ;; *) printf '%s\n' "$pane"; seen+=" $pane " ;; esac
       fi
-      pane="$(choose_architect_pane 2>/dev/null || true)"
-      if [[ -n "$pane" ]]; then
-        case "$seen" in *" $pane "*) ;; *) printf '%s\n' "$pane"; seen+=" $pane " ;; esac
+      if [[ "$strict" != "1" ]]; then
+        pane="$(choose_architect_pane 2>/dev/null || true)"
+        if [[ -n "$pane" ]]; then
+          case "$seen" in *" $pane "*) ;; *) printf '%s\n' "$pane"; seen+=" $pane " ;; esac
+        fi
+        # Legacy/non-strict workflows may borrow lab builders for planning.
+        # Governed workflows with strict_role_boundaries queue instead.
+        while IFS= read -r pane; do
+          [[ -z "$pane" ]] && continue
+          case "$seen" in *" $pane "*) continue ;; esac
+          printf '%s\n' "$pane"
+          seen+=" $pane "
+        done < <(list_lab_persona_panes "lab-builder" 2>/dev/null || true)
       fi
-      # Planner is the preferred owner for design/plan work, but a stuck
-      # planner pane must not deadhead the whole harness. Lab builders are
-      # acceptable fallback workers for producing design.md/plan.md from an
-      # already-approved PRD because the dispatch text explicitly forbids code
-      # edits and live pane mutation.
-      while IFS= read -r pane; do
-        [[ -z "$pane" ]] && continue
-        case "$seen" in *" $pane "*) continue ;; esac
-        printf '%s\n' "$pane"
-        seen+=" $pane "
-      done < <(list_lab_persona_panes "lab-builder" 2>/dev/null || true)
       ;;
     *)
       return 1
@@ -580,7 +595,7 @@ choose_available_role_pane() {
     fi
     echo "$pane"
     return 0
-  done 9< <(role_candidate_panes "$role" 2>/dev/null || true)
+  done 9< <(role_candidate_panes "$role" "$sid" 2>/dev/null || true)
   return 1
 }
 
@@ -617,7 +632,7 @@ dispatch_to_role() {
       return 0
     fi
     log "${Y}[worker-select] ${role} target=${pane} dispatch rc=${last_rc}; trying next candidate${N}"
-  done 9< <(role_candidate_panes "$role" 2>/dev/null || true)
+  done 9< <(role_candidate_panes "$role" "$sid" 2>/dev/null || true)
 
   if (( last_rc == 3 && terminal_suppressible == 1 )); then
     log "${Y}[worker-select] suppress terminal ${role} queue sid=${sid} intent=${intent} reason=terminal_phase_wake_detected${N}"

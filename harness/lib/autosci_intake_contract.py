@@ -118,11 +118,13 @@ def build_autosci_task_graph(
             "workflow_contract_version": WORKFLOW_CONTRACT_VERSION,
             "contract_bound": True,
             "plan_compile_required": True,
+            "strict_role_boundaries": True,
             "planner_stage": {
                 "node_id": "N0",
                 "role": "planner",
                 "status": "required",
                 "next_role": "builder",
+                "spillover_allowed": False,
             },
             "sprint_id": sprint_id,
             "title": f"AutoSci Research Workflow - {title[:120]}",
@@ -221,8 +223,14 @@ def validate_autosci_planner_graph(
         add("WORKFLOW_CONTRACT_VERSION_MISMATCH", "AutoSci graph contract version must be 1.0")
     if graph.get("plan_compile_required") is not True:
         add("PLAN_COMPILE_MARKER_MISSING", "AutoSci graph must retain plan_compile_required=true")
+    if graph.get("strict_role_boundaries") is not True:
+        add("AUTOSCI_ROLE_BOUNDARY_MISSING", "AutoSci requires strict_role_boundaries=true")
     planner_stage = graph.get("planner_stage") if isinstance(graph.get("planner_stage"), dict) else {}
-    if planner_stage.get("role") != "planner" or planner_stage.get("node_id") != "N0":
+    if (
+        planner_stage.get("role") != "planner"
+        or planner_stage.get("node_id") != "N0"
+        or planner_stage.get("spillover_allowed") is not False
+    ):
         add("AUTOSCI_PLANNER_STAGE_MISSING", "AutoSci requires a distinct N0 Planner stage")
 
     expected = build_autosci_task_graph(
@@ -231,7 +239,14 @@ def validate_autosci_planner_graph(
         request_text=str(graph.get("source_request_excerpt") or ""),
         harness_dir=Path(harness_dir),
     )
-    for field in ("dag_variant", "research_mode", "artifact_roots", "required_gates", "evidence_policy"):
+    for field in (
+        "dag_variant",
+        "research_mode",
+        "artifact_roots",
+        "required_gates",
+        "evidence_policy",
+        "strict_role_boundaries",
+    ):
         if graph.get(field) != expected.get(field):
             add("AUTOSCI_GRAPH_CONTRACT_MISMATCH", f"top-level field {field!r} differs from the AutoSci contract")
 

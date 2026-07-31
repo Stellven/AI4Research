@@ -36,6 +36,10 @@
     "builder",
     "evaluator"
   ],
+  "role_boundary_policy": {
+    "strict": true,
+    "allow_cross_role_pane_spillover": false
+  },
   "plan_compile": {
     "env_gate": "SOLAR_PLAN_VALIDATOR",
     "max_planner_bounces": 2,
