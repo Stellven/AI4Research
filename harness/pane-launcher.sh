@@ -431,6 +431,63 @@ PY
   CODEX_ARGS+=("${parsed[@]:1}")
 }
 
+run_codex_with_filesystem_scope() {
+  local mode="${SOLAR_CODEX_PANE_FS_ISOLATION:-landlock}"
+  case "$mode" in
+    landlock) ;;
+    0|off|disabled|none)
+      if [[ "${SOLAR_CODEX_PANE_STRICT_FS_SCOPE:-1}" == "1" ]]; then
+        echo "FATAL: strict Codex pane filesystem scope cannot disable Landlock" >&2
+        return 78
+      fi
+      "${CODEX_ARGS[@]}"
+      return $?
+      ;;
+    *)
+      echo "FATAL: unsupported SOLAR_CODEX_PANE_FS_ISOLATION='$mode'" >&2
+      return 64
+      ;;
+  esac
+
+  local wrapper="$HARNESS_DIR/tools/landlock_exec.py"
+  [[ -f "$wrapper" ]] || {
+    echo "FATAL: Codex pane Landlock wrapper missing: $wrapper" >&2
+    return 78
+  }
+  local pane_safe="${TMUX_PANE:-standalone}"
+  pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
+  local state_home="$HARNESS_DIR/run/codex-state/panes/${pane_safe}-${PERSONA}"
+  local tmp_dir="$HARNESS_DIR/run/pane-tmp/${pane_safe}-${PERSONA}"
+  mkdir -p "$state_home" "$tmp_dir" || return 78
+  export CODEX_SQLITE_HOME="$state_home"
+  export TMPDIR="$tmp_dir"
+  export TMP="$tmp_dir"
+  export TEMP="$tmp_dir"
+
+  local codex_home="${CODEX_HOME:-$HOME/.codex}"
+  local codex_real=""
+  codex_real="$(readlink -f "$CODEX_BIN" 2>/dev/null || true)"
+  local -a scoped=(python3 "$wrapper")
+  local path
+  for path in \
+    /usr /bin /sbin /lib /lib64 /etc \
+    "$CODEX_BIN" "${codex_real%/*}" \
+    "$codex_home/auth.json" "$codex_home/config.toml" \
+    "${CODEX_TRUST_PROFILE_PATH:-}"; do
+    [[ -n "$path" && -e "$path" ]] || continue
+    scoped+=(--read-only "$path")
+  done
+  for path in \
+    "$HARNESS_DIR" "$ORIGINAL_WORK_DIR" "$WORK_DIR" "$state_home" "$tmp_dir" \
+    /dev/null /dev/urandom /dev/random; do
+    [[ -e "$path" ]] || continue
+    scoped+=(--read-write "$path")
+  done
+  scoped+=(-- "${CODEX_ARGS[@]}")
+  echo -e "  Filesystem boundary: ${G}Landlock (strict)${N}"
+  "${scoped[@]}"
+}
+
 # 退出信号捕获 → pane-exit.jsonl
 EXIT_LOG="$HARNESS_DIR/logs/pane-exit.jsonl"
 mkdir -p "$(dirname "$EXIT_LOG")" 2>/dev/null || true
@@ -481,7 +538,7 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
   echo -e "${Y}[${PERSONA}] Codex runtime selected${N}"
   echo -e "  Role instructions: ${CODEX_ROLE_FILE}"
   echo -e "  Starting Codex idle; dispatcher prompts will include role + task files."
-  "${CODEX_ARGS[@]}"
+  run_codex_with_filesystem_scope
   RUNTIME_EXIT=$?
   cleanup_codex_trust_profile || true
   trap - EXIT

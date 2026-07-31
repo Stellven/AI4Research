@@ -225,16 +225,24 @@ def _filesystem_isolated_command(
             Path("/lib"),
             Path("/lib64"),
             Path("/etc"),
-            Path("/dev/null"),
-            Path("/dev/urandom"),
-            Path("/dev/random"),
             codex_binary,
             resolved_binary.parent,
             codex_home / "auth.json",
             codex_home / "config.toml",
         ]
     )
-    read_write = _existing_paths([harness_dir, cwd, task_dir, state_home, tmp_dir])
+    read_write = _existing_paths(
+        [
+            harness_dir,
+            cwd,
+            task_dir,
+            state_home,
+            tmp_dir,
+            Path("/dev/null"),
+            Path("/dev/urandom"),
+            Path("/dev/random"),
+        ]
+    )
     wrapper = Path(__file__).with_name("landlock_exec.py").resolve(strict=False)
     if not wrapper.is_file():
         raise RuntimeError(f"Landlock wrapper is missing: {wrapper}")

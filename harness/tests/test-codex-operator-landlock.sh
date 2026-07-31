@@ -21,6 +21,11 @@ BASE=(
 
 "${BASE[@]}" python3 -c "from pathlib import Path; assert Path('$TMP_ROOT/allowed/visible.txt').read_text().strip() == 'visible'"
 
+python3 "$ROOT/tools/landlock_exec.py" \
+  --read-only /usr --read-only /lib --read-only /lib64 --read-only /etc \
+  --read-write /dev/null --read-write "$TMP_ROOT/allowed" -- \
+  python3 -c "open('/dev/null', 'w').write('ok')"
+
 set +e
 "${BASE[@]}" python3 -c "from pathlib import Path; Path('$TMP_ROOT/denied/secret.txt').read_text()" >"$TMP_ROOT/out.log" 2>"$TMP_ROOT/err.log"
 rc=$?

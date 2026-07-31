@@ -11,6 +11,7 @@ import argparse
 import ctypes
 import errno
 import os
+import stat
 import sys
 from pathlib import Path
 
@@ -70,6 +71,16 @@ def read_access(handled: int) -> int:
 
 
 def _add_path_rule(libc: ctypes.CDLL, ruleset_fd: int, path: Path, access: int) -> None:
+    mode = path.stat().st_mode
+    if not stat.S_ISDIR(mode):
+        file_access = ACCESS_FS_READ_FILE | ACCESS_FS_WRITE_FILE | ACCESS_FS_TRUNCATE
+        if stat.S_ISREG(mode) and mode & 0o111:
+            file_access |= ACCESS_FS_EXECUTE
+        if stat.S_ISCHR(mode) or stat.S_ISBLK(mode):
+            file_access |= ACCESS_FS_IOCTL_DEV
+        access &= file_access
+    if access == 0:
+        raise OSError(errno.EINVAL, f"no compatible Landlock access rights for {path}")
     flags = getattr(os, "O_PATH", os.O_RDONLY) | os.O_CLOEXEC
     parent_fd = os.open(path, flags)
     try:
