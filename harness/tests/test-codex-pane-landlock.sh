@@ -7,6 +7,7 @@ TMP_ROOT="$(mktemp -d /tmp/solar-pane-landlock-test.XXXXXX)"
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
 grep -Fq 'run_codex_with_filesystem_scope' "$LAUNCHER"
+grep -Fq 'resolve_codex_source_home' "$LAUNCHER"
 grep -Fq 'SOLAR_CODEX_PANE_FS_ISOLATION' "$LAUNCHER"
 grep -Fq 'SOLAR_CODEX_PANE_STRICT_FS_SCOPE' "$LAUNCHER"
 grep -Fq 'landlock_exec.py' "$LAUNCHER"
@@ -15,9 +16,10 @@ grep -Fq 'export CODEX_HOME="$sandbox_codex_home"' "$LAUNCHER"
 grep -Fq '"$source_codex_home/auth.json"' "$LAUNCHER"
 grep -Fq '"$codex_arg0_dir"' "$LAUNCHER"
 
-mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied" "$TMP_ROOT/source-codex-home"
+mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied" "$TMP_ROOT/home/.codex" "$TMP_ROOT/stale-codex-home"
 printf 'must-not-cross-scope\n' >"$TMP_ROOT/denied/secret.txt"
-printf '{"fixture":true}\n' >"$TMP_ROOT/source-codex-home/auth.json"
+printf '{"fixture":true}\n' >"$TMP_ROOT/home/.codex/auth.json"
+printf 'stale = true\n' >"$TMP_ROOT/stale-codex-home/config.toml"
 FAKE_CODEX="$TMP_ROOT/project/codex"
 cat >"$FAKE_CODEX" <<'SH'
 #!/usr/bin/env bash
@@ -36,8 +38,11 @@ chmod +x "$FAKE_CODEX"
 
 output="$({
   DENIED_FILE="$TMP_ROOT/denied/secret.txt" \
-  SOURCE_CODEX_HOME="$TMP_ROOT/source-codex-home" \
-  CODEX_HOME="$TMP_ROOT/source-codex-home" \
+  SOURCE_CODEX_HOME="$TMP_ROOT/home/.codex" \
+  HOME="$TMP_ROOT/home" \
+  CODEX_HOME="$TMP_ROOT/stale-codex-home" \
+  SOLAR_CODEX_PANE_STATE_ROOT="$TMP_ROOT/pane-state" \
+  SOLAR_CODEX_PANE_TMP_ROOT="$TMP_ROOT/pane-tmp" \
   HARNESS_DIR="$HARNESS_DIR" \
   SOLAR_PANE_RUNTIME=codex \
   SOLAR_CODEX_BIN="$FAKE_CODEX" \

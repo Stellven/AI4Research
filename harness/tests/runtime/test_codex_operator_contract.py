@@ -190,12 +190,17 @@ def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, m
     task_dir.mkdir(parents=True)
     monkeypatch.delenv("CODEX_SQLITE_HOME", raising=False)
     monkeypatch.delenv("SOLAR_CODEX_STATE_HOME", raising=False)
+    monkeypatch.delenv("SOLAR_CODEX_SOURCE_HOME", raising=False)
     monkeypatch.delenv("SOLAR_CODEX_OPERATOR_EPHEMERAL", raising=False)
     monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    stale_codex_home = tmp_path / "stale-codex-home"
+    stale_codex_home.mkdir()
+    monkeypatch.setenv("CODEX_HOME", str(stale_codex_home))
 
     env = codex_operator._codex_exec_env(task_dir)
     assert env["CODEX_SQLITE_HOME"] == str(harness_dir / "run" / "codex-state")
     assert Path(env["CODEX_SQLITE_HOME"]).is_dir()
+    assert env["SOLAR_CODEX_SOURCE_HOME"] == str(Path.home() / ".codex")
 
     cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), task_dir / "last.md")
     assert "--ephemeral" in cmd
@@ -215,7 +220,7 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     source_codex_home.mkdir()
     (source_codex_home / "auth.json").write_text('{"fixture": true}\n', encoding="utf-8")
     monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
-    monkeypatch.setenv("CODEX_HOME", str(source_codex_home))
+    monkeypatch.setenv("SOLAR_CODEX_SOURCE_HOME", str(source_codex_home))
     monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "1")
     env = codex_operator._codex_exec_env(task_dir)
 

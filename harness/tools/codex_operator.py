@@ -116,6 +116,10 @@ def _codex_exec_env(task_dir: Path) -> dict[str, str]:
         or harness_dir / "run" / "codex-state"
     ).expanduser()
     state_home.mkdir(parents=True, exist_ok=True)
+    configured_codex_home = env.get("SOLAR_CODEX_SOURCE_HOME") or env.get("CODEX_HOME")
+    source_codex_home = Path(configured_codex_home).expanduser() if configured_codex_home else Path.home() / ".codex"
+    if not (source_codex_home / "auth.json").is_file() and not env.get("SOLAR_CODEX_SOURCE_HOME"):
+        source_codex_home = Path.home() / ".codex"
     sprints_dir = Path(
         env.get("SPRINTS_DIR")
         or env.get("HARNESS_SPRINTS_DIR")
@@ -127,6 +131,7 @@ def _codex_exec_env(task_dir: Path) -> dict[str, str]:
     env["HARNESS_SPRINTS_DIR"] = str(sprints_dir)
     env["SOLAR_HARNESS_SPRINTS_DIR"] = str(sprints_dir)
     env["SOLAR_HARNESS_CMD"] = str(shim_dir / "solar-harness")
+    env["SOLAR_CODEX_SOURCE_HOME"] = str(source_codex_home)
     env["CODEX_SQLITE_HOME"] = str(state_home)
     _prepend_env_path(env, "PATH", [shim_dir, harness_dir / "bin", harness_dir])
     _prepend_env_path(env, "PYTHONPATH", [harness_dir / "lib", harness_dir / "tools"])
@@ -213,7 +218,7 @@ def _filesystem_isolated_command(
     env["TMP"] = str(tmp_dir)
     env["TEMP"] = str(tmp_dir)
 
-    source_codex_home = Path(env.get("CODEX_HOME") or Path.home() / ".codex").expanduser()
+    source_codex_home = Path(env["SOLAR_CODEX_SOURCE_HOME"]).expanduser()
     codex_home = state_home / "home"
     codex_home.mkdir(parents=True, exist_ok=True)
     for name in ("auth.json", "config.toml"):

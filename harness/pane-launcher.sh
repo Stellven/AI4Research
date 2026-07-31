@@ -358,9 +358,22 @@ prepare_codex_role_file() {
   printf '%s\n' "$role_dir/${persona}.md"
 }
 
+resolve_codex_source_home() {
+  if [[ -n "${SOLAR_CODEX_SOURCE_HOME:-}" ]]; then
+    printf '%s\n' "$SOLAR_CODEX_SOURCE_HOME"
+    return 0
+  fi
+  if [[ -n "${CODEX_HOME:-}" && -s "$CODEX_HOME/auth.json" ]]; then
+    printf '%s\n' "$CODEX_HOME"
+    return 0
+  fi
+  printf '%s\n' "$HOME/.codex"
+}
+
 prepare_codex_trust_profile() {
   local work_dir="$1" session="$2" owner_id="$3"
-  local codex_home="${CODEX_HOME:-$HOME/.codex}"
+  local codex_home
+  codex_home="$(resolve_codex_source_home)"
   local helper="$HARNESS_DIR/lib/codex_trust_profiles.py"
   [[ -f "$helper" ]] || {
     echo "FATAL: managed Codex trust profile helper missing: $helper" >&2
@@ -456,9 +469,12 @@ run_codex_with_filesystem_scope() {
   }
   local pane_safe="${TMUX_PANE:-standalone}"
   pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
-  local state_home="$HARNESS_DIR/run/codex-state/panes/${pane_safe}-${PERSONA}"
-  local tmp_dir="$HARNESS_DIR/run/pane-tmp/${pane_safe}-${PERSONA}"
-  local source_codex_home="${CODEX_HOME:-$HOME/.codex}"
+  local pane_state_root="${SOLAR_CODEX_PANE_STATE_ROOT:-$HARNESS_DIR/run/codex-state/panes}"
+  local pane_tmp_root="${SOLAR_CODEX_PANE_TMP_ROOT:-$HARNESS_DIR/run/pane-tmp}"
+  local state_home="$pane_state_root/${pane_safe}-${PERSONA}"
+  local tmp_dir="$pane_tmp_root/${pane_safe}-${PERSONA}"
+  local source_codex_home
+  source_codex_home="$(resolve_codex_source_home)"
   local sandbox_codex_home="$state_home/home"
   mkdir -p "$sandbox_codex_home" "$tmp_dir" || return 78
   local source_file destination_file
