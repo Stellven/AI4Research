@@ -2,12 +2,14 @@
 """Run a Solar PM dispatch through Codex CLI non-interactively."""
 from __future__ import annotations
 
+import atexit
 import os
 import shutil
 import shlex
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -209,7 +211,15 @@ def _filesystem_isolated_command(
         return command, {"mode": "unsupported", "strict": False}
 
     harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
-    state_home = Path(env["CODEX_SQLITE_HOME"]).expanduser().resolve(strict=False)
+    state_root = Path(
+        env.get("SOLAR_CODEX_OPERATOR_STATE_ROOT")
+        or f"/tmp/solar-codex-operator-state-{os.getuid()}"
+    ).expanduser()
+    state_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    state_root.chmod(0o700)
+    state_home = Path(tempfile.mkdtemp(prefix=f"{os.getpid()}-", dir=state_root))
+    atexit.register(shutil.rmtree, state_home, ignore_errors=True)
+    env["CODEX_SQLITE_HOME"] = str(state_home)
     tmp_dir = task_dir / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
     env["TMPDIR"] = str(tmp_dir)
@@ -219,18 +229,11 @@ def _filesystem_isolated_command(
     source_codex_home = Path(env["SOLAR_CODEX_SOURCE_HOME"]).expanduser()
     codex_home = state_home / "home"
     codex_home.mkdir(parents=True, exist_ok=True)
-    for name in ("auth.json",):
-        source = source_codex_home / name
-        destination = codex_home / name
-        if not source.is_file():
-            continue
-        if destination.is_symlink():
-            if destination.resolve(strict=False) != source.resolve(strict=False):
-                raise RuntimeError(f"unexpected symlink in sandboxed CODEX_HOME: {destination}")
-        elif destination.exists():
-            raise RuntimeError(f"unexpected file in sandboxed CODEX_HOME: {destination}")
-        else:
-            destination.symlink_to(source)
+    source = source_codex_home / "auth.json"
+    destination = codex_home / "auth.json"
+    if source.is_file():
+        shutil.copyfile(source, destination)
+        destination.chmod(0o600)
     env["CODEX_HOME"] = str(codex_home)
     codex_arg0_dir = codex_home / "tmp" / "arg0"
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
@@ -246,7 +249,6 @@ def _filesystem_isolated_command(
             Path("/etc"),
             codex_binary,
             resolved_binary.parent,
-            source_codex_home / "auth.json",
         ]
     )
     read_write = _existing_paths(

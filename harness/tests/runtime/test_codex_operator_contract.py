@@ -222,6 +222,7 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     (source_codex_home / "config.toml").write_text("must_not_be_projected = true\n", encoding="utf-8")
     monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
     monkeypatch.setenv("SOLAR_CODEX_SOURCE_HOME", str(source_codex_home))
+    monkeypatch.setenv("SOLAR_CODEX_OPERATOR_STATE_ROOT", str(tmp_path / "operator-state"))
     monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "1")
     env = codex_operator._codex_exec_env(task_dir)
 
@@ -238,8 +239,10 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert str(tmp_path.resolve()) not in proof["read_write"]
     sandbox_codex_home = Path(env["CODEX_HOME"])
     assert sandbox_codex_home == Path(env["CODEX_SQLITE_HOME"]) / "home"
-    assert (sandbox_codex_home / "auth.json").is_symlink()
-    assert (sandbox_codex_home / "auth.json").resolve() == (source_codex_home / "auth.json").resolve()
+    assert (sandbox_codex_home / "auth.json").is_file()
+    assert not (sandbox_codex_home / "auth.json").is_symlink()
+    assert (sandbox_codex_home / "auth.json").stat().st_mode & 0o777 == 0o600
+    assert (sandbox_codex_home / "auth.json").read_text(encoding="utf-8") == '{"fixture": true}\n'
     assert not (sandbox_codex_home / "config.toml").exists()
 
 

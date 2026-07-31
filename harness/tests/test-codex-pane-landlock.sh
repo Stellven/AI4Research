@@ -29,7 +29,10 @@ cat >"$FAKE_CODEX" <<'SH'
 set -euo pipefail
 echo "FAKE_CODEX_STARTED"
 test "$CODEX_HOME" != "$SOURCE_CODEX_HOME"
-test "$(readlink -f "$CODEX_HOME/auth.json")" = "$(readlink -f "$SOURCE_CODEX_HOME/auth.json")"
+test -f "$CODEX_HOME/auth.json"
+test ! -L "$CODEX_HOME/auth.json"
+test "$(stat -c %a "$CODEX_HOME/auth.json")" = "600"
+grep -Fq '"fixture":true' "$CODEX_HOME/auth.json"
 test ! -e "$CODEX_HOME/config.toml"
 profiles=("$CODEX_HOME"/solar-managed-*.config.toml)
 test -f "${profiles[0]}"

@@ -369,8 +369,20 @@ resolve_codex_source_home() {
 codex_pane_state_home() {
   local pane_safe="${TMUX_PANE:-standalone}"
   pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
-  local pane_state_root="${SOLAR_CODEX_PANE_STATE_ROOT:-$HARNESS_DIR/run/codex-state/panes}"
+  local session_safe="${SOLAR_HARNESS_SESSION:-solar-harness}"
+  session_safe="${session_safe//[^A-Za-z0-9_.-]/_}"
+  local pane_state_root="${SOLAR_CODEX_PANE_STATE_ROOT:-/tmp/solar-codex-pane-state-${UID}/${session_safe}}"
   printf '%s\n' "$pane_state_root/${pane_safe}-${PERSONA}"
+}
+
+cleanup_codex_pane_state() {
+  local state_home root
+  state_home="$(readlink -m "$(codex_pane_state_home)")"
+  root="$(readlink -m "${state_home%/*}")"
+  case "$state_home" in
+    "$root"/*) rm -rf -- "$state_home" ;;
+    *) echo "FATAL: refusing unsafe Codex pane state cleanup: $state_home" >&2; return 78 ;;
+  esac
 }
 
 prepare_codex_trust_profile() {
@@ -485,12 +497,10 @@ run_codex_with_filesystem_scope() {
     [[ -n "$source_file" && -f "$source_file" ]] || continue
     destination_file="$sandbox_codex_home/${source_file##*/}"
     if [[ -e "$destination_file" || -L "$destination_file" ]]; then
-      if [[ ! -L "$destination_file" || "$(readlink -f "$destination_file" 2>/dev/null || true)" != "$(readlink -f "$source_file" 2>/dev/null || true)" ]]; then
-        echo "FATAL: refusing unexpected file in sandboxed CODEX_HOME: $destination_file" >&2
-        return 78
-      fi
+      echo "FATAL: refusing unexpected file in sandboxed CODEX_HOME: $destination_file" >&2
+      return 78
     else
-      ln -s "$source_file" "$destination_file" || return 78
+      install -m 600 "$source_file" "$destination_file" || return 78
     fi
   done
   export CODEX_HOME="$sandbox_codex_home"
@@ -508,8 +518,7 @@ run_codex_with_filesystem_scope() {
   local path
   for path in \
     /usr /bin /sbin /lib /lib64 /etc \
-    "$CODEX_BIN" "${codex_real%/*}" \
-    "$source_codex_home/auth.json"; do
+    "$CODEX_BIN" "${codex_real%/*}"; do
     [[ -n "$path" && -e "$path" ]] || continue
     scoped+=(--read-only "$path")
   done
@@ -539,6 +548,7 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
   if [[ "$SOLAR_CODEX_BYPASS" == "1" ]]; then
     CODEX_ARGS+=("--dangerously-bypass-approvals-and-sandbox")
   fi
+  trap 'cleanup_codex_trust_profile || true; cleanup_codex_pane_state || true' EXIT
   SOLAR_CODEX_TRUST_WORKSPACE="${SOLAR_CODEX_TRUST_WORKSPACE:-$SOLAR_CODEX_BYPASS}"
   case "$SOLAR_CODEX_TRUST_WORKSPACE" in
     0) ;;
@@ -554,7 +564,6 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
       CODEX_TRUST_PROFILE_NAME="${CODEX_TRUST_PROFILE_RECORD[0]}"
       CODEX_TRUST_PROFILE_PATH="${CODEX_TRUST_PROFILE_RECORD[1]}"
       CODEX_ARGS+=("--profile" "$CODEX_TRUST_PROFILE_NAME")
-      trap 'cleanup_codex_trust_profile || true' EXIT
       ;;
     *)
       echo "FATAL: invalid SOLAR_CODEX_TRUST_WORKSPACE='$SOLAR_CODEX_TRUST_WORKSPACE' (expected 0|1)" >&2
@@ -577,6 +586,7 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
   run_codex_with_filesystem_scope
   RUNTIME_EXIT=$?
   cleanup_codex_trust_profile || true
+  cleanup_codex_pane_state || true
   trap - EXIT
 else
   CLAUDE_CMD=("$CLAUDE_BIN")
