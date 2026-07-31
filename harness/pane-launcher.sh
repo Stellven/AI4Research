@@ -503,6 +503,8 @@ run_codex_with_filesystem_scope() {
       install -m 600 "$source_file" "$destination_file" || return 78
     fi
   done
+  printf '%s\n' 'cli_auth_credentials_store = "file"' > "$sandbox_codex_home/config.toml" || return 78
+  chmod 600 "$sandbox_codex_home/config.toml" || return 78
   export CODEX_HOME="$sandbox_codex_home"
   export CODEX_SQLITE_HOME="$state_home"
   export TMPDIR="$tmp_dir"

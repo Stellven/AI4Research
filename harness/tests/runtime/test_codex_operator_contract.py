@@ -243,7 +243,9 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert not (sandbox_codex_home / "auth.json").is_symlink()
     assert (sandbox_codex_home / "auth.json").stat().st_mode & 0o777 == 0o600
     assert (sandbox_codex_home / "auth.json").read_text(encoding="utf-8") == '{"fixture": true}\n'
-    assert not (sandbox_codex_home / "config.toml").exists()
+    assert (sandbox_codex_home / "config.toml").read_text(encoding="utf-8") == (
+        'cli_auth_credentials_store = "file"\n'
+    )
 
 
 def test_codex_operator_refuses_disabled_isolation_for_strict_run(tmp_path, monkeypatch):

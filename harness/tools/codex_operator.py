@@ -234,6 +234,9 @@ def _filesystem_isolated_command(
     if source.is_file():
         shutil.copyfile(source, destination)
         destination.chmod(0o600)
+    config = codex_home / "config.toml"
+    config.write_text('cli_auth_credentials_store = "file"\n', encoding="utf-8")
+    config.chmod(0o600)
     env["CODEX_HOME"] = str(codex_home)
     codex_arg0_dir = codex_home / "tmp" / "arg0"
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
