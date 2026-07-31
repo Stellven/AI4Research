@@ -458,13 +458,31 @@ run_codex_with_filesystem_scope() {
   pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
   local state_home="$HARNESS_DIR/run/codex-state/panes/${pane_safe}-${PERSONA}"
   local tmp_dir="$HARNESS_DIR/run/pane-tmp/${pane_safe}-${PERSONA}"
-  mkdir -p "$state_home" "$tmp_dir" || return 78
+  local source_codex_home="${CODEX_HOME:-$HOME/.codex}"
+  local sandbox_codex_home="$state_home/home"
+  mkdir -p "$sandbox_codex_home" "$tmp_dir" || return 78
+  local source_file destination_file
+  for source_file in \
+    "$source_codex_home/auth.json" "$source_codex_home/config.toml" \
+    "${CODEX_TRUST_PROFILE_PATH:-}"; do
+    [[ -n "$source_file" && -f "$source_file" ]] || continue
+    destination_file="$sandbox_codex_home/${source_file##*/}"
+    if [[ -e "$destination_file" || -L "$destination_file" ]]; then
+      if [[ ! -L "$destination_file" || "$(readlink -f "$destination_file" 2>/dev/null || true)" != "$(readlink -f "$source_file" 2>/dev/null || true)" ]]; then
+        echo "FATAL: refusing unexpected file in sandboxed CODEX_HOME: $destination_file" >&2
+        return 78
+      fi
+    else
+      ln -s "$source_file" "$destination_file" || return 78
+    fi
+  done
+  export CODEX_HOME="$sandbox_codex_home"
   export CODEX_SQLITE_HOME="$state_home"
   export TMPDIR="$tmp_dir"
   export TMP="$tmp_dir"
   export TEMP="$tmp_dir"
 
-  local codex_home="${CODEX_HOME:-$HOME/.codex}"
+  local codex_home="$CODEX_HOME"
   local codex_arg0_dir="$codex_home/tmp/arg0"
   mkdir -p "$codex_arg0_dir" || return 78
   local codex_real=""
@@ -474,7 +492,7 @@ run_codex_with_filesystem_scope() {
   for path in \
     /usr /bin /sbin /lib /lib64 /etc \
     "$CODEX_BIN" "${codex_real%/*}" \
-    "$codex_home/auth.json" "$codex_home/config.toml" \
+    "$source_codex_home/auth.json" "$source_codex_home/config.toml" \
     "${CODEX_TRUST_PROFILE_PATH:-}"; do
     [[ -n "$path" && -e "$path" ]] || continue
     scoped+=(--read-only "$path")

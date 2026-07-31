@@ -101,10 +101,9 @@ def _install_harness_command_shims(task_dir: Path, harness_dir: Path) -> Path:
 def _codex_exec_env(task_dir: Path) -> dict[str, str]:
     """Build a deterministic environment for non-interactive Codex operator runs.
 
-    Keep the user's CODEX_HOME/Auth as-is, but give Codex's SQLite/app-server
-    state a harness-owned writable home by default. Without this, daemonized
-    runs can inherit a cwd/sandbox context where Codex fails before the model
-    starts with read-only filesystem errors. The model shell must also resolve
+    The strict wrapper later gives each run a harness-owned CODEX_HOME and
+    exposes the user's auth/config through read-only symlinks. SQLite/app-server
+    state therefore stays inside the harness. The model shell must also resolve
     Solar helper commands from this active harness, not from any installed
     ~/.solar runtime left on the developer machine.
     """
@@ -214,7 +213,22 @@ def _filesystem_isolated_command(
     env["TMP"] = str(tmp_dir)
     env["TEMP"] = str(tmp_dir)
 
-    codex_home = Path(env.get("CODEX_HOME") or Path.home() / ".codex").expanduser()
+    source_codex_home = Path(env.get("CODEX_HOME") or Path.home() / ".codex").expanduser()
+    codex_home = state_home / "home"
+    codex_home.mkdir(parents=True, exist_ok=True)
+    for name in ("auth.json", "config.toml"):
+        source = source_codex_home / name
+        destination = codex_home / name
+        if not source.is_file():
+            continue
+        if destination.is_symlink():
+            if destination.resolve(strict=False) != source.resolve(strict=False):
+                raise RuntimeError(f"unexpected symlink in sandboxed CODEX_HOME: {destination}")
+        elif destination.exists():
+            raise RuntimeError(f"unexpected file in sandboxed CODEX_HOME: {destination}")
+        else:
+            destination.symlink_to(source)
+    env["CODEX_HOME"] = str(codex_home)
     codex_arg0_dir = codex_home / "tmp" / "arg0"
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
     codex_binary = Path(shutil.which("codex", path=env.get("PATH")) or "codex")
@@ -229,8 +243,8 @@ def _filesystem_isolated_command(
             Path("/etc"),
             codex_binary,
             resolved_binary.parent,
-            codex_home / "auth.json",
-            codex_home / "config.toml",
+            source_codex_home / "auth.json",
+            source_codex_home / "config.toml",
         ]
     )
     read_write = _existing_paths(

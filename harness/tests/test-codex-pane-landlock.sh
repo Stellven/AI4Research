@@ -11,16 +11,21 @@ grep -Fq 'SOLAR_CODEX_PANE_FS_ISOLATION' "$LAUNCHER"
 grep -Fq 'SOLAR_CODEX_PANE_STRICT_FS_SCOPE' "$LAUNCHER"
 grep -Fq 'landlock_exec.py' "$LAUNCHER"
 grep -Fq '"$ORIGINAL_WORK_DIR" "$WORK_DIR"' "$LAUNCHER"
-grep -Fq '"$codex_home/auth.json"' "$LAUNCHER"
+grep -Fq 'export CODEX_HOME="$sandbox_codex_home"' "$LAUNCHER"
+grep -Fq '"$source_codex_home/auth.json"' "$LAUNCHER"
 grep -Fq '"$codex_arg0_dir"' "$LAUNCHER"
 
-mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied"
+mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied" "$TMP_ROOT/source-codex-home"
 printf 'must-not-cross-scope\n' >"$TMP_ROOT/denied/secret.txt"
+printf '{"fixture":true}\n' >"$TMP_ROOT/source-codex-home/auth.json"
 FAKE_CODEX="$TMP_ROOT/project/codex"
 cat >"$FAKE_CODEX" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 echo "FAKE_CODEX_STARTED"
+test "$CODEX_HOME" != "$SOURCE_CODEX_HOME"
+test "$(readlink -f "$CODEX_HOME/auth.json")" = "$(readlink -f "$SOURCE_CODEX_HOME/auth.json")"
+echo "FAKE_CODEX_SANDBOX_HOME_READY"
 if cat "$DENIED_FILE" >/dev/null 2>&1; then
   echo "FAIL: fake Codex read the sibling directory" >&2
   exit 91
@@ -31,6 +36,8 @@ chmod +x "$FAKE_CODEX"
 
 output="$({
   DENIED_FILE="$TMP_ROOT/denied/secret.txt" \
+  SOURCE_CODEX_HOME="$TMP_ROOT/source-codex-home" \
+  CODEX_HOME="$TMP_ROOT/source-codex-home" \
   HARNESS_DIR="$HARNESS_DIR" \
   SOLAR_PANE_RUNTIME=codex \
   SOLAR_CODEX_BIN="$FAKE_CODEX" \
@@ -44,6 +51,7 @@ output="$({
 grep -Fq 'Filesystem boundary:' <<<"$output"
 grep -Fq 'landlock_exec: active' <<<"$output"
 grep -Fq 'FAKE_CODEX_STARTED' <<<"$output"
+grep -Fq 'FAKE_CODEX_SANDBOX_HOME_READY' <<<"$output"
 grep -Fq 'FAKE_CODEX_SIBLING_READ_DENIED' <<<"$output"
 
 echo "PASS: Codex panes route through the strict Landlock launcher"
