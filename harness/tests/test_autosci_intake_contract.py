@@ -197,6 +197,18 @@ def test_real_data_request_is_compiled_into_governed_live_source_acceptance() ->
     assert compact_chinese_graph["research_deliverable_contract"]["minimum_trends"] == 4
     assert chinese_graph["research_deliverable_contract"]["language"] == "zh-CN"
 
+    current_internet_graph = build_autosci_task_graph(
+        sprint_id="sprint-test-autosci-current-internet-zh",
+        title="Current Chinese public research",
+        request_text=(
+            "AutoSci \u771f\u5b9e\u6570\u636e\u7814\u7a76\uff0c\u641c\u7d22\u5f53\u524d\u4e92\u8054\u7f51\u4e0a\u7684\u516c\u5f00\u8d44\u6599\uff0c"
+            "\u751f\u6210\u4e2d\u6587 Markdown \u62a5\u544a\u3002"
+        ),
+        harness_dir=ROOT,
+    )
+    assert current_internet_graph["source_policy"]["online_retrieval_required"] is True
+    assert current_internet_graph["source_policy"]["freshness_required"] is True
+
 
 def test_autosci_builder_dispatch_requires_planner_artifacts_and_certificate(tmp_path: Path) -> None:
     sid = "sprint-test-autosci-governance"

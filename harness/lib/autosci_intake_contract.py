@@ -69,6 +69,13 @@ LIVE_PUBLIC_SOURCE_RE = re.compile(
     r"\u516c\u5f00\u7f51\u9875|\u4e92\u8054\u7f51\u516c\u5f00\u8d44\u6599|"
     r"\u516c\u5f00\u8d44\u6599|\u5b9e\u9645\u8bfb\u53d6|\u622a\u81f3\u5f53\u524d)"
 )
+FRESHNESS_REQUIRED_RE = re.compile(
+    r"(?i)(\bcurrent\b|\bup[- ]to[- ]date\b|"
+    r"\u622a\u81f3\u5f53\u524d|"
+    r"\u5f53\u524d(?:\u4e92\u8054\u7f51\u4e0a?|\u7f51\u7edc\u4e0a?)?"
+    r"(?:\u7684)?(?:\u516c\u5f00)?"
+    r"(?:\u8d44\u6599|\u4fe1\u606f|\u6765\u6e90|\u8bc1\u636e|\u7f51\u9875))"
+)
 
 
 def _requested_minimum(text: str, patterns: tuple[str, ...], default: int) -> int:
@@ -109,9 +116,7 @@ def _research_request_contract(request_text: str) -> tuple[dict[str, Any], dict[
         "fixture_only_sufficient": not live_public_required,
         "anchor_urls": anchor_urls,
         "minimum_traceable_sources": minimum_sources,
-        "freshness_required": bool(
-            re.search(r"(?i)\bcurrent\b|\bup[- ]to[- ]date\b|\u622a\u81f3\u5f53\u524d", text)
-        ),
+        "freshness_required": bool(FRESHNESS_REQUIRED_RE.search(text)),
         "preferred_source_kinds": [
             "research_paper",
             "standard",
