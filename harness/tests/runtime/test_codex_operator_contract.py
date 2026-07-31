@@ -204,6 +204,7 @@ def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, m
 
     cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), task_dir / "last.md")
     assert "--ephemeral" in cmd
+    assert 'cli_auth_credentials_store="file"' in cmd
     assert "--cd" in cmd
     assert str(tmp_path) in cmd
 

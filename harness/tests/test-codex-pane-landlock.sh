@@ -28,6 +28,7 @@ cat >"$FAKE_CODEX" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 echo "FAKE_CODEX_STARTED"
+printf '%s\n' "$@" | grep -Fxq 'cli_auth_credentials_store="file"'
 test "$CODEX_HOME" != "$SOURCE_CODEX_HOME"
 test -f "$CODEX_HOME/auth.json"
 test ! -L "$CODEX_HOME/auth.json"

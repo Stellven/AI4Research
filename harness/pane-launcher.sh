@@ -579,6 +579,7 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
   if [[ "${SOLAR_CODEX_CHECK_FOR_UPDATE_ON_STARTUP:-0}" != "1" ]]; then
     CODEX_ARGS+=("-c" "check_for_update_on_startup=false")
   fi
+  CODEX_ARGS+=("-c" 'cli_auth_credentials_store="file"')
   [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && CODEX_ARGS+=("--model" "$SOLAR_CODEX_MODEL")
   append_codex_extra_args "${SOLAR_CODEX_EXTRA_FLAGS:-}" || exit $?
   CODEX_ROLE_FILE="$(prepare_codex_role_file "$PERSONA")"

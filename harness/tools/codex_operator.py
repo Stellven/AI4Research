@@ -169,6 +169,8 @@ def _codex_exec_command(model: str, effort: str, cwd: str, output_file: Path) ->
         model,
         "--config",
         f"model_reasoning_effort={effort}",
+        "--config",
+        'cli_auth_credentials_store="file"',
         "--dangerously-bypass-approvals-and-sandbox",
         "--cd",
         cwd,
