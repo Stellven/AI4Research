@@ -363,10 +363,6 @@ resolve_codex_source_home() {
     printf '%s\n' "$SOLAR_CODEX_SOURCE_HOME"
     return 0
   fi
-  if [[ -n "${CODEX_HOME:-}" && -s "$CODEX_HOME/auth.json" ]]; then
-    printf '%s\n' "$CODEX_HOME"
-    return 0
-  fi
   printf '%s\n' "$HOME/.codex"
 }
 

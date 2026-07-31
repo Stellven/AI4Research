@@ -116,10 +116,8 @@ def _codex_exec_env(task_dir: Path) -> dict[str, str]:
         or harness_dir / "run" / "codex-state"
     ).expanduser()
     state_home.mkdir(parents=True, exist_ok=True)
-    configured_codex_home = env.get("SOLAR_CODEX_SOURCE_HOME") or env.get("CODEX_HOME")
+    configured_codex_home = env.get("SOLAR_CODEX_SOURCE_HOME")
     source_codex_home = Path(configured_codex_home).expanduser() if configured_codex_home else Path.home() / ".codex"
-    if not (source_codex_home / "auth.json").is_file() and not env.get("SOLAR_CODEX_SOURCE_HOME"):
-        source_codex_home = Path.home() / ".codex"
     sprints_dir = Path(
         env.get("SPRINTS_DIR")
         or env.get("HARNESS_SPRINTS_DIR")

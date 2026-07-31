@@ -20,6 +20,7 @@ mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied" "$TMP_ROOT/home/.codex" "$TMP_RO
 printf 'must-not-cross-scope\n' >"$TMP_ROOT/denied/secret.txt"
 printf '{"fixture":true}\n' >"$TMP_ROOT/home/.codex/auth.json"
 printf 'stale = true\n' >"$TMP_ROOT/stale-codex-home/config.toml"
+ln -s "$TMP_ROOT/home/.codex/auth.json" "$TMP_ROOT/stale-codex-home/auth.json"
 FAKE_CODEX="$TMP_ROOT/project/codex"
 cat >"$FAKE_CODEX" <<'SH'
 #!/usr/bin/env bash
