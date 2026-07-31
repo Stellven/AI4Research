@@ -21,8 +21,6 @@ _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 from prerequisite_resolver import iter_blocked
 from autosci_intake_contract import (
     WORKFLOW_CONTRACT_ID as AUTOSCI_WORKFLOW_CONTRACT_ID,
-    build_autosci_design_markdown,
-    build_autosci_plan_markdown,
     build_autosci_task_graph,
     is_autosci_research_intake_text,
 )
@@ -114,7 +112,7 @@ AUTOSCI_WORKFLOW_SLICE: dict[str, Any] = {
     "acceptance": [
         "child sprint 的 task_graph 声明 workflow_contract=research.autosci.v1",
         "所有 Scientific* 节点绑定 research capability capsule",
-        "status 进入 planning_complete/builder_main，autopilot 可直接派发 ready graph nodes",
+        "status 先进入 prd_ready/planner，plan certificate 通过后才能派发 Builder nodes",
     ],
     "required_capabilities": ["research.autosci.v1", "scientific-research", "graph-dispatch"],
 }
@@ -184,7 +182,7 @@ def autosci_product_brief_markdown(title: str, request: str) -> str:
 **Source**: autosci-intake-contract
 **Priority**: P1
 **Lane**: research
-**Handoff To**: builder_main
+**Handoff To**: planner
 
 ## Intent
 
@@ -192,7 +190,8 @@ def autosci_product_brief_markdown(title: str, request: str) -> str:
 
 ## Acceptance Criteria
 
-- Normal intake emits a `research.autosci.v1` task graph.
+- Normal intake emits a `research.autosci.v1` proposed task graph.
+- A distinct Planner must produce design/plan evidence and a valid certificate before Builder dispatch.
 - Scientific* nodes resolve to AutoSci research capsules and autosci-* physical operators.
 - Autopilot can dispatch ready graph nodes without a manual AutoSci shim call.
 
@@ -223,7 +222,7 @@ def autosci_requirement_ir(epic_id: str, sid: str, title: str, request: str, gra
             {
                 "id": "REQ-000",
                 "source_text": "Normal intake must route this request into AutoSci by contract.",
-                "success_criteria": ["research.autosci.v1 task graph is graph-ready"],
+                "success_criteria": ["research.autosci.v1 task graph is Planner-certified before Builder dispatch"],
                 "verification_method": "task_graph_closeout",
                 "priority": "P1",
             }
@@ -239,10 +238,11 @@ def autosci_status_payload(epic_id: str, sid: str, title: str, priority: str, ac
         "sprint_id": sid,
         "epic_id": epic_id,
         "title": title,
-        "status": "active" if active else "queued",
-        "phase": "planning_complete" if active else "epic_waiting_dependency",
-        "handoff_to": "builder_main" if active else "",
-        "target_role": "builder_main" if active else "",
+        "status": "drafting" if active else "queued",
+        "phase": "prd_ready" if active else "epic_waiting_dependency",
+        "handoff_to": "planner" if active else "",
+        "target_role": "planner" if active else "",
+        "plan_compile_required": True,
         "priority": priority,
         "created_at": utc_now(),
         "updated_at": utc_now(),
@@ -563,8 +563,6 @@ def create_autosci_epic(args: argparse.Namespace, *, title: str, request: str) -
         request_text=request,
         harness_dir=HARNESS_DIR,
     )
-    plan_md = build_autosci_plan_markdown(sid, title, graph)
-    design_md = build_autosci_design_markdown(sid, title, graph)
     handoff_md = f"""# AutoSci Graph Dispatch Handoff — {title}
 
 epic_id: `{epic_id}`
@@ -573,15 +571,14 @@ workflow_contract: `{AUTOSCI_WORKFLOW_CONTRACT_ID}`
 
 ## Dispatch
 
-This child sprint is already graph-ready. Autopilot should dispatch ready DAG
-nodes through graph_scheduler and the autosci-* physical operator pool.
+This child sprint contains a proposed AutoSci DAG. Route it to the distinct
+Planner stage first. Builder dispatch is forbidden until plan_validator stamps
+a PASS certificate and Solar records planning_complete.
 """
     if not args.dry_run:
         write_atomic(SPRINTS_DIR / f"{sid}.prd.md", prd_markdown(epic_id, sid, title, request, item))
         write_atomic(SPRINTS_DIR / f"{sid}.contract.md", contract_markdown(epic_id, sid, item, priority))
         write_atomic(SPRINTS_DIR / f"{sid}.product-brief.md", autosci_product_brief_markdown(title, request))
-        write_atomic(SPRINTS_DIR / f"{sid}.plan.md", plan_md)
-        write_atomic(SPRINTS_DIR / f"{sid}.design.md", design_md)
         write_atomic(SPRINTS_DIR / f"{sid}.handoff.md", handoff_md)
         write_json(SPRINTS_DIR / f"{sid}.task_graph.json", graph)
         write_json(SPRINTS_DIR / f"{sid}.requirement_ir.json", autosci_requirement_ir(epic_id, sid, title, request, graph))
@@ -637,8 +634,8 @@ workflow_contract: `{AUTOSCI_WORKFLOW_CONTRACT_ID}`
 
 ## 目标
 
-Normal intake 命中 AutoSci 研究工作流合同，生成 graph-ready child sprint，
-由 graph scheduler 派发 Scientific* DAG nodes。
+Normal intake 命中 AutoSci 研究工作流合同，先生成 proposed child sprint，
+由独立 Planner 审核并签发 plan certificate 后，graph scheduler 才能派发 Scientific* DAG nodes。
 
 ## 用户原始需求
 

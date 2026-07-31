@@ -245,6 +245,23 @@ def test_fixed_contract_graph_is_not_touched_when_env_on(tmp_path, monkeypatch):
     assert graph_path.read_bytes() == before
 
 
+def test_dispatch_guard_preserves_nameerror_detail(tmp_path, monkeypatch):
+    monkeypatch.setenv("SOLAR_PLAN_VALIDATOR", "1")
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path / "sprints")
+
+    def explode(*_args, **_kwargs):
+        raise NameError("name 'contract_id' is not defined")
+
+    monkeypatch.setattr(pv, "check_planner_graph_dispatchable", explode)
+    refusal = gnd._plan_validator_dispatch_guard({"sprint_id": "sprint-nameerror"})
+
+    assert refusal is not None
+    assert refusal["reason"] == "plan_validator_dispatch_refused"
+    assert refusal["errors"] == [
+        "PLAN_VALIDATOR_UNCHECKABLE:NameError:name 'contract_id' is not defined"
+    ]
+
+
 def test_missing_generic_contract_fails_closed_only_when_env_on(tmp_path, monkeypatch):
     sid = "sprint-g1b-missing-contract"
     sprints = tmp_path / "sprints"

@@ -145,7 +145,14 @@ def _capture_and_consume_autosci_intake(harness_dir: Path, sprints: Path, tmp_pa
     assert consume.returncode == 0, consume.stdout + consume.stderr
     result = json.loads(consume.stdout)["results"][0]
     assert result["status"] == "consumed"
-    return sprints / f"{result['sprint_id']}.task_graph.json"
+    from compiled_sprint_planner import generate_planner_artifacts
+
+    planning = generate_planner_artifacts(runtime_root=harness_dir, sprint_id=result["sprint_id"])
+    assert planning["ok"] is True, planning
+    graph_path = sprints / f"{result['sprint_id']}.task_graph.json"
+    certified = json.loads(graph_path.read_text(encoding="utf-8"))
+    assert certified["plan_certificate"]["verdict"] == "PASS"
+    return graph_path
 
 
 def test_autosci_eval_adapter_writes_gate_consumable_pass_and_fail(tmp_path: Path) -> None:
@@ -259,7 +266,7 @@ def test_dispatch_node_evals_routes_autosci_contract_to_autosci_evaluator_green(
     saved = gnd.load_graph(graph_path)
     node = saved["nodes"][0]
 
-    assert result["ok"] is True
+    assert result["ok"] is True, result
     assert result["dispatched"][0]["pane"] == "operator:autosci-evaluator-worker"
     assert result["dispatched"][0]["dispatch_mode"] == "autosci_eval_adapter"
     assert result["dispatched"][0]["node_verdict"]["status"] == "passed"
@@ -276,14 +283,15 @@ def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
 ) -> None:
     harness_dir, sprints = _prepare_isolated_harness(tmp_path, monkeypatch)
     graph_path = _capture_and_consume_autosci_intake(harness_dir, sprints, tmp_path)
-    evidence = harness_dir / "artifacts" / "intake-green" / "research_paper.v1.json"
-    evidence.parent.mkdir(parents=True)
-    evidence.write_text(PASS_EVIDENCE.read_text(encoding="utf-8"), encoding="utf-8")
-
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
     paper_node = next(node for node in graph["nodes"] if node["id"] == "paper_ingest")
+    upstream = harness_dir / str(paper_node["read_scope"][0])
+    upstream.parent.mkdir(parents=True, exist_ok=True)
+    upstream.write_text('{"schema_version":"literature_discovery.v1","status":"completed"}\n', encoding="utf-8")
+    evidence = harness_dir / str(paper_node["write_scope"][0])
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    evidence.write_text(PASS_EVIDENCE.read_text(encoding="utf-8"), encoding="utf-8")
     paper_node["status"] = "reviewing"
-    paper_node["write_scope"] = [str(evidence)]
     paper_node["artifacts"] = {"evidence_payload_path": str(evidence)}
     graph["node_results"] = {
         "paper_ingest": {
@@ -302,7 +310,7 @@ def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
     result = gnd.dispatch_node_evals(str(graph_path), ttl=30)
     saved = gnd.load_graph(graph_path)
 
-    assert result["ok"] is True
+    assert result["ok"] is True, result
     assert result["dispatched"][0]["pane"] == "operator:autosci-evaluator-worker"
     assert result["dispatched"][0]["node_verdict"]["status"] == "passed"
     assert saved["workflow_contract"] == "research.autosci.v1"

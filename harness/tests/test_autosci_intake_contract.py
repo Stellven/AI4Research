@@ -20,9 +20,11 @@ os.environ.setdefault("HARNESS_DIR", str(ROOT))
 from apo_plan_compiler import compile_execution_plan_for_node  # noqa: E402
 from autosci_intake_contract import (  # noqa: E402
     WORKFLOW_CONTRACT_ID,
+    WORKFLOW_CONTRACT_VERSION,
     build_autosci_task_graph,
     is_autosci_research_intake_text,
 )
+from plan_validator import check_planner_graph_dispatchable, compile_planner_graph  # noqa: E402
 
 
 AUTOSCI_REQUEST = (
@@ -40,6 +42,7 @@ def _env(tmp_path: Path) -> dict[str, str]:
     env["SOLAR_INTENT_GATEWAY_DIR"] = str(tmp_path / "intents")
     env["SOLAR_HARNESS_SPRINTS_DIR"] = str(tmp_path / "sprints")
     env["SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT"] = str(tmp_path / "workspace")
+    env["PYTHONIOENCODING"] = "utf-8"
     return env
 
 
@@ -58,6 +61,7 @@ def _capture(env: dict[str, str], text: str) -> str:
             "--json",
         ],
         text=True,
+        encoding="utf-8",
         capture_output=True,
         env=env,
         check=True,
@@ -79,6 +83,17 @@ def test_autosci_contract_task_graph_selects_autosci_physical_workers() -> None:
         harness_dir=ROOT,
     )
     assert graph["workflow_contract"] == WORKFLOW_CONTRACT_ID
+    assert graph["workflow_contract_id"] == WORKFLOW_CONTRACT_ID
+    assert graph["workflow_contract_version"] == WORKFLOW_CONTRACT_VERSION
+    assert graph["plan_compile_required"] is True
+    assert graph["planner_stage"] == {
+        "node_id": "N0",
+        "role": "planner",
+        "status": "required",
+        "next_role": "builder",
+    }
+    assert "planner_bypass_reason" not in graph["intake_contract"]
+    assert "plan_certificate" not in graph
     assert graph["research_mode"] is True
     assert len(graph["nodes"]) >= 19
 
@@ -103,6 +118,50 @@ def test_autosci_contract_task_graph_selects_autosci_physical_workers() -> None:
     assert selected["claim_verify"] == "autosci-claim-verify-worker"
 
 
+def test_autosci_builder_dispatch_requires_planner_artifacts_and_certificate(tmp_path: Path) -> None:
+    sid = "sprint-test-autosci-governance"
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph = build_autosci_task_graph(
+        sprint_id=sid,
+        title="AutoSci governance",
+        request_text=AUTOSCI_REQUEST,
+        harness_dir=ROOT,
+    )
+    (sprints / f"{sid}.task_graph.json").write_text(
+        json.dumps(graph, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (sprints / f"{sid}.status.json").write_text(
+        json.dumps({"id": sid, "sprint_id": sid, "plan_compile_required": True}),
+        encoding="utf-8",
+    )
+
+    missing_artifacts = compile_planner_graph(sprints, sid)
+    assert missing_artifacts["ok"] is False
+    assert {
+        error["code"] for error in missing_artifacts["errors"]
+    } == {"AUTOSCI_PLANNER_ARTIFACT_MISSING"}
+
+    design_path = sprints / f"{sid}.design.md"
+    plan_path = sprints / f"{sid}.plan.md"
+    design_path.write_text("# Planner Design\n\nReviewed AutoSci topology.\n", encoding="utf-8")
+    plan_path.write_text("# Planner Plan\n\nPreserve bounded Planner/Builder/Evaluator calls.\n", encoding="utf-8")
+
+    compiled = compile_planner_graph(sprints, sid)
+    assert compiled["ok"] is True
+    assert compiled["stamped"] is True
+    certified = json.loads((sprints / f"{sid}.task_graph.json").read_text(encoding="utf-8"))
+    assert certified["plan_certificate"]["verdict"] == "PASS"
+    assert certified["planner_stage"]["status"] == "reviewed"
+    assert check_planner_graph_dispatchable(certified, sprints_dir=sprints, sid=sid)["ok"] is True
+
+    plan_path.write_text("# Tampered after certification\n", encoding="utf-8")
+    tampered = check_planner_graph_dispatchable(certified, sprints_dir=sprints, sid=sid)
+    assert tampered["ok"] is False
+    assert tampered["errors"][0]["code"] == "AUTOSCI_PLANNER_ARTIFACT_HASH_MISMATCH"
+
+
 def test_rawintent_consumer_compiles_autosci_request_to_graph_ready_package(tmp_path: Path) -> None:
     env = _env(tmp_path)
     intent_id = _capture(env, AUTOSCI_REQUEST)
@@ -110,6 +169,7 @@ def test_rawintent_consumer_compiles_autosci_request_to_graph_ready_package(tmp_
     proc = subprocess.run(
         [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--json"],
         text=True,
+        encoding="utf-8",
         capture_output=True,
         env=env,
         check=True,
@@ -125,11 +185,19 @@ def test_rawintent_consumer_compiles_autosci_request_to_graph_ready_package(tmp_
     assert graph["workflow_contract"] == WORKFLOW_CONTRACT_ID
     assert graph["research_mode"] is True
     assert {node["logical_operator"] for node in graph["nodes"] if str(node["logical_operator"]).startswith("Scientific")}
-    assert status["status"] == "active"
-    assert status["phase"] == "planning_complete"
-    assert status["handoff_to"] == "builder_main"
-    assert (tmp_path / "sprints" / f"{sprint_id}.plan.md").exists()
-    assert (tmp_path / "sprints" / f"{sprint_id}.design.md").exists()
+    assert status["status"] == "drafting"
+    assert status["phase"] == "prd_ready"
+    assert status["handoff_to"] == "planner"
+    assert status["plan_compile_required"] is True
+    assert not (tmp_path / "sprints" / f"{sprint_id}.plan.md").exists()
+    assert not (tmp_path / "sprints" / f"{sprint_id}.design.md").exists()
+    refusal = check_planner_graph_dispatchable(
+        graph,
+        sprints_dir=tmp_path / "sprints",
+        sid=sprint_id,
+    )
+    assert refusal["ok"] is False
+    assert any(error["code"] == "PLAN_CERTIFICATE_MISSING" for error in refusal["errors"])
     assert all(str(node.get("capability_capsule_id", "")).startswith("cap.research-") for node in capsule_plan["nodes"])
 
 
@@ -154,6 +222,7 @@ def test_epic_decomposer_binds_long_autosci_intake_to_autosci_child_graph(tmp_pa
             "--json",
         ],
         text=True,
+        encoding="utf-8",
         capture_output=True,
         env=env,
         check=True,
@@ -169,7 +238,9 @@ def test_epic_decomposer_binds_long_autosci_intake_to_autosci_child_graph(tmp_pa
     assert payload["workflow_contract"] == WORKFLOW_CONTRACT_ID
     assert graph["workflow_contract"] == WORKFLOW_CONTRACT_ID
     assert parent["workflow_contract"] == WORKFLOW_CONTRACT_ID
-    assert status["phase"] == "planning_complete"
-    assert status["handoff_to"] == "builder_main"
-    assert (tmp_path / "sprints" / f"{sid}.plan.md").exists()
-    assert (tmp_path / "sprints" / f"{sid}.design.md").exists()
+    assert status["status"] == "drafting"
+    assert status["phase"] == "prd_ready"
+    assert status["handoff_to"] == "planner"
+    assert status["plan_compile_required"] is True
+    assert not (tmp_path / "sprints" / f"{sid}.plan.md").exists()
+    assert not (tmp_path / "sprints" / f"{sid}.design.md").exists()

@@ -1,0 +1,54 @@
+{
+  "schema_version": "solar.workflow_contract.v1",
+  "workflow_id": "research.autosci.v1",
+  "version": "1.0",
+  "title": "Planner-certified AutoSci scientific lifecycle",
+  "dag_variant": "research",
+  "stages_mode": "planner_generated",
+  "stages": [],
+  "trigger": {
+    "explicit_markers": [
+      "autosci",
+      "research.autosci.v1",
+      "scientific_research_lifecycle_full_v1"
+    ],
+    "selection": "explicit",
+    "on_match": "compile the canonical Scientific* graph proposal, route it to an independent Planner, and require a valid plan certificate before Builder dispatch"
+  },
+  "provider_policy": {
+    "runtime": "codex",
+    "allowed_providers": [
+      "openai"
+    ],
+    "route_proof_required": true,
+    "route_records": "per_stage_execution_append_only"
+  },
+  "artifact_roots": {
+    "canonical": "artifacts/scientific/<sid>/",
+    "aliases": [
+      "sprints/<sid>/workdir/",
+      "workdir/"
+    ],
+    "root_policy": "normalize_then_check"
+  },
+  "required_roles": [
+    "planner",
+    "builder",
+    "evaluator"
+  ],
+  "plan_compile": {
+    "env_gate": "SOLAR_PLAN_VALIDATOR",
+    "max_planner_bounces": 2,
+    "errors_artifact": "<sid>.plan-compile-errors.json",
+    "terminal_state": "PLAN_COMPILE_FAILED"
+  },
+  "plan_limits": {
+    "max_nodes": 24
+  },
+  "required_artifacts": [
+    "lifecycle_summary.json",
+    "evidence.jsonl"
+  ],
+  "release_proof_level": "P4",
+  "note": "The Requirement Compiler emits a locked AutoSci graph proposal. A distinct Planner reviews and certifies it; Solar remains the only authority for dispatch, evaluation, and completion."
+}

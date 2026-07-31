@@ -232,10 +232,14 @@ def _plan_validator_dispatch_guard(graph: dict[str, Any]) -> dict[str, Any] | No
             sid=str((graph or {}).get("sprint_id") or ""),
         )
     except Exception as exc:
+        detail = " ".join(str(exc).split())[:300]
         return {
             "ok": False,
             "reason": "plan_validator_dispatch_refused",
-            "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}"],
+            "errors": [
+                f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}"
+                + (f":{detail}" if detail else "")
+            ],
         }
     if verdict.get("ok"):
         return None
@@ -11176,6 +11180,28 @@ def _submit_eval_to_autosci_adapter(
     summary = ""
     eval_payload = _read_json_file_safe(eval_json_path)
     if isinstance(eval_payload, dict):
+        try:
+            persisted_graph = load_graph(graph_path)
+            persisted_node = next(
+                item
+                for item in persisted_graph.get("nodes", []) or []
+                if isinstance(item, dict) and str(item.get("id") or "") == node_id
+            )
+            snapshot = (
+                persisted_node.get("eval_artifact_snapshot")
+                if isinstance(persisted_node.get("eval_artifact_snapshot"), dict)
+                else {}
+            )
+        except Exception:
+            snapshot = {}
+        if snapshot:
+            eval_payload["artifact_snapshot_schema"] = str(snapshot.get("schema") or "")
+            eval_payload["artifact_snapshot_path"] = str(snapshot.get("path") or "")
+            eval_payload["artifact_snapshot_digest"] = str(snapshot.get("snapshot_digest") or "")
+            eval_json_path.write_text(
+                json.dumps(eval_payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
         summary = str(eval_payload.get("summary") or "")
     verdict_result = node_verdict(
         graph_path,
@@ -11367,6 +11393,26 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
             dispatch_id = f"{dispatch_group_id}-q1"
             eval_md_path = _eval_md_file(sid, node_id)
             eval_json_path = _eval_json_file(sid, node_id)
+            artifact_snapshot: dict[str, Any] = {}
+            if not dry_run and isinstance(graph.get("plan_certificate"), dict):
+                # Materialize every Solar-owned proof sidecar before freezing
+                # the evaluator's byte set. Creating them after the snapshot
+                # would make the snapshot self-invalidating on certified
+                # AutoSci graphs.
+                _emit_node_proof_sidecars(sid, node)
+                artifact_snapshot = _capture_eval_artifact_snapshot(sid, node, graph)
+                if not artifact_snapshot.get("ok"):
+                    skipped.append(
+                        {
+                            "node": node_id,
+                            "reason": str(
+                                artifact_snapshot.get("reason")
+                                or "eval_artifact_snapshot_invalid"
+                            ),
+                            "eval_artifact_snapshot": artifact_snapshot,
+                        }
+                    )
+                    continue
             instruction_file = _eval_dispatch_member_file(sid, node_id, 1)
             instruction_file.parent.mkdir(parents=True, exist_ok=True)
             instruction_file.write_text(
@@ -11395,6 +11441,9 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 "index": 1,
                 "eval_md_path": str(eval_md_path),
                 "eval_json_path": str(eval_json_path),
+                "artifact_snapshot_schema": str(artifact_snapshot.get("schema") or ""),
+                "artifact_snapshot_path": str(artifact_snapshot.get("path") or ""),
+                "artifact_snapshot_digest": str(artifact_snapshot.get("snapshot_digest") or ""),
             }
             if dry_run:
                 used_evaluator_panes.add(AUTOSCI_EVALUATOR_PANE)
@@ -11410,7 +11459,6 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 })
                 continue
 
-            _emit_node_proof_sidecars(sid, node)
             node["status"] = "reviewing"
             node["eval_dispatch_group_id"] = dispatch_group_id
             node.pop("eval_dispatch_failures", None)

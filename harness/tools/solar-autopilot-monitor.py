@@ -2563,10 +2563,14 @@ def dispatch_ready_graph_nodes(sid: str, lease: bool = True) -> dict:
         )
     except Exception as guard_exc:
         if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
+            detail = " ".join(str(guard_exc).split())[:300]
             return {
                 "ok": False,
                 "reason": "plan_validator_dispatch_refused",
-                "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"],
+                "errors": [
+                    f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"
+                    + (f":{detail}" if detail else "")
+                ],
                 "sprint_id": sid,
             }
         plan_guard = {"ok": True}
@@ -2723,9 +2727,13 @@ def normalize_status_to_workflow_route(sid: str, status: dict, route: dict) -> b
                     workflows_dir=HARNESS / "config" / "workflows",
                 )
             except Exception as exc:
+                detail = " ".join(str(exc).split())[:300]
                 compile_verdict = {
                     "ok": False,
-                    "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}"],
+                    "errors": [
+                        f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}"
+                        + (f":{detail}" if detail else "")
+                    ],
                 }
             if not compile_verdict.get("ok"):
                 append_event(

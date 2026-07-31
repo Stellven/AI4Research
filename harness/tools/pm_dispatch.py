@@ -1708,10 +1708,14 @@ def _builder_ready_nodes_for_sprint(sprint_id: str) -> tuple[list[dict[str, Any]
             )
         except Exception as guard_exc:
             if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
+                detail = " ".join(str(guard_exc).split())[:300]
                 return [], {
                     "ok": False,
                     "reason": "plan_validator_dispatch_refused",
-                    "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"],
+                    "errors": [
+                        f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"
+                        + (f":{detail}" if detail else "")
+                    ],
                     "graph": str(graph_path),
                 }
             plan_guard = {"ok": True}
@@ -2022,9 +2026,6 @@ def ensure_compiled_sprint_status(
         # but it cannot thereby turn a governed intake into legacy work.
         status["plan_compile_required"] = True
     else:
-        # Fixed workflow contracts (for example research.autosci.v1) already
-        # have their own structural guard and deliberately bypass the generic
-        # planner. Do not misclassify them as uncertified generic graphs.
         status.pop("plan_compile_required", None)
         status.pop("planner_dispatch_claim", None)
     if _pm_operator_pool_enabled() and target_role == "planner":
@@ -2146,16 +2147,14 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
         sprint_root=SPRINTS_DIR,
         sprint_id=sprint_id,
     )
-    task_graph_payload = payload.get("compiled_artifacts", {}).get("task_dag", {})
-    autosci_contract_bound = str(task_graph_payload.get("workflow_contract") or "") == "research.autosci.v1"
     status_path = ensure_compiled_sprint_status(
         sprint_id,
         title=payload["compiled_artifacts"]["product_brief"]["title"],
         summary=payload["compiled_artifacts"]["product_brief"]["problem"][:180],
-        status_value="active" if autosci_contract_bound else "drafting",
-        phase="planning_complete" if autosci_contract_bound else "prd_ready",
-        handoff_to="builder_main" if autosci_contract_bound else "planner",
-        target_role="builder_main" if autosci_contract_bound else "planner",
+        status_value="drafting",
+        phase="prd_ready",
+        handoff_to="planner",
+        target_role="planner",
     )
     emitted["status"] = str(status_path)
 
@@ -2174,7 +2173,7 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
         if rc != 0:
             return rc
 
-    print("✅ Requirement Compiler package ready")
+    print("OK: Requirement Compiler package ready")
     print(f"   sprint_id   = {sprint_id}")
     print(f"   workspace   = {workspace_root}")
     print(f"   pm_dir      = {emitted['pm_dir']}")
@@ -2488,7 +2487,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
     write_pm_task_record(task_id, record)
 
     # 7. 输出
-    print(f"✅ PM 任务已提交")
+    print("OK: PM task submitted")
     print(f"   task_id     = {task_id}")
     print(f"   operator    = {operator_id} ({operator.get('model', '?')})")
     if operator.get("borrowed_for_role"):
@@ -2500,8 +2499,8 @@ def cmd_submit(args: argparse.Namespace) -> int:
     print(f"   dispatch    = {dispatch_file}")
     print(f"   result      = {result_path}")
     print()
-    print(f"查看结果：solar-harness pm-fleet inbox")
-    print(f"等待完成：watch cat '{result_path}'")
+    print("Inspect: solar-harness pm-fleet inbox")
+    print(f"Wait for completion: watch cat '{result_path}'")
 
     return 0
 
