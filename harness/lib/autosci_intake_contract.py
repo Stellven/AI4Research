@@ -55,7 +55,13 @@ WORKFLOW_SIGNAL_RE = re.compile(
     r"论文|文献|研究|声明|想法|实验|报告|端到端|全流程|自主|自动)"
 )
 
-PUBLIC_URL_RE = re.compile(r"https?://[^\s<>()\[\]{}\"']+")
+# Raw Chinese intake commonly places full-width punctuation or prose directly
+# after a URL.  Those characters are delimiters, not part of the anchor.  CJK
+# ideographs are excluded as a conservative boundary; internationalized hosts
+# should arrive in their URL-safe/punycode form.
+PUBLIC_URL_RE = re.compile(
+    r"https?://[^\s<>()\[\]{}\"'，。；：！？、（）【】《》「」『』\u4e00-\u9fff]+"
+)
 LIVE_PUBLIC_SOURCE_RE = re.compile(
     r"(?i)(public\s+(?:internet|web|online)\s+(?:sources?|materials?|evidence)|"
     r"current\s+(?:public\s+)?(?:sources?|internet|web)|"
@@ -79,7 +85,7 @@ def _requested_minimum(text: str, patterns: tuple[str, ...], default: int) -> in
 def _research_request_contract(request_text: str) -> tuple[dict[str, Any], dict[str, Any]]:
     """Compile task-specific source and report acceptance from raw intake."""
     text = str(request_text or "")
-    anchor_urls = [url.rstrip(".,;:!?") for url in PUBLIC_URL_RE.findall(text)]
+    anchor_urls = [url.rstrip(".,;:!?，。；：！？、") for url in PUBLIC_URL_RE.findall(text)]
     live_public_required = bool(anchor_urls or LIVE_PUBLIC_SOURCE_RE.search(text))
     minimum_sources = _requested_minimum(
         text,
@@ -93,7 +99,7 @@ def _research_request_contract(request_text: str) -> tuple[dict[str, Any], dict[
         text,
         (
             r"at\s+least\s+(\d+)\s+(?:technical\s+)?trends?",
-            r"\u81f3\u5c11\s*(?:\u8986\u76d6\s*)?(\d+)\s*\u9879\s*\u8d8b\u52bf",
+            r"\u81f3\u5c11\s*(?:\u8986\u76d6\s*)?(\d+)\s*\u9879\s*(?:\u76f8\u5173\s*)?(?:\u6280\u672f\s*)?\u8d8b\u52bf",
         ),
         0,
     )

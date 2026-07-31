@@ -178,6 +178,23 @@ def test_real_data_request_is_compiled_into_governed_live_source_acceptance() ->
     assert chinese_graph["source_policy"]["online_retrieval_required"] is True
     assert chinese_graph["source_policy"]["minimum_traceable_sources"] == 8
     assert chinese_graph["research_deliverable_contract"]["minimum_trends"] == 4
+
+    compact_chinese_graph = build_autosci_task_graph(
+        sprint_id="sprint-test-autosci-real-data-compact-zh",
+        title="Compact Chinese real-data research",
+        request_text=(
+            "AutoSci 真实数据研究。请实际读取腾讯新闻锚点 "
+            "https://news.qq.com/rain/a/20251207A0337Y00，梳理网页中的关键技术趋势，"
+            "并检索截至当前的互联网公开资料，生成中文 Markdown 深层技术报告。"
+            "最低验收：至少 4 项相关技术趋势；至少 8 个可追溯公开来源链接。"
+        ),
+        harness_dir=ROOT,
+    )
+    assert compact_chinese_graph["source_policy"]["anchor_urls"] == [
+        "https://news.qq.com/rain/a/20251207A0337Y00"
+    ]
+    assert compact_chinese_graph["source_policy"]["minimum_traceable_sources"] == 8
+    assert compact_chinese_graph["research_deliverable_contract"]["minimum_trends"] == 4
     assert chinese_graph["research_deliverable_contract"]["language"] == "zh-CN"
 
 
