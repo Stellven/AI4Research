@@ -516,11 +516,21 @@ run_codex_with_filesystem_scope() {
   mkdir -p "$codex_arg0_dir" || return 78
   local codex_real=""
   codex_real="$(readlink -f "$CODEX_BIN" 2>/dev/null || true)"
+  # WSL commonly makes /etc/resolv.conf a symlink into /mnt/wsl. Landlock
+  # checks the resolved inode, so allowing /etc alone still blocks DNS and
+  # prevents Codex from refreshing an otherwise valid cached login.
+  local -a system_network_files=()
+  local resolved_system_file=""
+  for path in /etc/resolv.conf /etc/hosts /etc/nsswitch.conf /etc/gai.conf; do
+    [[ -e "$path" ]] || continue
+    resolved_system_file="$(readlink -f "$path" 2>/dev/null || true)"
+    [[ -n "$resolved_system_file" ]] && system_network_files+=("$resolved_system_file")
+  done
   local -a scoped=(python3 "$wrapper")
   local path
   for path in \
     /usr /bin /sbin /lib /lib64 /etc \
-    "$CODEX_BIN" "${codex_real%/*}"; do
+    "$CODEX_BIN" "${codex_real%/*}" "${system_network_files[@]}"; do
     [[ -n "$path" && -e "$path" ]] || continue
     scoped+=(--read-only "$path")
   done

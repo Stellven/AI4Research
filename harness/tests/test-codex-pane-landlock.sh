@@ -16,6 +16,7 @@ grep -Fq '"$ORIGINAL_WORK_DIR" "$WORK_DIR"' "$LAUNCHER"
 grep -Fq 'export CODEX_HOME="$sandbox_codex_home"' "$LAUNCHER"
 grep -Fq '"$source_codex_home/auth.json"' "$LAUNCHER"
 grep -Fq '"$codex_arg0_dir"' "$LAUNCHER"
+grep -Fq '/etc/resolv.conf /etc/hosts /etc/nsswitch.conf /etc/gai.conf' "$LAUNCHER"
 
 mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied" "$TMP_ROOT/home/.codex" "$TMP_ROOT/stale-codex-home"
 printf 'must-not-cross-scope\n' >"$TMP_ROOT/denied/secret.txt"
@@ -41,6 +42,8 @@ profiles=("$CODEX_HOME"/solar-managed-*.config.toml)
 test -f "${profiles[0]}"
 test ! -L "${profiles[0]}"
 echo "FAKE_CODEX_SANDBOX_HOME_READY"
+cat /etc/resolv.conf >/dev/null
+echo "FAKE_CODEX_RESOLVER_READABLE"
 if cat "$DENIED_FILE" >/dev/null 2>&1; then
   echo "FAIL: fake Codex read the sibling directory" >&2
   exit 91
@@ -71,6 +74,7 @@ grep -Fq 'Filesystem boundary:' <<<"$output"
 grep -Fq 'landlock_exec: active' <<<"$output"
 grep -Fq 'FAKE_CODEX_STARTED' <<<"$output"
 grep -Fq 'FAKE_CODEX_SANDBOX_HOME_READY' <<<"$output"
+grep -Fq 'FAKE_CODEX_RESOLVER_READABLE' <<<"$output"
 grep -Fq 'FAKE_CODEX_SIBLING_READ_DENIED' <<<"$output"
 
 echo "PASS: Codex panes route through the strict Landlock launcher"
