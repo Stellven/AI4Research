@@ -215,6 +215,8 @@ def _filesystem_isolated_command(
     env["TEMP"] = str(tmp_dir)
 
     codex_home = Path(env.get("CODEX_HOME") or Path.home() / ".codex").expanduser()
+    codex_arg0_dir = codex_home / "tmp" / "arg0"
+    codex_arg0_dir.mkdir(parents=True, exist_ok=True)
     codex_binary = Path(shutil.which("codex", path=env.get("PATH")) or "codex")
     resolved_binary = codex_binary.resolve(strict=False)
     read_only = _existing_paths(
@@ -241,6 +243,7 @@ def _filesystem_isolated_command(
             Path("/dev/null"),
             Path("/dev/urandom"),
             Path("/dev/random"),
+            codex_arg0_dir,
         ]
     )
     wrapper = Path(__file__).with_name("landlock_exec.py").resolve(strict=False)

@@ -12,6 +12,7 @@ grep -Fq 'SOLAR_CODEX_PANE_STRICT_FS_SCOPE' "$LAUNCHER"
 grep -Fq 'landlock_exec.py' "$LAUNCHER"
 grep -Fq '"$ORIGINAL_WORK_DIR" "$WORK_DIR"' "$LAUNCHER"
 grep -Fq '"$codex_home/auth.json"' "$LAUNCHER"
+grep -Fq '"$codex_arg0_dir"' "$LAUNCHER"
 
 mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied"
 printf 'must-not-cross-scope\n' >"$TMP_ROOT/denied/secret.txt"

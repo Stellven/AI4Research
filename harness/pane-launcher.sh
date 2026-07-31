@@ -465,6 +465,8 @@ run_codex_with_filesystem_scope() {
   export TEMP="$tmp_dir"
 
   local codex_home="${CODEX_HOME:-$HOME/.codex}"
+  local codex_arg0_dir="$codex_home/tmp/arg0"
+  mkdir -p "$codex_arg0_dir" || return 78
   local codex_real=""
   codex_real="$(readlink -f "$CODEX_BIN" 2>/dev/null || true)"
   local -a scoped=(python3 "$wrapper")
@@ -479,7 +481,7 @@ run_codex_with_filesystem_scope() {
   done
   for path in \
     "$HARNESS_DIR" "$ORIGINAL_WORK_DIR" "$WORK_DIR" "$state_home" "$tmp_dir" \
-    /dev/null /dev/urandom /dev/random; do
+    "$codex_arg0_dir" /dev/null /dev/urandom /dev/random; do
     [[ -e "$path" ]] || continue
     scoped+=(--read-write "$path")
   done
