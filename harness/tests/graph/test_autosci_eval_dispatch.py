@@ -106,6 +106,11 @@ def _capture_and_consume_autosci_intake(harness_dir: Path, sprints: Path, tmp_pa
     env["SOLAR_INTENT_GATEWAY_DIR"] = str(tmp_path / "intents")
     env["SOLAR_HARNESS_SPRINTS_DIR"] = str(sprints)
     env["SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT"] = str(tmp_path / "workspace")
+    # This helper exercises graph compilation/dispatch, not the asynchronous
+    # Planner operator lifecycle.  Keep it on the legacy managed-pane seam so
+    # no real operator daemon is launched from a unit test.
+    env["SOLAR_PANE_RUNTIME"] = "codex"
+    env["SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH"] = "0"
     capture = subprocess.run(
         [
             sys.executable,
@@ -145,11 +150,12 @@ def _capture_and_consume_autosci_intake(harness_dir: Path, sprints: Path, tmp_pa
     assert consume.returncode == 0, consume.stdout + consume.stderr
     result = json.loads(consume.stdout)["results"][0]
     assert result["status"] == "consumed"
+    sid = result["sprint_id"]
     from compiled_sprint_planner import generate_planner_artifacts
 
-    planning = generate_planner_artifacts(runtime_root=harness_dir, sprint_id=result["sprint_id"])
+    planning = generate_planner_artifacts(runtime_root=harness_dir, sprint_id=sid)
     assert planning["ok"] is True, planning
-    graph_path = sprints / f"{result['sprint_id']}.task_graph.json"
+    graph_path = sprints / f"{sid}.task_graph.json"
     certified = json.loads(graph_path.read_text(encoding="utf-8"))
     assert certified["plan_certificate"]["verdict"] == "PASS"
     return graph_path
@@ -344,6 +350,33 @@ def test_normal_intake_autosci_dispatch_ready_uses_exact_autosci_operator(
     assert dispatched["operator_envelope"]["outputs"]["evidence_payload_path"].endswith(
         "literature_discovery.v1.json"
     )
+
+
+def test_openai_policy_keeps_provider_neutral_autosci_operator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness_dir, sprints = _prepare_isolated_harness(tmp_path, monkeypatch)
+    graph_path = _capture_and_consume_autosci_intake(harness_dir, sprints, tmp_path)
+    monkeypatch.setenv("SOLAR_GATE_LEDGER", "1")
+
+    graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    graph["provider_policy"] = {
+        "runtime": "codex",
+        "allowed_providers": ["openai"],
+        "route_proof_required": True,
+    }
+    graph_path.write_text(json.dumps(graph, indent=2) + "\n", encoding="utf-8")
+
+    import graph_node_dispatcher as gnd
+
+    result = gnd.dispatch_ready(str(graph_path), dry_run=True, ttl=30, max_parallel=1)
+
+    assert result["ok"] is True
+    assert result["enqueue"]["enqueued"][0]["pane"] == "operator:autosci-literature-discover-worker"
+    dispatched = result["drain"]["results"][0]
+    assert dispatched["dispatch_mode"] == "autosci_operator_direct"
+    assert dispatched["operator_id"] == "autosci-literature-discover-worker"
 
 
 def test_autosci_operator_direct_dispatch_submits_to_operator_runtime(

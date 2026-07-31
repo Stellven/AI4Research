@@ -5393,15 +5393,13 @@ handle_needs_human() {
 
 注意: needs_human_review **不计入** 3 轮失败上限。"
 
-  local planner_rc
-  dispatch_to_planner "$sid" "needs_human" "$SPRINTS_DIR/${sid}.dispatch.md"
-  planner_rc=$?
-  if (( planner_rc != 0 )); then
-    log "${Y}[needs_human] planner dispatch failed (rc=${planner_rc}), inbox/event retained${N}"
-    emit_event "$sid" "dispatch_failed" "coordinator" "{\"to\":\"planner\",\"task\":\"needs_human\",\"reason\":\"${reason}\",\"rc\":${planner_rc}}"
-  else
-    emit_event "$sid" "dispatched" "coordinator" "{\"to\":\"planner\",\"task\":\"needs_human\",\"reason\":\"${reason}\"}"
-  fi
+  # A needs_human_review transition is an absorbing governance boundary.
+  # Planner is a model operator, not the human release owner: dispatching the
+  # generated menu to Planner let it choose `human_continue` autonomously and
+  # reopen a node that Solar had explicitly escalated.  Preserve the durable
+  # dispatch artifact for the real owner/UI, but do not send it to any model.
+  emit_event "$sid" "awaiting_human_decision" "coordinator" \
+    "{\"reason\":\"${reason}\",\"dispatch_file\":\"${SPRINTS_DIR}/${sid}.dispatch.md\"}"
 }
 
 # ================================================================

@@ -9102,6 +9102,17 @@ def _worker_provider_aliases(worker: dict[str, Any]) -> set[str]:
 def _worker_matches_graph_provider_policy(worker: dict[str, Any], providers: set[str]) -> bool:
     if not providers:
         return True
+    # AutoSci command operators are local, deterministic runtime adapters; they
+    # do not select an LLM provider.  Treating them as provider-less workers
+    # caused an OpenAI-only research graph to discard its exact Scientific*
+    # operator and fall back to a generic Codex builder.  Keep the exemption
+    # explicit and narrowly scoped to the contract-owned AutoSci operator
+    # namespace so ordinary model workers still have to prove their provider.
+    if worker.get("model_provider_neutral") is True:
+        pane = str(worker.get("pane") or "")
+        operator_id = str(worker.get("operator_id") or "")
+        if pane == f"operator:{operator_id}" and operator_id.startswith("autosci-"):
+            return True
     return bool(_worker_provider_aliases(worker) & providers)
 
 
@@ -11068,6 +11079,7 @@ def _autosci_contract_operator_workers(graph: dict[str, Any]) -> list[dict[str, 
             "host_role": "builder",
             "operator_role": str(spec.get("role") or ""),
             "operator_id": operator_id,
+            "model_provider_neutral": True,
             "busy": runtime_state not in {"", "idle"},
             "title": str(spec.get("display_name") or operator_id),
             "unavailable_reason": "" if runtime_state in {"", "idle"} else f"operator_runtime_{runtime_state}",
