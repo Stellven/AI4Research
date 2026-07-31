@@ -219,6 +219,7 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     source_codex_home = tmp_path / "source-codex-home"
     source_codex_home.mkdir()
     (source_codex_home / "auth.json").write_text('{"fixture": true}\n', encoding="utf-8")
+    (source_codex_home / "config.toml").write_text("must_not_be_projected = true\n", encoding="utf-8")
     monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
     monkeypatch.setenv("SOLAR_CODEX_SOURCE_HOME", str(source_codex_home))
     monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "1")
@@ -239,6 +240,7 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert sandbox_codex_home == Path(env["CODEX_SQLITE_HOME"]) / "home"
     assert (sandbox_codex_home / "auth.json").is_symlink()
     assert (sandbox_codex_home / "auth.json").resolve() == (source_codex_home / "auth.json").resolve()
+    assert not (sandbox_codex_home / "config.toml").exists()
 
 
 def test_codex_operator_refuses_disabled_isolation_for_strict_run(tmp_path, monkeypatch):

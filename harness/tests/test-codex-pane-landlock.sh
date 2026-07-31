@@ -8,6 +8,7 @@ trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
 grep -Fq 'run_codex_with_filesystem_scope' "$LAUNCHER"
 grep -Fq 'resolve_codex_source_home' "$LAUNCHER"
+grep -Fq 'codex_pane_state_home' "$LAUNCHER"
 grep -Fq 'SOLAR_CODEX_PANE_FS_ISOLATION' "$LAUNCHER"
 grep -Fq 'SOLAR_CODEX_PANE_STRICT_FS_SCOPE' "$LAUNCHER"
 grep -Fq 'landlock_exec.py' "$LAUNCHER"
@@ -19,6 +20,7 @@ grep -Fq '"$codex_arg0_dir"' "$LAUNCHER"
 mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied" "$TMP_ROOT/home/.codex" "$TMP_ROOT/stale-codex-home"
 printf 'must-not-cross-scope\n' >"$TMP_ROOT/denied/secret.txt"
 printf '{"fixture":true}\n' >"$TMP_ROOT/home/.codex/auth.json"
+printf 'must_not_be_projected = true\n' >"$TMP_ROOT/home/.codex/config.toml"
 printf 'stale = true\n' >"$TMP_ROOT/stale-codex-home/config.toml"
 ln -s "$TMP_ROOT/home/.codex/auth.json" "$TMP_ROOT/stale-codex-home/auth.json"
 FAKE_CODEX="$TMP_ROOT/project/codex"
@@ -28,6 +30,10 @@ set -euo pipefail
 echo "FAKE_CODEX_STARTED"
 test "$CODEX_HOME" != "$SOURCE_CODEX_HOME"
 test "$(readlink -f "$CODEX_HOME/auth.json")" = "$(readlink -f "$SOURCE_CODEX_HOME/auth.json")"
+test ! -e "$CODEX_HOME/config.toml"
+profiles=("$CODEX_HOME"/solar-managed-*.config.toml)
+test -f "${profiles[0]}"
+test ! -L "${profiles[0]}"
 echo "FAKE_CODEX_SANDBOX_HOME_READY"
 if cat "$DENIED_FILE" >/dev/null 2>&1; then
   echo "FAIL: fake Codex read the sibling directory" >&2
@@ -48,7 +54,8 @@ output="$({
   SOLAR_PANE_RUNTIME=codex \
   SOLAR_CODEX_BIN="$FAKE_CODEX" \
   SOLAR_CODEX_BYPASS=0 \
-  SOLAR_CODEX_TRUST_WORKSPACE=0 \
+  SOLAR_CODEX_TRUST_WORKSPACE=1 \
+  SOLAR_HARNESS_SESSION=solar-pane-landlock-test \
   SHELL=/bin/true \
   TERM=xterm \
   bash "$LAUNCHER" pm "$TMP_ROOT/project"

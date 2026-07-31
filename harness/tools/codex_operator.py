@@ -219,7 +219,7 @@ def _filesystem_isolated_command(
     source_codex_home = Path(env["SOLAR_CODEX_SOURCE_HOME"]).expanduser()
     codex_home = state_home / "home"
     codex_home.mkdir(parents=True, exist_ok=True)
-    for name in ("auth.json", "config.toml"):
+    for name in ("auth.json",):
         source = source_codex_home / name
         destination = codex_home / name
         if not source.is_file():
@@ -247,7 +247,6 @@ def _filesystem_isolated_command(
             codex_binary,
             resolved_binary.parent,
             source_codex_home / "auth.json",
-            source_codex_home / "config.toml",
         ]
     )
     read_write = _existing_paths(

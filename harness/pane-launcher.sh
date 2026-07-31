@@ -366,10 +366,17 @@ resolve_codex_source_home() {
   printf '%s\n' "$HOME/.codex"
 }
 
+codex_pane_state_home() {
+  local pane_safe="${TMUX_PANE:-standalone}"
+  pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
+  local pane_state_root="${SOLAR_CODEX_PANE_STATE_ROOT:-$HARNESS_DIR/run/codex-state/panes}"
+  printf '%s\n' "$pane_state_root/${pane_safe}-${PERSONA}"
+}
+
 prepare_codex_trust_profile() {
   local work_dir="$1" session="$2" owner_id="$3"
   local codex_home
-  codex_home="$(resolve_codex_source_home)"
+  codex_home="$(codex_pane_state_home)/home"
   local helper="$HARNESS_DIR/lib/codex_trust_profiles.py"
   [[ -f "$helper" ]] || {
     echo "FATAL: managed Codex trust profile helper missing: $helper" >&2
@@ -465,18 +472,16 @@ run_codex_with_filesystem_scope() {
   }
   local pane_safe="${TMUX_PANE:-standalone}"
   pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
-  local pane_state_root="${SOLAR_CODEX_PANE_STATE_ROOT:-$HARNESS_DIR/run/codex-state/panes}"
   local pane_tmp_root="${SOLAR_CODEX_PANE_TMP_ROOT:-$HARNESS_DIR/run/pane-tmp}"
-  local state_home="$pane_state_root/${pane_safe}-${PERSONA}"
+  local state_home
+  state_home="$(codex_pane_state_home)"
   local tmp_dir="$pane_tmp_root/${pane_safe}-${PERSONA}"
   local source_codex_home
   source_codex_home="$(resolve_codex_source_home)"
   local sandbox_codex_home="$state_home/home"
   mkdir -p "$sandbox_codex_home" "$tmp_dir" || return 78
   local source_file destination_file
-  for source_file in \
-    "$source_codex_home/auth.json" "$source_codex_home/config.toml" \
-    "${CODEX_TRUST_PROFILE_PATH:-}"; do
+  for source_file in "$source_codex_home/auth.json"; do
     [[ -n "$source_file" && -f "$source_file" ]] || continue
     destination_file="$sandbox_codex_home/${source_file##*/}"
     if [[ -e "$destination_file" || -L "$destination_file" ]]; then
@@ -504,8 +509,7 @@ run_codex_with_filesystem_scope() {
   for path in \
     /usr /bin /sbin /lib /lib64 /etc \
     "$CODEX_BIN" "${codex_real%/*}" \
-    "$source_codex_home/auth.json" "$source_codex_home/config.toml" \
-    "${CODEX_TRUST_PROFILE_PATH:-}"; do
+    "$source_codex_home/auth.json"; do
     [[ -n "$path" && -e "$path" ]] || continue
     scoped+=(--read-only "$path")
   done
