@@ -40,6 +40,12 @@
     "strict": true,
     "allow_cross_role_pane_spillover": false
   },
+  "filesystem_boundary_policy": {
+    "strict": true,
+    "runtime": "linux_landlock",
+    "allow_sibling_repository_reads": false,
+    "fail_closed_when_unavailable": true
+  },
   "plan_compile": {
     "env_gate": "SOLAR_PLAN_VALIDATOR",
     "max_planner_bounces": 2,

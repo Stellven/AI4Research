@@ -294,6 +294,12 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     graph_path = str(envelope.get("graph_path") or "").strip()
     if graph_path:
         env["GRAPH"] = graph_path
+    if bool(envelope.get("strict_filesystem_boundaries")):
+        env["SOLAR_OPERATOR_STRICT_FS_SCOPE"] = "1"
+    if isinstance(envelope.get("read_scope"), list):
+        env["SOLAR_OPERATOR_READ_SCOPE_JSON"] = json.dumps(envelope["read_scope"], ensure_ascii=False)
+    if isinstance(envelope.get("write_scope"), list):
+        env["SOLAR_OPERATOR_WRITE_SCOPE_JSON"] = json.dumps(envelope["write_scope"], ensure_ascii=False)
     work_dir = str(envelope.get("work_dir") or "").strip()
     if not work_dir:
         sid = str(envelope.get("sprint_id") or "").strip()

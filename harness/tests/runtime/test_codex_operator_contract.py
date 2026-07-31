@@ -12,6 +12,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -199,6 +201,47 @@ def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, m
     assert "--ephemeral" in cmd
     assert "--cd" in cmd
     assert str(tmp_path) in cmd
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Landlock is Linux-only")
+def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_landlock", ROOT / "tools" / "codex_operator.py")
+    harness_dir = tmp_path / "harness"
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    work_dir = harness_dir / "sprints" / "sprint-1" / "workdir"
+    task_dir.mkdir(parents=True)
+    work_dir.mkdir(parents=True)
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "1")
+    env = codex_operator._codex_exec_env(task_dir)
+
+    command, proof = codex_operator._filesystem_isolated_command(
+        ["codex", "exec", "-"], task_dir=task_dir, cwd=work_dir, env=env
+    )
+
+    assert command[0] == sys.executable
+    assert command[1].endswith("landlock_exec.py")
+    assert command[-4:] == ["--", "codex", "exec", "-"]
+    assert proof["mode"] == "landlock"
+    assert proof["strict"] is True
+    assert str(harness_dir.resolve()) in proof["read_write"]
+    assert str(tmp_path.resolve()) not in proof["read_write"]
+
+
+def test_codex_operator_refuses_disabled_isolation_for_strict_run(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_landlock_refusal", ROOT / "tools" / "codex_operator.py")
+    harness_dir = tmp_path / "harness"
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    task_dir.mkdir(parents=True)
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "1")
+    env = codex_operator._codex_exec_env(task_dir)
+    env["SOLAR_CODEX_OPERATOR_FS_ISOLATION"] = "off"
+
+    with pytest.raises(RuntimeError, match="cannot disable Landlock"):
+        codex_operator._filesystem_isolated_command(
+            ["codex", "exec", "-"], task_dir=task_dir, cwd=tmp_path, env=env
+        )
 
 
 def test_codex_operator_binds_model_shell_to_active_harness(tmp_path, monkeypatch):

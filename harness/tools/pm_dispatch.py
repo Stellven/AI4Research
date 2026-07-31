@@ -168,6 +168,15 @@ def _build_pm_operator_envelope(
     workdir contract regardless of the path that submitted them.
     """
     capsule_submit = capsule_submit or {}
+    graph_path = _graph_path_for_sprint(sprint_id)
+    graph_policy: dict[str, Any] = {}
+    if graph_path:
+        try:
+            payload = json.loads(Path(graph_path).read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                graph_policy = payload
+        except (OSError, json.JSONDecodeError):
+            graph_policy = {}
     envelope: dict[str, Any] = {
         "task_id": task_id,
         "sprint_id": sprint_id,
@@ -182,12 +191,14 @@ def _build_pm_operator_envelope(
         "pm_context": context[:500] if context else "",
         "requested_role": normalize_role(role),
         "work_dir": _pm_work_dir_for_sprint(sprint_id, work_dir),
-        "graph_path": _graph_path_for_sprint(sprint_id),
+        "graph_path": graph_path,
         "runtime_mode": _runtime_mode_from_env(),
         "provider_policy": _provider_policy_label(),
         "operator_provider": str(operator.get("provider") or operator.get("vendor") or ""),
         "operator_backend": str(operator.get("backend") or ""),
         "operator_model": str(operator.get("model") or ""),
+        "workflow_contract": str(graph_policy.get("workflow_contract") or ""),
+        "strict_filesystem_boundaries": bool(graph_policy.get("strict_filesystem_boundaries")),
     }
     if not envelope["graph_path"]:
         envelope.pop("graph_path", None)
@@ -205,6 +216,8 @@ def _build_pm_operator_envelope(
             "acceptance": task_graph_node.get("acceptance", []),
             "requirement_ids": task_graph_node.get("requirement_ids", []),
         }
+        envelope["read_scope"] = list(task_graph_node.get("read_scope") or [])
+        envelope["write_scope"] = list(task_graph_node.get("write_scope") or [])
     if capsule_submit.get("capability_capsule_id"):
         envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
         envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])

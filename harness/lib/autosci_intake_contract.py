@@ -119,6 +119,7 @@ def build_autosci_task_graph(
             "contract_bound": True,
             "plan_compile_required": True,
             "strict_role_boundaries": True,
+            "strict_filesystem_boundaries": True,
             "planner_stage": {
                 "node_id": "N0",
                 "role": "planner",
@@ -225,6 +226,8 @@ def validate_autosci_planner_graph(
         add("PLAN_COMPILE_MARKER_MISSING", "AutoSci graph must retain plan_compile_required=true")
     if graph.get("strict_role_boundaries") is not True:
         add("AUTOSCI_ROLE_BOUNDARY_MISSING", "AutoSci requires strict_role_boundaries=true")
+    if graph.get("strict_filesystem_boundaries") is not True:
+        add("AUTOSCI_FILESYSTEM_BOUNDARY_MISSING", "AutoSci requires strict_filesystem_boundaries=true")
     planner_stage = graph.get("planner_stage") if isinstance(graph.get("planner_stage"), dict) else {}
     if (
         planner_stage.get("role") != "planner"
@@ -246,6 +249,7 @@ def validate_autosci_planner_graph(
         "required_gates",
         "evidence_policy",
         "strict_role_boundaries",
+        "strict_filesystem_boundaries",
     ):
         if graph.get(field) != expected.get(field):
             add("AUTOSCI_GRAPH_CONTRACT_MISMATCH", f"top-level field {field!r} differs from the AutoSci contract")

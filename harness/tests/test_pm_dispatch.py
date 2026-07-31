@@ -63,6 +63,52 @@ def test_select_operator_by_role_prefers_capsule_operator_constraints(monkeypatc
     assert operator_id == "builder-b"
 
 
+def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", sprints)
+    sid = "sprint-strict-fs"
+    (sprints / f"{sid}.task_graph.json").write_text(
+        json.dumps(
+            {
+                "workflow_contract": "research.autosci.v1",
+                "strict_filesystem_boundaries": True,
+                "nodes": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    dispatch_file = tmp_path / "dispatch.md"
+    dispatch_file.write_text("bounded task", encoding="utf-8")
+
+    envelope = pm_dispatch._build_pm_operator_envelope(
+        task_id="task-1",
+        sprint_id=sid,
+        node_id="literature_discover",
+        operator_id="builder-1",
+        operator={"provider": "openai", "backend": "command", "model": "gpt-test"},
+        task_type="scientific-research",
+        objective="discover",
+        dispatch_file=dispatch_file,
+        result_path=str(tmp_path / "result.md"),
+        role="builder",
+        task_graph_node={
+            "id": "literature_discover",
+            "goal": "discover",
+            "acceptance": ["bounded"],
+            "requirement_ids": ["REQ-000"],
+            "read_scope": ["dispatch/envelope.json"],
+            "write_scope": ["artifacts/scientific/literature.json"],
+        },
+    )
+
+    assert envelope["workflow_contract"] == "research.autosci.v1"
+    assert envelope["strict_filesystem_boundaries"] is True
+    assert envelope["read_scope"] == ["dispatch/envelope.json"]
+    assert envelope["write_scope"] == ["artifacts/scientific/literature.json"]
+
+
 def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
     pm_dispatch = _load_pm_dispatch()
     with tempfile.TemporaryDirectory() as td:
