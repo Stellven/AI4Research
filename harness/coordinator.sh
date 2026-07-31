@@ -2805,6 +2805,17 @@ compile_generic_plan_graph() {
     3)
       log "${Y}[plan-compile] ${sid} failed; planner bounce remains available: ${out}${N}"
       emit_event "$sid" "plan_compile_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+      local bounce_out bounce_rc
+      bounce_out=$(HARNESS_DIR="$HARNESS_DIR" HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
+        python3 "$HARNESS_DIR/lib/planner_bounce_dispatch.py" dispatch "$sid" --harness-dir "$HARNESS_DIR" 2>&1)
+      bounce_rc=$?
+      if (( bounce_rc == 0 )); then
+        log "${G}[plan-compile] ${sid} dispatched bounded Planner repair: ${bounce_out}${N}"
+        emit_event "$sid" "planner_bounce_dispatched" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"output": sys.argv[1][-2000:]}))' "$bounce_out" 2>/dev/null || echo '{}')"
+      else
+        log "${Y}[plan-compile] ${sid} Planner repair dispatch deferred rc=${bounce_rc}: ${bounce_out}${N}"
+        emit_event "$sid" "planner_bounce_dispatch_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$bounce_rc" "$bounce_out" 2>/dev/null || echo '{}')"
+      fi
       return 1
       ;;
     4)
