@@ -347,3 +347,6 @@ def test_autopilot_role_handoff_objective_gains_policy_via_submit_helper(tmp_pat
 
     assert enriched.startswith(objective)
     assert "## Plan compile policy" in enriched
+    assert "不要运行 plan compiler" in objective
+    assert "不要修改 status.json" in objective
+    assert "完成后把 status 更新为" not in objective

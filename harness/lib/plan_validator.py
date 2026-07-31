@@ -32,6 +32,7 @@ from executable_node import (  # noqa: E402
     physical_role_is_compatible,
 )
 from physical_operator_catalog import is_operator_statically_selectable  # noqa: E402
+from planner_operator_gate import planner_operator_state  # noqa: E402
 
 GENERIC_CONTRACT_ID = "pm.generic.v1"
 AUTOSCI_CONTRACT_ID = "research.autosci.v1"
@@ -1174,6 +1175,21 @@ def compile_planner_graph(
         verdict["skipped_reason"] = graph_kind
         return verdict
 
+    # Certification is a Solar lifecycle decision, not an action the bounded
+    # Planner model may take while it is still writing artifacts.  An
+    # operator-pool task therefore has to publish a durable successful result
+    # before any candidate graph can be stamped.  Legacy pane planning has no
+    # PM task record and remains supported as ``unmanaged``.
+    operator_gate = planner_operator_state(sprints.parent, sid)
+    if not operator_gate["ready_for_compile"]:
+        return {
+            **verdict,
+            "ok": False,
+            "deferred": True,
+            "skipped_reason": "planner_operator_not_complete",
+            "operator_gate": operator_gate,
+        }
+
     contract_id, contract = _planner_contract(task_graph, workflows_dir=workflows_dir)
     if contract is None:
         error = _error(
@@ -1462,7 +1478,6 @@ def planner_compile_policy_block(
         except (OSError, ValueError, TypeError):
             governed_graph = {}
         if str(governed_graph.get("workflow_contract_id") or "") == AUTOSCI_CONTRACT_ID:
-            runtime_root = Path(sprints_dir).parent
             return "\n".join(
                 [
                     f"## Plan compile policy ({AUTOSCI_CONTRACT_ID})",
@@ -1471,12 +1486,10 @@ def planner_compile_policy_block(
                     "You are the distinct Planner stage (N0). Do not execute any Scientific* Builder node.",
                     "Review the PRD, contract, requirement IR, and proposed task graph; preserve the locked",
                     "Scientific* node set, dependencies, logical operators, capability capsules, scopes, and gates.",
-                    "Produce design.md and plan.md, then invoke the Solar-owned planner artifact compiler:",
-                    "",
-                    f"python3 tools/generate_compiled_sprint_planner_artifacts.py --runtime-root {runtime_root} --sprint-id {sid}",
-                    "",
-                    "Builder dispatch remains fail-closed until plan_validator stamps a PASS certificate and",
-                    "Solar transitions the sprint to planning_complete. Never self-declare the sprint complete.",
+                    "Produce design.md and plan.md, finish every artifact write, then return from this bounded",
+                    "Planner invocation. Do not invoke the plan compiler and do not edit lifecycle status.",
+                    "After your durable operator result succeeds, Solar alone runs plan_validator, stamps any",
+                    "PASS certificate, and transitions the sprint to planning_complete. Never self-declare it.",
                 ]
             )
 
@@ -1675,6 +1688,8 @@ def _main_compile_generic(argv: List[str]) -> int:
     print(json.dumps(verdict, indent=2, sort_keys=True, ensure_ascii=True))
     if verdict.get("ok"):
         return 0
+    if verdict.get("deferred"):
+        return 5
     if verdict.get("terminal") or verdict.get("exhausted"):
         return 4
     return 3

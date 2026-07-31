@@ -2812,6 +2812,10 @@ compile_generic_plan_graph() {
       emit_event "$sid" "plan_compile_terminal" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
       return 1
       ;;
+    5)
+      log "${Y}[plan-compile] ${sid} deferred until the Planner operator publishes a durable successful result: ${out}${N}"
+      return 1
+      ;;
     *)
       log "${R}[plan-compile] ${sid} validator error rc=${rc}: ${out}${N}"
       emit_event "$sid" "plan_compile_error" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
@@ -2879,7 +2883,19 @@ gate_check() {
 
   case "$st" in
 	    active)
-	      local guard_role guard_violations
+	      local guard_role guard_violations planner_operator_state
+	      planner_operator_state="$(planner_operator_compile_state "$sid")"
+	      case "$planner_operator_state" in
+	        running|pending)
+	          log "${Y}[plan-compile] ${sid} waits for the bounded Planner operator result (${planner_operator_state}); no certification, rollback, or Builder dispatch${N}"
+	          return 1
+	          ;;
+	        failed|abandoned)
+	          log "${R}[plan-compile] ${sid} Planner operator ended without a successful durable result; return ownership to Solar Planner routing${N}"
+	          runtime_status_transition "$sid" "drafting" "planner_operator_failed" "coordinator" '{"status_fields":{"phase":"prd_ready","handoff_to":"planner","target_role":"planner","planner_dispatch_claim":{"owner":"operator_pool","state":"failed","failure_reason":"durable_operator_result_failed"}}}' || true
+	          return 1
+	          ;;
+	      esac
 	      guard_role="$(workflow_guard_route_role "$sid")"
 	      guard_violations="$(workflow_guard_violations "$sid")"
 	      # G3 run-4 fix (p5-g3-live-rung-20260709T201817Z): the acceptance
@@ -3186,6 +3202,18 @@ role = sys.argv[3]
 node = sys.argv[4]
 prefix = f"pm-{sid}-{node}-"
 released = set()
+pending = set()
+results_root = h / "run" / "operator-results"
+
+def has_durable_result(task_id):
+    for result_path in results_root.glob(f"*/{task_id}/result.json"):
+        try:
+            data = json.loads(result_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(data, dict) and str(data.get("status") or "").strip():
+            return True
+    return False
 
 for task_path in (h / "run" / "pm-inbox").glob(f"{prefix}*.json"):
     try:
@@ -3196,12 +3224,12 @@ for task_path in (h / "run" / "pm-inbox").glob(f"{prefix}*.json"):
     if data and str(data.get("requested_role") or role) != role:
         continue
     status = str(data.get("status") or "").strip().lower()
-    if status in {"completed", "cancelled"} or status.startswith("failed"):
+    if has_durable_result(task_id) or status in {"completed", "cancelled"} or status.startswith("failed"):
         released.add(task_id)
         continue
     # Missing status is a legacy non-terminal record and remains active for
     # compatibility. New claims use explicit pending/submitting/submitted.
-    sys.exit(0)
+    pending.add(task_id)
 
 for status_path in (h / "run" / "operator-status").glob("*.json"):
     try:
@@ -3212,15 +3240,14 @@ for status_path in (h / "run" / "operator-status").glob("*.json"):
     if task_id.startswith(prefix) and task_id not in released:
         sys.exit(0)
 
-results_root = h / "run" / "operator-results"
 for operator_dir in results_root.glob("*"):
     if not operator_dir.is_dir():
         continue
     for result_path in operator_dir.glob(f"{prefix}*"):
-        if result_path.name not in released:
+        if result_path.name not in released and not has_durable_result(result_path.name):
             sys.exit(0)
 
-sys.exit(1)
+sys.exit(0 if pending - released else 1)
 PY
 }
 
@@ -3288,6 +3315,12 @@ sys.exit(1)
 PY
 }
 
+planner_operator_compile_state() {
+  local sid="$1"
+  python3 "$HARNESS_DIR/lib/planner_operator_gate.py" state "$sid" \
+    --harness-dir "$HARNESS_DIR" --field state 2>/dev/null || echo unmanaged
+}
+
 handle_queued() {
   local sid="$1" sf="$2"
   local blocked_by
@@ -3328,6 +3361,23 @@ PY
   fi
 
   req_file=$(pm_requirements_file "$sid" 2>/dev/null || true)
+
+  # A role-pool Planner owns its candidate files until the bounded invocation
+  # has a durable terminal result.  File presence is not completion evidence.
+  # Keep Solar in control of status/certification and let autopilot replace a
+  # failed operator claim instead of falling through to the legacy pane path.
+  local planner_operator_state
+  planner_operator_state="$(planner_operator_compile_state "$sid")"
+  case "$planner_operator_state" in
+    running|pending)
+      log "${Y}Sprint ${sid} Planner operator is ${planner_operator_state}; wait for durable result before reading or certifying its artifacts${N}"
+      return 0
+      ;;
+    failed)
+      log "${R}Sprint ${sid} Planner operator failed; waiting for Solar role-pool retry${N}"
+      return 0
+      ;;
+  esac
 
   if [[ -z "$req_file" ]]; then
     if drafting_flow_marked "$sid" "pm"; then
@@ -3398,6 +3448,26 @@ PY
   local graph="$SPRINTS_DIR/${sid}.task_graph.json"
   local guard_role
   guard_role="$(workflow_guard_route_role "$sid")"
+
+  # The Planner no longer self-certifies or mutates lifecycle status.  Once
+  # its bounded operator result is durable (gate above) and all candidate
+  # artifacts exist, Solar annotates and compiles the final bytes, then
+  # re-reads workflow_guard before deciding whether Builder may run.
+  if [[ "$guard_role" != "builder_main" && "$guard_role" != "builder" ]] \
+    && planner_artifacts_present "$sid" \
+    && ! pm_operator_role_pool_task_seen "$sid" "planner"; then
+    if ! annotate_requirement_matrix_for_planning "$sid"; then
+      log "${R}Planner 产物存在但 Requirement Trace Matrix 注入失败，阻止 Solar 签证${N}"
+      emit_event "$sid" "gate_blocked" "coordinator" '{"stage":"planning","reason":"requirement_trace_annotation_failed"}'
+      rollback_state_cache "$sid"
+      return 0
+    fi
+    if ! compile_generic_plan_graph "$sid"; then
+      rollback_state_cache "$sid"
+      return 0
+    fi
+    guard_role="$(workflow_guard_route_role "$sid")"
+  fi
 
   if [[ "$guard_role" != "builder_main" && "$guard_role" != "builder" ]]; then
     if pm_operator_role_pool_enabled; then
@@ -3482,13 +3552,10 @@ PY
 
 9. plan 必须包含: 交付切片顺序、文件级写入范围、并发边界、验证命令、no-live-pane-mutation 保护、rollback/stop rule。
 
-10. 完成后更新 status.json:
-   - status: active
-   - phase: planning_complete
-   - handoff_to: builder_main
-   - artifacts 追加 design_html: sprints/${sid}.design.html
-   - artifacts 追加 planning_html: sprints/${sid}.planning.html
-   - history 追加 planner_plan_completed
+10. 完成所有 artifact 写入后结束本次受约束 Planner 调用。不得运行 plan compiler，
+    不得修改 status.json，也不得自行声明 planning_complete。Solar coordinator 会等待
+    durable operator result 成功，随后独立注入 trace matrix、执行 plan validator、签发
+    certificate，并决定是否推进到 builder_main。
 
 11. 不要直接给 Builder 写自然语言任务；Builder 派发必须由 graph scheduler / graph-dispatch 根据 task_graph.json 生成。
 

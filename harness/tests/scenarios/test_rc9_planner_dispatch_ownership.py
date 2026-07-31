@@ -374,3 +374,62 @@ def test_expired_operator_pool_claim_allows_legacy_recovery(tmp_path: Path) -> N
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "expired"
+
+
+def test_active_gate_waits_for_planner_result_without_certifying_or_rolling_back(
+    tmp_path: Path,
+) -> None:
+    harness = _minimal_harness(tmp_path)
+    (harness / "lib").mkdir(exist_ok=True)
+    shutil.copy2(_HARNESS / "lib" / "planner_operator_gate.py", harness / "lib")
+    sid = "sprint-planner-candidate-still-running"
+    task_id = f"pm-{sid}-N0-acde9876"
+    sprints = harness / "sprints"
+    status_path = sprints / f"{sid}.status.json"
+    status_path.write_text(
+        json.dumps(
+            {
+                "id": sid,
+                "status": "active",
+                "phase": "planning_complete",
+                "handoff_to": "builder_main",
+                "planner_dispatch_claim": {
+                    "owner": "operator_pool",
+                    "state": "submitted",
+                    "task_id": task_id,
+                    "expires_at": _iso_after(120),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (harness / "run" / "pm-inbox" / f"{task_id}.json").write_text(
+        json.dumps(
+            {
+                "task_id": task_id,
+                "sprint_id": sid,
+                "requested_role": "planner",
+                "status": "submitted",
+            }
+        ),
+        encoding="utf-8",
+    )
+    marker = tmp_path / "forbidden-action"
+    script = r'''
+log() { :; }
+workflow_guard_route_role() { printf '%s\n' planner; }
+workflow_guard_violations() { printf '%s\n' '[]'; }
+compile_generic_plan_graph() { printf '%s\n' compile > "$MARKER"; return 0; }
+runtime_status_transition() { printf '%s\n' rollback > "$MARKER"; return 0; }
+dispatch_to_planner() { printf '%s\n' dispatch > "$MARKER"; return 0; }
+if gate_check "$SID" active; then exit 91; fi
+[[ ! -e "$MARKER" ]]
+'''
+    result = _source_coordinator(
+        harness,
+        script,
+        env={"SID": sid, "MARKER": str(marker)},
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not marker.exists()

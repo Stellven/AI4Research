@@ -1581,7 +1581,8 @@ def objective_for_role_handoff(sid: str, role: str) -> str:
             f"{base}.product-brief.md、{base}.requirement_ir.json、{base}.task_graph.json（存在即读）。"
             f"产出 {base}.design.md 和 {base}.plan.md；如 task_graph 还只是粗粒度需求图，"
             "请细化为可执行 DAG。不得跳过 PM->Planner->task_graph 主链直接交 Builder。"
-            "完成后把 status 更新为 phase=planning_complete handoff_to=builder_main target_role=builder_main；"
+            "完成所有 artifact 写入后结束本次受约束调用；不要运行 plan compiler，不要修改 status.json。"
+            "Solar 会在 durable operator result 成功后独立验收、签证并推进生命周期；"
             "如果证据不足或需求不完整，写明 blocker 和下一步。"
         )
     if role == "evaluator":

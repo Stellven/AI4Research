@@ -28,6 +28,7 @@ from plan_validator import (  # noqa: E402
     check_plan_certificate,
     check_planner_graph_dispatchable,
     compile_planner_graph,
+    planner_compile_policy_block,
 )
 
 
@@ -226,6 +227,108 @@ def test_autosci_builder_dispatch_requires_planner_artifacts_and_certificate(tmp
     tampered = check_planner_graph_dispatchable(certified, sprints_dir=sprints, sid=sid)
     assert tampered["ok"] is False
     assert tampered["errors"][0]["code"] == "AUTOSCI_PLANNER_ARTIFACT_HASH_MISMATCH"
+
+
+def test_autosci_certificate_waits_for_durable_planner_operator_result(tmp_path: Path) -> None:
+    sid = "sprint-test-autosci-planner-result-gate"
+    task_id = f"pm-{sid}-N0-cafefeed"
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph = build_autosci_task_graph(
+        sprint_id=sid,
+        title="AutoSci Planner result gate",
+        request_text=AUTOSCI_REQUEST,
+        harness_dir=ROOT,
+    )
+    (sprints / f"{sid}.task_graph.json").write_text(
+        json.dumps(graph, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (sprints / f"{sid}.status.json").write_text(
+        json.dumps(
+            {
+                "id": sid,
+                "sprint_id": sid,
+                "plan_compile_required": True,
+                "planner_dispatch_claim": {
+                    "owner": "operator_pool",
+                    "state": "submitted",
+                    "task_id": task_id,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (sprints / f"{sid}.requirement_ir.json").write_text(
+        json.dumps({"source_inputs": {"raw_request": AUTOSCI_REQUEST}}), encoding="utf-8"
+    )
+    (sprints / f"{sid}.design.md").write_text("# Final design\n", encoding="utf-8")
+    (sprints / f"{sid}.plan.md").write_text("# Final plan\n", encoding="utf-8")
+    inbox = tmp_path / "run" / "pm-inbox" / f"{task_id}.json"
+    inbox.parent.mkdir(parents=True)
+    inbox.write_text(
+        json.dumps(
+            {
+                "task_id": task_id,
+                "sprint_id": sid,
+                "node_id": "N0",
+                "requested_role": "planner",
+                "status": "submitted",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    deferred = compile_planner_graph(sprints, sid)
+
+    assert deferred["ok"] is False
+    assert deferred["deferred"] is True
+    assert deferred["operator_gate"]["state"] == "pending"
+    assert not (sprints / f"{sid}.plan-compile-errors.json").exists()
+    uncertified = json.loads((sprints / f"{sid}.task_graph.json").read_text(encoding="utf-8"))
+    assert "plan_certificate" not in uncertified
+
+    result = tmp_path / "run" / "operator-results" / "codex-planner" / task_id / "result.json"
+    result.parent.mkdir(parents=True)
+    result.write_text(
+        json.dumps(
+            {
+                "task_id": task_id,
+                "sprint_id": sid,
+                "node_id": "N0",
+                "status": "completed",
+                "exit_code": 0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    compiled = compile_planner_graph(sprints, sid)
+
+    assert compiled["ok"] is True
+    assert compiled["stamped"] is True
+    certified = json.loads((sprints / f"{sid}.task_graph.json").read_text(encoding="utf-8"))
+    assert certified["plan_certificate"]["verdict"] == "PASS"
+
+
+def test_autosci_planner_policy_reserves_certification_for_solar(tmp_path: Path, monkeypatch) -> None:
+    sid = "sprint-test-autosci-solar-owned-certificate"
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph = build_autosci_task_graph(
+        sprint_id=sid,
+        title="Solar-owned certificate",
+        request_text=AUTOSCI_REQUEST,
+        harness_dir=ROOT,
+    )
+    (sprints / f"{sid}.task_graph.json").write_text(json.dumps(graph), encoding="utf-8")
+    monkeypatch.setenv("SOLAR_PLAN_VALIDATOR", "1")
+
+    policy = planner_compile_policy_block(sprints, sid)
+
+    assert "Do not invoke the plan compiler" in policy
+    assert "do not edit lifecycle status" in policy
+    assert "durable operator result succeeds" in policy
+    assert "generate_compiled_sprint_planner_artifacts.py" not in policy
 
 
 def test_plan_validator_rejects_real_data_graph_downgraded_to_fixture_semantics(tmp_path: Path) -> None:
