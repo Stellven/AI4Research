@@ -4007,7 +4007,15 @@ def _latest_operator_result_for(
         if task_id and str(data.get("task_id") or "") != task_id:
             continue
         status = str(data.get("status") or "").strip().lower()
-        if status not in {"completed", "failed", "failed_missing_handoff", "failed_stale_handoff", "cancelled", "error"}:
+        if status not in {
+            "completed",
+            "failed",
+            "failed_contract_closeout",
+            "failed_missing_handoff",
+            "failed_stale_handoff",
+            "cancelled",
+            "error",
+        }:
             continue
         finished = str(data.get("finished_at") or data.get("updated_at") or data.get("started_at") or "")
         item = dict(data)
@@ -5021,13 +5029,23 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     operator_id=operator_id,
                     task_id=str(assignment.get("pm_task_id") or ""),
                 )
-                if result and not Path(str(assignment.get("eval_json_path") or _eval_json_file(sid, node_id))).exists():
+                eval_json_path = Path(
+                    str(assignment.get("eval_json_path") or _eval_json_file(sid, node_id))
+                )
+                eval_json_ready = (
+                    eval_json_path.is_file()
+                    and eval_json_path.stat().st_size > 0
+                )
+                operator_status = str((result or {}).get("status") or "").strip().lower()
+                if result and (
+                    operator_status == "failed_contract_closeout" or not eval_json_ready
+                ):
                     terminal_operator_assignment = {
                         "pane": pane,
                         "dispatch_id": str(assignment.get("dispatch_id") or "").strip(),
                         "pm_task_id": str(assignment.get("pm_task_id") or "").strip(),
                         "reason": "eval_failed_contract_closeout",
-                        "operator_status": str(result.get("status") or ""),
+                        "operator_status": operator_status,
                         "result_json": str(result.get("_result_json") or ""),
                     }
                     break
