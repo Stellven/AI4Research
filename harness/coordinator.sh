@@ -3332,6 +3332,26 @@ planner_operator_compile_state() {
     --harness-dir "$HARNESS_DIR" --field state 2>/dev/null || echo unmanaged
 }
 
+dispatch_planner_operator_retry() {
+  local sid="$1" out rc
+  out=$(HARNESS_DIR="$HARNESS_DIR" SOLAR_HARNESS_DIR="$HARNESS_DIR" \
+    SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" SOLAR_PM_DISPATCH_ALLOW_DIRECT=1 \
+    python3 "$HARNESS_DIR/tools/pm_dispatch.py" submit \
+      --role planner \
+      --objective "[Solar Planner recovery] Retry the bounded Planner stage for ${sid} after the prior operator ended without a successful durable result. Read the current sprint contract, requirement IR, PRD, design, plan, task graph, and any prior Planner artifacts. Produce corrected candidate design.md, plan.md, and task_graph.json only. Do not run the plan compiler, do not modify status.json or the Solar ledger, do not create a certificate, do not dispatch Builder or Evaluator, and do not perform Builder work." \
+      --sprint "$sid" --node N0 --task-type planning \
+      --context "source=solar_coordinator planner_operator_retry=1 prior_result=unsuccessful" 2>&1)
+  rc=$?
+  if (( rc == 0 )); then
+    log "${G}[planner-retry] ${sid} dispatched a new bounded Planner operator task: ${out}${N}"
+    emit_event "$sid" "planner_operator_retry_dispatched" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"output": sys.argv[1][-2000:]}))' "$out" 2>/dev/null || echo '{}')"
+    return 0
+  fi
+  log "${Y}[planner-retry] ${sid} retry dispatch failed rc=${rc}: ${out}${N}"
+  emit_event "$sid" "planner_operator_retry_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+  return "$rc"
+}
+
 handle_queued() {
   local sid="$1" sf="$2"
   local blocked_by
@@ -3384,8 +3404,18 @@ PY
       log "${Y}Sprint ${sid} Planner operator is ${planner_operator_state}; wait for durable result before reading or certifying its artifacts${N}"
       return 0
       ;;
-    failed)
-      log "${R}Sprint ${sid} Planner operator failed; waiting for Solar role-pool retry${N}"
+    failed|abandoned)
+      if pm_operator_role_pool_enabled; then
+        if drafting_retry_blocked "$sid" "planner_operator_retry"; then
+          log "${Y}Sprint ${sid} Planner operator retry cooldown active${N}"
+          return 0
+        fi
+        if dispatch_planner_operator_retry "$sid"; then
+          return 0
+        fi
+        mark_drafting_retry "$sid" "planner_operator_retry" "dispatch_failed"
+      fi
+      log "${R}Sprint ${sid} Planner operator ended unsuccessfully; Solar retry remains pending${N}"
       return 0
       ;;
   esac

@@ -433,3 +433,99 @@ if gate_check "$SID" active; then exit 91; fi
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert not marker.exists()
+
+
+def test_planner_gate_selects_new_retry_after_claimed_task_failed(tmp_path: Path) -> None:
+    harness = _minimal_harness(tmp_path)
+    (harness / "lib").mkdir(exist_ok=True)
+    shutil.copy2(_HARNESS / "lib" / "planner_operator_gate.py", harness / "lib")
+    sid = "sprint-planner-retry-selection"
+    old_task = f"pm-{sid}-N0-00000001"
+    new_task = f"pm-{sid}-N0-00000002"
+    status_path = harness / "sprints" / f"{sid}.status.json"
+    status_path.write_text(
+        json.dumps(
+            {
+                "id": sid,
+                "status": "drafting",
+                "planner_dispatch_claim": {
+                    "owner": "operator_pool",
+                    "state": "submitted",
+                    "task_id": old_task,
+                    "expires_at": _iso_after(120),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    old_record = harness / "run" / "pm-inbox" / f"{old_task}.json"
+    old_record.write_text(
+        json.dumps({"task_id": old_task, "requested_role": "planner", "status": "failed_missing_pm_result"}),
+        encoding="utf-8",
+    )
+    old_result_dir = harness / "run" / "operator-results" / "op" / old_task
+    old_result_dir.mkdir(parents=True)
+    (old_result_dir / "result.json").write_text(
+        json.dumps({"task_id": old_task, "status": "draining", "exit_code": -15}),
+        encoding="utf-8",
+    )
+    new_record = harness / "run" / "pm-inbox" / f"{new_task}.json"
+    new_record.write_text(
+        json.dumps({"task_id": new_task, "requested_role": "planner", "status": "submitted"}),
+        encoding="utf-8",
+    )
+    old_time = dt.datetime.now().timestamp() - 10
+    os.utime(old_record, (old_time, old_time))
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(harness / "lib" / "planner_operator_gate.py"),
+            "state",
+            sid,
+            "--harness-dir",
+            str(harness),
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "pending"
+    assert payload["task_id"] == new_task
+
+
+def test_failed_planner_retry_uses_solar_pm_dispatch(tmp_path: Path) -> None:
+    harness = _minimal_harness(tmp_path)
+    (harness / "tools").mkdir()
+    call_log = tmp_path / "pm-dispatch-call.json"
+    (harness / "tools" / "pm_dispatch.py").write_text(
+        "import json, os, sys\n"
+        "json.dump(sys.argv[1:], open(os.environ['CALL_LOG'], 'w', encoding='utf-8'))\n"
+        "print('OK: PM task submitted')\n"
+        "print('task_id = pm-retry-N0-cafefeed')\n",
+        encoding="utf-8",
+    )
+    sid = "sprint-planner-retry-dispatch"
+    script = r'''
+log() { :; }
+emit_event() { :; }
+dispatch_planner_operator_retry "$SID"
+'''
+    result = _source_coordinator(
+        harness,
+        script,
+        env={"SID": sid, "CALL_LOG": str(call_log)},
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    args = json.loads(call_log.read_text(encoding="utf-8"))
+    assert args[0] == "submit"
+    assert args[args.index("--role") + 1] == "planner"
+    assert args[args.index("--sprint") + 1] == sid
+    objective = args[args.index("--objective") + 1]
+    assert "Do not run the plan compiler" in objective
+    assert "do not dispatch Builder or Evaluator" in objective

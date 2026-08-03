@@ -26,6 +26,26 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def _durable_result(harness: Path, task_id: str) -> tuple[Path | None, dict[str, Any]]:
+    candidates = sorted(
+        (harness / "run" / "operator-results").glob(f"*/{task_id}/result.json"),
+        key=lambda path: path.stat().st_mtime if path.exists() else 0.0,
+        reverse=True,
+    )
+    if not candidates:
+        return None, {}
+    return candidates[0], _read_json(candidates[0])
+
+
+def _result_succeeded(result: dict[str, Any]) -> bool:
+    result_status = str(result.get("status") or "").strip().lower()
+    try:
+        exit_code = int(result.get("exit_code"))
+    except (TypeError, ValueError):
+        exit_code = None
+    return result_status in SUCCESS_STATUSES and exit_code == 0
+
+
 def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> dict[str, Any]:
     """Return the durable completion state for the current Planner task.
 
@@ -63,19 +83,19 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
     selected = next((row for row in records if row[1] == claimed_task), None)
     if selected is None:
         selected = max(records, key=lambda row: row[0])
+    else:
+        # A claim pins the intended Planner invocation while it is live.  Once
+        # that invocation has a durable unsuccessful result, however, Solar may
+        # submit a newer bounded retry.  Do not keep selecting the dead claimed
+        # task forever merely because its claim metadata survived a restart.
+        newest = max(records, key=lambda row: row[0])
+        if newest[1] != selected[1]:
+            _claimed_result_path, claimed_result = _durable_result(harness, selected[1])
+            if claimed_result and not _result_succeeded(claimed_result):
+                selected = newest
     _mtime, task_id, inbox_path, inbox = selected
 
-    result_path: Path | None = None
-    result: dict[str, Any] = {}
-    results_root = harness / "run" / "operator-results"
-    candidates = sorted(
-        results_root.glob(f"*/{task_id}/result.json"),
-        key=lambda path: path.stat().st_mtime if path.exists() else 0.0,
-        reverse=True,
-    )
-    if candidates:
-        result_path = candidates[0]
-        result = _read_json(result_path)
+    result_path, result = _durable_result(harness, task_id)
 
     if result:
         result_status = str(result.get("status") or "").strip().lower()
@@ -83,7 +103,7 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
             exit_code = int(result.get("exit_code"))
         except (TypeError, ValueError):
             exit_code = None
-        succeeded = result_status in SUCCESS_STATUSES and exit_code == 0
+        succeeded = _result_succeeded(result)
         return {
             "state": "completed" if succeeded else "failed",
             "ready_for_compile": succeeded,
