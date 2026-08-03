@@ -210,6 +210,40 @@ def test_real_data_request_is_compiled_into_governed_live_source_acceptance() ->
     assert current_internet_graph["source_policy"]["freshness_required"] is True
 
 
+def test_chinese_research_acceptance_preserves_summary_count_and_fact_separation() -> None:
+    request = (
+        "\u8bf7\u4f7f\u7528 Solar AutoSci \u5b8c\u6574\u79d1\u7814\u751f\u547d\u5468\u671f\u68b3\u7406\u817e\u8baf\u65b0\u95fb\u7f51\u9875 "
+        "https://news.qq.com/rain/a/20251207A0337Y00 \u7684\u5173\u952e\u6280\u672f\u8d8b\u52bf\uff0c"
+        "\u5e76\u641c\u7d22\u622a\u81f3\u5f53\u524d\u65e5\u671f\u7684\u4e92\u8054\u7f51\u516c\u5f00\u8d44\u6599\uff0c\u751f\u6210\u4e2d\u6587\u6df1\u5c42\u6280\u672f\u62a5\u544a\u3002"
+        "\u5fc5\u987b\u5728\u7ebf\u7814\u7a76\uff0c\u4e0d\u5f97\u4f7f\u7528 fixture \u6216\u79bb\u7ebf\u66ff\u4ee3\uff1b"
+        "\u81f3\u5c11\u603b\u7ed3 4 \u4e2a\u5173\u952e\u8d8b\u52bf\u5e76\u63d0\u4f9b\u81f3\u5c11 8 \u4e2a\u53ef\u8ffd\u6eaf\u516c\u5f00\u94fe\u63a5\u3002"
+        "\u6bcf\u4e2a\u8d8b\u52bf\u5fc5\u987b\u5206\u6790\u6280\u672f\u673a\u5236\u3001\u652f\u6301\u8bc1\u636e\u3001\u53cd\u8bc1\u6216\u4e89\u8bae\u3001\u6210\u719f\u5ea6\u3001\u5de5\u7a0b\u74f6\u9888\u3001\u98ce\u9669\u4ee5\u53ca\u5c55\u671b\uff1b"
+        "\u660e\u786e\u533a\u5206\u4e8b\u5b9e\u3001\u8bc1\u636e\u4e0e\u63a8\u65ad\u3002"
+    )
+    graph = build_autosci_task_graph(
+        sprint_id="sprint-test-autosci-user-zh-acceptance",
+        title="Chinese research acceptance",
+        request_text=request,
+        harness_dir=ROOT,
+    )
+
+    deliverable = graph["research_deliverable_contract"]
+    assert deliverable["minimum_trends"] == 4
+    assert deliverable["minimum_traceable_sources"] == 8
+    assert deliverable["separate_claim_evidence_inference"] is True
+    assert deliverable["required_analysis_dimensions"] == [
+        "mechanism",
+        "evidence",
+        "counterevidence",
+        "maturity",
+        "bottleneck",
+        "risk",
+        "outlook",
+    ]
+    report = next(node for node in graph["nodes"] if node["id"] == "report_draft")
+    assert report["research_deliverable_contract"] == deliverable
+
+
 def test_autosci_builder_dispatch_requires_planner_artifacts_and_certificate(tmp_path: Path) -> None:
     sid = "sprint-test-autosci-governance"
     sprints = tmp_path / "sprints"

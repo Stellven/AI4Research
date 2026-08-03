@@ -106,7 +106,8 @@ def _research_request_contract(request_text: str) -> tuple[dict[str, Any], dict[
         text,
         (
             r"at\s+least\s+(\d+)\s+(?:technical\s+)?trends?",
-            r"\u81f3\u5c11\s*(?:\u8986\u76d6\s*)?(\d+)\s*\u9879\s*(?:\u76f8\u5173\s*)?(?:\u6280\u672f\s*)?\u8d8b\u52bf",
+            r"\u81f3\u5c11\s*(?:\u603b\u7ed3|\u68b3\u7406|\u63d0\u70bc|\u8986\u76d6|\u5217\u51fa)?\s*"
+            r"(\d+)\s*(?:\u4e2a|\u9879)\s*(?:\u76f8\u5173|\u5173\u952e)?\s*(?:\u6280\u672f\s*)?\u8d8b\u52bf",
         ),
         0,
     )
@@ -130,7 +131,13 @@ def _research_request_contract(request_text: str) -> tuple[dict[str, Any], dict[
         "minimum_trends": minimum_trends,
         "minimum_traceable_sources": minimum_sources,
         "separate_claim_evidence_inference": bool(
-            re.search(r"\u533a\u5206.*\u4e3b\u5f20.*\u8bc1\u636e.*\u63a8\u65ad|claim.*evidence.*inference", text, re.IGNORECASE)
+            re.search(
+                r"(?:\u660e\u786e\s*)?(?:\u533a\u5206|\u5206\u5f00|\u5206\u522b).*?"
+                r"(?:\u4e8b\u5b9e|\u4e3b\u5f20|\u7ed3\u8bba).*?\u8bc1\u636e.*?\u63a8\u65ad|"
+                r"claim.*evidence.*inference",
+                text,
+                re.IGNORECASE,
+            )
         ),
         "required_analysis_dimensions": [
             label
