@@ -278,6 +278,7 @@ def _manifest_presence(sid: str, node_id: str) -> dict[str, Any]:
 
 
 _GENERIC_WORKFLOW_CONTRACT_ID = "pm.generic.v1"
+_AUTOSCI_WORKFLOW_CONTRACT_ID = "research.autosci.v1"
 _EVAL_ARTIFACT_SNAPSHOT_SCHEMA = "solar.eval_artifact_snapshot.v1"
 
 
@@ -302,9 +303,20 @@ def _manifest_anchor(
     gate-cwd fix (contract_gate_executor): certified-generic anchors at the sprint
     workdir with the contract's canonical root, and the contract's alias
     spellings (sprints/<sid>/workdir/X, workdir/X) normalize onto it. Fixed
-    contracts keep the HARNESS_DIR anchor and graph-carried roots (P2/P3 proven).
+    AutoSci operators also execute below the sprint workdir, but retain their
+    graph-carried ``artifacts/scientific/<sid>/`` root. Other fixed contracts
+    keep the HARNESS_DIR anchor and graph-carried roots (P2/P3 proven).
     A returned write_scope of None means "use the node's own write_scope"."""
     graph_roots = graph.get("artifact_roots") if isinstance(graph.get("artifact_roots"), dict) else {}
+    contract_id = str(
+        (graph or {}).get("workflow_contract_id")
+        or (graph or {}).get("workflow_contract")
+        or ""
+    ).strip()
+    if contract_id == _AUTOSCI_WORKFLOW_CONTRACT_ID:
+        workdir = SPRINTS_DIR / sid / "workdir"
+        if workdir.is_dir():
+            return workdir, graph_roots, None
     if not _graph_is_certified_generic(graph):
         return HARNESS_DIR, graph_roots, None
     workdir = SPRINTS_DIR / sid / "workdir"
@@ -441,6 +453,29 @@ def _scope_owner_for_read(
             if target == owner_path or (is_directory and target.is_relative_to(owner_path)):
                 return candidate
     return None
+
+
+def _current_operator_dispatch_read(
+    sid: str,
+    declared: str,
+    node: dict[str, Any],
+) -> Path | None:
+    """Resolve the exact immutable operator envelope for the active node attempt."""
+    if str(declared or "").strip().replace("\\", "/") != "dispatch/envelope.json":
+        return None
+    attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
+    task_id = str(attempt.get("task_id") or node.get("pm_task_id") or "").strip()
+    operator_id = str(attempt.get("operator_id") or node.get("operator_id") or "").strip()
+    if not task_id or not operator_id:
+        return None
+    if any(value in {".", ".."} or Path(value).name != value for value in (task_id, operator_id)):
+        return None
+    if str(attempt.get("sprint_id") or sid) != sid:
+        return None
+    node_id = str(node.get("id") or "").strip()
+    if str(attempt.get("node_id") or node_id) != node_id:
+        return None
+    return HARNESS_DIR / "run" / "operator-results" / operator_id / task_id / "envelope.json"
 
 
 def _snapshot_row_material(row: dict[str, Any]) -> dict[str, Any]:
@@ -809,6 +844,29 @@ def _capture_eval_artifact_snapshot(
             )
         return row
 
+    def add_operator_dispatch_read(declared: str, path: Path) -> dict[str, Any]:
+        task_root = path.parent
+        row = {
+            "scope": "read",
+            "authority": "operator_dispatch",
+            "declared": declared,
+            "path": str(Path(os.path.abspath(path.expanduser()))),
+            "resolved_root": "operator_result",
+            **_artifact_manifest.snapshot_path(path, root=task_root),
+        }
+        rows.append(row)
+        if row.get("unsafe") or not row.get("exists") or not row.get("sha256"):
+            violations.append(
+                {
+                    "code": "DECLARED_EVAL_BYTES_UNAVAILABLE",
+                    "scope": "read",
+                    "declared": declared,
+                    "path": str(row.get("path") or ""),
+                    "authority": "operator_dispatch",
+                }
+            )
+        return row
+
     def add_governed_graph_read(declared: str, path: Path) -> dict[str, Any]:
         """Bind task_graph reads to its stable certificate projection.
 
@@ -875,8 +933,11 @@ def _capture_eval_artifact_snapshot(
 
     staging_reads: dict[str, dict[str, Any]] = {}
     for declared in _scope_values(node.get("read_scope")):
+        operator_dispatch = _current_operator_dispatch_read(sid, declared, node)
         sprint_sidecar = _current_sprint_control_read(sid, declared, graph)
-        if sprint_sidecar is not None:
+        if operator_dispatch is not None:
+            add_operator_dispatch_read(declared, operator_dispatch)
+        elif sprint_sidecar is not None:
             if sprint_sidecar.name == f"{sid}.task_graph.json":
                 add_governed_graph_read(declared, sprint_sidecar)
             else:

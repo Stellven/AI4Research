@@ -351,6 +351,68 @@ def test_autosci_eval_waits_for_durable_builder_result_before_snapshot(
     assert not (sprints / f"{sid}.paper_ingest-eval.json").exists()
 
 
+def test_autosci_eval_snapshot_uses_workdir_and_exact_operator_envelope(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness_dir, sprints = _prepare_isolated_harness(tmp_path, monkeypatch)
+    sid = "sprint-autosci-snapshot-root"
+    task_id = f"pm-{sid}-literature_discover-builder"
+    operator_id = "autosci-literature-discover-worker"
+    relative_output = f"artifacts/scientific/{sid}/01_paper/literature_discovery.v1.json"
+    workdir = sprints / sid / "workdir"
+    output = workdir / relative_output
+    output.parent.mkdir(parents=True)
+    output.write_text('{"schema":"literature_discovery.v1","status":"completed"}\n', encoding="utf-8")
+    envelope = harness_dir / "run" / "operator-results" / operator_id / task_id / "envelope.json"
+    envelope.parent.mkdir(parents=True)
+    envelope.write_text('{"expected_action":"discover_literature"}\n', encoding="utf-8")
+    node = {
+        "id": "literature_discover",
+        "status": "reviewing",
+        "read_scope": ["dispatch/envelope.json"],
+        "write_scope": [relative_output],
+        "execution_attempt": {
+            "schema_version": "solar.node_attempt.v1",
+            "phase": "execution",
+            "sequence": 1,
+            "repair_generation": 0,
+            "task_id": task_id,
+            "dispatch_id": task_id,
+            "operator_id": operator_id,
+            "source": "pm_dispatch",
+            "logical_role": "builder",
+            "status": "completed",
+            "requires_operator_result": True,
+            "sprint_id": sid,
+            "node_id": "literature_discover",
+            "activated_at": "2026-08-03T02:11:08Z",
+            "updated_at": "2026-08-03T02:13:58Z",
+        },
+    }
+    graph = {
+        "sprint_id": sid,
+        "workflow_contract": "research.autosci.v1",
+        "workflow_contract_id": "research.autosci.v1",
+        "artifact_roots": {"canonical": f"artifacts/scientific/{sid}/"},
+        "nodes": [node],
+        "node_results": {"literature_discover": {"status": "reviewing"}},
+    }
+
+    import graph_node_dispatcher as gnd
+
+    snapshot = gnd._capture_eval_artifact_snapshot(sid, node, graph)
+
+    assert snapshot["ok"] is True, snapshot
+    assert snapshot["violations"] == []
+    rows = {row["declared"]: row for row in snapshot["rows"]}
+    assert rows["dispatch/envelope.json"]["authority"] == "operator_dispatch"
+    assert rows["dispatch/envelope.json"]["path"] == str(envelope)
+    assert rows[relative_output]["resolved_root"] == "canonical"
+    assert rows[relative_output]["path"] == str(output)
+    assert rows[relative_output]["exists"] is True
+
+
 def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -359,10 +421,11 @@ def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
     graph_path = _capture_and_consume_autosci_intake(harness_dir, sprints, tmp_path)
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
     paper_node = next(node for node in graph["nodes"] if node["id"] == "paper_ingest")
-    upstream = harness_dir / str(paper_node["read_scope"][0])
+    workdir = sprints / graph["sprint_id"] / "workdir"
+    upstream = workdir / str(paper_node["read_scope"][0])
     upstream.parent.mkdir(parents=True, exist_ok=True)
     upstream.write_text('{"schema_version":"literature_discovery.v1","status":"completed"}\n', encoding="utf-8")
-    evidence = harness_dir / str(paper_node["write_scope"][0])
+    evidence = workdir / str(paper_node["write_scope"][0])
     evidence.parent.mkdir(parents=True, exist_ok=True)
     evidence.write_text(PASS_EVIDENCE.read_text(encoding="utf-8"), encoding="utf-8")
     paper_node["status"] = "reviewing"

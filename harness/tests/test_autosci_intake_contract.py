@@ -158,6 +158,7 @@ def test_real_data_request_is_compiled_into_governed_live_source_acceptance() ->
     assert graph["research_deliverable_contract"]["format"] == "markdown"
     assert graph["research_deliverable_contract"]["minimum_trends"] == 4
     literature = next(node for node in graph["nodes"] if node["id"] == "literature_discover")
+    assert literature["read_scope"] == ["dispatch/envelope.json"]
     assert literature["source_policy"]["online_retrieval_required"] is True
     assert literature["evidence_policy"]["allow_inconclusive"] is False
     assert literature["evidence_policy"]["fixture_only_sufficient"] is False
