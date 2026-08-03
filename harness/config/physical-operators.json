@@ -4590,10 +4590,10 @@
       "deprecated": false
     },
     "autosci-evaluator-worker": {
-      "display_name": "AutoSci runtime evaluator worker",
+      "display_name": "AutoSci deterministic scientific gate",
       "owner_host": "stub_docker_sandbox",
-      "role": "evaluator",
-      "persona": "evaluator",
+      "role": "policy-gate",
+      "persona": "scientific-gate",
       "backend": "command",
       "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_eval_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
       "enabled": true,
@@ -4601,9 +4601,8 @@
       "health_status": "ok",
       "max_concurrency": 1,
       "task_classes": [
-        "graph_eval",
         "scientific-evidence-gate",
-        "verification"
+        "deterministic-verification"
       ],
       "strengths": [
         "autosci-evidence",
@@ -4612,8 +4611,7 @@
       ],
       "preferred_for": [
         "research.autosci.v1",
-        "scientific-evidence",
-        "evaluator"
+        "scientific-evidence"
       ],
       "compat_maps_to": {
         "host_type": "local_command_worker"

@@ -7,6 +7,7 @@ must be correct before a live model call is attempted.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -73,6 +74,7 @@ def test_pm_operator_envelope_carries_work_dir_and_provider_policy(tmp_path, mon
         dispatch_file=dispatch_file,
         result_path=str(tmp_path / "result.md"),
         role="planner",
+        expected_artifacts=[str(tmp_path / "handoff.md")],
     )
 
     assert envelope["work_dir"] == str(tmp_path / "sprints" / "sprint-1" / "workdir")
@@ -80,6 +82,7 @@ def test_pm_operator_envelope_carries_work_dir_and_provider_policy(tmp_path, mon
     assert envelope["runtime_mode"] == "codex"
     assert envelope["provider_policy"] == "openai"
     assert envelope["operator_provider"] == "openai"
+    assert envelope["expected_artifacts"] == [str(tmp_path / "handoff.md")]
 
 
 def test_pm_route_preflight_fails_closed_on_provider_mismatch(tmp_path, monkeypatch, capsys):
@@ -139,6 +142,8 @@ def test_operatord_materializes_work_dir_for_codex(tmp_path, monkeypatch):
     result_dir.mkdir()
     dispatch_file = tmp_path / "dispatch.md"
     dispatch_file.write_text("dispatch", encoding="utf-8")
+    result_path = result_dir / "result.md"
+    handoff_path = tmp_path / "harness" / "sprints" / "sprint-1.N1-handoff.md"
 
     env = operatord._materialize_envelope_context(
         result_dir,
@@ -149,6 +154,8 @@ def test_operatord_materializes_work_dir_for_codex(tmp_path, monkeypatch):
             "dispatch_file": str(dispatch_file),
             "graph_path": str(tmp_path / "sprint.task_graph.json"),
             "work_dir": str(tmp_path / "sprint-workdir"),
+            "result_path": str(result_path),
+            "expected_artifacts": [str(handoff_path)],
         },
     )
 
@@ -156,6 +163,12 @@ def test_operatord_materializes_work_dir_for_codex(tmp_path, monkeypatch):
     assert env["CODEX_WORKDIR"] == str(tmp_path / "sprint-workdir")
     assert env["GRAPH"] == str(tmp_path / "sprint.task_graph.json")
     assert Path(env["SOLAR_OPERATOR_ENVELOPE_JSON"]).exists()
+    assert result_path.is_file()
+    assert handoff_path.is_file()
+    assert set(json.loads(env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"])) == {
+        str(result_path),
+        str(handoff_path),
+    }
 
 
 def test_operatord_derives_work_dir_for_legacy_pm_envelope(tmp_path, monkeypatch):
@@ -181,6 +194,25 @@ def test_operatord_derives_work_dir_for_legacy_pm_envelope(tmp_path, monkeypatch
     assert env["WORK_DIR"] == str(expected)
     assert env["CODEX_WORKDIR"] == str(expected)
     assert expected.is_dir()
+
+
+def test_operatord_refuses_expected_artifact_outside_authorized_roots(tmp_path, monkeypatch):
+    operatord = _load_module("operatord_contract_output_refusal", ROOT / "tools" / "operatord.py")
+    harness = tmp_path / "harness"
+    monkeypatch.setattr(operatord, "HARNESS_DIR", harness)
+    result_dir = harness / "run" / "operator-results" / "op" / "task"
+    result_dir.mkdir(parents=True)
+
+    with pytest.raises(ValueError, match="outside Solar-authorized roots"):
+        operatord._materialize_envelope_context(
+            result_dir,
+            {
+                "task_id": "dispatch-escape",
+                "sprint_id": "sprint-1",
+                "work_dir": str(harness / "sprints" / "sprint-1" / "workdir"),
+                "expected_artifacts": [str(tmp_path / "outside" / "escape.md")],
+            },
+        )
 
 
 def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, monkeypatch):
@@ -226,6 +258,10 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     monkeypatch.setenv("SOLAR_CODEX_OPERATOR_STATE_ROOT", str(tmp_path / "operator-state"))
     monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "1")
     env = codex_operator._codex_exec_env(task_dir)
+    exact_handoff = harness_dir / "sprints" / "sprint-1.N1-handoff.md"
+    exact_handoff.parent.mkdir(parents=True, exist_ok=True)
+    exact_handoff.touch()
+    env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"] = json.dumps([str(exact_handoff)])
 
     command, proof = codex_operator._filesystem_isolated_command(
         ["codex", "exec", "-"], task_dir=task_dir, cwd=work_dir, env=env
@@ -236,7 +272,11 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert command[-4:] == ["--", "codex", "exec", "-"]
     assert proof["mode"] == "landlock"
     assert proof["strict"] is True
-    assert str(harness_dir.resolve()) in proof["read_write"]
+    assert str(harness_dir.resolve()) in proof["read_only"]
+    assert str(harness_dir.resolve()) not in proof["read_write"]
+    assert str(work_dir.resolve()) in proof["read_write"]
+    assert str(task_dir.resolve()) in proof["read_write"]
+    assert str(exact_handoff.resolve()) in proof["read_write"]
     assert str(tmp_path.resolve()) not in proof["read_write"]
     assert str(Path("/etc/resolv.conf").resolve()) in proof["read_only"]
     sandbox_codex_home = Path(env["CODEX_HOME"])

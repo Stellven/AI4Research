@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import json
 import os
 import shutil
 import shlex
@@ -267,11 +268,20 @@ def _filesystem_isolated_command(
             codex_binary,
             resolved_binary.parent,
             *resolved_system_network_files,
+            harness_dir,
         ]
     )
+    try:
+        declared_outputs = json.loads(env.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
+    except (TypeError, ValueError):
+        declared_outputs = []
+    exact_outputs = [
+        Path(str(value)).expanduser()
+        for value in declared_outputs
+        if isinstance(value, str) and value.strip()
+    ]
     read_write = _existing_paths(
         [
-            harness_dir,
             cwd,
             task_dir,
             state_home,
@@ -280,6 +290,7 @@ def _filesystem_isolated_command(
             Path("/dev/urandom"),
             Path("/dev/random"),
             codex_arg0_dir,
+            *exact_outputs,
         ]
     )
     wrapper = Path(__file__).with_name("landlock_exec.py").resolve(strict=False)

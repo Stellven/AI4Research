@@ -160,6 +160,7 @@ def _build_pm_operator_envelope(
     logical_operator: str = "",
     task_graph_node: dict[str, Any] | None = None,
     capsule_submit: dict[str, Any] | None = None,
+    expected_artifacts: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build the canonical PM/operator envelope.
 
@@ -199,6 +200,7 @@ def _build_pm_operator_envelope(
         "operator_model": str(operator.get("model") or ""),
         "workflow_contract": str(graph_policy.get("workflow_contract") or ""),
         "strict_filesystem_boundaries": bool(graph_policy.get("strict_filesystem_boundaries")),
+        "expected_artifacts": list(expected_artifacts or []),
     }
     if not envelope["graph_path"]:
         envelope.pop("graph_path", None)
@@ -2442,6 +2444,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
         logical_operator=logical_operator,
         task_graph_node=task_graph_node,
         capsule_submit=capsule_submit,
+        expected_artifacts=expected_artifacts,
     )
 
     record: dict[str, Any] = {

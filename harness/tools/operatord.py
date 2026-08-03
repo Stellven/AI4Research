@@ -318,10 +318,45 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
         env["TASK_ID"] = str(envelope["task_id"])
     if str(envelope.get("sprint_id") or "").strip():
         env["SID"] = str(envelope["sprint_id"])
+
+    allowed_output_roots = [
+        HARNESS_DIR.expanduser().resolve(strict=False),
+        result_dir.expanduser().resolve(strict=False),
+    ]
+    if work_dir:
+        allowed_output_roots.append(Path(work_dir).expanduser().resolve(strict=False))
+
+    def authorized_output(raw: str) -> Path:
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            path = result_dir / path
+        resolved = path.resolve(strict=False)
+        if not any(resolved == root or resolved.is_relative_to(root) for root in allowed_output_roots):
+            raise ValueError(f"operator output outside Solar-authorized roots: {resolved}")
+        return resolved
+
     result_path = str(envelope.get("result_path") or "").strip()
     if result_path:
+        result_file = authorized_output(result_path)
+        result_file.parent.mkdir(parents=True, exist_ok=True)
+        result_file.touch(exist_ok=True)
+        result_path = str(result_file)
         env["RESULT_PATH"] = result_path
         env["PM_RESULT_PATH"] = result_path
+    allowed_outputs: list[str] = []
+    for raw in envelope.get("expected_artifacts") or []:
+        if not str(raw or "").strip():
+            continue
+        path = authorized_output(str(raw).strip())
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch(exist_ok=True)
+        allowed_outputs.append(str(path))
+    if result_path:
+        allowed_outputs.append(str(Path(result_path).expanduser()))
+    if allowed_outputs:
+        env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"] = json.dumps(
+            sorted(set(allowed_outputs)), ensure_ascii=False
+        )
     pm_context = str(envelope.get("pm_context") or "").strip()
     if pm_context:
         env["PM_CONTEXT"] = pm_context

@@ -27,7 +27,10 @@ def _prepare_isolated_harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     shutil.copytree(HARNESS / "config", harness_dir / "config")
     for name in ("evaluators", "lib", "personas", "plugins", "schemas", "templates", "tools", "workflows"):
         link = harness_dir / name
-        link.symlink_to(HARNESS / name, target_is_directory=True)
+        try:
+            link.symlink_to(HARNESS / name, target_is_directory=True)
+        except OSError:
+            shutil.copytree(HARNESS / name, link)
     (harness_dir / "run").mkdir()
     sprints = harness_dir / "sprints"
     sprints.mkdir()
@@ -58,11 +61,17 @@ def _write_graph(
     status: str = "reviewing",
     max_repair_attempts: int = 1,
 ) -> Path:
+    relative_evidence = Path("artifacts") / "scientific" / sid / "paper_ingest" / "research_paper.v1.json"
+    staged_evidence = sprints / sid / "workdir" / relative_evidence
+    staged_evidence.parent.mkdir(parents=True, exist_ok=True)
+    if evidence_path.is_file():
+        shutil.copyfile(evidence_path, staged_evidence)
     graph = {
         "schema_version": "solar.task_graph.v1",
         "workflow_contract": "research.autosci.v1",
         "research_mode": True,
         "sprint_id": sid,
+        "artifact_roots": {"canonical": f"artifacts/scientific/{sid}/"},
         "required_gates": ["G_PAPER_INGEST"],
         "nodes": [
             {
@@ -71,7 +80,7 @@ def _write_graph(
                 "logical_operator": "ScientificPaperIngestor",
                 "capability_capsule_id": "cap.research-paper-ingest",
                 "depends_on": [],
-                "write_scope": [str(evidence_path)],
+                "write_scope": [str(relative_evidence)],
                 "acceptance": ["Emits or validates research_paper.v1 evidence."],
                 "gate": "G_PAPER_INGEST",
                 "workflow_contract": "research.autosci.v1",
@@ -83,7 +92,7 @@ def _write_graph(
         "node_results": {
             "paper_ingest": {
                 "status": status,
-                "artifacts": {"evidence_payload_path": str(evidence_path)},
+                "artifacts": {"evidence_payload_path": str(relative_evidence)},
             }
         },
         "gate_results": {},
@@ -161,7 +170,41 @@ def _capture_and_consume_autosci_intake(harness_dir: Path, sprints: Path, tmp_pa
     return graph_path
 
 
+def _mock_independent_evaluator(monkeypatch: pytest.MonkeyPatch, gnd, submitted: list[dict]) -> None:
+    monkeypatch.setattr(
+        gnd,
+        "_discover_evaluators",
+        lambda dry_run=False: [
+            {
+                "pane": "operator-pool:evaluator.0",
+                "models": ["gpt-5.5"],
+                "skills": ["review", "testing"],
+                "busy": False,
+                "title": "operator pool evaluator",
+            }
+        ],
+    )
+
+    def fake_submit(**kwargs):
+        submitted.append(kwargs)
+        return {
+            "ok": True,
+            "pane": "operator:mini-codex-gpt55-medium-evaluator-1",
+            "operator_id": "mini-codex-gpt55-medium-evaluator-1",
+            "pm_dispatch": {"pm_task_id": "pm-test-independent-evaluator"},
+            "dispatch_mode": "operator_pool_eval",
+        }
+
+    monkeypatch.setattr(gnd, "_submit_eval_to_operator_pool", fake_submit)
+
+
 def test_autosci_eval_adapter_writes_gate_consumable_pass_and_fail(tmp_path: Path) -> None:
+    registry = json.loads((HARNESS / "config" / "physical-operators.json").read_text(encoding="utf-8"))
+    gate_operator = registry["operators"]["autosci-evaluator-worker"]
+    assert gate_operator["role"] == "policy-gate"
+    assert "graph_eval" not in gate_operator["task_classes"]
+    assert "evaluator" not in gate_operator["preferred_for"]
+
     graph_path = tmp_path / "graph.json"
     graph_path.write_text(
         json.dumps(
@@ -210,7 +253,8 @@ def test_autosci_eval_adapter_writes_gate_consumable_pass_and_fail(tmp_path: Pat
     assert payload["schema_version"] == "solar.eval.v1"
     assert payload["verdict"] == "PASS"
     assert payload["generated_by"] == "autosci-evaluator-worker"
-    assert payload["proof_level"] == "independent_verification"
+    assert payload["proof_level"] == "deterministic_policy_gate"
+    assert payload["independent_author"] == ""
     assert payload["evidence"]["gate_result"]["ok"] is True
 
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
@@ -256,6 +300,62 @@ def test_autosci_eval_adapter_writes_gate_consumable_pass_and_fail(tmp_path: Pat
     assert fail_md.read_text(encoding="utf-8").strip()
 
 
+def test_autosci_eval_adapter_resolves_relative_evidence_from_sprint_workdir(tmp_path: Path) -> None:
+    sid = "sprint-adapter-workdir"
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    relative_evidence = Path("artifacts/scientific") / sid / "paper_ingest" / "research_paper.v1.json"
+    evidence = sprints / sid / "workdir" / relative_evidence
+    evidence.parent.mkdir(parents=True)
+    evidence.write_text(PASS_EVIDENCE.read_text(encoding="utf-8"), encoding="utf-8")
+    graph_path = sprints / f"{sid}.task_graph.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "workflow_contract": "research.autosci.v1",
+                "nodes": [
+                    {
+                        "id": "paper_ingest",
+                        "logical_operator": "ScientificPaperIngestor",
+                        "write_scope": [str(relative_evidence)],
+                        "evidence_policy": {"expected_schema": "research_paper.v1"},
+                    }
+                ],
+                "node_results": {},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    gate_json = sprints / f"{sid}.paper_ingest-scientific-gate.json"
+    gate_md = sprints / f"{sid}.paper_ingest-scientific-gate.md"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(ADAPTER),
+            "--graph",
+            str(graph_path),
+            "--node",
+            "paper_ingest",
+            "--eval-json",
+            str(gate_json),
+            "--eval-md",
+            str(gate_md),
+        ],
+        env=dict(os.environ, HARNESS_DIR=str(HARNESS)),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    payload = json.loads(gate_json.read_text(encoding="utf-8"))
+    assert payload["verdict"] == "PASS"
+    assert payload["provenance"]["evidence_path"] == str(evidence)
+
+
 def test_dispatch_node_evals_routes_autosci_contract_to_autosci_evaluator_green(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -268,19 +368,30 @@ def test_dispatch_node_evals_routes_autosci_contract_to_autosci_evaluator_green(
 
     import graph_node_dispatcher as gnd
 
+    submitted: list[dict] = []
+    _mock_independent_evaluator(monkeypatch, gnd, submitted)
+
     result = gnd.dispatch_node_evals(str(graph_path), ttl=30)
     saved = gnd.load_graph(graph_path)
     node = saved["nodes"][0]
 
     assert result["ok"] is True, result
-    assert result["dispatched"][0]["pane"] == "operator:autosci-evaluator-worker"
-    assert result["dispatched"][0]["dispatch_mode"] == "autosci_eval_adapter"
-    assert result["dispatched"][0]["node_verdict"]["status"] == "passed"
-    assert node["status"] == "passed"
-    assert saved["node_results"]["paper_ingest"]["status"] == "passed"
-    assert saved["gate_results"]["G_PAPER_INGEST"]["status"] == "passed"
-    eval_json = sprints / "sprint-autosci-eval-green.paper_ingest-eval.json"
-    assert json.loads(eval_json.read_text(encoding="utf-8"))["generated_by"] == "autosci-evaluator-worker"
+    assert submitted
+    assert result["dispatched"][0]["pane"] == "operator:mini-codex-gpt55-medium-evaluator-1"
+    assert result["dispatched"][0]["evaluation_plan"]["independence_policy"]["mechanism"] == (
+        "solar_policy_gate_plus_independent_codex_evaluator"
+    )
+    assert node["status"] == "reviewing"
+    assert saved["node_results"]["paper_ingest"]["status"] == "reviewing"
+    gate = node["autosci_scientific_gate"]
+    assert gate["ok"] is True
+    assert gate["proof_level"] == "deterministic_policy_gate"
+    assert gnd._validate_autosci_scientific_gate(node)["ok"] is True
+    dispatch_text = Path(result["dispatched"][0]["instruction_file"]).read_text(encoding="utf-8")
+    assert "You remain an independent Codex Evaluator" in dispatch_text
+    assert gate["json_path"] in dispatch_text
+    Path(gate["json_path"]).write_text("{}\n", encoding="utf-8")
+    assert gnd._validate_autosci_scientific_gate(node)["ok"] is False
 
 
 def test_autosci_eval_waits_for_durable_builder_result_before_snapshot(
@@ -329,6 +440,9 @@ def test_autosci_eval_waits_for_durable_builder_result_before_snapshot(
     graph_path.write_text(json.dumps(graph, indent=2) + "\n", encoding="utf-8")
 
     import graph_node_dispatcher as gnd
+
+    submitted: list[dict] = []
+    _mock_independent_evaluator(monkeypatch, gnd, submitted)
 
     result = gnd.dispatch_node_evals(str(graph_path), ttl=30)
     saved = gnd.load_graph(graph_path)
@@ -488,14 +602,19 @@ def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
 
     import graph_node_dispatcher as gnd
 
+    submitted: list[dict] = []
+    _mock_independent_evaluator(monkeypatch, gnd, submitted)
+
     result = gnd.dispatch_node_evals(str(graph_path), ttl=30)
     saved = gnd.load_graph(graph_path)
 
     assert result["ok"] is True, result
-    assert result["dispatched"][0]["pane"] == "operator:autosci-evaluator-worker"
-    assert result["dispatched"][0]["node_verdict"]["status"] == "passed"
+    assert submitted
+    assert result["dispatched"][0]["pane"] == "operator:mini-codex-gpt55-medium-evaluator-1"
     assert saved["workflow_contract"] == "research.autosci.v1"
-    assert saved["node_results"]["paper_ingest"]["status"] == "passed"
+    assert saved["node_results"]["paper_ingest"]["status"] == "reviewing"
+    saved_paper = next(node for node in saved["nodes"] if node["id"] == "paper_ingest")
+    assert saved_paper["autosci_scientific_gate"]["ok"] is True
 
 
 def test_normal_intake_autosci_dispatch_ready_uses_exact_autosci_operator(
@@ -625,15 +744,21 @@ def test_dispatch_node_evals_autosci_fail_blocks_stage_red(
 
     import graph_node_dispatcher as gnd
 
+    submitted: list[dict] = []
+    _mock_independent_evaluator(monkeypatch, gnd, submitted)
+
     result = gnd.dispatch_node_evals(str(graph_path), ttl=30)
     saved = gnd.load_graph(graph_path)
     node = saved["nodes"][0]
 
     assert result["ok"] is True
-    assert result["dispatched"][0]["pane"] == "operator:autosci-evaluator-worker"
-    assert result["dispatched"][0]["node_verdict"]["status"] == "failed_review"
-    assert node["status"] == "failed_review"
-    assert saved["node_results"]["paper_ingest"]["status"] == "failed_review"
-    assert node["repair_context"]["verdict"] == "FAIL"
-    assert "paper parse_status is failed" in " ".join(node["repair_context"]["failed_conditions"])
+    assert submitted
+    assert result["dispatched"][0]["pane"] == "operator:mini-codex-gpt55-medium-evaluator-1"
+    assert node["status"] == "reviewing"
+    assert saved["node_results"]["paper_ingest"]["status"] == "reviewing"
+    assert node["autosci_scientific_gate"]["verdict"] == "FAIL"
+    assert node["autosci_scientific_gate"]["ok"] is False
+    assert gnd._validate_autosci_scientific_gate(node)["ok"] is False
+    gate_payload = json.loads(Path(node["autosci_scientific_gate"]["json_path"]).read_text(encoding="utf-8"))
+    assert "paper parse_status is failed" in " ".join(gate_payload["failed_conditions"])
     assert saved["gate_results"].get("G_PAPER_INGEST", {}).get("status") != "passed"
