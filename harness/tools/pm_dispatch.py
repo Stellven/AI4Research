@@ -1832,6 +1832,7 @@ def _pm_expected_artifacts(record: dict[str, Any]) -> list[Path]:
         canonical = [SPRINTS_DIR / f"{sprint_id}.{node_id}-handoff.md"]
     elif kind == "planner":
         canonical = [
+            SPRINTS_DIR / f"{sprint_id}.design.md",
             SPRINTS_DIR / f"{sprint_id}.plan.md",
             SPRINTS_DIR / f"{sprint_id}.task_graph.json",
         ]

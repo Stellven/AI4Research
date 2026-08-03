@@ -112,6 +112,22 @@ def test_logical_planner_graph_node_also_uses_node_execution_handoff(sprints: Pa
     assert _names(pmd._pm_expected_artifacts(record)) == [f"{SID}.S1-handoff.md"]
 
 
+def test_independent_planner_closeout_authorizes_every_prompted_artifact(sprints: Path) -> None:
+    record = {
+        "requested_role": "planner",
+        "task_type": "planning",
+        "closeout_kind": "planner",
+        "sprint_id": SID,
+        "node_id": "N0",
+    }
+
+    assert _names(pmd._pm_expected_artifacts(record)) == [
+        f"{SID}.design.md",
+        f"{SID}.plan.md",
+        f"{SID}.task_graph.json",
+    ]
+
+
 def test_independent_graph_evaluation_still_requires_eval_pair(sprints: Path) -> None:
     record = {
         "requested_role": "evaluator",
