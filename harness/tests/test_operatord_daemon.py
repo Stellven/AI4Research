@@ -702,6 +702,77 @@ class TestDaemonOnce:
         assert complete_log.exists()
         assert json.loads(complete_log.read_text(encoding="utf-8"))["task_id"] == "pm-T-command-002"
 
+    def test_pm_result_file_exists_when_restricted_operator_starts(self, tmp_path):
+        env = _setup_command_harness(tmp_path)
+        checker = tmp_path / "tools" / "require_precreated_pm_result.py"
+        checker.write_text(
+            """#!/usr/bin/env python3
+import os
+from pathlib import Path
+
+result = Path(os.environ["PM_RESULT_PATH"])
+if not result.is_file():
+    raise SystemExit("PM result must be pre-created by Solar")
+result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\n", encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
+        checker.chmod(0o755)
+        env["COMMAND_AGENT"] = f"{sys.executable} {checker}"
+
+        dispatch_dir = tmp_path / "run" / "pm-dispatch-files"
+        dispatch_dir.mkdir(parents=True, exist_ok=True)
+        dispatch_file = dispatch_dir / "pm-T-precreated-result.md"
+        dispatch_file.write_text("# Solar PM Dispatch\n", encoding="utf-8")
+        pm_result = tmp_path / "sprints" / "sprint-command.N0.pm-result.md"
+        pm_result.parent.mkdir(parents=True, exist_ok=True)
+        pm_result.write_text("stale content", encoding="utf-8")
+        envelope = {
+            "task_id": "pm-T-precreated-result",
+            "sprint_id": "sprint-command",
+            "node_id": "N0",
+            "operator_id": "test-command-builder",
+            "task_type": "planning",
+            "objective": "Verify Solar pre-creates the exact PM result output",
+            "dispatch_file": str(dispatch_file),
+            "result_path": str(pm_result),
+            "command": "$COMMAND_AGENT",
+        }
+        envelope_path = tmp_path / "pm-envelope-precreated-result.json"
+        envelope_path.write_text(json.dumps(envelope), encoding="utf-8")
+
+        submit_out = self._run_submit(env, envelope_path)
+        assert submit_out["status"] == "submitted"
+        daemon_proc = subprocess.run(
+            [
+                sys.executable,
+                str(TOOLS_DIR / "operatord.py"),
+                "daemon",
+                "--operator",
+                "test-command-builder",
+                "--once",
+                "--poll-interval",
+                "0.2",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        assert daemon_proc.returncode == 0, daemon_proc.stderr
+        assert "stale content" not in pm_result.read_text(encoding="utf-8")
+        assert "pre-created exact output was writable" in pm_result.read_text(encoding="utf-8")
+        result_json = (
+            tmp_path
+            / "run"
+            / "operator-results"
+            / "test-command-builder"
+            / "pm-T-precreated-result"
+            / "result.json"
+        )
+        assert json.loads(result_json.read_text(encoding="utf-8"))["status"] == "completed"
+
     def test_signal_leaves_final_status(self, tmp_path):
         """SIGTERM while idle should leave a final idle status file."""
         import signal as _signal

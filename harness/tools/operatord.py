@@ -906,10 +906,15 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             if pm_result_path is not None:
                 try:
                     pm_result_path.parent.mkdir(parents=True, exist_ok=True)
-                    if pm_result_path.exists():
-                        pm_result_path.unlink()
+                    # Keep the exact output inode present for kernel-enforced
+                    # Landlock scopes.  Removing it here makes the later
+                    # file-level rule unusable because creating the directory
+                    # entry would require write access to the whole sprints
+                    # directory.  Truncation still clears stale content and
+                    # refreshes mtime without widening the operator's scope.
+                    pm_result_path.write_text("", encoding="utf-8")
                 except Exception as exc:
-                    _info(f"Unable to clear stale pm result {pm_result_path}: {exc}")
+                    _info(f"Unable to prepare pm result {pm_result_path}: {exc}")
 
             cmd = _build_command(config, envelope)
             _info(f"Executing: {' '.join(shlex.quote(part) for part in cmd[:8])}")
