@@ -63,6 +63,54 @@ def test_select_operator_by_role_prefers_capsule_operator_constraints(monkeypatc
     assert operator_id == "builder-b"
 
 
+def test_scientific_research_rejects_spark_without_research_capability(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "mini-codex-gpt53-spark-builder-1": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation", "tests", "code-edit"],
+                    "strengths": ["code-edit", "independent-budget"],
+                    "preferred_for": ["codex", "spark"],
+                    "provider": "openai",
+                    "model": "gpt-5.3-codex-spark",
+                },
+                "mini-codex-gpt55-medium-builder-1": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["research", "knowledge-extraction", "evidence"],
+                    "strengths": ["web-research", "source-grounding"],
+                    "preferred_for": ["research", "report-writing"],
+                    "provider": "openai",
+                    "model": "gpt-5.5",
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda op: (True, ""))
+    monkeypatch.setattr(pm_dispatch, "_load_concurrency_policy_module", lambda: None)
+    monkeypatch.setattr(pm_dispatch, "DEFAULT_OPERATOR_PROVIDERS", ["openai"])
+
+    operator_id, operator, reason = pm_dispatch.select_operator_by_role(
+        role="builder",
+        task_type="scientific-research",
+        logical_operator="ScientificLiteratureDiscoverer",
+    )
+
+    assert reason == ""
+    assert operator_id == "mini-codex-gpt55-medium-builder-1"
+    assert operator["model"] == "gpt-5.5"
+
+
 def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_path):
     pm_dispatch = _load_pm_dispatch()
     sprints = tmp_path / "sprints"

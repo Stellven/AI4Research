@@ -1044,6 +1044,23 @@ def _operator_reject_reason_for_task(op: dict[str, Any], role: str, task_type: s
     """
     norm_role = normalize_role(role)
     task = str(task_type or "").strip().lower()
+    if task in {"research", "scientific-research"}:
+        research_markers = {
+            "research",
+            "scientific-research",
+            "web-research",
+            "knowledge-extraction",
+            "evidence",
+            "report-writing",
+        }
+        declared = {
+            str(item).strip().lower()
+            for field in ("task_classes", "strengths", "preferred_for")
+            for item in (op.get(field) or [])
+            if str(item or "").strip()
+        }
+        if not declared.intersection(research_markers):
+            return "operator_lacks_scientific_research_capability"
     requested_code_exec = norm_role in CODE_EXEC_ROLES or task in CODE_EXEC_TASK_TYPES
     if not requested_code_exec:
         return ""
