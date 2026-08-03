@@ -107,6 +107,8 @@ def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_p
     assert envelope["strict_filesystem_boundaries"] is True
     assert envelope["read_scope"] == ["dispatch/envelope.json"]
     assert envelope["write_scope"] == ["artifacts/scientific/literature.json"]
+    assert envelope["write_scope_root"] == str(sprints / sid / "workdir")
+    assert envelope["write_scope_resolution"] == "relative_to_write_scope_root"
 
 
 def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):

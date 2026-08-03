@@ -3036,7 +3036,9 @@ def _canonical_output_paths_block(node: dict[str, Any]) -> str:
     )
 
 
-def _generic_workdir_block(sid: str, graph: dict[str, Any]) -> str:
+def _generic_workdir_block(
+    sid: str, graph: dict[str, Any], node: dict[str, Any] | None = None
+) -> str:
     """Certified-generic builder teaching: STATE the workdir, name the trap.
 
     G4-lite run 2 (codex-cli-output.log:1938): with cwd correctly set to
@@ -3045,9 +3047,38 @@ def _generic_workdir_block(sid: str, graph: dict[str, Any]) -> str:
     sprint's dot-suffixed artifact files and invented sprints/<sid>.workdir.
     The runtime now recovers that stray spelling, but the dispatch text must
     stop inviting it."""
+    contract_id = str(
+        (graph or {}).get("workflow_contract_id")
+        or (graph or {}).get("workflow_contract")
+        or ""
+    ).strip()
+    workdir = SPRINTS_DIR / sid / "workdir"
+    if contract_id == _AUTOSCI_WORKFLOW_CONTRACT_ID:
+        mappings: list[str] = []
+        active_node = node or {}
+        for field in ("write_scope", "outputs"):
+            for raw in _iter_scope_values(active_node.get(field)):
+                scope = Path(raw).expanduser()
+                if scope.is_absolute() or any(ch in raw for ch in "*?[]"):
+                    continue
+                try:
+                    target = (workdir / scope).resolve()
+                    target.relative_to(workdir.resolve())
+                except (OSError, ValueError):
+                    continue
+                mappings.append(f"- `{field}` `{raw}` -> `{target}`")
+        mapping_block = "\n".join(mappings) if mappings else "- No relative output paths declared."
+        return (
+            "## AutoSci Staging Workdir\n\n"
+            f"The sole staging root for every relative `write_scope` and `outputs` path is: `{workdir}`.\n"
+            "Resolve relative paths against this directory, even when sprint sidecars live beside it.\n"
+            "Exact resolved paths for this node:\n\n"
+            f"{mapping_block}\n\n"
+            f"Do not create a second artifact tree at `{SPRINTS_DIR / sid / 'artifacts'}`; "
+            "Solar's evaluator snapshots only the authoritative staging workdir."
+        )
     if not _graph_is_certified_generic(graph):
         return ""
-    workdir = SPRINTS_DIR / sid / "workdir"
     return (
         "## Sprint Workdir\n\n"
         f"The sole staging write root for declared product outputs is: `{workdir}`\n"
@@ -6779,7 +6810,7 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
     )
     write_scope_preflight = _write_scope_preflight_block(str(sid), node)
     canonical_output_paths = _canonical_output_paths_block(node)
-    generic_workdir_block = _generic_workdir_block(str(sid), graph_for_policy)
+    generic_workdir_block = _generic_workdir_block(str(sid), graph_for_policy, node)
     repair_context_block = _node_repair_context_block(node)
 
     return f"""{STATE_READ_PREFLIGHT}

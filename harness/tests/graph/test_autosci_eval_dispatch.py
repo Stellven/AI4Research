@@ -413,6 +413,50 @@ def test_autosci_eval_snapshot_uses_workdir_and_exact_operator_envelope(
     assert rows[relative_output]["exists"] is True
 
 
+def test_autosci_dispatch_names_the_same_workdir_used_by_eval_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _harness_dir, sprints = _prepare_isolated_harness(tmp_path, monkeypatch)
+    sid = "sprint-autosci-dispatch-root"
+    relative_output = f"artifacts/scientific/{sid}/01_paper/literature_discovery.v1.json"
+    node = {
+        "id": "literature_discover",
+        "goal": "discover live sources",
+        "read_scope": ["dispatch/envelope.json"],
+        "write_scope": [relative_output],
+        "outputs": [relative_output],
+        "acceptance": ["live evidence exists"],
+    }
+    graph_path = sprints / f"{sid}.task_graph.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "workflow_contract": "research.autosci.v1",
+                "workflow_contract_id": "research.autosci.v1",
+                "nodes": [node],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    import graph_node_dispatcher as gnd
+
+    text = gnd.build_dispatch_text(
+        {"sprint_id": sid, "node": node, "graph": str(graph_path)},
+        "operator-pool:builder.0",
+    )
+    workdir = sprints / sid / "workdir"
+    expected = workdir / relative_output
+
+    assert "## AutoSci Staging Workdir" in text
+    assert f"sole staging root for every relative `write_scope` and `outputs` path is: `{workdir}`" in text
+    assert f"`write_scope` `{relative_output}` -> `{expected}`" in text
+    assert f"`outputs` `{relative_output}` -> `{expected}`" in text
+    assert f"Do not create a second artifact tree at `{sprints / sid / 'artifacts'}`" in text
+
+
 def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

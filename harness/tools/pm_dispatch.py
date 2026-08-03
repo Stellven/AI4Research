@@ -218,6 +218,8 @@ def _build_pm_operator_envelope(
         }
         envelope["read_scope"] = list(task_graph_node.get("read_scope") or [])
         envelope["write_scope"] = list(task_graph_node.get("write_scope") or [])
+        envelope["write_scope_root"] = envelope["work_dir"]
+        envelope["write_scope_resolution"] = "relative_to_write_scope_root"
     if capsule_submit.get("capability_capsule_id"):
         envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
         envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
