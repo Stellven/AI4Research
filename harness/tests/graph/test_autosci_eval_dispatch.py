@@ -283,6 +283,74 @@ def test_dispatch_node_evals_routes_autosci_contract_to_autosci_evaluator_green(
     assert json.loads(eval_json.read_text(encoding="utf-8"))["generated_by"] == "autosci-evaluator-worker"
 
 
+def test_autosci_eval_waits_for_durable_builder_result_before_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness_dir, sprints = _prepare_isolated_harness(tmp_path, monkeypatch)
+    sid = "sprint-autosci-builder-still-running"
+    evidence = harness_dir / "artifacts" / "pending" / "research_paper.v1.json"
+    graph_path = _write_graph(
+        sprints,
+        sid=sid,
+        evidence_path=evidence,
+        status="dispatched",
+    )
+    graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    node = graph["nodes"][0]
+    task_id = f"pm-{sid}-paper_ingest-builder"
+    operator_id = "autosci-paper-ingest-worker"
+    node.update(
+        {
+            "dispatched_via": "pm_dispatch",
+            "pm_task_id": task_id,
+            "operator_id": operator_id,
+            "assigned_to": f"operator:{operator_id}",
+            "execution_attempt": {
+                "schema_version": "solar.node_attempt.v1",
+                "phase": "execution",
+                "sequence": 1,
+                "repair_generation": 0,
+                "task_id": task_id,
+                "dispatch_id": task_id,
+                "operator_id": operator_id,
+                "source": "pm_dispatch",
+                "logical_role": "builder",
+                "status": "submitted",
+                "requires_operator_result": True,
+                "sprint_id": sid,
+                "node_id": "paper_ingest",
+                "activated_at": "2026-08-03T01:40:00Z",
+                "updated_at": "2026-08-03T01:40:00Z",
+            },
+        }
+    )
+    graph["plan_certificate"] = {"verdict": "PASS"}
+    graph_path.write_text(json.dumps(graph, indent=2) + "\n", encoding="utf-8")
+
+    import graph_node_dispatcher as gnd
+
+    result = gnd.dispatch_node_evals(str(graph_path), ttl=30)
+    saved = gnd.load_graph(graph_path)
+
+    assert result["dispatched"] == []
+    assert result["skipped"] == [
+        {
+            "node": "paper_ingest",
+            "reason": "builder_operator_result_pending",
+            "task_id": task_id,
+            "operator_id": operator_id,
+            "complete": False,
+            "result_json": None,
+        }
+    ]
+    assert saved["nodes"][0]["status"] == "dispatched"
+    assert saved["node_results"]["paper_ingest"]["status"] == "dispatched"
+    assert not (sprints / f"{sid}.paper_ingest-eval-snapshot.json").exists()
+    assert not (sprints / f"{sid}.paper_ingest-eval-dispatch.md").exists()
+    assert not (sprints / f"{sid}.paper_ingest-eval.json").exists()
+
+
 def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

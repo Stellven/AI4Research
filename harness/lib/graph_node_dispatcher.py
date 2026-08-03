@@ -11365,6 +11365,27 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
         node_id = str(node.get("id") or "")
         if not _node_eval_needed(graph, sid, node, force=force):
             continue
+        # Every evaluator route consumes the Builder's output bytes.  A
+        # PM-dispatched Builder may create its handoff before its process has
+        # exited, so the handoff is not a durable completion boundary.  Gate
+        # AutoSci and generic evaluators alike on the exact operator result
+        # before emitting proof sidecars, freezing a snapshot, or evaluating.
+        builder_result_gate = _builder_operator_result_gate(sid, node)
+        if builder_result_gate.get("required") and not builder_result_gate.get("ok"):
+            skipped.append(
+                {
+                    "node": node_id,
+                    "reason": str(
+                        builder_result_gate.get("reason")
+                        or "builder_operator_result_pending"
+                    ),
+                    "task_id": builder_result_gate.get("task_id"),
+                    "operator_id": builder_result_gate.get("operator_id"),
+                    "complete": builder_result_gate.get("complete"),
+                    "result_json": builder_result_gate.get("result_json"),
+                }
+            )
+            continue
         if _node_uses_autosci_evaluator(graph, node):
             requested_plan = _plan_node_evaluation(graph, node)
             requested_capacity = {
@@ -11543,22 +11564,6 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 })
             graph = load_graph(graph_path)
             break
-        builder_result_gate = _builder_operator_result_gate(sid, node)
-        if builder_result_gate.get("required") and not builder_result_gate.get("ok"):
-            skipped.append(
-                {
-                    "node": node_id,
-                    "reason": str(
-                        builder_result_gate.get("reason")
-                        or "builder_operator_result_pending"
-                    ),
-                    "task_id": builder_result_gate.get("task_id"),
-                    "operator_id": builder_result_gate.get("operator_id"),
-                    "complete": builder_result_gate.get("complete"),
-                    "result_json": builder_result_gate.get("result_json"),
-                }
-            )
-            continue
         if not dry_run:
             _emit_node_proof_sidecars(sid, node)
         gate_result = _maybe_execute_contract_gate(graph, sid, node, dry_run=dry_run)
