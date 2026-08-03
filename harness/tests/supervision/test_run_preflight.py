@@ -74,6 +74,61 @@ def ops_fixture(tmp_path, monkeypatch):
     return _install
 
 
+# --- Codex Landlock write capability -----------------------------------------
+
+
+def _landlock_harness(tmp_path: Path) -> Path:
+    harness = tmp_path / "harness"
+    tools = harness / "tools"
+    tools.mkdir(parents=True)
+    (tools / "landlock_exec.py").write_text("# test wrapper\n", encoding="utf-8")
+    return harness
+
+
+def test_landlock_probe_skips_non_codex_runtime(tmp_path):
+    result = rp.check_codex_landlock_write_scope(
+        harness_dir=tmp_path,
+        env={"SOLAR_PANE_RUNTIME": "claude"},
+        platform_name="linux",
+    )
+    assert result["ok"] is True
+    assert result["detail"]["skipped"] == "runtime_not_codex"
+
+
+def test_landlock_probe_accepts_real_restricted_write(tmp_path, monkeypatch):
+    harness = _landlock_harness(tmp_path)
+
+    def _run(command, **_kwargs):
+        Path(command[-1]).write_bytes(b"landlock-ok")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(rp.subprocess, "run", _run)
+    result = rp.check_codex_landlock_write_scope(
+        harness_dir=harness,
+        env={"SOLAR_PANE_RUNTIME": "codex"},
+        platform_name="linux",
+    )
+    assert result["ok"] is True
+    assert result["detail"]["returncode"] == 0
+
+
+def test_landlock_probe_rejects_filesystem_that_denies_granted_write(tmp_path, monkeypatch):
+    harness = _landlock_harness(tmp_path)
+
+    def _run(command, **_kwargs):
+        return subprocess.CompletedProcess(command, 1, "", "Permission denied")
+
+    monkeypatch.setattr(rp.subprocess, "run", _run)
+    result = rp.check_codex_landlock_write_scope(
+        harness_dir=harness,
+        env={"SOLAR_PANE_RUNTIME": "codex"},
+        platform_name="linux",
+    )
+    assert result["ok"] is False
+    assert "Permission denied" in result["detail"]["error_tail"]
+    assert "/mnt/c" in result["remediation"]
+
+
 # --- auth presence (existence only — never token contents) --------------------
 
 

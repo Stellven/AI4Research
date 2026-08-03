@@ -7,13 +7,16 @@ Before a run dispatches anything, prove the ground it stands on:
      PATH / already-imported harness modules all resolve inside the ACTIVE tree,
      never a different checkout or the installed ~/.solar/harness (the cb2cc504
      / F-CLASS-21 installed-harness contamination class).
-  2. auth_presence — per-provider credential PRESENCE only, via stat/env-name
+  2. codex_landlock_write_scope — for a Codex runtime, perform a real
+     kernel-restricted write below the active Harness tree. This rejects WSL
+     DrvFs deployments before a Sprint or Planner task is created.
+  3. auth_presence — per-provider credential PRESENCE only, via stat/env-name
      checks (``~/.claude/.credentials.json`` non-empty or CLAUDE_CODE_OAUTH_TOKEN
      set; ``~/.codex/auth.json`` non-empty — same signals as auth-helpers.sh).
      Token contents are NEVER read and never appear in the report. A
      single-provider policy is a product contract: that provider must be authed;
      a multi-provider policy needs at least one authed provider.
-  3. role_routes — per-role route resolution under the provider policy
+  4. role_routes — per-role route resolution under the provider policy
      (SOLAR_MULTI_TASK_DEFAULT_PROVIDERS, default "anthropic,openai"; R5
      fail-closed per role). Candidates come from the real registry loaders and
      selectors (multi_task_runner.load_physical_operators / operator_dispatchable
@@ -21,9 +24,9 @@ Before a run dispatches anything, prove the ground it stands on:
      single classifier, operator_runtime.get_operator_runtime_state. A role with
      zero policy-admissible, dispatchable, healthy operators fails the run.
      leased/running operators still route: busy is not broken (F-CLASS-08).
-  4. live_capacity — the multi-task pool session is up, or is auto-startable
+  5. live_capacity — the multi-task pool session is up, or is auto-startable
      (tmux present). Zero capacity fails closed (the "no live workers" wall).
-  5. contract_compile — when the run is contracted, the workflow contract must
+  6. contract_compile — when the run is contracted, the workflow contract must
      compile via the Lane 1 ``workflow_contract`` module, against THIS run's
      provider policy (not the contract's embedded one), so the contract gate and
      the run resolve the same stage the same way; a contracted run on a tree
@@ -57,7 +60,9 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
@@ -177,7 +182,129 @@ def check_harness_path_consistency(
     )
 
 
-# --- 2. auth presence (existence/validity signal only — never token contents) ----
+# --- 2. Codex Landlock write capability -----------------------------------------
+
+
+def check_codex_landlock_write_scope(
+    harness_dir: Optional[Path | str] = None,
+    env: Optional[Mapping[str, str]] = None,
+    platform_name: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Prove that Landlock can write an explicitly granted Harness file.
+
+    WSL DrvFs accepts the Landlock rule but denies the later write. A normal
+    directory-writable check therefore produces a false green run; only an
+    actual restricted child write detects the deployment wall.
+    """
+    env_map = _env(env)
+    runtime = str(
+        env_map.get("SOLAR_PANE_RUNTIME")
+        or env_map.get("SOLAR_RUNTIME")
+        or ""
+    ).strip().lower()
+    mode = str(env_map.get("SOLAR_CODEX_OPERATOR_FS_ISOLATION") or "landlock").strip().lower()
+    strict = str(env_map.get("SOLAR_OPERATOR_STRICT_FS_SCOPE") or "").strip().lower() in {
+        "1", "true", "yes", "on"
+    }
+    if runtime != "codex":
+        return _check(
+            "codex_landlock_write_scope",
+            True,
+            {"skipped": "runtime_not_codex", "runtime": runtime or "unset"},
+        )
+    if mode in {"0", "off", "disabled", "none"}:
+        return _check(
+            "codex_landlock_write_scope",
+            not strict,
+            {"skipped": "landlock_disabled", "strict": strict},
+            "strict Codex operator scope requires Landlock; enable SOLAR_CODEX_OPERATOR_FS_ISOLATION=landlock",
+        )
+    effective_platform = platform_name or sys.platform
+    if effective_platform != "linux":
+        return _check(
+            "codex_landlock_write_scope",
+            not strict,
+            {"skipped": "landlock_requires_linux", "platform": effective_platform, "strict": strict},
+            "strict Codex operator scope requires a Linux filesystem with Landlock support",
+        )
+
+    harness = Path(harness_dir or _harness_dir_from_env(env_map)).expanduser().resolve(strict=False)
+    wrapper = harness / "tools" / "landlock_exec.py"
+    if not wrapper.is_file():
+        return _check(
+            "codex_landlock_write_scope",
+            False,
+            {"harness_dir": str(harness), "error": "landlock_wrapper_missing"},
+            f"Landlock wrapper missing from active Harness: {wrapper}",
+        )
+
+    probe_dir = harness / "run" / "preflight-probes"
+    probe: Optional[Path] = None
+    try:
+        probe_dir.mkdir(parents=True, exist_ok=True)
+        fd, raw_probe = tempfile.mkstemp(prefix="landlock-write-", dir=probe_dir)
+        os.close(fd)
+        probe = Path(raw_probe).resolve(strict=False)
+        command = [sys.executable, str(wrapper)]
+        for readable in (Path("/usr"), Path("/bin"), Path("/lib"), Path("/lib64"), Path("/etc")):
+            if readable.exists():
+                command.extend(["--read-only", str(readable)])
+        command.extend(
+            [
+                "--read-write",
+                str(probe),
+                "--",
+                sys.executable,
+                "-c",
+                (
+                    "import os,sys; "
+                    "fd=os.open(sys.argv[1],os.O_WRONLY|os.O_TRUNC); "
+                    "os.write(fd,b'landlock-ok'); os.close(fd)"
+                ),
+                str(probe),
+            ]
+        )
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            env=dict(env_map),
+        )
+        wrote = completed.returncode == 0 and probe.read_bytes() == b"landlock-ok"
+        detail = {
+            "harness_dir": str(harness),
+            "mode": mode,
+            "returncode": completed.returncode,
+            "error_tail": (completed.stderr or completed.stdout or "")[-500:] if not wrote else "",
+        }
+    except Exception as exc:
+        wrote = False
+        detail = {
+            "harness_dir": str(harness),
+            "mode": mode,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+    finally:
+        if probe is not None:
+            try:
+                probe.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+    return _check(
+        "codex_landlock_write_scope",
+        wrote,
+        detail,
+        (
+            "the active Harness filesystem cannot honor Landlock write grants; "
+            "on WSL install SOLAR_HOME/HARNESS_DIR inside the Linux ext4 filesystem "
+            "(for example /home/<user>/.solar), not under /mnt/c, then rerun preflight"
+        ),
+    )
+
+
+# --- 3. auth presence (existence/validity signal only — never token contents) ----
 
 
 def _file_nonempty(path: Path) -> bool:
@@ -517,6 +644,10 @@ def run_preflight(
             env=env_map,
             solar_harness_path=solar_harness_path,
             modules=modules,
+        ),
+        check_codex_landlock_write_scope(
+            harness_dir=expected_harness_dir or _harness_dir_from_env(env_map),
+            env=env_map,
         ),
         check_auth_presence(policy, home=home, env=env_map),
         check_role_routes(roles=roles, providers=policy),
