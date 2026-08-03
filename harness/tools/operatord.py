@@ -1011,8 +1011,13 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 _state["current_task_id"] = None
 
             if _state["drain"]:
-                # Signal arrived mid-execution; mark draining then tidy up.
-                result_status = "draining"
+                # ``draining`` is a daemon lifecycle state, not a durable task
+                # result. Persisting it here leaves PM inbox records in
+                # ``submitted`` forever because no failure closeout runs.
+                result_status = "failed_interrupted"
+                if exit_code == 0:
+                    exit_code = 130
+                log_lines.append("[ERROR] operator task interrupted while daemon was draining")
                 _state["current_state"] = "draining"
 
             finished_at: str = _now_utc()
@@ -1074,7 +1079,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             # ── Write result artifact ─────────────────────────────────────────────
             log_tail = "\n".join(log_lines[-50:])
             flow_control_decision: dict[str, Any] | None = None
-            if result_status not in {"completed", "draining"} and log_tail.strip():
+            if result_status != "completed" and log_tail.strip():
                 try:
                     flow_control_decision = _apply_failure_runtime_override(
                         operator_id=operator_id,
@@ -1104,7 +1109,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             )
             _info(f"Result written: {result_path}")
 
-            if pm_result_path is not None and result_status not in {"completed", "draining"}:
+            if pm_result_path is not None and result_status != "completed":
                 try:
                     failed = subprocess.run(
                         _pm_dispatch_fail_command(task_id, result_status, log_tail or result_status),

@@ -158,6 +158,13 @@ if len(sys.argv) >= 4 and sys.argv[1] == "complete" and sys.argv[2] == "--task-i
     log.write_text(json.dumps({"task_id": task_id}, ensure_ascii=False), encoding="utf-8")
     print(f"✅ 任务 {task_id} 已标记为 completed")
     raise SystemExit(0)
+if len(sys.argv) >= 4 and sys.argv[1] == "fail" and sys.argv[2] == "--task-id":
+    task_id = sys.argv[3]
+    log = Path(__file__).resolve().parent.parent / "run" / "pm-fail.json"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(json.dumps({"task_id": task_id, "args": sys.argv[1:]}, ensure_ascii=False), encoding="utf-8")
+    print(f"task {task_id} marked failed")
+    raise SystemExit(0)
 raise SystemExit(2)
 """,
         encoding="utf-8",
@@ -744,6 +751,81 @@ class TestDaemonOnce:
         assert hb["runtime_state"] == "idle", (
             f"Final heartbeat after SIGTERM should be idle, got {hb['runtime_state']}"
         )
+
+    def test_signal_during_pm_task_records_terminal_failure(self, tmp_path):
+        """An interrupted PM task must close as failed, never as draining."""
+        import signal as _signal
+
+        env = _setup_command_harness(tmp_path)
+        slow_agent = tmp_path / "tools" / "slow_command.py"
+        slow_agent.write_text("import time\ntime.sleep(30)\n", encoding="utf-8")
+        env["COMMAND_AGENT"] = f"{sys.executable} {slow_agent}"
+
+        dispatch_dir = tmp_path / "run" / "pm-dispatch-files"
+        dispatch_dir.mkdir(parents=True, exist_ok=True)
+        dispatch_file = dispatch_dir / "pm-T-command-interrupted.md"
+        dispatch_file.write_text("# Solar PM Dispatch\n", encoding="utf-8")
+        envelope = {
+            "task_id": "pm-T-command-interrupted",
+            "sprint_id": "sprint-command",
+            "node_id": "N0",
+            "operator_id": "test-command-builder",
+            "task_type": "planning",
+            "objective": "Verify interrupted PM closeout",
+            "dispatch_file": str(dispatch_file),
+            "result_path": str(tmp_path / "sprints" / "sprint-command.N0.pm-result.md"),
+            "handoff_path": str(tmp_path / "sprints" / "sprint-command.N0-handoff.md"),
+            "command": "$COMMAND_AGENT",
+        }
+        envelope_path = tmp_path / "pm-envelope-interrupted.json"
+        envelope_path.write_text(json.dumps(envelope), encoding="utf-8")
+        self._run_submit(env, envelope_path)
+
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                str(TOOLS_DIR / "operatord.py"),
+                "daemon",
+                "--operator",
+                "test-command-builder",
+                "--once",
+                "--poll-interval",
+                "0.1",
+            ],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        result_path = (
+            tmp_path
+            / "run"
+            / "operator-results"
+            / "test-command-builder"
+            / "pm-T-command-interrupted"
+            / "result.json"
+        )
+        heartbeat_path = tmp_path / "run" / "operator-status" / "test-command-builder.json"
+        deadline = time.time() + 5.0
+        running = False
+        while time.time() < deadline:
+            if heartbeat_path.exists():
+                heartbeat = json.loads(heartbeat_path.read_text(encoding="utf-8"))
+                running = heartbeat.get("runtime_state") == "running"
+                if running:
+                    break
+            time.sleep(0.05)
+        assert running, "PM task should enter running before SIGTERM"
+
+        proc.send_signal(_signal.SIGTERM)
+        proc.wait(timeout=10)
+
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        assert result["status"] == "failed_interrupted"
+        assert result["exit_code"] != 0
+        failure = json.loads((tmp_path / "run" / "pm-fail.json").read_text(encoding="utf-8"))
+        assert failure["task_id"] == "pm-T-command-interrupted"
+        assert "failed_interrupted" in failure["args"]
 
 
 class TestBuildCommand:
