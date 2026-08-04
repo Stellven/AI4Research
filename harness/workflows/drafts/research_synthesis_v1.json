@@ -1,6 +1,6 @@
 {
-  "$schema": "../schemas/draft/research_workflow_skeleton.v1.schema.json",
-  "schema_version": "v1",
+  "$schema": "../../schemas/draft/research_workflow_skeleton.v1.schema.json",
+  "schema_version": "v1.0.0-draft",
   "workflow_id": "research_synthesis_v1",
   "status": "draft",
   "execution_mode": "non-executable",
@@ -53,7 +53,7 @@
           "seed_snapshot includes source seed tokens and acquisition timestamp."
         ]
       },
-      "binding_status": "required",
+      "binding_status": "planned",
       "retry_policy": {
         "mode": "planned",
         "max_attempts": 2
@@ -97,7 +97,7 @@
           "Each source entry includes an identifier and discovery trace."
         ]
       },
-      "binding_status": "required",
+      "binding_status": "planned",
       "retry_policy": {
         "mode": "planned",
         "max_attempts": 2
@@ -143,7 +143,7 @@
           "Validation output records provenance for each reviewed source."
         ]
       },
-      "binding_status": "required",
+      "binding_status": "planned",
       "retry_policy": {
         "mode": "planned",
         "max_attempts": 1
@@ -171,7 +171,7 @@
           "enabled": false,
           "notes": "No network calls; local evidence composition only."
         },
-        "provider_execution": false,
+        "provider_execution": true,
         "read_scope": [
           "artifacts/research_synthesis_v1/seed/seed_snapshot.json",
           "artifacts/research_synthesis_v1/validation/source_validation.json"
@@ -191,7 +191,7 @@
           "Synthesis references only validated source artifacts and marks uncertainties."
         ]
       },
-      "binding_status": "required",
+      "binding_status": "planned",
       "retry_policy": {
         "mode": "planned",
         "max_attempts": 1
@@ -219,7 +219,7 @@
           "enabled": false,
           "notes": "Drafting runs without network."
         },
-        "provider_execution": false,
+        "provider_execution": true,
         "read_scope": [
           "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json"
         ],
@@ -266,7 +266,7 @@
           "enabled": false,
           "notes": "Review uses only local report and source artifacts."
         },
-        "provider_execution": false,
+        "provider_execution": true,
         "read_scope": [
           "artifacts/research_synthesis_v1/report/report_draft.json",
           "artifacts/research_synthesis_v1/validation/source_validation.json"

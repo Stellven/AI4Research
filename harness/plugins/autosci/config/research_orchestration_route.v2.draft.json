@@ -4,9 +4,31 @@
   "routes": [
     {
       "native_skill": "research",
+      "workflow_kinds": [
+        "research_synthesis",
+        "paper_ingestion",
+        "literature_synthesis",
+        "scientific_lifecycle"
+      ],
       "target_capability": "cap.research-lifecycle-run",
       "target_logical_operator": "ScientificResearchLifecycleOrchestrator",
       "planned_backend_action": "dispatch_research_lifecycle",
+      "coverage": "skeleton/partial",
+      "run_mode": [
+        "execute",
+        "resume",
+        "import_evidence"
+      ],
+      "active": false
+    },
+    {
+      "native_skill": "research",
+      "workflow_kinds": [
+        "workflow_evolution"
+      ],
+      "target_capability": "cap.research-workflow-evolve",
+      "target_logical_operator": "ScientificWorkflowEvolver",
+      "planned_backend_action": "dispatch_workflow_evolution",
       "coverage": "skeleton/partial",
       "run_mode": [
         "execute",

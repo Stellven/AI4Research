@@ -26,8 +26,18 @@
     "run_id": {"$ref": "#/$defs/non_empty_string"},
     "workflow_id": {"$ref": "#/$defs/non_empty_string"},
     "node_id": {"$ref": "#/$defs/non_empty_string"},
-    "logical_operator": {"$ref": "#/$defs/operator_ref"},
-    "physical_operator": {"$ref": "#/$defs/operator_ref"},
+    "logical_operator": {
+      "allOf": [
+        {"$ref": "#/$defs/operator_ref"},
+        {"properties": {"operator_kind": {"const": "logical"}}}
+      ]
+    },
+    "physical_operator": {
+      "allOf": [
+        {"$ref": "#/$defs/operator_ref"},
+        {"properties": {"operator_kind": {"const": "physical"}}}
+      ]
+    },
     "typed_inputs": {
       "type": "object",
       "required": ["input_schema", "payload"],
@@ -101,7 +111,19 @@
           "type": "array",
           "items": {"$ref": "#/$defs/non_empty_string"}
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"allow_live_provider": {"const": true}},
+            "required": ["allow_live_provider"]
+          },
+          "then": {
+            "required": ["approval_ref"],
+            "properties": {"allow_network": {"const": true}}
+          }
+        }
+      ]
     },
     "timeout_retry_policy": {
       "type": "object",

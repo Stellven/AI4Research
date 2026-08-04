@@ -58,20 +58,26 @@ declared with provenance.
 `research_node_request.v1` is the Solar-to-worker dispatch envelope. It
 contains task, run, workflow, and node IDs; logical and physical operator IDs;
 typed inputs; input artifact references; scoped authorization; allowed read and
-write scopes; and timeout/retry policy.
+write scopes; and timeout/retry policy. Live-provider authorization is valid
+only when network access is enabled and an explicit approval reference is
+present.
 
 `research_node_result.v1` is the worker-to-Solar result envelope. It contains a
 terminal or nonterminal node status, output artifacts, evidence references and
 payload summaries, hashes, model/provider usage, concise errors, limitations,
 and a secret-redaction assertion. A terminal status is one of `completed`,
 `failed`, `blocked`, or `cancelled`; a nonterminal status is one of `pending`,
-`ready`, `running`, `awaiting_human`, or `awaiting_external`.
+`ready`, `running`, `awaiting_human`, or `awaiting_external`. A completed node
+must carry evidence and cannot carry errors; a failed node must carry a concise
+error record.
 
 `research_run_state.v1` is the Solar-owned committed state document. It contains
 graph identity, node states, ready nodes, current blockers,
 resume/import provenance, and final run status. The final status is a generic
 `run_status` value and must not depend on a dedicated evidence schema name such
-as `real_data_research`.
+as `real_data_research`. A completed run requires every required node to be
+completed with a result reference, every optional node to be terminal, no
+current blockers, and at least one final status evidence reference.
 
 ## Reuse From Real Data Research
 

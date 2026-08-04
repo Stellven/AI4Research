@@ -79,6 +79,27 @@
       "then": {
         "properties": {"status_is_terminal": {"const": false}}
       }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "completed"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "evidence": {"minItems": 1},
+          "errors": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "failed"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {"errors": {"minItems": 1}}
+      }
     }
   ],
   "$defs": {

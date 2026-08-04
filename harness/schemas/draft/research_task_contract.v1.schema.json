@@ -75,7 +75,10 @@
       },
       "then": {
         "anyOf": [
-          {"required": ["supplied_evidence"]},
+          {
+            "required": ["supplied_evidence"],
+            "properties": {"supplied_evidence": {"minItems": 1}}
+          },
           {
             "properties": {
               "seed_inputs": {
@@ -120,7 +123,16 @@
         "value": {"$ref": "#/$defs/non_empty_string"},
         "artifact_ref": {"$ref": "#/$defs/artifact_ref"},
         "provenance": {"$ref": "#/$defs/provenance"}
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"seed_kind": {"const": "external_evidence"}},
+            "required": ["seed_kind"]
+          },
+          "then": {"required": ["artifact_ref"]}
+        }
+      ]
     },
     "deliverable": {
       "type": "object",
@@ -140,8 +152,8 @@
       "required": ["no_live_provider_without_approval", "no_secret_logging"],
       "additionalProperties": true,
       "properties": {
-        "no_live_provider_without_approval": {"type": "boolean"},
-        "no_secret_logging": {"type": "boolean"},
+        "no_live_provider_without_approval": {"const": true},
+        "no_secret_logging": {"const": true},
         "time_budget_minutes": {"type": "integer", "minimum": 1}
       }
     },

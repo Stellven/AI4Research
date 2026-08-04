@@ -50,8 +50,7 @@
     },
     "nodes": {
       "type": "array",
-      "minItems": 7,
-      "maxItems": 7,
+      "minItems": 1,
       "items": {
         "$ref": "#/$defs/workflow_node"
       }

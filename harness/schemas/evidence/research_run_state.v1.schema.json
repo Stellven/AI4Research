@@ -45,6 +45,43 @@
       "items": {"$ref": "#/$defs/non_empty_string"}
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"final_status": {"const": "completed"}},
+        "required": ["final_status"]
+      },
+      "then": {
+        "required": ["final_status_evidence_refs"],
+        "properties": {
+          "current_blockers": {"maxItems": 0},
+          "final_status_evidence_refs": {"minItems": 1},
+          "node_states": {
+            "additionalProperties": {
+              "required": ["status", "required_for_completion", "result_ref"],
+              "properties": {
+                "status": {"enum": ["completed", "cancelled"]}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {"required_for_completion": {"const": true}},
+                    "required": ["required_for_completion"]
+                  },
+                  "then": {
+                    "properties": {
+                      "status": {"const": "completed"},
+                      "result_ref": {"$ref": "#/$defs/non_empty_string"}
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "non_empty_string": {"type": "string", "minLength": 1},
     "node_status": {
@@ -101,6 +138,7 @@
       "type": "object",
       "required": [
         "node_id",
+        "required_for_completion",
         "previous_status",
         "status",
         "depends_on",
@@ -110,6 +148,7 @@
       "additionalProperties": false,
       "properties": {
         "node_id": {"$ref": "#/$defs/non_empty_string"},
+        "required_for_completion": {"type": "boolean"},
         "previous_status": {
           "anyOf": [
             {"$ref": "#/$defs/node_status"},

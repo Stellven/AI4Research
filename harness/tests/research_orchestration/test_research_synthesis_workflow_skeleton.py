@@ -6,6 +6,8 @@ import json
 import re
 from pathlib import Path
 
+import jsonschema
+
 SCHEMA_PATH = (
     Path(__file__).resolve().parents[2]
     / "schemas/draft/research_workflow_skeleton.v1.schema.json"
@@ -26,6 +28,7 @@ EXPECTED_DEPENDENCIES = {
     "final_acceptance": ["independent_review"],
 }
 NETWORK_ALLOWED_NODES = {"seed_fetch", "source_discovery"}
+PROVIDER_ALLOWED_NODES = {"evidence_synthesis", "report_draft", "independent_review"}
 
 
 def _load_json(path: Path) -> dict:
@@ -87,17 +90,20 @@ def test_schema_parsable() -> None:
     schema = _load_json(SCHEMA_PATH)
     workflow = _load_json(WORKFLOW_PATH)
     assert schema["schema_version"] in {"v1.0.0-draft", "v1"}
-    assert workflow["schema_version"] == "v1"
+    jsonschema.Draft202012Validator.check_schema(schema)
+    assert workflow["schema_version"] == "v1.0.0-draft"
     assert workflow["workflow_id"] == EXPECTED_WORKFLOW_ID
+
+    referenced_schema = (WORKFLOW_PATH.parent / workflow["$schema"]).resolve()
+    assert referenced_schema == SCHEMA_PATH.resolve()
+    assert referenced_schema.is_file()
 
 
 def test_graph_passes_own_schema() -> None:
     schema = _load_json(SCHEMA_PATH)
     workflow = _load_json(WORKFLOW_PATH)
 
-    required_top = schema.get("required", [])
-    for field in required_top:
-        assert field in workflow
+    jsonschema.Draft202012Validator(schema).validate(workflow)
 
     nodes = workflow["nodes"]
     assert isinstance(nodes, list) and nodes
@@ -158,6 +164,13 @@ def test_report_draft_without_network() -> None:
     assert node["permission_profile"]["network"]["enabled"] is False
 
 
+def test_provider_execution_is_allowed_only_for_model_nodes() -> None:
+    workflow = _load_json(WORKFLOW_PATH)
+    for node in workflow["nodes"]:
+        allowed = node["node_id"] in PROVIDER_ALLOWED_NODES
+        assert node["permission_profile"]["provider_execution"] is allowed
+
+
 def test_final_acceptance_without_provider_execution() -> None:
     workflow = _load_json(WORKFLOW_PATH)
     node = _node_by_id(workflow["nodes"], "final_acceptance")
@@ -200,3 +213,22 @@ def test_output_and_input_contracts_present() -> None:
         assert gate["entry_condition"] and gate["exit_condition"]
         assert gate["deliverable"]
         assert gate["success_criteria"] and isinstance(gate["success_criteria"], list)
+
+
+def test_artifact_inputs_have_upstream_or_task_context_producers() -> None:
+    workflow = _load_json(WORKFLOW_PATH)
+    nodes = {node["node_id"]: node for node in workflow["nodes"]}
+    outputs_by_node = {
+        node_id: set(node["output_artifacts"]) for node_id, node in nodes.items()
+    }
+
+    for node_id, node in nodes.items():
+        upstream_outputs: set[str] = set()
+        for dependency in node["depends_on"]:
+            assert dependency in nodes
+            upstream_outputs.update(outputs_by_node[dependency])
+        for artifact in node["input_artifacts"]:
+            assert artifact.startswith("task_context/") or artifact in upstream_outputs, (
+                node_id,
+                artifact,
+            )

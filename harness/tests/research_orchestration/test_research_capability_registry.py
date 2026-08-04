@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import jsonschema
 import yaml
 
 
@@ -11,6 +12,7 @@ SELECTION_PATH = ROOT / "config/research-workflow-selection.v1.json"
 ROUTE_PATH = ROOT / "plugins/autosci/config/research_orchestration_route.v2.draft.json"
 LIFECYCLE_PATH = ROOT / "capability-capsules/cap.research-lifecycle-run.yaml"
 EVOLVE_PATH = ROOT / "capability-capsules/cap.research-workflow-evolve.yaml"
+CAPSULE_SCHEMA_PATH = ROOT / "schemas/draft/capability-capsule.v1.draft.json"
 
 
 WORKFLOW_KINDS = {
@@ -24,7 +26,7 @@ WORKFLOW_KINDS = {
 SELECTED_WORKFLOWS = {
     "research_synthesis": ("research_synthesis_v1", "seed_fetch"),
     "paper_ingestion": ("scientific_research_lifecycle_full_v1", "paper_ingest"),
-    "literature_synthesis": ("research_synthesis_v1", "source_discovery"),
+    "literature_synthesis": ("research_synthesis_v1", "seed_fetch"),
     "scientific_lifecycle": ("scientific_research_lifecycle_full_v1", "literature_discover"),
     "workflow_evolution": ("scientific_research_lifecycle_full_v1", "workflow_evolve"),
 }
@@ -33,20 +35,29 @@ RUN_MODE = ["execute", "resume", "import_evidence"]
 
 
 def test_new_artifacts_are_valid_yaml_json():
-    yaml.safe_load(LIFECYCLE_PATH.read_text(encoding="utf-8"))
+    lifecycle = yaml.safe_load(LIFECYCLE_PATH.read_text(encoding="utf-8"))
+    capsule_schema = json.loads(CAPSULE_SCHEMA_PATH.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator.check_schema(capsule_schema)
+    jsonschema.Draft202012Validator(capsule_schema).validate(lifecycle)
     json.loads(SELECTION_PATH.read_text(encoding="utf-8"))
     json.loads(ROUTE_PATH.read_text(encoding="utf-8"))
 
 
 def test_registry_ids_are_unique():
     payload = yaml.safe_load(REGISTRY_PATH.read_text(encoding="utf-8"))
-    capabilities = [entry["capability_capsule_id"] for entry in payload["capability"]]
+    capabilities = [
+        entry["capability_capsule_id"]
+        for entry in payload["capsules"]["capability"]
+    ]
     assert len(capabilities) == len(set(capabilities))
 
 
 def test_lifecycle_run_and_workflow_evolve_are_distinct():
     payload = yaml.safe_load(REGISTRY_PATH.read_text(encoding="utf-8"))
-    entries = {str(entry["capability_capsule_id"]): entry for entry in payload["capability"]}
+    entries = {
+        str(entry["capability_capsule_id"]): entry
+        for entry in payload["capsules"]["capability"]
+    }
 
     assert "cap.research-lifecycle-run" in entries
     assert "cap.research-workflow-evolve" in entries
@@ -65,13 +76,17 @@ def test_lifecycle_run_and_workflow_evolve_are_distinct():
     assert (
         "postmortem" not in lifecycle_manifest["metadata"]["description"].lower()
     )
-    assert (
-        "postmortem" in evolve_manifest["metadata"]["description"].lower()
-    )
+    evolve_required_inputs = {
+        item["name"] for item in evolve_manifest["contract"]["inputs"]["required"]
+    }
+    assert "trigger_evidence" in evolve_required_inputs
+    assert "cap.research-workflow-evolve" in lifecycle_manifest["composition"]["incompatible_with"]
 
 
 def test_research_workflow_selection_has_exact_five_kinds():
     payload = json.loads(SELECTION_PATH.read_text(encoding="utf-8"))
+    assert payload["status"] == "draft"
+    assert payload["active"] is False
     routes = payload["routes"]
 
     assert len(routes) == 5
@@ -86,22 +101,40 @@ def test_research_workflow_selection_has_exact_five_kinds():
         expected_workflow_id, expected_start_node = SELECTED_WORKFLOWS[item["workflow_kind"]]
         assert item["workflow_id"] == expected_workflow_id
         assert item["start_node"] == expected_start_node
+        workflow_path = ROOT / item["workflow_path"]
+        assert workflow_path.is_file(), workflow_path
+        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+        assert workflow["workflow_id"] == item["workflow_id"]
+        node_ids = {node.get("node_id") or node.get("id") for node in workflow["nodes"]}
+        assert item["start_node"] in node_ids
 
 
 def test_research_orchestration_route_is_nonactive_skeleton():
     payload = json.loads(ROUTE_PATH.read_text(encoding="utf-8"))
     assert payload["active"] is False
     routes = payload["routes"]
-    assert len(routes) == 1
+    assert len(routes) == 2
 
-    route = routes[0]
-    assert route["active"] is False
-    assert route["native_skill"] == "research"
-    assert route["target_capability"] == "cap.research-lifecycle-run"
-    assert route["target_logical_operator"] == "ScientificResearchLifecycleOrchestrator"
-    assert route["planned_backend_action"] == "dispatch_research_lifecycle"
-    assert route["coverage"] == "skeleton/partial"
-    assert route["run_mode"] == RUN_MODE
+    by_capability = {route["target_capability"]: route for route in routes}
+    assert set(by_capability) == {
+        "cap.research-lifecycle-run",
+        "cap.research-workflow-evolve",
+    }
+    lifecycle = by_capability["cap.research-lifecycle-run"]
+    evolution = by_capability["cap.research-workflow-evolve"]
+
+    for route in routes:
+        assert route["active"] is False
+        assert route["native_skill"] == "research"
+        assert route["coverage"] == "skeleton/partial"
+        assert route["run_mode"] == RUN_MODE
+
+    assert set(lifecycle["workflow_kinds"]) == WORKFLOW_KINDS - {"workflow_evolution"}
+    assert lifecycle["target_logical_operator"] == "ScientificResearchLifecycleOrchestrator"
+    assert lifecycle["planned_backend_action"] == "dispatch_research_lifecycle"
+    assert evolution["workflow_kinds"] == ["workflow_evolution"]
+    assert evolution["target_logical_operator"] == "ScientificWorkflowEvolver"
+    assert evolution["planned_backend_action"] == "dispatch_workflow_evolution"
 
 
 def test_no_full_stable_overstatement_and_no_real_data_research_schema():
@@ -112,9 +145,10 @@ def test_no_full_stable_overstatement_and_no_real_data_research_schema():
 
     assert lifecycle_manifest["capsule_kind"] == "capability"
     assert route_payload.get("active") is False
-    assert route_payload["routes"][0]["coverage"] != "full"
-    assert route_payload["routes"][0]["coverage"] != "stable"
-    assert route_payload["routes"][0]["coverage"] == "skeleton/partial"
+    assert selection_payload["active"] is False
+    for route in route_payload["routes"]:
+        assert route["coverage"] not in {"full", "stable"}
+        assert route["coverage"] == "skeleton/partial"
 
     for raw in (LIFECYCLE_PATH.read_text(encoding="utf-8"), EVOLVE_PATH.read_text(encoding="utf-8")):
         assert "real_data_research" not in raw

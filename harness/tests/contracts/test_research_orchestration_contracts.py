@@ -185,6 +185,7 @@ def valid_run_state() -> dict:
         "node_states": {
             "node-discover": {
                 "node_id": "node-discover",
+                "required_for_completion": True,
                 "previous_status": "running",
                 "status": "completed",
                 "depends_on": [],
@@ -263,7 +264,6 @@ def test_execute_mode_rejects_forged_imported_evidence(schemas: dict[str, dict])
 def test_resume_mode_accepts_imported_evidence(schemas: dict[str, dict]) -> None:
     task = valid_task_contract()
     task["run_mode"] = "resume"
-    task["seed_inputs"][0]["seed_kind"] = "external_evidence"
     task["supplied_evidence"] = [
         {
             "artifact_id": "old-result",
@@ -278,11 +278,120 @@ def test_resume_mode_accepts_imported_evidence(schemas: dict[str, dict]) -> None
     assert_valid(schemas["task"], task)
 
 
+def test_external_evidence_seed_requires_artifact_provenance(schemas: dict[str, dict]) -> None:
+    task = valid_task_contract()
+    task["run_mode"] = "import_evidence"
+    task["seed_inputs"][0]["seed_kind"] = "external_evidence"
+    task["supplied_evidence"] = []
+    assert_invalid(schemas["task"], task)
+
+    task["seed_inputs"][0]["artifact_ref"] = {
+        "artifact_id": "external-evidence",
+        "path": "imports/evidence.json",
+        "sha256": HASH,
+        "provenance": {
+            "source": "reviewed-external-run",
+            "captured_at": "2030-01-01T00:00:00Z",
+        },
+    }
+    assert_valid(schemas["task"], task)
+
+
+def test_resume_mode_rejects_empty_import_declaration(schemas: dict[str, dict]) -> None:
+    task = valid_task_contract()
+    task["run_mode"] = "resume"
+    task["supplied_evidence"] = []
+    assert_invalid(schemas["task"], task)
+
+
+def test_task_safety_invariants_cannot_be_disabled(schemas: dict[str, dict]) -> None:
+    for field in ("no_live_provider_without_approval", "no_secret_logging"):
+        task = valid_task_contract()
+        task["constraints"][field] = False
+        assert_invalid(schemas["task"], task)
+
+
+def test_operator_kinds_cannot_be_swapped(schemas: dict[str, dict]) -> None:
+    request = valid_node_request()
+    request["logical_operator"]["operator_kind"] = "physical"
+    assert_invalid(schemas["request"], request)
+
+    request = valid_node_request()
+    request["physical_operator"]["operator_kind"] = "logical"
+    assert_invalid(schemas["request"], request)
+
+
+def test_live_provider_requires_network_and_explicit_approval(schemas: dict[str, dict]) -> None:
+    request = valid_node_request()
+    request["authorization"]["allow_live_provider"] = True
+    request["authorization"]["allow_network"] = True
+    assert_invalid(schemas["request"], request)
+
+    request["authorization"]["approval_ref"] = "user-approval-phase0"
+    assert_valid(schemas["request"], request)
+
+    request["authorization"]["allow_network"] = False
+    assert_invalid(schemas["request"], request)
+
+
+def test_result_outcome_requires_matching_evidence_or_error(schemas: dict[str, dict]) -> None:
+    completed = valid_node_result()
+    completed["evidence"] = []
+    assert_invalid(schemas["result"], completed)
+
+    completed = valid_node_result()
+    completed["errors"] = [
+        {"error_id": "unexpected", "error_type": "test", "message": "not allowed"}
+    ]
+    assert_invalid(schemas["result"], completed)
+
+    failed = valid_node_result()
+    failed["status"] = "failed"
+    failed["errors"] = []
+    assert_invalid(schemas["result"], failed)
+
+
 def test_illegal_node_transition_is_rejected(schemas: dict[str, dict]) -> None:
     state = copy.deepcopy(valid_run_state())
     state["node_states"]["node-discover"]["previous_status"] = "completed"
     state["node_states"]["node-discover"]["status"] = "running"
     assert_invalid(schemas["state"], state)
+
+
+def test_completed_run_requires_completed_nodes_evidence_and_no_blockers(
+    schemas: dict[str, dict],
+) -> None:
+    state = valid_run_state()
+    state["node_states"]["node-discover"]["status"] = "running"
+    assert_invalid(schemas["state"], state)
+
+    state = valid_run_state()
+    state["current_blockers"] = [
+        {"blocker_id": "blocker-1", "node_id": "node-discover", "reason": "blocked"}
+    ]
+    assert_invalid(schemas["state"], state)
+
+    state = valid_run_state()
+    state["final_status_evidence_refs"] = []
+    assert_invalid(schemas["state"], state)
+
+    state = valid_run_state()
+    state["node_states"]["node-discover"]["result_ref"] = None
+    assert_invalid(schemas["state"], state)
+
+
+def test_completed_run_allows_cancelled_optional_nodes(schemas: dict[str, dict]) -> None:
+    state = valid_run_state()
+    state["node_states"]["optional-review"] = {
+        "node_id": "optional-review",
+        "required_for_completion": False,
+        "previous_status": "ready",
+        "status": "cancelled",
+        "depends_on": ["node-discover"],
+        "result_ref": None,
+        "updated_at": "2030-01-01T00:00:00Z",
+    }
+    assert_valid(schemas["state"], state)
 
 
 def test_terminal_result_must_mark_terminal(schemas: dict[str, dict]) -> None:
