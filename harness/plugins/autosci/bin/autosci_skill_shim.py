@@ -173,6 +173,8 @@ def target_ref(args: argparse.Namespace) -> str:
     if getattr(args, "add", None):
         return str(args.add)
     positional = [str(item) for item in list(args.skill_args or []) if not str(item).startswith("-")]
+    if str(getattr(args, "skill_name", "")).strip().lstrip("/$") == "research":
+        return " ".join(positional).strip()
     if str(getattr(args, "skill_name", "")).strip().lstrip("/$") == "edit" and len(positional) > 1 and positional[0].lower() in {"delete", "remove", "rm"}:
         return " ".join(positional)
     for item in positional:
@@ -1122,6 +1124,15 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
             outputs.setdefault("recommended_changes_path", f"{envelope.get('output_dir')}/{prefix}_recommended_changes.md")
             outputs.setdefault("patch_candidates_path", f"{envelope.get('output_dir')}/patch_candidates")
             if action == "run_research_lifecycle":
+                prompt = target_ref(args)
+                if args.run_id:
+                    inputs["run_id"] = str(args.run_id)
+                    envelope["sprint_id"] = str(args.run_id)
+                    envelope["task_id"] = f"{args.run_id}:research"
+                    envelope["node_id"] = f"{args.run_id}:run-research-lifecycle"
+                if prompt:
+                    inputs["prompt"] = prompt
+                    inputs["target"] = prompt
                 outputs.setdefault("pipeline_progress_path", "artifacts/autosci/workspace/wiki/outputs/pipeline-progress.md")
                 outputs.setdefault("pipeline_report_path", "artifacts/autosci/workspace/wiki/outputs/PIPELINE_REPORT.md")
                 outputs.setdefault("pipeline_state_path", "artifacts/autosci/workspace/wiki/outputs/pipeline-state.json")
