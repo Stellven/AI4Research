@@ -1,0 +1,346 @@
+{
+  "$schema": "../schemas/draft/research_workflow_skeleton.v1.schema.json",
+  "schema_version": "v1",
+  "workflow_id": "research_synthesis_v1",
+  "status": "draft",
+  "execution_mode": "non-executable",
+  "contract": {
+    "deliverables": [
+      "Verified discovery and synthesis report draft",
+      "Independent acceptance verdict with review evidence"
+    ],
+    "success_criteria": [
+      "Seed is collected, validated sources are produced, synthesis is completed, and final acceptance has a review outcome.",
+      "Draft outputs include source list, synthesis notes, report draft, and review verdict artifacts.",
+      "No provider execution is required to produce this skeleton artifact."
+    ]
+  },
+  "nodes": [
+    {
+      "node_id": "seed_fetch",
+      "purpose": "Fetch initial research seed metadata and seed evidence.",
+      "logical_operator": "ResearchSeedFetcher",
+      "required_capabilities": [
+        "cap.research.seed.fetch"
+      ],
+      "input_artifacts": [
+        "task_context/seed_input.json"
+      ],
+      "output_artifacts": [
+        "artifacts/research_synthesis_v1/seed/seed_snapshot.json"
+      ],
+      "permission_profile": {
+        "network": {
+          "enabled": true,
+          "notes": "Limited network lookup for seed harvesting sources only."
+        },
+        "provider_execution": false,
+        "read_scope": [
+          "task_context/seed_input.json"
+        ],
+        "write_scope": [
+          "artifacts/research_synthesis_v1/seed/"
+        ],
+        "approved_operators": [
+          "seed_fetch_operator"
+        ]
+      },
+      "gate_contract": {
+        "entry_condition": "Seed request is present.",
+        "exit_condition": "Seed snapshot artifact is complete and auditable.",
+        "deliverable": "artifacts/research_synthesis_v1/seed/seed_snapshot.json",
+        "success_criteria": [
+          "seed_snapshot includes source seed tokens and acquisition timestamp."
+        ]
+      },
+      "binding_status": "required",
+      "retry_policy": {
+        "mode": "planned",
+        "max_attempts": 2
+      },
+      "depends_on": []
+    },
+    {
+      "node_id": "source_discovery",
+      "purpose": "Discover candidate sources from the fetched research seed.",
+      "logical_operator": "ResearchSourceDiscovery",
+      "required_capabilities": [
+        "cap.research.source.discover"
+      ],
+      "input_artifacts": [
+        "artifacts/research_synthesis_v1/seed/seed_snapshot.json"
+      ],
+      "output_artifacts": [
+        "artifacts/research_synthesis_v1/discovery/source_discovery.json"
+      ],
+      "permission_profile": {
+        "network": {
+          "enabled": true,
+          "notes": "Limited source discovery queries and bounded fetch planning."
+        },
+        "provider_execution": false,
+        "read_scope": [
+          "artifacts/research_synthesis_v1/seed/seed_snapshot.json"
+        ],
+        "write_scope": [
+          "artifacts/research_synthesis_v1/discovery/"
+        ],
+        "approved_operators": [
+          "source_discovery_operator"
+        ]
+      },
+      "gate_contract": {
+        "entry_condition": "Seed snapshot exists and is valid.",
+        "exit_condition": "Candidate sources list is produced with bounded metadata.",
+        "deliverable": "artifacts/research_synthesis_v1/discovery/source_discovery.json",
+        "success_criteria": [
+          "Each source entry includes an identifier and discovery trace."
+        ]
+      },
+      "binding_status": "required",
+      "retry_policy": {
+        "mode": "planned",
+        "max_attempts": 2
+      },
+      "depends_on": [
+        "seed_fetch"
+      ]
+    },
+    {
+      "node_id": "source_validation",
+      "purpose": "Validate discovered sources with bounded checks and provenance.",
+      "logical_operator": "ResearchSourceValidator",
+      "required_capabilities": [
+        "cap.research.source.validate"
+      ],
+      "input_artifacts": [
+        "artifacts/research_synthesis_v1/discovery/source_discovery.json"
+      ],
+      "output_artifacts": [
+        "artifacts/research_synthesis_v1/validation/source_validation.json"
+      ],
+      "permission_profile": {
+        "network": {
+          "enabled": false,
+          "notes": "No external network access; reads only discovered candidates."
+        },
+        "provider_execution": false,
+        "read_scope": [
+          "artifacts/research_synthesis_v1/discovery/source_discovery.json"
+        ],
+        "write_scope": [
+          "artifacts/research_synthesis_v1/validation/"
+        ],
+        "approved_operators": [
+          "source_validation_operator"
+        ]
+      },
+      "gate_contract": {
+        "entry_condition": "Source discovery artifacts are available.",
+        "exit_condition": "Validation report includes accepted and rejected source groups.",
+        "deliverable": "artifacts/research_synthesis_v1/validation/source_validation.json",
+        "success_criteria": [
+          "Validation output records provenance for each reviewed source."
+        ]
+      },
+      "binding_status": "required",
+      "retry_policy": {
+        "mode": "planned",
+        "max_attempts": 1
+      },
+      "depends_on": [
+        "source_discovery"
+      ]
+    },
+    {
+      "node_id": "evidence_synthesis",
+      "purpose": "Synthesize validated evidence into a review-ready evidence body.",
+      "logical_operator": "ResearchEvidenceSynthesizer",
+      "required_capabilities": [
+        "cap.research.synthesis"
+      ],
+      "input_artifacts": [
+        "artifacts/research_synthesis_v1/seed/seed_snapshot.json",
+        "artifacts/research_synthesis_v1/validation/source_validation.json"
+      ],
+      "output_artifacts": [
+        "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json"
+      ],
+      "permission_profile": {
+        "network": {
+          "enabled": false,
+          "notes": "No network calls; local evidence composition only."
+        },
+        "provider_execution": false,
+        "read_scope": [
+          "artifacts/research_synthesis_v1/seed/seed_snapshot.json",
+          "artifacts/research_synthesis_v1/validation/source_validation.json"
+        ],
+        "write_scope": [
+          "artifacts/research_synthesis_v1/synthesis/"
+        ],
+        "approved_operators": [
+          "evidence_synthesis_operator"
+        ]
+      },
+      "gate_contract": {
+        "entry_condition": "Validated source set is ready.",
+        "exit_condition": "Synthesis artifact is produced with limitation labels.",
+        "deliverable": "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json",
+        "success_criteria": [
+          "Synthesis references only validated source artifacts and marks uncertainties."
+        ]
+      },
+      "binding_status": "required",
+      "retry_policy": {
+        "mode": "planned",
+        "max_attempts": 1
+      },
+      "depends_on": [
+        "seed_fetch",
+        "source_validation"
+      ]
+    },
+    {
+      "node_id": "report_draft",
+      "purpose": "Draft a grounded synthesis report from synthesized evidence.",
+      "logical_operator": "ResearchReportDraftOperator",
+      "required_capabilities": [
+        "cap.research.report.draft"
+      ],
+      "input_artifacts": [
+        "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json"
+      ],
+      "output_artifacts": [
+        "artifacts/research_synthesis_v1/report/report_draft.json"
+      ],
+      "permission_profile": {
+        "network": {
+          "enabled": false,
+          "notes": "Drafting runs without network."
+        },
+        "provider_execution": false,
+        "read_scope": [
+          "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json"
+        ],
+        "write_scope": [
+          "artifacts/research_synthesis_v1/report/"
+        ],
+        "approved_operators": [
+          "report_draft_operator"
+        ]
+      },
+      "gate_contract": {
+        "entry_condition": "Evidence synthesis artifact is complete.",
+        "exit_condition": "Report draft artifact is produced and traceable.",
+        "deliverable": "artifacts/research_synthesis_v1/report/report_draft.json",
+        "success_criteria": [
+          "Report draft cites synthesis evidence artifacts and pending review status."
+        ]
+      },
+      "binding_status": "planned",
+      "retry_policy": {
+        "mode": "once",
+        "max_attempts": 1
+      },
+      "depends_on": [
+        "evidence_synthesis"
+      ]
+    },
+    {
+      "node_id": "independent_review",
+      "purpose": "Run an independent review of the report draft against evidence and source validation.",
+      "logical_operator": "ResearchIndependentReviewOperator",
+      "required_capabilities": [
+        "cap.research.review.independent"
+      ],
+      "input_artifacts": [
+        "artifacts/research_synthesis_v1/report/report_draft.json",
+        "artifacts/research_synthesis_v1/validation/source_validation.json"
+      ],
+      "output_artifacts": [
+        "artifacts/research_synthesis_v1/review/independent_review.json"
+      ],
+      "permission_profile": {
+        "network": {
+          "enabled": false,
+          "notes": "Review uses only local report and source artifacts."
+        },
+        "provider_execution": false,
+        "read_scope": [
+          "artifacts/research_synthesis_v1/report/report_draft.json",
+          "artifacts/research_synthesis_v1/validation/source_validation.json"
+        ],
+        "write_scope": [
+          "artifacts/research_synthesis_v1/review/"
+        ],
+        "approved_operators": [
+          "independent_review_operator"
+        ]
+      },
+      "gate_contract": {
+        "entry_condition": "Report draft exists and validation output is complete.",
+        "exit_condition": "Independent review verdict is emitted with findings.",
+        "deliverable": "artifacts/research_synthesis_v1/review/independent_review.json",
+        "success_criteria": [
+          "Review verdict includes findings categories and references source validation entries."
+        ]
+      },
+      "binding_status": "planned",
+      "retry_policy": {
+        "mode": "once",
+        "max_attempts": 1
+      },
+      "depends_on": [
+        "report_draft",
+        "source_validation"
+      ]
+    },
+    {
+      "node_id": "final_acceptance",
+      "purpose": "Conclude final acceptance from independent review and synthesis lineage.",
+      "logical_operator": "ResearchFinalAcceptanceOperator",
+      "required_capabilities": [
+        "cap.research.final.acceptance"
+      ],
+      "input_artifacts": [
+        "artifacts/research_synthesis_v1/review/independent_review.json"
+      ],
+      "output_artifacts": [
+        "artifacts/research_synthesis_v1/final/final_acceptance.json"
+      ],
+      "permission_profile": {
+        "network": {
+          "enabled": false,
+          "notes": "No external reads or writes."
+        },
+        "provider_execution": false,
+        "read_scope": [
+          "artifacts/research_synthesis_v1/review/independent_review.json"
+        ],
+        "write_scope": [
+          "artifacts/research_synthesis_v1/final/"
+        ],
+        "approved_operators": [
+          "final_acceptance_operator"
+        ]
+      },
+      "gate_contract": {
+        "entry_condition": "Independent review artifact exists.",
+        "exit_condition": "Final acceptance artifact records decision and evidence lineage.",
+        "deliverable": "artifacts/research_synthesis_v1/final/final_acceptance.json",
+        "success_criteria": [
+          "Final acceptance record includes review status and lineage references."
+        ]
+      },
+      "binding_status": "planned",
+      "retry_policy": {
+        "mode": "once",
+        "max_attempts": 1
+      },
+      "depends_on": [
+        "independent_review"
+      ]
+    }
+  ]
+}
