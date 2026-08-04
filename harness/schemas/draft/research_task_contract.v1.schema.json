@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/research_task_contract.v1.schema.json",
+  "title": "Research Task Contract v1",
+  "description": "Solar-owned run-level contract for generic research orchestration.",
+  "type": "object",
+  "required": [
+    "schema",
+    "task_id",
+    "run_id",
+    "user_intent",
+    "seed_inputs",
+    "deliverable",
+    "workflow_kind",
+    "run_mode",
+    "constraints",
+    "provider_requirements",
+    "platform_requirements",
+    "success_criteria"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "research_task_contract.v1"},
+    "task_id": {"$ref": "#/$defs/non_empty_string"},
+    "run_id": {"$ref": "#/$defs/non_empty_string"},
+    "user_intent": {"$ref": "#/$defs/non_empty_string"},
+    "seed_inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/seed_input"}
+    },
+    "deliverable": {"$ref": "#/$defs/deliverable"},
+    "workflow_kind": {"$ref": "#/$defs/workflow_kind"},
+    "run_mode": {"$ref": "#/$defs/run_mode"},
+    "constraints": {"$ref": "#/$defs/constraints"},
+    "provider_requirements": {"$ref": "#/$defs/requirements"},
+    "platform_requirements": {"$ref": "#/$defs/requirements"},
+    "success_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/non_empty_string"}
+    },
+    "supplied_evidence": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/artifact_ref"},
+      "default": []
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"run_mode": {"const": "execute"}},
+        "required": ["run_mode"]
+      },
+      "then": {
+        "properties": {
+          "seed_inputs": {
+            "items": {
+              "not": {
+                "properties": {"seed_kind": {"const": "external_evidence"}},
+                "required": ["seed_kind"]
+              }
+            }
+          },
+          "supplied_evidence": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "run_mode": {"enum": ["resume", "import_evidence"]}
+        },
+        "required": ["run_mode"]
+      },
+      "then": {
+        "anyOf": [
+          {"required": ["supplied_evidence"]},
+          {
+            "properties": {
+              "seed_inputs": {
+                "contains": {
+                  "properties": {"seed_kind": {"const": "external_evidence"}},
+                  "required": ["seed_kind"]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "non_empty_string": {"type": "string", "minLength": 1},
+    "seed_kind": {
+      "type": "string",
+      "enum": ["url", "pdf", "markdown", "topic", "research_brief", "external_evidence"]
+    },
+    "workflow_kind": {
+      "type": "string",
+      "enum": [
+        "research_synthesis",
+        "paper_ingestion",
+        "literature_synthesis",
+        "scientific_lifecycle",
+        "workflow_evolution"
+      ]
+    },
+    "run_mode": {
+      "type": "string",
+      "enum": ["execute", "resume", "import_evidence"]
+    },
+    "seed_input": {
+      "type": "object",
+      "required": ["seed_id", "seed_kind", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "seed_id": {"$ref": "#/$defs/non_empty_string"},
+        "seed_kind": {"$ref": "#/$defs/seed_kind"},
+        "value": {"$ref": "#/$defs/non_empty_string"},
+        "artifact_ref": {"$ref": "#/$defs/artifact_ref"},
+        "provenance": {"$ref": "#/$defs/provenance"}
+      }
+    },
+    "deliverable": {
+      "type": "object",
+      "required": ["kind", "description"],
+      "additionalProperties": true,
+      "properties": {
+        "kind": {"$ref": "#/$defs/non_empty_string"},
+        "description": {"$ref": "#/$defs/non_empty_string"},
+        "artifact_expectations": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/non_empty_string"}
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "required": ["no_live_provider_without_approval", "no_secret_logging"],
+      "additionalProperties": true,
+      "properties": {
+        "no_live_provider_without_approval": {"type": "boolean"},
+        "no_secret_logging": {"type": "boolean"},
+        "time_budget_minutes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["requirement_id", "description", "required"],
+        "additionalProperties": true,
+        "properties": {
+          "requirement_id": {"$ref": "#/$defs/non_empty_string"},
+          "description": {"$ref": "#/$defs/non_empty_string"},
+          "required": {"type": "boolean"}
+        }
+      }
+    },
+    "artifact_ref": {
+      "type": "object",
+      "required": ["artifact_id", "path", "provenance"],
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {"$ref": "#/$defs/non_empty_string"},
+        "path": {"$ref": "#/$defs/non_empty_string"},
+        "schema": {"$ref": "#/$defs/non_empty_string"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "provenance": {"$ref": "#/$defs/provenance"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["source", "captured_at"],
+      "additionalProperties": true,
+      "properties": {
+        "source": {"$ref": "#/$defs/non_empty_string"},
+        "captured_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+  }
+}
