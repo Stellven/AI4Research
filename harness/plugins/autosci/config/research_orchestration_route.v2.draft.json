@@ -1,0 +1,19 @@
+{
+  "schema_version": "research_orchestration_route.v2",
+  "active": false,
+  "routes": [
+    {
+      "native_skill": "research",
+      "target_capability": "cap.research-lifecycle-run",
+      "target_logical_operator": "ScientificResearchLifecycleOrchestrator",
+      "planned_backend_action": "dispatch_research_lifecycle",
+      "coverage": "skeleton/partial",
+      "run_mode": [
+        "execute",
+        "resume",
+        "import_evidence"
+      ],
+      "active": false
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "research_workflow_selection.v1",
+  "routes": [
+    {
+      "workflow_kind": "research_synthesis",
+      "workflow_id": "research_synthesis_v1",
+      "start_node": "seed_fetch"
+    },
+    {
+      "workflow_kind": "paper_ingestion",
+      "workflow_id": "scientific_research_lifecycle_full_v1",
+      "start_node": "paper_ingest"
+    },
+    {
+      "workflow_kind": "literature_synthesis",
+      "workflow_id": "research_synthesis_v1",
+      "start_node": "source_discovery"
+    },
+    {
+      "workflow_kind": "scientific_lifecycle",
+      "workflow_id": "scientific_research_lifecycle_full_v1",
+      "start_node": "literature_discover"
+    },
+    {
+      "workflow_kind": "workflow_evolution",
+      "workflow_id": "scientific_research_lifecycle_full_v1",
+      "start_node": "workflow_evolve"
+    }
+  ]
+}

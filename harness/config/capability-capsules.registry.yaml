@@ -411,6 +411,19 @@ capsules:
     - workflow
     owner: opensolar
     default_operator_profile: codex-planner
+  - capability_capsule_id: cap.research-lifecycle-run
+    version: 0.1.0
+    capsule_kind: capability
+    status: draft
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-lifecycle-run.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - lifecycle
+    owner: opensolar
+    default_operator_profile: codex-builder
   guard:
   - capability_capsule_id: guard.secret-leak-guard
     version: 0.1.0

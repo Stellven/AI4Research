@@ -1,0 +1,108 @@
+capability_capsule_id: cap.research-lifecycle-run
+capsule_kind: capability
+metadata:
+  name: Scientific Research Lifecycle Run
+  description: Execute the complete scientific research lifecycle workflow with explicit gates, scheduler states, and evidence handoff.
+applicability:
+  task_types:
+    - scientific-research
+    - research-lifecycle
+  positive_signals:
+    - run research lifecycle
+    - execute scientific workflow
+    - publish experimental findings
+    - route lifecycle tasks end-to-end
+  negative_signals:
+    - postmortem
+    - workflow audit only
+contract:
+  inputs:
+    required:
+      - name: request_text
+        description: User request text that authorizes a research lifecycle run.
+      - name: workflow_id
+        description: Target workflow identifier chosen by selection or route configuration.
+      - name: start_node
+        description: Entry node for lifecycle execution.
+    optional:
+      - name: resume_token
+        description: Optional checkpoint token to resume a previous lifecycle run.
+      - name: import_artifacts
+        description: Optional pre-existing artifacts for resume/import-evidence entry modes.
+  outputs:
+    required:
+      - name: lifecycle_summary
+        schema_ref: schemas/evidence/scientific_report.v1.schema.json
+    optional:
+      - name: lifecycle_manifest
+        description: Instantiated or resumed workflow execution manifest.
+      - name: gating_report
+        description: Evidence-aware gate and resume/import status report.
+  preconditions:
+    - check: request_acceptance_orchestrator_mode
+      description: Solar orchestrator controls the lifecycle execution path.
+  postconditions:
+    - check: lifecycle_dispatch_ready
+      description: Lifecycle graph dispatches through a sequenced scientific workflow path.
+  invariants:
+    - Does not treat postmortem evidence as a successful lifecycle execution.
+    - Requires explicit workflow routing and run mode before progressing nodes.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/intent.v1.schema.json
+      purpose: User intent and orchestration inputs.
+  produces:
+    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      purpose: Lifecycle completion summary.
+    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      purpose: Completed scientific report when final lifecycle stage succeeds.
+  compatible_with:
+    - cap.research-lifecycle-run
+  incompatible_with:
+    - cap.research-workflow-evolve
+  requires_after: []
+effects:
+  read:
+    - workflow definitions and prior lifecycle state
+    - schemas/evidence/scientific_report.v1.schema.json
+    - schemas/evidence/research_graph_update.v1.schema.json
+  write:
+    - artifacts/scientific/
+    - artifacts/scientific/summaries/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+    - tools/run_scientific_workflow.py
+  network:
+    - optional by workflow node design
+  cost:
+    - workflow execution runtime + graph dispatch
+  risk:
+    - long-running execution and external dependency variance
+bindings:
+  skills:
+    required:
+      - research
+    optional:
+      - autosci.work
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/scientific_report.v1.schema.json
+    - schemas/evidence/research_graph_update.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted lifecycle summary against scientific_report.v1 schema.
+    - Confirm lifecycle execution metadata includes workflow_id/start_node and run_mode.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Lifecycle run progresses through scheduler-defined scientific-research nodes.
+    - Resume and import-evidence modes preserve checkpoint context.
+    - Postmortem mode is not treated as lifecycle success.
+operator_compatibility:
+  preferred:
+    - autosci-solar-lifecycle-orchestrator
+  forbidden:
+    - WorkflowPostmortemOperator
+provenance:
+  owner: opensolar
