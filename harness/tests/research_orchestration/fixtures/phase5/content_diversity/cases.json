@@ -1,0 +1,21 @@
+{
+  "schema": "phase5_content_diversity_cases.v1",
+  "cases": [
+    {
+      "case_id": "zh_web_technical_report",
+      "description": "Chinese web-page technical trend report from a Tencent News article plus public supplemental sources.",
+      "input_type": "url",
+      "source": "https://news.qq.com/rain/a/20251207A0337Y00",
+      "output_language": "zh",
+      "prompt": "请抓取并完整阅读 https://news.qq.com/rain/a/20251207A0337Y00，同时搜索其他公开来源，生成中文深度技术趋势报告。报告必须说明主要技术趋势、产业影响、关键不确定性，并把主要技术判断追溯到实际来源。"
+    },
+    {
+      "case_id": "en_rag_reliability_survey",
+      "description": "English technical survey for reliability and evaluation methods in retrieval-augmented generation systems.",
+      "input_type": "topic",
+      "source": "Reliability and evaluation methods for retrieval-augmented generation systems",
+      "output_language": "en",
+      "prompt": "Search public sources and generate an English technical survey on reliability and evaluation methods for retrieval-augmented generation systems. Cover evaluation dimensions, benchmark design, failure modes, observability, trade-offs, and open research problems, with major technical judgments traceable to actual sources."
+    }
+  ]
+}
