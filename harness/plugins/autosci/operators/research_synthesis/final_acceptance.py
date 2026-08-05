@@ -45,7 +45,11 @@ def _normalize(value: str) -> str:
 
 
 def _has_substantive_report_section(report_body: str, heading_pattern: str) -> bool:
-    heading = re.search(rf"(?im)^##\s+(?:{heading_pattern})[^\r\n]*$", report_body)
+    numbering = (
+        r"(?:(?:\d+(?:\.\d+)*[.)\u3001\uff0e]?)|"
+        r"(?:[\u4e00\u4e8c\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d\u5341]+[\u3001.\uff0e]))\s*"
+    )
+    heading = re.search(rf"(?im)^##\s+(?:{numbering})?(?:{heading_pattern})[^\r\n]*$", report_body)
     if not heading:
         return False
     section_body = re.split(r"(?m)^#{1,2}\s+", report_body[heading.end():], maxsplit=1)[0]

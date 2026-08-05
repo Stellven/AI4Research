@@ -438,7 +438,7 @@ def default_synthesis_resolver(*, services: dict | None = None) -> PhysicalOpera
         "final_acceptance_operator",
     )
     return PhysicalOperatorResolver(
-        [PhysicalOperatorBinding(operator_id=operator_id, runner=run, version="research_synthesis.v1.4") for operator_id in operator_ids]
+        [PhysicalOperatorBinding(operator_id=operator_id, runner=run, version="research_synthesis.v1.5") for operator_id in operator_ids]
     )
 
 
