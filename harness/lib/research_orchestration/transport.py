@@ -24,6 +24,8 @@ DEFAULT_MAX_STDOUT_BYTES = 1_048_576
 DEFAULT_MAX_STDERR_BYTES = 65_536
 DEFAULT_MAX_REQUEST_BYTES = 4_194_304
 DEFAULT_MAX_DIAGNOSTIC_CHARS = 8_192
+DEFAULT_MAX_REQUEST_NODES = 100_000
+DEFAULT_MAX_REQUEST_DEPTH = 100
 _READ_CHUNK_BYTES = 4_096
 _SECRET_KEY_NAMES = {
     "access_token",
@@ -133,6 +135,120 @@ class ResearchTransportError(RuntimeError):
         return payload
 
 
+class ResearchRequestBoundaryError(ValueError):
+    """Raised before serialization when a request structure is not safely bounded."""
+
+    def __init__(self, error_type: str, message: str) -> None:
+        super().__init__(message)
+        self.error_type = error_type
+        self.message = message
+
+
+def collect_bounded_request_body_strings(
+    request: Mapping[str, Any],
+    *,
+    max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES,
+    max_nodes: int = DEFAULT_MAX_REQUEST_NODES,
+    max_depth: int = DEFAULT_MAX_REQUEST_DEPTH,
+) -> tuple[str, ...]:
+    """Completely collect request-body strings or fail before silent truncation."""
+
+    typed_inputs = request.get("typed_inputs")
+    if not isinstance(typed_inputs, Mapping):
+        return ()
+    payload = typed_inputs.get("payload")
+    if payload is None:
+        return ()
+
+    collected: set[str] = set()
+    active_containers: set[int] = set()
+    stack: list[tuple[bool, Any, int]] = [(False, payload, 0)]
+    visited_nodes = 0
+    estimated_bytes = 0
+
+    while stack:
+        exiting, value, depth = stack.pop()
+        if exiting:
+            active_containers.remove(id(value))
+            continue
+        visited_nodes += 1
+        if visited_nodes > max_nodes:
+            raise ResearchRequestBoundaryError(
+                "oversized_request", "request body exceeds structural node limit"
+            )
+        if depth > max_depth:
+            raise ResearchRequestBoundaryError(
+                "oversized_request", "request body exceeds structural depth limit"
+            )
+        estimated_bytes += 4
+        if estimated_bytes > max_request_bytes:
+            raise ResearchRequestBoundaryError(
+                "oversized_request", "request body exceeds byte budget during traversal"
+            )
+
+        if isinstance(value, Mapping):
+            identity = id(value)
+            if identity in active_containers:
+                raise ResearchRequestBoundaryError("invalid_request", "cyclic request body")
+            active_containers.add(identity)
+            stack.append((True, value, depth))
+            try:
+                entries = list(value.items())
+            except Exception:
+                raise ResearchRequestBoundaryError(
+                    "invalid_request", "request body mapping cannot be inspected safely"
+                ) from None
+            if len(entries) > max_nodes - visited_nodes:
+                raise ResearchRequestBoundaryError(
+                    "oversized_request", "request body exceeds structural node limit"
+                )
+            for raw_key, nested in reversed(entries):
+                if isinstance(raw_key, str) and raw_key:
+                    collected.add(raw_key)
+                    estimated_bytes += len(raw_key.encode("utf-8", errors="replace"))
+                    if estimated_bytes > max_request_bytes:
+                        raise ResearchRequestBoundaryError(
+                            "oversized_request",
+                            "request body exceeds byte budget during traversal",
+                        )
+                stack.append((False, nested, depth + 1))
+        elif isinstance(value, (list, tuple)):
+            identity = id(value)
+            if identity in active_containers:
+                raise ResearchRequestBoundaryError("invalid_request", "cyclic request body")
+            active_containers.add(identity)
+            stack.append((True, value, depth))
+            if len(value) > max_nodes - visited_nodes:
+                raise ResearchRequestBoundaryError(
+                    "oversized_request", "request body exceeds structural node limit"
+                )
+            for nested in reversed(value):
+                stack.append((False, nested, depth + 1))
+        elif isinstance(value, str):
+            if value:
+                collected.add(value)
+            estimated_bytes += len(value.encode("utf-8", errors="replace"))
+        elif value is not None and not isinstance(value, (bool, int, float)):
+            raise ResearchRequestBoundaryError(
+                "invalid_request", "request body contains a non-JSON value"
+            )
+
+        if estimated_bytes > max_request_bytes:
+            raise ResearchRequestBoundaryError(
+                "oversized_request", "request body exceeds byte budget during traversal"
+            )
+
+    try:
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    except (TypeError, ValueError, RecursionError):
+        raise ResearchRequestBoundaryError("invalid_request", "request body is not bounded JSON") from None
+    if len(serialized.encode("utf-8")) > max_request_bytes:
+        raise ResearchRequestBoundaryError("oversized_request", "request body exceeds byte budget")
+    if serialized:
+        collected.add(serialized)
+    return tuple(sorted(collected, key=len, reverse=True))
+
+
 def run_json_worker(
     command: list[str],
     request: dict,
@@ -174,6 +290,17 @@ def run_json_worker(
         )
 
     try:
+        request_diagnostic_values = collect_bounded_request_body_strings(
+            request,
+            max_request_bytes=max_request_bytes,
+        )
+    except ResearchRequestBoundaryError as exc:
+        raise ResearchTransportError(
+            exc.error_type,
+            exc.message,
+            secret_values=secrets,
+        ) from None
+    try:
         stdin_text = json.dumps(request, ensure_ascii=False, sort_keys=True)
     except (TypeError, ValueError, RecursionError) as exc:
         raise ResearchTransportError(
@@ -189,7 +316,6 @@ def run_json_worker(
             details={"size_bytes": len(stdin_payload), "max_bytes": max_request_bytes},
             secret_values=secrets,
         )
-    request_diagnostic_values = _collect_request_body_strings(request)
     diagnostic_secrets = (
         *secrets,
         stdin_text,
@@ -609,27 +735,6 @@ def _is_sensitive_env_key(key: str) -> bool:
     if segments & {"credential", "credentials", "key", "password", "passwd", "pwd", "secret"}:
         return True
     return normalized in {"authorization", "bearer", "token"} or normalized.endswith("_token")
-
-
-def _collect_request_body_strings(request: Mapping[str, Any]) -> tuple[str, ...]:
-    typed_inputs = request.get("typed_inputs")
-    if not isinstance(typed_inputs, Mapping):
-        return ()
-    payload = typed_inputs.get("payload")
-    collected: set[str] = set()
-    pending = [payload]
-    while pending:
-        value = pending.pop()
-        if isinstance(value, Mapping):
-            for raw_key, nested in value.items():
-                if isinstance(raw_key, str) and len(raw_key) >= 4:
-                    collected.add(raw_key)
-                pending.append(nested)
-        elif isinstance(value, (list, tuple)):
-            pending.extend(value)
-        elif isinstance(value, str) and len(value) >= 4:
-            collected.add(value)
-    return tuple(sorted(collected, key=len, reverse=True))
 
 
 def _contains_explicit_value(text: str, values: Iterable[str]) -> bool:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import json
-import os
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any, Callable
@@ -19,7 +18,9 @@ from .result_validation import (
 )
 from .transport import (
     DEFAULT_MAX_REQUEST_BYTES,
+    ResearchRequestBoundaryError,
     ResearchTransportError,
+    collect_bounded_request_body_strings,
     run_json_worker,
     sanitize_diagnostic_value,
     sanitize_text,
@@ -39,7 +40,6 @@ def dispatch_research_node(
     result_schema_path: Path,
     artifact_root: Path,
     operator_resolver: Callable[[str], Any] | None = None,
-    trusted_test_bypass_operator_resolution: bool = False,
     secret_values: Iterable[str] = (),
 ) -> dict:
     """Validate a node request, call the injected runner, and validate result."""
@@ -54,7 +54,6 @@ def dispatch_research_node(
     _validate_physical_operator_resolution(
         node_request,
         operator_resolver,
-        trusted_test_bypass=trusted_test_bypass_operator_resolution,
     )
 
     try:
@@ -201,17 +200,9 @@ def _validate_provider_authorization(node_request: dict) -> None:
 def _validate_physical_operator_resolution(
     node_request: dict,
     resolver: Callable[[str], Any] | None,
-    *,
-    trusted_test_bypass: bool,
 ) -> None:
     if resolver is None:
-        if trusted_test_bypass:
-            if not os.environ.get("PYTEST_CURRENT_TEST"):
-                raise ResearchDispatchError("trusted operator resolver bypass is test-only")
-            return
         raise ResearchDispatchError("physical operator resolver is required")
-    if trusted_test_bypass:
-        raise ResearchDispatchError("trusted test bypass cannot be combined with resolver")
     operator_id = str(node_request.get("physical_operator", {}).get("operator_id") or "")
     try:
         resolved = resolver(operator_id)
@@ -249,7 +240,7 @@ def _resolver_record_is_disabled(record: Mapping[str, Any]) -> bool:
 
     return any(
         _disabled(record.get(key))
-        for key in ("availability", "runtime_state", "state")
+        for key in ("availability", "runtime_state", "state", "status")
         if key in record
     )
 
@@ -297,19 +288,35 @@ def _failed_result_from_exception(
 
 
 def _bounded_receipt(receipt: Any, *, secret_values: Iterable[str]) -> Any:
-    sanitized = sanitize_diagnostic_value(
-        receipt,
-        explicit_secret_values=secret_values,
-        omit_request_bodies=True,
-        max_depth=4,
-        max_items=20,
-        max_string_chars=512,
-    )
-    serialized = json.dumps(sanitized, ensure_ascii=False, sort_keys=True, default=repr)
-    if len(serialized.encode("utf-8")) <= 8_192:
-        return sanitized
-    summary = sanitize_text(serialized[:7_500], secret_values)
-    return {"receipt_summary": f"{summary}...[TRUNCATED]"}
+    if not isinstance(receipt, Mapping):
+        return {}
+    allowed_fields = {
+        "created_at",
+        "inbox_path",
+        "node_id",
+        "operator_id",
+        "queue_id",
+        "receipt_id",
+        "status",
+        "submission_id",
+        "submitted_at",
+        "task_id",
+    }
+    safe: dict[str, Any] = {}
+    for raw_key, raw_value in receipt.items():
+        key = str(raw_key)
+        if key not in allowed_fields or isinstance(raw_value, (Mapping, list, tuple, set)):
+            continue
+        sanitized = sanitize_diagnostic_value(
+            raw_value,
+            explicit_secret_values=secret_values,
+            omit_request_bodies=True,
+            max_depth=1,
+            max_items=1,
+            max_string_chars=512,
+        )
+        safe[key] = sanitized
+    return safe
 
 
 def _sanitize_result_request_echo(result: dict, request_values: Iterable[str]) -> dict:
@@ -377,27 +384,10 @@ def _operator_runtime_envelope(node_request: dict) -> dict:
 
 
 def _request_body_diagnostic_values(node_request: dict) -> tuple[str, ...]:
-    typed_inputs = node_request.get("typed_inputs") if isinstance(node_request, dict) else None
-    payload = typed_inputs.get("payload") if isinstance(typed_inputs, dict) else None
-    collected: set[str] = set()
-    pending = [payload]
-    while pending:
-        value = pending.pop()
-        if isinstance(value, Mapping):
-            for raw_key, nested in value.items():
-                if isinstance(raw_key, str) and len(raw_key) >= 4:
-                    collected.add(raw_key)
-                pending.append(nested)
-        elif isinstance(value, (list, tuple)):
-            pending.extend(value)
-        elif isinstance(value, str) and len(value) >= 4:
-            collected.add(value)
-    if payload is not None:
-        try:
-            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=repr)
-        except (TypeError, ValueError, RecursionError):
-            raise ResearchDispatchError("typed input payload is not bounded JSON") from None
-        if len(serialized.encode("utf-8")) > DEFAULT_MAX_REQUEST_BYTES:
-            raise ResearchDispatchError("typed input payload exceeds diagnostic safety bound")
-        collected.add(serialized)
-    return tuple(sorted(collected, key=len, reverse=True))
+    try:
+        return collect_bounded_request_body_strings(
+            node_request,
+            max_request_bytes=DEFAULT_MAX_REQUEST_BYTES,
+        )
+    except ResearchRequestBoundaryError as exc:
+        raise ResearchDispatchError(exc.message) from None

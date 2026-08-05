@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -29,9 +30,12 @@ from test_research_result_validation import (  # noqa: E402
 
 
 def dispatch_research_node(*args, **kwargs):
-    """Explicit test-only bypass; production callers must inject a resolver."""
+    """Inject the explicit physical-operator fixture used by unit tests."""
 
-    kwargs.setdefault("trusted_test_bypass_operator_resolution", True)
+    kwargs.setdefault(
+        "operator_resolver",
+        lambda operator_id: {"operator_id": operator_id, "enabled": True},
+    )
     return _dispatch_research_node(*args, **kwargs)
 
 
@@ -99,6 +103,10 @@ def test_operator_runtime_submit_adapter_returns_awaiting_external_receipt(tmp_p
     assert result["status"] == "awaiting_external"
     assert result["status_is_terminal"] is False
     assert result["evidence"][0]["kind"] == "operator_runtime_receipt"
+    assert result["evidence"][0]["receipt"] == {
+        "status": "submitted",
+        "inbox_path": "inbox/task.json",
+    }
 
 
 def test_malformed_request_is_rejected_before_runner(tmp_path: Path) -> None:
@@ -337,9 +345,24 @@ def test_generic_exception_and_nested_receipt_secrets_are_scrubbed(tmp_path: Pat
     assert "private body" not in receipt_text
     assert request_body not in receipt_text
     assert env_secret not in receipt_text
-    assert "risk-research-summary" in receipt_text
+    assert "risk-research-summary" not in receipt_text
     assert len(receipt_text.encode("utf-8")) < 8_500
     assert receipt["status"] == "awaiting_external"
+    assert receipt["evidence"][0]["receipt"] == {"status": "submitted"}
+
+    strict_receipt = dispatch_research_node(
+        request,
+        runner=operator_runtime_submit_adapter(
+            submit=lambda _: {
+                "status": "submitted",
+                "opaque": {"unlisted_private_value": "short-secret"},
+            }
+        ),
+        request_schema_path=REQUEST_SCHEMA,
+        result_schema_path=RESULT_SCHEMA,
+        artifact_root=tmp_path,
+    )
+    assert strict_receipt["evidence"][0]["receipt"] == {"status": "submitted"}
 
 
 def test_malformed_secret_bearing_result_fails_closed_without_leak(tmp_path: Path) -> None:
@@ -386,6 +409,20 @@ def test_completed_result_omits_private_request_body_without_mutating_worker_res
     assert "[OMITTED_REQUEST_BODY]" in str(accepted["evidence"])
     assert completed == original
 
+    short_request = dispatch_request(tmp_path)
+    short_request["typed_inputs"]["payload"]["query"] = "xy"
+    short_result = valid_result()
+    short_result["evidence"][0]["summary"] = "private=xy"
+    materialize_result_artifacts(tmp_path, short_result, content=b"short request result")
+    short_accepted = dispatch_research_node(
+        short_request,
+        runner=lambda _: short_result,
+        request_schema_path=REQUEST_SCHEMA,
+        result_schema_path=RESULT_SCHEMA,
+        artifact_root=tmp_path,
+    )
+    assert "xy" not in str(short_accepted["evidence"])
+
 
 def test_redteam_combined_forged_completed_proof_is_rejected(tmp_path: Path) -> None:
     request = dispatch_request(tmp_path)
@@ -429,6 +466,7 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
         called = True
         return valid_result()
 
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "spoofed-production")
     with pytest.raises(ResearchDispatchError, match="resolver is required"):
         _dispatch_research_node(
             request,
@@ -438,8 +476,7 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
             artifact_root=tmp_path,
         )
 
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    with pytest.raises(ResearchDispatchError, match="test-only"):
+    with pytest.raises(TypeError, match="trusted_test_bypass"):
         _dispatch_research_node(
             request,
             runner=runner,
@@ -461,6 +498,7 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
             "operator_id": operator_id,
             "runtime_state": {"status": "disabled"},
         },
+        lambda operator_id: {"operator_id": operator_id, "status": "disabled"},
     ):
         with pytest.raises(ResearchDispatchError, match="operator"):
             dispatch_research_node(
@@ -470,7 +508,6 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
                 result_schema_path=RESULT_SCHEMA,
                 artifact_root=tmp_path,
                 operator_resolver=resolver,
-                trusted_test_bypass_operator_resolution=False,
             )
     assert called is False
 
@@ -483,6 +520,26 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
         result_schema_path=RESULT_SCHEMA,
         artifact_root=tmp_path,
         operator_resolver=lambda operator_id: {"operator_id": operator_id, "enabled": True},
-        trusted_test_bypass_operator_resolution=False,
     )
     assert accepted["status"] == "completed"
+
+
+def test_cyclic_typed_payload_fails_fast_before_dispatch(tmp_path: Path) -> None:
+    request = valid_request()
+    cyclic: dict = {}
+    cyclic["self"] = cyclic
+    request["typed_inputs"]["payload"] = cyclic
+    started = time.monotonic()
+    with pytest.raises(ResearchDispatchError, match="cyclic"):
+        _dispatch_research_node(
+            request,
+            runner=lambda _: valid_result(),
+            request_schema_path=REQUEST_SCHEMA,
+            result_schema_path=RESULT_SCHEMA,
+            artifact_root=tmp_path,
+            operator_resolver=lambda operator_id: {
+                "operator_id": operator_id,
+                "enabled": True,
+            },
+        )
+    assert time.monotonic() - started < 1.0

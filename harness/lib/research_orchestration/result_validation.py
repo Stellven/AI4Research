@@ -14,7 +14,13 @@ from typing import Any
 
 import jsonschema
 
-from .transport import DEFAULT_MAX_REQUEST_BYTES, contains_sensitive_diagnostic, sanitize_text
+from .transport import (
+    DEFAULT_MAX_REQUEST_BYTES,
+    ResearchRequestBoundaryError,
+    collect_bounded_request_body_strings,
+    contains_sensitive_diagnostic,
+    sanitize_text,
+)
 
 
 class ResearchResultValidationError(ValueError):
@@ -328,27 +334,13 @@ def _request_body_diagnostic_values(
     explicit_secret_values: Iterable[str],
 ) -> tuple[str, ...]:
     collected = {str(item) for item in explicit_secret_values if str(item)}
-    typed_inputs = request.get("typed_inputs") if isinstance(request, dict) else None
-    payload = typed_inputs.get("payload") if isinstance(typed_inputs, dict) else None
-
-    pending = [payload]
-    while pending:
-        value = pending.pop()
-        if isinstance(value, dict):
-            for raw_key, nested in value.items():
-                if isinstance(raw_key, str) and len(raw_key) >= 4:
-                    collected.add(raw_key)
-                pending.append(nested)
-        elif isinstance(value, (list, tuple)):
-            pending.extend(value)
-        elif isinstance(value, str) and len(value) >= 4:
-            collected.add(value)
-    if payload is not None:
-        try:
-            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=repr)
-        except (TypeError, ValueError, RecursionError):
-            raise ResearchResultValidationError("typed input payload is not bounded JSON") from None
-        if len(serialized.encode("utf-8")) > DEFAULT_MAX_REQUEST_BYTES:
-            raise ResearchResultValidationError("typed input payload exceeds diagnostic safety bound")
-        collected.add(serialized)
+    try:
+        collected.update(
+            collect_bounded_request_body_strings(
+                request,
+                max_request_bytes=DEFAULT_MAX_REQUEST_BYTES,
+            )
+        )
+    except ResearchRequestBoundaryError as exc:
+        raise ResearchResultValidationError(exc.message) from None
     return tuple(sorted(collected, key=len, reverse=True))

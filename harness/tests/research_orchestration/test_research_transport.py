@@ -340,12 +340,36 @@ print("{{}}")
     assert oversized.value.error_type == "oversized_request"
     assert not marker.exists()
 
-    cyclic: dict = {}
-    cyclic["self"] = cyclic
+    cyclic_payload: dict = {}
+    cyclic_payload["self"] = cyclic_payload
+    cyclic = {"typed_inputs": {"payload": cyclic_payload}}
+    started = time.monotonic()
     with pytest.raises(ResearchTransportError) as invalid:
         run_json_worker(command, cyclic, cwd=tmp_path, timeout_seconds=5)
     assert invalid.value.error_type == "invalid_request"
+    assert time.monotonic() - started < 1.0
     assert not marker.exists()
+
+
+def test_short_request_body_is_omitted_from_failure_diagnostics(tmp_path: Path) -> None:
+    command = _worker(
+        tmp_path,
+        """
+import json, sys
+request = json.loads(sys.stdin.read())
+sys.stderr.write("private=" + request["typed_inputs"]["payload"]["query"])
+sys.exit(3)
+""",
+    )
+    with pytest.raises(ResearchTransportError) as excinfo:
+        run_json_worker(
+            command,
+            {"typed_inputs": {"payload": {"query": "xy"}}},
+            cwd=tmp_path,
+            timeout_seconds=5,
+        )
+    assert "xy" not in str(excinfo.value.to_dict())
+    assert "[SCRUBBED]" in str(excinfo.value.to_dict())
 
 
 def test_missing_cwd_is_rejected(tmp_path: Path) -> None:
