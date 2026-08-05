@@ -344,6 +344,13 @@ def write_artifact(
     target = validate_scoped_path(relative_path, context.write_scope, workspace_root=context.workspace_root)
     artifact_payload = dict(payload) if isinstance(payload, dict) else payload
     if isinstance(artifact_payload, dict):
+        embedded_artifact_id = str(artifact_payload.get("artifact_id") or "")
+        if embedded_artifact_id and embedded_artifact_id != artifact_id:
+            raise ResearchOperatorError(
+                "Artifact payload artifact_id does not match the declared artifact_id.",
+                error_type="artifact_identity_mismatch",
+            )
+        artifact_payload["artifact_id"] = artifact_id
         artifact_payload.setdefault("task_id", str(context.node_request.get("task_id") or ""))
         artifact_payload.setdefault("run_id", str(context.node_request.get("run_id") or ""))
         artifact_payload.setdefault("workflow_id", str(context.node_request.get("workflow_id") or ""))

@@ -16,6 +16,11 @@ PLUGIN = HARNESS / "plugins" / "autosci"
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(PLUGIN))
 
+from harness.plugins.autosci.operators.research_synthesis.base import (  # noqa: E402
+    OperatorContext,
+    ResearchOperatorError,
+    write_artifact,
+)
 from harness.plugins.autosci.operators.research_synthesis.registry import execute_operator  # noqa: E402
 
 
@@ -122,6 +127,7 @@ def _valid_acceptance_refs(
 
     def write_ref(node_id: str, payload: dict) -> dict:
         payload.update({
+            "artifact_id": node_id,
             "task_id": "task-research-synthesis",
             "run_id": "run-research-synthesis",
             "workflow_id": "research_synthesis_v1",
@@ -282,10 +288,37 @@ def test_full_seven_node_chain_with_injected_services(tmp_path: Path, monkeypatc
         _validate_result(result)
         for ref in result["output_artifacts"]:
             artifact = json.loads((tmp_path / ref["path"]).read_text(encoding="utf-8"))
-            assert {"task_id", "run_id", "workflow_id", "node_id"} <= set(artifact)
+            assert {"schema", "artifact_id", "task_id", "run_id", "workflow_id", "node_id"} <= set(artifact)
+            assert artifact["schema"] == ref["schema"]
+            assert artifact["artifact_id"] == ref["artifact_id"]
+            assert artifact["task_id"] == result["task_id"]
+            assert artifact["run_id"] == result["run_id"]
+            assert artifact["workflow_id"] == result["workflow_id"]
+            assert artifact["node_id"] == result["node_id"]
     assert _read_artifact(tmp_path, results["final_acceptance"])["decision"] == "accepted"
     draft = results["report_draft"]
     assert "中文" in json.dumps(_read_artifact(tmp_path, draft), ensure_ascii=False)
+
+
+def test_write_artifact_rejects_conflicting_embedded_artifact_id(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    context = OperatorContext.from_request(_request(tmp_path, "seed_fetch"), workspace_root=tmp_path)
+
+    with pytest.raises(ResearchOperatorError) as error:
+        write_artifact(
+            context,
+            "out/seed_fetch/conflict.json",
+            {
+                "schema": "research_synthesis.seed_snapshot.v1",
+                "artifact_id": "caller-supplied-conflict",
+                "node_id": "seed_fetch",
+            },
+            artifact_id="seed_snapshot",
+            schema="research_synthesis.seed_snapshot.v1",
+        )
+
+    assert error.value.error_type == "artifact_identity_mismatch"
+    assert not (tmp_path / "out" / "seed_fetch" / "conflict.json").exists()
 
 
 def test_seed_fetch_supports_topic_and_local_markdown_roundtrip(tmp_path: Path, monkeypatch) -> None:
