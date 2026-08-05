@@ -47,6 +47,29 @@ _S2_RETRY_EVENTS: list[dict[str, Any]] = []
 _S2_PROGRESS_PATH: Path | None = None
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(Path(path).resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
+def _mkdir(path: Path) -> None:
+    os.makedirs(_fs_path(path), exist_ok=True)
+
+
+def _write_text(path: Path, body: str) -> None:
+    _mkdir(path.parent)
+    with open(_fs_path(path), "w", encoding="utf-8") as handle:
+        handle.write(body)
+
+
+def _exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
 def normalize_arxiv_id(value: str) -> str:
     value = str(value or "").strip()
     if not value:
@@ -255,10 +278,9 @@ def _emit_s2_retry_progress(event: dict[str, Any]) -> None:
         "events": list(_S2_RETRY_EVENTS),
     }
     try:
-        _S2_PROGRESS_PATH.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = _S2_PROGRESS_PATH.with_name(f"{_S2_PROGRESS_PATH.name}.tmp")
-        tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        tmp_path.replace(_S2_PROGRESS_PATH)
+        _write_text(tmp_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        os.replace(_fs_path(tmp_path), _fs_path(_S2_PROGRESS_PATH))
     except OSError as exc:
         print(f"Semantic Scholar retry progress write failed: {exc}", file=sys.stderr, flush=True)
 
@@ -269,7 +291,7 @@ def _attach_s2_progress_artifact(
     workspace_root: Path,
     repository_root: Path | None,
 ) -> None:
-    if _S2_PROGRESS_PATH is None or not _S2_PROGRESS_PATH.exists():
+    if _S2_PROGRESS_PATH is None or not _exists(_S2_PROGRESS_PATH):
         return
     path = _display_path(_S2_PROGRESS_PATH, workspace_root, repository_root)
     if not any(item.get("type") == "semantic_scholar_retry_progress_json" and item.get("path") == path for item in artifacts):

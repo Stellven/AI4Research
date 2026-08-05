@@ -336,6 +336,7 @@ def apply_task_conditions(workflow: dict, task_contract: dict) -> dict:
     claims_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/02_claims/research_claims.v1.json"
     methods_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json"
     code_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/04_code_evidence/code_evidence_map.v1.json"
+    experiment_status_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_status.v1.json"
     verdict_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/08_verdict/claim_verdict.v1.json"
     plan_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report_plan.v1.json"
 
@@ -347,10 +348,15 @@ def apply_task_conditions(workflow: dict, task_contract: dict) -> dict:
     if "claim_verify" in selected_by_id:
         node = selected_by_id["claim_verify"]
         node["depends_on"] = [
-            item for item in ("claim_extract", "method_extract", "code_evidence_map")
+            item for item in ("claim_extract", "method_extract", "code_evidence_map", "experiment_monitor")
             if item in selected_by_id
         ]
-        node["read_scope"] = list(dict.fromkeys([claims_path, methods_path, *([code_path] if "code_evidence_map" in selected_by_id else [])]))
+        node["read_scope"] = list(dict.fromkeys([
+            claims_path,
+            methods_path,
+            *([code_path] if "code_evidence_map" in selected_by_id else []),
+            *([experiment_status_path] if "experiment_monitor" in selected_by_id else []),
+        ]))
     if "report_plan" in selected_by_id:
         node = selected_by_id["report_plan"]
         node["depends_on"] = [item for item in ("claim_verify", "method_extract") if item in selected_by_id]

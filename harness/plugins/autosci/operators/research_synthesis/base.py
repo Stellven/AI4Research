@@ -127,6 +127,30 @@ def stable_json_sha256(payload: Any) -> str:
     return sha256_bytes(stable_json_bytes(payload))
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(Path(path).resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
+def _mkdir(path: Path) -> None:
+    os.makedirs(_fs_path(path), exist_ok=True)
+
+
+def _write_bytes(path: Path, body: bytes) -> None:
+    _mkdir(path.parent)
+    with open(_fs_path(path), "wb") as handle:
+        handle.write(body)
+
+
+def _read_bytes(path: Path) -> bytes:
+    with open(_fs_path(path), "rb") as handle:
+        return handle.read()
+
+
 def _resolve(path_text: str | Path, workspace_root: Path) -> Path:
     path = Path(str(path_text))
     if path.is_absolute():
@@ -363,9 +387,8 @@ def write_artifact(
             )
     redacted = redact_secrets(artifact_payload, context.secret_refs, context.secret_values)
     body = json.dumps(redacted, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(body, encoding="utf-8")
-    digest = sha256_bytes(target.read_bytes())
+    _write_bytes(target, body.encode("utf-8"))
+    digest = sha256_bytes(_read_bytes(target))
     artifact = {
         "artifact_id": artifact_id,
         "path": display_path(target, context.workspace_root),

@@ -17,6 +17,8 @@ from .base import (
     provider_usage_from,
     redact_secrets,
     require_node,
+    _read_bytes,
+    _write_bytes,
     sha256_bytes,
     utc_now,
     validate_scoped_path,
@@ -216,10 +218,9 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         context.write_scope,
         workspace_root=context.workspace_root,
     )
-    report_path.parent.mkdir(parents=True, exist_ok=True)
     safe_body = str(redact_secrets(report["body"], context.secret_refs, context.secret_values))
-    report_path.write_text(safe_body.rstrip() + "\n", encoding="utf-8")
-    report_digest = sha256_bytes(report_path.read_bytes())
+    _write_bytes(report_path, (safe_body.rstrip() + "\n").encode("utf-8"))
+    report_digest = sha256_bytes(_read_bytes(report_path))
     report_artifact = {
         "artifact_id": "report_markdown",
         "path": display_path(report_path, context.workspace_root),

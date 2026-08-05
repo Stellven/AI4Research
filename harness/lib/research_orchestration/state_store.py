@@ -40,9 +40,9 @@ class ResearchStateStore:
     def __init__(self, state_root: Path, clock: Callable[[], str] | None = None) -> None:
         self.state_root = Path(state_root).expanduser().resolve()
         self.clock = clock or _default_clock
-        self.state_root.mkdir(parents=True, exist_ok=True)
+        _mkdir(self.state_root)
         self._records_root = (self.state_root / "node-records").resolve()
-        self._records_root.mkdir(parents=True, exist_ok=True)
+        _mkdir(self._records_root)
 
     def load(self, run_id: str) -> dict | None:
         payload, _revision = self.load_with_revision(run_id)
@@ -51,9 +51,9 @@ class ResearchStateStore:
     def load_with_revision(self, run_id: str) -> tuple[dict | None, str | None]:
         path = self._state_path(run_id)
         with self._run_lock(run_id):
-            if not path.exists():
+            if not _exists(path):
                 return None, None
-            encoded = path.read_bytes()
+            encoded = _read_bytes(path)
         return self._decode_state(encoded, path), _sha256(encoded)
 
     def revision(self, run_id: str) -> str | None:
@@ -73,7 +73,7 @@ class ResearchStateStore:
         run_id, encoded = self._encode_state(state)
         path = self._state_path(run_id)
         with self._run_lock(run_id):
-            current_revision = _sha256(path.read_bytes()) if path.exists() else None
+            current_revision = _sha256(_read_bytes(path)) if _exists(path) else None
             if expected_revision is not _ANY_REVISION and current_revision != expected_revision:
                 raise ResearchStateConflictError(
                     f"state revision conflict for {run_id}: expected {expected_revision!r}, "
@@ -118,7 +118,7 @@ class ResearchStateStore:
         self._assert_below(path, self._records_root, "node record path escapes record root")
         with self._run_lock(run_id):
             self._atomic_write(path, encoded)
-        if not path.is_file():
+        if not _is_file(path):
             raise ResearchStateStoreError(f"node record was not persisted: {path}")
         return str(path)
 
@@ -133,9 +133,9 @@ class ResearchStateStore:
             raise ResearchStateStoreError("result_ref must be a non-empty string")
         path = Path(result_ref).expanduser().resolve()
         self._assert_below(path, self._records_root, "result_ref escapes record root")
-        if not path.is_file():
+        if not _is_file(path):
             raise ResearchStateStoreError(f"node record does not exist: {path}")
-        encoded = path.read_bytes()
+        encoded = _read_bytes(path)
         try:
             payload = json.loads(encoded.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -176,32 +176,35 @@ class ResearchStateStore:
         return payload
 
     def _atomic_write(self, path: Path, encoded: bytes) -> None:
+        _mkdir(path.parent)
         temp_path = self._temp_path(path)
         try:
-            temp_path.write_bytes(encoded)
+            _write_bytes(temp_path, encoded)
             for attempt in range(8):
                 try:
-                    os.replace(temp_path, path)
+                    os.replace(_fs_path(temp_path), _fs_path(path))
                     break
                 except PermissionError:
                     if os.name != "nt" or attempt == 7:
                         raise
                     time.sleep(0.01 * (attempt + 1))
         finally:
-            if temp_path.exists():
-                temp_path.unlink()
+            if _exists(temp_path):
+                _unlink(temp_path)
 
     @contextmanager
     def _run_lock(self, run_id: str) -> Iterator[None]:
         self._validate_id(run_id, "run_id")
-        lock_path = (self.state_root / f".{run_id}.lock").resolve()
+        lock_id = _sha256(run_id.encode("utf-8"))[:20]
+        lock_path = (self.state_root / f".{lock_id}.lock").resolve()
         self._assert_below(lock_path, self.state_root, "lock path escapes state_root")
         key = str(lock_path).casefold()
         with _THREAD_LOCKS_GUARD:
             thread_lock = _THREAD_LOCKS.setdefault(key, threading.RLock())
         with thread_lock:
-            lock_path.parent.mkdir(parents=True, exist_ok=True)
-            with lock_path.open("a+b") as handle:
+            _mkdir(self.state_root)
+            _mkdir(lock_path.parent)
+            with open(_fs_path(lock_path), "a+b") as handle:
                 handle.seek(0, os.SEEK_END)
                 if handle.tell() == 0:
                     handle.write(b"0")
@@ -221,8 +224,9 @@ class ResearchStateStore:
         return path
 
     def _temp_path(self, path: Path) -> Path:
-        suffix = f".{os.getpid()}.{threading.get_ident()}.tmp"
-        temp_path = path.with_name(path.name + suffix).resolve()
+        path_id = _sha256(str(path).encode("utf-8"))[:20]
+        temp_name = f".{path_id}.{os.getpid()}.{threading.get_ident()}.tmp"
+        temp_path = path.with_name(temp_name).resolve()
         self._assert_below(temp_path, path.parent, "temp path escapes target directory")
         return temp_path
 
@@ -265,6 +269,41 @@ def _unlock_file(handle: object) -> None:
 
 def _sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _fs_path(path: Path) -> str:
+    text = str(Path(path).resolve(strict=False))
+    if os.name != "nt" or text.startswith("\\\\?\\"):
+        return text
+    if text.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + text.lstrip("\\")
+    return "\\\\?\\" + text
+
+
+def _mkdir(path: Path) -> None:
+    os.makedirs(_fs_path(path), exist_ok=True)
+
+
+def _exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
+def _is_file(path: Path) -> bool:
+    return os.path.isfile(_fs_path(path))
+
+
+def _read_bytes(path: Path) -> bytes:
+    with open(_fs_path(path), "rb") as handle:
+        return handle.read()
+
+
+def _write_bytes(path: Path, payload: bytes) -> None:
+    with open(_fs_path(path), "wb") as handle:
+        handle.write(payload)
+
+
+def _unlink(path: Path) -> None:
+    os.unlink(_fs_path(path))
 
 
 def _default_clock() -> str:

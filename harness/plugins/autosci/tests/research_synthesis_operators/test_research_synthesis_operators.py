@@ -29,6 +29,15 @@ WORKFLOW = json.loads((HARNESS / "workflows" / "drafts" / "research_synthesis_v1
 BASELINE_ARTIFACTS_FOR_TEST = ("independent_review", "report_draft", "evidence_synthesis", "source_validation")
 
 
+def _test_fs_path(path: Path) -> str:
+    resolved = str(path.resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
 def _task_contract() -> dict:
     return {
         "schema": "research_task_contract.v1",
@@ -51,6 +60,34 @@ def _task_contract() -> dict:
         "platform_requirements": [],
         "success_criteria": ["Every conclusion has evidence."],
     }
+
+
+def test_write_artifact_supports_long_windows_workspace_paths(tmp_path: Path) -> None:
+    long_root = (
+        tmp_path
+        / ("phase5-generalization-integration-" + "x" * 80)
+        / ("research-synthesis-artifacts-" + "y" * 80)
+        / ("content-diversity-run-" + "z" * 60)
+    )
+    request = _request(long_root, "source_discovery")
+    request["write_scope"] = ["artifacts/research_synthesis_v1/discovery/"]
+    context = OperatorContext.from_request(request, workspace_root=long_root)
+
+    artifact, hash_record = write_artifact(
+        context,
+        "artifacts/research_synthesis_v1/discovery/source_discovery.json",
+        {"schema": "research_synthesis.source_discovery.v1", "candidates": []},
+        artifact_id="source_discovery",
+        schema="research_synthesis.source_discovery.v1",
+    )
+
+    target = long_root / artifact["path"]
+    assert len(str(target)) > 260
+    assert os.path.isfile(_test_fs_path(target))
+    with open(_test_fs_path(target), "rb") as handle:
+        body = handle.read()
+    assert artifact["sha256"] == hashlib.sha256(body).hexdigest()
+    assert hash_record["value"] == artifact["sha256"]
 
 
 def _request(

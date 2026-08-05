@@ -508,6 +508,25 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
         assert all("\\" not in item["path"] for item in result["output_artifacts"])
 
 
+def test_experiment_design_defaults_sandbox_to_experiment_result_scope(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    idea = _external_ref(tmp_path, "idea_generate", "idea_candidate.v1", {
+        "ideas": [{
+            "idea_id": "idea-default-scope",
+            "hypothesis": "Default sandbox scope is bound to the experiment result.",
+            "minimum_experiment": "Run one bounded local check.",
+            "origin_evidence_ids": ["source:1"],
+        }]
+    })
+
+    result = execute_operator(_request("experiment_design", refs=[idea]), services={})
+
+    plan = _artifact(tmp_path, result)["outputs"]["experiment_plan"]
+    assert plan["sandbox"]["write_scope"] == [
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
+    ]
+
+
 def _explicit_test_method() -> dict:
     return {
         "method_id": "method-001",

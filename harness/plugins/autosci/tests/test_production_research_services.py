@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,15 @@ from harness.plugins.autosci.services.production_research import (
 
 
 PUBLIC_DNS = lambda *_args, **_kwargs: [(2, 1, 6, "", ("93.184.216.34", 443))]
+
+
+def _test_fs_path(path: Path) -> str:
+    resolved = str(path.resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
 
 
 class _Response:
@@ -135,6 +145,42 @@ def test_literature_discovery_reuses_backend_and_hashes_multiple_sources(tmp_pat
     usage = result["provider_usage"][0]
     assert (tmp_path / usage["archive_path"]).is_file()
     assert len(usage["request_sha256"]) == len(usage["response_sha256"]) == 64
+
+
+def test_literature_discovery_archives_under_long_windows_workspace_path(tmp_path: Path) -> None:
+    long_root = (
+        tmp_path
+        / ("phase5-generalization-integration-" + "x" * 80)
+        / ("content-diversity-provider-retry-" + "y" * 80)
+        / ("service-evidence-root-" + "z" * 60)
+    )
+
+    def backend(**_kwargs):
+        return {
+            "status": "completed",
+            "candidates": [
+                {
+                    "candidate_id": "s2-long-path",
+                    "title": "Long path provider evidence",
+                    "source_ref": "https://www.semanticscholar.org/paper/s2-long-path",
+                    "abstract": "Evidence archived below a deep Windows workspace path.",
+                    "source_channels": ["semantic_scholar"],
+                }
+            ],
+            "limitations": [],
+        }
+
+    discovery = LiteratureDiscoveryService(long_root, backend=backend)
+    snapshot = {"seeds": [{"seed_kind": "topic", "content": "Long path archive"}]}
+
+    result = discovery(seed_snapshot=snapshot, payload={})
+
+    archive_path = long_root / result["provider_usage"][0]["archive_path"]
+    assert len(str(archive_path)) > 260
+    assert os.path.isfile(_test_fs_path(archive_path))
+    with open(_test_fs_path(archive_path), "rb") as handle:
+        body = handle.read()
+    assert result["provider_usage"][0]["archive_sha256"] == hashlib.sha256(body).hexdigest()
 
 
 def test_production_service_composition_supports_injected_fakes_without_secrets(tmp_path: Path, monkeypatch) -> None:

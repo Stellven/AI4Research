@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -110,6 +111,27 @@ def test_missing_state_returns_none(tmp_path: Path) -> None:
     store = ResearchStateStore(tmp_path)
 
     assert store.load("missing") is None
+
+
+def test_state_store_recreates_state_root_before_lock_and_temp_write(tmp_path: Path) -> None:
+    state_root = tmp_path / "states"
+    store = ResearchStateStore(state_root)
+    shutil.rmtree(state_root)
+
+    path = store.save(state())
+
+    assert path.is_file()
+    assert store.load("run-state") == state()
+
+
+def test_state_store_handles_long_windows_run_paths(tmp_path: Path) -> None:
+    run_id = "phase5-content-diversity-en_rag_reliability_survey-20260805T204008Z"
+    state_root = tmp_path / "phase5-worker-results" / "content-diversity" / "runs" / run_id / "state"
+    store = ResearchStateStore(state_root)
+
+    store.save(state(run_id))
+
+    assert store.load(run_id)["run_id"] == run_id
 
 
 def test_interrupted_replace_temp_file_does_not_hide_committed_state(tmp_path: Path) -> None:

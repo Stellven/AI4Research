@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,6 +11,15 @@ PLUGIN = HARNESS / "plugins" / "autosci"
 sys.path.insert(0, str(PLUGIN))
 
 from backends import literature_discover  # noqa: E402
+
+
+def _test_fs_path(path: Path) -> str:
+    resolved = str(path.resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
 
 
 class FakeS2Response:
@@ -132,7 +142,12 @@ def test_topic_discovery_retries_semantic_scholar_429_then_returns_candidates(mo
     monkeypatch.setenv("AUTOSCI_S2_RATE_LIMIT_DELAY_SECONDS", "0")
     monkeypatch.setenv("AUTOSCI_S2_MAX_RETRIES", "1")
     monkeypatch.setenv("AUTOSCI_S2_RETRY_DELAY_SECONDS", "60")
-    progress_path = tmp_path / "run" / "semantic_scholar_retry_progress.json"
+    progress_path = (
+        tmp_path
+        / ("phase5-long-progress-" + "x" * 80)
+        / ("semantic-scholar-retry-" + "y" * 80)
+        / "semantic_scholar_retry_progress.json"
+    )
 
     result = literature_discover.discover_literature(
         mode="topic",
@@ -152,7 +167,9 @@ def test_topic_discovery_retries_semantic_scholar_429_then_returns_candidates(mo
     assert sleeps == [0.25]
     assert any("Semantic Scholar rate-limit retry 1/1" in item for item in result["limitations"])
     assert "waiting 0.25s before retry 1/1" in stderr
-    progress = json.loads(progress_path.read_text(encoding="utf-8"))
+    assert "progress write failed" not in stderr
+    with open(_test_fs_path(progress_path), encoding="utf-8") as handle:
+        progress = json.load(handle)
     assert progress["schema"] == "autosci_s2_retry_progress.v1"
     assert progress["status"] == "waiting_for_rate_limit"
     assert progress["current_event"]["status_code"] == 429

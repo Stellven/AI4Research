@@ -143,3 +143,30 @@ def test_conditional_graph_runs_code_mapping_for_repository_input() -> None:
     assert "inputs/repository" in by_id["code_evidence_map"]["read_scope"]
     assert "code_evidence_map" in by_id["claim_verify"]["depends_on"]
     assert all(item["node_id"] != "code_evidence_map" for item in selected["conditional_skips"])
+
+
+def test_conditional_graph_preserves_experiment_status_for_claim_verification() -> None:
+    workflow = _conditional_workflow()
+    workflow["nodes"].extend(
+        [
+            {"node_id": "idea_generate", "depends_on": ["method_extract"], "read_scope": [], "write_scope": ["idea.json"]},
+            {"node_id": "idea_evaluate", "depends_on": ["idea_generate"], "read_scope": ["idea.json"], "write_scope": ["idea-eval.json"]},
+            {"node_id": "experiment_design", "depends_on": ["idea_evaluate"], "read_scope": ["idea-eval.json"], "write_scope": ["plan.json"]},
+            {"node_id": "experiment_approval_gate", "depends_on": ["experiment_design"], "read_scope": ["plan.json"], "write_scope": ["approval.json"]},
+            {"node_id": "experiment_run", "depends_on": ["experiment_approval_gate"], "read_scope": ["approval.json"], "write_scope": ["result.json"]},
+            {"node_id": "experiment_monitor", "depends_on": ["experiment_run"], "read_scope": ["result.json"], "write_scope": ["status.json"]},
+        ]
+    )
+    contract = {
+        "user_intent": "Synthesize the material, design an experiment, and verify claims.",
+        "constraints": {"repository_inputs": []},
+    }
+
+    selected = apply_task_conditions(workflow, contract)
+
+    claim_verify = {item["node_id"]: item for item in selected["nodes"]}["claim_verify"]
+    assert "experiment_monitor" in claim_verify["depends_on"]
+    assert (
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_status.v1.json"
+        in claim_verify["read_scope"]
+    )

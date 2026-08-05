@@ -72,11 +72,34 @@ def _safe_component(value: str) -> str:
     return cleaned[:100] or "service-evidence"
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(Path(path).resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
+def _mkdir(path: Path) -> None:
+    os.makedirs(_fs_path(path), exist_ok=True)
+
+
+def _write_bytes(path: Path, body: bytes) -> None:
+    _mkdir(path.parent)
+    with open(_fs_path(path), "wb") as handle:
+        handle.write(body)
+
+
+def _read_bytes(path: Path) -> bytes:
+    with open(_fs_path(path), "rb") as handle:
+        return handle.read()
+
+
 def _write_json(path: Path, payload: dict[str, Any]) -> str:
-    path.parent.mkdir(parents=True, exist_ok=True)
     body = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    path.write_text(body, encoding="utf-8")
-    return _sha256(path.read_bytes())
+    _write_bytes(path, body.encode("utf-8"))
+    return _sha256(_read_bytes(path))
 
 
 def _display_path(path: Path, root: Path) -> str:
@@ -335,8 +358,7 @@ class BoundedUrlFetcher:
         content_sha256 = _sha256(content.encode("utf-8"))
         suffix = ".html" if media_type in {"text/html", "application/xhtml+xml"} else ".txt"
         archive_path = self.workspace_root / "service-evidence" / "fetch" / f"{raw_sha256}{suffix}"
-        archive_path.parent.mkdir(parents=True, exist_ok=True)
-        archive_path.write_bytes(body)
+        _write_bytes(archive_path, body)
         metadata_path = archive_path.with_suffix(archive_path.suffix + ".json")
         response_hash = _write_json(
             metadata_path,

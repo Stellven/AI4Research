@@ -23,6 +23,10 @@ APPROVAL_ID = "autosci-experiment-approval-gate-physical"
 RUNNER_ID = "autosci-bounded-experiment-run-physical"
 MONITOR_ID = "autosci-experiment-monitor-physical"
 SANDBOX_MODES = {"isolated", "container", "process_restricted"}
+DEFAULT_EXPERIMENT_RESULT_SCOPE = (
+    "artifacts/scientific/scientific_research_lifecycle_full_v1/"
+    "07_experiment_result/experiment_result.v1.json"
+)
 
 
 def _first_idea(context: OperatorContext) -> dict[str, Any]:
@@ -46,6 +50,10 @@ def design_experiment(node_request: dict[str, Any], context: OperatorContext) ->
     idea = _first_idea(context)
     hypothesis = require_text(idea.get("hypothesis"), "idea.hypothesis")
     minimum = require_text(idea.get("minimum_experiment"), "idea.minimum_experiment")
+    requested_sandbox = context.payload.get("sandbox") if isinstance(context.payload.get("sandbox"), dict) else {}
+    sandbox_write_scope = list(requested_sandbox.get("write_scope") or [])
+    if not sandbox_write_scope:
+        sandbox_write_scope = [DEFAULT_EXPERIMENT_RESULT_SCOPE]
     plan = {
         "experiment_id": str(context.payload.get("experiment_id") or f"exp-{idea.get('idea_id', 'candidate')}"),
         "objective": str(context.payload.get("objective") or minimum),
@@ -58,9 +66,9 @@ def design_experiment(node_request: dict[str, Any], context: OperatorContext) ->
         "success_criteria": [str(item) for item in context.payload.get("success_criteria") or ["primary_outcome is recorded"]],
         "safety_checks": [str(item) for item in context.payload.get("safety_checks") or ["no undeclared network access", "writes remain in declared scope"]],
         "sandbox": {
-            "mode": str((context.payload.get("sandbox") or {}).get("mode") or "isolated"),
-            "network": bool((context.payload.get("sandbox") or {}).get("network", False)),
-            "write_scope": list((context.payload.get("sandbox") or {}).get("write_scope") or context.write_scope),
+            "mode": str(requested_sandbox.get("mode") or "isolated"),
+            "network": bool(requested_sandbox.get("network", False)),
+            "write_scope": sandbox_write_scope,
         },
         "resource_limits": {
             "timeout_seconds": min(
