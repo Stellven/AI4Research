@@ -1643,3 +1643,296 @@ operators, and lifecycle action operators completed with `403 passed in
 `.codex-tmp/phase34-worker-results/phase4-lifecycle-recovery/result.json`.
 No Phase 22 workbook, matrix, journey report, final journey report, or brief
 report was edited during Phase 3/4 integration.
+
+## Phase 4 real-task acceptance rework
+
+Logged: 2026-08-05 EDT
+
+Role: OpenSolar Phase 4 Rework and Final Integration Agent. This work was
+isolated in `C:\Users\j50058254\Desktop\Github repo\.phase34-worktrees\phase4-rework`
+on branch `codex/phase4-rework`, based on integration commit
+`d61cbb02b40c3b73efd57055eaf38b7d9a3f2dac`. The exact implementation tested
+below is committed as `9d8eb1d4de112f87a4d479d15d53dfe3d884bc77`. No branch was pushed or merged.
+
+### Defects, root causes, and general fixes
+
+1. **Chinese URL research stopped at `awaiting_external`.** The production
+   resolver had no `fetch_url` binding. A general bounded HTTP adapter now
+   accepts only public HTTP(S), validates every redirect target, rejects
+   embedded credentials and non-public addresses, enforces a 30-second
+   timeout, five redirects, a 5 MiB response limit, and an allowlist of textual
+   content types. It extracts visible text without executing page content and
+   retains requested/final URL, fetch time, selected non-sensitive headers,
+   raw/content/request hashes, and raw/metadata archives. Discovery now keeps
+   the fetched page as the primary source and uses public-provider fallbacks
+   for supplemental context. Failures retain their actual classification
+   instead of generating content. Principal files:
+   `harness/plugins/autosci/services/production_research.py`,
+   `harness/plugins/autosci/operators/research_synthesis/seed_fetch.py`,
+   `harness/plugins/autosci/bin/autosci_bridge.py`, and
+   `harness/lib/research_orchestration/runtime.py`.
+
+2. **English topic survey stopped at `awaiting_external`.** The production
+   resolver had no `discover_sources` binding. The new discovery adapter reuses
+   the existing AutoSci Semantic Scholar backend and has bounded OpenAlex and
+   Crossref fallbacks; URL research can additionally use bounded Wikipedia
+   context queries derived from visible headings. Every candidate retains
+   provider, query, title, URL or identifier, provenance, and a stable content
+   hash; provider traces are archived. Principal files:
+   `harness/plugins/autosci/services/production_research.py`,
+   `harness/plugins/autosci/services/__init__.py`,
+   `harness/plugins/autosci/bin/autosci_bridge.py`, and
+   `harness/plugins/autosci/operators/research_synthesis/report_draft.py`.
+
+3. **Markdown synthesis incorrectly required `code_evidence_map`.** The full
+   lifecycle graph had treated code mapping as unconditional. Pre-execution
+   task conditions now retain that node only when a repository/code input or
+   explicit code-analysis request exists. A skipped node is recorded with
+   status `skipped`, condition, and the reason that no code input was supplied;
+   downstream dependencies and read scopes are rewired before Solar creates
+   the executable graph. Explicit repositories are copied into a bounded,
+   hash-recorded code-only snapshot. Principal files:
+   `harness/lib/research_orchestration/routing.py`,
+   `harness/lib/research_orchestration/runtime.py`,
+   `harness/lib/research_orchestration/orchestrator.py`, and
+   `harness/workflows/scientific_research_lifecycle_full_v1.json`.
+
+4. **PDF synthesis failed when no Method heading survived extraction.** Method
+   extraction now distinguishes `explicitly_extracted`,
+   `extracted_with_inference`, and `insufficient_evidence`. Content without a
+   heading is used only when it contains procedural cues and always retains its
+   source anchor. When no method evidence exists, the operator completes with
+   an empty method list and the explicit limitation `No method was
+   synthesized`; downstream report planning, drafting, review, publication,
+   and final evaluation preserve that limitation. Missing core source evidence
+   still fails: a `missing-evidence:*` placeholder is never treated as a real
+   report source. Principal files:
+   `harness/plugins/autosci/operators/scientific_lifecycle/evidence/operators.py`,
+   `harness/plugins/autosci/operators/scientific_lifecycle/action/delivery.py`,
+   `harness/plugins/autosci/operators/scientific_lifecycle/action/common.py`,
+   `harness/plugins/autosci/operators/scientific_lifecycle/action/registry.py`,
+   `harness/schemas/evidence/research_method.v1.schema.json`, and
+   `harness/schemas/evidence/research_final_evaluation.v1.schema.json`.
+
+Production report writers now emit hash-recorded Markdown in addition to JSON.
+The artifact reviewer evaluates the produced report, publication creates a
+usable final Markdown file, and `final_evaluation` evaluates the actual review,
+bundle, file manifest, and evidence links. Physical operators explicitly do
+not mutate graph or run status; Solar alone derived all final statuses.
+
+### Provider binding and cost-control result
+
+The production model adapter has stable identity
+`autosci-production-research-model@1.0.0`, HTTPS-only endpoints, a 60-second
+timeout, serializable JSON I/O, request/response/archive hashes, classified
+errors, and no serialized authorization headers. It supports deterministic
+fake injection in tests. The accepted URL and topic reports were generated
+through the OpenRouter endpoint (model route `openai/gpt-5.5`), not the OpenAI
+API endpoint. After the user requested a cheaper model, commit `9d8eb1d4`
+removed legacy live-review environment variables from research routing, made
+OpenRouter the default when both keys exist, changed the default model to
+`deepseek/deepseek-v3.2`, and made OpenAI explicitly selectable only through
+`AUTOSCI_RESEARCH_LLM_PROVIDER=openai` or the explicit fallback flag. When
+OpenAI is inactive its key is not included in the run authorization service
+map.
+
+A minimal production probe ran with only the OpenRouter key in the process.
+It returned provider `openrouter`, model `deepseek/deepseek-v3.2`, one
+structured claim, request SHA-256
+`6fcd60843f51a2e5d0fa9d8877119fc6715501e546e34f946c15859443bd2e83`,
+and response SHA-256
+`165ed91d970176e10f404796131872bdfc3b8368c1ef81438613eb846a35a781`.
+Its non-secret exchange record is under
+`.codex-tmp/phase4-rework/openrouter-cheap-probe/service-evidence/model/`.
+No additional full-report model call was made after this cost-control request.
+
+### Accepted production runs
+
+#### Chinese URL report
+
+Exact bridge command:
+
+```text
+python harness/plugins/autosci/bin/autosci_bridge.py research --prompt '请研究并分析以下网页所讨论的技术主题：https://news.qq.com/rain/a/20251207A0337Y00。完整获取和解析网页内容，结合多个可追溯的公开资料进行补充研究，生成结构清晰、证据链接完整的中文技术报告，并明确结论与局限。' --run-id phase4-rework-url-003 --source 'https://news.qq.com/rain/a/20251207A0337Y00' --artifact-root .codex-tmp/phase4-rework/url-003 --output-language Chinese --allow-network --allow-live-provider --approval-ref phase4-user-authorized --max-steps 100
+```
+
+Exit code 0; duration 292.5 seconds; final Solar state `completed`; final gate
+`accepted`. The bounded fetch read 286,494 bytes at
+`2026-08-05T14:55:41Z`; raw SHA-256 is
+`d630c0a039a69305d7ad95953a7d6a2f0dfc84da29133b47c39f68900219ac90`
+and extracted-content SHA-256 is
+`103a6fa92508dcbef854331712c227d7aa1c0a0e3aba6d5cc1cf04495ef0b2a0`.
+Seven sources were validated: the fetched Tencent page plus six Chinese
+Wikipedia contextual results for AI, robot-industry, automotive, and flying-
+car concepts. Five sources were actually cited across nine claims and six
+conclusions. The 18,456-byte Chinese report is structurally usable and directly
+analyzes the page's 2049 technology-vision topic.
+
+- Report: `.codex-tmp/phase4-rework/url-003/artifacts/research_synthesis_v1/report/report.md`
+- Report SHA-256: `2c5e62a6ee45d1fc79342ed9938065e90672507aa304547832e3350d3846096c`
+- Final acceptance: `.codex-tmp/phase4-rework/url-003/artifacts/research_synthesis_v1/final/final_acceptance.json`
+- Source, validation, and fetch evidence:
+  `.codex-tmp/phase4-rework/url-003/artifacts/research_synthesis_v1/` and
+  `.codex-tmp/phase4-rework/url-003/service-evidence/`
+- Solar state: `.codex-tmp/phase4-rework/url-003/state/phase4-rework-url-003.research_run_state.json`
+- Node states: `seed_fetch`, `source_discovery`, `source_validation`,
+  `evidence_synthesis`, `report_draft`, `independent_review`, and
+  `final_acceptance` all `completed`.
+
+Earlier URL attempts are not acceptance evidence. `url-001` exposed live-
+provider capability authorization; `url-002` retained Semantic Scholar and
+OpenAlex HTTP 429 evidence and a model timeout. Other defects were repaired
+while respecting the required retry interval; `url-003` later completed via
+the legal provider fallback chain.
+
+#### English WebAssembly survey
+
+Exact bridge command:
+
+```text
+python harness/plugins/autosci/bin/autosci_bridge.py research --prompt 'Survey compiler optimization techniques for WebAssembly runtimes, comparing performance tradeoffs and open research problems.' --run-id phase4-rework-topic-002 --artifact-root .codex-tmp/phase4-rework/topic-002 --output-language English --allow-network --allow-live-provider --approval-ref phase4-user-authorized --max-steps 100
+```
+
+Exit code 0; duration 110.7 seconds; final Solar state `completed`; final gate
+`accepted`. Semantic Scholar supplied eight traceable candidates. Three are
+direct WebAssembly evidence (runtime fuzzing, call-graph construction, and edge
+runtime characterization); five are clearly treated as supplemental compiler,
+CPU/HPC, or instruction-scheduling evidence. Seven sources were cited across
+seven claims and five conclusions. The 12,747-byte English report explicitly
+compares startup, peak-throughput, compilation-cost, code-size, portability,
+and safety trade-offs and lists open research problems.
+
+- Report: `.codex-tmp/phase4-rework/topic-002/artifacts/research_synthesis_v1/report/report.md`
+- Report SHA-256: `6af1455af959ad5c62feffc1f5680ba62686e03a7aacfc81012d5cb225996349`
+- Final acceptance: `.codex-tmp/phase4-rework/topic-002/artifacts/research_synthesis_v1/final/final_acceptance.json`
+- Discovery/model evidence: `.codex-tmp/phase4-rework/topic-002/artifacts/research_synthesis_v1/` and
+  `.codex-tmp/phase4-rework/topic-002/service-evidence/`
+- Solar state: `.codex-tmp/phase4-rework/topic-002/state/phase4-rework-topic-002.research_run_state.json`
+- Node states: `source_discovery`, `source_validation`, `evidence_synthesis`,
+  `report_draft`, `independent_review`, and `final_acceptance` all `completed`.
+
+The earlier `topic-001` content run is not acceptance evidence because its
+workflow did not declare the Markdown output. The workflow declaration was
+fixed before `topic-002`.
+
+#### Local Markdown synthesis
+
+Exact bridge command:
+
+```text
+python harness/plugins/autosci/bin/autosci_bridge.py research --prompt 'Synthesize this local Markdown into an evidence-backed technical report about Solar-native adapter boundaries, preserving the method and result.' --run-id phase4-rework-md-001 --source harness/plugins/autosci/tests/fixtures/sample_paper.md --artifact-root .codex-tmp/phase4-rework/md-001 --max-steps 100 --approval-ref phase4-user-authorized
+```
+
+Exit code 0; final Solar state `completed`; final evaluation `accepted`. The
+411-byte local source was copied into the run boundary with SHA-256
+`163738ba4b4aa33c842153e601b09d6d18ef1d6872b5cf486fc0985e6084f10e`.
+The method was explicitly extracted. `code_evidence_map` and eight other
+non-applicable idea/experiment/final-mutation nodes were recorded as
+conditional skips; none was represented as a successful execution.
+
+- Final report: `.codex-tmp/phase4-rework/md-001/artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/final-report.md`
+- Report size/hash: 1,026 bytes;
+  `de27c7a769906d910ec6a32604811c8e5b337c275c9fc1c8dcaee5eb8d44d258`
+- Final evaluation: `.codex-tmp/phase4-rework/md-001/artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json`
+- Evidence tree: `.codex-tmp/phase4-rework/md-001/artifacts/scientific/scientific_research_lifecycle_full_v1/`
+- Solar state: `.codex-tmp/phase4-rework/md-001/state/phase4-rework-md-001.research_run_state.json`
+- Completed lifecycle nodes: `material_ingest`, `paper_analyze`,
+  `memory_update_initial`, `graph_update`, `claim_extract`, `method_extract`,
+  `claim_verify`, `report_plan`, `report_draft`, `artifact_review`,
+  `publication_produce`, and `final_evaluation`.
+
+#### Local PDF synthesis
+
+Exact bridge command:
+
+```text
+python harness/plugins/autosci/bin/autosci_bridge.py research --prompt 'Synthesize this local PDF study into a structured evidence-backed report about adapter auditability, including method, result, and limitations.' --run-id phase4-rework-pdf-001 --source 'C:\Users\j50058254\Desktop\Github repo\.phase34-worktrees\phase4-generalization\.codex-tmp\phase4-generalization\solar_adapter_fixture.pdf' --artifact-root .codex-tmp/phase4-rework/pdf-001 --max-steps 100 --approval-ref phase4-user-authorized
+```
+
+Exit code 0; final Solar state `completed`; final evaluation `accepted`. The
+1,505-byte PDF was actually parsed and snapshotted with SHA-256
+`0726b22c5067780895578ede27fb08187a30892cebf0e5be9653a1667bfee1f6`.
+Its method artifact completed with `methods=[]` and
+`method_evidence_status=insufficient_evidence`; the report explicitly says no
+method was synthesized. This limitation did not block the evidence-grounded
+core synthesis.
+
+- Final report: `.codex-tmp/phase4-rework/pdf-001/artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/final-report.md`
+- Report size/hash: 2,130 bytes;
+  `a0002133ba81464b4dd4b39d7cc974e8c10893df8188f21d032a9837d9512f1c`
+- Method evidence: `.codex-tmp/phase4-rework/pdf-001/artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json`
+- Final evaluation: `.codex-tmp/phase4-rework/pdf-001/artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json`
+- Evidence tree: `.codex-tmp/phase4-rework/pdf-001/artifacts/scientific/scientific_research_lifecycle_full_v1/`
+- Solar state: `.codex-tmp/phase4-rework/pdf-001/state/phase4-rework-pdf-001.research_run_state.json`
+- Completed lifecycle nodes: `paper_ingest`, `paper_analyze`,
+  `memory_update_initial`, `graph_update`, `claim_extract`, `method_extract`,
+  `claim_verify`, `report_plan`, `report_draft`, `artifact_review`,
+  `publication_produce`, and `final_evaluation`.
+
+The Markdown and PDF paths jointly demonstrate the full applicable lifecycle:
+input snapshot, ingestion, analysis, initial memory and graph evidence, claims
+and methods, evidence synthesis/verification, report plan, report draft,
+artifact review, publication production, and final evaluation. Dependencies
+were dispatched only after completion; non-applicable code/idea/experiment
+nodes were conditionally removed before graph execution.
+
+### Tests and final quality gates
+
+Final production-service and action-operator command:
+
+```text
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q harness/plugins/autosci/tests/scientific_lifecycle_action_operators/test_action_delivery_operators.py harness/plugins/autosci/tests/test_production_research_services.py --basetemp='C:\tmp\p4-rework-bt-core-evidence' -o cache_dir='C:\tmp\p4-rework-cache-core-evidence'
+```
+
+Exit code 0; 30 passed, 0 failed, 0 skipped in 0.56 seconds. Output tail:
+`30 passed in 0.56s`. This covers fetch/discovery composition and safety,
+OpenRouter-first/no-OpenAI-key binding, report/review/publication/final
+evaluation, and the missing-core-evidence failure boundary.
+
+Final Phase 2-4 high-signal command:
+
+```text
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q harness/tests/contracts/test_research_orchestration_contracts.py harness/tests/research_orchestration/ harness/plugins/autosci/tests/research_synthesis_operators/ harness/plugins/autosci/tests/test_evidence_physical_operators.py harness/plugins/autosci/tests/scientific_lifecycle_action_operators/ --basetemp='C:\tmp\p4-rework-bt-highsignal5' -o cache_dir='C:\tmp\p4-rework-cache-highsignal5'
+```
+
+Exit code 0; 411 passed, 0 failed, 0 skipped in 143.39 seconds. Output tail:
+`411 passed in 143.39s (0:02:23)`. The original integrated baseline was 403
+passed, so the final result adds eight regression tests without losing a baseline
+test. Included coverage has URL/topic/Markdown/PDF routing, optional code node
+with and without repository input, all three method-evidence variants,
+registry completeness, report production, lifecycle final evaluation, and the
+specified Phase 2-4 high-signal paths.
+
+A plain `python -m pytest` attempt did not start because that PowerShell
+session resolved `python` to the Windows Store placeholder (exit code 1;
+duration 0.3 seconds; output tail `Python was not found`). It was classified as
+a runner/PATH issue and rerun with the repository virtual-environment
+executable above. It is not product evidence.
+
+Final pre-commit checks on all 23 implementation/test files reported
+`git diff --check` exit 0 and `SECRET_SCAN_PASS`; the scan compared the changed
+files against three configured secret values without printing them and also
+checked common literal API-key shapes. No `.env`, credential, `.codex-tmp`,
+output artifact, workbook, matrix, journey report, or lock file was staged.
+
+### Final result and known limitations
+
+All four required real tasks meet their minimum acceptance conditions and have
+both a non-empty usable final report and Solar-owned `completed` state with an
+accepted final gate or evaluation. Phase 4 real-task acceptance is therefore complete
+for the exercised production paths.
+
+Known non-core limitations retained in the reports and evidence are:
+
+- The URL report's supplemental Wikipedia sources provide concept and industry
+  context, not independent proof of the Tencent article's long-horizon 2049
+  forecasts or numeric milestones.
+- The WebAssembly survey has three directly WebAssembly-specific sources and
+  five broader compiler/HPC sources, so it is a bounded survey rather than an
+  exhaustive systematic review.
+- The local lifecycle artifact reviewer is a deterministic structural
+  surrogate and does not replace independent scientific peer review.
+- The PDF contains insufficient method evidence; the accepted report preserves
+  that limitation and does not invent a method.
+- Acceptance artifacts remain local under ignored `.codex-tmp` directories as
+  required and are not part of Git history.
