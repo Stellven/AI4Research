@@ -193,7 +193,10 @@ def workflow_from_entry_stage(
             removed_outputs = {
                 str(path)
                 for dep in removed_dependencies
-                for path in by_id[dep].get("write_scope") or []
+                for path in [
+                    *(by_id[dep].get("write_scope") or []),
+                    *(by_id[dep].get("expected_output_artifacts") or []),
+                ]
             }
             item["read_scope"] = [
                 scope for scope in item.get("read_scope") or [] if str(scope) not in removed_outputs

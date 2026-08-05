@@ -138,8 +138,11 @@ class SolarResearchRuntime:
             for node in workflow.get("nodes") or []
             for capability in node.get("required_capabilities") or []
             if capability != "execute_experiment"
-            and not node.get("allow_network")
             and not node.get("allow_live_provider")
+            and (
+                not node.get("allow_network")
+                or runtime_authorization.get("allow_network") is True
+            )
         )
         runtime_authorization["approved_capabilities"] = sorted(approved)
 

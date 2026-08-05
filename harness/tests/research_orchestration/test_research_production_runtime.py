@@ -185,3 +185,56 @@ def test_production_evaluator_rejects_empty_or_hash_mismatched_artifact(tmp_path
     assert decision["accepted"] is False
     assert decision["status"] == "failed"
     assert "missing or empty" in decision["errors"][0]["message"]
+
+
+def test_explicit_network_authorization_approves_bounded_non_provider_node(tmp_path: Path) -> None:
+    captured: dict = {}
+
+    def workflow_loader(decision):
+        return {
+            "workflow_id": "network_research_v1",
+            "workflow_kind": decision.workflow_kind,
+            "start_node": "seed_fetch",
+            "nodes": [{
+                "node_id": "seed_fetch",
+                "depends_on": [],
+                "required_for_completion": True,
+                "logical_operator": "ResearchSeedFetcher",
+                "physical_operator": "seed_fetch_operator",
+                "required_capabilities": ["cap.research.seed.fetch"],
+                "read_scope": [str(tmp_path)],
+                "write_scope": [str(tmp_path / "out")],
+                "allow_network": True,
+                "allow_live_provider": False,
+                "gate": "G_SEED_FETCH",
+            }],
+        }
+
+    base = _resolver(tmp_path)
+
+    def run(request: dict) -> dict:
+        captured.update(request["authorization"])
+        forwarded = dict(request)
+        forwarded["physical_operator"] = {
+            **request["physical_operator"],
+            "operator_id": "physical_web_fetch",
+        }
+        return base.execute(forwarded)
+
+    runtime = SolarResearchRuntime(
+        artifact_root=tmp_path,
+        workflow_loader=workflow_loader,
+        operator_resolver=PhysicalOperatorResolver([
+            PhysicalOperatorBinding("seed_fetch_operator", run, version="test.v1")
+        ]),
+        authorization={"allow_network": True},
+    )
+
+    result = runtime.run(
+        prompt="Analyze https://example.test/research",
+        run_id="network-authorized",
+    )
+
+    assert result["final_status"] == "completed"
+    assert captured["allow_network"] is True
+    assert captured["approved_capabilities"] == ["cap.research.seed.fetch"]

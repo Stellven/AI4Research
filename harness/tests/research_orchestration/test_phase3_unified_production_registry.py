@@ -73,6 +73,33 @@ def test_local_material_route_prunes_unreachable_paper_read_scope() -> None:
     ]
 
 
+def test_topic_route_prunes_unreachable_seed_artifact_scope() -> None:
+    decision = select_production_route("Survey fault-tolerant databases")
+    workflow = _catalog().load(decision)
+
+    assert workflow["start_node"] == "source_discovery"
+    assert workflow["nodes"][0]["read_scope"] == []
+
+
+def test_local_material_route_preserves_paper_evidence_for_claim_and_method_nodes() -> None:
+    decision = select_production_route(
+        "Synthesize notes",
+        seed_inputs=[{"kind": "markdown", "value": "notes.md"}],
+    )
+    workflow = _catalog().load(decision)
+    nodes = {node["node_id"]: node for node in workflow["nodes"]}
+    paper_evidence = (
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/"
+        "research_paper_analysis.v1.json"
+    )
+
+    assert "paper_analyze" in nodes["claim_extract"]["depends_on"]
+    assert paper_evidence in nodes["claim_extract"]["read_scope"]
+    assert "paper_analyze" in nodes["method_extract"]["depends_on"]
+    assert paper_evidence in nodes["method_extract"]["read_scope"]
+    assert "claim_extract" in nodes["code_evidence_map"]["depends_on"]
+
+
 def test_unified_registry_has_one_binding_per_identity_and_covers_every_reachable_node(tmp_path: Path) -> None:
     entries = registration_entries()
     identities = [item["physical_operator_id"] for item in entries]

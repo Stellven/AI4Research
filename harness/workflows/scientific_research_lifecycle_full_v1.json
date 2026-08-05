@@ -468,7 +468,8 @@
       "goal": "Extract source-grounded claims without verification.",
       "logical_operator": "ScientificClaimExtractor",
       "depends_on": [
-        "graph_update"
+        "graph_update",
+        "paper_analyze"
       ],
       "required_capabilities": [
         "cap.research-claim-extract",
@@ -476,7 +477,8 @@
         "academic_critique"
       ],
       "read_scope": [
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/10_memory_update/research_graph_update.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/10_memory_update/research_graph_update.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_paper_analysis.v1.json"
       ],
       "write_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/02_claims/research_claims.v1.json"
@@ -538,7 +540,8 @@
       "goal": "Extract methods, protocols, assumptions, and reproducibility details.",
       "logical_operator": "ScientificMethodExtractor",
       "depends_on": [
-        "claim_extract"
+        "claim_extract",
+        "paper_analyze"
       ],
       "required_capabilities": [
         "cap.research-method-extract",
@@ -546,7 +549,8 @@
         "data_extraction"
       ],
       "read_scope": [
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/02_claims/research_claims.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/02_claims/research_claims.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_paper_analysis.v1.json"
       ],
       "write_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json"
@@ -608,7 +612,8 @@
       "goal": "Map claims or methods to concrete code evidence and unknowns.",
       "logical_operator": "ScientificCodeEvidenceMapper",
       "depends_on": [
-        "method_extract"
+        "method_extract",
+        "claim_extract"
       ],
       "required_capabilities": [
         "cap.research-code-evidence-map",
@@ -616,7 +621,8 @@
         "data_extraction"
       ],
       "read_scope": [
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/02_claims/research_claims.v1.json"
       ],
       "write_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/04_code_evidence/code_evidence_map.v1.json"
