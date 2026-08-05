@@ -432,23 +432,30 @@ def graph_update(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]
 def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
     paper = _paper_from(context)
     claims: list[dict[str, Any]] = []
+    claims_by_text: dict[str, dict[str, Any]] = {}
     limit = max(1, min(int(context.payload.get("limit") or 12), 50))
     cue = re.compile(r"\b(?:show|shows|demonstrat|improv|reduc|increas|achiev|outperform|result|found|find)\w*\b", re.IGNORECASE)
     for _title, text, anchor in _section_texts(paper):
         sentences = _source_sentences(text, minimum_length=30)
         selected = [item for item in sentences if len(item) >= 30 and cue.search(item)]
         for sentence in selected:
-            claims.append(
-                {
-                    "claim_id": f"claim-{len(claims) + 1:03d}",
-                    "text": sentence,
-                    "claim_type": "result",
-                    "source_anchor": anchor,
-                    "testability": "testable" if re.search(r"\d|%|compared|than", sentence, re.IGNORECASE) else "partially_testable",
-                    "verification_status": "unverified",
-                    "evidence_ids": [anchor],
-                }
-            )
+            normalized_sentence = " ".join(sentence.split()).casefold()
+            existing = claims_by_text.get(normalized_sentence)
+            if existing is not None:
+                if anchor not in existing["evidence_ids"]:
+                    existing["evidence_ids"].append(anchor)
+                continue
+            claim = {
+                "claim_id": f"claim-{len(claims) + 1:03d}",
+                "text": sentence,
+                "claim_type": "result",
+                "source_anchor": anchor,
+                "testability": "testable" if re.search(r"\d|%|compared|than", sentence, re.IGNORECASE) else "partially_testable",
+                "verification_status": "unverified",
+                "evidence_ids": [anchor],
+            }
+            claims.append(claim)
+            claims_by_text[normalized_sentence] = claim
             if len(claims) >= limit:
                 break
         if len(claims) >= limit:
@@ -471,6 +478,7 @@ def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, An
 def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
     paper = _paper_from(context)
     methods: list[dict[str, Any]] = []
+    methods_by_text: dict[str, dict[str, Any]] = {}
     method_heading = re.compile(r"method|approach|experiment|implementation|procedure|setup|protocol", re.IGNORECASE)
     description_cue = re.compile(
         r"\b(?:we\s+(?:use|used|apply|applied|implement|implemented|evaluate|evaluated|measure|measured|"
@@ -482,23 +490,47 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
         r"preserved|extracts?|extracted|records?|recorded|configures?|configured))\b",
         re.IGNORECASE,
     )
+
+    def record_method(
+        *,
+        name: str,
+        procedure: list[str],
+        anchor: str,
+        extraction_basis: str,
+        confidence: float,
+    ) -> None:
+        summary = " ".join(procedure)[:500]
+        normalized_summary = " ".join(summary.split()).casefold()
+        existing = methods_by_text.get(normalized_summary)
+        if existing is not None:
+            if anchor not in existing["evidence_ids"]:
+                existing["evidence_ids"].append(anchor)
+            return
+        method = {
+            "method_id": f"method-{len(methods) + 1:03d}",
+            "name": name,
+            "summary": summary,
+            "procedure": procedure,
+            "source_papers": [str(paper.get("paper_id") or "paper-unresolved")],
+            "evidence_ids": [anchor],
+            "extraction_basis": extraction_basis,
+            "confidence": confidence,
+        }
+        methods.append(method)
+        methods_by_text[normalized_summary] = method
+
     for title, text, anchor in _section_texts(paper):
         if not method_heading.search(title):
             continue
         procedure = _source_sentences(text, minimum_length=15)[:12]
         if not procedure:
             continue
-        methods.append(
-            {
-                "method_id": f"method-{len(methods) + 1:03d}",
-                "name": title,
-                "summary": " ".join(procedure)[:500],
-                "procedure": procedure,
-                "source_papers": [str(paper.get("paper_id") or "paper-unresolved")],
-                "evidence_ids": [anchor],
-                "extraction_basis": "explicit_method_heading",
-                "confidence": 1.0,
-            }
+        record_method(
+            name=title,
+            procedure=procedure,
+            anchor=anchor,
+            extraction_basis="explicit_method_heading",
+            confidence=1.0,
         )
     if not methods:
         for title, text, anchor in _section_texts(paper):
@@ -506,17 +538,12 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
             grounded = [item for item in sentences if description_cue.search(item)][:8]
             if not grounded:
                 continue
-            methods.append(
-                {
-                    "method_id": f"method-{len(methods) + 1:03d}",
-                    "name": f"Method description in {title}",
-                    "summary": " ".join(grounded)[:500],
-                    "procedure": grounded,
-                    "source_papers": [str(paper.get("paper_id") or "paper-unresolved")],
-                    "evidence_ids": [anchor],
-                    "extraction_basis": "method_description_without_heading",
-                    "confidence": 0.6,
-                }
+            record_method(
+                name=f"Method description in {title}",
+                procedure=grounded,
+                anchor=anchor,
+                extraction_basis="method_description_without_heading",
+                confidence=0.6,
             )
     if not methods:
         limitation = (

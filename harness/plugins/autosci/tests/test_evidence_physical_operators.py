@@ -17,6 +17,7 @@ from harness.plugins.autosci.operators.scientific_lifecycle.evidence import (
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SCHEMAS = REPO_ROOT / "harness" / "schemas" / "evidence"
 NODE_IDS = tuple(OPERATOR_SPECS)
+VERSION_OVERRIDES = {"claim_extract": "1.2.0", "method_extract": "1.3.0"}
 
 
 def paper_evidence() -> dict:
@@ -217,7 +218,7 @@ def validate_result_and_artifact(result: dict, workspace: Path) -> dict:
     artifact = json.loads((workspace / artifact_ref["path"]).read_text(encoding="utf-8"))
     artifact_schema = json.loads((SCHEMAS / f"{artifact['schema']}.schema.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(artifact_schema).validate(artifact)
-    expected_version = "1.2.0" if artifact["provenance"]["node_id"] == "method_extract" else "1.1.0"
+    expected_version = VERSION_OVERRIDES.get(artifact["provenance"]["node_id"], "1.1.0")
     assert artifact["provenance"]["operator_version"] == expected_version
     assert len(artifact["provenance"]["input_sha256"]) == 64
     assert len(artifact["provenance"]["output_sha256"]) == 64
@@ -313,7 +314,7 @@ def test_package_local_registration_is_unique_and_resolvable() -> None:
     assert len({item["node_id"] for item in entries}) == len(entries)
     assert len({item["operator_id"] for item in entries}) == len(entries)
     assert all(
-        item["operator_version"] == ("1.2.0" if item["node_id"] == "method_extract" else "1.1.0")
+        item["operator_version"] == VERSION_OVERRIDES.get(item["node_id"], "1.1.0")
         for item in entries
     )
     assert all(item["mutates_global_state"] is False for item in entries)
@@ -386,6 +387,46 @@ def test_method_extract_preserves_explicit_inferred_and_insufficient_evidence(
     else:
         assert artifact["outputs"]["methods"] == []
         assert any("No method was synthesized" in item for item in artifact["limitations"])
+
+
+def test_claim_and_method_extract_merge_duplicate_ingest_views(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    paper = paper_evidence()
+    result_text = "Results The bounded adapter improves auditability by linking every result to deterministic hashes."
+    method_text = "Method The method ingests a local paper, preserves source hashes, and records a provenance ledger."
+    paper["outputs"]["paper"]["sections"] = [
+        {
+            "section_id": "abstract",
+            "title": "Abstract",
+            "text": f"{method_text} {result_text}",
+            "source_anchor": "inputs/paper.pdf#abstract",
+        },
+        {
+            "section_id": "recovered-text",
+            "title": "Recovered Text",
+            "text": f"{method_text} {result_text}",
+            "source_anchor": "inputs/paper.pdf#recovered-text",
+        },
+    ]
+
+    claim_request, claim_services = request_for("claim_extract", tmp_path)
+    claim_request["typed_inputs"]["payload"] = {"paper_evidence": paper}
+    claims = validate_result_and_artifact(
+        execute_operator(claim_request, services=claim_services, workspace_root=tmp_path),
+        tmp_path,
+    )["outputs"]["claims"]
+    assert len(claims) == 1
+    assert claims[0]["evidence_ids"] == ["inputs/paper.pdf#abstract", "inputs/paper.pdf#recovered-text"]
+
+    method_request, method_services = request_for("method_extract", tmp_path)
+    method_request["typed_inputs"]["payload"] = {"paper_evidence": paper}
+    methods = validate_result_and_artifact(
+        execute_operator(method_request, services=method_services, workspace_root=tmp_path),
+        tmp_path,
+    )["outputs"]["methods"]
+    assert len(methods) == 1
+    assert methods[0]["extraction_basis"] == "method_description_without_heading"
+    assert methods[0]["evidence_ids"] == ["inputs/paper.pdf#abstract", "inputs/paper.pdf#recovered-text"]
 
 
 def test_unknown_operator_fails_closed() -> None:

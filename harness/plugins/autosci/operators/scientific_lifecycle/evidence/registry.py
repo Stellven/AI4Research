@@ -65,7 +65,12 @@ OPERATOR_SPECS: dict[str, OperatorSpec] = {
         "graph_update", "autosci-evidence-graph-update", "research_graph_update.v1", "research_graph_update.v1.json", operators.graph_update
     ),
     "claim_extract": _spec(
-        "claim_extract", "autosci-evidence-claim-extract", "research_claims.v1", "research_claims.v1.json", operators.extract_claims
+        "claim_extract",
+        "autosci-evidence-claim-extract",
+        "research_claims.v1",
+        "research_claims.v1.json",
+        operators.extract_claims,
+        version="1.2.0",
     ),
     "method_extract": _spec(
         "method_extract",
@@ -73,7 +78,7 @@ OPERATOR_SPECS: dict[str, OperatorSpec] = {
         "research_method.v1",
         "research_method.v1.json",
         operators.extract_methods,
-        version="1.2.0",
+        version="1.3.0",
     ),
     "code_evidence_map": _spec(
         "code_evidence_map", "autosci-evidence-code-evidence-map", "code_evidence_map.v1", "code_evidence_map.v1.json", operators.map_code_evidence
