@@ -419,7 +419,11 @@ def check_role_routes(
                 _exclude(f"provider_policy_excludes:{provider or 'unknown'}")
                 continue
             dispatchable, reason = multi_task_runner.operator_dispatchable(operator)
-            if not dispatchable:
+            # This preflight proves that a role has a valid route, not that the
+            # selected worker is idle at this instant.  A leased/running worker
+            # is temporarily busy but remains a configured, healthy route.
+            busy = reason in {"dynamic_state_leased", "dynamic_state_running"}
+            if not dispatchable and not busy:
                 _exclude(f"not_dispatchable:{reason}")
                 continue
             if not multi_task_runner._operator_backend_runnable(operator):

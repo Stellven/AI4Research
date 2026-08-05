@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -718,7 +719,7 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
             encoding="utf-8",
         )
         checker.chmod(0o755)
-        env["COMMAND_AGENT"] = f"{sys.executable} {checker}"
+        env["COMMAND_AGENT"] = f"{shlex.quote(sys.executable)} {shlex.quote(str(checker))}"
 
         dispatch_dir = tmp_path / "run" / "pm-dispatch-files"
         dispatch_dir.mkdir(parents=True, exist_ok=True)
@@ -830,7 +831,7 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
         env = _setup_command_harness(tmp_path)
         slow_agent = tmp_path / "tools" / "slow_command.py"
         slow_agent.write_text("import time\ntime.sleep(30)\n", encoding="utf-8")
-        env["COMMAND_AGENT"] = f"{sys.executable} {slow_agent}"
+        env["COMMAND_AGENT"] = f"{shlex.quote(sys.executable)} {shlex.quote(str(slow_agent))}"
 
         dispatch_dir = tmp_path / "run" / "pm-dispatch-files"
         dispatch_dir.mkdir(parents=True, exist_ok=True)
@@ -900,6 +901,18 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
 
 
 class TestBuildCommand:
+    def test_missing_command_environment_indirection_fails_closed(self, monkeypatch):
+        monkeypatch.delenv("SOLAR_TEST_MISSING_COMMAND", raising=False)
+        cmd = _od._build_command(
+            {"backend": "command"},
+            {"command": "$SOLAR_TEST_MISSING_COMMAND"},
+        )
+
+        completed = subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+        assert completed.returncode == 127
+        assert "SOLAR_TEST_MISSING_COMMAND is not set" in completed.stderr
+
     def test_claude_cli_backend_uses_print_command(self):
         cmd = _od._build_command(
             {"backend": "claude-cli", "model": "claude-opus-4-8"},

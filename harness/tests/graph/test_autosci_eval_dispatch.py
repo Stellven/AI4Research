@@ -580,7 +580,10 @@ def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
     paper_node = next(node for node in graph["nodes"] if node["id"] == "paper_ingest")
     workdir = sprints / graph["sprint_id"] / "workdir"
-    upstream = workdir / str(paper_node["read_scope"][0])
+    upstream_scope = next(
+        scope for scope in paper_node["read_scope"] if str(scope).endswith("literature_discovery.v1.json")
+    )
+    upstream = workdir / str(upstream_scope)
     upstream.parent.mkdir(parents=True, exist_ok=True)
     upstream.write_text('{"schema_version":"literature_discovery.v1","status":"completed"}\n', encoding="utf-8")
     evidence = workdir / str(paper_node["write_scope"][0])
@@ -632,17 +635,17 @@ def test_normal_intake_autosci_dispatch_ready_uses_exact_autosci_operator(
     assert result["enqueue"]["worker_blocked"] == []
     assert result["enqueue"]["queued"] == []
     enqueued = result["enqueue"]["enqueued"][0]
-    assert enqueued["node"] == "literature_discover"
-    assert enqueued["pane"] == "operator:autosci-literature-discover-worker"
+    assert enqueued["node"] == "evidence_import"
+    assert enqueued["pane"] == "operator:autosci-paper-ingest-worker"
 
     dispatched = result["drain"]["results"][0]
     assert dispatched["ok"] is True
     assert dispatched["dispatch_mode"] == "autosci_operator_direct"
-    assert dispatched["operator_id"] == "autosci-literature-discover-worker"
-    assert dispatched["operator_envelope"]["expected_action"] == "discover_literature"
+    assert dispatched["operator_id"] == "autosci-paper-ingest-worker"
+    assert dispatched["operator_envelope"]["expected_action"] == "ingest_paper"
     assert dispatched["operator_envelope"]["runner_contract"] == "research.autosci.v1"
     assert dispatched["operator_envelope"]["outputs"]["evidence_payload_path"].endswith(
-        "literature_discovery.v1.json"
+        "research_evidence_import.v1.json"
     )
 
 
@@ -667,10 +670,10 @@ def test_openai_policy_keeps_provider_neutral_autosci_operator(
     result = gnd.dispatch_ready(str(graph_path), dry_run=True, ttl=30, max_parallel=1)
 
     assert result["ok"] is True
-    assert result["enqueue"]["enqueued"][0]["pane"] == "operator:autosci-literature-discover-worker"
+    assert result["enqueue"]["enqueued"][0]["pane"] == "operator:autosci-paper-ingest-worker"
     dispatched = result["drain"]["results"][0]
     assert dispatched["dispatch_mode"] == "autosci_operator_direct"
-    assert dispatched["operator_id"] == "autosci-literature-discover-worker"
+    assert dispatched["operator_id"] == "autosci-paper-ingest-worker"
 
 
 def test_autosci_operator_direct_dispatch_submits_to_operator_runtime(
@@ -703,8 +706,12 @@ def test_autosci_operator_direct_dispatch_submits_to_operator_runtime(
 
     import graph_node_dispatcher as gnd
 
-    dry_run_result = gnd.dispatch_ready(str(graph_path), dry_run=True, ttl=30, max_parallel=1)
-    payload = dry_run_result["enqueue"]["enqueued"][0]["payload"]
+    dry_run_result = gnd.dispatch_ready(str(graph_path), dry_run=True, ttl=30, max_parallel=3)
+    payload = next(
+        item["payload"]
+        for item in dry_run_result["enqueue"]["enqueued"]
+        if item["node"] == "literature_discover"
+    )
     payload["assignment"]["pane"] = "operator:autosci-literature-discover-worker"
     payload["dispatch_id"] = "graph-test-autosci-direct-submit"
 

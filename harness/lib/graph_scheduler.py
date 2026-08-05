@@ -2278,6 +2278,7 @@ def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, An
         strict_model = bool(node.get("strict_model") or node.get("model_strict"))
         required_skills = [str(s) for s in node.get("required_skills", [])]
         required_capabilities = _capability_list(node)
+        required_operator_id = str(node.get("required_operator_id") or "").strip()
         # Layer 0 (dispatch-provisioned): strip resource/guard capsule + eval-asserted caps that are
         # bound/asserted at dispatch, not advertised by a worker (see _is_dispatch_provisioned_capability).
         required_capabilities = [c for c in required_capabilities if not _is_dispatch_provisioned_capability(c)]
@@ -2307,6 +2308,8 @@ def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, An
             if not pane:
                 continue
             any_worker_seen = True
+            if required_operator_id and str(worker.get("operator_id") or "").strip() != required_operator_id:
+                continue
             role_penalty = _role_penalty(node_role, _worker_role(worker))
             if role_penalty is None:
                 continue
@@ -2389,6 +2392,8 @@ def assign_workers(batch_nodes: list[dict[str, Any]], workers: list[dict[str, An
                 "required_skills": required_skills,
                 "required_capabilities": required_capabilities,
             }
+            if required_operator_id:
+                details["required_operator_id"] = required_operator_id
             if blocked_by_runtime:
                 details["unavailable_reasons"] = sorted(runtime_unavailable_reasons)
             if reason == "no_matching_worker":

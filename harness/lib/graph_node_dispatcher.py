@@ -11320,6 +11320,10 @@ def _autosci_contract_operator_workers(graph: dict[str, Any]) -> list[dict[str, 
         operator_id = _autosci_physical_operator_for_node(node)
         if not operator_id or operator_id == AUTOSCI_EVALUATOR_OPERATOR_ID:
             continue
+        # AutoSci nodes have an exact logical-to-physical binding. Generic
+        # capability overlap must never allow (for example) evidence_import to
+        # run on the literature-discovery worker.
+        node["required_operator_id"] = operator_id
         spec = _physical_operator_spec(operator_id)
         if not spec or bool(spec.get("deprecated")):
             continue

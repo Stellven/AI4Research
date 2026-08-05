@@ -445,7 +445,29 @@ def _build_command(config: dict, envelope: dict) -> list[str]:
     if cmd_val:
         if isinstance(cmd_val, list):
             return [str(c) for c in cmd_val]
-        return ["bash", "-lc", str(cmd_val)]
+        command_text = str(cmd_val)
+        env_ref = re.fullmatch(
+            r"\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))",
+            command_text,
+        )
+        if env_ref:
+            variable = env_ref.group(1) or env_ref.group(2)
+            command_text = os.environ.get(variable, "").strip()
+            if not command_text:
+                return [
+                    "bash",
+                    "-c",
+                    f"echo 'operator command environment variable {variable} is not set' >&2; exit 127",
+                ]
+        # An explicit envelope command executes in the environment materialized
+        # by Solar.  A login shell may source user startup files that replace or
+        # unset those variables (including a bounded command indirection such
+        # as ``$COMMAND_AGENT``), turning the task into an empty successful
+        # command. Resolve an exact environment-variable indirection once so
+        # shell quoting in its value is honored, then preserve the task
+        # environment for execution. Configured provider launches retain their
+        # existing login-shell behavior below.
+        return ["bash", "-c", command_text]
 
     launch_cmd = _configured_launch_command(config)
     if backend == "command" and launch_cmd:
