@@ -30,7 +30,7 @@ def registration_entries() -> tuple[dict[str, str], ...]:
             "node_id": node_id,
             "physical_operator_id": f"{node_id}_operator",
             "implementation_operator_id": f"research-synthesis-{node_id}",
-            "operator_version": "research_synthesis.v1.2",
+            "operator_version": "research_synthesis.v1.3",
             "operator_family": "research_synthesis",
         }
         for node_id in _SYNTHESIS_NODES

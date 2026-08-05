@@ -44,6 +44,14 @@ def _normalize(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", str(value or "").lower()).strip("_")
 
 
+def _has_substantive_report_section(report_body: str, heading_pattern: str) -> bool:
+    heading = re.search(rf"(?im)^##\s+(?:{heading_pattern})[^\r\n]*$", report_body)
+    if not heading:
+        return False
+    section_body = re.split(r"(?m)^#{1,2}\s+", report_body[heading.end():], maxsplit=1)[0]
+    return bool(re.search(r"[A-Za-z0-9\u4e00-\u9fff]", section_body))
+
+
 def _artifact_kind(value: str) -> str:
     normalized = _normalize(value)
     for kind, aliases in ARTIFACT_ALIASES.items():
@@ -183,6 +191,16 @@ def _recompute_chain(
     findings = [item for item in review.get("findings", []) if isinstance(item, dict)] if isinstance(review.get("findings"), list) else []
     high_risk = [item for item in findings if str(item.get("severity") or "").lower() in REJECTING_SEVERITIES]
     verdict = str(review.get("verdict_suggestion") or "").strip().lower()
+    provider_limitations = [
+        " ".join(str(item).split()).casefold()
+        for item in report_draft.get("limitations", [])
+        if str(item).strip()
+    ] if isinstance(report_draft.get("limitations"), list) else []
+    limitations_section_present = _has_substantive_report_section(
+        report_body,
+        r"limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3",
+    )
+    provider_limitations_rendered = all(item in normalized_report_body for item in provider_limitations)
     facts = {
         "chain_complete": not issues,
         "seed_collected": bool(str(synthesis_lineage.get("seed_snapshot") or "")),
@@ -202,10 +220,11 @@ def _recompute_chain(
             and " ".join(str(item.get("text") or "").split()).casefold() in normalized_report_body
             for item in conclusions
         ),
-        "limitations_rendered": bool(report_draft.get("limitations")) and bool(
-            re.search(r"(?im)^##\s+(?:limitations?|局限|限制|不足)\b", report_body)
+        "limitations_rendered": limitations_section_present and provider_limitations_rendered,
+        "method_rendered": _has_substantive_report_section(
+            report_body,
+            r"methods?\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba",
         ),
-        "method_rendered": bool(re.search(r"(?im)^##\s+(?:methods?|方法|方法论)\b", report_body)),
         "review_verdict": verdict,
         "high_risk_finding_count": len(high_risk),
         "review_finding_count": len(findings),
@@ -290,8 +309,8 @@ def _evaluate_required_content(task_contract: dict[str, Any], facts: dict[str, A
         elif requirement_id == "limitations":
             passed = bool(facts.get("limitations_rendered"))
             evidence = (
-                "Provider-recorded limitations are rendered under an explicit limitations heading."
-                if passed else "Provider-recorded limitations or an explicit limitations heading are missing."
+                "The report contains a substantive explicit limitations section and renders every provider-recorded limitation."
+                if passed else "A substantive explicit limitations section is missing or omits a provider-recorded limitation."
             )
         elif requirement_id == "method_evidence":
             passed = bool(facts.get("method_rendered"))

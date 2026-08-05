@@ -618,6 +618,20 @@ def test_final_acceptance_checks_explicit_result_and_limitation_requirements(tmp
         for item in _read_artifact(tmp_path, passed)["required_content_evaluation"]
     )
 
+    localized_refs = _valid_acceptance_refs(
+        tmp_path,
+        report_body="Grounded report body.\n\n## \u5c40\u9650\u6027\u4e0e\u4e0d\u786e\u5b9a\u6027\u58f0\u660e\n\n- \u672a\u83b7\u53d6\u539f\u59cb\u6570\u636e\uff0c\u957f\u671f\u9884\u6d4b\u4ecd\u6709\u4e0d\u786e\u5b9a\u6027\u3002",
+    )
+    localized = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=localized_refs),
+        services={},
+    )
+    assert localized["status"] == "completed"
+    assert all(
+        item["status"] == "passed"
+        for item in _read_artifact(tmp_path, localized)["required_content_evaluation"]
+    )
+
     failing_refs = _valid_acceptance_refs(tmp_path, report_body="Grounded report body without a limitation section.")
     failed = execute_operator(
         _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=failing_refs),
