@@ -1,0 +1,6 @@
+{
+  "schema": "phase5.external_source_evidence.v1",
+  "title": "Phase 5 imported source receipt",
+  "summary": "External source metadata used only as hash-verified provenance in the lifecycle recovery test.",
+  "claims_accepted_by_import": false
+}
