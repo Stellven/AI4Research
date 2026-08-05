@@ -42,6 +42,8 @@ DEFAULT_FETCH_MAX_REDIRECTS = 5
 DEFAULT_EXTRACTED_TEXT_CHARS = 120_000
 DEFAULT_PROVIDER_TIMEOUT_SECONDS = 90
 DEFAULT_PROVIDER_MAX_BYTES = 5 * 1024 * 1024
+DEFAULT_PROVIDER_MAX_ATTEMPTS = 3
+DEFAULT_PROVIDER_RETRY_MAX_SLEEP_SECONDS = 5.0
 DEFAULT_OPENROUTER_RESEARCH_MODEL = "deepseek/deepseek-v3.2"
 DEFAULT_OPENAI_RESEARCH_MODEL = "gpt-5-mini"
 _ALLOWED_CONTENT_TYPES = {
@@ -865,6 +867,8 @@ class ResearchModelService:
     workspace_root: Path
     routes: list[_ProviderRoute]
     timeout_seconds: int = 60
+    max_attempts: int = DEFAULT_PROVIDER_MAX_ATTEMPTS
+    retry_max_sleep_seconds: float = DEFAULT_PROVIDER_RETRY_MAX_SLEEP_SECONDS
     urlopen: Callable[..., Any] = urllib.request.urlopen
     clock: Callable[[], str] = _utc_now
 
@@ -1023,6 +1027,16 @@ class ResearchModelService:
             raise ResearchOperatorError(f"Unsupported production model node: {node_id}", error_type="invalid_input")
         return system, user
 
+    def _provider_retry_delay(self, retry_after: str, attempt: int) -> float:
+        parsed = 0.0
+        try:
+            parsed = float(retry_after)
+        except (TypeError, ValueError):
+            parsed = 0.0
+        if parsed <= 0:
+            parsed = min(float(attempt), self.retry_max_sleep_seconds)
+        return max(0.0, min(parsed, self.retry_max_sleep_seconds))
+
     def _invoke(self, route: _ProviderRoute, node_id: str, system: str, user: dict[str, Any]) -> dict[str, Any]:
         if not route.endpoint.lower().startswith("https://"):
             raise ResearchOperatorError("Research model endpoint must use https", error_type="provider_configuration")
@@ -1040,23 +1054,56 @@ class ResearchModelService:
         if route.provider == "openrouter":
             headers.update({"HTTP-Referer": "https://local.solar/autosci", "X-Title": "Solar AutoSci Research"})
         request = urllib.request.Request(route.endpoint, data=request_body, headers=headers, method="POST")
-        try:
-            with self.urlopen(request, timeout=self.timeout_seconds) as response:
-                body = response.read(DEFAULT_PROVIDER_MAX_BYTES + 1)
-        except urllib.error.HTTPError as exc:
-            retry_after = str(exc.headers.get("Retry-After") or "") if exc.headers else ""
-            detail = f"provider={route.provider} status={exc.code} stage={node_id}"
-            if retry_after:
-                detail += f" retry_after={retry_after}"
-            raise ResearchOperatorError(
-                detail,
-                error_type="provider_rate_limited" if exc.code == 429 else "provider_http_error",
-            ) from exc
-        except (OSError, urllib.error.URLError, TimeoutError) as exc:
-            raise ResearchOperatorError(
-                f"provider={route.provider} stage={node_id} failure={type(exc).__name__}",
-                error_type="provider_unavailable",
-            ) from exc
+        retry_events: list[dict[str, Any]] = []
+        attempts = max(1, int(self.max_attempts or 1))
+        for attempt in range(1, attempts + 1):
+            try:
+                with self.urlopen(request, timeout=self.timeout_seconds) as response:
+                    body = response.read(DEFAULT_PROVIDER_MAX_BYTES + 1)
+                break
+            except urllib.error.HTTPError as exc:
+                retry_after = str(exc.headers.get("Retry-After") or "") if exc.headers else ""
+                detail = f"provider={route.provider} status={exc.code} stage={node_id}"
+                if retry_after:
+                    detail += f" retry_after={retry_after}"
+                if exc.code == 429 and attempt < attempts:
+                    delay = self._provider_retry_delay(retry_after, attempt)
+                    retry_events.append(
+                        {
+                            "attempt": attempt,
+                            "max_attempts": attempts,
+                            "provider": route.provider,
+                            "status_code": exc.code,
+                            "retry_after": retry_after,
+                            "delay_seconds": delay,
+                        }
+                    )
+                    if delay > 0:
+                        time.sleep(delay)
+                    continue
+                raise ResearchOperatorError(
+                    f"{detail} attempts={attempts}",
+                    error_type="provider_rate_limited" if exc.code == 429 else "provider_http_error",
+                ) from exc
+            except (OSError, urllib.error.URLError, TimeoutError) as exc:
+                if attempt < attempts:
+                    delay = self._provider_retry_delay("", attempt)
+                    retry_events.append(
+                        {
+                            "attempt": attempt,
+                            "max_attempts": attempts,
+                            "provider": route.provider,
+                            "failure": type(exc).__name__,
+                            "delay_seconds": delay,
+                        }
+                    )
+                    if delay > 0:
+                        time.sleep(delay)
+                    continue
+                raise ResearchOperatorError(
+                    f"provider={route.provider} stage={node_id} failure={type(exc).__name__} attempts={attempts}",
+                    error_type="provider_unavailable",
+                ) from exc
         if len(body) > DEFAULT_PROVIDER_MAX_BYTES:
             raise ResearchOperatorError("Research model response exceeds the size limit", error_type="provider_contract")
         response_hash = _sha256(body)
@@ -1082,6 +1129,9 @@ class ResearchModelService:
             "service_id": self.service_id,
             "service_version": self.service_version,
         }
+        if retry_events:
+            provider_usage["retry_events"] = retry_events
+            provider_usage["attempt_count"] = len(retry_events) + 1
         archive_payload = {
             "schema": "autosci_research_model_exchange.v1",
             "service_id": self.service_id,

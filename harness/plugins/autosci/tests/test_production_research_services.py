@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from harness.plugins.autosci.services.production_research import (
     BoundedUrlFetcher,
     LiteratureDiscoveryService,
     ResearchModelService,
+    _ProviderRoute,
     production_services_from_environment,
 )
 
@@ -57,6 +59,47 @@ class _Opener:
         assert request.full_url.startswith("https://")
         self.timeout = timeout
         return self.response
+
+
+class _ModelResponse:
+    def __init__(self, payload: dict) -> None:
+        self._body = json.dumps(payload).encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self, _amount: int) -> bytes:
+        return self._body
+
+
+def _model_payload(content: dict) -> dict:
+    return {
+        "model": "test-model",
+        "choices": [{"message": {"content": json.dumps(content)}}],
+        "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+    }
+
+
+def _model_service(tmp_path: Path, urlopen) -> ResearchModelService:
+    return ResearchModelService(
+        tmp_path,
+        routes=[_ProviderRoute("openai_compatible", "https://provider.example.test/chat", "test-model", "test-key")],
+        max_attempts=3,
+        retry_max_sleep_seconds=0,
+        urlopen=urlopen,
+        clock=lambda: "2026-08-05T12:00:00Z",
+    )
+
+
+def _model_kwargs() -> dict:
+    return {
+        "node_id": "evidence_synthesis",
+        "task_contract": {"user_intent": "Summarize evidence.", "deliverable": {"language": "en"}},
+        "validated_sources": [{"source_id": "source-1", "title": "Evidence", "content_summary": "Traceable facts."}],
+    }
 
 
 def test_bounded_url_fetch_archives_traceable_visible_content(tmp_path: Path) -> None:
@@ -214,3 +257,59 @@ def test_openrouter_is_default_and_openai_key_is_not_bound_when_both_exist(tmp_p
     ]
     assert services["secret_values"]["OPENROUTER_API_KEY"] == "test-openrouter-secret"
     assert "OPENAI_API_KEY" not in services["secret_values"]
+
+
+def test_research_model_retries_429_retry_after_on_same_route(tmp_path: Path) -> None:
+    calls = []
+
+    def urlopen(request, *, timeout):
+        calls.append((request, timeout))
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(
+                request.full_url,
+                429,
+                "rate limited",
+                {"Retry-After": "2"},
+                None,
+            )
+        return _ModelResponse(_model_payload({"claims": [{"claim_id": "claim-1", "text": "ok", "evidence_ids": ["source-1"]}]}))
+
+    result = _model_service(tmp_path, urlopen)(**_model_kwargs())
+
+    assert len(calls) == 2
+    usage = result["provider_usage"][0]
+    assert usage["attempt_count"] == 2
+    assert usage["retry_events"][0]["status_code"] == 429
+    assert result["claims"][0]["claim_id"] == "claim-1"
+
+
+def test_research_model_exhausts_persistent_429_without_completed_payload(tmp_path: Path) -> None:
+    calls = []
+
+    def urlopen(request, *, timeout):
+        calls.append((request, timeout))
+        raise urllib.error.HTTPError(request.full_url, 429, "rate limited", {"Retry-After": "0"}, None)
+
+    with pytest.raises(ResearchOperatorError) as raised:
+        _model_service(tmp_path, urlopen)(**_model_kwargs())
+
+    assert len(calls) == 3
+    assert raised.value.error_type == "provider_unavailable"
+    assert "provider_rate_limited" in str(raised.value)
+
+
+def test_research_model_retries_timeout_on_same_route(tmp_path: Path) -> None:
+    calls = []
+
+    def urlopen(_request, *, timeout):
+        calls.append(timeout)
+        if len(calls) == 1:
+            raise TimeoutError("provider did not respond")
+        return _ModelResponse(_model_payload({"claims": [{"claim_id": "claim-1", "text": "ok", "evidence_ids": ["source-1"]}]}))
+
+    result = _model_service(tmp_path, urlopen)(**_model_kwargs())
+
+    assert calls == [60, 60]
+    usage = result["provider_usage"][0]
+    assert usage["attempt_count"] == 2
+    assert usage["retry_events"][0]["failure"] == "TimeoutError"
