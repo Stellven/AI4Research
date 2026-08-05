@@ -424,6 +424,43 @@ def test_completed_result_omits_private_request_body_without_mutating_worker_res
     assert "xy" not in str(short_accepted["evidence"])
 
 
+def test_request_echo_sanitization_preserves_evidence_artifact_linkage_and_ids(
+    tmp_path: Path,
+) -> None:
+    request = dispatch_request(tmp_path)
+    private_query = "private-seed-query"
+    request["typed_inputs"]["payload"] = {
+        "query": private_query,
+        "node_label": request["node_id"],
+        "artifact_hint": "discovery-result",
+    }
+    completed = valid_result()
+    evidence_id = f"{request['node_id']}.snapshot"
+    completed["evidence"][0].update(
+        {
+            "evidence_id": evidence_id,
+            "artifact_id": completed["output_artifacts"][0]["artifact_id"],
+            "summary": f"completed for {private_query}",
+        }
+    )
+    materialize_result_artifacts(tmp_path, completed)
+
+    accepted = dispatch_research_node(
+        request,
+        runner=lambda _: completed,
+        request_schema_path=REQUEST_SCHEMA,
+        result_schema_path=RESULT_SCHEMA,
+        artifact_root=tmp_path,
+    )
+
+    evidence = accepted["evidence"][0]
+    assert evidence["evidence_id"] == evidence_id
+    assert evidence["artifact_id"] == accepted["output_artifacts"][0]["artifact_id"]
+    assert evidence["artifact_id"] == "discovery-result"
+    assert private_query not in evidence["summary"]
+    assert "[OMITTED_REQUEST_BODY]" in evidence["summary"]
+
+
 def test_redteam_combined_forged_completed_proof_is_rejected(tmp_path: Path) -> None:
     request = dispatch_request(tmp_path)
     request_body = request["typed_inputs"]["payload"]["query"]

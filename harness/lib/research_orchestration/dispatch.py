@@ -337,9 +337,53 @@ def _sanitize_result_request_echo(result: dict, request_values: Iterable[str]) -
         "request_body",
         "research_node_request",
     }
+    diagnostic_text_keys = {
+        "detail",
+        "details",
+        "diagnostic",
+        "diagnostics",
+        "description",
+        "message",
+        "reason",
+        "stderr",
+        "stdout",
+        "summary",
+        "text",
+    }
+    machine_identity_keys = {
+        "algorithm",
+        "artifact_id",
+        "capability",
+        "capability_id",
+        "evidence_id",
+        "hash_id",
+        "kind",
+        "model",
+        "node_id",
+        "operator_id",
+        "path",
+        "provider",
+        "run_id",
+        "schema",
+        "sha256",
+        "status",
+        "status_is_terminal",
+        "task_id",
+        "usage_kind",
+        "workflow_id",
+    }
     remaining_nodes = [10_000]
 
-    def _walk(value: Any) -> Any:
+    def _is_machine_identity_key(normalized: str) -> bool:
+        return (
+            normalized in machine_identity_keys
+            or normalized.endswith("_id")
+            or normalized.endswith("_path")
+            or normalized.endswith("_schema")
+            or normalized.endswith("_sha256")
+        )
+
+    def _walk(value: Any, *, sanitize_strings: bool) -> Any:
         remaining_nodes[0] -= 1
         if remaining_nodes[0] < 0:
             raise ResearchDispatchError("result exceeds request-echo sanitization bound")
@@ -348,24 +392,34 @@ def _sanitize_result_request_echo(result: dict, request_values: Iterable[str]) -
             for raw_key, nested in value.items():
                 key = str(raw_key)
                 normalized = key.casefold().replace("-", "_")
-                output[key] = (
-                    "[OMITTED_REQUEST_BODY]" if normalized in body_keys else _walk(nested)
-                )
+                if normalized in body_keys:
+                    output[key] = "[OMITTED_REQUEST_BODY]"
+                elif _is_machine_identity_key(normalized):
+                    output[key] = copy.deepcopy(nested)
+                else:
+                    output[key] = _walk(
+                        nested,
+                        sanitize_strings=(
+                            sanitize_strings or normalized in diagnostic_text_keys
+                        ),
+                    )
             return output
         if isinstance(value, list):
-            return [_walk(nested) for nested in value]
+            return [_walk(nested, sanitize_strings=sanitize_strings) for nested in value]
         if isinstance(value, tuple):
-            return [_walk(nested) for nested in value]
-        if isinstance(value, str):
+            return [_walk(nested, sanitize_strings=sanitize_strings) for nested in value]
+        if isinstance(value, str) and sanitize_strings:
             scrubbed = value
             for protected_value in protected:
                 scrubbed = scrubbed.replace(protected_value, "[OMITTED_REQUEST_BODY]")
             return scrubbed
         return value
 
-    for field in ("errors", "evidence", "limitations", "model_provider_usage"):
+    for field in ("errors", "evidence", "model_provider_usage"):
         if field in safe:
-            safe[field] = _walk(safe[field])
+            safe[field] = _walk(safe[field], sanitize_strings=False)
+    if "limitations" in safe:
+        safe["limitations"] = _walk(safe["limitations"], sanitize_strings=True)
     return safe
 
 
