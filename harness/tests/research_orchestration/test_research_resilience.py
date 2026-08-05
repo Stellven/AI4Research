@@ -147,3 +147,83 @@ def test_process_interruptions_are_never_caught_or_retried(interruption) -> None
 
     assert sleeps == []
     assert controller.attempt_metadata == []
+
+
+def test_accepted_awaiting_external_receipt_submits_exactly_once() -> None:
+    calls = 0
+
+    def operation() -> dict:
+        nonlocal calls
+        calls += 1
+        return {
+            "status": "awaiting_external",
+            "submission_accepted": True,
+            "job_id": "provider-job-1",
+        }
+
+    controller = RetryController(sleeper=lambda _delay: None, clock=lambda: 0.0)
+    result = controller.run(
+        operation,
+        {
+            "max_attempts": 3,
+            "retry_on": [RATE_LIMIT, TRANSIENT_FAILURE, "provider_unavailable"],
+        },
+    )
+
+    assert calls == 1
+    assert result["job_id"] == "provider-job-1"
+    assert controller.attempt_metadata == [
+        {
+            "attempt": 1,
+            "classification": "success",
+            "elapsed_seconds": 0.0,
+            "will_retry": False,
+            "delay_seconds": 0.0,
+        }
+    ]
+
+
+def test_unaccepted_awaiting_external_retries_only_with_safe_idempotency_key() -> None:
+    calls = 0
+
+    def operation() -> dict:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return {
+                "status": "awaiting_external",
+                "submission_accepted": False,
+                "safe_to_retry": True,
+                "idempotency_key": "research-node-1-attempt",
+            }
+        return {"status": "completed"}
+
+    controller = RetryController(sleeper=lambda _delay: None, clock=lambda: 0.0)
+    result = controller.run(
+        operation,
+        {"max_attempts": 3, "retry_on": ["provider_unavailable"]},
+    )
+
+    assert calls == 2
+    assert result["status"] == "completed"
+
+
+def test_unaccepted_awaiting_external_without_idempotency_key_is_not_retried() -> None:
+    calls = 0
+
+    def operation() -> dict:
+        nonlocal calls
+        calls += 1
+        return {
+            "status": "awaiting_external",
+            "submission_accepted": False,
+            "safe_to_retry": True,
+        }
+
+    result = RetryController(sleeper=lambda _delay: None, clock=lambda: 0.0).run(
+        operation,
+        {"max_attempts": 3, "retry_on": ["provider_unavailable"]},
+    )
+
+    assert calls == 1
+    assert result["status"] == "awaiting_external"

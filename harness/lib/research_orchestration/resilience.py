@@ -210,7 +210,13 @@ def classify_runtime_failure(exception_or_result: Any) -> str:
         return AUTHORIZATION_REQUIRED
     if status in {"platform_unavailable", "environment_blocked"}:
         return PLATFORM_UNAVAILABLE
-    if status in {"provider_unavailable", "awaiting_external"}:
+    if status == "awaiting_external":
+        # An accepted asynchronous submission is a truthful stop condition,
+        # not evidence that the provider is unavailable.  Re-submission is
+        # safe only when the receipt explicitly says it was not accepted and
+        # supplies both retry safety and an idempotency key.
+        return PROVIDER_UNAVAILABLE if _awaiting_external_retry_is_safe(item) else ""
+    if status == "provider_unavailable":
         return PROVIDER_UNAVAILABLE
     if status in {"rate_limit", "quota_exhausted", "quota_blocked"}:
         return RATE_LIMIT
@@ -360,6 +366,27 @@ def _value_from(item: Any, *keys: str) -> Any:
         if hasattr(item, key):
             return getattr(item, key)
     return None
+
+
+def _awaiting_external_retry_is_safe(item: Any) -> bool:
+    if not isinstance(item, Mapping):
+        return False
+    receipt = item.get("receipt")
+    sources = [item]
+    if isinstance(receipt, Mapping):
+        sources.append(receipt)
+
+    def first(*keys: str) -> Any:
+        for source in sources:
+            for key in keys:
+                if key in source:
+                    return source[key]
+        return None
+
+    accepted = first("submission_accepted")
+    retryable = first("safe_to_retry", "retry_safe")
+    idempotency_key = first("idempotency_key", "submission_idempotency_key")
+    return accepted is False and retryable is True and bool(str(idempotency_key or "").strip())
 
 
 def _retry_after_seconds(

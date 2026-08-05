@@ -179,6 +179,57 @@ output.write_text(json.dumps(result), encoding='utf-8')
     assert not list(lease_dir.rglob("*.tmp"))
 
 
+def test_independent_processes_same_operator_different_nodes_have_one_winner(
+    tmp_path,
+) -> None:
+    start = tmp_path / "start-operator"
+    script = """
+import json, pathlib, sys, time
+from harness.lib.research_orchestration.runtime_lease import ResearchLeaseAdapter
+root, start, output = map(pathlib.Path, sys.argv[1:4])
+node_id = sys.argv[4]
+deadline = time.time() + 15
+while not start.exists() and time.time() < deadline:
+    time.sleep(0.005)
+result = ResearchLeaseAdapter(root).acquire('run-process', node_id, 'shared-operator')
+output.write_text(json.dumps(result), encoding='utf-8')
+"""
+    processes: list[tuple[subprocess.Popen[str], Path]] = []
+    for index in range(4):
+        output = tmp_path / f"operator-result-{index}.json"
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                script,
+                str(tmp_path / "operator-harness"),
+                str(start),
+                str(output),
+                f"node-{index}",
+            ],
+            env=_subprocess_env(),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        processes.append((process, output))
+    start.touch()
+
+    results = []
+    for process, output in processes:
+        stdout, stderr = process.communicate(timeout=20)
+        assert process.returncode == 0, (stdout, stderr)
+        results.append(json.loads(output.read_text(encoding="utf-8")))
+
+    assert sum(result.get("acquired") is True for result in results) == 1
+    assert sum(result.get("acquired") is False for result in results) == 3
+    assert all(
+        result.get("acquired") is True
+        or result["blocker"]["reason"] == "operator_busy"
+        for result in results
+    )
+
+
 def test_abandoned_process_claim_is_recovered_after_crash(tmp_path) -> None:
     root = tmp_path / "harness"
     claim = root / "run" / "operator-leases" / ".research-run-run-crash-node-crash.claim"
@@ -212,9 +263,14 @@ os._exit(23)
 
 
 def test_nested_secrets_are_never_persisted(tmp_path) -> None:
+    opaque_secret = "opaque-provider-value-9f82d17"
     metadata = {
         "safe": {
             "topic": "bounded synthesis",
+            "provider_label": opaque_secret,
+            "secretariat_notes": "meeting retained",
+            "token_budget": "token budget=1000",
+            "token": "token-direct-canary",
             "authorization": "Bearer nested-secret-canary",
             "items": [
                 {"password": "password-canary", "note": "api_key=key-canary"},
@@ -223,24 +279,54 @@ def test_nested_secrets_are_never_persisted(tmp_path) -> None:
         }
     }
     adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
-    adapter.acquire("run-1", "N1", "operator-a", metadata=metadata)
+    acquired = adapter.acquire(
+        "run-1",
+        "N1",
+        "operator-a",
+        metadata=metadata,
+        secret_values=[opaque_secret],
+    )
 
     persisted = (tmp_path / "run" / "operator-leases" / "operator-a.json").read_text(
         encoding="utf-8"
     )
     emitted = json.dumps(
-        adapter.acquire("run-2", "N2", "operator-b", metadata=metadata)
+        adapter.acquire(
+            "run-2",
+            "N2",
+            "operator-b",
+            metadata=metadata,
+            secret_values=[opaque_secret],
+        )
+    )
+    adapter.release(
+        "run-1",
+        "N1",
+        "operator-a",
+        lease_id=acquired["lease"]["lease_id"],
+        reason=f"completed with {opaque_secret}",
+        secret_values=[opaque_secret],
+    )
+    all_persisted = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (tmp_path / "run").rglob("*.json")
     )
     assert "bounded synthesis" in persisted
     assert "retained" in persisted
+    assert "secretariat_notes" in persisted
+    assert "token budget=1000" in persisted
+    assert "secret_values" not in persisted
     for secret in (
         "nested-secret-canary",
         "password-canary",
         "key-canary",
         "token-canary",
+        "token-direct-canary",
+        opaque_secret,
     ):
         assert secret not in persisted
         assert secret not in emitted
+        assert secret not in all_persisted
 
 
 def test_fallback_record_uses_canonical_operator_lease_fields(tmp_path) -> None:
@@ -339,3 +425,79 @@ def test_ownerless_abandoned_claim_is_cleaned_after_stale_threshold(tmp_path) ->
 
     assert result["acquired"] is True
     assert not claim.exists()
+
+
+def test_unsafe_operator_ids_use_distinct_stable_filenames(tmp_path) -> None:
+    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    first = adapter.acquire("run-a", "node-a", "op/a")
+    second = adapter.acquire("run-b", "node-b", "op?a")
+
+    assert first["acquired"] is True
+    assert second["acquired"] is True
+    paths = sorted((tmp_path / "run" / "operator-leases").glob("*.json"))
+    assert len(paths) == 2
+    assert paths[0].name != paths[1].name
+    records = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
+    assert {record["operator_id"] for record in records} == {"op/a", "op?a"}
+
+
+def test_legacy_lossy_filename_migrates_only_for_exact_identity(tmp_path) -> None:
+    lease_dir = tmp_path / "run" / "operator-leases"
+    lease_dir.mkdir(parents=True)
+    legacy = lease_dir / "op-a.json"
+    legacy.write_text(
+        json.dumps(
+            {
+                "operator_id": "op/a",
+                "task_id": "task-old",
+                "sprint_id": "run-old",
+                "run_id": "run-old",
+                "research_run_id": "run-old",
+                "node_id": "node-old",
+                "lease_id": "lease-old",
+                "leased_at": "2026-08-05T12:00:00Z",
+                "heartbeat_at": "2026-08-05T12:00:00Z",
+                "expires_at": "2026-08-05T13:00:00Z",
+                "heartbeat_timeout_seconds": 7200,
+                "state": "leased",
+            }
+        ),
+        encoding="utf-8",
+    )
+    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+
+    renewed = adapter.heartbeat(
+        "run-old", "node-old", "op/a", lease_id="lease-old"
+    )
+
+    assert renewed["ok"] is True
+    assert not legacy.exists()
+    migrated = list(lease_dir.glob("op-a--*.json"))
+    assert len(migrated) == 1
+    assert json.loads(migrated[0].read_text(encoding="utf-8"))["operator_id"] == "op/a"
+
+
+def test_windows_fallback_enforces_available_operator_registry(tmp_path) -> None:
+    registry = tmp_path / "config" / "physical-operators.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "operators": {
+                    "known": {"enabled": True},
+                    "disabled": {"enabled": False},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+
+    unknown = adapter.acquire("run-unknown", "node-unknown", "unknown")
+    disabled = adapter.acquire("run-disabled", "node-disabled", "disabled")
+    known = adapter.acquire("run-known", "node-known", "known")
+
+    assert unknown["blocker"]["reason"] == "operator_not_found"
+    assert disabled["blocker"]["reason"] == "operator_disabled"
+    assert known["acquired"] is True
