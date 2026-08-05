@@ -113,7 +113,11 @@ def test_autosci_contract_task_graph_selects_autosci_physical_workers() -> None:
     assert len(graph["nodes"]) >= 19
 
     selected: dict[str, str] = {}
+    solar_control_nodes: set[str] = set()
     for node in graph["nodes"]:
+        if not str(node.get("capability_capsule_id") or ""):
+            solar_control_nodes.add(str(node["id"]))
+            continue
         plan = compile_execution_plan_for_node(
             node,
             request_type="research",
@@ -127,6 +131,10 @@ def test_autosci_contract_task_graph_selects_autosci_physical_workers() -> None:
         assert operator_id.startswith("autosci-")
         selected[str(node["id"])] = operator_id
 
+    # These are Solar-owned lifecycle controls, not capsule-dispatched Builder
+    # work. The approval gate pauses for explicit authorization; final
+    # evaluation is performed by the research runtime's bounded evaluator.
+    assert solar_control_nodes == {"experiment_approval_gate", "final_evaluation"}
     assert selected["paper_ingest"] == "autosci-paper-ingest-worker"
     assert selected["paper_analyze"] == "autosci-paper-analyze-worker"
     assert selected["idea_generate"] == "autosci-idea-worker"
@@ -509,7 +517,13 @@ def test_rawintent_consumer_compiles_autosci_request_to_graph_ready_package(tmp_
     )
     assert refusal["ok"] is False
     assert any(error["code"] == "PLAN_CERTIFICATE_MISSING" for error in refusal["errors"])
-    assert all(str(node.get("capability_capsule_id", "")).startswith("cap.research-") for node in capsule_plan["nodes"])
+    capsule_nodes = [node for node in capsule_plan["nodes"] if node.get("capability_capsule_id")]
+    control_nodes = [node for node in capsule_plan["nodes"] if not node.get("capability_capsule_id")]
+    assert all(str(node["capability_capsule_id"]).startswith("cap.research-") for node in capsule_nodes)
+    assert {str(node["node_id"]) for node in control_nodes} == {
+        "experiment_approval_gate",
+        "final_evaluation",
+    }
 
 
 def test_epic_decomposer_binds_long_autosci_intake_to_autosci_child_graph(tmp_path: Path) -> None:
