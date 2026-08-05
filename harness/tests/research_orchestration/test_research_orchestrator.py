@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import json
 from copy import deepcopy
 from pathlib import Path
 from random import Random
@@ -167,6 +168,7 @@ def orchestrator(tmp_path: Path, wf: dict | None = None, **kwargs) -> tuple[Rese
         state_store=ResearchStateStore(tmp_path / "states"),
         dispatch_callable=dispatch,
         evaluator_callable=evaluator,
+        authorization=kwargs.pop("authorization", None),
         clock=lambda: "2030-01-01T00:00:00Z",
     )
     return orch, dispatch, evaluator
@@ -176,7 +178,12 @@ def test_url_synthesis_full_offline_fake_dispatch_flow(tmp_path: Path) -> None:
     selection = load_workflow_selection(ROOT / "config" / "research-workflow-selection.v1.json")
     selected = select_research_workflow({"workflow_kind": "research_synthesis"}, selection, ROOT)
     wf = load_and_normalize_workflow(selected, ROOT)
-    orch, dispatch, evaluator = orchestrator(tmp_path, wf, task_contract=task(seed_kind="url"))
+    orch, dispatch, evaluator = orchestrator(
+        tmp_path,
+        wf,
+        task_contract=task(seed_kind="url"),
+        authorization={"allow_live_provider": True, "approval_ref": "approval-test-001"},
+    )
 
     state = orch.run_until_blocked(max_steps=20)
 
@@ -435,8 +442,23 @@ def test_malformed_evaluator_response_is_rejected(tmp_path: Path) -> None:
 
     orch, _dispatch, _evaluator = orchestrator(tmp_path, evaluator=BadEvaluator())
 
-    with pytest.raises(ResearchOrchestrationError, match="invalid status"):
-        orch.step()
+    state = orch.step()
+
+    assert state["final_status"] == "failed"
+    assert "invalid status" in state["current_blockers"][0]["reason"]
+
+
+def test_string_accepted_flag_cannot_green_a_worker_result(tmp_path: Path) -> None:
+    class StringBooleanEvaluator:
+        def __call__(self, request: dict, result: dict, state: dict) -> dict:
+            return {"accepted": "false", "status": "completed", "evidence_refs": ["fake-green"]}
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, evaluator=StringBooleanEvaluator())
+
+    state = orch.step()
+
+    assert state["final_status"] == "failed"
+    assert "must be boolean" in state["current_blockers"][0]["reason"]
 
 
 def test_scoped_node_request_matches_contract_schema(tmp_path: Path) -> None:
@@ -474,3 +496,268 @@ def test_repeated_resume_is_deterministic(tmp_path: Path) -> None:
     second, _dispatch2, _evaluator2 = orchestrator(tmp_path)
 
     assert first.resume() == second.resume()
+
+
+def test_live_provider_never_fabricates_approval_and_stops_before_dispatch(tmp_path: Path) -> None:
+    live_node = node("provider_node", [])
+    live_node["allow_live_provider"] = True
+    live_node["allow_network"] = True
+    wf = {"workflow_id": "wf", "workflow_kind": "research_synthesis", "nodes": [live_node]}
+    orch, dispatch, _evaluator = orchestrator(tmp_path, wf)
+
+    state = orch.run_until_blocked()
+
+    assert state["final_status"] == "awaiting_external"
+    assert state["node_states"]["provider_node"]["status"] == "awaiting_external"
+    assert dispatch.requests == []
+    persisted = json.dumps(state)
+    assert "approved-by-task-contract" not in persisted
+    assert state["current_blockers"][0]["blocker_id"] == "provider_node_provider_approval_required"
+    run_schema = json.loads((ROOT / "schemas/evidence/research_run_state.v1.schema.json").read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(run_schema).validate(state)
+
+
+def test_task_contract_rejects_nested_secret_value_before_state_or_dispatch(tmp_path: Path) -> None:
+    compromised = task()
+    compromised["constraints"]["api_key"] = "s" + "k-live-CONTRACTCANARY123"
+    orch, dispatch, _evaluator = orchestrator(tmp_path, task_contract=compromised)
+
+    with pytest.raises(ResearchOrchestrationError, match="secret references"):
+        orch.initialize()
+
+    assert dispatch.requests == []
+    assert orch.state_store.load("run-orch") is None
+
+
+def test_authorization_rejects_secret_value_disguised_as_secret_ref(tmp_path: Path) -> None:
+    with pytest.raises(ResearchOrchestrationError, match="names, not secret values"):
+        orchestrator(tmp_path, authorization={"secret_refs": ["s" + "k-live-REFCANARY12345"]})
+
+
+def test_explicit_authorization_resumes_provider_node_after_restart(tmp_path: Path) -> None:
+    live_node = node("provider_node", [])
+    live_node["allow_live_provider"] = True
+    live_node["allow_network"] = True
+    wf = {"workflow_id": "wf", "workflow_kind": "research_synthesis", "nodes": [live_node]}
+    first, _dispatch, _evaluator = orchestrator(tmp_path, wf)
+    assert first.run_until_blocked()["final_status"] == "awaiting_external"
+
+    second_dispatch = FakeDispatch()
+    second, _ignored, _evaluator2 = orchestrator(
+        tmp_path,
+        wf,
+        dispatch=second_dispatch,
+        authorization={"allow_live_provider": True, "approval_ref": "approval-user-042"},
+    )
+    state = second.resume(redispatch_node_id="provider_node")
+
+    assert state["final_status"] == "completed"
+    assert len(second_dispatch.requests) == 1
+    assert second_dispatch.requests[0]["authorization"]["approval_ref"] == "approval-user-042"
+    assert "approved-by-task-contract" not in json.dumps(second_dispatch.requests[0])
+
+
+def test_plain_resume_does_not_relabel_awaiting_node(tmp_path: Path) -> None:
+    evaluator = FakeEvaluator(
+        {"seed_fetch": {"accepted": False, "status": "awaiting_external", "evidence_refs": ["receipt"], "errors": [], "limitations": []}}
+    )
+    first, _dispatch, _evaluator = orchestrator(tmp_path, evaluator=evaluator)
+    waiting = first.run_until_blocked()
+
+    second, second_dispatch, _evaluator2 = orchestrator(tmp_path)
+    resumed = second.resume()
+
+    assert resumed == waiting
+    assert resumed["node_states"]["seed_fetch"]["status"] == "awaiting_external"
+    assert second_dispatch.requests == []
+
+
+def test_imported_terminal_result_advances_persisted_awaiting_node(tmp_path: Path) -> None:
+    dispatch = FakeDispatch({"seed_fetch": "awaiting_external"})
+    first, _ignored, _evaluator = orchestrator(tmp_path, dispatch=dispatch)
+    assert first.run_until_blocked()["final_status"] == "awaiting_external"
+    completed = result_for(dispatch.requests[0])
+
+    second, _dispatch2, _evaluator2 = orchestrator(tmp_path)
+    resumed = second.resume(node_result=completed)
+
+    assert resumed["node_states"]["seed_fetch"]["status"] == "completed"
+    assert resumed["ready_nodes"] == ["source_discovery"]
+    result_ref = resumed["node_states"]["seed_fetch"]["result_ref"]
+    assert Path(result_ref).is_file()
+    record = second.state_store.load_node_record(result_ref)
+    assert record["evaluation"]["evidence_refs"] == ["ev-seed_fetch"]
+    assert record["result"]["output_artifacts"][0]["artifact_id"] == "artifact-seed_fetch"
+    run_schema = json.loads((ROOT / "schemas/evidence/research_run_state.v1.schema.json").read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(run_schema).validate(resumed)
+
+
+@pytest.mark.parametrize("identity_field", ["task_id", "run_id", "workflow_id", "node_id"])
+def test_resume_rejects_mismatched_result_identity(tmp_path: Path, identity_field: str) -> None:
+    dispatch = FakeDispatch({"seed_fetch": "awaiting_external"})
+    first, _ignored, _evaluator = orchestrator(tmp_path, dispatch=dispatch)
+    waiting = first.run_until_blocked()
+    mismatched = result_for(dispatch.requests[0])
+    mismatched[identity_field] = "wrong-identity"
+
+    second, _dispatch2, _evaluator2 = orchestrator(tmp_path)
+    with pytest.raises(ResearchOrchestrationError, match="does not match|does not target"):
+        second.resume(node_result=mismatched)
+
+    assert second.state_store.load("run-orch") == waiting
+
+
+def test_failed_worker_result_cannot_be_promoted_by_evaluator(tmp_path: Path) -> None:
+    class UnsafeEvaluator:
+        def __call__(self, request: dict, result: dict, state: dict) -> dict:
+            return {"accepted": True, "status": "completed", "evidence_refs": ["fake-green"]}
+
+    orch, _dispatch, _evaluator = orchestrator(
+        tmp_path,
+        dispatch=FakeDispatch({"seed_fetch": "failed"}),
+        evaluator=UnsafeEvaluator(),
+    )
+
+    state = orch.step()
+
+    assert state["node_states"]["seed_fetch"]["status"] == "failed"
+    assert state["final_status"] == "failed"
+    record = orch.state_store.load_node_record(state["node_states"]["seed_fetch"]["result_ref"])
+    assert record["evaluation"]["accepted"] is False
+    assert "fake-green" not in record["evaluation"]["evidence_refs"]
+
+
+def test_malformed_worker_result_is_normalized_to_failed_evidence(tmp_path: Path) -> None:
+    class MalformedDispatch:
+        def __call__(self, request: dict) -> dict:
+            return {"schema": "research_node_result.v1", "node_id": request["node_id"], "status": "completed"}
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, dispatch=MalformedDispatch())
+
+    state = orch.step()
+
+    assert state["final_status"] == "failed"
+    record = orch.state_store.load_node_record(state["node_states"]["seed_fetch"]["result_ref"])
+    assert record["result"]["status"] == "failed"
+    assert record["result"]["errors"][0]["error_id"] == "dispatch_exception"
+
+
+def test_nested_secret_canary_is_scrubbed_before_state_or_record_persistence(tmp_path: Path) -> None:
+    canary = "s" + "k-live-NESTEDCANARY123456"
+
+    class SecretDispatch:
+        def __call__(self, request: dict) -> dict:
+            raise RuntimeError({"outer": {"api_key": canary}, "authorization": f"Bearer {canary}"})
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, dispatch=SecretDispatch())
+    state = orch.step()
+    record_path = Path(state["node_states"]["seed_fetch"]["result_ref"])
+
+    persisted = json.dumps(state) + record_path.read_text(encoding="utf-8")
+    assert canary not in persisted
+    assert "[REDACTED]" in persisted
+    record = orch.state_store.load_node_record(str(record_path))
+    assert record["result"]["secret_redaction_assertion"] == {
+        "no_secrets_observed": True,
+        "redaction_review": "passed",
+    }
+
+
+def test_nested_secret_in_worker_evidence_is_redacted_before_acceptance(tmp_path: Path) -> None:
+    canary = "s" + "k-live-EVIDENCECANARY123"
+
+    class LeakyCompletedDispatch:
+        def __call__(self, request: dict) -> dict:
+            result = result_for(request)
+            result["evidence"][0]["debug"] = {"api_key": canary}
+            return result
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, dispatch=LeakyCompletedDispatch())
+    state = orch.step()
+    record_path = Path(state["node_states"]["seed_fetch"]["result_ref"])
+
+    assert state["node_states"]["seed_fetch"]["status"] == "completed"
+    persisted = record_path.read_text(encoding="utf-8")
+    assert canary not in persisted
+    assert '"api_key": "[REDACTED]"' in persisted
+
+
+def test_evaluator_exception_secret_is_scrubbed_before_persistence(tmp_path: Path) -> None:
+    canary = "s" + "k-evaluator-CANARY123456"
+
+    class SecretEvaluator:
+        def __call__(self, request: dict, result: dict, state: dict) -> dict:
+            raise RuntimeError({"password": canary})
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, evaluator=SecretEvaluator())
+    state = orch.step()
+    record_path = Path(state["node_states"]["seed_fetch"]["result_ref"])
+
+    persisted = json.dumps(state) + record_path.read_text(encoding="utf-8")
+    assert canary not in persisted
+    assert state["final_status"] == "failed"
+
+
+def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(tmp_path: Path) -> None:
+    chain = [
+        ("seed_fetch", [], []),
+        ("source_discovery", ["seed_fetch"], ["seed_snapshot.v1"]),
+        ("source_validation", ["source_discovery"], ["source_discovery.v1"]),
+        ("evidence_synthesis", ["seed_fetch", "source_validation"], ["seed_snapshot.v1", "source_validation.v1"]),
+        ("report_draft", ["evidence_synthesis"], ["evidence_synthesis.v1"]),
+        ("independent_review", ["report_draft", "source_validation"], ["source_validation.v1", "report_draft.v1"]),
+        ("final_acceptance", ["independent_review"], ["independent_review.v1"]),
+    ]
+    schemas = {
+        "seed_fetch": "seed_snapshot.v1",
+        "source_discovery": "source_discovery.v1",
+        "source_validation": "source_validation.v1",
+        "evidence_synthesis": "evidence_synthesis.v1",
+        "report_draft": "report_draft.v1",
+        "independent_review": "independent_review.v1",
+        "final_acceptance": "final_acceptance.v1",
+    }
+    paths = {node_id: str((tmp_path / "artifacts" / f"{node_id}.json").resolve()) for node_id in schemas}
+    nodes = []
+    for node_id, deps, expected_schemas in chain:
+        item = node(node_id, deps)
+        item["read_scope"] = [paths[upstream] for upstream in schemas if schemas[upstream] in expected_schemas]
+        item["write_scope"] = [str((tmp_path / "artifacts").resolve()) + "/"]
+        nodes.append(item)
+    wf = {"workflow_id": "seven", "workflow_kind": "research_synthesis", "nodes": nodes}
+
+    class SchemaDiscoveringPhysicalChain:
+        def __init__(self) -> None:
+            self.requests: list[dict] = []
+
+        def __call__(self, request: dict) -> dict:
+            self.requests.append(deepcopy(request))
+            node_id = request["node_id"]
+            expected = next(row[2] for row in chain if row[0] == node_id)
+            received = request["input_artifact_refs"]
+            assert [artifact.get("schema") for artifact in received] == expected
+            for artifact in received:
+                assert artifact["artifact_id"].startswith("real-")
+                assert ":input:" not in artifact["artifact_id"]
+            Path(paths[node_id]).parent.mkdir(parents=True, exist_ok=True)
+            Path(paths[node_id]).write_text(json.dumps({"node": node_id}), encoding="utf-8")
+            result = result_for(request)
+            result["output_artifacts"] = [
+                {
+                    "artifact_id": f"real-{node_id}",
+                    "path": paths[node_id],
+                    "schema": schemas[node_id],
+                    "sha256": HASH,
+                }
+            ]
+            return result
+
+    physical_chain = SchemaDiscoveringPhysicalChain()
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, wf, dispatch=physical_chain)
+
+    state = orch.run_until_blocked(max_steps=10)
+
+    assert state["final_status"] == "completed"
+    assert [request["node_id"] for request in physical_chain.requests] == [row[0] for row in chain]
+    assert len(state["final_status_evidence_refs"]) == 14
+    assert all(Path(item["result_ref"]).is_file() for item in state["node_states"].values())

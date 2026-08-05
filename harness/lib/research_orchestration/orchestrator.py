@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from datetime import UTC, datetime
+from pathlib import PurePosixPath
 from typing import Any, Callable
 
 
@@ -22,19 +24,17 @@ NODE_STATUSES = {
     "blocked",
     "cancelled",
 }
-RUN_STATUSES = {
-    "pending",
-    "running",
-    "awaiting_human",
-    "awaiting_external",
-    "completed",
-    "failed",
-    "blocked",
-    "cancelled",
-}
 TERMINAL_NODE_STATUSES = {"completed", "failed", "blocked", "cancelled"}
 TERMINAL_RUN_STATUSES = {"completed", "failed", "blocked", "cancelled"}
 STOPPING_RUN_STATUSES = TERMINAL_RUN_STATUSES | {"awaiting_human", "awaiting_external"}
+_SHA256_RE = re.compile(r"^[A-Fa-f0-9]{64}$")
+_SENSITIVE_KEY_RE = re.compile(r"(?:api[_-]?key|access[_-]?token|password|credential|client[_-]?secret)", re.I)
+_SECRET_PATTERNS = (
+    re.compile(r"\bsk-[A-Za-z0-9_-]{8,}\b"),
+    re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]{8,}"),
+    re.compile(r"(?i)(api[_-]?key|access[_-]?token|password|client[_-]?secret)\s*[:=]\s*['\"]?[^\s,'\"}]+"),
+)
+_SAFE_SECRET_METADATA_KEYS = {"secret_refs", "secret_redaction_assertion", "no_secrets_observed"}
 
 
 class ResearchOrchestrator:
@@ -48,6 +48,7 @@ class ResearchOrchestrator:
         state_store: Any,
         dispatch_callable: Callable[[dict], dict],
         evaluator_callable: Callable[[dict, dict, dict], dict],
+        authorization: dict | None = None,
         clock: Callable[[], str] | None = None,
     ) -> None:
         self.task_contract = deepcopy(task_contract)
@@ -55,8 +56,10 @@ class ResearchOrchestrator:
         self.state_store = state_store
         self.dispatch_callable = dispatch_callable
         self.evaluator_callable = evaluator_callable
+        self.authorization = self._normalize_authorization(authorization or {})
         self.clock = clock or _default_clock
         self._workflow: dict | None = None
+        self._state_revision: str | None = None
 
     def initialize(self) -> dict:
         """Create and persist the initial Solar-owned run state."""
@@ -64,89 +67,66 @@ class ResearchOrchestrator:
         self._validate_task_contract()
         workflow = self._load_workflow()
         validation_error = self._validate_workflow(workflow)
-        if validation_error:
-            state = self._failed_initial_state(workflow, validation_error)
+        state = self._failed_initial_state(workflow, validation_error) if validation_error else self._initial_state(workflow)
+        if hasattr(self.state_store, "create_with_revision"):
+            _path, self._state_revision = self.state_store.create_with_revision(state)
+        else:  # compatibility for injected stores outside this package
             self.state_store.create(state)
-            return deepcopy(state)
-
-        now = self.clock()
-        node_states = {}
-        completed_deps: set[str] = set()
-        for node in workflow["nodes"]:
-            status = "ready" if not node["depends_on"] else "pending"
-            node_states[node["node_id"]] = {
-                "node_id": node["node_id"],
-                "required_for_completion": bool(node.get("required_for_completion", True)),
-                "previous_status": None,
-                "status": status,
-                "depends_on": list(node.get("depends_on") or []),
-                "result_ref": None,
-                "updated_at": now,
-            }
-            if status == "completed":
-                completed_deps.add(node["node_id"])
-        state = {
-            "schema": "research_run_state.v1",
-            "task_id": self.task_contract["task_id"],
-            "run_id": self.task_contract["run_id"],
-            "workflow_id": workflow["workflow_id"],
-            "graph_identity": {
-                "graph_id": workflow["workflow_id"],
-                "graph_version": 1,
-                "workflow_kind": workflow["workflow_kind"],
-            },
-            "node_states": node_states,
-            "ready_nodes": self._calculate_ready_nodes_from_states(node_states),
-            "current_blockers": [],
-            "resume_import_provenance": self._resume_import_provenance(),
-            "final_status": "pending",
-            "status_updated_at": now,
-            "final_status_evidence_refs": [],
-        }
-        self.state_store.create(state)
         return deepcopy(state)
 
     def step(self) -> dict:
-        """Dispatch at most one ready node, evaluate its evidence, and commit state."""
+        """Dispatch at most one ready node, evaluate it, and commit accepted evidence."""
 
         state = self._load_or_initialize()
         if state["final_status"] in STOPPING_RUN_STATUSES:
             return deepcopy(state)
         workflow = self._load_workflow()
+        before_refresh = deepcopy(state)
         state = self._refresh_ready_and_status(state, workflow)
+        if state != before_refresh:
+            self._save_state(state)
         if state["final_status"] in STOPPING_RUN_STATUSES:
-            self.state_store.save(state)
             return deepcopy(state)
 
         ready_nodes = list(state.get("ready_nodes") or [])
         if not ready_nodes:
             state["final_status"] = "running"
             state["status_updated_at"] = self.clock()
-            self.state_store.save(state)
+            self._save_state(state)
             return deepcopy(state)
 
         node_id = ready_nodes[0]
         node = self._node_by_id(workflow, node_id)
-        node_state = state["node_states"][node_id]
-        if node_state["status"] == "completed":
-            return deepcopy(self._refresh_ready_and_status(state, workflow))
+        if node.get("allow_live_provider") and not self._has_live_provider_approval():
+            self._transition_node(state, node_id, "running")
+            self._transition_node(state, node_id, "awaiting_external")
+            state["current_blockers"] = [
+                {
+                    "blocker_id": f"{node_id}_provider_approval_required",
+                    "node_id": node_id,
+                    "reason": "Live provider execution requires explicit allow_live_provider=true and a non-empty approval_ref.",
+                }
+            ]
+            state = self._refresh_ready_and_status(state, workflow)
+            self._save_state(state)
+            return deepcopy(state)
 
-        request = self._node_request(node, state)
+        request = self._node_request(node, state, workflow)
         self._transition_node(state, node_id, "running")
         state["final_status"] = "running"
         state["ready_nodes"] = self._calculate_ready_nodes_from_states(state["node_states"])
         state["status_updated_at"] = self.clock()
-        self.state_store.save(state)
+        self._save_state(state)
 
         result = self._dispatch(request)
         decision = self._evaluate(request, result, state)
         state = self._commit_evaluation(state, node_id, result, decision)
         state = self._refresh_ready_and_status(state, workflow)
-        self.state_store.save(state)
+        self._save_state(state)
         return deepcopy(state)
 
     def run_until_blocked(self, max_steps: int = 100) -> dict:
-        """Run until terminal, awaiting external input, or max_steps is reached."""
+        """Run until terminal, awaiting explicit input, or max_steps is reached."""
 
         if max_steps < 1:
             raise ResearchOrchestrationError("max_steps must be >= 1")
@@ -170,31 +150,117 @@ class ResearchOrchestrator:
             ]
             state["final_status"] = "blocked"
             state["status_updated_at"] = self.clock()
-            self.state_store.save(state)
+            self._save_state(state)
         return deepcopy(state)
 
-    def resume(self) -> dict:
-        """Load persisted state and continue readiness calculation without rerunning completed nodes."""
+    def resume(
+        self,
+        *,
+        node_result: dict | None = None,
+        redispatch_node_id: str | None = None,
+        authorization: dict | None = None,
+    ) -> dict:
+        """Resume only with validated evidence or an explicit redispatch request.
 
-        state = self.state_store.load(self.task_contract["run_id"])
+        Calling ``resume()`` without either input is read-only with respect to
+        an awaiting/running node.  This prevents a restart from relabelling an
+        unfulfilled provider or human gate as ready.
+        """
+
+        if authorization is not None:
+            self.authorization = self._normalize_authorization(authorization)
+        state = self._load_state()
         if state is None:
+            if node_result is not None or redispatch_node_id is not None:
+                raise ResearchOrchestrationError("cannot resume a run that has not been initialized")
             return self.initialize()
         workflow = self._load_workflow()
+
+        if node_result is not None:
+            if redispatch_node_id is not None:
+                raise ResearchOrchestrationError("supply node_result or redispatch_node_id, not both")
+            return self._resume_with_result(state, workflow, node_result)
+
+        if redispatch_node_id is not None:
+            node = self._node_by_id(workflow, redispatch_node_id)
+            node_state = state["node_states"].get(redispatch_node_id)
+            if not isinstance(node_state, dict) or node_state.get("status") not in {
+                "awaiting_human",
+                "awaiting_external",
+                "running",
+                "failed",
+                "blocked",
+            }:
+                raise ResearchOrchestrationError("redispatch target is not resumable")
+            if node.get("allow_live_provider") and not self._has_live_provider_approval():
+                raise ResearchOrchestrationError("live provider redispatch requires explicit approval_ref")
+            if node_state["status"] == "running":
+                self._transition_node(state, redispatch_node_id, "failed")
+            self._transition_node(state, redispatch_node_id, "ready")
+            state["current_blockers"] = [
+                blocker for blocker in state.get("current_blockers") or []
+                if blocker.get("node_id") != redispatch_node_id
+            ]
+            state = self._refresh_ready_and_status(state, workflow)
+            self._save_state(state)
+            return self.step()
+
+        # A plain restart must not silently clear awaiting or crash state.
+        refreshed = self._refresh_ready_and_status(deepcopy(state), workflow)
+        if refreshed != state:
+            self._save_state(refreshed)
+        return deepcopy(refreshed)
+
+    def _resume_with_result(self, state: dict, workflow: dict, raw_result: dict) -> dict:
+        node_id = str(raw_result.get("node_id") or "") if isinstance(raw_result, dict) else ""
+        node_state = state["node_states"].get(node_id)
+        if not isinstance(node_state, dict) or node_state.get("status") not in {
+            "awaiting_human",
+            "awaiting_external",
+            "running",
+        }:
+            raise ResearchOrchestrationError("imported result does not target an awaiting/running node")
+        node = self._node_by_id(workflow, node_id)
+        request = self._node_request(node, state, workflow)
+        result = self._sanitize_result(deepcopy(raw_result))
+        self._validate_result_boundary(request, result)
+        if result["status"] not in TERMINAL_NODE_STATUSES:
+            raise ResearchOrchestrationError("imported result must be terminal evidence")
+        decision = self._evaluate(request, result, state)
+        if node_state["status"] != "running":
+            self._transition_node(state, node_id, "running")
+        state = self._commit_evaluation(state, node_id, result, decision)
         state = self._refresh_ready_and_status(state, workflow)
-        self.state_store.save(state)
+        self._save_state(state)
         return deepcopy(state)
 
     def _load_or_initialize(self) -> dict:
-        state = self.state_store.load(self.task_contract["run_id"])
-        if state is None:
-            return self.initialize()
-        return deepcopy(state)
+        state = self._load_state()
+        return self.initialize() if state is None else deepcopy(state)
+
+    def _load_state(self) -> dict | None:
+        run_id = self.task_contract["run_id"]
+        if hasattr(self.state_store, "load_with_revision"):
+            state, self._state_revision = self.state_store.load_with_revision(run_id)
+            return state
+        return self.state_store.load(run_id)
+
+    def _save_state(self, state: dict) -> None:
+        if hasattr(self.state_store, "save_with_revision"):
+            _path, self._state_revision = self.state_store.save_with_revision(
+                state,
+                expected_revision=self._state_revision,
+            )
+        else:
+            self.state_store.save(state)
 
     def _validate_task_contract(self) -> None:
         required = {"task_id", "run_id", "workflow_kind", "run_mode", "seed_inputs"}
         missing = sorted(key for key in required if key not in self.task_contract)
         if missing:
             raise ResearchOrchestrationError(f"task contract missing fields: {', '.join(missing)}")
+        if _contains_secret_material(self.task_contract):
+            raise ResearchOrchestrationError("task contract must contain secret references, not secret values")
         run_mode = self.task_contract["run_mode"]
         if run_mode == "execute":
             if self.task_contract.get("supplied_evidence"):
@@ -204,11 +270,11 @@ class ResearchOrchestrator:
                     raise ResearchOrchestrationError("execute mode cannot consume imported evidence seeds")
         elif run_mode in {"resume", "import_evidence"}:
             supplied = self.task_contract.get("supplied_evidence") or []
-            external_seeds = [
+            external = [
                 seed for seed in self.task_contract.get("seed_inputs") or []
                 if isinstance(seed, dict) and seed.get("seed_kind") == "external_evidence"
             ]
-            if not supplied and not external_seeds:
+            if not supplied and not external:
                 raise ResearchOrchestrationError(f"{run_mode} requires imported evidence provenance")
         else:
             raise ResearchOrchestrationError(f"unsupported run_mode: {run_mode}")
@@ -216,10 +282,7 @@ class ResearchOrchestrator:
     def _load_workflow(self) -> dict:
         if self._workflow is not None:
             return deepcopy(self._workflow)
-        if callable(self.workflow_selector):
-            workflow = self.workflow_selector(deepcopy(self.task_contract))
-        else:
-            workflow = deepcopy(self.workflow_selector)
+        workflow = self.workflow_selector(deepcopy(self.task_contract)) if callable(self.workflow_selector) else deepcopy(self.workflow_selector)
         if not isinstance(workflow, dict):
             raise ResearchOrchestrationError("workflow_selector must return a workflow object")
         self._workflow = workflow
@@ -254,7 +317,7 @@ class ResearchOrchestrator:
                 indegree[node_id] += 1
                 outgoing[dep].append(node_id)
         queue = sorted(node_id for node_id, degree in indegree.items() if degree == 0)
-        seen = []
+        seen: list[str] = []
         while queue:
             node_id = queue.pop(0)
             seen.append(node_id)
@@ -264,9 +327,41 @@ class ResearchOrchestrator:
                     queue.append(child)
                     queue.sort()
         if len(seen) != len(nodes):
-            cycle_nodes = sorted(node_id for node_id, degree in indegree.items() if degree > 0)
-            return "cycle detected: " + ", ".join(cycle_nodes)
+            return "cycle detected: " + ", ".join(sorted(node_id for node_id, degree in indegree.items() if degree > 0))
         return ""
+
+    def _initial_state(self, workflow: dict) -> dict:
+        now = self.clock()
+        node_states = {
+            node["node_id"]: {
+                "node_id": node["node_id"],
+                "required_for_completion": bool(node.get("required_for_completion", True)),
+                "previous_status": None,
+                "status": "ready" if not node.get("depends_on") else "pending",
+                "depends_on": list(node.get("depends_on") or []),
+                "result_ref": None,
+                "updated_at": now,
+            }
+            for node in workflow["nodes"]
+        }
+        return {
+            "schema": "research_run_state.v1",
+            "task_id": self.task_contract["task_id"],
+            "run_id": self.task_contract["run_id"],
+            "workflow_id": workflow["workflow_id"],
+            "graph_identity": {
+                "graph_id": workflow["workflow_id"],
+                "graph_version": 1,
+                "workflow_kind": workflow["workflow_kind"],
+            },
+            "node_states": node_states,
+            "ready_nodes": self._calculate_ready_nodes_from_states(node_states),
+            "current_blockers": [],
+            "resume_import_provenance": self._resume_import_provenance(),
+            "final_status": "pending",
+            "status_updated_at": now,
+            "final_status_evidence_refs": [],
+        }
 
     def _failed_initial_state(self, workflow: dict, reason: str) -> dict:
         now = self.clock()
@@ -300,44 +395,39 @@ class ResearchOrchestrator:
     def _resume_import_provenance(self) -> dict:
         refs: list[str] = []
         source_runs: list[str] = []
-        for artifact in self.task_contract.get("supplied_evidence") or []:
+        artifacts = list(self.task_contract.get("supplied_evidence") or [])
+        artifacts.extend(
+            seed.get("artifact_ref") for seed in self.task_contract.get("seed_inputs") or []
+            if isinstance(seed, dict) and seed.get("seed_kind") == "external_evidence" and isinstance(seed.get("artifact_ref"), dict)
+        )
+        for artifact in artifacts:
             if not isinstance(artifact, dict):
                 continue
-            artifact_id = artifact.get("artifact_id")
-            if artifact_id:
-                refs.append(str(artifact_id))
+            if artifact.get("artifact_id"):
+                refs.append(str(artifact["artifact_id"]))
             provenance = artifact.get("provenance") if isinstance(artifact.get("provenance"), dict) else {}
-            source = provenance.get("source")
-            if source:
-                source_runs.append(str(source))
-        for seed in self.task_contract.get("seed_inputs") or []:
-            if isinstance(seed, dict) and seed.get("seed_kind") == "external_evidence":
-                artifact = seed.get("artifact_ref") if isinstance(seed.get("artifact_ref"), dict) else {}
-                artifact_id = artifact.get("artifact_id")
-                if artifact_id:
-                    refs.append(str(artifact_id))
-                provenance = artifact.get("provenance") if isinstance(artifact.get("provenance"), dict) else {}
-                source = provenance.get("source")
-                if source:
-                    source_runs.append(str(source))
+            if provenance.get("source"):
+                source_runs.append(str(provenance["source"]))
         return {
             "run_mode": self.task_contract["run_mode"],
             "imported_evidence_refs": _dedupe(refs),
             "source_run_ids": _dedupe(source_runs),
         }
 
-    def _node_request(self, node: dict, state: dict) -> dict:
-        allow_live_provider = bool(node.get("allow_live_provider") and self.task_contract.get("constraints", {}).get("allow_live_provider"))
-        authorization = {
-            "scope_id": f"{state['run_id']}:{node['node_id']}",
+    def _node_request(self, node: dict, state: dict, workflow: dict) -> dict:
+        live = bool(node.get("allow_live_provider"))
+        auth = {
+            "scope_id": str(self.authorization.get("scope_id") or f"{state['run_id']}:{node['node_id']}"),
             "approved_capabilities": list(node.get("required_capabilities") or []),
             "allow_network": bool(node.get("allow_network", False)),
-            "allow_live_provider": allow_live_provider,
-            "secret_refs": [],
+            "allow_live_provider": live,
+            "secret_refs": list(self.authorization.get("secret_refs") or []),
         }
-        if allow_live_provider:
-            authorization["approval_ref"] = str(self.task_contract.get("approval_ref") or "approved-by-task-contract")
-            authorization["allow_network"] = True
+        if live:
+            if not self._has_live_provider_approval():
+                raise ResearchOrchestrationError("live provider request cannot be built without explicit approval")
+            auth["approval_ref"] = self._explicit_approval_ref()
+            auth["allow_network"] = True
         return {
             "schema": "research_node_request.v1",
             "task_id": state["task_id"],
@@ -356,16 +446,10 @@ class ResearchOrchestrator:
             },
             "typed_inputs": {
                 "input_schema": "research_node_input.v1",
-                "payload": {
-                    "task_contract": deepcopy(self.task_contract),
-                    "node": deepcopy(node),
-                },
+                "payload": {"task_contract": deepcopy(self.task_contract), "node": deepcopy(node)},
             },
-            "input_artifact_refs": [
-                {"artifact_id": f"{node['node_id']}:input:{index}", "path": path}
-                for index, path in enumerate(node.get("read_scope") or [])
-            ],
-            "authorization": authorization,
+            "input_artifact_refs": self._upstream_artifacts(node, state, workflow),
+            "authorization": auth,
             "read_scope": list(node.get("read_scope") or []),
             "write_scope": list(node.get("write_scope") or []),
             "timeout_retry_policy": {
@@ -375,78 +459,193 @@ class ResearchOrchestrator:
             },
         }
 
+    def _upstream_artifacts(self, node: dict, state: dict, workflow: dict) -> list[dict]:
+        reachable = self._reachable_dependencies(node["node_id"], workflow)
+        order = [item["node_id"] for item in workflow["nodes"] if item["node_id"] in reachable]
+        read_scope = list(node.get("read_scope") or [])
+        artifacts: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+        for upstream_id in order:
+            upstream_state = state["node_states"].get(upstream_id) or {}
+            if upstream_state.get("status") != "completed" or not upstream_state.get("result_ref"):
+                continue
+            record = self.state_store.load_node_record(upstream_state["result_ref"])
+            evaluation = record.get("evaluation") or {}
+            result = record.get("result") or {}
+            if evaluation.get("accepted") is not True or result.get("status") != "completed":
+                continue
+            for artifact in result.get("output_artifacts") or []:
+                if not isinstance(artifact, dict) or not artifact.get("artifact_id") or not artifact.get("path"):
+                    continue
+                if read_scope and not any(_path_within_scope(str(artifact["path"]), scope) for scope in read_scope):
+                    continue
+                key = (str(artifact["artifact_id"]), str(artifact["path"]))
+                if key in seen:
+                    continue
+                seen.add(key)
+                artifacts.append(deepcopy(artifact))
+        return artifacts
+
+    def _reachable_dependencies(self, node_id: str, workflow: dict) -> set[str]:
+        by_id = {item["node_id"]: item for item in workflow["nodes"]}
+        result: set[str] = set()
+        stack = list(by_id[node_id].get("depends_on") or [])
+        while stack:
+            dependency = stack.pop()
+            if dependency in result:
+                continue
+            result.add(dependency)
+            stack.extend(by_id[dependency].get("depends_on") or [])
+        return result
+
     def _dispatch(self, request: dict) -> dict:
         try:
             result = self.dispatch_callable(deepcopy(request))
+            if not isinstance(result, dict):
+                raise ResearchOrchestrationError("dispatch_callable returned a non-object result")
+            result = self._sanitize_result(result)
+            self._validate_result_boundary(request, result)
+            return result
         except Exception as exc:
-            return {
-                "schema": "research_node_result.v1",
-                "task_id": request["task_id"],
-                "run_id": request["run_id"],
-                "workflow_id": request["workflow_id"],
-                "node_id": request["node_id"],
-                "status": "failed",
-                "status_is_terminal": True,
-                "output_artifacts": [],
-                "evidence": [],
-                "hashes": [],
-                "model_provider_usage": [{"provider": "none", "model": "none", "usage_kind": "none"}],
-                "errors": [{"error_id": "dispatch_exception", "error_type": type(exc).__name__, "message": str(exc)[:500]}],
-                "limitations": ["Dispatch callable raised before returning node evidence."],
-                "secret_redaction_assertion": {"no_secrets_observed": True, "redaction_review": "passed"},
-            }
-        if not isinstance(result, dict):
-            raise ResearchOrchestrationError("dispatch_callable must return a result object")
-        return result
+            failure = self._failure_result(request, "dispatch_exception", type(exc).__name__, str(exc))
+            self._validate_result_boundary(request, failure)
+            return failure
+
+    def _sanitize_result(self, result: dict) -> dict:
+        sanitized = _sanitize_payload(deepcopy(result))
+        if _contains_secret_material(sanitized):
+            raise ResearchOrchestrationError("result contains secret material after sanitization")
+        sanitized["secret_redaction_assertion"] = {
+            "no_secrets_observed": True,
+            "redaction_review": "passed",
+        }
+        return sanitized
+
+    def _validate_result_boundary(self, request: dict, result: dict) -> None:
+        if result.get("schema") != "research_node_result.v1":
+            raise ResearchOrchestrationError("worker result has invalid schema identity")
+        for key in ("task_id", "run_id", "workflow_id", "node_id"):
+            if result.get(key) != request.get(key):
+                raise ResearchOrchestrationError(f"worker result {key} does not match request")
+        status = result.get("status")
+        if status not in NODE_STATUSES:
+            raise ResearchOrchestrationError("worker result has invalid status")
+        terminal = result.get("status_is_terminal")
+        if not isinstance(terminal, bool) or terminal != (status in TERMINAL_NODE_STATUSES):
+            raise ResearchOrchestrationError("worker result terminal flag contradicts status")
+        list_fields = ("output_artifacts", "evidence", "hashes", "model_provider_usage", "errors", "limitations")
+        if any(not isinstance(result.get(field), list) for field in list_fields):
+            raise ResearchOrchestrationError("worker result list fields are malformed")
+        if status == "completed" and (not result["evidence"] or result["errors"]):
+            raise ResearchOrchestrationError("completed worker result requires evidence and no errors")
+        if status == "failed" and not result["errors"]:
+            raise ResearchOrchestrationError("failed worker result requires an error")
+        for artifact in result["output_artifacts"]:
+            if not isinstance(artifact, dict) or not str(artifact.get("artifact_id") or "").strip() or not str(artifact.get("path") or "").strip():
+                raise ResearchOrchestrationError("worker result contains malformed artifact reference")
+            if artifact.get("sha256") is not None and not _SHA256_RE.match(str(artifact["sha256"])):
+                raise ResearchOrchestrationError("worker artifact sha256 is malformed")
+        for evidence in result["evidence"]:
+            if not isinstance(evidence, dict) or any(
+                not str(evidence.get(field) or "").strip() for field in ("evidence_id", "kind", "summary")
+            ):
+                raise ResearchOrchestrationError("worker result contains malformed evidence")
+        for error in result["errors"]:
+            if not isinstance(error, dict) or any(
+                not str(error.get(field) or "").strip() for field in ("error_id", "error_type", "message")
+            ):
+                raise ResearchOrchestrationError("worker result contains malformed error")
+        assertion = result.get("secret_redaction_assertion")
+        if not isinstance(assertion, dict) or assertion.get("no_secrets_observed") is not True:
+            raise ResearchOrchestrationError("worker result lacks a verified secret-redaction assertion")
 
     def _evaluate(self, request: dict, result: dict, state: dict) -> dict:
-        decision = self.evaluator_callable(deepcopy(request), deepcopy(result), deepcopy(state))
-        if not isinstance(decision, dict):
-            raise ResearchOrchestrationError("evaluator_callable must return an object")
-        accepted = bool(decision.get("accepted", False))
-        status = str(decision.get("status") or "").strip()
-        if status not in NODE_STATUSES - {"pending", "ready", "running"}:
-            raise ResearchOrchestrationError(f"evaluator returned invalid status: {status}")
-        if not accepted and status == "completed":
-            status = "failed"
-        return {
-            "accepted": accepted,
-            "status": status,
-            "evidence_refs": [str(item) for item in decision.get("evidence_refs") or [] if str(item)],
-            "errors": list(decision.get("errors") or []),
-            "limitations": [str(item) for item in decision.get("limitations") or []],
-        }
+        try:
+            raw = self.evaluator_callable(deepcopy(request), deepcopy(result), deepcopy(state))
+            if not isinstance(raw, dict):
+                raise ResearchOrchestrationError("evaluator_callable must return an object")
+            raw = _sanitize_payload(raw)
+            if any(not isinstance(raw.get(field, []), list) for field in ("evidence_refs", "errors", "limitations")):
+                raise ResearchOrchestrationError("evaluator evidence/errors/limitations must be lists")
+            if not isinstance(raw.get("accepted"), bool):
+                raise ResearchOrchestrationError("evaluator accepted flag must be boolean")
+            accepted = raw["accepted"]
+            status = str(raw.get("status") or "").strip()
+            if status not in NODE_STATUSES - {"pending", "ready", "running"}:
+                raise ResearchOrchestrationError(f"evaluator returned invalid status: {status}")
+            # An evaluator may reject a completed result, but cannot promote a
+            # failed/nonterminal worker result into completed evidence.
+            if result["status"] != "completed" and (accepted or status == "completed"):
+                accepted = False
+                status = result["status"] if result["status"] not in {"pending", "ready", "running"} else "failed"
+                raw["evidence_refs"] = []
+            if not accepted and status == "completed":
+                status = "failed"
+            if status != "completed":
+                accepted = False
+            evidence_refs = _dedupe([str(item) for item in raw.get("evidence_refs") or [] if isinstance(item, str) and item])
+            if accepted and not evidence_refs:
+                evidence_refs = _dedupe([
+                    str(item.get("evidence_id")) for item in result.get("evidence") or []
+                    if isinstance(item, dict) and item.get("evidence_id")
+                ])
+            return {
+                "accepted": accepted,
+                "status": status,
+                "evidence_refs": evidence_refs,
+                "errors": deepcopy(raw.get("errors") or []),
+                "limitations": [str(item) for item in raw.get("limitations") or []],
+            }
+        except Exception as exc:
+            return {
+                "accepted": False,
+                "status": "failed",
+                "evidence_refs": [],
+                "errors": [{"message": _scrub_text(str(exc))[:500] or "evaluator failed"}],
+                "limitations": ["Evaluator did not return a valid acceptance decision."],
+            }
 
     def _commit_evaluation(self, state: dict, node_id: str, result: dict, decision: dict) -> dict:
         status = decision["status"]
         if status == "cancelled" and state["node_states"][node_id]["required_for_completion"]:
             status = "failed"
         self._transition_node(state, node_id, status)
-        result_ref = self._result_ref(result, node_id, state["run_id"])
-        if status == "completed":
-            state["node_states"][node_id]["result_ref"] = result_ref
-        elif status in {"failed", "blocked", "cancelled"} and result_ref:
-            state["node_states"][node_id]["result_ref"] = result_ref
+        result_ref = self.state_store.store_node_record(
+            run_id=state["run_id"],
+            node_id=node_id,
+            result=result,
+            evaluation=decision,
+        )
+        state["node_states"][node_id]["result_ref"] = result_ref
         if decision["errors"]:
+            first = decision["errors"][0]
+            reason = first.get("message") if isinstance(first, dict) else first
             state["current_blockers"] = [
                 {
                     "blocker_id": f"{node_id}_evaluation_error",
                     "node_id": node_id,
-                    "reason": str(decision["errors"][0].get("message") if isinstance(decision["errors"][0], dict) else decision["errors"][0]),
+                    "reason": _scrub_text(str(reason))[:500] or "evaluation failed",
                 }
+            ]
+        elif status in {"awaiting_human", "awaiting_external"}:
+            state["current_blockers"] = [
+                {
+                    "blocker_id": f"{node_id}_{status}",
+                    "node_id": node_id,
+                    "reason": f"Node is {status.replace('_', ' ')} and requires explicit resume input.",
+                }
+            ]
+        else:
+            state["current_blockers"] = [
+                blocker for blocker in state.get("current_blockers") or []
+                if blocker.get("node_id") != node_id
             ]
         return state
 
     def _refresh_ready_and_status(self, state: dict, workflow: dict) -> dict:
         state["ready_nodes"] = self._calculate_ready_nodes_from_states(state["node_states"])
-        required = [
-            node_state for node_state in state["node_states"].values()
-            if node_state["required_for_completion"]
-        ]
-        optional = [
-            node_state for node_state in state["node_states"].values()
-            if not node_state["required_for_completion"]
-        ]
+        required = [item for item in state["node_states"].values() if item["required_for_completion"]]
+        optional = [item for item in state["node_states"].values() if not item["required_for_completion"]]
         if any(item["status"] == "failed" for item in required):
             state["final_status"] = "failed"
         elif any(item["status"] == "blocked" for item in required):
@@ -460,11 +659,7 @@ class ResearchOrchestrator:
         ):
             state["final_status"] = "completed"
             state["current_blockers"] = []
-            evidence_refs = []
-            for item in state["node_states"].values():
-                if item["result_ref"]:
-                    evidence_refs.append(item["result_ref"])
-            state["final_status_evidence_refs"] = _dedupe(evidence_refs)
+            state["final_status_evidence_refs"] = self._accepted_evidence_refs(state)
         else:
             state["final_status"] = "running" if any(
                 item["status"] in {"running", "completed"} for item in state["node_states"].values()
@@ -472,8 +667,24 @@ class ResearchOrchestrator:
         state["status_updated_at"] = self.clock()
         return state
 
+    def _accepted_evidence_refs(self, state: dict) -> list[str]:
+        refs: list[str] = []
+        for node_id in sorted(state["node_states"]):
+            item = state["node_states"][node_id]
+            if item.get("status") != "completed" or not item.get("result_ref"):
+                continue
+            record = self.state_store.load_node_record(item["result_ref"])
+            if (record.get("evaluation") or {}).get("accepted") is not True:
+                continue
+            refs.extend(str(ref) for ref in (record.get("evaluation") or {}).get("evidence_refs") or [] if str(ref))
+            refs.extend(
+                str(artifact.get("artifact_id")) for artifact in (record.get("result") or {}).get("output_artifacts") or []
+                if isinstance(artifact, dict) and artifact.get("artifact_id")
+            )
+        return _dedupe(refs)
+
     def _calculate_ready_nodes_from_states(self, node_states: dict) -> list[str]:
-        ready = []
+        ready: list[str] = []
         for node_id, node_state in sorted(node_states.items()):
             if node_state["status"] not in {"pending", "ready"}:
                 continue
@@ -488,7 +699,7 @@ class ResearchOrchestrator:
     def _transition_node(self, state: dict, node_id: str, status: str) -> None:
         node_state = state["node_states"][node_id]
         if node_state["status"] == "completed" and status != "completed":
-            return
+            raise ResearchOrchestrationError("completed nodes are immutable")
         node_state["previous_status"] = node_state["status"]
         node_state["status"] = status
         node_state["updated_at"] = self.clock()
@@ -499,12 +710,106 @@ class ResearchOrchestrator:
                 return node
         raise ResearchOrchestrationError(f"unknown workflow node: {node_id}")
 
-    def _result_ref(self, result: dict, node_id: str, run_id: str) -> str:
-        artifacts = result.get("output_artifacts") if isinstance(result.get("output_artifacts"), list) else []
-        for artifact in artifacts:
-            if isinstance(artifact, dict) and artifact.get("path"):
-                return str(artifact["path"])
-        return f"artifacts/research/{run_id}/{node_id}/result.json"
+    def _has_live_provider_approval(self) -> bool:
+        allow = self.authorization.get("allow_live_provider") is True or self.task_contract.get("constraints", {}).get("allow_live_provider") is True
+        return allow and bool(self._explicit_approval_ref())
+
+    def _explicit_approval_ref(self) -> str:
+        # task_contract support is legacy-only; Phase 0 callers should pass the
+        # separate authorization envelope because the task schema has no field.
+        value = self.authorization.get("approval_ref") or self.task_contract.get("approval_ref")
+        return str(value).strip() if value is not None else ""
+
+    @staticmethod
+    def _normalize_authorization(value: dict) -> dict:
+        if not isinstance(value, dict):
+            raise ResearchOrchestrationError("authorization must be an object")
+        result = {
+            "allow_live_provider": value.get("allow_live_provider") is True,
+            "allow_network": value.get("allow_network") is True,
+            "approval_ref": str(value.get("approval_ref") or "").strip(),
+            "scope_id": str(value.get("scope_id") or "").strip(),
+            "secret_refs": [str(item) for item in value.get("secret_refs") or [] if str(item).strip()],
+        }
+        if _contains_secret_material(result["approval_ref"]):
+            raise ResearchOrchestrationError("approval_ref resembles secret material")
+        if any(_contains_secret_material(item) for item in result["secret_refs"]):
+            raise ResearchOrchestrationError("secret_refs must contain names, not secret values")
+        return result
+
+    def _failure_result(self, request: dict, error_id: str, error_type: str, message: str) -> dict:
+        clean_message = _scrub_text(message)[:500] or "dispatch failed"
+        payload = {
+            "schema": "research_node_result.v1",
+            "task_id": request["task_id"],
+            "run_id": request["run_id"],
+            "workflow_id": request["workflow_id"],
+            "node_id": request["node_id"],
+            "status": "failed",
+            "status_is_terminal": True,
+            "output_artifacts": [],
+            "evidence": [],
+            "hashes": [],
+            "model_provider_usage": [],
+            "errors": [{"error_id": error_id, "error_type": _scrub_text(error_type)[:120], "message": clean_message}],
+            "limitations": ["Dispatch failed before accepted node evidence was produced."],
+            "secret_redaction_assertion": {"no_secrets_observed": True, "redaction_review": "passed"},
+        }
+        if _contains_secret_material(payload):
+            payload["errors"][0]["message"] = "dispatch failed; sensitive exception text was discarded"
+        return payload
+
+
+def _sanitize_payload(value: Any, key: str = "") -> Any:
+    if isinstance(value, dict):
+        clean: dict = {}
+        for child_key, child_value in value.items():
+            text_key = str(child_key)
+            if text_key not in _SAFE_SECRET_METADATA_KEYS and _SENSITIVE_KEY_RE.search(text_key):
+                clean[child_key] = "[REDACTED]"
+            else:
+                clean[child_key] = _sanitize_payload(child_value, text_key)
+        return clean
+    if isinstance(value, list):
+        return [_sanitize_payload(item, key) for item in value]
+    if isinstance(value, tuple):
+        return [_sanitize_payload(item, key) for item in value]
+    if isinstance(value, str):
+        return _scrub_text(value)
+    return value
+
+
+def _scrub_text(value: str) -> str:
+    result = str(value)
+    for pattern in _SECRET_PATTERNS:
+        if pattern.pattern.startswith("(?i)(api"):
+            result = pattern.sub(lambda match: f"{match.group(1)}=[REDACTED]", result)
+        else:
+            result = pattern.sub("[REDACTED]", result)
+    return result
+
+
+def _contains_secret_material(value: Any) -> bool:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if str(key) not in _SAFE_SECRET_METADATA_KEYS and _SENSITIVE_KEY_RE.search(str(key)) and child != "[REDACTED]":
+                return True
+            if _contains_secret_material(child):
+                return True
+        return False
+    if isinstance(value, (list, tuple)):
+        return any(_contains_secret_material(item) for item in value)
+    if isinstance(value, str):
+        return any(pattern.search(value) for pattern in _SECRET_PATTERNS)
+    return False
+
+
+def _path_within_scope(path: str, scope: str) -> bool:
+    candidate = str(PurePosixPath(path.replace("\\", "/"))).rstrip("/")
+    allowed = str(PurePosixPath(str(scope).replace("\\", "/"))).rstrip("/")
+    if candidate == allowed:
+        return True
+    return candidate.startswith(allowed + "/")
 
 
 def _dedupe(items: list[str]) -> list[str]:
