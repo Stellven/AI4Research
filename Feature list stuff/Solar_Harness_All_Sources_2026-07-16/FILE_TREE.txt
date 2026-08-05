@@ -21,8 +21,8 @@ files/Prompt_A_Solar_Unification_Agent.md
 files/Prompt_B_AutoSci_Full_Parity_Agent.md
 files/Second-Draft-of-Technical-Report.docx
 files/Second-Draft-of-Technical-Report_Revised.docx
-files/Section 1: Drafting a Technical Report.pdf
-files/Section 1: The Structure of a Technical Report.pdf
+files/Section 1 - Drafting a Technical Report.pdf
+files/Section 1 - The Structure of a Technical Report.pdf
 files/Solar_Harness_Architecture_OnePage(1).pptx
 files/Solar_Harness_Architecture_OnePage.pptx
 files/Solar_Native_AutoSci_Technical_Report_Draft.docx

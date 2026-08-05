@@ -125,12 +125,12 @@
       "validation": "zip-container-ok"
     },
     {
-      "relative_path": "files/Section 1: Drafting a Technical Report.pdf",
+      "relative_path": "files/Section 1 - Drafting a Technical Report.pdf",
       "sha256": "b51498ebced608f6016e46900a62adfd9ad8e5ef034aff564b1523f4ac87100b",
       "validation": "pdf-signature-ok"
     },
     {
-      "relative_path": "files/Section 1: The Structure of a Technical Report.pdf",
+      "relative_path": "files/Section 1 - The Structure of a Technical Report.pdf",
       "sha256": "0f4ec965cb5020836e8e6d128ea7fba224a10d33669b0943f19cda6f06e8233a",
       "validation": "pdf-signature-ok"
     },

@@ -270,8 +270,8 @@ Additional project threads covered architecture generation, AutoSci parity, setu
 
 The following files supported report formatting or coursework compliance, not Solar Harness architecture or implementation, and therefore are not treated as technical sources above:
 
-- `Section 1: Drafting a Technical Report.pdf`
-- `Section 1: The Structure of a Technical Report.pdf`
+- `Section 1 - Drafting a Technical Report.pdf`
+- `Section 1 - The Structure of a Technical Report.pdf`
 - `First-Draft-of-Technical-Report-Template(1).docx`
 
 ## 12. Reliability hierarchy

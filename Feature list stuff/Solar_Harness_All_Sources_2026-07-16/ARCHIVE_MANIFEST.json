@@ -216,16 +216,16 @@
       "sha256": "cdeef60e9b2ce0dc1bb8befcdd85bb29b6b139ee584dc337350df7f10301f7e9"
     },
     {
-      "relative_path": "files/Section 1: Drafting a Technical Report.pdf",
-      "filename": "Section 1: Drafting a Technical Report.pdf",
+      "relative_path": "files/Section 1 - Drafting a Technical Report.pdf",
+      "filename": "Section 1 - Drafting a Technical Report.pdf",
       "category": "Supporting report guidance",
       "extension": ".pdf",
       "size_bytes": 1775070,
       "sha256": "b51498ebced608f6016e46900a62adfd9ad8e5ef034aff564b1523f4ac87100b"
     },
     {
-      "relative_path": "files/Section 1: The Structure of a Technical Report.pdf",
-      "filename": "Section 1: The Structure of a Technical Report.pdf",
+      "relative_path": "files/Section 1 - The Structure of a Technical Report.pdf",
+      "filename": "Section 1 - The Structure of a Technical Report.pdf",
       "category": "Supporting report guidance",
       "extension": ".pdf",
       "size_bytes": 209722,
