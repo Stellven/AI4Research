@@ -116,6 +116,8 @@ def _recompute_chain(
     synthesis = artifacts.get("evidence_synthesis", {})
     validation = artifacts.get("source_validation", {})
     report = report_draft.get("report") if isinstance(report_draft.get("report"), dict) else {}
+    report_body = str(report.get("body") or "").strip()
+    normalized_report_body = " ".join(report_body.split()).casefold()
     conclusions = [item for item in report.get("conclusions", []) if isinstance(item, dict)]
     claims = [item for item in synthesis.get("claims", []) if isinstance(item, dict)]
     accepted = [item for item in validation.get("accepted", []) if isinstance(item, dict)]
@@ -168,6 +170,9 @@ def _recompute_chain(
         cited_claim_ids.update(conclusion_claims)
         for claim_id in conclusion_claims & set(claim_sources):
             cited_source_ids.update(claim_sources[claim_id])
+        conclusion_text = " ".join(str(conclusion.get("text") or "").split()).casefold()
+        if not conclusion_text or conclusion_text not in normalized_report_body:
+            issues.append(f"report conclusion {index} is not rendered in the report body")
     expected_review_lineage = set(BASELINE_ARTIFACTS) - {"independent_review"}
     if not expected_review_lineage.issubset(review_lineage):
         issues.append("independent_review lineage omits an actual upstream artifact")
@@ -187,10 +192,20 @@ def _recompute_chain(
         "cited_claim_count": len(cited_claim_ids),
         "cited_source_count": len(cited_source_ids),
         "all_conclusions_grounded": bool(conclusions) and not any(
-            any(token in issue for token in ("conclusion", "claim", "source"))
+            "not rendered" not in issue
+            and any(token in issue for token in ("conclusion", "claim", "source"))
             for issue in issues
         ),
-        "report_body_present": bool(str(report.get("body") or "").strip() or report.get("sections")),
+        "report_body_present": bool(report_body),
+        "all_conclusions_rendered": bool(conclusions) and all(
+            bool(" ".join(str(item.get("text") or "").split()))
+            and " ".join(str(item.get("text") or "").split()).casefold() in normalized_report_body
+            for item in conclusions
+        ),
+        "limitations_rendered": bool(report_draft.get("limitations")) and bool(
+            re.search(r"(?im)^##\s+(?:limitations?|局限|限制|不足)\b", report_body)
+        ),
+        "method_rendered": bool(re.search(r"(?im)^##\s+(?:methods?|方法|方法论)\b", report_body)),
         "review_verdict": verdict,
         "high_risk_finding_count": len(high_risk),
         "review_finding_count": len(findings),
@@ -258,6 +273,40 @@ def _evaluate_success_criteria(task_contract: dict[str, Any], facts: dict[str, A
     return evaluations
 
 
+def _evaluate_required_content(task_contract: dict[str, Any], facts: dict[str, Any]) -> list[dict[str, str]]:
+    deliverable = task_contract.get("deliverable") if isinstance(task_contract.get("deliverable"), dict) else {}
+    requirements = deliverable.get("required_content") if isinstance(deliverable.get("required_content"), list) else []
+    results: list[dict[str, str]] = []
+    for item in requirements:
+        if not isinstance(item, dict) or not bool(item.get("required", False)):
+            continue
+        requirement_id = str(item.get("requirement_id") or "").strip()
+        if requirement_id == "result_claims":
+            passed = bool(facts.get("all_conclusions_rendered"))
+            evidence = (
+                "Every source-grounded conclusion is rendered verbatim in the report body."
+                if passed else "At least one source-grounded conclusion is missing from the report body."
+            )
+        elif requirement_id == "limitations":
+            passed = bool(facts.get("limitations_rendered"))
+            evidence = (
+                "Provider-recorded limitations are rendered under an explicit limitations heading."
+                if passed else "Provider-recorded limitations or an explicit limitations heading are missing."
+            )
+        elif requirement_id == "method_evidence":
+            passed = bool(facts.get("method_rendered"))
+            evidence = "The report contains an explicit method section." if passed else "The report lacks an explicit method section."
+        else:
+            passed = False
+            evidence = "No deterministic evaluator is registered for this explicit requirement."
+        results.append({
+            "requirement_id": requirement_id or "invalid_requirement",
+            "status": "passed" if passed else "failed",
+            "evidence": evidence,
+        })
+    return results
+
+
 def execute(node_request: dict, context: OperatorContext) -> dict:
     require_node(context, "final_acceptance")
     artifacts, artifact_refs, chain_issues = _load_chain_artifacts(context)
@@ -272,6 +321,8 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     task_contract = context.payload.get("task_contract") if isinstance(context.payload.get("task_contract"), dict) else {}
     criteria_evaluation = _evaluate_success_criteria(task_contract, facts)
     criteria_passed = bool(criteria_evaluation) and all(item["status"] == "passed" for item in criteria_evaluation)
+    required_content_evaluation = _evaluate_required_content(task_contract, facts)
+    required_content_passed = all(item["status"] == "passed" for item in required_content_evaluation)
     accepted = (
         len(artifacts) == len(BASELINE_ARTIFACTS)
         and not chain_issues
@@ -280,6 +331,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         and not unsupported_expectations
         and verdict == "accept"
         and criteria_passed
+        and required_content_passed
         and context.secret_verification_complete
     )
     reasons: list[str] = []
@@ -296,6 +348,8 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         reasons.append("task contract has no evaluable minimum success criteria")
     elif not criteria_passed:
         reasons.append("one or more task success criteria failed or are unsupported")
+    if not required_content_passed:
+        reasons.append("one or more explicit deliverable content requirements failed")
     if not context.secret_verification_complete:
         reasons.append("secret absence could not be verified because an authorized secret value was not supplied in memory")
     if not reasons:
@@ -315,6 +369,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "unsupported_artifact_expectations": unsupported_expectations,
         "recomputed_chain_facts": facts,
         "success_criteria_evaluation": criteria_evaluation,
+        "required_content_evaluation": required_content_evaluation,
         "does_not_modify_graph_or_run_state": True,
     }
     artifact, hash_record = write_artifact(

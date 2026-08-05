@@ -274,19 +274,19 @@ def build_task_contract(
     local_lifecycle = decision.workflow_kind in {"paper_ingestion", "scientific_lifecycle"}
     required_content: list[dict[str, Any]] = []
     lowered_prompt = prompt.lower()
-    if re.search(r"\b(method|methods|methodology|procedure|approach)\b", lowered_prompt):
+    if re.search(r"\b(method|methods|methodology|procedure|approach)\b|方法|方法论", lowered_prompt):
         required_content.append({
             "requirement_id": "method_evidence",
             "description": "Render available method evidence, or explicitly disclose insufficient method evidence.",
             "required": True,
         })
-    if re.search(r"\b(result|results|finding|findings|claim|claims|conclusion|conclusions)\b", lowered_prompt):
+    if re.search(r"\b(result|results|finding|findings|claim|claims|conclusion|conclusions)\b|结果|结论|发现", lowered_prompt):
         required_content.append({
             "requirement_id": "result_claims",
             "description": "Preserve source-grounded result or claim semantics in the final report.",
             "required": True,
         })
-    if re.search(r"\b(limitation|limitations|caveat|caveats)\b", lowered_prompt):
+    if re.search(r"\b(limitation|limitations|caveat|caveats)\b|局限|限制|不足", lowered_prompt):
         required_content.append({
             "requirement_id": "limitations",
             "description": "Render known evidence limitations explicitly.",
@@ -438,7 +438,7 @@ def default_synthesis_resolver(*, services: dict | None = None) -> PhysicalOpera
         "final_acceptance_operator",
     )
     return PhysicalOperatorResolver(
-        [PhysicalOperatorBinding(operator_id=operator_id, runner=run, version="research_synthesis.v1.1") for operator_id in operator_ids]
+        [PhysicalOperatorBinding(operator_id=operator_id, runner=run, version="research_synthesis.v1.2") for operator_id in operator_ids]
     )
 
 

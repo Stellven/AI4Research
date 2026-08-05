@@ -120,6 +120,7 @@ def _valid_acceptance_refs(
     verdict: str = "accept",
     findings: list[dict] | None = None,
     source_count: int = 2,
+    report_limitations: list[str] | None = None,
 ) -> list[dict]:
     sources = [f"source-{index}" for index in range(1, source_count + 1)]
     primary_source = sources[0] if sources else "missing-source"
@@ -162,6 +163,7 @@ def _valid_acceptance_refs(
         "evidence_lineage": ["evidence_synthesis", "source_validation", "seed_snapshot"],
         "input_artifact_hashes": {"evidence_synthesis": synthesis_ref["sha256"]},
         "claim_source_lineage": {"claim-1": [primary_source]},
+        "limitations": list(report_limitations or []),
         "report": {
             "body": report_body,
             "conclusions": [{"conclusion_id": "conclusion-1", "text": "Grounded", "evidence_ids": ["claim-1"]}],
@@ -506,6 +508,7 @@ def test_report_draft_compiles_structured_sections_when_provider_omits_duplicate
         return {
             "provider": "writer",
             "model": "sections-only-model",
+            "limitations": ["The surveyed evidence is incomplete."],
             "report": {
                 "title": "WebAssembly optimization survey",
                 "sections": [
@@ -534,6 +537,97 @@ def test_report_draft_compiles_structured_sections_when_provider_omits_duplicate
     assert "startup latency against peak throughput" in body
     assert "## Open problems" in body
     assert "adaptive optimization remain open research problems" in body
+    assert "## Conclusions" in body
+    assert "Tiered compilation has explicit performance trade-offs." in body
+    assert "## Limitations" in body
+    assert "The surveyed evidence is incomplete." in body
+
+
+def test_report_draft_localizes_compiled_conclusion_and_limitation_headings_for_chinese(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def model_generate(**kwargs) -> dict:
+        return {
+            "provider": "writer",
+            "model": "sections-only-model",
+            "limitations": ["长期预测具有高度不确定性。"],
+            "report": {
+                "title": "未来技术愿景分析",
+                "sections": [{"title": "技术路线", "body": "该愿景覆盖人工智能、能源与生物医学。"}],
+                "conclusions": [{
+                    "conclusion_id": "c1",
+                    "text": "远期技术预测必须结合证据边界解读。",
+                    "evidence_ids": ["claim-alpha"],
+                }],
+            },
+        }
+
+    synthesis = {"claims": [{"claim_id": "claim-alpha", "text": "证据", "evidence_ids": ["source-alpha"]}]}
+    result = execute_operator(
+        _request(tmp_path, "report_draft", payload={"task_contract": _task_contract(), "evidence_synthesis": synthesis}),
+        services={"model_generate": model_generate},
+    )
+
+    body = _read_artifact(tmp_path, result)["report"]["body"]
+    assert result["status"] == "completed"
+    assert "## 结论" in body
+    assert "证据: claim-alpha" in body
+    assert "## 局限" in body
+    assert "长期预测具有高度不确定性" in body
+
+
+def test_final_acceptance_requires_conclusions_to_be_rendered_in_report_body(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = execute_operator(
+        _request(
+            tmp_path,
+            "final_acceptance",
+            payload={"task_contract": _task_contract()},
+            refs=_valid_acceptance_refs(tmp_path, report_body="A substantive but unrelated report body."),
+        ),
+        services={},
+    )
+
+    decision = _read_artifact(tmp_path, result)
+    assert result["status"] == "failed"
+    assert any("not rendered in the report body" in reason for reason in decision["reasons"])
+
+
+def test_final_acceptance_checks_explicit_result_and_limitation_requirements(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    contract = _task_contract()
+    contract["deliverable"]["required_content"] = [
+        {"requirement_id": "result_claims", "description": "Render conclusions.", "required": True},
+        {"requirement_id": "limitations", "description": "Render limitations.", "required": True},
+    ]
+    passing_refs = _valid_acceptance_refs(
+        tmp_path,
+        report_body="Grounded report body.\n\n## Limitations\n\n- The evidence is bounded.",
+        report_limitations=["The evidence is bounded."],
+    )
+    passed = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=passing_refs),
+        services={},
+    )
+    assert passed["status"] == "completed"
+    assert all(
+        item["status"] == "passed"
+        for item in _read_artifact(tmp_path, passed)["required_content_evaluation"]
+    )
+
+    failing_refs = _valid_acceptance_refs(tmp_path, report_body="Grounded report body without a limitation section.")
+    failed = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=failing_refs),
+        services={},
+    )
+    assert failed["status"] == "failed"
+    assert any(
+        item["requirement_id"] == "limitations" and item["status"] == "failed"
+        for item in _read_artifact(tmp_path, failed)["required_content_evaluation"]
+    )
 
 
 def test_empty_review_and_empty_artifact_expectations_fail_closed(tmp_path: Path, monkeypatch) -> None:

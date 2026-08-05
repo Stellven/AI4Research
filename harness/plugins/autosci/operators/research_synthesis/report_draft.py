@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .base import (
@@ -83,14 +84,33 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
             "title": str(item.get("title") or f"Section {index}").strip(),
             "body": section_body,
         })
-    body = str(report.get("body") or report.get("markdown") or "").strip()
-    if not body and sections:
-        body = "\n\n".join([
-            f"# {title}",
-            *[f"## {section['title']}\n\n{section['body']}" for section in sections],
-        ])
-    if not body:
+    raw_body = str(report.get("body") or report.get("markdown") or "").strip()
+    if not raw_body and not sections:
         raise ResearchOperatorError("model_generate returned an empty report body", error_type="provider_contract")
+    if sections:
+        body_parts = [f"# {title}"]
+        if raw_body:
+            body_parts.append(f"## Summary\n\n{raw_body}")
+        body_parts.extend(f"## {section['title']}\n\n{section['body']}" for section in sections)
+        body = "\n\n".join(body_parts)
+    else:
+        body = raw_body
+    missing_conclusions = [
+        item for item in normalized_conclusions
+        if " ".join(str(item["text"]).split()).casefold() not in " ".join(body.split()).casefold()
+    ]
+    cjk_report = bool(re.search(r"[\u4e00-\u9fff]", title + body))
+    if missing_conclusions:
+        conclusion_heading = "结论" if cjk_report else "Conclusions"
+        evidence_label = "证据" if cjk_report else "Evidence"
+        body += f"\n\n## {conclusion_heading}\n\n" + "\n".join(
+            f"- {item['text']} {evidence_label}: {', '.join(item['evidence_ids'])}."
+            for item in missing_conclusions
+        )
+    limitations = [str(item).strip() for item in response.get("limitations") or [] if str(item).strip()]
+    if limitations:
+        limitation_heading = "局限" if cjk_report else "Limitations"
+        body += f"\n\n## {limitation_heading}\n\n" + "\n".join(f"- {item}" for item in limitations)
     return {
         "title": title,
         "body": body,
