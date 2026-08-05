@@ -71,13 +71,30 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
         })
     if not normalized_conclusions:
         raise ResearchOperatorError("model_generate returned no traceable report conclusions", error_type="provider_contract")
+    title = str(report.get("title") or "Research synthesis draft").strip()
+    sections: list[dict[str, str]] = []
+    for index, item in enumerate(report.get("sections") or [], start=1):
+        if not isinstance(item, dict):
+            continue
+        section_body = str(item.get("body") or item.get("content") or item.get("text") or "").strip()
+        if not section_body:
+            continue
+        sections.append({
+            "title": str(item.get("title") or f"Section {index}").strip(),
+            "body": section_body,
+        })
     body = str(report.get("body") or report.get("markdown") or "").strip()
+    if not body and sections:
+        body = "\n\n".join([
+            f"# {title}",
+            *[f"## {section['title']}\n\n{section['body']}" for section in sections],
+        ])
     if not body:
         raise ResearchOperatorError("model_generate returned an empty report body", error_type="provider_contract")
     return {
-        "title": str(report.get("title") or "Research synthesis draft"),
+        "title": title,
         "body": body,
-        "sections": [item for item in report.get("sections", []) if isinstance(item, dict)] if isinstance(report.get("sections"), list) else [],
+        "sections": sections,
         "conclusions": normalized_conclusions,
     }
 

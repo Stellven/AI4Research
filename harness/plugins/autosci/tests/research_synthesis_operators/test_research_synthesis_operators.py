@@ -496,6 +496,46 @@ def test_report_requirements_come_from_task_contract(tmp_path: Path, monkeypatch
     assert captured == {"kind": "memo", "description": "Board memo", "language": "fr", "format": "html", "length": "900 words", "artifact_expectations": []}
 
 
+def test_report_draft_compiles_structured_sections_when_provider_omits_duplicate_body(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def model_generate(**kwargs) -> dict:
+        return {
+            "provider": "writer",
+            "model": "sections-only-model",
+            "report": {
+                "title": "WebAssembly optimization survey",
+                "sections": [
+                    {"title": "Trade-offs", "body": "Tiered compilation balances startup latency against peak throughput."},
+                    {"title": "Open problems", "body": "Portable profiling and adaptive optimization remain open research problems."},
+                ],
+                "conclusions": [{
+                    "conclusion_id": "c1",
+                    "text": "Tiered compilation has explicit performance trade-offs.",
+                    "evidence_ids": ["claim-alpha"],
+                }],
+            },
+        }
+
+    synthesis = {"claims": [{"claim_id": "claim-alpha", "text": "A", "evidence_ids": ["source-alpha"]}]}
+    result = execute_operator(
+        _request(tmp_path, "report_draft", payload={"task_contract": _task_contract(), "evidence_synthesis": synthesis}),
+        services={"model_generate": model_generate},
+    )
+
+    assert result["status"] == "completed"
+    artifact = _read_artifact(tmp_path, result)
+    body = artifact["report"]["body"]
+    assert body.startswith("# WebAssembly optimization survey")
+    assert "## Trade-offs" in body
+    assert "startup latency against peak throughput" in body
+    assert "## Open problems" in body
+    assert "adaptive optimization remain open research problems" in body
+
+
 def test_empty_review_and_empty_artifact_expectations_fail_closed(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     contract = _task_contract()
