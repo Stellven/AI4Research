@@ -17,6 +17,7 @@ from research_orchestration.result_validation import (  # noqa: E402
     ResearchResultValidationError,
     validate_node_request,
     validate_node_result,
+    validate_request_artifact_scopes,
     validate_result_identity,
     validate_result_scopes,
 )
@@ -125,11 +126,28 @@ def materialize_result_artifacts(
     return path
 
 
+def materialize_request_artifacts(
+    artifact_root: Path,
+    request: dict,
+    *,
+    content: bytes = b"bounded request artifact",
+) -> Path:
+    artifact = request["input_artifact_refs"][0]
+    relative = str(artifact["path"]).replace("\\", "/")
+    path = artifact_root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    artifact["sha256"] = hashlib.sha256(content).hexdigest()
+    return path
+
+
 def test_valid_request_result_identity_and_scopes_pass(tmp_path: Path) -> None:
     request = valid_request()
+    materialize_request_artifacts(tmp_path, request)
     result = valid_result()
     materialize_result_artifacts(tmp_path, result)
     validate_node_request(request, REQUEST_SCHEMA)
+    validate_request_artifact_scopes(request, tmp_path)
     validate_node_result(result, RESULT_SCHEMA)
     validate_result_identity(request, result)
     validate_result_scopes(request, result, tmp_path)
@@ -255,6 +273,32 @@ def test_worker_cannot_expand_capability_read_or_write_scope(tmp_path: Path) -> 
         validate_result_scopes(request, valid_result(), tmp_path)
 
 
+def test_input_artifacts_require_existing_read_scope_file_and_matching_hash(
+    tmp_path: Path,
+) -> None:
+    missing_scope = valid_request()
+    missing_scope["read_scope"] = []
+    with pytest.raises(ResearchResultValidationError, match="read_scope"):
+        validate_request_artifact_scopes(missing_scope, tmp_path)
+
+    missing_file = valid_request()
+    with pytest.raises(ResearchResultValidationError, match="read_scope does not exist"):
+        validate_request_artifact_scopes(missing_file, tmp_path)
+
+    wrong_hash = valid_request()
+    materialize_request_artifacts(tmp_path, wrong_hash)
+    wrong_hash["input_artifact_refs"][0]["sha256"] = "f" * 64
+    with pytest.raises(ResearchResultValidationError, match="sha256"):
+        validate_request_artifact_scopes(wrong_hash, tmp_path)
+
+    outside_scope = valid_request()
+    materialize_request_artifacts(tmp_path, outside_scope)
+    outside_scope["read_scope"] = ["dispatch/other.json"]
+    other = tmp_path / "dispatch/other.json"
+    other.write_text("other", encoding="utf-8")
+    with pytest.raises(ResearchResultValidationError, match="escapes read_scope"):
+        validate_request_artifact_scopes(outside_scope, tmp_path)
+
 def test_result_validation_does_not_mutate_inputs(tmp_path: Path) -> None:
     request = valid_request()
     result = valid_result()
@@ -287,6 +331,14 @@ def test_output_artifact_must_exist_and_match_declared_hash(tmp_path: Path) -> N
     with pytest.raises(ResearchResultValidationError, match="hash record"):
         validate_result_scopes(request, matching_artifact_bad_record, tmp_path)
 
+    orphan = valid_result()
+    materialize_result_artifacts(tmp_path, orphan)
+    orphan["hashes"].append(
+        {"hash_id": "not-an-artifact", "algorithm": "sha256", "value": "d" * 64}
+    )
+    with pytest.raises(ResearchResultValidationError, match="orphan"):
+        validate_result_scopes(request, orphan, tmp_path)
+
     assert path.is_file()
 
 
@@ -314,3 +366,28 @@ def test_output_artifact_symlink_escape_is_rejected(tmp_path: Path) -> None:
     result["hashes"][0]["value"] = result["output_artifacts"][0]["sha256"]
     with pytest.raises(ResearchResultValidationError, match="artifact_root"):
         validate_result_scopes(valid_request(), result, tmp_path)
+
+
+def test_input_read_scope_symlink_or_junction_escape_is_rejected(tmp_path: Path) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside-input"
+    outside.mkdir()
+    content = b"outside input"
+    (outside / "task.json").write_bytes(content)
+    link = tmp_path / "dispatch"
+    try:
+        os.symlink(outside, link, target_is_directory=True)
+    except OSError:
+        if sys.platform != "win32":
+            pytest.skip("symlink creation is unavailable on this platform")
+        created = subprocess.run(
+            ["cmd", "/d", "/c", "mklink", "/J", str(link), str(outside)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if created.returncode != 0:
+            pytest.skip("junction creation is unavailable on this platform")
+    request = valid_request()
+    request["input_artifact_refs"][0]["sha256"] = hashlib.sha256(content).hexdigest()
+    with pytest.raises(ResearchResultValidationError, match="artifact_root"):
+        validate_request_artifact_scopes(request, tmp_path)

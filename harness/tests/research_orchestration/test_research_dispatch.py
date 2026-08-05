@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "lib"))
 
 from research_orchestration.dispatch import (  # noqa: E402
     ResearchDispatchError,
-    dispatch_research_node,
+    dispatch_research_node as _dispatch_research_node,
     operator_runtime_submit_adapter,
     synchronous_json_command_runner,
 )
@@ -21,14 +21,28 @@ from research_orchestration.transport import ResearchTransportError  # noqa: E40
 from test_research_result_validation import (  # noqa: E402
     RESULT_SCHEMA,
     REQUEST_SCHEMA,
+    materialize_request_artifacts,
     materialize_result_artifacts,
     valid_request,
     valid_result,
 )
 
 
-def test_dispatch_returns_completed_worker_result(tmp_path: Path) -> None:
+def dispatch_research_node(*args, **kwargs):
+    """Explicit test-only bypass; production callers must inject a resolver."""
+
+    kwargs.setdefault("trusted_test_bypass_operator_resolution", True)
+    return _dispatch_research_node(*args, **kwargs)
+
+
+def dispatch_request(tmp_path: Path) -> dict:
     request = valid_request()
+    materialize_request_artifacts(tmp_path, request)
+    return request
+
+
+def test_dispatch_returns_completed_worker_result(tmp_path: Path) -> None:
+    request = dispatch_request(tmp_path)
     completed = valid_result()
     materialize_result_artifacts(tmp_path, completed)
 
@@ -47,12 +61,13 @@ def test_dispatch_returns_completed_worker_result(tmp_path: Path) -> None:
 
 
 def test_dispatch_accepts_failed_worker_result(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
     failed = valid_result()
     failed["status"] = "failed"
     failed["status_is_terminal"] = True
     failed["output_artifacts"] = []
     failed["evidence"] = []
+    failed["hashes"] = []
     failed["errors"] = [
         {"error_id": "worker-failed", "error_type": "worker_failed", "message": "worker failed"}
     ]
@@ -68,7 +83,7 @@ def test_dispatch_accepts_failed_worker_result(tmp_path: Path) -> None:
 
 
 def test_operator_runtime_submit_adapter_returns_awaiting_external_receipt(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
 
     def submit(envelope: dict) -> dict:
         assert envelope["operator_id"] == request["physical_operator"]["operator_id"]
@@ -87,7 +102,7 @@ def test_operator_runtime_submit_adapter_returns_awaiting_external_receipt(tmp_p
 
 
 def test_malformed_request_is_rejected_before_runner(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
     request.pop("task_id")
     called = False
 
@@ -108,7 +123,7 @@ def test_malformed_request_is_rejected_before_runner(tmp_path: Path) -> None:
 
 
 def test_malformed_result_and_wrong_identity_are_rejected(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
     malformed = valid_result()
     malformed.pop("schema")
     with pytest.raises(ResearchResultValidationError):
@@ -133,7 +148,7 @@ def test_malformed_result_and_wrong_identity_are_rejected(tmp_path: Path) -> Non
 
 
 def test_runner_exception_converts_to_contract_failed_result(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
 
     def runner(_: dict) -> dict:
         raise RuntimeError("boom")
@@ -151,7 +166,7 @@ def test_runner_exception_converts_to_contract_failed_result(tmp_path: Path) -> 
 
 
 def test_transport_exception_converts_to_scrubbed_failed_result(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
 
     def runner(_: dict) -> dict:
         raise ResearchTransportError("nonzero_exit", "token=sk-" + "a" * 40)
@@ -169,7 +184,7 @@ def test_transport_exception_converts_to_scrubbed_failed_result(tmp_path: Path) 
 
 
 def test_live_provider_without_approval_or_network_is_rejected(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
     request["authorization"]["allow_live_provider"] = True
     request["authorization"]["allow_network"] = True
     with pytest.raises(ResearchResultValidationError):
@@ -194,7 +209,7 @@ def test_live_provider_without_approval_or_network_is_rejected(tmp_path: Path) -
 
 
 def test_dispatch_does_not_mutate_request_or_result(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
     result = valid_result()
     materialize_result_artifacts(tmp_path, result)
     before_request = copy.deepcopy(request)
@@ -246,7 +261,7 @@ print(json.dumps(result))
 """,
         encoding="utf-8",
     )
-    request = valid_request()
+    request = dispatch_request(tmp_path)
     runner = synchronous_json_command_runner(
         [sys.executable, str(worker)],
         cwd=tmp_path,
@@ -263,7 +278,7 @@ print(json.dumps(result))
 
 
 def test_generic_exception_and_nested_receipt_secrets_are_scrubbed(tmp_path: Path) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
     request_body = request["typed_inputs"]["payload"]["query"]
     canary = "canary-explicit-credential-12345"
 
@@ -287,14 +302,27 @@ def test_generic_exception_and_nested_receipt_secrets_are_scrubbed(tmp_path: Pat
     assert "bearer-token-value" not in rendered
     assert request_body not in rendered
 
+    env_secret = "opaque-receipt-environment-secret"
+
+    class OpaqueReceiptValue:
+        def __repr__(self) -> str:
+            return f"OpaqueReceiptValue({env_secret})"
+
     receipt_runner = operator_runtime_submit_adapter(
         submit=lambda _: {
             "status": "submitted",
             "nested": {"api_key": canary, "request_body": {"prompt": "private body"}},
             "echoed_query": request_body,
             "large": "x" * 50_000,
+            "opaque": {"layer": [{"value": OpaqueReceiptValue()}]},
+            "near_boundary": "risk-research-summary",
+            "deep": {"a": {"b": {"c": {"d": {"request_body": request_body}}}}},
+            **{f"padding_{index}": f"ordinary_{index}" for index in range(30)},
+            "request_body": {"prompt": request_body},
         },
         secret_values=(canary,),
+        env={"RESEARCH_PROVIDER_TOKEN": env_secret},
+        env_allowlist={"RESEARCH_PROVIDER_TOKEN"},
     )
     receipt = dispatch_research_node(
         request,
@@ -308,6 +336,8 @@ def test_generic_exception_and_nested_receipt_secrets_are_scrubbed(tmp_path: Pat
     assert canary not in receipt_text
     assert "private body" not in receipt_text
     assert request_body not in receipt_text
+    assert env_secret not in receipt_text
+    assert "risk-research-summary" in receipt_text
     assert len(receipt_text.encode("utf-8")) < 8_500
     assert receipt["status"] == "awaiting_external"
 
@@ -324,7 +354,7 @@ def test_malformed_secret_bearing_result_fails_closed_without_leak(tmp_path: Pat
     ]
     with pytest.raises(ResearchResultValidationError) as excinfo:
         dispatch_research_node(
-            valid_request(),
+            dispatch_request(tmp_path),
             runner=lambda _: malformed,
             request_schema_path=REQUEST_SCHEMA,
             result_schema_path=RESULT_SCHEMA,
@@ -334,10 +364,64 @@ def test_malformed_secret_bearing_result_fails_closed_without_leak(tmp_path: Pat
     assert canary not in str(excinfo.value)
 
 
-def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
+def test_completed_result_omits_private_request_body_without_mutating_worker_result(
     tmp_path: Path,
 ) -> None:
-    request = valid_request()
+    request = dispatch_request(tmp_path)
+    request_body = request["typed_inputs"]["payload"]["query"]
+    completed = valid_result()
+    completed["evidence"][0]["summary"] = f"completed for {request_body}"
+    completed["evidence"][0]["payload"] = {"query": request_body}
+    materialize_result_artifacts(tmp_path, completed)
+    original = copy.deepcopy(completed)
+
+    accepted = dispatch_research_node(
+        request,
+        runner=lambda _: completed,
+        request_schema_path=REQUEST_SCHEMA,
+        result_schema_path=RESULT_SCHEMA,
+        artifact_root=tmp_path,
+    )
+    assert request_body not in str(accepted["evidence"])
+    assert "[OMITTED_REQUEST_BODY]" in str(accepted["evidence"])
+    assert completed == original
+
+
+def test_redteam_combined_forged_completed_proof_is_rejected(tmp_path: Path) -> None:
+    request = dispatch_request(tmp_path)
+    request_body = request["typed_inputs"]["payload"]["query"]
+    secret = "opaque-redteam-completed-secret"
+    forged = valid_result()
+    forged["evidence"][0].update(
+        {
+            "summary": f"completed for {request_body}",
+            "payload": {"private_request": request_body},
+            "opaque": {"provider_value": secret},
+        }
+    )
+    materialize_result_artifacts(tmp_path, forged)
+
+    with pytest.raises(ResearchResultValidationError, match="sensitive") as excinfo:
+        _dispatch_research_node(
+            request,
+            runner=lambda _: forged,
+            request_schema_path=REQUEST_SCHEMA,
+            result_schema_path=RESULT_SCHEMA,
+            artifact_root=tmp_path,
+            operator_resolver=lambda operator_id: {
+                "operator_id": operator_id,
+                "enabled": True,
+                "state": {"availability": "ready"},
+            },
+            secret_values=(secret,),
+        )
+    assert secret not in str(excinfo.value)
+
+
+def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = dispatch_request(tmp_path)
     called = False
 
     def runner(_: dict) -> dict:
@@ -345,10 +429,38 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
         called = True
         return valid_result()
 
+    with pytest.raises(ResearchDispatchError, match="resolver is required"):
+        _dispatch_research_node(
+            request,
+            runner=runner,
+            request_schema_path=REQUEST_SCHEMA,
+            result_schema_path=RESULT_SCHEMA,
+            artifact_root=tmp_path,
+        )
+
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    with pytest.raises(ResearchDispatchError, match="test-only"):
+        _dispatch_research_node(
+            request,
+            runner=runner,
+            request_schema_path=REQUEST_SCHEMA,
+            result_schema_path=RESULT_SCHEMA,
+            artifact_root=tmp_path,
+            trusted_test_bypass_operator_resolution=True,
+        )
+
     for resolver in (
         lambda _: None,
         lambda operator_id: {"operator_id": operator_id, "enabled": False},
         lambda _: {"operator_id": "wrong", "enabled": True},
+        lambda operator_id: {
+            "operator_id": operator_id,
+            "state": {"availability": "disabled"},
+        },
+        lambda operator_id: {
+            "operator_id": operator_id,
+            "runtime_state": {"status": "disabled"},
+        },
     ):
         with pytest.raises(ResearchDispatchError, match="operator"):
             dispatch_research_node(
@@ -358,6 +470,7 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
                 result_schema_path=RESULT_SCHEMA,
                 artifact_root=tmp_path,
                 operator_resolver=resolver,
+                trusted_test_bypass_operator_resolution=False,
             )
     assert called is False
 
@@ -370,5 +483,6 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
         result_schema_path=RESULT_SCHEMA,
         artifact_root=tmp_path,
         operator_resolver=lambda operator_id: {"operator_id": operator_id, "enabled": True},
+        trusted_test_bypass_operator_resolution=False,
     )
     assert accepted["status"] == "completed"

@@ -234,6 +234,120 @@ sys.exit(2)
     assert "[SCRUBBED]" in rendered
 
 
+def test_request_secret_discovery_does_not_stop_after_200_values(tmp_path: Path) -> None:
+    secret = "opaque-request-entry-201-secret"
+    entries = [f"ordinary-entry-{index}" for index in range(200)] + [secret]
+    command = _worker(
+        tmp_path,
+        """
+import json, sys
+request = json.loads(sys.stdin.read())
+sys.stderr.write("failed value=" + request["typed_inputs"]["payload"]["entries"][200])
+sys.exit(3)
+""",
+    )
+    request = {"typed_inputs": {"payload": {"entries": entries}}}
+    with pytest.raises(ResearchTransportError) as excinfo:
+        run_json_worker(command, request, cwd=tmp_path, timeout_seconds=5)
+    rendered = str(excinfo.value.to_dict())
+    assert secret not in rendered
+    assert "[SCRUBBED]" in rendered
+
+
+def test_allowlisted_sensitive_environment_is_automatically_protected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    secret = "opaque-allowlisted-provider-secret"
+    monkeypatch.setenv("RESEARCH_PROVIDER_TOKEN", secret)
+    failing = _worker(
+        tmp_path,
+        """
+import os, sys
+sys.stderr.write("provider=" + os.environ["RESEARCH_PROVIDER_TOKEN"])
+sys.exit(4)
+""",
+    )
+    with pytest.raises(ResearchTransportError) as excinfo:
+        run_json_worker(
+            failing,
+            {"task_id": "task-1"},
+            cwd=tmp_path,
+            timeout_seconds=5,
+            env_allowlist={"RESEARCH_PROVIDER_TOKEN"},
+        )
+    assert secret not in str(excinfo.value.to_dict())
+
+    echoing = _worker(
+        tmp_path,
+        """
+import json, os, sys
+json.loads(sys.stdin.read())
+print(json.dumps({"provider_value": os.environ["RESEARCH_PROVIDER_TOKEN"]}))
+""",
+    )
+    with pytest.raises(ResearchTransportError) as success_leak:
+        run_json_worker(
+            echoing,
+            {"task_id": "task-1"},
+            cwd=tmp_path,
+            timeout_seconds=5,
+            env_allowlist={"RESEARCH_PROVIDER_TOKEN"},
+        )
+    assert success_leak.value.error_type == "sensitive_output"
+    assert secret not in str(success_leak.value.to_dict())
+
+
+def test_near_boundary_nonsecret_environment_value_remains_usable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MODEL_TOKEN_COUNT", "4096-non-secret-count")
+    command = _worker(
+        tmp_path,
+        """
+import json, os, sys
+json.loads(sys.stdin.read())
+print(json.dumps({"count": os.environ["MODEL_TOKEN_COUNT"]}))
+""",
+    )
+    result = run_json_worker(
+        command,
+        {"task_id": "task-1"},
+        cwd=tmp_path,
+        timeout_seconds=5,
+        env_allowlist={"MODEL_TOKEN_COUNT"},
+    )
+    assert result["count"] == "4096-non-secret-count"
+
+
+def test_request_size_and_structure_fail_before_worker_spawn(tmp_path: Path) -> None:
+    marker = tmp_path / "worker-started.txt"
+    command = _worker(
+        tmp_path,
+        f"""
+from pathlib import Path
+Path({str(marker)!r}).write_text("started", encoding="utf-8")
+print("{{}}")
+""",
+    )
+    with pytest.raises(ResearchTransportError) as oversized:
+        run_json_worker(
+            command,
+            {"typed_inputs": {"payload": {"text": "x" * 1000}}},
+            cwd=tmp_path,
+            timeout_seconds=5,
+            max_request_bytes=100,
+        )
+    assert oversized.value.error_type == "oversized_request"
+    assert not marker.exists()
+
+    cyclic: dict = {}
+    cyclic["self"] = cyclic
+    with pytest.raises(ResearchTransportError) as invalid:
+        run_json_worker(command, cyclic, cwd=tmp_path, timeout_seconds=5)
+    assert invalid.value.error_type == "invalid_request"
+    assert not marker.exists()
+
+
 def test_missing_cwd_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(ResearchTransportError, match="cwd"):
         run_json_worker(

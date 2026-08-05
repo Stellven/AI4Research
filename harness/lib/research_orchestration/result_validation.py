@@ -14,7 +14,7 @@ from typing import Any
 
 import jsonschema
 
-from .transport import contains_sensitive_diagnostic, sanitize_text
+from .transport import DEFAULT_MAX_REQUEST_BYTES, contains_sensitive_diagnostic, sanitize_text
 
 
 class ResearchResultValidationError(ValueError):
@@ -91,6 +91,46 @@ def validate_result_identity(request: dict, result: dict) -> None:
             raise ResearchResultValidationError(f"result {key} does not match request")
 
 
+def validate_request_artifact_scopes(request: dict, artifact_root: Path) -> None:
+    """Validate declared read scopes and all concrete input artifact files."""
+
+    root = _existing_artifact_root(artifact_root)
+    raw_read_scopes = list(request.get("read_scope") or [])
+    input_refs = list(request.get("input_artifact_refs") or [])
+    if input_refs and not raw_read_scopes:
+        raise ResearchResultValidationError("input artifacts require declared read_scope")
+
+    read_scopes: list[Path] = []
+    for raw_scope in raw_read_scopes:
+        raw_path = _declared_path_without_resolution(root, raw_scope)
+        resolved = raw_path.resolve(strict=False)
+        if not _is_under_or_equal(resolved, root):
+            raise ResearchResultValidationError("declared read_scope escapes artifact_root")
+        if not resolved.exists():
+            raise ResearchResultValidationError("declared read_scope does not exist")
+        _reject_reparse_escape(root, raw_path, [resolved])
+        read_scopes.append(resolved)
+
+    seen_ids: set[str] = set()
+    for artifact in input_refs:
+        artifact_id = str(artifact.get("artifact_id") or "")
+        if artifact_id in seen_ids:
+            raise ResearchResultValidationError("duplicate input artifact_id")
+        seen_ids.add(artifact_id)
+        raw_path = _declared_path_without_resolution(root, artifact.get("path"))
+        resolved = raw_path.resolve(strict=False)
+        if not _is_under_or_equal(resolved, root):
+            raise ResearchResultValidationError("input artifact path escapes artifact_root")
+        if not any(_is_under_or_equal(resolved, scope) for scope in read_scopes):
+            raise ResearchResultValidationError("input artifact path escapes read_scope")
+        _reject_reparse_escape(root, raw_path, read_scopes)
+        if not resolved.exists() or not resolved.is_file():
+            raise ResearchResultValidationError("declared input artifact file does not exist")
+        declared_hash = artifact.get("sha256")
+        if declared_hash is not None and str(declared_hash).casefold() != _sha256_file(resolved):
+            raise ResearchResultValidationError("declared input artifact sha256 does not match file")
+
+
 def validate_result_scopes(
     request: dict,
     result: dict,
@@ -98,12 +138,7 @@ def validate_result_scopes(
     *,
     secret_values: Iterable[str] = (),
 ) -> None:
-    try:
-        root = Path(artifact_root).resolve(strict=True)
-    except OSError as exc:
-        raise ResearchResultValidationError("artifact_root must be an existing directory") from exc
-    if not root.is_dir():
-        raise ResearchResultValidationError("artifact_root must be an existing directory")
+    root = _existing_artifact_root(artifact_root)
     write_scopes = list(request.get("write_scope") or [])
     read_scopes = list(request.get("read_scope") or [])
     approved = set(request.get("authorization", {}).get("approved_capabilities") or [])
@@ -135,14 +170,26 @@ def validate_result_scopes(
         if declared_hash is not None and str(declared_hash).casefold() != actual_hash:
             raise ResearchResultValidationError("declared output artifact sha256 does not match file")
         artifact_id = str(artifact.get("artifact_id") or "")
+        if artifact_id in artifacts_by_id:
+            raise ResearchResultValidationError("duplicate output artifact_id")
         artifacts_by_id[artifact_id] = (artifact_path, actual_hash)
 
+    seen_hash_ids: set[str] = set()
     for record in result.get("hashes") or []:
         hash_id = str(record.get("hash_id") or "")
-        if hash_id in artifacts_by_id:
-            actual_hash = artifacts_by_id[hash_id][1]
-            if str(record.get("value") or "").casefold() != actual_hash:
-                raise ResearchResultValidationError("artifact hash record does not match file")
+        if hash_id in seen_hash_ids:
+            raise ResearchResultValidationError("duplicate artifact hash record")
+        seen_hash_ids.add(hash_id)
+        if hash_id not in artifacts_by_id:
+            raise ResearchResultValidationError("orphan hash record has no output artifact")
+        actual_hash = artifacts_by_id[hash_id][1]
+        if str(record.get("value") or "").casefold() != actual_hash:
+            raise ResearchResultValidationError("artifact hash record does not match file")
+
+    for evidence in result.get("evidence") or []:
+        artifact_id = evidence.get("artifact_id")
+        if artifact_id is not None and str(artifact_id) not in artifacts_by_id:
+            raise ResearchResultValidationError("evidence references an unknown output artifact")
 
     for scope in [*write_scopes, *read_scopes]:
         resolved = _resolve_declared_path(root, scope)
@@ -166,6 +213,16 @@ def _validate_schema(
         prefix = f"{location}: " if location else ""
         safe_message = sanitize_text(f"{prefix}{exc.message}", secret_values)
         raise ResearchResultValidationError(safe_message[:500]) from exc
+
+
+def _existing_artifact_root(artifact_root: Path) -> Path:
+    try:
+        root = Path(artifact_root).resolve(strict=True)
+    except OSError as exc:
+        raise ResearchResultValidationError("artifact_root must be an existing directory") from exc
+    if not root.is_dir():
+        raise ResearchResultValidationError("artifact_root must be an existing directory")
+    return root
 
 
 def _validate_authorization(request: dict) -> None:
@@ -270,23 +327,28 @@ def _request_body_diagnostic_values(
     request: dict,
     explicit_secret_values: Iterable[str],
 ) -> tuple[str, ...]:
-    collected = [str(item) for item in explicit_secret_values if str(item)]
+    collected = {str(item) for item in explicit_secret_values if str(item)}
     typed_inputs = request.get("typed_inputs") if isinstance(request, dict) else None
     payload = typed_inputs.get("payload") if isinstance(typed_inputs, dict) else None
 
-    def _walk(value: Any, depth: int = 0) -> None:
-        if depth > 10 or len(collected) >= 200:
-            return
+    pending = [payload]
+    while pending:
+        value = pending.pop()
         if isinstance(value, dict):
-            for nested in value.values():
-                _walk(nested, depth + 1)
+            for raw_key, nested in value.items():
+                if isinstance(raw_key, str) and len(raw_key) >= 4:
+                    collected.add(raw_key)
+                pending.append(nested)
         elif isinstance(value, (list, tuple)):
-            for nested in value:
-                _walk(nested, depth + 1)
+            pending.extend(value)
         elif isinstance(value, str) and len(value) >= 4:
-            collected.append(value)
-
-    _walk(payload)
+            collected.add(value)
     if payload is not None:
-        collected.append(json.dumps(payload, ensure_ascii=False, sort_keys=True, default=repr))
-    return tuple(collected)
+        try:
+            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=repr)
+        except (TypeError, ValueError, RecursionError):
+            raise ResearchResultValidationError("typed input payload is not bounded JSON") from None
+        if len(serialized.encode("utf-8")) > DEFAULT_MAX_REQUEST_BYTES:
+            raise ResearchResultValidationError("typed input payload exceeds diagnostic safety bound")
+        collected.add(serialized)
+    return tuple(sorted(collected, key=len, reverse=True))

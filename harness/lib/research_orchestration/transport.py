@@ -22,6 +22,7 @@ except Exception:  # pragma: no cover - import depends on caller sys.path
 
 DEFAULT_MAX_STDOUT_BYTES = 1_048_576
 DEFAULT_MAX_STDERR_BYTES = 65_536
+DEFAULT_MAX_REQUEST_BYTES = 4_194_304
 DEFAULT_MAX_DIAGNOSTIC_CHARS = 8_192
 _READ_CHUNK_BYTES = 4_096
 _SECRET_KEY_NAMES = {
@@ -142,6 +143,7 @@ def run_json_worker(
     env_allowlist: set[str] | None = None,
     max_stdout_bytes: int = DEFAULT_MAX_STDOUT_BYTES,
     max_stderr_bytes: int = DEFAULT_MAX_STDERR_BYTES,
+    max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES,
     secret_values: Iterable[str] = (),
 ) -> dict:
     """Run a JSON worker while bounding streams before they enter memory."""
@@ -166,19 +168,36 @@ def run_json_worker(
         raise ResearchTransportError(
             "invalid_timeout", "timeout_seconds must be at least 1", secret_values=secrets
         )
-    if max_stdout_bytes < 1 or max_stderr_bytes < 1:
+    if max_stdout_bytes < 1 or max_stderr_bytes < 1 or max_request_bytes < 1:
         raise ResearchTransportError(
-            "invalid_output_limit", "output limits must be positive", secret_values=secrets
+            "invalid_output_limit", "request and output limits must be positive", secret_values=secrets
         )
 
-    stdin_text = json.dumps(request, ensure_ascii=False, sort_keys=True)
+    try:
+        stdin_text = json.dumps(request, ensure_ascii=False, sort_keys=True)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise ResearchTransportError(
+            "invalid_request",
+            f"request is not bounded JSON: {type(exc).__name__}",
+            secret_values=secrets,
+        ) from None
     stdin_payload = stdin_text.encode("utf-8")
+    if len(stdin_payload) > max_request_bytes:
+        raise ResearchTransportError(
+            "oversized_request",
+            f"request exceeded {max_request_bytes} bytes",
+            details={"size_bytes": len(stdin_payload), "max_bytes": max_request_bytes},
+            secret_values=secrets,
+        )
+    request_diagnostic_values = _collect_request_body_strings(request)
     diagnostic_secrets = (
         *secrets,
         stdin_text,
-        *_collect_request_body_strings(request),
+        *request_diagnostic_values,
     )
     child_env = _build_env(env, env_allowlist)
+    sensitive_env_values = _sensitive_values_from_environment(child_env)
+    diagnostic_secrets = (*diagnostic_secrets, *sensitive_env_values)
     try:
         proc = subprocess.Popen(
             command,
@@ -317,6 +336,18 @@ def run_json_worker(
         raise ResearchTransportError(
             "nonzero_exit",
             f"worker exited with code {proc.returncode}",
+            exit_code=proc.returncode,
+            stdout=stdout_text,
+            stderr=stderr_text,
+            secret_values=diagnostic_secrets,
+        )
+    leaked_runtime_values = (*secrets, *sensitive_env_values)
+    if _contains_explicit_value(stdout_text, leaked_runtime_values) or _contains_explicit_value(
+        stderr_text, leaked_runtime_values
+    ):
+        raise ResearchTransportError(
+            "sensitive_output",
+            "worker output contained a protected in-memory value",
             exit_code=proc.returncode,
             stdout=stdout_text,
             stderr=stderr_text,
@@ -498,6 +529,25 @@ def _build_env(env: dict[str, str] | None, env_allowlist: set[str] | None) -> di
     return child
 
 
+def sensitive_environment_values(
+    *,
+    env: Mapping[str, str] | None = None,
+    env_allowlist: set[str] | None = None,
+) -> tuple[str, ...]:
+    """Return only sensitive values that would enter an allowlisted child env."""
+
+    return _sensitive_values_from_environment(_build_env(dict(env or {}), env_allowlist))
+
+
+def _sensitive_values_from_environment(environment: Mapping[str, str]) -> tuple[str, ...]:
+    values = {
+        str(value)
+        for key, value in environment.items()
+        if _is_sensitive_env_key(str(key)) and str(value)
+    }
+    return tuple(sorted(values, key=len, reverse=True))
+
+
 def _minimal_env_keys() -> set[str]:
     if sys.platform == "win32":
         return {"PATH", "SystemRoot", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT"}
@@ -553,27 +603,37 @@ def _is_sensitive_key(key: str) -> bool:
     )
 
 
+def _is_sensitive_env_key(key: str) -> bool:
+    normalized = re.sub(r"[^a-z0-9]+", "_", str(key).casefold()).strip("_")
+    segments = set(normalized.split("_"))
+    if segments & {"credential", "credentials", "key", "password", "passwd", "pwd", "secret"}:
+        return True
+    return normalized in {"authorization", "bearer", "token"} or normalized.endswith("_token")
+
+
 def _collect_request_body_strings(request: Mapping[str, Any]) -> tuple[str, ...]:
     typed_inputs = request.get("typed_inputs")
     if not isinstance(typed_inputs, Mapping):
         return ()
     payload = typed_inputs.get("payload")
-    collected: list[str] = []
-
-    def _walk(value: Any, depth: int = 0) -> None:
-        if depth > 10 or len(collected) >= 200:
-            return
+    collected: set[str] = set()
+    pending = [payload]
+    while pending:
+        value = pending.pop()
         if isinstance(value, Mapping):
-            for nested in value.values():
-                _walk(nested, depth + 1)
+            for raw_key, nested in value.items():
+                if isinstance(raw_key, str) and len(raw_key) >= 4:
+                    collected.add(raw_key)
+                pending.append(nested)
         elif isinstance(value, (list, tuple)):
-            for nested in value:
-                _walk(nested, depth + 1)
+            pending.extend(value)
         elif isinstance(value, str) and len(value) >= 4:
-            collected.append(value)
+            collected.add(value)
+    return tuple(sorted(collected, key=len, reverse=True))
 
-    _walk(payload)
-    return tuple(collected)
+
+def _contains_explicit_value(text: str, values: Iterable[str]) -> bool:
+    return any(str(value) and str(value) in text for value in values)
 
 
 def _parse_single_json(stdout: str, *, secret_values: Iterable[str] = ()) -> dict:
