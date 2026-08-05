@@ -225,11 +225,23 @@ def completed_result(
         artifact_id=artifact_id,
         limitations=limitations,
     )
+    extras = list(extra_artifacts or [])
+    evidence = [ev]
+    evidence.extend(
+        evidence_ref(
+            f"{operator_id}.artifact.{index}",
+            "physical_operator_artifact",
+            f"{operator_id}@{OPERATOR_VERSION} produced an additional hash-verified artifact.",
+            str(item["artifact_id"]),
+        )
+        for index, item in enumerate(extras, start=1)
+        if isinstance(item, dict) and item.get("artifact_id")
+    )
     return build_node_result(
         context,
         status="completed",
-        output_artifacts=[artifact, *(extra_artifacts or [])],
-        evidence=[ev],
+        output_artifacts=[artifact, *extras],
+        evidence=evidence,
         hashes=[*hashes, *(extra_hashes or [])],
         model_provider_usage=model_provider_usage,
         limitations=limitations,

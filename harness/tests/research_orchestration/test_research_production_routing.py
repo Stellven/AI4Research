@@ -16,6 +16,7 @@ from research_orchestration.resolver import (  # noqa: E402
 )
 from research_orchestration.routing import (  # noqa: E402
     ResearchRoutingError,
+    apply_task_conditions,
     select_production_route,
     workflow_from_entry_stage,
 )
@@ -99,3 +100,46 @@ def test_physical_operator_resolver_rejects_unknown_disabled_and_duplicate_bindi
         PhysicalOperatorResolver(
             [PhysicalOperatorBinding("same", runner), PhysicalOperatorBinding("same", runner)]
         )
+
+
+def _conditional_workflow() -> dict:
+    return {
+        "workflow_id": "conditional-research",
+        "nodes": [
+            {"node_id": "claim_extract", "depends_on": [], "read_scope": [], "write_scope": ["claims.json"]},
+            {"node_id": "method_extract", "depends_on": [], "read_scope": [], "write_scope": ["methods.json"]},
+            {"node_id": "code_evidence_map", "depends_on": ["claim_extract"], "read_scope": ["claims.json"], "write_scope": ["code.json"]},
+            {"node_id": "claim_verify", "depends_on": ["claim_extract", "code_evidence_map"], "read_scope": ["claims.json", "code.json"], "write_scope": ["verdict.json"]},
+            {"node_id": "report_plan", "depends_on": ["claim_verify"], "read_scope": ["verdict.json"], "write_scope": ["plan.json"]},
+            {"node_id": "report_draft", "depends_on": ["report_plan"], "read_scope": ["plan.json"], "write_scope": ["report.json"]},
+        ],
+    }
+
+
+def test_conditional_graph_skips_code_mapping_without_code_and_keeps_downstream_report() -> None:
+    contract = {"user_intent": "Synthesize the supplied Markdown", "constraints": {"repository_inputs": []}}
+
+    selected = apply_task_conditions(_conditional_workflow(), contract)
+
+    by_id = {item["node_id"]: item for item in selected["nodes"]}
+    assert "code_evidence_map" not in by_id
+    assert by_id["claim_verify"]["depends_on"] == ["claim_extract", "method_extract"]
+    assert by_id["report_draft"]["depends_on"] == ["report_plan", "claim_verify", "method_extract"]
+    skip = next(item for item in selected["conditional_skips"] if item["node_id"] == "code_evidence_map")
+    assert skip["status"] == "skipped"
+    assert "No code" in skip["reason"]
+
+
+def test_conditional_graph_runs_code_mapping_for_repository_input() -> None:
+    contract = {
+        "user_intent": "Synthesize the material with repository evidence",
+        "constraints": {"repository_inputs": [{"snapshot_path": "inputs/repository"}]},
+    }
+
+    selected = apply_task_conditions(_conditional_workflow(), contract)
+
+    by_id = {item["node_id"]: item for item in selected["nodes"]}
+    assert "code_evidence_map" in by_id
+    assert "inputs/repository" in by_id["code_evidence_map"]["read_scope"]
+    assert "code_evidence_map" in by_id["claim_verify"]["depends_on"]
+    assert all(item["node_id"] != "code_evidence_map" for item in selected["conditional_skips"])

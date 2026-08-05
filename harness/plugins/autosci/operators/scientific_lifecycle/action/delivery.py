@@ -23,6 +23,7 @@ REPORT_DRAFTER_ID = "autosci-report-drafting-physical"
 ARTIFACT_REVIEWER_ID = "autosci-artifact-review-physical"
 PUBLICATION_PRODUCER_ID = "autosci-publication-production-physical"
 WORKFLOW_EVOLVER_ID = "autosci-workflow-evolution-proposal-physical"
+FINAL_EVALUATOR_ID = "autosci-final-publication-evaluation-physical"
 
 
 def _outputs(document: dict[str, Any]) -> dict[str, Any]:
@@ -76,6 +77,7 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
             evidence_ids = [f"missing-evidence:{claim_id}"]
         verdicts.append({
             "claim_id": claim_id,
+            "claim_text": str(claim.get("text") or "").strip(),
             "verdict": verdict,
             "support_classification": support_class,
             "confidence": confidence,
@@ -108,16 +110,27 @@ def _verdicts(context: OperatorContext) -> list[dict[str, Any]]:
     return require_list(rows, "verdicts")
 
 
+def _grounded_evidence_ids(verdict: dict[str, Any]) -> list[str]:
+    return [
+        str(item)
+        for item in verdict.get("evidence_ids") or []
+        if str(item).strip() and not str(item).startswith("missing-evidence:")
+    ]
+
+
 def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     verdicts = _verdicts(context)
-    supported = [item for item in verdicts if item.get("support_classification") == "supported"]
-    if not supported:
-        raise ResearchOperatorError("No supported claims are available for the report", error_type="insufficient_evidence")
+    reportable = [
+        item for item in verdicts
+        if _grounded_evidence_ids(item) and str(item.get("claim_text") or "").strip()
+    ]
+    if not reportable:
+        raise ResearchOperatorError("No source-grounded claims are available for the report", error_type="insufficient_evidence")
     topic = require_text(context.payload.get("topic") or context.payload.get("title"), "report topic")
-    evidence_ids = sorted({str(eid) for item in supported for eid in item.get("evidence_ids") or [] if str(eid).strip()})
+    evidence_ids = sorted({evidence_id for item in reportable for evidence_id in _grounded_evidence_ids(item)})
     sections = [
         {"section_id": "summary", "title": f"Summary: {topic}", "purpose": "Answer the requested topic.", "evidence_ids": evidence_ids},
-        {"section_id": "findings", "title": "Supported findings", "purpose": "Present only verified claims.", "evidence_ids": evidence_ids},
+        {"section_id": "findings", "title": "Source-grounded findings", "purpose": "Present claims with their unchanged verification classification.", "evidence_ids": evidence_ids},
         {"section_id": "limitations", "title": "Limitations", "purpose": "List unsupported and insufficient claims.", "evidence_ids": evidence_ids},
     ]
     plan = {
@@ -125,8 +138,11 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
         "title": topic,
         "audience": str(context.payload.get("audience") or "researcher"),
         "sections": sections,
-        "supported_claim_ids": [str(item["claim_id"]) for item in supported],
-        "excluded_claim_ids": [str(item["claim_id"]) for item in verdicts if item not in supported],
+        # The ABI field is retained for compatibility.  It means reportable,
+        # evidence-linked claims here; each claim's support classification is
+        # preserved in the report and is never promoted from inconclusive.
+        "supported_claim_ids": [str(item["claim_id"]) for item in reportable],
+        "excluded_claim_ids": [str(item["claim_id"]) for item in verdicts if item not in reportable],
         "evidence_ids": evidence_ids,
     }
     return completed_result(
@@ -139,14 +155,16 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
     )
 
 
-def _report_plan_and_verdicts(context: OperatorContext) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _report_plan_and_verdicts(context: OperatorContext) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     documents = load_documents(
         context,
-        schemas=("scientific_report_plan.v1", "claim_verdict.v1"),
-        payload_keys=("report_plan", "verdicts"),
+        schemas=("scientific_report_plan.v1", "claim_verdict.v1", "research_method.v1"),
+        payload_keys=("report_plan", "verdicts", "research_method"),
     )
     plan: dict[str, Any] = {}
     verdicts: list[dict[str, Any]] = []
+    methods: list[dict[str, Any]] = []
+    method_limitations: list[str] = []
     for document in documents:
         if document.get("report_id") and document.get("sections"):
             plan = document
@@ -159,17 +177,21 @@ def _report_plan_and_verdicts(context: OperatorContext) -> tuple[dict[str, Any],
             plan = values["report_plan"]
         if isinstance(values.get("verdicts"), list):
             verdicts.extend(item for item in values["verdicts"] if isinstance(item, dict))
+        if isinstance(values.get("methods"), list):
+            methods.extend(item for item in values["methods"] if isinstance(item, dict))
+        if document.get("schema") == "research_method.v1":
+            method_limitations.extend(str(item) for item in document.get("limitations") or [] if str(item).strip())
     if not plan or not verdicts:
         raise ResearchOperatorError("Report plan and claim verdict evidence are required", error_type="missing_input")
-    return plan, verdicts
+    return plan, verdicts, methods, method_limitations
 
 
 def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
-    plan, verdicts = _report_plan_and_verdicts(context)
+    plan, verdicts, methods, method_limitations = _report_plan_and_verdicts(context)
     supported_ids = set(str(item) for item in plan.get("supported_claim_ids") or [])
-    supported = [item for item in verdicts if str(item.get("claim_id")) in supported_ids and item.get("support_classification") == "supported"]
-    if not supported:
-        raise ResearchOperatorError("Report plan has no still-supported claim", error_type="insufficient_evidence")
+    reportable = [item for item in verdicts if str(item.get("claim_id")) in supported_ids]
+    if not reportable:
+        raise ResearchOperatorError("Report plan has no still-reportable source-grounded claim", error_type="insufficient_evidence")
     title = require_text(plan.get("title"), "report title")
     sections: list[dict[str, Any]] = []
     markdown_parts = [f"# {title}"]
@@ -178,27 +200,53 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         section_title = require_text(section.get("title"), "section title")
         evidence_ids = [str(item) for item in section.get("evidence_ids") or [] if str(item).strip()]
         if section_id == "findings":
-            body = "\n".join(f"- {item['claim_id']}: {item['basis']}" for item in supported)
+            body = "\n".join(
+                f"- {item['claim_id']} ({item['support_classification']}): {item['claim_text']} "
+                f"Evidence: {', '.join(str(value) for value in item.get('evidence_ids') or [])}."
+                for item in reportable
+            )
         elif section_id == "limitations":
-            excluded = [item for item in verdicts if item not in supported]
-            body = "\n".join(f"- {item['claim_id']}: {item['support_classification']}" for item in excluded) or "- No additional limitations recorded."
+            rows = [
+                f"- {item['claim_id']}: {item['support_classification']} — {item['basis']}"
+                for item in reportable
+                if item.get("support_classification") != "supported"
+            ]
+            rows.extend(f"- Method limitation: {item}" for item in method_limitations)
+            body = "\n".join(rows) or "- No additional limitations recorded."
         else:
-            body = f"This report addresses {title} using {len(supported)} supported claim(s)."
+            body = (
+                f"This report addresses {title} using {len(reportable)} source-grounded claim(s). "
+                "Claims marked insufficient_evidence are retained as limitations, not promoted to verified findings."
+            )
         require_text(body, f"section {section_id} body")
         sections.append({"section_id": section_id, "title": section_title, "body": body, "evidence_ids": evidence_ids})
         markdown_parts.extend([f"\n## {section_title}", body])
     markdown = "\n".join(markdown_parts).strip() + "\n"
     if title.lower() not in markdown.lower():
         raise ResearchOperatorError("Draft is not relevant to the requested topic", error_type="product_failure")
-    unsupported = [str(item.get("claim_id")) for item in verdicts if item not in supported]
+    unsupported = [str(item.get("claim_id")) for item in verdicts if item not in reportable]
     report = {
         "report_id": require_text(plan.get("report_id"), "report_id"),
         "title": title,
         "sections": sections,
-        "evidence_ids": sorted({str(eid) for item in supported for eid in item.get("evidence_ids") or []}),
+        "evidence_ids": sorted({str(eid) for item in reportable for eid in item.get("evidence_ids") or []}),
         "unsupported_claims": unsupported,
+        "methods": methods,
+        "method_evidence_status": "available" if methods else "insufficient_evidence",
         "markdown": markdown,
     }
+    extra_artifacts: list[dict[str, Any]] = []
+    extra_hashes: list[dict[str, str]] = []
+    if len(context.write_scope) > 1:
+        markdown_ref, markdown_hash = write_scoped_text(
+            context,
+            relative_path=context.write_scope[1],
+            content=markdown,
+            artifact_id="scientific_report_markdown",
+            schema="text/markdown",
+        )
+        extra_artifacts.append(markdown_ref)
+        extra_hashes.append(markdown_hash)
     return completed_result(
         context,
         operator_id=REPORT_DRAFTER_ID,
@@ -206,6 +254,9 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         outputs={"report": report},
         filename="scientific_report.v1.json",
         artifact_id="scientific_report",
+        limitations=method_limitations,
+        extra_artifacts=extra_artifacts,
+        extra_hashes=extra_hashes,
     )
 
 
@@ -285,7 +336,19 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
     extra_artifacts: list[dict[str, Any]] = []
     extra_hashes: list[dict[str, str]] = []
     first_scope = context.write_scope[0] if context.write_scope else ""
-    if first_scope and not Path(first_scope).suffix:
+    markdown_scope = next((scope for scope in context.write_scope if Path(scope).suffix.lower() == ".md"), "")
+    if markdown_scope:
+        compiled_ref, compiled_hash = write_scoped_text(
+            context,
+            relative_path=markdown_scope,
+            content=markdown,
+            artifact_id="publication_markdown",
+            schema="text/markdown",
+        )
+        extra_artifacts.append(compiled_ref)
+        extra_hashes.append(compiled_hash)
+        files = [{"type": "markdown", "path": compiled_ref["path"], "sha256": compiled_ref["sha256"]}]
+    elif first_scope and not Path(first_scope).suffix:
         compiled_ref, compiled_hash = write_scoped_text(
             context,
             relative_path=f"{first_scope.rstrip('/\\')}/publication.md",
@@ -316,6 +379,59 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
         artifact_id="publication_bundle",
         extra_artifacts=extra_artifacts,
         extra_hashes=extra_hashes,
+    )
+
+
+def evaluate_final_publication(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    """Evaluate the produced publication evidence without changing Solar state."""
+
+    documents = load_documents(
+        context,
+        schemas=("publication_bundle.v1", "artifact_review.v1"),
+        payload_keys=("publication_bundle", "artifact_review"),
+    )
+    bundle: dict[str, Any] = {}
+    review: dict[str, Any] = {}
+    for document in documents:
+        values = _outputs(document)
+        if isinstance(values.get("bundle"), dict):
+            bundle = values["bundle"]
+        if isinstance(values.get("review"), dict):
+            review = values["review"]
+    markdown = str(bundle.get("compiled_markdown") or "").strip()
+    evidence_ids = [str(item) for item in bundle.get("evidence_ids") or [] if str(item).strip()]
+    files = [item for item in bundle.get("files") or [] if isinstance(item, dict)]
+    checks = {
+        "publication_bundle_present": bool(bundle),
+        "non_empty_report": bool(markdown),
+        "evidence_linked": bool(evidence_ids),
+        "usable_file_manifest": bool(files),
+        "artifact_review_passed": review.get("recommendation") == "pass_with_review_required",
+    }
+    accepted = all(checks.values())
+    if not accepted:
+        failed = ", ".join(key for key, value in checks.items() if not value)
+        raise ResearchOperatorError(
+            f"Final publication evaluation failed: {failed}",
+            error_type="quality_gate_failed",
+        )
+    evaluation = {
+        "decision": "accepted",
+        "accepted": True,
+        "checks": checks,
+        "source_report_id": str(bundle.get("source_report_id") or ""),
+        "publication_bundle_id": str(bundle.get("bundle_id") or ""),
+        "evidence_ids": evidence_ids,
+        "does_not_modify_graph_or_run_state": True,
+    }
+    return completed_result(
+        context,
+        operator_id=FINAL_EVALUATOR_ID,
+        schema="research_final_evaluation.v1",
+        outputs={"evaluation": evaluation},
+        filename="research_final_evaluation.v1.json",
+        artifact_id="research_final_evaluation",
+        limitations=["Final evaluation assesses produced evidence; Solar alone derives and commits the run final status."],
     )
 
 

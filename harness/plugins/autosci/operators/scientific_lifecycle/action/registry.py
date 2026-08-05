@@ -30,6 +30,7 @@ _OPERATORS: dict[str, tuple[Operator, str]] = {
     "report_draft": (delivery.draft_report, delivery.REPORT_DRAFTER_ID),
     "artifact_review": (delivery.review_artifact, delivery.ARTIFACT_REVIEWER_ID),
     "publication_produce": (delivery.produce_publication, delivery.PUBLICATION_PRODUCER_ID),
+    "final_evaluation": (delivery.evaluate_final_publication, delivery.FINAL_EVALUATOR_ID),
     "workflow_evolve": (delivery.propose_workflow_evolution, delivery.WORKFLOW_EVOLVER_ID),
 }
 

@@ -238,3 +238,58 @@ def test_explicit_network_authorization_approves_bounded_non_provider_node(tmp_p
     assert result["final_status"] == "completed"
     assert captured["allow_network"] is True
     assert captured["approved_capabilities"] == ["cap.research.seed.fetch"]
+
+
+def test_explicit_live_provider_authorization_approves_provider_capability(tmp_path: Path) -> None:
+    captured: dict = {}
+
+    def workflow_loader(decision):
+        return {
+            "workflow_id": "provider_research_v1",
+            "workflow_kind": decision.workflow_kind,
+            "start_node": "source_discovery",
+            "nodes": [{
+                "node_id": "source_discovery",
+                "depends_on": [],
+                "required_for_completion": True,
+                "logical_operator": "ResearchSourceDiscovery",
+                "physical_operator": "source_discovery_operator",
+                "required_capabilities": ["cap.research.source.discovery"],
+                "read_scope": [str(tmp_path)],
+                "write_scope": [str(tmp_path / "out")],
+                "allow_network": True,
+                "allow_live_provider": True,
+                "gate": "G_SOURCE_DISCOVERY",
+            }],
+        }
+
+    base = _resolver(tmp_path)
+
+    def run(request: dict) -> dict:
+        captured.update(request["authorization"])
+        forwarded = dict(request)
+        forwarded["physical_operator"] = {
+            **request["physical_operator"],
+            "operator_id": "physical_source_discovery",
+        }
+        return base.execute(forwarded)
+
+    runtime = SolarResearchRuntime(
+        artifact_root=tmp_path,
+        workflow_loader=workflow_loader,
+        operator_resolver=PhysicalOperatorResolver([
+            PhysicalOperatorBinding("source_discovery_operator", run, version="test.v1")
+        ]),
+        authorization={
+            "allow_network": True,
+            "allow_live_provider": True,
+            "approval_ref": "user-approved-live-provider",
+        },
+    )
+
+    result = runtime.run(prompt="Survey a bounded topic", run_id="provider-authorized")
+
+    assert result["final_status"] == "completed"
+    assert captured["allow_network"] is True
+    assert captured["allow_live_provider"] is True
+    assert captured["approved_capabilities"] == ["cap.research.source.discovery"]

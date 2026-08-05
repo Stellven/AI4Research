@@ -16,6 +16,7 @@ from .orchestrator import ResearchOrchestrator
 from .resolver import PhysicalOperatorBinding, PhysicalOperatorResolver
 from .routing import (
     ResearchRouteDecision,
+    apply_task_conditions,
     normalize_seed_inputs,
     select_production_route,
     workflow_from_entry_stage,
@@ -33,6 +34,10 @@ _REQUEST_SCHEMA = _HARNESS_ROOT / "schemas" / "draft" / "research_node_request.v
 _RESULT_SCHEMA = _HARNESS_ROOT / "schemas" / "evidence" / "research_node_result.v1.schema.json"
 _DEFAULT_SELECTION = _HARNESS_ROOT / "config" / "research-workflow-selection.v1.json"
 _PROMPT_URL_RE = re.compile(r"https?://[^\s)>\]]+", re.IGNORECASE)
+_REPOSITORY_CODE_SUFFIXES = {
+    ".c", ".cc", ".cpp", ".cs", ".go", ".h", ".hpp", ".java", ".js", ".jsx",
+    ".kt", ".m", ".php", ".py", ".rb", ".rs", ".scala", ".sh", ".swift", ".ts", ".tsx",
+}
 
 
 class FileWorkflowCatalog:
@@ -89,6 +94,7 @@ class SolarResearchRuntime:
         supplied_evidence: list[dict] | None = None,
         imported_result: dict | None = None,
         output_language: str = "",
+        repository_paths: list[str] | None = None,
         max_steps: int = 100,
     ) -> dict[str, Any]:
         normalized_seeds = _complete_seed_inputs(
@@ -113,16 +119,17 @@ class SolarResearchRuntime:
                 },
                 *normalized_seeds,
             ]
+        repositories = _complete_repository_inputs(
+            repository_paths or [],
+            artifact_root=self.artifact_root,
+            run_id=run_id,
+        )
         decision = select_production_route(
             prompt,
             seed_inputs=normalized_seeds,
             explicit_workflow=explicit_workflow,
             run_mode=run_mode,
         )
-        try:
-            workflow = self.workflow_loader(decision)
-        except Exception as exc:
-            raise ResearchRuntimeError(f"workflow route resolution failed: {exc}") from exc
         task_contract = build_task_contract(
             prompt=prompt,
             run_id=run_id,
@@ -130,7 +137,12 @@ class SolarResearchRuntime:
             seed_inputs=normalized_seeds,
             supplied_evidence=evidence,
             output_language=output_language,
+            repository_inputs=repositories,
         )
+        try:
+            workflow = apply_task_conditions(self.workflow_loader(decision), task_contract)
+        except Exception as exc:
+            raise ResearchRuntimeError(f"workflow route resolution failed: {exc}") from exc
         runtime_authorization = deepcopy(self.authorization)
         approved = set(runtime_authorization.get("approved_capabilities") or [])
         approved.update(
@@ -138,7 +150,10 @@ class SolarResearchRuntime:
             for node in workflow.get("nodes") or []
             for capability in node.get("required_capabilities") or []
             if capability != "execute_experiment"
-            and not node.get("allow_live_provider")
+            and (
+                not node.get("allow_live_provider")
+                or runtime_authorization.get("allow_live_provider") is True
+            )
             and (
                 not node.get("allow_network")
                 or runtime_authorization.get("allow_network") is True
@@ -218,6 +233,7 @@ class SolarResearchRuntime:
             "final_status_evidence_refs": list(state.get("final_status_evidence_refs") or []),
             "node_states": deepcopy(state.get("node_states") or {}),
             "current_blockers": deepcopy(state.get("current_blockers") or []),
+            "conditionally_skipped_nodes": deepcopy(workflow.get("conditional_skips") or []),
         }
 
     def _state_provenance_ref(self, run_id: str) -> dict:
@@ -235,6 +251,7 @@ def build_task_contract(
     seed_inputs: list[dict],
     supplied_evidence: list[dict] | None = None,
     output_language: str = "",
+    repository_inputs: list[dict] | None = None,
 ) -> dict:
     """Build the frozen Phase 0 task contract without truncating user intent."""
 
@@ -249,20 +266,32 @@ def build_task_contract(
             "kind": "evidence_backed_research_report",
             "description": "A non-empty, structurally usable report relevant to the complete user request.",
             "language": language,
-            "artifact_expectations": ["report", "evidence_lineage", "evaluation"],
+            "artifact_expectations": [
+                "report",
+                "evidence_synthesis",
+                "source_validation",
+                "independent_review",
+            ],
         },
         "workflow_kind": decision.workflow_kind,
         "run_mode": decision.run_mode,
         "constraints": {
             "no_live_provider_without_approval": True,
             "no_secret_logging": True,
+            "repository_inputs": deepcopy(repository_inputs or []),
+            "conditional_skips": [],
         },
         "provider_requirements": [],
         "platform_requirements": [],
         "success_criteria": [
-            "The complete user prompt is preserved in the run contract.",
-            "Every accepted output artifact is non-empty, hash-verified, and linked to evidence.",
-            "The final status is derived from evaluated node evidence.",
+            (
+                "At least 2 validated sources"
+                if decision.workflow_kind in {"research_synthesis", "literature_synthesis"}
+                else "At least 1 parsed, non-empty local source"
+            ),
+            "Every conclusion is linked to evidence sources",
+            "The final report contains non-empty body content",
+            "The independent review verdict is accept",
         ],
         "supplied_evidence": deepcopy(supplied_evidence or []),
     }
@@ -325,10 +354,18 @@ def default_production_resolver(
     except ModuleNotFoundError:  # direct execution with harness/ as sys.path root
         from plugins.autosci.operators.scientific_lifecycle.registry import production_bindings
 
+    root = Path(workspace_root or Path.cwd()).resolve()
+    injected = services
+    if injected is None:
+        try:
+            from harness.plugins.autosci.services import production_services_from_environment
+        except ModuleNotFoundError:
+            from plugins.autosci.services import production_services_from_environment
+        injected = production_services_from_environment(workspace_root=root)
     return PhysicalOperatorResolver(
         production_bindings(
-            services=deepcopy(services or {}),
-            workspace_root=Path(workspace_root or Path.cwd()).resolve(),
+            services=deepcopy(injected),
+            workspace_root=root,
             binding_factory=PhysicalOperatorBinding,
         )
     )
@@ -396,6 +433,54 @@ def _complete_seed_inputs(
 def _safe_component(value: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(value)).strip(".-")
     return cleaned[:120] or "research-input"
+
+
+def _complete_repository_inputs(
+    repository_paths: list[str],
+    *,
+    artifact_root: Path,
+    run_id: str,
+) -> list[dict[str, Any]]:
+    """Snapshot a bounded code-only view so code mapping stays workspace scoped."""
+
+    completed: list[dict[str, Any]] = []
+    for index, raw in enumerate(repository_paths, start=1):
+        source = Path(str(raw)).expanduser().resolve()
+        if not source.exists():
+            raise ResearchRuntimeError(f"repository input is missing: {source}")
+        snapshot_root = artifact_root / "inputs" / _safe_component(run_id) / f"repository-{index:02d}"
+        members = [source] if source.is_file() else sorted(item for item in source.rglob("*") if item.is_file())
+        copied: list[dict[str, str]] = []
+        total_bytes = 0
+        for member in members:
+            if member.suffix.lower() not in _REPOSITORY_CODE_SUFFIXES:
+                continue
+            size = member.stat().st_size
+            if size > 1_000_000 or total_bytes + size > 50 * 1024 * 1024 or len(copied) >= 500:
+                continue
+            relative = Path(member.name) if source.is_file() else member.relative_to(source)
+            target = snapshot_root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(member, target)
+            total_bytes += size
+            copied.append({"path": target.relative_to(artifact_root).as_posix(), "sha256": hashlib.sha256(target.read_bytes()).hexdigest()})
+        if not copied:
+            raise ResearchRuntimeError(f"repository input contains no bounded supported code files: {source}")
+        captured_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        completed.append(
+            {
+                "repository_id": f"repository-{index}",
+                "original_path": str(source),
+                "snapshot_path": str(snapshot_root),
+                "snapshot_sha256": hashlib.sha256(
+                    repr(sorted((item["path"], item["sha256"]) for item in copied)).encode("utf-8")
+                ).hexdigest(),
+                "file_count": len(copied),
+                "total_bytes": total_bytes,
+                "captured_at": captured_at,
+            }
+        )
+    return completed
 
 
 def _secret_values(authorization: dict) -> tuple[str, ...]:

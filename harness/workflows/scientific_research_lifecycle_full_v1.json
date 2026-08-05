@@ -1182,7 +1182,8 @@
       "goal": "Plan scientific report structure from verified evidence.",
       "logical_operator": "ScientificReportPlanner",
       "depends_on": [
-        "claim_verify"
+        "claim_verify",
+        "method_extract"
       ],
       "required_capabilities": [
         "cap.research-report-plan",
@@ -1190,7 +1191,8 @@
         "academic_critique"
       ],
       "read_scope": [
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/08_verdict/claim_verdict.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/08_verdict/claim_verdict.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json"
       ],
       "write_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report_plan.v1.json"
@@ -1211,7 +1213,7 @@
       "required_node_status": "passed",
       "research_stage": "report_planning",
       "evidence_policy": {
-        "expected_schema": "scientific_report.v1",
+        "expected_schema": "scientific_report_plan.v1",
         "allow_failed": true,
         "allow_inconclusive": true,
         "require_provenance": true,
@@ -1232,7 +1234,7 @@
       "resume_policy": {
         "mode": "skip_if_completed_evidence_exists",
         "artifact": "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report_plan.v1.json",
-        "expected_schema": "scientific_report.v1",
+        "expected_schema": "scientific_report_plan.v1",
         "evidence_log": "artifacts/scientific/scientific_research_lifecycle_full_v1/evidence.jsonl",
         "completed_statuses": [
           "passed",
@@ -1252,7 +1254,9 @@
       "goal": "Draft evidence-linked scientific reports with limitations visible.",
       "logical_operator": "ScientificReportDrafter",
       "depends_on": [
-        "report_plan"
+        "report_plan",
+        "claim_verify",
+        "method_extract"
       ],
       "required_capabilities": [
         "cap.research-report-draft",
@@ -1260,10 +1264,13 @@
         "academic_critique"
       ],
       "read_scope": [
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report_plan.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report_plan.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/08_verdict/claim_verdict.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json"
       ],
       "write_scope": [
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report.md"
       ],
       "gate": "G_REPORT_DRAFT",
       "acceptance": [
@@ -1404,7 +1411,8 @@
         "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/artifact_review.v1.json"
       ],
       "write_scope": [
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/publication_bundle.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/publication_bundle.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/final-report.md"
       ],
       "gate": "G_PUBLICATION_PRODUCE",
       "acceptance": [
@@ -1470,11 +1478,82 @@
       }
     },
     {
+      "id": "final_evaluation",
+      "goal": "Evaluate the produced publication and its execution evidence before Solar accepts the research lifecycle.",
+      "logical_operator": "ScientificFinalEvaluator",
+      "depends_on": [
+        "publication_produce",
+        "artifact_review"
+      ],
+      "required_capabilities": [
+        "research_synthesis",
+        "academic_critique"
+      ],
+      "read_scope": [
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/publication_bundle.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/artifact_review.v1.json"
+      ],
+      "write_scope": [
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json"
+      ],
+      "gate": "G_FINAL_EVALUATION",
+      "acceptance": [
+        "Evaluates the publication produced by the lifecycle rather than pre-supplied evidence.",
+        "Requires a non-empty report, source evidence, artifact hashes, and an accepted independent review.",
+        "Does not mutate Solar graph or final state."
+      ],
+      "pass_conditions": [
+        "research_final_evaluation.v1 records accepted only when the produced report and evidence satisfy all checks.",
+        "Any failed check is retained with a concrete reason."
+      ],
+      "priority": 82,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": "publication_produce",
+      "required_node_status": "passed",
+      "research_stage": "final_evaluation",
+      "evidence_policy": {
+        "expected_schema": "research_final_evaluation.v1",
+        "allow_failed": false,
+        "allow_inconclusive": false,
+        "require_provenance": true,
+        "forbid_overclaiming": true
+      },
+      "architecture_policy": {
+        "package_boundary": "plugins/autosci",
+        "plugin_id": "autosci",
+        "backend_contract": "single_bounded_action_or_solar_gate",
+        "forbidden": [
+          "hidden-backend-full-workflow",
+          "backend-black-box-runner"
+        ]
+      },
+      "status": "pending",
+      "lifecycle_artifact_slot": "09_report",
+      "evidence_log": "artifacts/scientific/scientific_research_lifecycle_full_v1/evidence.jsonl",
+      "resume_policy": {
+        "mode": "skip_if_completed_evidence_exists",
+        "artifact": "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json",
+        "expected_schema": "research_final_evaluation.v1",
+        "evidence_log": "artifacts/scientific/scientific_research_lifecycle_full_v1/evidence.jsonl",
+        "completed_statuses": [
+          "passed",
+          "skipped_parent_passed"
+        ],
+        "rerun_statuses": [
+          "failed",
+          "inconclusive",
+          "missing_artifact",
+          "schema_invalid"
+        ],
+        "do_not_rerun_completed_nodes": true
+      }
+    },
+    {
       "id": "memory_update_final",
       "goal": "Apply explicit evidence-backed research memory updates.",
       "logical_operator": "ScientificMemoryUpdater",
       "depends_on": [
-        "publication_produce"
+        "final_evaluation"
       ],
       "required_capabilities": [
         "cap.research-memory-update",
@@ -1482,6 +1561,7 @@
         "code_impl"
       ],
       "read_scope": [
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json",
         "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/publication_bundle.v1.json"
       ],
       "write_scope": [
@@ -1499,7 +1579,7 @@
       ],
       "priority": 82,
       "required_phase": "research_taskgraph_template",
-      "required_node_id": "publication_produce",
+      "required_node_id": "final_evaluation",
       "required_node_status": "passed",
       "research_stage": "memory_update",
       "evidence_policy": {

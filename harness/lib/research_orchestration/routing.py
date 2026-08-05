@@ -33,6 +33,15 @@ START_STAGE_BY_SEED_KIND = {
     "external_evidence": "evidence_import",
 }
 
+_CODE_ANALYSIS_RE = re.compile(
+    r"\b(?:code|repository|repo|source\s+tree|implementation|call\s+site|代码|代码库|仓库|实现分析)\b",
+    re.IGNORECASE,
+)
+_IDEA_OR_EXPERIMENT_RE = re.compile(
+    r"\b(?:idea|ideat|hypothesis|novel\s+direction|experiment|benchmark|prototype|poc|实验|假设|创意|原型)\w*\b",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class ResearchRouteDecision:
@@ -207,4 +216,152 @@ def workflow_from_entry_stage(
     result["start_node"] = start_node
     result["start_stage"] = decision.start_stage
     result["nodes"] = selected_nodes
+    return result
+
+
+def apply_task_conditions(workflow: dict, task_contract: dict) -> dict:
+    """Remove non-applicable lifecycle nodes and retain explicit skip reasons.
+
+    Conditional routing is deliberately performed before Solar initializes the
+    graph.  Solar therefore remains the only owner of the graph that is
+    actually executed, while the frozen task contract records every omitted
+    node and its reason.
+    """
+
+    result = deepcopy(workflow)
+    raw_nodes = result.get("nodes")
+    if not isinstance(raw_nodes, list) or not raw_nodes:
+        raise ResearchRoutingError("workflow must contain non-empty nodes")
+    by_id = {str(item.get("node_id") or ""): deepcopy(item) for item in raw_nodes if isinstance(item, dict)}
+    if "code_evidence_map" not in by_id:
+        result["conditional_skips"] = []
+        return result
+
+    constraints = task_contract.get("constraints") if isinstance(task_contract.get("constraints"), dict) else {}
+    repository_inputs = [item for item in constraints.get("repository_inputs") or [] if isinstance(item, dict)]
+    intent = str(task_contract.get("user_intent") or "")
+    code_requested = bool(repository_inputs) or bool(_CODE_ANALYSIS_RE.search(intent))
+    idea_or_experiment_requested = bool(_IDEA_OR_EXPERIMENT_RE.search(intent))
+    skipped: list[dict[str, str]] = []
+    remove: set[str] = set()
+
+    if not code_requested:
+        remove.add("code_evidence_map")
+        skipped.append(
+            {
+                "node_id": "code_evidence_map",
+                "status": "skipped",
+                "reason": "No code, repository path, or explicit code-analysis request was supplied.",
+                "condition": "code_input_or_explicit_code_analysis_required",
+            }
+        )
+    if not idea_or_experiment_requested:
+        for node_id in (
+            "idea_generate",
+            "idea_evaluate",
+            "experiment_design",
+            "experiment_approval_gate",
+            "experiment_run",
+            "experiment_monitor",
+        ):
+            if node_id in by_id:
+                remove.add(node_id)
+                skipped.append(
+                    {
+                        "node_id": node_id,
+                        "status": "skipped",
+                        "reason": "The requested deliverable is evidence synthesis, not ideation or experiment execution.",
+                        "condition": "explicit_ideation_or_experiment_request_required",
+                    }
+                )
+        for node_id, reason, condition in (
+            (
+                "memory_update_final",
+                "Final memory mutation is not applicable to a report-only synthesis request; earlier evidence memory and graph stages remain active.",
+                "explicit_final_memory_update_required",
+            ),
+            (
+                "workflow_evolve",
+                "Workflow evolution was not requested by the user.",
+                "explicit_workflow_evolution_request_required",
+            ),
+        ):
+            if node_id in by_id:
+                remove.add(node_id)
+                skipped.append(
+                    {
+                        "node_id": node_id,
+                        "status": "skipped",
+                        "reason": reason,
+                        "condition": condition,
+                    }
+                )
+
+    removed_outputs = {
+        str(path)
+        for node_id in remove
+        for path in [
+            *(by_id[node_id].get("write_scope") or []),
+            *(by_id[node_id].get("expected_output_artifacts") or []),
+        ]
+    }
+
+    def expanded_dependencies(node_id: str, seen: set[str] | None = None) -> list[str]:
+        values: list[str] = []
+        active_seen = set(seen or set())
+        if node_id in active_seen:
+            raise ResearchRoutingError(f"conditional dependency cycle at {node_id}")
+        active_seen.add(node_id)
+        for dependency in by_id[node_id].get("depends_on") or []:
+            dependency = str(dependency)
+            if dependency in remove:
+                values.extend(expanded_dependencies(dependency, active_seen))
+            elif dependency in by_id and dependency not in values:
+                values.append(dependency)
+        return values
+
+    selected: list[dict[str, Any]] = []
+    for original in raw_nodes:
+        node_id = str(original.get("node_id") or "")
+        if node_id in remove:
+            continue
+        item = deepcopy(by_id[node_id])
+        item["depends_on"] = expanded_dependencies(node_id)
+        item["read_scope"] = [
+            str(scope) for scope in item.get("read_scope") or [] if str(scope) not in removed_outputs
+        ]
+        selected.append(item)
+
+    selected_by_id = {item["node_id"]: item for item in selected}
+    claims_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/02_claims/research_claims.v1.json"
+    methods_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json"
+    code_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/04_code_evidence/code_evidence_map.v1.json"
+    verdict_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/08_verdict/claim_verdict.v1.json"
+    plan_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report_plan.v1.json"
+
+    if code_requested and "code_evidence_map" in selected_by_id:
+        code_node = selected_by_id["code_evidence_map"]
+        snapshot = str((repository_inputs[0] if repository_inputs else {}).get("snapshot_path") or "")
+        if snapshot:
+            code_node["read_scope"] = list(dict.fromkeys([*code_node.get("read_scope", []), snapshot]))
+    if "claim_verify" in selected_by_id:
+        node = selected_by_id["claim_verify"]
+        node["depends_on"] = [
+            item for item in ("claim_extract", "method_extract", "code_evidence_map")
+            if item in selected_by_id
+        ]
+        node["read_scope"] = list(dict.fromkeys([claims_path, methods_path, *([code_path] if "code_evidence_map" in selected_by_id else [])]))
+    if "report_plan" in selected_by_id:
+        node = selected_by_id["report_plan"]
+        node["depends_on"] = [item for item in ("claim_verify", "method_extract") if item in selected_by_id]
+        node["read_scope"] = [verdict_path, methods_path]
+    if "report_draft" in selected_by_id:
+        node = selected_by_id["report_draft"]
+        node["depends_on"] = [item for item in ("report_plan", "claim_verify", "method_extract") if item in selected_by_id]
+        node["read_scope"] = [plan_path, verdict_path, methods_path]
+
+    constraints["conditional_skips"] = deepcopy(skipped)
+    task_contract["constraints"] = constraints
+    result["nodes"] = selected
+    result["conditional_skips"] = skipped
     return result

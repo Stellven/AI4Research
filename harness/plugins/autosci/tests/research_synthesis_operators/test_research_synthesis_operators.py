@@ -287,6 +287,9 @@ def test_full_seven_node_chain_with_injected_services(tmp_path: Path, monkeypatc
         assert result["status"] == "completed"
         _validate_result(result)
         for ref in result["output_artifacts"]:
+            if ref.get("schema") == "text/markdown":
+                assert (tmp_path / ref["path"]).read_text(encoding="utf-8").strip()
+                continue
             artifact = json.loads((tmp_path / ref["path"]).read_text(encoding="utf-8"))
             assert {"schema", "artifact_id", "task_id", "run_id", "workflow_id", "node_id"} <= set(artifact)
             assert artifact["schema"] == ref["schema"]

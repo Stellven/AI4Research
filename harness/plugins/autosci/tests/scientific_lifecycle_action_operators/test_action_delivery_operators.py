@@ -34,6 +34,7 @@ EXPECTED_NODES = {
     "report_draft",
     "artifact_review",
     "publication_produce",
+    "final_evaluation",
     "workflow_evolve",
 }
 
@@ -297,6 +298,17 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
     assert publication["compiled_markdown"].strip()
     assert (tmp_path / "out/publication_produce/publication.md").is_file()
 
+    evaluated_final = _execute_twice(
+        tmp_path,
+        _request("final_evaluation", refs=[*published["output_artifacts"], *reviewed["output_artifacts"]]),
+        services={},
+    )
+    results.append(evaluated_final)
+    final_decision = _artifact(tmp_path, evaluated_final)["outputs"]["evaluation"]
+    assert final_decision["decision"] == "accepted"
+    assert all(final_decision["checks"].values())
+    assert final_decision["does_not_modify_graph_or_run_state"] is True
+
     evolved = _execute_twice(
         tmp_path,
         _request(
@@ -312,7 +324,7 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
     assert evolution["review"]["protected_core_edits_applied"] is False
     assert evolution["proposed_changes"][0]["application_state"] == "proposed_only"
 
-    assert len(results) == 12
+    assert len(results) == 13
     assert all(result["status"] == "completed" for result in results)
     for result in results:
         _validate_evidence(tmp_path, result)
@@ -427,6 +439,30 @@ def test_claim_verification_never_promotes_incomplete_evidence(
     })
     verified = execute_operator(_request("claim_verify", refs=[claim, result]), services={})
     assert _artifact(tmp_path, verified)["outputs"]["verdicts"][0]["support_classification"] == expected
+
+
+def test_report_planning_fails_when_claim_has_no_core_source_evidence(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    claim = _external_ref(tmp_path, "claims", "research_claims.v1", {
+        "claims": [{
+            "claim_id": "claim-without-source",
+            "text": "This claim has no source evidence.",
+            "acceptance_criteria": [],
+            "evidence_ids": [],
+        }]
+    })
+
+    verified = execute_operator(_request("claim_verify", refs=[claim]), services={})
+    verdict = _artifact(tmp_path, verified)["outputs"]["verdicts"][0]
+    assert verdict["evidence_ids"] == ["missing-evidence:claim-without-source"]
+
+    planned = execute_operator(
+        _request("report_plan", refs=verified["output_artifacts"], payload={"topic": "Core evidence boundary"}),
+        services={},
+    )
+    assert planned["status"] == "failed"
+    assert planned["errors"][0]["error_type"] == "insufficient_evidence"
+    assert planned["output_artifacts"] == []
 
 
 def test_provider_failure_is_classified_and_no_artifact_is_written(tmp_path: Path, monkeypatch) -> None:

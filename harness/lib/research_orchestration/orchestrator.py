@@ -491,6 +491,10 @@ class ResearchOrchestrator:
                 typed_payload["paper_path"] = seed_value
             elif seed_kind == "markdown":
                 typed_payload["material_path"] = seed_value
+        constraints = self.task_contract.get("constraints") if isinstance(self.task_contract.get("constraints"), dict) else {}
+        repository_inputs = [item for item in constraints.get("repository_inputs") or [] if isinstance(item, dict)]
+        if node["node_id"] == "code_evidence_map" and repository_inputs:
+            typed_payload["repo_path"] = str(repository_inputs[0].get("snapshot_path") or "")
         return {
             "schema": "research_node_request.v1",
             "task_id": state["task_id"],

@@ -41,16 +41,31 @@ def _snapshot_url(seed: dict[str, Any], context: OperatorContext) -> dict[str, A
         raise ResearchOperatorError("fetch_url service must return a JSON object", error_type="provider_contract")
     content = fetched.get("content", "")
     body = content if isinstance(content, bytes) else str(content).encode("utf-8")
-    return {
+    snapshot = {
         "seed_id": str(seed.get("seed_id") or "seed-url"),
         "seed_kind": "url",
-        "source": str(seed.get("value") or ""),
+        "source": str(fetched.get("requested_url") or seed.get("value") or ""),
+        "final_url": str(fetched.get("final_url") or seed.get("value") or ""),
         "fetched_at": str(fetched.get("fetched_at") or utc_now()),
         "sha256": sha256_bytes(body),
+        "content_sha256": str(fetched.get("content_sha256") or sha256_bytes(body)),
+        "raw_sha256": str(fetched.get("response_sha256") or ""),
+        "request_sha256": str(fetched.get("request_sha256") or ""),
         "content_type": str(fetched.get("content_type") or "text/plain"),
         "content": content.decode("utf-8", errors="replace") if isinstance(content, bytes) else str(content),
+        "title": str(fetched.get("title") or ""),
+        "description": str(fetched.get("description") or ""),
+        "provider": str(fetched.get("provider") or "bounded_http"),
+        "service_id": str(fetched.get("service_id") or ""),
+        "service_version": str(fetched.get("service_version") or ""),
+        "archive_path": str(fetched.get("archive_path") or ""),
+        "metadata_path": str(fetched.get("metadata_path") or ""),
+        "response_bytes": int(fetched.get("response_bytes") or len(body)),
+        "redirect_count": int(fetched.get("redirect_count") or 0),
         "limitations": list(fetched.get("limitations") or []),
     }
+    snapshot["fetch_metadata_sha256"] = str(fetched.get("metadata_sha256") or "")
+    return snapshot
 
 
 def _snapshot_local(seed: dict[str, Any], context: OperatorContext) -> dict[str, Any]:

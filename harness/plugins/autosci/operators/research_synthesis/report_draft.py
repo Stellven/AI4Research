@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .base import (
+    display_path,
     OperatorContext,
     ResearchOperatorError,
     build_node_result,
@@ -13,8 +14,11 @@ from .base import (
     no_provider_result,
     output_path,
     provider_usage_from,
+    redact_secrets,
     require_node,
+    sha256_bytes,
     utc_now,
+    validate_scoped_path,
     write_artifact,
 )
 
@@ -67,9 +71,12 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
         })
     if not normalized_conclusions:
         raise ResearchOperatorError("model_generate returned no traceable report conclusions", error_type="provider_contract")
+    body = str(report.get("body") or report.get("markdown") or "").strip()
+    if not body:
+        raise ResearchOperatorError("model_generate returned an empty report body", error_type="provider_contract")
     return {
         "title": str(report.get("title") or "Research synthesis draft"),
-        "body": str(report.get("body") or report.get("markdown") or ""),
+        "body": body,
         "sections": [item for item in report.get("sections", []) if isinstance(item, dict)] if isinstance(report.get("sections"), list) else [],
         "conclusions": normalized_conclusions,
     }
@@ -131,12 +138,31 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         artifact_id="report_draft",
         schema="research_synthesis.report_draft.v1",
     )
+    report_path = validate_scoped_path(
+        output_path(context, "report.md"),
+        context.write_scope,
+        workspace_root=context.workspace_root,
+    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    safe_body = str(redact_secrets(report["body"], context.secret_refs, context.secret_values))
+    report_path.write_text(safe_body.rstrip() + "\n", encoding="utf-8")
+    report_digest = sha256_bytes(report_path.read_bytes())
+    report_artifact = {
+        "artifact_id": "report_markdown",
+        "path": display_path(report_path, context.workspace_root),
+        "schema": "text/markdown",
+        "sha256": report_digest,
+    }
+    report_hash = {"hash_id": "report_markdown", "algorithm": "sha256", "value": report_digest}
     return build_node_result(
         context,
         status="completed",
-        output_artifacts=[artifact],
-        evidence=[evidence_ref("report_draft.traceable", "traceable_report_draft", "Report draft conclusions are linked to synthesis evidence.", artifact["artifact_id"])],
-        hashes=[hash_record],
+        output_artifacts=[artifact, report_artifact],
+        evidence=[
+            evidence_ref("report_draft.traceable", "traceable_report_draft", "Report draft conclusions are linked to synthesis evidence.", artifact["artifact_id"]),
+            evidence_ref("report_draft.usable_markdown", "usable_report", "A non-empty Markdown report was written by the production report operator.", report_artifact["artifact_id"]),
+        ],
+        hashes=[hash_record, report_hash],
         model_provider_usage=usage,
         limitations=limitations,
     )

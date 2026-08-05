@@ -324,7 +324,13 @@ def analyze_content(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
 def memory_update(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
     final = spec.node_id == "memory_update_final"
     if final:
-        schemas = ("scientific_report.v1", "artifact_review.v1", "claim_verdict.v1", "publication_bundle.v1")
+        schemas = (
+            "scientific_report.v1",
+            "artifact_review.v1",
+            "claim_verdict.v1",
+            "publication_bundle.v1",
+            "research_final_evaluation.v1",
+        )
         keys = ("source_evidence", "report_evidence", "review_evidence", "verdict_evidence")
     else:
         schemas = ("research_paper.v1",)
@@ -459,6 +465,12 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
     paper = _paper_from(context)
     methods: list[dict[str, Any]] = []
     method_heading = re.compile(r"method|approach|experiment|implementation|procedure|setup|protocol", re.IGNORECASE)
+    description_cue = re.compile(
+        r"\b(?:we\s+(?:use|used|apply|applied|implement|implemented|evaluate|evaluated|measure|measured|"
+        r"compare|compared|collect|collected|train|trained|run|ran)|using|implemented\s+with|evaluated\s+(?:on|using)|"
+        r"measured\s+(?:with|using)|configured\s+to|dataset|benchmark\s+suite|experimental\s+setup)\b",
+        re.IGNORECASE,
+    )
     for title, text, anchor in _section_texts(paper):
         if not method_heading.search(title):
             continue
@@ -473,15 +485,58 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
                 "procedure": procedure,
                 "source_papers": [str(paper.get("paper_id") or "paper-unresolved")],
                 "evidence_ids": [anchor],
+                "extraction_basis": "explicit_method_heading",
+                "confidence": 1.0,
             }
         )
     if not methods:
-        raise _product_error("No method/procedure section was found; synthetic methods were not generated")
+        for title, text, anchor in _section_texts(paper):
+            sentences = [re.sub(r"\s+", " ", item).strip() for item in _SENTENCE.split(text) if len(item.strip()) >= 20]
+            grounded = [item for item in sentences if description_cue.search(item)][:8]
+            if not grounded:
+                continue
+            methods.append(
+                {
+                    "method_id": f"method-{len(methods) + 1:03d}",
+                    "name": f"Method description in {title}",
+                    "summary": " ".join(grounded)[:500],
+                    "procedure": grounded,
+                    "source_papers": [str(paper.get("paper_id") or "paper-unresolved")],
+                    "evidence_ids": [anchor],
+                    "extraction_basis": "method_description_without_heading",
+                    "confidence": 0.6,
+                }
+            )
+    if not methods:
+        limitation = (
+            "Method evidence is insufficient: no explicit method heading or source-grounded method description "
+            "was found. No method was synthesized."
+        )
+        evidence = evidence_document(
+            context,
+            spec,
+            {"methods": [], "method_evidence_status": "insufficient_evidence"},
+            limitations=[limitation],
+        )
+        return {
+            "evidence": evidence,
+            "outcome_class": SUCCESS,
+            "summary": "Recorded insufficient method evidence without inventing a method.",
+        }
+    inferred = any(item.get("extraction_basis") == "method_description_without_heading" for item in methods)
+    limitations = ["Method steps are extractive and retain their source anchors."]
+    if inferred:
+        limitations.append(
+            "At least one method was cautiously extracted from descriptive text without an explicit Method heading."
+        )
     evidence = evidence_document(
         context,
         spec,
-        {"methods": methods},
-        limitations=["Method steps are extractive and retain their source anchors."],
+        {
+            "methods": methods,
+            "method_evidence_status": "extracted_with_inference" if inferred else "explicitly_extracted",
+        },
+        limitations=limitations,
     )
     return {
         "evidence": evidence,

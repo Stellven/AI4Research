@@ -212,7 +212,8 @@
         "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json"
       ],
       "output_artifacts": [
-        "artifacts/research_synthesis_v1/report/report_draft.json"
+        "artifacts/research_synthesis_v1/report/report_draft.json",
+        "artifacts/research_synthesis_v1/report/report.md"
       ],
       "permission_profile": {
         "network": {

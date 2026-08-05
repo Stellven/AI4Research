@@ -318,6 +318,65 @@ def test_package_local_registration_is_unique_and_resolvable() -> None:
         assert resolved.operator_spec is OPERATOR_SPECS[node_id]
 
 
+@pytest.mark.parametrize(
+    ("title", "text", "expected_status", "expected_basis", "expected_count"),
+    [
+        (
+            "Methods",
+            "We used a bounded parser and compared its output hash with a deterministic baseline.",
+            "explicitly_extracted",
+            "explicit_method_heading",
+            1,
+        ),
+        (
+            "Evaluation",
+            "We evaluated the runtime using three benchmark suites and measured latency against the baseline.",
+            "extracted_with_inference",
+            "method_description_without_heading",
+            1,
+        ),
+        (
+            "Background",
+            "Compiler optimizations affect runtime performance, but this document reports no procedural details.",
+            "insufficient_evidence",
+            None,
+            0,
+        ),
+    ],
+)
+def test_method_extract_preserves_explicit_inferred_and_insufficient_evidence(
+    tmp_path: Path,
+    monkeypatch,
+    title: str,
+    text: str,
+    expected_status: str,
+    expected_basis: str | None,
+    expected_count: int,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    paper = paper_evidence()
+    paper["outputs"]["paper"]["sections"] = [{
+        "section_id": "section-001",
+        "title": title,
+        "text": text,
+        "source_anchor": "inputs/paper.md#section-001",
+    }]
+    request, services = request_for("method_extract", tmp_path)
+    request["typed_inputs"]["payload"] = {"paper_evidence": paper}
+
+    result = execute_operator(request, services=services, workspace_root=tmp_path)
+
+    artifact = validate_result_and_artifact(result, tmp_path)
+    assert artifact["outputs"]["method_evidence_status"] == expected_status
+    assert len(artifact["outputs"]["methods"]) == expected_count
+    if expected_basis:
+        assert artifact["outputs"]["methods"][0]["extraction_basis"] == expected_basis
+        assert artifact["outputs"]["methods"][0]["evidence_ids"] == ["inputs/paper.md#section-001"]
+    else:
+        assert artifact["outputs"]["methods"] == []
+        assert any("No method was synthesized" in item for item in artifact["limitations"])
+
+
 def test_unknown_operator_fails_closed() -> None:
     with pytest.raises(Exception, match="No evidence physical operator registered"):
         resolve_entrypoint("not-a-node")

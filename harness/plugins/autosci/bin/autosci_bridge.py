@@ -61,6 +61,7 @@ from backends.idea_source import build_idea_candidates
 from backends.literature_discover import discover_literature
 from backends.novelty_review import evaluate_novelty_and_review
 from backends.paper_prepare import read_paper_source
+from services.production_research import production_services_from_environment
 from policy.gate_policy import GateDecision, decide_gate
 
 REQUIRED_EVIDENCE_FIELDS = {
@@ -22674,6 +22675,10 @@ def cmd_research(args: argparse.Namespace) -> int:
         "secret_refs": [],
     }
     try:
+        production_services = production_services_from_environment(workspace_root=artifact_root)
+        secret_values = dict(production_services.get("secret_values") or {})
+        authorization["secret_refs"] = sorted(secret_values)
+        authorization["secret_values"] = secret_values
         evidence = load_evidence_references(args.import_evidence or [], artifact_root=artifact_root)
         catalog = FileWorkflowCatalog(
             harness_root=REPO_HARNESS_DIR,
@@ -22683,7 +22688,10 @@ def cmd_research(args: argparse.Namespace) -> int:
         runtime = SolarResearchRuntime(
             artifact_root=artifact_root,
             workflow_loader=catalog.load,
-            operator_resolver=default_production_resolver(workspace_root=artifact_root),
+            operator_resolver=default_production_resolver(
+                services=production_services,
+                workspace_root=artifact_root,
+            ),
             authorization=authorization,
         )
         result = runtime.run(
@@ -22694,6 +22702,7 @@ def cmd_research(args: argparse.Namespace) -> int:
             explicit_workflow=args.workflow,
             supplied_evidence=evidence,
             output_language=args.output_language,
+            repository_paths=list(args.repository or []),
             max_steps=args.max_steps,
         )
     except Exception as exc:
@@ -22726,6 +22735,7 @@ def build_parser() -> argparse.ArgumentParser:
     research.add_argument("--run-id", required=True, help="Stable research run identity")
     research.add_argument("--run-mode", choices=["execute", "resume", "import_evidence"], default="execute")
     research.add_argument("--source", action="append", help="Explicit URL, PDF, Markdown, text, or topic source")
+    research.add_argument("--repository", action="append", help="Optional code file or repository path for code-evidence mapping")
     research.add_argument("--import-evidence", action="append", help="Provenance-bearing evidence path below artifact-root")
     research.add_argument("--workflow", help="Explicit workflow kind when the user requested one")
     research.add_argument("--output-language", default="", help="Requested output language")

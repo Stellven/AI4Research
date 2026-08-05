@@ -123,38 +123,60 @@ def result_for(request: dict, status: str = "completed", artifact_root: Path | N
         declared_outputs = list(node_payload.get("expected_output_artifacts") or [])
         if node_payload.get("gate_deliverable"):
             declared_outputs.append(node_payload["gate_deliverable"])
-        raw_scope = str(declared_outputs[0] if declared_outputs else request["write_scope"][0]).replace("\\", "/")
-        scoped = Path(raw_scope)
-        scope_path = scoped if scoped.is_absolute() else root / scoped
-        artifact_path = scope_path if scope_path.suffix else scope_path / f"{request['node_id']}.json"
-        artifact_path.parent.mkdir(parents=True, exist_ok=True)
-        artifact_id = f"artifact-{request['node_id']}"
-        artifact_schema = f"{request['node_id']}.artifact.v1"
-        payload = json.dumps(
-            {
-                "schema": artifact_schema,
-                "task_id": request["task_id"],
-                "run_id": request["run_id"],
-                "workflow_id": request["workflow_id"],
-                "node_id": request["node_id"],
-                "artifact_id": artifact_id,
-                "status": status,
-            },
-            sort_keys=True,
-        ).encode("utf-8")
-        artifact_path.write_bytes(payload)
-        try:
-            declared_path = artifact_path.resolve().relative_to(root).as_posix()
-        except ValueError:
-            declared_path = str(artifact_path.resolve())
-        output_artifacts = [
-            {
-                "artifact_id": artifact_id,
-                "path": declared_path,
-                "schema": artifact_schema,
-                "sha256": hashlib.sha256(payload).hexdigest(),
-            }
-        ]
+        declared_outputs = list(dict.fromkeys(declared_outputs))
+        if not declared_outputs:
+            declared_outputs = [request["write_scope"][0]]
+        elif request["node_id"] != "report_draft":
+            # The generic fake intentionally emits one artifact so tests can
+            # verify that missing declared outputs fail closed. Report draft
+            # is the production multi-output case (JSON plus usable Markdown).
+            declared_outputs = declared_outputs[:1]
+        for index, raw_output in enumerate(declared_outputs):
+            raw_scope = str(raw_output).replace("\\", "/")
+            scoped = Path(raw_scope)
+            scope_path = scoped if scoped.is_absolute() else root / scoped
+            artifact_path = scope_path if scope_path.suffix else scope_path / f"{request['node_id']}.json"
+            artifact_path.parent.mkdir(parents=True, exist_ok=True)
+            artifact_id = f"artifact-{request['node_id']}" + (f"-{index + 1}" if index else "")
+            if artifact_path.suffix.lower() == ".md":
+                artifact_schema = "text/markdown"
+                payload = f"# {request['node_id']} fake artifact\n".encode("utf-8")
+            else:
+                artifact_schema = f"{request['node_id']}.artifact.v1"
+                payload = json.dumps(
+                    {
+                        "schema": artifact_schema,
+                        "task_id": request["task_id"],
+                        "run_id": request["run_id"],
+                        "workflow_id": request["workflow_id"],
+                        "node_id": request["node_id"],
+                        "artifact_id": artifact_id,
+                        "status": status,
+                    },
+                    sort_keys=True,
+                ).encode("utf-8")
+            artifact_path.write_bytes(payload)
+            try:
+                declared_path = artifact_path.resolve().relative_to(root).as_posix()
+            except ValueError:
+                declared_path = str(artifact_path.resolve())
+            output_artifacts.append(
+                {
+                    "artifact_id": artifact_id,
+                    "path": declared_path,
+                    "schema": artifact_schema,
+                    "sha256": hashlib.sha256(payload).hexdigest(),
+                }
+            )
+            if index:
+                evidence.append(
+                    {
+                        "evidence_id": f"ev-{request['node_id']}-{index + 1}",
+                        "kind": "fake",
+                        "summary": "accepted",
+                        "artifact_id": artifact_id,
+                    }
+                )
     return {
         "schema": "research_node_result.v1",
         "task_id": request["task_id"],
