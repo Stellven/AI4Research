@@ -27,6 +27,7 @@ def _load_candidates(context: OperatorContext) -> list[dict[str, Any]]:
         artifact_ids=("source_discovery",),
         filenames=("source_discovery.json",),
         payload_keys=(),
+        expected_node_ids=("source_discovery",),
     )
     if payload:
         return [item for item in payload.get("candidates", []) if isinstance(item, dict)]

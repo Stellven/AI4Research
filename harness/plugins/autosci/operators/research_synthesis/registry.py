@@ -14,7 +14,7 @@ from . import (
     source_discovery,
     source_validation,
 )
-from .base import OperatorContext, ResearchOperatorError, error_result
+from .base import OperatorContext, ResearchOperatorError, build_node_result, error_result
 
 
 _OPERATORS = {
@@ -37,6 +37,17 @@ def get_operator(node_id: str):
 
 def execute_operator(node_request: dict, *, services: dict | None = None) -> dict:
     context = OperatorContext.from_request(node_request, services=services, workspace_root=Path.cwd())
+    if not context.secret_verification_complete:
+        return build_node_result(
+            context,
+            status="failed",
+            errors=[{
+                "error_id": "operator.secret_verification_unavailable",
+                "error_type": "secret_verification_unavailable",
+                "message": "Authorized secret refs require matching in-memory secret_values before bounded output can be verified.",
+            }],
+            limitations=["No operator was invoked and no output artifact was written."],
+        )
     try:
         operator = get_operator(str(node_request.get("node_id") or ""))
         return operator.execute(node_request, context)

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,6 +20,7 @@ from harness.plugins.autosci.operators.research_synthesis.registry import execut
 
 
 NODE_RESULT_SCHEMA = json.loads((HARNESS / "schemas" / "evidence" / "research_node_result.v1.schema.json").read_text(encoding="utf-8"))
+BASELINE_ARTIFACTS_FOR_TEST = ("independent_review", "report_draft", "evidence_synthesis", "source_validation")
 
 
 def _task_contract() -> dict:
@@ -44,7 +47,14 @@ def _task_contract() -> dict:
     }
 
 
-def _request(tmp_path: Path, node_id: str, *, payload: dict | None = None, refs: list[dict] | None = None) -> dict:
+def _request(
+    tmp_path: Path,
+    node_id: str,
+    *,
+    payload: dict | None = None,
+    refs: list[dict] | None = None,
+    secret_refs: list[str] | None = None,
+) -> dict:
     return {
         "schema": "research_node_request.v1",
         "task_id": "task-research-synthesis",
@@ -60,7 +70,7 @@ def _request(tmp_path: Path, node_id: str, *, payload: dict | None = None, refs:
             "approved_capabilities": ["write_artifact"],
             "allow_network": False,
             "allow_live_provider": False,
-            "secret_refs": ["TOP_SECRET_TOKEN"],
+            "secret_refs": list(secret_refs or []),
         },
         "read_scope": ["inputs", "out"],
         "write_scope": [f"out/{node_id}"],
@@ -95,6 +105,71 @@ def _accepted_review() -> dict:
             "cited_source_count": 1,
         },
     }
+
+
+def _valid_acceptance_refs(
+    tmp_path: Path,
+    *,
+    report_body: str = "Grounded report body.",
+    verdict: str = "accept",
+    findings: list[dict] | None = None,
+    source_count: int = 2,
+) -> list[dict]:
+    sources = [f"source-{index}" for index in range(1, source_count + 1)]
+    primary_source = sources[0] if sources else "missing-source"
+    refs: list[dict] = []
+
+    def write_ref(node_id: str, payload: dict) -> dict:
+        payload.update({
+            "task_id": "task-research-synthesis",
+            "run_id": "run-research-synthesis",
+            "workflow_id": "research_synthesis_v1",
+        })
+        path = tmp_path / "out" / "acceptance-inputs" / f"{node_id}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+        ref = {
+            "artifact_id": node_id,
+            "path": str(path.relative_to(tmp_path)).replace("\\", "/"),
+            "schema": payload["schema"],
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        refs.append(ref)
+        return ref
+
+    validation_ref = write_ref("source_validation", {
+        "schema": "research_synthesis.source_validation.v1",
+        "node_id": "source_validation",
+        "accepted": [{"source_id": source_id, "title": source_id} for source_id in sources],
+    })
+    synthesis_ref = write_ref("evidence_synthesis", {
+        "schema": "research_synthesis.evidence_synthesis.v1",
+        "node_id": "evidence_synthesis",
+        "input_lineage": {"seed_snapshot": "seed_snapshot", "source_validation": "source_validation"},
+        "input_artifact_hashes": {"seed_snapshot": "seed-hash-not-required-by-final", "source_validation": validation_ref["sha256"]},
+        "claims": [{"claim_id": "claim-1", "text": "Grounded", "evidence_ids": [primary_source]}],
+    })
+    report_ref = write_ref("report_draft", {
+        "schema": "research_synthesis.report_draft.v1",
+        "node_id": "report_draft",
+        "evidence_lineage": ["evidence_synthesis", "source_validation", "seed_snapshot"],
+        "input_artifact_hashes": {"evidence_synthesis": synthesis_ref["sha256"]},
+        "claim_source_lineage": {"claim-1": [primary_source]},
+        "report": {
+            "body": report_body,
+            "conclusions": [{"conclusion_id": "conclusion-1", "text": "Grounded", "evidence_ids": ["claim-1"]}],
+        },
+    })
+    write_ref("independent_review", {
+        **_accepted_review(),
+        "verdict_suggestion": verdict,
+        "findings": list(findings or []),
+        "reviewed_artifact_hashes": {
+            "report_draft": report_ref["sha256"],
+            "source_validation": validation_ref["sha256"],
+        },
+    })
+    return refs
 
 
 def _fake_services() -> dict:
@@ -190,7 +265,8 @@ def test_full_seven_node_chain_with_injected_services(tmp_path: Path, monkeypatc
     synthesis = execute_operator(_request(tmp_path, "evidence_synthesis", payload={"task_contract": _task_contract()}, refs=[*seed["output_artifacts"], *validation["output_artifacts"]]), services=services)
     draft = execute_operator(_request(tmp_path, "report_draft", payload={"task_contract": _task_contract()}, refs=synthesis["output_artifacts"]), services=services)
     review = execute_operator(_request(tmp_path, "independent_review", payload={"task_contract": _task_contract()}, refs=[*draft["output_artifacts"], *validation["output_artifacts"]]), services=services)
-    final = execute_operator(_request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=review["output_artifacts"]), services=services)
+    final_refs = [*review["output_artifacts"], *draft["output_artifacts"], *synthesis["output_artifacts"], *validation["output_artifacts"]]
+    final = execute_operator(_request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=final_refs), services=services)
     for result in (seed, discovery, validation, synthesis, draft, review, final):
         assert result["status"] == "completed"
         _validate_result(result)
@@ -291,27 +367,26 @@ def test_independent_review_records_same_model_limitation_and_unsupported_claim(
 
 def test_final_acceptance_pass_and_reject(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
+    accepted_refs = _valid_acceptance_refs(tmp_path)
     passed = execute_operator(
-        _request(tmp_path, "final_acceptance", payload={"independent_review": _accepted_review(), "task_contract": _task_contract()}),
+        _request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=accepted_refs),
         services={"model_generate": pytest.fail},
     )
     passed_decision = _read_artifact(tmp_path, passed)["decision"]
+    rejected_refs = _valid_acceptance_refs(
+        tmp_path,
+        verdict="revise",
+        findings=[{"finding_id": "f1", "severity": "high", "category": "unsupported_claim", "message": "bad"}],
+    )
     rejected = execute_operator(
-        _request(
-            tmp_path,
-            "final_acceptance",
-                payload={
-                    "task_contract": _task_contract(),
-                    "independent_review": {
-                    "findings": [{"finding_id": "f1", "severity": "high", "category": "unsupported_claim", "message": "bad"}],
-                    "verdict_suggestion": "revise",
-                }
-            },
-        ),
+        _request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=rejected_refs),
         services={},
     )
     assert passed_decision == "accepted"
+    assert passed["status"] == "completed"
     assert _read_artifact(tmp_path, rejected)["decision"] == "rejected"
+    assert rejected["status"] == "failed"
+    assert rejected["errors"][0]["error_type"] == "acceptance_gate_rejected"
 
 
 def test_wrong_node_identity_fails_schema_valid_result(tmp_path: Path, monkeypatch) -> None:
@@ -326,8 +401,13 @@ def test_wrong_node_identity_fails_schema_valid_result(tmp_path: Path, monkeypat
 def test_hash_matches_artifact_and_secret_is_redacted(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     result = execute_operator(
-        _request(tmp_path, "seed_fetch", payload={"seed_inputs": [{"seed_id": "topic", "seed_kind": "topic", "value": "TOP_SECRET_TOKEN"}]}),
-        services={},
+        _request(
+            tmp_path,
+            "seed_fetch",
+            payload={"seed_inputs": [{"seed_id": "topic", "seed_kind": "topic", "value": "TOP_SECRET_TOKEN"}]},
+            secret_refs=["TOP_SECRET_TOKEN"],
+        ),
+        services={"secret_values": {"TOP_SECRET_TOKEN": "opaque-runtime-secret"}},
     )
     artifact_ref = result["output_artifacts"][0]
     artifact_text = (tmp_path / artifact_ref["path"]).read_text(encoding="utf-8")
@@ -335,7 +415,7 @@ def test_hash_matches_artifact_and_secret_is_redacted(tmp_path: Path, monkeypatc
     # Secret refs are names, not secret values. Merely mentioning the reference
     # must not create a false redaction claim.
     assert "TOP_SECRET_TOKEN" in artifact_text
-    assert result["secret_redaction_assertion"]["redaction_review"] == "passed"
+    assert result["secret_redaction_assertion"] == {"no_secrets_observed": True, "redaction_review": "passed"}
 
 
 def test_report_requirements_come_from_task_contract(tmp_path: Path, monkeypatch) -> None:
@@ -374,22 +454,21 @@ def test_empty_review_and_empty_artifact_expectations_fail_closed(tmp_path: Path
         services={},
     )
     decision = _read_artifact(tmp_path, result)
-    assert result["status"] == "completed"
+    assert result["status"] == "failed"
     assert decision["decision"] == "rejected"
-    assert "independent review artifact is missing" in decision["reasons"]
     assert set(decision["missing_required_artifacts"]) >= {"independent_review", "report_draft", "evidence_synthesis", "source_validation"}
 
 
 @pytest.mark.parametrize("verdict", ["revise", "revise_required", "reject", ""])
 def test_non_accepting_or_empty_review_verdict_is_rejected(tmp_path: Path, monkeypatch, verdict: str) -> None:
     monkeypatch.chdir(tmp_path)
-    review = _accepted_review()
-    review["verdict_suggestion"] = verdict
+    refs = _valid_acceptance_refs(tmp_path, verdict=verdict)
     result = execute_operator(
-        _request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract(), "independent_review": review}),
+        _request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=refs),
         services={},
     )
     assert _read_artifact(tmp_path, result)["decision"] == "rejected"
+    assert result["status"] == "failed"
 
 
 def test_unsupported_task_success_criterion_is_explicitly_rejected(tmp_path: Path, monkeypatch) -> None:
@@ -397,7 +476,7 @@ def test_unsupported_task_success_criterion_is_explicitly_rejected(tmp_path: Pat
     contract = _task_contract()
     contract["success_criteria"] = ["The prose should delight an expert reader."]
     result = execute_operator(
-        _request(tmp_path, "final_acceptance", payload={"task_contract": contract, "independent_review": _accepted_review()}),
+        _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=_valid_acceptance_refs(tmp_path)),
         services={},
     )
     decision = _read_artifact(tmp_path, result)
@@ -521,6 +600,7 @@ def test_invalid_pdf_is_blocked_without_raw_byte_decode(tmp_path: Path, monkeypa
 
 def test_nested_secret_canaries_are_sanitized_from_provider_output(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
+    opaque_secret = "semanticscholar-opaque-P7xQ2mN9vL4cT8w"
     report = {
         "schema": "research_synthesis.report_draft.v1",
         "report": {"body": "Body", "conclusions": [{"conclusion_id": "c1", "evidence_ids": ["claim-1"]}]},
@@ -538,19 +618,43 @@ def test_nested_secret_canaries_are_sanitized_from_provider_output(tmp_path: Pat
                 "finding_id": "poison",
                 "severity": "medium",
                 "category": "provider_note",
-                "message": "Authorization: Bearer canary-secret-123456789",
-                "nested": {"api_key": "sk-canarysecret123456"},
+                "message": f"Provider trace contained {opaque_secret}",
+                "nested": {"provider_value": opaque_secret},
             }],
         }
 
     result = execute_operator(
-        _request(tmp_path, "independent_review", payload={"report_draft": report, "source_validation": validation}),
-        services={"review_model_generate": poisoned_reviewer},
+        _request(
+            tmp_path,
+            "independent_review",
+            payload={"report_draft": report, "source_validation": validation},
+            secret_refs=["SEMANTIC_SCHOLAR_API_KEY"],
+        ),
+        services={
+            "review_model_generate": poisoned_reviewer,
+            "secret_values": {"SEMANTIC_SCHOLAR_API_KEY": opaque_secret},
+        },
     )
     serialized = json.dumps(_read_artifact(tmp_path, result)) + json.dumps(result)
-    assert "canary-secret-123456789" not in serialized
-    assert "sk-canarysecret123456" not in serialized
+    assert opaque_secret not in serialized
     assert "[REDACTED]" in serialized
+    assert result["secret_redaction_assertion"] == {"no_secrets_observed": True, "redaction_review": "passed"}
+
+
+def test_unknown_secret_value_does_not_claim_verified_absence(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = execute_operator(
+        _request(
+            tmp_path,
+            "seed_fetch",
+            payload={"seed_inputs": [{"seed_id": "topic", "seed_kind": "topic", "value": "research"}]},
+            secret_refs=["SEMANTIC_SCHOLAR_API_KEY"],
+        ),
+        services={},
+    )
+    assert result["status"] == "failed"
+    assert result["errors"][0]["error_type"] == "secret_verification_unavailable"
+    assert result["secret_redaction_assertion"] == {"no_secrets_observed": False, "redaction_review": "not_applicable"}
 
 
 def test_generic_input_refs_use_embedded_schema_and_hash(tmp_path: Path, monkeypatch) -> None:
@@ -572,7 +676,8 @@ def test_generic_input_refs_use_embedded_schema_and_hash(tmp_path: Path, monkeyp
     draft = execute_operator(_request(tmp_path, "report_draft", payload={"task_contract": _task_contract()}, refs=generic_refs(synthesis)), services=services)
     review_refs = [*generic_refs(draft), *generic_refs(validation)]
     review = execute_operator(_request(tmp_path, "independent_review", payload={"task_contract": _task_contract()}, refs=review_refs), services=services)
-    final = execute_operator(_request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=generic_refs(review)), services=services)
+    final_refs = [*generic_refs(review), *generic_refs(draft), *generic_refs(synthesis), *generic_refs(validation)]
+    final = execute_operator(_request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=final_refs), services=services)
     assert [item["status"] for item in (seed, discovery, validation, synthesis, draft, review, final)] == ["completed"] * 7
     assert _read_artifact(tmp_path, final)["decision"] == "accepted"
 
@@ -589,6 +694,173 @@ def test_poisoned_artifact_hash_is_rejected(tmp_path: Path, monkeypatch) -> None
     )
     assert result["status"] == "failed"
     assert result["errors"][0]["error_type"] == "artifact_hash_mismatch"
+
+
+def test_final_acceptance_rejects_self_reported_chain_without_actual_refs(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = execute_operator(
+        _request(
+            tmp_path,
+            "final_acceptance",
+            payload={"task_contract": _task_contract(), "independent_review": _accepted_review()},
+        ),
+        services={},
+    )
+    decision = _read_artifact(tmp_path, result)
+    assert result["status"] == "failed"
+    assert decision["gate_outcome"] == "fail"
+    assert set(decision["missing_required_artifacts"]) == set(BASELINE_ARTIFACTS_FOR_TEST)
+
+
+def test_acceptance_critical_ref_requires_hash_and_matching_identity(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    refs = _valid_acceptance_refs(tmp_path)
+    no_hash_refs = [dict(ref) for ref in refs]
+    next(ref for ref in no_hash_refs if ref["artifact_id"] == "independent_review").pop("sha256")
+    no_hash = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=no_hash_refs),
+        services={},
+    )
+    assert no_hash["status"] == "failed"
+    assert any("no sha256" in reason for reason in _read_artifact(tmp_path, no_hash)["reasons"])
+
+    report_ref = next(ref for ref in refs if ref["artifact_id"] == "report_draft")
+    report_path = tmp_path / report_ref["path"]
+    report_payload = json.loads(report_path.read_text(encoding="utf-8"))
+    report_payload["task_id"] = "different-task"
+    report_path.write_text(json.dumps(report_payload, sort_keys=True), encoding="utf-8")
+    report_ref["sha256"] = hashlib.sha256(report_path.read_bytes()).hexdigest()
+    wrong_identity = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=refs),
+        services={},
+    )
+    assert wrong_identity["status"] == "failed"
+    assert any("task_id does not match" in reason for reason in _read_artifact(tmp_path, wrong_identity)["reasons"])
+
+
+def test_compound_success_criterion_evaluates_every_conjunct(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    contract = _task_contract()
+    contract["success_criteria"] = ["Every conclusion has evidence and the report body is non-empty."]
+    result = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=_valid_acceptance_refs(tmp_path, report_body="")),
+        services={},
+    )
+    evaluation = _read_artifact(tmp_path, result)["success_criteria_evaluation"][0]
+    assert result["status"] == "failed"
+    assert evaluation["status"] == "failed"
+    assert [check["status"] for check in evaluation["checks"]] == ["passed", "failed"]
+
+
+def test_numeric_success_criteria_use_exact_thresholds(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    passing = _task_contract()
+    passing["success_criteria"] = ["At least 2 validated sources and exactly 1 conclusion."]
+    passed = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": passing}, refs=_valid_acceptance_refs(tmp_path, source_count=2)),
+        services={},
+    )
+    assert passed["status"] == "completed"
+    failing = _task_contract()
+    failing["success_criteria"] = ["At least 3 validated sources."]
+    failed = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": failing}, refs=_valid_acceptance_refs(tmp_path, source_count=2)),
+        services={},
+    )
+    assert failed["status"] == "failed"
+    check = _read_artifact(tmp_path, failed)["success_criteria_evaluation"][0]["checks"][0]
+    assert check["status"] == "failed"
+    assert "required threshold=3" in check["evidence"]
+
+
+@pytest.mark.parametrize(
+    "criterion",
+    [
+        "There should not be fewer than 2 validated sources.",
+        "Approximately 2 validated sources.",
+        "The report should be good enough.",
+        "A score of 80 or better.",
+    ],
+)
+def test_negated_or_ambiguous_criteria_are_unsupported(tmp_path: Path, monkeypatch, criterion: str) -> None:
+    monkeypatch.chdir(tmp_path)
+    contract = _task_contract()
+    contract["success_criteria"] = [criterion]
+    result = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=_valid_acceptance_refs(tmp_path)),
+        services={},
+    )
+    assert result["status"] == "failed"
+    assert _read_artifact(tmp_path, result)["success_criteria_evaluation"][0]["status"] == "unsupported"
+
+
+def test_legitimate_artifact_expectation_aliases_are_supported(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    contract = _task_contract()
+    contract["deliverable"]["artifact_expectations"] = [
+        "Markdown report", "evidence index", "validated source list", "review verdict",
+    ]
+    passed = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=_valid_acceptance_refs(tmp_path)),
+        services={},
+    )
+    assert passed["status"] == "completed"
+    contract["deliverable"]["artifact_expectations"].append("beautiful executive graphic")
+    failed = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=_valid_acceptance_refs(tmp_path)),
+        services={},
+    )
+    assert failed["status"] == "failed"
+    assert _read_artifact(tmp_path, failed)["unsupported_artifact_expectations"] == ["beautiful executive graphic"]
+
+
+def test_absolute_scopes_outside_workspace_are_rejected(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    outside_file = outside / "seed.md"
+    outside_file.write_text("outside", encoding="utf-8")
+    read_request = _request(tmp_path, "seed_fetch", payload={"seed_inputs": [{"seed_id": "md", "seed_kind": "markdown", "value": str(outside_file)}]})
+    read_request["read_scope"] = [str(outside)]
+    read_result = execute_operator(read_request, services={})
+    assert read_result["status"] == "failed"
+    assert read_result["errors"][0]["error_type"] == "scope_violation"
+
+    write_request = _request(tmp_path, "seed_fetch", payload={"seed_inputs": [{"seed_id": "topic", "seed_kind": "topic", "value": "safe"}]})
+    write_request["write_scope"] = [str(outside / "write")]
+    write_result = execute_operator(write_request, services={})
+    assert write_result["status"] == "failed"
+    assert write_result["errors"][0]["error_type"] == "scope_violation"
+
+
+def test_symlink_scope_cannot_escape_workspace(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    outside = tmp_path.parent / f"{tmp_path.name}-symlink-target"
+    outside.mkdir()
+    (outside / "seed.md").write_text("outside", encoding="utf-8")
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    link = inputs / "escape"
+    try:
+        os.symlink(outside, link, target_is_directory=True)
+    except OSError as exc:  # pragma: no cover - host policy may deny symlink creation
+        if os.name != "nt":
+            pytest.skip(f"host denied symlink creation: {exc}")
+        junction = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if junction.returncode != 0:
+            pytest.fail(f"could not create a symlink or junction for escape test: {junction.stderr}")
+    result = execute_operator(
+        _request(tmp_path, "seed_fetch", payload={"seed_inputs": [{"seed_id": "md", "seed_kind": "markdown", "value": "inputs/escape/seed.md"}]}),
+        services={},
+    )
+    assert result["status"] == "failed"
+    assert result["errors"][0]["error_type"] == "scope_violation"
 
 
 def test_no_task_specific_constants_and_no_graph_state_access() -> None:

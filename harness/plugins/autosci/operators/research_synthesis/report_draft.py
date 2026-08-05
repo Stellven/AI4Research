@@ -26,6 +26,7 @@ def _load_synthesis(context: OperatorContext) -> tuple[dict[str, Any], dict[str,
         artifact_ids=("evidence_synthesis",),
         filenames=("evidence_synthesis.json",),
         payload_keys=("evidence_synthesis",),
+        expected_node_ids=("evidence_synthesis",),
     )
 
 
@@ -117,6 +118,9 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             "evidence_synthesis",
             *[str(value) for value in (synthesis.get("input_lineage") or {}).values() if str(value).strip()],
         ],
+        "input_artifact_hashes": {
+            "evidence_synthesis": str((synthesis_ref or {}).get("sha256") or ""),
+        },
         "writer_usage": usage,
         "limitations": limitations,
     }

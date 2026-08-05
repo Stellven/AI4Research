@@ -26,6 +26,10 @@ def _load_artifact_by_schema(context: OperatorContext, schema: str, token: str) 
         artifact_ids=(token,),
         filenames=(f"{token}.json",),
         payload_keys=(token,),
+        expected_node_ids=({
+            "report_draft": "report_draft",
+            "source_validation": "source_validation",
+        }.get(token, token),),
     )
 
 
@@ -219,6 +223,10 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "writer_usage": writer_usage,
         "chain_validation": chain_validation,
         "evidence_lineage": [item for item in evidence_lineage if item],
+        "reviewed_artifact_hashes": {
+            "report_draft": str((report_ref or {}).get("sha256") or ""),
+            "source_validation": str((validation_ref or {}).get("sha256") or ""),
+        },
         "limitations": limitations,
     }
     artifact, hash_record = write_artifact(

@@ -25,6 +25,7 @@ def _load_seed_snapshot(context: OperatorContext) -> dict[str, Any]:
         artifact_ids=("seed_snapshot",),
         filenames=("seed_snapshot.json",),
         payload_keys=("seed_snapshot",),
+        expected_node_ids=("seed_fetch",),
     )
     return payload
 

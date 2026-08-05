@@ -66,6 +66,28 @@ class OperatorContext:
         authorization = self.node_request.get("authorization") if isinstance(self.node_request.get("authorization"), dict) else {}
         return [str(item) for item in authorization.get("secret_refs") or [] if str(item).strip()]
 
+    @property
+    def secret_values(self) -> dict[str, str]:
+        """Return explicitly injected secret values without copying them to artifacts.
+
+        Callers may inject ``services["secret_values"]`` solely so the bounded
+        sanitizer can recognize otherwise opaque credentials.  Values are kept
+        in memory and are never included in node requests or result metadata.
+        """
+
+        supplied = self.services.get("secret_values")
+        if not isinstance(supplied, dict):
+            return {}
+        return {
+            str(key): str(value)
+            for key, value in supplied.items()
+            if str(key).strip() and str(value)
+        }
+
+    @property
+    def secret_verification_complete(self) -> bool:
+        return not self.secret_refs or all(ref in self.secret_values for ref in self.secret_refs)
+
     def input_artifact_refs(self) -> list[dict[str, Any]]:
         return [item for item in self.node_request.get("input_artifact_refs") or [] if isinstance(item, dict)]
 
@@ -137,6 +159,14 @@ def validate_scoped_path(
     scope_paths = [path for _raw, path in scope_entries]
     if not scope_paths:
         raise ResearchOperatorError("No scope was declared for path access", error_type="scope_violation")
+    if not _is_same_or_child(target, workspace):
+        raise ResearchOperatorError(f"Path escapes workspace root: {path_text}", error_type="scope_violation")
+    outside_scopes = [raw for raw, scope_path in scope_entries if not _is_same_or_child(scope_path, workspace)]
+    if outside_scopes:
+        raise ResearchOperatorError(
+            "Declared scope escapes workspace root: " + ", ".join(outside_scopes),
+            error_type="scope_violation",
+        )
 
     def scope_allows(target_path: Path, raw_scope: str, scope_path: Path) -> bool:
         if target_path == scope_path:
@@ -181,13 +211,23 @@ def _scrub_sensitive_text(value: str) -> str:
     return redacted
 
 
-def redact_secrets(value: Any, secret_refs: list[str] | None = None) -> Any:
+def redact_secrets(
+    value: Any,
+    secret_refs: list[str] | None = None,
+    secret_values: dict[str, str] | None = None,
+) -> Any:
     """Sanitize observable secret shapes.
 
     ``secret_refs`` are identifiers for secrets held outside the operator.  They
     are deliberately *not* treated as secret values: seeing ``OPENAI_API_KEY``
     in a contract is not proof that the corresponding credential was exposed.
     """
+
+    opaque_values = sorted(
+        {str(item) for item in (secret_values or {}).values() if str(item)},
+        key=len,
+        reverse=True,
+    )
 
     def scrub(item: Any) -> Any:
         if isinstance(item, dict):
@@ -205,7 +245,10 @@ def redact_secrets(value: Any, secret_refs: list[str] | None = None) -> Any:
         if isinstance(item, list):
             return [scrub(child) for child in item]
         if isinstance(item, str):
-            return _scrub_sensitive_text(item)
+            redacted = item
+            for secret_value in opaque_values:
+                redacted = redacted.replace(secret_value, "[REDACTED]")
+            return _scrub_sensitive_text(redacted)
         return item
 
     return scrub(value)
@@ -218,6 +261,8 @@ def load_artifact(
     artifact_ids: tuple[str, ...],
     filenames: tuple[str, ...] = (),
     payload_keys: tuple[str, ...] = (),
+    expected_node_ids: tuple[str, ...] = (),
+    require_hash: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
     """Load one upstream artifact by stable identity.
 
@@ -239,6 +284,11 @@ def load_artifact(
         if score:
             candidates.append((score, index, ref))
     for score, _index, ref in sorted(candidates, key=lambda item: (-item[0], item[1])):
+        if require_hash and not str(ref.get("sha256") or ""):
+            raise ResearchOperatorError(
+                f"Acceptance-critical artifact reference has no sha256: {ref.get('path')}",
+                error_type="missing_artifact_hash",
+            )
         payload = context.load_json_artifact(ref)
         embedded_schema = str(payload.get("schema") or "")
         if embedded_schema and embedded_schema not in expected_schemas:
@@ -246,6 +296,20 @@ def load_artifact(
                 f"Input artifact identity does not match expected schema: {ref.get('path')}",
                 error_type="artifact_identity_mismatch",
             )
+        embedded_node_id = str(payload.get("node_id") or "")
+        if expected_node_ids and embedded_node_id and embedded_node_id not in set(expected_node_ids):
+            raise ResearchOperatorError(
+                f"Input artifact has wrong upstream node identity: {embedded_node_id}",
+                error_type="artifact_identity_mismatch",
+            )
+        for identity_key in ("task_id", "run_id", "workflow_id"):
+            embedded_identity = str(payload.get(identity_key) or "")
+            request_identity = str(context.node_request.get(identity_key) or "")
+            if embedded_identity and request_identity and embedded_identity != request_identity:
+                raise ResearchOperatorError(
+                    f"Input artifact {identity_key} does not match node request.",
+                    error_type="artifact_identity_mismatch",
+                )
         if embedded_schema in expected_schemas:
             return payload, ref
     if context.input_artifact_refs():
@@ -268,7 +332,12 @@ def write_artifact(
     schema: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     target = validate_scoped_path(relative_path, context.write_scope, workspace_root=context.workspace_root)
-    redacted = redact_secrets(payload, context.secret_refs)
+    artifact_payload = dict(payload) if isinstance(payload, dict) else payload
+    if isinstance(artifact_payload, dict):
+        artifact_payload.setdefault("task_id", str(context.node_request.get("task_id") or ""))
+        artifact_payload.setdefault("run_id", str(context.node_request.get("run_id") or ""))
+        artifact_payload.setdefault("workflow_id", str(context.node_request.get("workflow_id") or ""))
+    redacted = redact_secrets(artifact_payload, context.secret_refs, context.secret_values)
     body = json.dumps(redacted, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(body, encoding="utf-8")
@@ -311,11 +380,11 @@ def build_node_result(
         "errors": list(errors or []),
         "limitations": [str(item) for item in limitations or [] if str(item).strip()],
         "secret_redaction_assertion": {
-            "no_secrets_observed": True,
-            "redaction_review": "passed" if context.secret_refs else "not_applicable",
+            "no_secrets_observed": context.secret_verification_complete,
+            "redaction_review": "passed" if context.secret_verification_complete else "not_applicable",
         },
     }
-    return redact_secrets(result, context.secret_refs)
+    return redact_secrets(result, context.secret_refs, context.secret_values)
 
 
 def error_result(context: OperatorContext, exc: ResearchOperatorError) -> dict[str, Any]:

@@ -26,6 +26,7 @@ def _load_validation(context: OperatorContext) -> tuple[dict[str, Any], dict[str
         artifact_ids=("source_validation",),
         filenames=("source_validation.json",),
         payload_keys=("source_validation",),
+        expected_node_ids=("source_validation",),
     )
 
 
@@ -36,6 +37,7 @@ def _load_seed(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any]
         artifact_ids=("seed_snapshot",),
         filenames=("seed_snapshot.json",),
         payload_keys=("seed_snapshot",),
+        expected_node_ids=("seed_fetch",),
     )
 
 
@@ -101,6 +103,10 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "input_lineage": {
             "seed_snapshot": "seed_snapshot" if seed_snapshot else "",
             "source_validation": "source_validation" if validation else "",
+        },
+        "input_artifact_hashes": {
+            "seed_snapshot": str((seed_ref or {}).get("sha256") or ""),
+            "source_validation": str((validation_ref or {}).get("sha256") or ""),
         },
         "limitations": limitations,
     }
