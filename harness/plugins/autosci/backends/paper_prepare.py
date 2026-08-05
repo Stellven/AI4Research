@@ -72,10 +72,10 @@ def _display_path(path: Path, roots: list[Path]) -> str:
     resolved = path.resolve()
     for root in roots:
         try:
-            return str(resolved.relative_to(root.resolve()))
+            return resolved.relative_to(root.resolve()).as_posix()
         except ValueError:
             continue
-    return str(path)
+    return path.as_posix()
 
 
 def _resolve_source(source: str | Path, roots: list[Path]) -> Path:
