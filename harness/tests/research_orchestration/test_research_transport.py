@@ -11,13 +11,42 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "lib"))
 
-from research_orchestration.transport import ResearchTransportError, run_json_worker  # noqa: E402
+from research_orchestration.transport import (  # noqa: E402
+    ResearchTransportError,
+    run_json_worker,
+    sanitize_text,
+)
 
 
 def _worker(tmp_path: Path, body: str) -> list[str]:
     path = tmp_path / "worker.py"
     path.write_text(body, encoding="utf-8")
     return [sys.executable, str(path)]
+
+
+@pytest.mark.parametrize(
+    "ordinary_identifier",
+    ["task-research-synthesis", "risk-research-summary"],
+)
+def test_sk_scrubber_does_not_match_inside_ordinary_identifiers(
+    ordinary_identifier: str,
+) -> None:
+    assert sanitize_text(ordinary_identifier) == ordinary_identifier
+
+
+@pytest.mark.parametrize(
+    "secret_text",
+    [
+        "sk-abcdefghijklmnopqrstuvwxyz123456",
+        "error sk-abcdefghijklmnopqrstuvwxyz123456",
+        "api_key=sk-abcdefghijklmnopqrstuvwxyz123456",
+        '{"api_key":"sk-abcdefghijklmnopqrstuvwxyz123456"}',
+    ],
+)
+def test_sk_scrubber_matches_real_token_boundaries(secret_text: str) -> None:
+    scrubbed = sanitize_text(secret_text)
+    assert "sk-abcdefghijklmnopqrstuvwxyz123456" not in scrubbed
+    assert "[SCRUBBED]" in scrubbed
 
 
 def test_completed_worker_receives_request_on_stdin_only(tmp_path: Path) -> None:

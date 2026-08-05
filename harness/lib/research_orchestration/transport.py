@@ -58,7 +58,7 @@ _SECRET_METADATA_KEYS = {
     "secret_redaction_assertion",
 }
 _SECRET_PATTERNS = (
-    (re.compile(r"sk-[A-Za-z0-9_-]{16,}"), "[SCRUBBED]"),
+    (re.compile(r"(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_-]{16,}"), "[SCRUBBED]"),
     (re.compile(r"gh[pousr]_[A-Za-z0-9]{16,}"), "[SCRUBBED]"),
     (re.compile(r"AKIA[0-9A-Z]{16}"), "[SCRUBBED]"),
     (

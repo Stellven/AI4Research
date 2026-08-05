@@ -226,6 +226,13 @@ def test_completed_failed_terminal_hash_and_secret_invariants() -> None:
         validate_node_result(leaked, RESULT_SCHEMA)
 
 
+def test_legitimate_research_identifiers_are_not_classified_as_secrets() -> None:
+    result = valid_result()
+    result["task_id"] = "task-research-synthesis"
+    result["limitations"] = ["risk-research-summary"]
+    validate_node_result(result, RESULT_SCHEMA)
+
+
 def test_schema_validation_message_scrubs_explicit_secret() -> None:
     canary = "schema-validation-canary-987654321"
     request = valid_request()
