@@ -1,0 +1,82 @@
+{
+  "schema": "research_synthesis_operator_bindings.v1.draft",
+  "workflow_id": "research_synthesis_v1",
+  "status": "draft",
+  "active": false,
+  "bindings": [
+    {
+      "node_id": "seed_fetch",
+      "entrypoint": "harness.plugins.autosci.operators.research_synthesis.seed_fetch:execute",
+      "requirements": {
+        "network": "injected_fetch_url_only_for_url_seed",
+        "provider": "none",
+        "read": "declared read_scope for local PDF/Markdown seeds",
+        "write": "declared write_scope for seed_snapshot.json"
+      }
+    },
+    {
+      "node_id": "source_discovery",
+      "entrypoint": "harness.plugins.autosci.operators.research_synthesis.source_discovery:execute",
+      "requirements": {
+        "network": "none_direct; discovery must be supplied by injected discover_sources",
+        "provider": "injected discover_sources when candidates are not supplied",
+        "read": "declared read_scope for seed_snapshot artifact",
+        "write": "declared write_scope for source_discovery.json"
+      }
+    },
+    {
+      "node_id": "source_validation",
+      "entrypoint": "harness.plugins.autosci.operators.research_synthesis.source_validation:execute",
+      "requirements": {
+        "network": "none",
+        "provider": "none",
+        "read": "declared read_scope for source_discovery artifact",
+        "write": "declared write_scope for source_validation.json"
+      }
+    },
+    {
+      "node_id": "evidence_synthesis",
+      "entrypoint": "harness.plugins.autosci.operators.research_synthesis.evidence_synthesis:execute",
+      "requirements": {
+        "network": "none_direct",
+        "provider": "injected model_generate",
+        "read": "declared read_scope for seed and validation artifacts",
+        "write": "declared write_scope for evidence_synthesis.json"
+      }
+    },
+    {
+      "node_id": "report_draft",
+      "entrypoint": "harness.plugins.autosci.operators.research_synthesis.report_draft:execute",
+      "requirements": {
+        "network": "none_direct",
+        "provider": "injected model_generate",
+        "read": "declared read_scope for evidence_synthesis artifact",
+        "write": "declared write_scope for report_draft.json"
+      }
+    },
+    {
+      "node_id": "independent_review",
+      "entrypoint": "harness.plugins.autosci.operators.research_synthesis.independent_review:execute",
+      "requirements": {
+        "network": "none_direct",
+        "provider": "injected review_model_generate with independent identity",
+        "read": "declared read_scope for report_draft and source_validation artifacts",
+        "write": "declared write_scope for independent_review.json"
+      }
+    },
+    {
+      "node_id": "final_acceptance",
+      "entrypoint": "harness.plugins.autosci.operators.research_synthesis.final_acceptance:execute",
+      "requirements": {
+        "network": "none",
+        "provider": "none",
+        "read": "declared read_scope for independent_review artifact",
+        "write": "declared write_scope for final_acceptance.json"
+      }
+    }
+  ],
+  "notes": [
+    "This draft manifest does not modify active route/config/physical-operators.json.",
+    "Each operator returns research_node_result.v1 and does not advance graph or run state."
+  ]
+}
