@@ -1572,3 +1572,74 @@ failed`, with failures concentrated in already-known Windows path/state and
 legacy side-effect assumptions. Phase 4 owns full real-input journeys and the
 Windows lease recovery defect; no Phase 22 workbook, matrix, journey report,
 or brief report was modified.
+
+## Phase 4 real-input generalization and lifecycle recovery
+
+Logged: 2026-08-05 EDT
+
+Phase 4 began from Phase 3 integration commit
+`eaed505c5f83043f08e5b9e4d95e361a90a4b89e`. The real-input generalization
+worker committed `026d10be2ec855573bde5feed499d8a0d62f506b` (integrated as
+`56659124`), and the lifecycle-recovery worker committed
+`78cdf00d877fa8700b30ab09c9c990e844e25fca` (integrated as `a91851a1`).
+Both worker trees passed `git diff --check` and secret scanning and were clean
+after commit. Neither branch was pushed.
+
+The generalization worker exercised four distinct inputs through the
+production bridge and the shared route/graph/operator stack:
+
+- Chinese URL `https://news.qq.com/rain/a/20251207A0337Y00`: classified as
+  `research_synthesis` with URL seed and physical start `seed_fetch`; it
+  truthfully stopped `awaiting_external` because no `fetch_url` service was
+  configured. No source-content success was claimed.
+- English survey topic about WebAssembly runtime compiler optimization:
+  classified as `literature_synthesis` with topic seed and physical start
+  `source_discovery`; it truthfully stopped `awaiting_external` because no
+  `discover_sources` service was configured.
+- Local Markdown: physical start `material_ingest`; six nodes completed and a
+  5,546-byte claims artifact with SHA-256
+  `f48237f4c67a149cfe707a50aa408f3af0583d925666da489753d179032b50e6`
+  was retained. The later code-evidence step failed because no repository/code
+  input was supplied; it did not invent code linkage.
+- Local PDF: physical start `paper_ingest`; five nodes completed and a
+  12,058-byte paper-analysis artifact with SHA-256
+  `1c7e0c34ab8c4aa83918106c29cff89f7ff182b41706b9bc258142d65aff42e7`
+  was retained. Method extraction failed because the one-page PDF layout did
+  not preserve a method heading; it did not invent a method.
+
+The real-input work fixed general production defects rather than adding
+input-specific workflows: explicit network authorization now approves bounded
+non-live node capabilities; pruned subgraphs remove unreachable read scopes;
+seed fetch uses the frozen typed seed; and claim/method/code nodes retain the
+reachable ancestor evidence their physical operators require. Targeted tests
+reported `15 passed`; the worker's related Phase 0-4 regression reported `120
+passed in 38.03s`.
+
+Lifecycle recovery fixed Windows process liveness with
+`GetExitCodeProcess`/`STILL_ACTIVE`, made approval-gated nodes report
+`awaiting_human`, enabled approval-bound redispatch on resume, and inserted an
+explicit hash-bound `experiment_approval_gate` before experiment execution.
+The core recovery matrix reported `171 passed`; targeted PID/gate/registry/
+workflow/action tests reported `40 passed`. Covered behaviors include resume,
+evidence import, stale leases, retry/backoff contracts, artifact-before-state
+commit safety, concurrent claims, idempotent replay, human gates, approval-
+bound experiment pause/resume, secret redaction, stdin transport, and Windows
+path handling.
+
+Environment probes found native Windows ready with limitations and WSL2
+Ubuntu/Python available. Bubblewrap was absent in Windows and WSL, while
+capability detection plus the minimal stdin/read-only fallback passed. No
+OpenAI or Anthropic provider credentials were present, so provider retry is
+contract-tested only and no live-provider success is claimed. The first
+recovery runs under missing or deep worktree basetemps produced setup/path
+errors; rerunning with a short isolated basetemp passed all 171 tests and
+classifies those attempts as runner/path defects.
+
+After both commits were integrated, the combined command covering the Phase
+0-4 contracts, research-orchestration suite, synthesis operators, evidence
+operators, and lifecycle action operators completed with `403 passed in
+131.34s`. Worker evidence is retained in their isolated worktrees under
+`.codex-tmp/phase34-worker-results/phase4-generalization/result.json` and
+`.codex-tmp/phase34-worker-results/phase4-lifecycle-recovery/result.json`.
+No Phase 22 workbook, matrix, journey report, final journey report, or brief
+report was edited during Phase 3/4 integration.
