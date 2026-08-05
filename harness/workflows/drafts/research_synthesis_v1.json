@@ -304,6 +304,9 @@
         "cap.research.final.acceptance"
       ],
       "input_artifacts": [
+        "artifacts/research_synthesis_v1/validation/source_validation.json",
+        "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json",
+        "artifacts/research_synthesis_v1/report/report_draft.json",
         "artifacts/research_synthesis_v1/review/independent_review.json"
       ],
       "output_artifacts": [
@@ -316,6 +319,9 @@
         },
         "provider_execution": false,
         "read_scope": [
+          "artifacts/research_synthesis_v1/validation/source_validation.json",
+          "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json",
+          "artifacts/research_synthesis_v1/report/report_draft.json",
           "artifacts/research_synthesis_v1/review/independent_review.json"
         ],
         "write_scope": [
@@ -326,11 +332,11 @@
         ]
       },
       "gate_contract": {
-        "entry_condition": "Independent review artifact exists.",
-        "exit_condition": "Final acceptance artifact records decision and evidence lineage.",
+        "entry_condition": "Validated sources, evidence synthesis, report draft, and independent review artifacts all exist with verifiable identity and hashes.",
+        "exit_condition": "Final acceptance artifact records a fail-closed decision after recomputing the complete evidence lineage.",
         "deliverable": "artifacts/research_synthesis_v1/final/final_acceptance.json",
         "success_criteria": [
-          "Final acceptance record includes review status and lineage references."
+          "Final acceptance verifies actual scoped source-validation, synthesis, report, and review artifacts rather than trusting review self-reports."
         ]
       },
       "binding_status": "planned",
@@ -339,6 +345,9 @@
         "max_attempts": 1
       },
       "depends_on": [
+        "source_validation",
+        "evidence_synthesis",
+        "report_draft",
         "independent_review"
       ]
     }

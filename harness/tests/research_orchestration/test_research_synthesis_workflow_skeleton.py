@@ -25,7 +25,7 @@ EXPECTED_DEPENDENCIES = {
     "evidence_synthesis": ["seed_fetch", "source_validation"],
     "report_draft": ["evidence_synthesis"],
     "independent_review": ["report_draft", "source_validation"],
-    "final_acceptance": ["independent_review"],
+    "final_acceptance": ["source_validation", "evidence_synthesis", "report_draft", "independent_review"],
 }
 NETWORK_ALLOWED_NODES = {"seed_fetch", "source_discovery"}
 PROVIDER_ALLOWED_NODES = {"evidence_synthesis", "report_draft", "independent_review"}

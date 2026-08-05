@@ -20,6 +20,7 @@ from harness.plugins.autosci.operators.research_synthesis.registry import execut
 
 
 NODE_RESULT_SCHEMA = json.loads((HARNESS / "schemas" / "evidence" / "research_node_result.v1.schema.json").read_text(encoding="utf-8"))
+WORKFLOW = json.loads((HARNESS / "workflows" / "drafts" / "research_synthesis_v1.json").read_text(encoding="utf-8"))
 BASELINE_ARTIFACTS_FOR_TEST = ("independent_review", "report_draft", "evidence_synthesis", "source_validation")
 
 
@@ -256,21 +257,34 @@ def test_full_seven_node_chain_with_injected_services(tmp_path: Path, monkeypatc
     monkeypatch.chdir(tmp_path)
     (tmp_path / "inputs").mkdir()
     services = _fake_services()
-    seed = execute_operator(
-        _request(tmp_path, "seed_fetch", payload={"task_contract": _task_contract(), "seed_inputs": [{"seed_id": "url-1", "seed_kind": "url", "value": "https://example.test/seed"}]}),
-        services=services,
-    )
-    discovery = execute_operator(_request(tmp_path, "source_discovery", refs=seed["output_artifacts"]), services=services)
-    validation = execute_operator(_request(tmp_path, "source_validation", refs=discovery["output_artifacts"]), services=services)
-    synthesis = execute_operator(_request(tmp_path, "evidence_synthesis", payload={"task_contract": _task_contract()}, refs=[*seed["output_artifacts"], *validation["output_artifacts"]]), services=services)
-    draft = execute_operator(_request(tmp_path, "report_draft", payload={"task_contract": _task_contract()}, refs=synthesis["output_artifacts"]), services=services)
-    review = execute_operator(_request(tmp_path, "independent_review", payload={"task_contract": _task_contract()}, refs=[*draft["output_artifacts"], *validation["output_artifacts"]]), services=services)
-    final_refs = [*review["output_artifacts"], *draft["output_artifacts"], *synthesis["output_artifacts"], *validation["output_artifacts"]]
-    final = execute_operator(_request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=final_refs), services=services)
-    for result in (seed, discovery, validation, synthesis, draft, review, final):
+    produced_by_declared_path: dict[str, dict] = {}
+    results: dict[str, dict] = {}
+    refs_used: dict[str, list[dict]] = {}
+    for node in WORKFLOW["nodes"]:
+        node_id = node["node_id"]
+        for dependency in node["depends_on"]:
+            assert results[dependency]["status"] == "completed"
+        refs = [produced_by_declared_path[path] for path in node["input_artifacts"] if path in produced_by_declared_path]
+        payload = {"task_contract": _task_contract()}
+        if node_id == "seed_fetch":
+            payload["seed_inputs"] = [{"seed_id": "url-1", "seed_kind": "url", "value": "https://example.test/seed"}]
+        result = execute_operator(_request(tmp_path, node_id, payload=payload, refs=refs), services=services)
+        results[node_id] = result
+        refs_used[node_id] = refs
+        assert len(node["output_artifacts"]) == len(result["output_artifacts"])
+        for declared_path, actual_ref in zip(node["output_artifacts"], result["output_artifacts"], strict=True):
+            produced_by_declared_path[declared_path] = actual_ref
+    final_node = next(node for node in WORKFLOW["nodes"] if node["node_id"] == "final_acceptance")
+    assert refs_used["final_acceptance"] == [produced_by_declared_path[path] for path in final_node["input_artifacts"]]
+    assert len(refs_used["final_acceptance"]) == 4
+    for result in results.values():
         assert result["status"] == "completed"
         _validate_result(result)
-    assert _read_artifact(tmp_path, final)["decision"] == "accepted"
+        for ref in result["output_artifacts"]:
+            artifact = json.loads((tmp_path / ref["path"]).read_text(encoding="utf-8"))
+            assert {"task_id", "run_id", "workflow_id", "node_id"} <= set(artifact)
+    assert _read_artifact(tmp_path, results["final_acceptance"])["decision"] == "accepted"
+    draft = results["report_draft"]
     assert "中文" in json.dumps(_read_artifact(tmp_path, draft), ensure_ascii=False)
 
 
@@ -416,6 +430,7 @@ def test_hash_matches_artifact_and_secret_is_redacted(tmp_path: Path, monkeypatc
     # must not create a false redaction claim.
     assert "TOP_SECRET_TOKEN" in artifact_text
     assert result["secret_redaction_assertion"] == {"no_secrets_observed": True, "redaction_review": "passed"}
+    _validate_result(result)
 
 
 def test_report_requirements_come_from_task_contract(tmp_path: Path, monkeypatch) -> None:
@@ -639,22 +654,39 @@ def test_nested_secret_canaries_are_sanitized_from_provider_output(tmp_path: Pat
     assert opaque_secret not in serialized
     assert "[REDACTED]" in serialized
     assert result["secret_redaction_assertion"] == {"no_secrets_observed": True, "redaction_review": "passed"}
+    _validate_result(result)
 
 
-def test_unknown_secret_value_does_not_claim_verified_absence(tmp_path: Path, monkeypatch) -> None:
+def test_missing_secret_value_returns_static_schema_valid_failure(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     result = execute_operator(
         _request(
             tmp_path,
-            "seed_fetch",
-            payload={"seed_inputs": [{"seed_id": "topic", "seed_kind": "topic", "value": "research"}]},
+            "source_discovery",
+            payload={},
             secret_refs=["SEMANTIC_SCHOLAR_API_KEY"],
         ),
-        services={},
+        services={"discover_sources": pytest.fail},
     )
     assert result["status"] == "failed"
     assert result["errors"][0]["error_type"] == "secret_verification_unavailable"
-    assert result["secret_redaction_assertion"] == {"no_secrets_observed": False, "redaction_review": "not_applicable"}
+    assert result["secret_redaction_assertion"] == {"no_secrets_observed": True, "redaction_review": "passed"}
+    assert result["output_artifacts"] == []
+    serialized = json.dumps(result)
+    assert "SEMANTIC_SCHOLAR_API_KEY" not in serialized
+    assert "provider output was not reviewed" in serialized
+    _validate_result(result)
+
+
+def test_empty_secret_refs_produce_schema_valid_result(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = execute_operator(
+        _request(tmp_path, "seed_fetch", payload={"seed_inputs": [{"seed_id": "topic", "seed_kind": "topic", "value": "research"}]}),
+        services={},
+    )
+    assert result["status"] == "completed"
+    assert result["secret_redaction_assertion"] == {"no_secrets_observed": True, "redaction_review": "passed"}
+    _validate_result(result)
 
 
 def test_generic_input_refs_use_embedded_schema_and_hash(tmp_path: Path, monkeypatch) -> None:
@@ -736,6 +768,24 @@ def test_acceptance_critical_ref_requires_hash_and_matching_identity(tmp_path: P
     )
     assert wrong_identity["status"] == "failed"
     assert any("task_id does not match" in reason for reason in _read_artifact(tmp_path, wrong_identity)["reasons"])
+
+
+@pytest.mark.parametrize("identity_key", ["task_id", "run_id", "workflow_id", "node_id"])
+def test_acceptance_rejects_missing_identity_even_after_rehash(tmp_path: Path, monkeypatch, identity_key: str) -> None:
+    monkeypatch.chdir(tmp_path)
+    refs = _valid_acceptance_refs(tmp_path)
+    report_ref = next(ref for ref in refs if ref["artifact_id"] == "report_draft")
+    report_path = tmp_path / report_ref["path"]
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    payload.pop(identity_key)
+    report_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    report_ref["sha256"] = hashlib.sha256(report_path.read_bytes()).hexdigest()
+    result = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=refs),
+        services={},
+    )
+    assert result["status"] == "failed"
+    assert any(f"missing required {identity_key}" in reason for reason in _read_artifact(tmp_path, result)["reasons"])
 
 
 def test_compound_success_criterion_evaluates_every_conjunct(tmp_path: Path, monkeypatch) -> None:

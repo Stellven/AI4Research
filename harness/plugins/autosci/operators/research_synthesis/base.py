@@ -297,7 +297,12 @@ def load_artifact(
                 error_type="artifact_identity_mismatch",
             )
         embedded_node_id = str(payload.get("node_id") or "")
-        if expected_node_ids and embedded_node_id and embedded_node_id not in set(expected_node_ids):
+        if expected_node_ids and not embedded_node_id:
+            raise ResearchOperatorError(
+                f"Input artifact is missing required node_id: {ref.get('path')}",
+                error_type="artifact_identity_missing",
+            )
+        if expected_node_ids and embedded_node_id not in set(expected_node_ids):
             raise ResearchOperatorError(
                 f"Input artifact has wrong upstream node identity: {embedded_node_id}",
                 error_type="artifact_identity_mismatch",
@@ -305,7 +310,12 @@ def load_artifact(
         for identity_key in ("task_id", "run_id", "workflow_id"):
             embedded_identity = str(payload.get(identity_key) or "")
             request_identity = str(context.node_request.get(identity_key) or "")
-            if embedded_identity and request_identity and embedded_identity != request_identity:
+            if not embedded_identity:
+                raise ResearchOperatorError(
+                    f"Input artifact is missing required {identity_key}: {ref.get('path')}",
+                    error_type="artifact_identity_missing",
+                )
+            if not request_identity or embedded_identity != request_identity:
                 raise ResearchOperatorError(
                     f"Input artifact {identity_key} does not match node request.",
                     error_type="artifact_identity_mismatch",

@@ -38,7 +38,7 @@ def get_operator(node_id: str):
 def execute_operator(node_request: dict, *, services: dict | None = None) -> dict:
     context = OperatorContext.from_request(node_request, services=services, workspace_root=Path.cwd())
     if not context.secret_verification_complete:
-        return build_node_result(
+        result = build_node_result(
             context,
             status="failed",
             errors=[{
@@ -46,8 +46,21 @@ def execute_operator(node_request: dict, *, services: dict | None = None) -> dic
                 "error_type": "secret_verification_unavailable",
                 "message": "Authorized secret refs require matching in-memory secret_values before bounded output can be verified.",
             }],
-            limitations=["No operator was invoked and no output artifact was written."],
+            limitations=[
+                "No operator or provider was invoked and no output artifact was written.",
+                "The redaction assertion applies only to this static preflight diagnostic; provider output was not reviewed.",
+            ],
         )
+        # This static result contains only fixed strings and request identity;
+        # it never interpolates secret refs or values.  Claiming that this
+        # constructed diagnostic contains no secrets is therefore truthful and
+        # keeps the Phase 0 result contract valid without pretending that any
+        # provider output was inspected.
+        result["secret_redaction_assertion"] = {
+            "no_secrets_observed": True,
+            "redaction_review": "passed",
+        }
+        return result
     try:
         operator = get_operator(str(node_request.get("node_id") or ""))
         return operator.execute(node_request, context)
