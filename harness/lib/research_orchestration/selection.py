@@ -77,8 +77,13 @@ def select_research_workflow(
     }
 
 
-def load_and_normalize_workflow(selection_result: dict, harness_root: Path) -> dict:
-    """Load the selected workflow and return a normalized executable subgraph."""
+def load_and_normalize_workflow(
+    selection_result: dict,
+    harness_root: Path,
+    *,
+    preserve_all_nodes: bool = False,
+) -> dict:
+    """Load and normalize a workflow, optionally retaining every entry root."""
 
     if not isinstance(selection_result, dict):
         raise WorkflowSelectionError("selection_result must be an object")
@@ -106,7 +111,7 @@ def load_and_normalize_workflow(selection_result: dict, harness_root: Path) -> d
         raise WorkflowSelectionError(f"unknown start node: {start_node}")
     _assert_acyclic(by_id)
 
-    selected_ids = _descendants_from(start_node, by_id)
+    selected_ids = set(by_id) if preserve_all_nodes else _descendants_from(start_node, by_id)
     selected_nodes: list[dict[str, Any]] = []
     for node in normalized_all:
         if node["node_id"] not in selected_ids:
@@ -183,6 +188,7 @@ def _normalize_node(raw: Any) -> dict[str, Any]:
         "physical_operator": str(_first(permission.get("approved_operators")) or raw.get("physical_operator") or f"{node_id}_worker"),
         "allow_network": bool((permission.get("network") or {}).get("enabled", False)) if isinstance(permission.get("network"), dict) else False,
         "allow_live_provider": bool(permission.get("provider_execution", False)),
+        "approval_gate": bool(raw.get("approval_gate", False)),
         "timeout_seconds": int(raw.get("timeout_seconds") or retry_policy.get("timeout_seconds") or 60),
         "max_attempts": int(raw.get("max_attempts") or retry_policy.get("max_attempts") or 1),
     }

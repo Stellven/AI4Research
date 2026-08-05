@@ -469,8 +469,27 @@ class ResearchOrchestrator:
             "allow_live_provider": bool(live and self.authorization.get("allow_live_provider") is True),
             "secret_refs": list(self.authorization.get("secret_refs") or []),
         }
-        if live:
+        if (live or node.get("approval_gate")) and self._explicit_approval_ref():
             auth["approval_ref"] = self._explicit_approval_ref()
+        typed_payload = {
+            "task_contract": deepcopy(self.task_contract),
+            "node": deepcopy(node),
+            "topic": str(self.task_contract.get("user_intent") or ""),
+            "title": str(self.task_contract.get("user_intent") or ""),
+        }
+        seeds = self.task_contract.get("seed_inputs") or []
+        primary_seed = seeds[0] if seeds and isinstance(seeds[0], dict) else {}
+        seed_value = str(primary_seed.get("value") or "")
+        seed_kind = str(primary_seed.get("seed_kind") or "")
+        if seed_value and node["node_id"] == workflow.get("start_node"):
+            typed_payload["source"] = seed_value
+            if seed_kind == "url":
+                typed_payload["url"] = seed_value
+                typed_payload["allow_network_fetch"] = auth["allow_network"]
+            elif seed_kind == "pdf":
+                typed_payload["paper_path"] = seed_value
+            elif seed_kind == "markdown":
+                typed_payload["material_path"] = seed_value
         return {
             "schema": "research_node_request.v1",
             "task_id": state["task_id"],
@@ -489,7 +508,7 @@ class ResearchOrchestrator:
             },
             "typed_inputs": {
                 "input_schema": "research_node_input.v1",
-                "payload": {"task_contract": deepcopy(self.task_contract), "node": deepcopy(node)},
+                "payload": typed_payload,
             },
             "input_artifact_refs": self._upstream_artifacts(node, state, workflow),
             "authorization": auth,
@@ -719,6 +738,7 @@ class ResearchOrchestrator:
             raise ResearchOrchestrationError("declared JSON artifact is not a valid JSON document") from exc
         if not isinstance(embedded, dict):
             raise ResearchOrchestrationError("declared JSON artifact must contain an object")
+        provenance = embedded.get("provenance") if isinstance(embedded.get("provenance"), dict) else {}
         identity_fields = {
             "artifact_id": artifact.get("artifact_id"),
             "schema": artifact.get("schema"),
@@ -727,13 +747,18 @@ class ResearchOrchestrator:
             "workflow_id": request.get("workflow_id"),
             "node_id": request.get("node_id"),
         }
-        missing = [field for field, expected in identity_fields.items() if expected is None or field not in embedded]
+        missing = [
+            field
+            for field, expected in identity_fields.items()
+            if expected is None or (field not in embedded and field not in provenance)
+        ]
         if missing:
             raise ResearchOrchestrationError(
                 f"JSON artifact is missing required embedded identity: {', '.join(missing)}"
             )
         for field, expected in identity_fields.items():
-            if embedded.get(field) != expected:
+            observed = embedded[field] if field in embedded else provenance.get(field)
+            if observed != expected:
                 raise ResearchOrchestrationError(f"JSON artifact embedded {field} does not match declared identity")
 
     def _resolve_scoped_path(self, raw: Any, *, must_exist: bool) -> Path:

@@ -1487,3 +1487,88 @@ columns, so its stale atomic-summary formulas were removed. Current L2 counts
 are `PASS=26`, `PASS_WITH_KNOWN_LIMITATIONS=66`, `FAIL=22`,
 `ENVIRONMENT_BLOCKED=0`, `NOT_AVAILABLE=28`, and `NOT_TESTED=0`. Final
 validator: `outputs/phase22-j23-pass-sync-20260730/final-validator.json`.
+
+## Phase 3/4 lead-integration preflight and Phase 0-2 baseline
+
+Logged: 2026-08-05 EDT
+
+Integration role: OpenSolar Phase 3/4 Lead Integration Agent. Phase 3/4 work
+started from Phase 2 integration commit
+`6444f9847cac90e21675368ad763cd5500b098d3` without modifying the main
+worktree or pushing any branch.
+
+Preflight checked the runtime-route, evidence-operators, lifecycle-operators,
+and integration worktrees with `git status --short`, `git rev-parse HEAD`, and
+`git branch --show-current`. All four worktrees were clean, all four were at
+the required Phase 2 commit, and their checked-out branches matched the
+assigned Phase 3/4 branches.
+
+The first Phase 0-2 baseline command used a unique pytest basetemp below an
+absent `.codex-tmp` parent. Pytest therefore reported `100 passed, 170 errors`;
+all errors were fixture setup failures caused by the missing parent directory,
+not product failures. The runner issue was resolved by creating the isolated
+parent directory and rerunning the same test set with a new basetemp and cache
+directory.
+
+Rerun command:
+
+`C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe -m pytest harness/tests/contracts/test_research_orchestration_contracts.py harness/tests/research_orchestration -q --basetemp .codex-tmp\pytest-phase02-baseline-rerun -o cache_dir=.codex-tmp\pytest-cache-phase02-baseline-rerun`
+
+Rerun result: `269 passed, 1 failed` in 79.31 seconds. The remaining failure is
+`test_abandoned_process_claim_is_recovered_after_crash`. The child process had
+already exited with code 23, but the Windows lease implementation still
+treated its claim as active. This is classified as a product portability and
+recovery defect in Windows process-liveness detection, not an environment
+block. It remains open for the Phase 4 lifecycle-recovery work and requires a
+targeted regression rerun plus the affected research-orchestration suite.
+
+## Phase 3 production-route integration
+
+Logged: 2026-08-05 EDT
+
+Three isolated Phase 3 worker commits were reviewed and cherry-picked into the
+integration branch: runtime/route `fca09f838dd7dbc7ac5514a07ce167c563c54034`
+(integrated as `541096ad`), evidence operators
+`e09555f7438d060547c298205d3bbbeb9bc370a7` (integrated as `7d0b0d6f`), and
+lifecycle/action operators `9393ea2c5ebb360375dc75043703c3043abe0068`
+(integrated as `0c2147ba`). Their isolated result records are under
+`.codex-tmp/phase34-worker-results/` in the integration worktree.
+
+Integration added a fail-closed unified physical-operator registry, explicit
+production opt-in metadata, route aliases for URL, PDF, Markdown/text, survey,
+evidence import, and workflow evolution, and bounded evidence/action operator
+bindings. The production bridge now composes the Solar-owned runtime and
+unified registry rather than the temporary monolithic backend.
+
+Four integration defects were found with the real Markdown entrypoint and
+fixed: local seed fields violated the frozen task schema; worker result hash
+records named logical inputs rather than real output artifacts; JSON identity
+was nested under schema-valid provenance but rejected by the boundary; and a
+mutually exclusive PDF read scope survived Markdown subgraph pruning. A fifth
+scope defect projected the entry seed into every downstream node. The final
+implementation snapshots local files inside the artifact boundary, records
+only verifiable artifact hashes, accepts complete identity in top-level fields
+or provenance, prunes read scopes belonging to removed dependencies, and
+projects seed-specific fields only to the selected entry node.
+
+Validation results:
+
+- Phase 0-3 contract/orchestration suite: `398 passed in 126.65s`.
+- Hash and result-validation regressions: `77 passed`.
+- Identity/operator/orchestrator regressions: `142 passed in 24.87s`.
+- Final route and orchestrator regression:
+  `87 passed in 27.64s`.
+- Real Markdown production command used
+  `autosci_bridge.py research --source
+  harness/plugins/autosci/tests/fixtures/sample_paper.md --max-steps 2` with
+  run id `phase3-md-smoke-006`. It completed `material_ingest` and
+  `paper_analyze`, produced durable artifacts and node records under
+  `.codex-tmp/phase3-md-smoke-006/`, and then truthfully returned `blocked`
+  because the deliberately bounded run exhausted two steps. This is accepted
+  as Phase 3 route/dispatch smoke evidence, not as a full-lifecycle PASS.
+
+The broad legacy AutoSci bridge/shim run remains diagnostic: `179 passed, 60
+failed`, with failures concentrated in already-known Windows path/state and
+legacy side-effect assumptions. Phase 4 owns full real-input journeys and the
+Windows lease recovery defect; no Phase 22 workbook, matrix, journey report,
+or brief report was modified.

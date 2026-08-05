@@ -150,6 +150,7 @@ def write_evidence_artifact(
     input_hash = request_input_hash(context)
     clean_outputs = redact_secrets(outputs, context.secret_refs, context.secret_values)
     output_hash = stable_json_sha256(clean_outputs)
+    final_artifact_id = artifact_id or schema.removesuffix(".v1")
     payload = {
         "schema": schema,
         "task_id": str(context.node_request.get("task_id") or ""),
@@ -163,9 +164,14 @@ def write_evidence_artifact(
         "outputs": clean_outputs,
         "artifacts": [],
         "provenance": {
+            "artifact_id": final_artifact_id,
             "operator_id": operator_id,
             "operator_version": OPERATOR_VERSION,
             "implementation_package": IMPLEMENTATION_PACKAGE,
+            "task_id": str(context.node_request.get("task_id") or ""),
+            "run_id": str(context.node_request.get("run_id") or ""),
+            "workflow_id": str(context.node_request.get("workflow_id") or ""),
+            "node_id": str(context.node_request.get("node_id") or ""),
             "timestamp": evidence_timestamp(context),
             "input_sha256": input_hash,
             "output_sha256": output_hash,
@@ -181,18 +187,13 @@ def write_evidence_artifact(
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
     target.write_text(body, encoding="utf-8")
     digest = sha256_bytes(target.read_bytes())
-    final_artifact_id = artifact_id or schema.removesuffix(".v1")
     ref = {
         "artifact_id": final_artifact_id,
         "path": display_path(target, context.workspace_root),
         "schema": schema,
         "sha256": digest,
     }
-    hashes = [
-        {"hash_id": f"{final_artifact_id}.input", "algorithm": "sha256", "value": input_hash},
-        {"hash_id": f"{final_artifact_id}.output", "algorithm": "sha256", "value": output_hash},
-        {"hash_id": final_artifact_id, "algorithm": "sha256", "value": digest},
-    ]
+    hashes = [{"hash_id": final_artifact_id, "algorithm": "sha256", "value": digest}]
     ev = evidence_ref(
         f"{operator_id}.execution",
         "physical_operator_execution",

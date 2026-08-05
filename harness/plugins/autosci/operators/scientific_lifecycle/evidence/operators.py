@@ -163,6 +163,47 @@ def _source_path(context: OperatorContext) -> tuple[str, Path | None]:
     )
 
 
+def import_existing_evidence(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
+    """Create execution-produced provenance for already existing evidence."""
+
+    task_contract = context.payload.get("task_contract")
+    supplied = task_contract.get("supplied_evidence") if isinstance(task_contract, dict) else None
+    refs = [dict(item) for item in supplied or [] if isinstance(item, dict)]
+    if not refs:
+        raise _product_error("Evidence import requires at least one supplied evidence reference")
+    imported: list[dict[str, Any]] = []
+    for ref in refs:
+        path = validate_scoped_path(
+            str(ref.get("path") or ""),
+            context.read_scope,
+            workspace_root=context.workspace_root,
+            must_exist=True,
+        )
+        digest = sha256_bytes(path.read_bytes())
+        expected = str(ref.get("sha256") or "")
+        if expected and expected.lower() != digest:
+            raise _product_error(f"Imported evidence hash mismatch: {ref.get('path')}")
+        imported.append(
+            {
+                "artifact_id": str(ref.get("artifact_id") or f"import-{len(imported) + 1}"),
+                "path": display_path(path, context.workspace_root),
+                "sha256": digest,
+                "provenance": dict(ref.get("provenance") or {}),
+            }
+        )
+    evidence = evidence_document(
+        context,
+        spec,
+        {"imported_evidence": imported, "imported_count": len(imported)},
+        limitations=["Imported content is hash-verified provenance; its scientific claims are not accepted without downstream evaluation."],
+    )
+    return {
+        "evidence": evidence,
+        "outcome_class": SUCCESS,
+        "summary": f"Imported and re-hashed {len(imported)} evidence artifact(s).",
+    }
+
+
 def ingest_source(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
     source, local_path = _source_path(context)
     backend = context.services.get("read_paper_source") or read_paper_source

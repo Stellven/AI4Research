@@ -178,11 +178,14 @@ def enrich_evidence(
     provenance = payload.setdefault("provenance", {})
     provenance.update(
         {
+            "artifact_id": f"evidence.{spec.node_id}",
             "operator_id": spec.operator_id,
             "operator_version": spec.version,
             "implementation_package": "plugins/autosci/operators/scientific_lifecycle/evidence",
+            "task_id": str(context.node_request["task_id"]),
             "run_id": str(context.node_request["run_id"]),
             "workflow_id": str(context.node_request["workflow_id"]),
+            "node_id": str(context.node_request["node_id"]),
             "input_sha256": input_hash,
             "output_sha256": stable_json_sha256(payload.get("outputs") or {}),
             "outcome_class": outcome_class,
@@ -254,8 +257,7 @@ def execute_spec(
                 output_artifacts=[artifact],
                 evidence=[evidence_ref(f"ev.{spec.node_id}", spec.output_schema, "Reused idempotent evidence output.", artifact["artifact_id"])],
                 hashes=[
-                    {"hash_id": f"input.{spec.node_id}", "algorithm": "sha256", "value": input_hash},
-                    {"hash_id": f"output.{spec.node_id}", "algorithm": "sha256", "value": output_hash},
+                    {"hash_id": artifact["artifact_id"], "algorithm": "sha256", "value": output_hash},
                 ],
                 limitations=["Idempotent replay reused the existing output because operator identity, version and input hash matched."],
             )
@@ -270,10 +272,7 @@ def execute_spec(
             outcome_class=outcome_class,
         )
         artifact, output_hash = write_evidence(context, target, typed)
-        hashes = [
-            {"hash_id": f"input.{spec.node_id}", "algorithm": "sha256", "value": input_hash},
-            {"hash_id": f"output.{spec.node_id}", "algorithm": "sha256", "value": output_hash},
-        ]
+        hashes = [{"hash_id": artifact["artifact_id"], "algorithm": "sha256", "value": output_hash}]
         evidence = [evidence_ref(f"ev.{spec.node_id}", spec.output_schema, str(raw["summary"]), artifact["artifact_id"])]
         limitations = list(typed.get("limitations") or [])
         if outcome_class == SUCCESS and typed.get("status") == "completed":
@@ -305,7 +304,7 @@ def execute_spec(
         return build_node_result(
             context,
             status="failed",
-            hashes=([{"hash_id": f"input.{spec.node_id}", "algorithm": "sha256", "value": input_hash}] if input_hash else []),
+            hashes=[],
             errors=[{
                 "error_id": f"operator.{spec.node_id}.product_failure",
                 "error_type": PRODUCT_FAILURE,
@@ -334,8 +333,13 @@ def evidence_document(
         "outputs": outputs,
         "artifacts": list(artifacts or []),
         "provenance": {
+            "artifact_id": f"evidence.{spec.node_id}",
             "operator_id": spec.operator_id,
             "implementation_package": "plugins/autosci/operators/scientific_lifecycle/evidence",
+            "task_id": str(context.node_request["task_id"]),
+            "run_id": str(context.node_request["run_id"]),
+            "workflow_id": str(context.node_request["workflow_id"]),
+            "node_id": str(context.node_request["node_id"]),
             "timestamp": str(context.node_request.get("issued_at") or utc_now()),
         },
         "limitations": list(limitations or []),

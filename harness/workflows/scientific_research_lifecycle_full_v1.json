@@ -24,7 +24,9 @@
   },
   "required_gates": [
     "G_LITERATURE_DISCOVER",
+    "G_EVIDENCE_IMPORT",
     "G_PAPER_INGEST",
+    "G_MATERIAL_INGEST",
     "G_PAPER_ANALYZE",
     "G_MEMORY_UPDATE_INITIAL",
     "G_GRAPH_UPDATE",
@@ -46,6 +48,26 @@
     "G_SCIENTIFIC_LIFECYCLE"
   ],
   "nodes": [
+    {
+      "id": "evidence_import",
+      "goal": "Import user-supplied evidence through an execution-produced hash and provenance receipt.",
+      "logical_operator": "ScientificPaperIngestor",
+      "physical_operator": "evidence_import_worker",
+      "depends_on": [],
+      "required_capabilities": [],
+      "read_scope": ["."],
+      "write_scope": ["artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_evidence_import.v1.json"],
+      "gate": "G_EVIDENCE_IMPORT",
+      "acceptance": [
+        "Every imported artifact is non-empty and hash verified.",
+        "The import produces new provenance evidence rather than accepting scientific claims directly."
+      ],
+      "priority": 100,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": null,
+      "required_node_status": null,
+      "status": "pending"
+    },
     {
       "id": "literature_discover",
       "goal": "Discover candidate literature and produce bounded shortlist evidence.",
@@ -129,6 +151,7 @@
         "data_extraction"
       ],
       "read_scope": [
+        ".",
         "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/literature_discovery.v1.json"
       ],
       "write_scope": [
@@ -187,11 +210,32 @@
       }
     },
     {
+      "id": "material_ingest",
+      "goal": "Ingest an explicitly supplied local Markdown or text material.",
+      "logical_operator": "ScientificPaperIngestor",
+      "physical_operator": "material_ingest_worker",
+      "depends_on": [],
+      "required_capabilities": [],
+      "read_scope": ["."],
+      "write_scope": ["artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_material.v1.json"],
+      "gate": "G_MATERIAL_INGEST",
+      "acceptance": [
+        "The selected local material is copied into the run input boundary before parsing.",
+        "The operator emits non-empty research_paper.v1 evidence with source hashes."
+      ],
+      "priority": 98,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": null,
+      "required_node_status": null,
+      "status": "pending"
+    },
+    {
       "id": "paper_analyze",
       "goal": "Analyze ingested paper evidence while preserving source anchors and limitations.",
       "logical_operator": "ScientificPaperAnalyzer",
       "depends_on": [
-        "paper_ingest"
+        "paper_ingest",
+        "material_ingest"
       ],
       "required_capabilities": [
         "cap.research-paper-analyze",
@@ -199,7 +243,8 @@
         "academic_critique"
       ],
       "read_scope": [
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_paper.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_paper.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_material.v1.json"
       ],
       "write_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_paper_analysis.v1.json"

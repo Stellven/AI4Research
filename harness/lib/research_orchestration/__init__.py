@@ -20,6 +20,7 @@ from .runtime import (
     SolarResearchRuntime,
     artifact_reference,
     build_task_contract,
+    default_production_resolver,
     default_synthesis_resolver,
     load_evidence_references,
 )
@@ -39,6 +40,7 @@ __all__ = [
     "artifact_reference",
     "build_task_contract",
     "classify_research_intent",
+    "default_production_resolver",
     "default_synthesis_resolver",
     "evaluate_production_result",
     "load_evidence_references",

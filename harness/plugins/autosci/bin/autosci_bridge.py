@@ -34,7 +34,7 @@ from evaluators.scientific.lifecycle_runtime_gate import evaluate as evaluate_li
 from research_orchestration.runtime import (
     FileWorkflowCatalog,
     SolarResearchRuntime,
-    default_synthesis_resolver,
+    default_production_resolver,
     load_evidence_references,
 )
 from research_orchestration.routing import seed_kind_for_value
@@ -22660,11 +22660,11 @@ def cmd_research(args: argparse.Namespace) -> int:
         for index, source in enumerate(sources, start=1)
     ]
     aliases = {
-        # These aliases name equivalent Phase 2 physical stages.  There is no
-        # alias for material_ingest: the current draft workflow lacks that
-        # physical stage and must fail closed until the unified graph supplies it.
+        # Semantic aliases are explicit metadata, never import/name guessing.
         "research_synthesis": {"web_fetch": "seed_fetch"},
         "literature_synthesis": {"source_discovery": "source_discovery"},
+        "scientific_lifecycle": {"source_discovery": "literature_discover"},
+        "workflow_evolution": {"workflow_evolve": "workflow_evolve"},
     }
     authorization = {
         "approved_capabilities": [],
@@ -22683,7 +22683,7 @@ def cmd_research(args: argparse.Namespace) -> int:
         runtime = SolarResearchRuntime(
             artifact_root=artifact_root,
             workflow_loader=catalog.load,
-            operator_resolver=default_synthesis_resolver(),
+            operator_resolver=default_production_resolver(workspace_root=artifact_root),
             authorization=authorization,
         )
         result = runtime.run(

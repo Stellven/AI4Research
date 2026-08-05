@@ -165,7 +165,21 @@ def discovery_service(**_kwargs) -> dict:
 def request_for(node_id: str, workspace: Path) -> tuple[dict, dict]:
     payload: dict = {}
     services: dict = {}
-    if node_id == "literature_discover":
+    if node_id == "evidence_import":
+        imported = workspace / "inputs" / "imported.json"
+        imported.write_text('{"schema":"external.test.v1","value":"bounded"}', encoding="utf-8")
+        import hashlib
+        payload = {
+            "task_contract": {
+                "supplied_evidence": [{
+                    "artifact_id": "external-1",
+                    "path": "inputs/imported.json",
+                    "sha256": hashlib.sha256(imported.read_bytes()).hexdigest(),
+                    "provenance": {"source": "prior-run"},
+                }]
+            }
+        }
+    elif node_id == "literature_discover":
         payload = {"query": "bounded evidence", "mode": "topic", "limit": 3}
         services["discover_literature"] = discovery_service
     elif node_id in {"paper_ingest", "material_ingest"}:
@@ -294,7 +308,7 @@ def test_direct_source_content_change_invalidates_idempotent_ingest_reuse(worksp
 
 def test_package_local_registration_is_unique_and_resolvable() -> None:
     entries = registration_entries()
-    assert len(entries) == len(NODE_IDS) == 11
+    assert len(entries) == len(NODE_IDS) == 12
     assert len({item["node_id"] for item in entries}) == len(entries)
     assert len({item["operator_id"] for item in entries}) == len(entries)
     assert all(item["operator_version"] == "1.0.0" for item in entries)

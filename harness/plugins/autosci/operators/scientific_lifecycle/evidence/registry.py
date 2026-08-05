@@ -29,6 +29,9 @@ def _spec(node_id: str, operator_id: str, schema: str, filename: str, handler) -
 
 
 OPERATOR_SPECS: dict[str, OperatorSpec] = {
+    "evidence_import": _spec(
+        "evidence_import", "autosci-evidence-import", "research_evidence_import.v1", "research_evidence_import.v1.json", operators.import_existing_evidence
+    ),
     "literature_discover": _spec(
         "literature_discover", "autosci-evidence-literature-discover", "literature_discovery.v1", "literature_discovery.v1.json", operators.literature_discovery
     ),
@@ -135,6 +138,10 @@ def _execute_named(
 
 def execute_literature_discover(node_request, *, services=None, workspace_root=None):
     return _execute_named("literature_discover", node_request, services=services, workspace_root=workspace_root)
+
+
+def execute_evidence_import(node_request, *, services=None, workspace_root=None):
+    return _execute_named("evidence_import", node_request, services=services, workspace_root=workspace_root)
 
 
 def execute_paper_ingest(node_request, *, services=None, workspace_root=None):

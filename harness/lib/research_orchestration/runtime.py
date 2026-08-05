@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import shutil
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
@@ -50,7 +51,11 @@ class FileWorkflowCatalog:
 
     def load(self, decision: ResearchRouteDecision) -> dict:
         selected = select_research_workflow(decision.to_dict(), self.selection, self.harness_root)
-        configured = load_and_normalize_workflow(selected, self.harness_root)
+        configured = load_and_normalize_workflow(
+            selected,
+            self.harness_root,
+            preserve_all_nodes=True,
+        )
         aliases = self.entrypoint_aliases.get(decision.workflow_kind, {})
         return workflow_from_entry_stage(configured, decision, entrypoint_aliases=aliases)
 
@@ -86,7 +91,12 @@ class SolarResearchRuntime:
         output_language: str = "",
         max_steps: int = 100,
     ) -> dict[str, Any]:
-        normalized_seeds = _complete_seed_inputs(prompt, seed_inputs)
+        normalized_seeds = _complete_seed_inputs(
+            prompt,
+            seed_inputs,
+            artifact_root=self.artifact_root,
+            run_id=run_id,
+        )
         evidence = deepcopy(supplied_evidence or [])
         if run_mode == "resume" and not evidence:
             evidence = [self._state_provenance_ref(run_id)]
@@ -121,6 +131,17 @@ class SolarResearchRuntime:
             supplied_evidence=evidence,
             output_language=output_language,
         )
+        runtime_authorization = deepcopy(self.authorization)
+        approved = set(runtime_authorization.get("approved_capabilities") or [])
+        approved.update(
+            capability
+            for node in workflow.get("nodes") or []
+            for capability in node.get("required_capabilities") or []
+            if capability != "execute_experiment"
+            and not node.get("allow_network")
+            and not node.get("allow_live_provider")
+        )
+        runtime_authorization["approved_capabilities"] = sorted(approved)
 
         def dispatch(request: dict) -> dict:
             return dispatch_research_node(
@@ -130,7 +151,7 @@ class SolarResearchRuntime:
                 result_schema_path=_RESULT_SCHEMA,
                 artifact_root=self.artifact_root,
                 operator_resolver=self.operator_resolver.resolve,
-                secret_values=_secret_values(self.authorization),
+                secret_values=_secret_values(runtime_authorization),
             )
 
         def evaluator(request: dict, result: dict, state: dict) -> dict:
@@ -147,7 +168,7 @@ class SolarResearchRuntime:
             state_store=self.state_store,
             dispatch_callable=dispatch,
             evaluator_callable=evaluator,
-            authorization=self.authorization,
+            authorization=runtime_authorization,
             artifact_root=self.artifact_root,
         )
         if run_mode == "execute":
@@ -272,6 +293,27 @@ def default_synthesis_resolver(*, services: dict | None = None) -> PhysicalOpera
     )
 
 
+def default_production_resolver(
+    *,
+    services: dict | None = None,
+    workspace_root: Path | None = None,
+) -> PhysicalOperatorResolver:
+    """Compose all Phase 2/3 bounded operators into one fail-closed registry."""
+
+    try:
+        from harness.plugins.autosci.operators.scientific_lifecycle.registry import production_bindings
+    except ModuleNotFoundError:  # direct execution with harness/ as sys.path root
+        from plugins.autosci.operators.scientific_lifecycle.registry import production_bindings
+
+    return PhysicalOperatorResolver(
+        production_bindings(
+            services=deepcopy(services or {}),
+            workspace_root=Path(workspace_root or Path.cwd()).resolve(),
+            binding_factory=PhysicalOperatorBinding,
+        )
+    )
+
+
 def load_evidence_references(paths: list[str] | tuple[str, ...], *, artifact_root: Path) -> list[dict]:
     root = Path(artifact_root).expanduser().resolve()
     return [
@@ -283,7 +325,13 @@ def load_evidence_references(paths: list[str] | tuple[str, ...], *, artifact_roo
     ]
 
 
-def _complete_seed_inputs(prompt: str, seed_inputs: list[dict] | None) -> list[dict]:
+def _complete_seed_inputs(
+    prompt: str,
+    seed_inputs: list[dict] | None,
+    *,
+    artifact_root: Path,
+    run_id: str,
+) -> list[dict]:
     normalized = normalize_seed_inputs(seed_inputs)
     if not normalized:
         url = _PROMPT_URL_RE.search(prompt)
@@ -297,9 +345,37 @@ def _complete_seed_inputs(prompt: str, seed_inputs: list[dict] | None) -> list[d
             raise ResearchRuntimeError("seed input value must be non-empty")
         record = deepcopy(item)
         record["seed_id"] = str(record.get("seed_id") or f"seed-{index}")
-        record["value"] = value
+        if record.get("seed_kind") in {"pdf", "markdown"}:
+            source = Path(value).expanduser().resolve()
+            if not source.is_file() or source.stat().st_size <= 0:
+                raise ResearchRuntimeError(f"local research source is missing or empty: {source}")
+            snapshot_dir = artifact_root / "inputs" / _safe_component(run_id)
+            snapshot_dir.mkdir(parents=True, exist_ok=True)
+            snapshot = snapshot_dir / f"{index:02d}-{_safe_component(source.name)}"
+            shutil.copyfile(source, snapshot)
+            record["value"] = str(snapshot)
+            captured_at = datetime.fromtimestamp(source.stat().st_mtime, UTC).isoformat().replace("+00:00", "Z")
+            provenance = {
+                "source": "explicit_local_research_input",
+                "captured_at": captured_at,
+                "original_path": str(source),
+            }
+            record["provenance"] = provenance
+            record["artifact_ref"] = {
+                "artifact_id": f"input-{_safe_component(run_id)}-{index}",
+                "path": str(snapshot),
+                "sha256": hashlib.sha256(snapshot.read_bytes()).hexdigest(),
+                "provenance": provenance,
+            }
+        else:
+            record["value"] = value
         completed.append(record)
     return completed
+
+
+def _safe_component(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(value)).strip(".-")
+    return cleaned[:120] or "research-input"
 
 
 def _secret_values(authorization: dict) -> tuple[str, ...]:

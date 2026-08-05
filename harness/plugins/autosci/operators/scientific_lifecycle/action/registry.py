@@ -58,8 +58,17 @@ def get_operator(node_id: str) -> Operator:
         ) from exc
 
 
-def execute_operator(node_request: dict[str, Any], *, services: dict[str, Any] | None = None) -> dict[str, Any]:
-    context = OperatorContext.from_request(node_request, services=services, workspace_root=Path.cwd())
+def execute_operator(
+    node_request: dict[str, Any],
+    *,
+    services: dict[str, Any] | None = None,
+    workspace_root: Path | None = None,
+) -> dict[str, Any]:
+    context = OperatorContext.from_request(
+        node_request,
+        services=services,
+        workspace_root=workspace_root or Path.cwd(),
+    )
     if not context.secret_verification_complete:
         result = build_node_result(
             context,

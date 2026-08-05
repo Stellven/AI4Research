@@ -112,10 +112,13 @@ def select_production_route(
     except ResearchIntentError as exc:
         raise ResearchRoutingError(str(exc)) from exc
     seed_kind = str(classification["seed_kind"])
-    try:
-        start_stage = START_STAGE_BY_SEED_KIND[seed_kind]
-    except KeyError as exc:  # defensive against classifier/config drift
-        raise ResearchRoutingError(f"no production entry stage for seed_kind: {seed_kind}") from exc
+    if classification["workflow_kind"] == "workflow_evolution":
+        start_stage = "workflow_evolve"
+    else:
+        try:
+            start_stage = START_STAGE_BY_SEED_KIND[seed_kind]
+        except KeyError as exc:  # defensive against classifier/config drift
+            raise ResearchRoutingError(f"no production entry stage for seed_kind: {seed_kind}") from exc
     return ResearchRouteDecision(
         seed_kind=seed_kind,
         workflow_kind=str(classification["workflow_kind"]),
@@ -184,7 +187,17 @@ def workflow_from_entry_stage(
         if node["node_id"] not in selected:
             continue
         item = deepcopy(node)
+        removed_dependencies = [dep for dep in item["depends_on"] if dep not in selected]
         item["depends_on"] = [dep for dep in item["depends_on"] if dep in selected]
+        if removed_dependencies:
+            removed_outputs = {
+                str(path)
+                for dep in removed_dependencies
+                for path in by_id[dep].get("write_scope") or []
+            }
+            item["read_scope"] = [
+                scope for scope in item.get("read_scope") or [] if str(scope) not in removed_outputs
+            ]
         selected_nodes.append(item)
     result = deepcopy(workflow)
     result["workflow_kind"] = decision.workflow_kind

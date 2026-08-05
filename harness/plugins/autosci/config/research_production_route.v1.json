@@ -1,0 +1,16 @@
+{
+  "schema": "research_production_route.v1",
+  "status": "production_opt_in",
+  "active_by_default": false,
+  "entrypoint": "$research --solar-orchestrator",
+  "orchestrator": "harness.lib.research_orchestration.runtime:SolarResearchRuntime",
+  "physical_registry": "harness.plugins.autosci.operators.scientific_lifecycle.registry:registration_entries",
+  "temporary_backend_forbidden_as_default": "real_data_research.py",
+  "routes": [
+    {"seed_kind": "url", "semantic_start": "web_fetch", "workflow_kind": "research_synthesis", "physical_start": "seed_fetch"},
+    {"seed_kind": "pdf", "semantic_start": "paper_ingest", "workflow_kind": "paper_ingestion", "physical_start": "paper_ingest"},
+    {"seed_kind": "markdown", "semantic_start": "material_ingest", "workflow_kind": "paper_ingestion", "physical_start": "material_ingest"},
+    {"seed_kind": "topic", "semantic_start": "source_discovery", "workflow_kind": "literature_synthesis", "physical_start": "source_discovery"},
+    {"seed_kind": "external_evidence", "semantic_start": "evidence_import", "workflow_kind": "scientific_lifecycle", "physical_start": "evidence_import"}
+  ]
+}
