@@ -25,8 +25,43 @@ class Clock:
         self.value += dt.timedelta(seconds=seconds)
 
 
+_TEST_OPERATORS = {
+    "operator-a",
+    "operator-b",
+    "operator-compat",
+    "operator-after-crash",
+    "operator-new",
+    "shared-operator",
+    "op/a",
+    "op?a",
+    *(f"operator-{index}" for index in range(8)),
+}
+
+
+def _write_registry(root: Path, operator_ids=()) -> None:
+    registry = root / "config" / "physical-operators.json"
+    registry.parent.mkdir(parents=True, exist_ok=True)
+    ids = _TEST_OPERATORS | set(operator_ids)
+    registry.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "operators": {
+                    operator_id: {"enabled": True} for operator_id in sorted(ids)
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _adapter(root: Path, **kwargs) -> ResearchLeaseAdapter:
+    _write_registry(root)
+    return ResearchLeaseAdapter(root, **kwargs)
+
+
 def test_acquire_conflict_same_run_node_returns_blocker(tmp_path) -> None:
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
     first = adapter.acquire("run-1", "N1", "operator-a")
     second = adapter.acquire("run-1", "N1", "operator-b")
 
@@ -36,7 +71,7 @@ def test_acquire_conflict_same_run_node_returns_blocker(tmp_path) -> None:
 
 
 def test_operator_busy_conflict_returns_structured_blocker(tmp_path) -> None:
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
     adapter.acquire("run-1", "N1", "operator-a")
     blocked = adapter.acquire("run-2", "N2", "operator-a")
 
@@ -46,7 +81,7 @@ def test_operator_busy_conflict_returns_structured_blocker(tmp_path) -> None:
 
 def test_heartbeat_renews_expiry_and_writes_status(tmp_path) -> None:
     clock = Clock()
-    adapter = ResearchLeaseAdapter(tmp_path, clock=clock)
+    adapter = _adapter(tmp_path, clock=clock)
     lease = adapter.acquire("run-1", "N1", "operator-a", ttl_seconds=30)["lease"]
     clock.advance(10)
 
@@ -61,7 +96,7 @@ def test_heartbeat_renews_expiry_and_writes_status(tmp_path) -> None:
 
 def test_stale_lease_recovery_allows_new_acquire(tmp_path) -> None:
     clock = Clock()
-    adapter = ResearchLeaseAdapter(tmp_path, clock=clock)
+    adapter = _adapter(tmp_path, clock=clock)
     adapter.acquire("run-1", "N1", "operator-a", ttl_seconds=5, heartbeat_timeout_seconds=5)
     clock.advance(10)
 
@@ -74,7 +109,7 @@ def test_stale_lease_recovery_allows_new_acquire(tmp_path) -> None:
 
 
 def test_live_lease_is_not_recovered_or_preempted(tmp_path) -> None:
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
     adapter.acquire("run-1", "N1", "operator-a", ttl_seconds=300)
     recovered = adapter.recover_stale("run-1", "N1")
 
@@ -83,7 +118,7 @@ def test_live_lease_is_not_recovered_or_preempted(tmp_path) -> None:
 
 
 def test_release_removes_active_lease_and_archives(tmp_path) -> None:
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
     lease = adapter.acquire("run-1", "N1", "operator-a")["lease"]
     released = adapter.release("run-1", "N1", "operator-a", lease_id=lease["lease_id"], reason="done")
 
@@ -94,8 +129,8 @@ def test_release_removes_active_lease_and_archives(tmp_path) -> None:
 
 def test_crash_restart_reads_existing_active_lease(tmp_path) -> None:
     clock = Clock()
-    ResearchLeaseAdapter(tmp_path, clock=clock).acquire("run-1", "N1", "operator-a", ttl_seconds=300)
-    restarted = ResearchLeaseAdapter(tmp_path, clock=clock)
+    _adapter(tmp_path, clock=clock).acquire("run-1", "N1", "operator-a", ttl_seconds=300)
+    restarted = _adapter(tmp_path, clock=clock)
 
     blocked = restarted.acquire("run-1", "N1", "operator-b")
 
@@ -106,7 +141,7 @@ def test_corrupted_lease_can_be_recovered_by_operator(tmp_path) -> None:
     lease_dir = tmp_path / "run" / "operator-leases"
     lease_dir.mkdir(parents=True)
     (lease_dir / "operator-a.json").write_text("{not json", encoding="utf-8")
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
 
     result = adapter.acquire("run-1", "N1", "operator-a", recover_stale=True)
 
@@ -114,7 +149,7 @@ def test_corrupted_lease_can_be_recovered_by_operator(tmp_path) -> None:
 
 
 def test_concurrent_same_node_only_one_acquisition_succeeds(tmp_path) -> None:
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
 
     def acquire(index: int) -> bool:
         return bool(adapter.acquire("run-1", "N1", f"operator-{index}")["acquired"])
@@ -136,6 +171,7 @@ def test_independent_processes_same_node_have_exactly_one_winner(tmp_path) -> No
     """This is the contention that the old thread-only Windows test missed."""
 
     start = tmp_path / "start"
+    _write_registry(tmp_path / "harness")
     script = """
 import json, pathlib, sys, time
 from harness.lib.research_orchestration.runtime_lease import ResearchLeaseAdapter
@@ -183,6 +219,7 @@ def test_independent_processes_same_operator_different_nodes_have_one_winner(
     tmp_path,
 ) -> None:
     start = tmp_path / "start-operator"
+    _write_registry(tmp_path / "operator-harness")
     script = """
 import json, pathlib, sys, time
 from harness.lib.research_orchestration.runtime_lease import ResearchLeaseAdapter
@@ -254,7 +291,7 @@ os._exit(23)
     assert marker.exists()
     assert process.wait(timeout=10) == 23
 
-    result = ResearchLeaseAdapter(
+    result = _adapter(
         root, claim_timeout_seconds=2, abandoned_claim_seconds=300
     ).acquire("run-crash", "node-crash", "operator-after-crash")
 
@@ -265,26 +302,26 @@ os._exit(23)
 def test_nested_secrets_are_never_persisted(tmp_path) -> None:
     opaque_secret = "opaque-provider-value-9f82d17"
     metadata = {
-        "safe": {
-            "topic": "bounded synthesis",
-            "provider_label": opaque_secret,
-            "secretariat_notes": "meeting retained",
-            "token_budget": "token budget=1000",
-            "token": "token-direct-canary",
-            "authorization": "Bearer nested-secret-canary",
-            "items": [
-                {"password": "password-canary", "note": "api_key=key-canary"},
-                {"accessToken": "token-canary", "label": "retained"},
-            ],
-        }
+        "topic": "bounded synthesis",
+        "provider_label": opaque_secret,
+        "secretariat_notes": "meeting retained",
+        "token_budget": "token budget=1000",
+        "token": "token-direct-canary",
+        "authorization": "Bearer nested-secret-canary",
+        "nested": {
+            "label": opaque_secret,
+            "password": "password-canary",
+            "accessToken": "token-canary",
+        },
     }
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
     acquired = adapter.acquire(
         "run-1",
         "N1",
         "operator-a",
         metadata=metadata,
         secret_values=[opaque_secret],
+        safe_metadata_fields=["topic", "secretariat_notes", "token_budget"],
     )
 
     persisted = (tmp_path / "run" / "operator-leases" / "operator-a.json").read_text(
@@ -297,6 +334,7 @@ def test_nested_secrets_are_never_persisted(tmp_path) -> None:
             "operator-b",
             metadata=metadata,
             secret_values=[opaque_secret],
+            safe_metadata_fields=["topic", "secretariat_notes", "token_budget"],
         )
     )
     adapter.release(
@@ -330,7 +368,7 @@ def test_nested_secrets_are_never_persisted(tmp_path) -> None:
 
 
 def test_fallback_record_uses_canonical_operator_lease_fields(tmp_path) -> None:
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
     result = adapter.acquire("run-compat", "node-compat", "operator-compat")
     lease = json.loads(
         (tmp_path / "run" / "operator-leases" / "operator-compat.json").read_text(
@@ -367,12 +405,13 @@ def test_live_process_claim_is_never_stolen_only_because_it_is_old(tmp_path) -> 
         encoding="utf-8",
     )
 
-    adapter = ResearchLeaseAdapter(
+    adapter = _adapter(
         root, claim_timeout_seconds=0.1, abandoned_claim_seconds=1
     )
-    with pytest.raises(TimeoutError, match="runtime claim"):
-        adapter.acquire("run-live", "node-live", "operator-new")
+    blocked = adapter.acquire("run-live", "node-live", "operator-new")
 
+    assert blocked["acquired"] is False
+    assert blocked["blocker"]["reason"] == "lease_claim_busy"
     assert claim.exists()
 
 
@@ -419,7 +458,7 @@ def test_ownerless_abandoned_claim_is_cleaned_after_stale_threshold(tmp_path) ->
     old = time.time() - 120
     os.utime(claim, (old, old))
 
-    result = ResearchLeaseAdapter(
+    result = _adapter(
         root, claim_timeout_seconds=1, abandoned_claim_seconds=1
     ).acquire("run-old", "node-old", "operator-new")
 
@@ -428,7 +467,7 @@ def test_ownerless_abandoned_claim_is_cleaned_after_stale_threshold(tmp_path) ->
 
 
 def test_unsafe_operator_ids_use_distinct_stable_filenames(tmp_path) -> None:
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
     first = adapter.acquire("run-a", "node-a", "op/a")
     second = adapter.acquire("run-b", "node-b", "op?a")
 
@@ -464,7 +503,7 @@ def test_legacy_lossy_filename_migrates_only_for_exact_identity(tmp_path) -> Non
         ),
         encoding="utf-8",
     )
-    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter = _adapter(tmp_path, clock=Clock())
 
     renewed = adapter.heartbeat(
         "run-old", "node-old", "op/a", lease_id="lease-old"
@@ -501,3 +540,100 @@ def test_windows_fallback_enforces_available_operator_registry(tmp_path) -> None
     assert unknown["blocker"]["reason"] == "operator_not_found"
     assert disabled["blocker"]["reason"] == "operator_disabled"
     assert known["acquired"] is True
+
+
+def test_windows_fallback_missing_registry_fails_closed(tmp_path) -> None:
+    result = ResearchLeaseAdapter(tmp_path, clock=Clock()).acquire(
+        "run-missing", "node-missing", "unknown"
+    )
+
+    assert result["acquired"] is False
+    assert result["blocker"]["reason"] == "operator_registry_missing"
+    assert not list((tmp_path / "run" / "operator-leases").glob("*.json"))
+
+
+def test_metadata_without_secret_values_omits_opaque_and_nested_values(tmp_path) -> None:
+    opaque = "opaque-provider-credential-4d9281"
+    adapter = _adapter(tmp_path, clock=Clock())
+    result = adapter.acquire(
+        "run-metadata",
+        "node-metadata",
+        "operator-a",
+        metadata={
+            "provider_label": opaque,
+            "secretariat_notes": "agenda retained",
+            "token_budget": 1000,
+            "nested": {"label": opaque},
+        },
+        safe_metadata_fields=["secretariat_notes"],
+    )
+
+    persisted = (tmp_path / "run" / "operator-leases" / "operator-a.json").read_text(
+        encoding="utf-8"
+    )
+    assert result["acquired"] is True
+    assert opaque not in persisted
+    assert "provider_label" not in persisted
+    assert "nested" not in persisted
+    assert "agenda retained" in persisted
+    assert '"token_budget": 1000' in persisted
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows subprocess contention stress")
+@pytest.mark.parametrize("shape", ["different_operators_same_node", "same_operator_different_nodes"])
+def test_windows_subprocess_contention_stress_50_rounds(tmp_path, shape) -> None:
+    script = """
+import json, pathlib, sys, time
+from harness.lib.research_orchestration.runtime_lease import ResearchLeaseAdapter
+root, start, output = map(pathlib.Path, sys.argv[1:4])
+operator_id, node_id = sys.argv[4:6]
+deadline = time.time() + 15
+while not start.exists() and time.time() < deadline:
+    time.sleep(0.002)
+result = ResearchLeaseAdapter(root).acquire('stress-run', node_id, operator_id)
+output.write_text(json.dumps(result), encoding='utf-8')
+"""
+
+    for round_index in range(50):
+        root = tmp_path / shape / f"round-{round_index}" / "harness"
+        _write_registry(root, {"stress-a", "stress-b", "stress-shared"})
+        start = root.parent / "start"
+        if shape == "different_operators_same_node":
+            contenders = [("stress-a", "same-node"), ("stress-b", "same-node")]
+        else:
+            contenders = [("stress-shared", "node-a"), ("stress-shared", "node-b")]
+
+        processes: list[tuple[subprocess.Popen[str], Path]] = []
+        for index, (operator_id, node_id) in enumerate(contenders):
+            output = root.parent / f"result-{index}.json"
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-c",
+                    script,
+                    str(root),
+                    str(start),
+                    str(output),
+                    operator_id,
+                    node_id,
+                ],
+                env=_subprocess_env(),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            processes.append((process, output))
+        start.touch()
+
+        results = []
+        for process, output in processes:
+            stdout, stderr = process.communicate(timeout=20)
+            assert process.returncode == 0, (round_index, stdout, stderr)
+            results.append(json.loads(output.read_text(encoding="utf-8")))
+
+        assert sum(result.get("acquired") is True for result in results) == 1, (
+            round_index,
+            results,
+        )
+        assert sum(result.get("acquired") is False for result in results) == 1
+        assert all("Traceback" not in json.dumps(result) for result in results)

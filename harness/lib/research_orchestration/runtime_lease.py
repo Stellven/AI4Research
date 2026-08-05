@@ -4,7 +4,9 @@ The native ``operator_runtime`` functions are used when they are importable and
 point at the requested harness root.  Windows cannot currently import that
 module because it depends on ``fcntl``; in that case this module writes the
 same core lease fields under the same store while protecting them with a
-portable, process-safe atomic-directory claim.
+portable process-safe claim: Windows uses a kernel byte-range lock that is
+released automatically on process exit, while Unix uses an atomic directory
+with owner identity for stale recovery.
 
 The claim protocol prevents cooperating processes from racing.  It cannot
 protect against an unrelated process that bypasses both canonical and research
@@ -35,6 +37,28 @@ RECOVERABLE_STATES = frozenset({"stale", "crashed"})
 _CREDENTIAL_VALUE = re.compile(
     r"(?:\bBearer\s+\S+|\bsk-[A-Za-z0-9_-]{8,}|\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|client[_-]?secret|secret)\s*[:=]\s*\S+)",
     re.IGNORECASE,
+)
+_SAFE_NUMERIC_METADATA_FIELDS = frozenset(
+    {
+        "attempt",
+        "attempt_count",
+        "duration_ms",
+        "timeout_seconds",
+        "token_budget",
+    }
+)
+_SAFE_TEXT_METADATA_FIELDS = frozenset(
+    {
+        "correlation_id",
+        "label",
+        "model_name",
+        "provider_name",
+        "secretariat_notes",
+        "stage",
+        "status",
+        "topic",
+        "trace_id",
+    }
 )
 
 
@@ -79,12 +103,18 @@ class ResearchLeaseAdapter:
         heartbeat_timeout_seconds: int = 120,
         metadata: dict[str, Any] | None = None,
         secret_values: Sequence[str] | None = None,
+        safe_metadata_fields: Sequence[str] | None = None,
         recover_stale: bool = False,
     ) -> dict[str, Any]:
         self._validate_identity(run_id, node_id, operator_id)
         self.lease_dir.mkdir(parents=True, exist_ok=True)
 
-        with self._exclusive(run_id, node_id, operator_id):
+        with self._exclusive(run_id, node_id, operator_id) as claims_acquired:
+            if not claims_acquired:
+                return self._blocked(
+                    "lease_claim_busy",
+                    {"run_id": run_id, "node_id": node_id, "operator_id": operator_id},
+                )
             explicit_secrets = _normalize_secret_values(secret_values)
             registry_blocker = self._fallback_registry_blocker(
                 run_id, node_id, operator_id
@@ -141,9 +171,14 @@ class ResearchLeaseAdapter:
                 "heartbeat_timeout_seconds": max(1, int(heartbeat_timeout_seconds)),
             }
             if metadata:
-                cleaned = _sanitize_metadata(metadata, explicit_secrets)
+                cleaned = _sanitize_research_metadata(
+                    metadata,
+                    explicit_secrets,
+                    safe_metadata_fields=safe_metadata_fields,
+                )
                 if cleaned:
                     extension["research_metadata"] = cleaned
+                    extension["research_metadata_policy"] = "explicit_safe_scalars.v1"
 
             if self.operator_runtime is not None:
                 try:
@@ -189,7 +224,12 @@ class ResearchLeaseAdapter:
         state: str = "running",
         secret_values: Sequence[str] | None = None,
     ) -> dict[str, Any]:
-        with self._exclusive(run_id, node_id, operator_id):
+        with self._exclusive(run_id, node_id, operator_id) as claims_acquired:
+            if not claims_acquired:
+                return self._blocked(
+                    "lease_claim_busy",
+                    {"run_id": run_id, "node_id": node_id, "operator_id": operator_id},
+                )
             explicit_secrets = _normalize_secret_values(secret_values)
             lease = self._read_lease(operator_id)
             if not lease:
@@ -215,8 +255,16 @@ class ResearchLeaseAdapter:
                 lease = self.operator_runtime.update_operator_lease_state(
                     operator_id, normalized_state
                 )
+                sanitized_metadata = _sanitize_lease_record(
+                    lease, explicit_secrets
+                )
                 lease = self.operator_runtime.update_operator_lease_metadata(
-                    operator_id, **updates
+                    operator_id,
+                    **updates,
+                    research_metadata=sanitized_metadata.get("research_metadata"),
+                    research_metadata_policy=sanitized_metadata.get(
+                        "research_metadata_policy"
+                    ),
                 )
                 try:
                     self.operator_runtime.set_operator_status(
@@ -245,7 +293,12 @@ class ResearchLeaseAdapter:
         reason: str = "completed",
         secret_values: Sequence[str] | None = None,
     ) -> dict[str, Any]:
-        with self._exclusive(run_id, node_id, operator_id):
+        with self._exclusive(run_id, node_id, operator_id) as claims_acquired:
+            if not claims_acquired:
+                return self._blocked(
+                    "lease_claim_busy",
+                    {"run_id": run_id, "node_id": node_id, "operator_id": operator_id},
+                )
             explicit_secrets = _normalize_secret_values(secret_values)
             lease = self._read_lease(operator_id)
             if not lease:
@@ -296,7 +349,9 @@ class ResearchLeaseAdapter:
             if not observed or not self._matches(observed, run_id, node_id):
                 continue
             operator_id = str(observed.get("operator_id") or path.stem)
-            with self._exclusive(run_id, node_id, operator_id):
+            with self._exclusive(run_id, node_id, operator_id) as claims_acquired:
+                if not claims_acquired:
+                    return self._blocked("lease_claim_busy", observed)
                 lease = self._read_lease(operator_id)
                 if not lease or not self._matches(lease, run_id, node_id):
                     continue
@@ -308,7 +363,12 @@ class ResearchLeaseAdapter:
                     _safe_reason(reason, explicit_secrets),
                     explicit_secrets,
                 )
-                recovered.append(_sanitize_metadata(lease, explicit_secrets))
+                recovered.append(
+                    _sanitize_metadata(
+                        _sanitize_lease_record(lease, explicit_secrets),
+                        explicit_secrets,
+                    )
+                )
         return {"recovered": bool(recovered), "leases": recovered}
 
     def _lease_is_stale(self, lease: dict[str, Any]) -> bool:
@@ -356,7 +416,7 @@ class ResearchLeaseAdapter:
         current = self._lease_path(operator_id)
         lease = self._read_json(current)
         if lease is not None:
-            return lease
+            return _sanitize_lease_record(lease)
 
         # c54a728a and earlier used a lossy sanitized filename.  Read and
         # migrate it only when the record identity exactly matches, so a
@@ -366,6 +426,7 @@ class ResearchLeaseAdapter:
             return None
         lease = self._read_json(legacy)
         if lease and str(lease.get("operator_id") or "") == operator_id:
+            lease = _sanitize_lease_record(lease)
             _atomic_write_json(current, lease)
             _unlink_if_exists(legacy)
             return lease
@@ -404,6 +465,7 @@ class ResearchLeaseAdapter:
         reason: str,
         secret_values: Sequence[str] = (),
     ) -> None:
+        lease = _sanitize_lease_record(lease, secret_values)
         lease["state"] = "stale"
         lease["recovered_at"] = _format_time(self._now())
         lease["recovery_reason"] = _safe_reason(reason, secret_values)
@@ -423,7 +485,9 @@ class ResearchLeaseAdapter:
         lease_id = _identity_filename(str(lease.get("lease_id") or uuid.uuid4()))
         _atomic_write_json(
             archive_dir / f"{_identity_filename(operator_id)}-{lease_id}.json",
-            _sanitize_metadata(lease, secret_values),
+            _sanitize_metadata(
+                _sanitize_lease_record(lease, secret_values), secret_values
+            ),
         )
 
     def _lease_path(self, operator_id: str) -> Path:
@@ -432,8 +496,13 @@ class ResearchLeaseAdapter:
     def _fallback_registry_blocker(
         self, run_id: str, node_id: str, operator_id: str
     ) -> dict[str, Any] | None:
-        if self.operator_runtime is not None or not self.operator_registry_path.exists():
+        if self.operator_runtime is not None:
             return None
+        if not self.operator_registry_path.exists():
+            return self._blocked(
+                "operator_registry_missing",
+                {"run_id": run_id, "node_id": node_id, "operator_id": operator_id},
+            )
         try:
             registry = json.loads(
                 self.operator_registry_path.read_text(encoding="utf-8")
@@ -528,7 +597,7 @@ class ResearchLeaseAdapter:
     @contextmanager
     def _exclusive(
         self, run_id: str, node_id: str, operator_id: str
-    ) -> Iterator[None]:
+    ) -> Iterator[bool]:
         claims = sorted(
             [
                 self._run_node_claim_path(run_id, node_id),
@@ -538,8 +607,11 @@ class ResearchLeaseAdapter:
         )
         with ExitStack() as stack:
             for claim in claims:
-                stack.enter_context(self._claim(claim))
-            yield
+                acquired = stack.enter_context(self._claim(claim))
+                if not acquired:
+                    yield False
+                    return
+            yield True
 
     def _run_node_claim(self, run_id: str, node_id: str) -> Any:
         return self._claim(self._run_node_claim_path(run_id, node_id))
@@ -558,7 +630,16 @@ class ResearchLeaseAdapter:
         )
 
     @contextmanager
-    def _claim(self, claim_path: Path) -> Iterator[None]:
+    def _claim(self, claim_path: Path) -> Iterator[bool]:
+        if os.name == "nt":
+            with _windows_file_claim(
+                claim_path,
+                timeout_seconds=self.claim_timeout_seconds,
+                abandoned_claim_seconds=self.abandoned_claim_seconds,
+            ) as acquired:
+                yield acquired
+            return
+
         claim_path.parent.mkdir(parents=True, exist_ok=True)
         token = str(uuid.uuid4())
         deadline = time.monotonic() + self.claim_timeout_seconds
@@ -566,32 +647,29 @@ class ResearchLeaseAdapter:
             try:
                 claim_path.mkdir()
             except FileExistsError:
-                if _claim_is_abandoned(claim_path, self.abandoned_claim_seconds):
-                    try:
-                        shutil.rmtree(claim_path)
-                    except (FileNotFoundError, OSError):
-                        pass
+                if _remove_abandoned_claim(
+                    claim_path, self.abandoned_claim_seconds
+                ):
                     continue
                 if time.monotonic() >= deadline:
-                    raise TimeoutError(f"timed out acquiring runtime claim: {claim_path.name}")
+                    yield False
+                    return
                 time.sleep(0.01)
                 continue
             owner = {
                 "pid": os.getpid(),
+                "process_identity": _process_identity(os.getpid()),
                 "token": token,
                 "created_at_epoch": time.time(),
             }
             _atomic_write_json(claim_path / "owner.json", owner)
             break
         try:
-            yield
+            yield True
         finally:
             owner = self._read_json(claim_path / "owner.json")
             if owner and owner.get("token") == token:
-                try:
-                    shutil.rmtree(claim_path)
-                except FileNotFoundError:
-                    pass
+                _remove_claim_owned(claim_path, token)
 
 
 def _load_matching_operator_runtime(harness_root: Path) -> Any | None:
@@ -627,22 +705,190 @@ def _atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
             pass
 
 
-def _claim_is_abandoned(path: Path, stale_seconds: float) -> bool:
+@contextmanager
+def _windows_file_claim(
+    legacy_claim_path: Path,
+    *,
+    timeout_seconds: float,
+    abandoned_claim_seconds: float,
+) -> Iterator[bool]:
+    """Use a kernel-managed byte-range lock; Windows releases it on process exit."""
+
+    import msvcrt
+
+    deadline = time.monotonic() + timeout_seconds
+    legacy_claim_path.parent.mkdir(parents=True, exist_ok=True)
+    while legacy_claim_path.exists():
+        if _remove_abandoned_claim(legacy_claim_path, abandoned_claim_seconds):
+            continue
+        if time.monotonic() >= deadline:
+            yield False
+            return
+        time.sleep(0.01)
+
+    lock_path = legacy_claim_path.with_name(f"{legacy_claim_path.name}.lock")
+    handle = open(lock_path, "a+b", buffering=0)
+    acquired = False
+    try:
+        handle.seek(0, os.SEEK_END)
+        if handle.tell() == 0:
+            handle.write(b"\0")
+        while True:
+            handle.seek(0)
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                acquired = True
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    yield False
+                    return
+                time.sleep(0.01)
+        yield True
+    finally:
+        if acquired:
+            handle.seek(0)
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
+        handle.close()
+
+
+def _read_claim_owner(path: Path) -> dict[str, Any] | None:
     try:
         owner = json.loads((path / "owner.json").read_text(encoding="utf-8"))
     except Exception:
-        try:
-            return time.time() - path.stat().st_mtime >= stale_seconds
-        except FileNotFoundError:
-            return False
+        return None
+    return owner if isinstance(owner, dict) else None
+
+
+def _claim_owner_is_abandoned(owner: Mapping[str, Any], stale_seconds: float) -> bool:
     pid = owner.get("pid") if isinstance(owner, dict) else None
+    expected_identity = str(owner.get("process_identity") or "") if isinstance(owner, dict) else ""
     try:
         created_at = float(owner.get("created_at_epoch", 0.0))
     except (TypeError, ValueError, AttributeError):
         created_at = 0.0
     if isinstance(pid, int) and pid > 0:
-        return not _pid_exists(pid)
+        if not _pid_exists(pid):
+            return True
+        current_identity = _process_identity(pid)
+        if expected_identity and current_identity:
+            return current_identity != expected_identity
+        return False
     return created_at > 0 and time.time() - created_at >= stale_seconds
+
+
+def _remove_abandoned_claim(path: Path, stale_seconds: float) -> bool:
+    owner = _read_claim_owner(path)
+    if owner is None:
+        try:
+            if time.time() - path.stat().st_mtime < stale_seconds:
+                return False
+            # Ownerless compatibility claims are removed only when empty.  If
+            # an owner appears concurrently, rmdir fails instead of stealing.
+            path.rmdir()
+            return True
+        except (FileNotFoundError, OSError):
+            return False
+    if not _claim_owner_is_abandoned(owner, stale_seconds):
+        return False
+    token = str(owner.get("token") or "")
+    if not token:
+        return False
+
+    quarantine = path.with_name(f"{path.name}.reap-{uuid.uuid4().hex}")
+    try:
+        os.replace(path, quarantine)
+    except (FileNotFoundError, OSError):
+        return False
+    moved_owner = _read_claim_owner(quarantine)
+    if moved_owner is None or str(moved_owner.get("token") or "") != token:
+        try:
+            if not path.exists():
+                os.replace(quarantine, path)
+        except OSError:
+            pass
+        return False
+    try:
+        shutil.rmtree(quarantine)
+        return True
+    except (FileNotFoundError, OSError):
+        return False
+
+
+def _process_identity(pid: int) -> str:
+    """Return a PID-reuse-resistant process birth marker when the OS exposes one."""
+
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        process_query_limited_information = 0x1000
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.GetProcessTimes.argtypes = [
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.FILETIME),
+            ctypes.POINTER(wintypes.FILETIME),
+            ctypes.POINTER(wintypes.FILETIME),
+            ctypes.POINTER(wintypes.FILETIME),
+        ]
+        kernel32.GetProcessTimes.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+        handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+        if not handle:
+            return ""
+        creation = wintypes.FILETIME()
+        exit_time = wintypes.FILETIME()
+        kernel = wintypes.FILETIME()
+        user = wintypes.FILETIME()
+        try:
+            if not kernel32.GetProcessTimes(
+                handle,
+                ctypes.byref(creation),
+                ctypes.byref(exit_time),
+                ctypes.byref(kernel),
+                ctypes.byref(user),
+            ):
+                return ""
+            value = (int(creation.dwHighDateTime) << 32) | int(creation.dwLowDateTime)
+            return f"windows-filetime:{value}"
+        finally:
+            kernel32.CloseHandle(handle)
+    stat_path = Path(f"/proc/{pid}/stat")
+    try:
+        # Field 22 is process start time.  Split after the final ')' because
+        # process names may contain spaces and parentheses.
+        tail = stat_path.read_text(encoding="utf-8").rsplit(")", 1)[1].split()
+        return f"proc-start:{tail[19]}"
+    except Exception:
+        return ""
+
+
+def _remove_claim_owned(path: Path, token: str) -> bool:
+    """Best-effort Windows-safe cleanup that never removes another owner's claim."""
+
+    for _attempt in range(20):
+        try:
+            owner = json.loads((path / "owner.json").read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return not path.exists()
+        except Exception:
+            return False
+        if not isinstance(owner, Mapping) or owner.get("token") != token:
+            return False
+        try:
+            shutil.rmtree(path)
+            return True
+        except FileNotFoundError:
+            return True
+        except OSError:
+            time.sleep(0.01)
+    return False
 
 
 def _pid_exists(pid: int) -> bool:
@@ -675,6 +921,77 @@ def _pid_exists(pid: int) -> bool:
         return True
     except OSError:
         return False
+
+
+def _sanitize_lease_record(
+    lease: Mapping[str, Any], secret_values: Sequence[str] = ()
+) -> dict[str, Any]:
+    cleaned = dict(lease)
+    metadata = cleaned.get("research_metadata")
+    if not isinstance(metadata, Mapping):
+        cleaned.pop("research_metadata", None)
+        cleaned.pop("research_metadata_policy", None)
+        return cleaned
+    policy = str(cleaned.get("research_metadata_policy") or "")
+    explicit_fields: list[str] = []
+    if policy == "explicit_safe_scalars.v1":
+        allowed = _SAFE_TEXT_METADATA_FIELDS | _SAFE_NUMERIC_METADATA_FIELDS
+        explicit_fields = [str(key) for key in metadata if str(key) in allowed]
+    sanitized = _sanitize_research_metadata(
+        metadata,
+        secret_values,
+        safe_metadata_fields=explicit_fields,
+    )
+    if sanitized:
+        cleaned["research_metadata"] = sanitized
+        cleaned["research_metadata_policy"] = "explicit_safe_scalars.v1"
+    else:
+        cleaned.pop("research_metadata", None)
+        cleaned.pop("research_metadata_policy", None)
+    return cleaned
+
+
+def _sanitize_research_metadata(
+    metadata: Mapping[str, Any],
+    secret_values: Sequence[str],
+    *,
+    safe_metadata_fields: Sequence[str] | None,
+) -> dict[str, Any]:
+    """Persist only documented scalar telemetry or explicitly safe text fields.
+
+    Free-form nested structures are intentionally omitted.  Text fields must
+    be named in ``safe_metadata_fields`` and still pass credential/value
+    scrubbing; callers should use ``secret_values`` for opaque provider values.
+    """
+
+    explicit: set[str] = set()
+    if safe_metadata_fields is not None:
+        if isinstance(safe_metadata_fields, (str, bytes, bytearray)):
+            raise ValueError("safe_metadata_fields must be a sequence of field names")
+        for field in safe_metadata_fields:
+            if not isinstance(field, str) or not field:
+                raise ValueError("safe_metadata_fields must contain non-empty strings")
+            if field not in _SAFE_TEXT_METADATA_FIELDS | _SAFE_NUMERIC_METADATA_FIELDS:
+                raise ValueError(f"unsupported safe metadata field: {field}")
+            explicit.add(field)
+
+    cleaned: dict[str, Any] = {}
+    for raw_key, raw_value in metadata.items():
+        key = str(raw_key)
+        if _is_sensitive_key(key):
+            continue
+        if (
+            key in _SAFE_NUMERIC_METADATA_FIELDS
+            and isinstance(raw_value, (int, float))
+            and not isinstance(raw_value, bool)
+        ):
+            cleaned[key] = raw_value
+            continue
+        if key not in explicit or isinstance(raw_value, (Mapping, list, tuple, set, frozenset)):
+            continue
+        if raw_value is None or isinstance(raw_value, (str, bool, int, float)):
+            cleaned[key] = _sanitize_metadata(raw_value, secret_values)
+    return cleaned
 
 
 def _sanitize_metadata(value: Any, secret_values: Sequence[str] = ()) -> Any:
