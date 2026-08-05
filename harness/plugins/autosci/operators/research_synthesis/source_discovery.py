@@ -9,6 +9,7 @@ from .base import (
     ResearchOperatorError,
     build_node_result,
     evidence_ref,
+    load_artifact,
     no_provider_result,
     output_path,
     require_node,
@@ -18,12 +19,14 @@ from .base import (
 
 
 def _load_seed_snapshot(context: OperatorContext) -> dict[str, Any]:
-    if isinstance(context.payload.get("seed_snapshot"), dict):
-        return context.payload["seed_snapshot"]
-    for artifact_ref in context.input_artifact_refs():
-        if artifact_ref.get("schema") == "research_synthesis.seed_snapshot.v1" or "seed" in str(artifact_ref.get("artifact_id", "")):
-            return context.load_json_artifact(artifact_ref)
-    return {}
+    payload, _ref = load_artifact(
+        context,
+        schemas=("research_synthesis.seed_snapshot.v1",),
+        artifact_ids=("seed_snapshot",),
+        filenames=("seed_snapshot.json",),
+        payload_keys=("seed_snapshot",),
+    )
+    return payload
 
 
 def _supplied_candidates(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -49,6 +52,18 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         provider_usage = [item for item in response.get("provider_usage", []) if isinstance(item, dict)]
         limitations = [str(item) for item in response.get("limitations", []) if str(item).strip()]
         discovery_trace = str(response.get("trace") or "discover_sources")
+    if not candidates:
+        return build_node_result(
+            context,
+            status="blocked",
+            errors=[{
+                "error_id": "source_discovery.no_candidates",
+                "error_type": "no_sources_discovered",
+                "message": "Source discovery returned no candidate sources.",
+            }],
+            model_provider_usage=provider_usage,
+            limitations=[*limitations, "No source candidate was available for validation."],
+        )
     artifact_payload = {
         "schema": "research_synthesis.source_discovery.v1",
         "node_id": "source_discovery",

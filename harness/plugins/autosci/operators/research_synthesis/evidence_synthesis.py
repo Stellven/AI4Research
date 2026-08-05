@@ -9,6 +9,7 @@ from .base import (
     ResearchOperatorError,
     build_node_result,
     evidence_ref,
+    load_artifact,
     no_provider_result,
     output_path,
     provider_usage_from,
@@ -18,22 +19,24 @@ from .base import (
 )
 
 
-def _load_validation(context: OperatorContext) -> dict[str, Any]:
-    if isinstance(context.payload.get("source_validation"), dict):
-        return context.payload["source_validation"]
-    for artifact_ref in context.input_artifact_refs():
-        if artifact_ref.get("schema") == "research_synthesis.source_validation.v1" or "validation" in str(artifact_ref.get("artifact_id", "")):
-            return context.load_json_artifact(artifact_ref)
-    return {}
+def _load_validation(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    return load_artifact(
+        context,
+        schemas=("research_synthesis.source_validation.v1",),
+        artifact_ids=("source_validation",),
+        filenames=("source_validation.json",),
+        payload_keys=("source_validation",),
+    )
 
 
-def _load_seed(context: OperatorContext) -> dict[str, Any]:
-    if isinstance(context.payload.get("seed_snapshot"), dict):
-        return context.payload["seed_snapshot"]
-    for artifact_ref in context.input_artifact_refs():
-        if artifact_ref.get("schema") == "research_synthesis.seed_snapshot.v1" or "seed" in str(artifact_ref.get("artifact_id", "")):
-            return context.load_json_artifact(artifact_ref)
-    return {}
+def _load_seed(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    return load_artifact(
+        context,
+        schemas=("research_synthesis.seed_snapshot.v1",),
+        artifact_ids=("seed_snapshot",),
+        filenames=("seed_snapshot.json",),
+        payload_keys=("seed_snapshot",),
+    )
 
 
 def _normalize_claims(response: dict[str, Any], accepted_ids: set[str]) -> list[dict[str, Any]]:
@@ -65,7 +68,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     model_generate = context.services.get("model_generate")
     if model_generate is None:
         return no_provider_result(context, "model_generate")
-    validation = _load_validation(context)
+    validation, validation_ref = _load_validation(context)
     accepted = [item for item in validation.get("accepted", []) if isinstance(item, dict)]
     if not accepted:
         return build_node_result(
@@ -74,7 +77,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             errors=[{"error_id": "evidence_synthesis.no_sources", "error_type": "missing_validated_sources", "message": "No validated sources were available for synthesis."}],
             limitations=["Evidence synthesis only consumes validated sources and cannot synthesize from unvalidated candidates."],
         )
-    seed_snapshot = _load_seed(context)
+    seed_snapshot, seed_ref = _load_seed(context)
     response = model_generate(
         node_id="evidence_synthesis",
         task_contract=context.payload.get("task_contract"),
@@ -95,6 +98,10 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "source_ids": sorted(accepted_ids),
         "claims": claims,
         "claim_count": len(claims),
+        "input_lineage": {
+            "seed_snapshot": "seed_snapshot" if seed_snapshot else "",
+            "source_validation": "source_validation" if validation else "",
+        },
         "limitations": limitations,
     }
     artifact, hash_record = write_artifact(

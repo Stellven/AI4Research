@@ -9,6 +9,7 @@ from .base import (
     ResearchOperatorError,
     build_node_result,
     evidence_ref,
+    load_artifact,
     no_provider_result,
     output_path,
     provider_usage_from,
@@ -18,13 +19,14 @@ from .base import (
 )
 
 
-def _load_synthesis(context: OperatorContext) -> dict[str, Any]:
-    if isinstance(context.payload.get("evidence_synthesis"), dict):
-        return context.payload["evidence_synthesis"]
-    for artifact_ref in context.input_artifact_refs():
-        if artifact_ref.get("schema") == "research_synthesis.evidence_synthesis.v1" or "synthesis" in str(artifact_ref.get("artifact_id", "")):
-            return context.load_json_artifact(artifact_ref)
-    return {}
+def _load_synthesis(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    return load_artifact(
+        context,
+        schemas=("research_synthesis.evidence_synthesis.v1",),
+        artifact_ids=("evidence_synthesis",),
+        filenames=("evidence_synthesis.json",),
+        payload_keys=("evidence_synthesis",),
+    )
 
 
 def _task_contract(context: OperatorContext) -> dict[str, Any]:
@@ -77,7 +79,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     model_generate = context.services.get("model_generate")
     if model_generate is None:
         return no_provider_result(context, "model_generate")
-    synthesis = _load_synthesis(context)
+    synthesis, synthesis_ref = _load_synthesis(context)
     claims = [item for item in synthesis.get("claims", []) if isinstance(item, dict)]
     if not claims:
         return build_node_result(
@@ -106,6 +108,15 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "created_at": utc_now(),
         "deliverable_requirements": deliverable_requirements,
         "report": report,
+        "claim_source_lineage": {
+            str(item.get("claim_id")): [str(source_id) for source_id in item.get("evidence_ids", []) if str(source_id).strip()]
+            for item in claims
+            if item.get("claim_id")
+        },
+        "evidence_lineage": [
+            "evidence_synthesis",
+            *[str(value) for value in (synthesis.get("input_lineage") or {}).values() if str(value).strip()],
+        ],
         "writer_usage": usage,
         "limitations": limitations,
     }

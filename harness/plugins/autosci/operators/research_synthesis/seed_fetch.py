@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -58,7 +59,39 @@ def _snapshot_local(seed: dict[str, Any], context: OperatorContext) -> dict[str,
         raise ResearchOperatorError(f"Local seed is not a file: {seed.get('value')}", error_type="invalid_input")
     data = path.read_bytes()
     kind = str(seed.get("seed_kind") or path.suffix.lstrip(".")).lower()
-    text = data.decode("utf-8", errors="replace")
+    limitations: list[str] = []
+    if kind == "pdf":
+        extractor = context.services.get("extract_pdf_text")
+        if extractor is not None:
+            extracted = extractor(path)
+            if isinstance(extracted, tuple):
+                text, warnings = extracted
+            elif isinstance(extracted, dict):
+                text = extracted.get("text", "")
+                warnings = extracted.get("warnings", [])
+            else:
+                text, warnings = extracted, []
+        else:
+            try:
+                from harness.plugins.autosci.backends.paper_prepare import _extract_pdf_text
+            except ImportError as exc:  # pragma: no cover - installation shape
+                raise ResearchOperatorError(
+                    "PDF extraction dependency is unavailable; raw PDF bytes were not treated as text.",
+                    error_type="pdf_extraction_unavailable",
+                ) from exc
+            text, warnings = _extract_pdf_text(path)
+        text = str(text or "").strip()
+        limitations = [str(item) for item in warnings or [] if str(item).strip()]
+        if not text:
+            raise ResearchOperatorError(
+                "PDF extraction produced no usable document text; raw PDF bytes were not treated as text.",
+                error_type="pdf_extraction_unavailable",
+            )
+    else:
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ResearchOperatorError("Markdown seed is not valid UTF-8", error_type="invalid_input") from exc
     return {
         "seed_id": str(seed.get("seed_id") or f"seed-{path.stem}"),
         "seed_kind": kind,
@@ -67,7 +100,57 @@ def _snapshot_local(seed: dict[str, Any], context: OperatorContext) -> dict[str,
         "sha256": sha256_bytes(data),
         "content_type": "application/pdf" if kind == "pdf" else "text/markdown",
         "content": text,
-        "limitations": ["PDF content is captured as bounded raw text bytes for this draft operator."] if kind == "pdf" else [],
+        "limitations": limitations,
+    }
+
+
+def _snapshot_external_evidence(seed: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    task_contract = context.payload.get("task_contract") if isinstance(context.payload.get("task_contract"), dict) else {}
+    if str(task_contract.get("run_mode") or "") not in {"resume", "import_evidence"}:
+        raise ResearchOperatorError(
+            "external_evidence is accepted only for a validated resume or import_evidence task contract.",
+            error_type="unverified_external_evidence",
+        )
+    declared_ref = seed.get("artifact_ref") if isinstance(seed.get("artifact_ref"), dict) else {}
+    provenance = declared_ref.get("provenance") if isinstance(declared_ref.get("provenance"), dict) else {}
+    if not declared_ref or not str(provenance.get("source") or "").strip() or not str(provenance.get("captured_at") or "").strip():
+        raise ResearchOperatorError(
+            "external_evidence requires a provenance-bearing artifact_ref.",
+            error_type="unverified_external_evidence",
+        )
+    matching_ref = next(
+        (
+            ref for ref in context.input_artifact_refs()
+            if str(ref.get("artifact_id") or "") == str(declared_ref.get("artifact_id") or "")
+            and str(ref.get("path") or "").replace("\\", "/") == str(declared_ref.get("path") or "").replace("\\", "/")
+        ),
+        None,
+    )
+    if matching_ref is None:
+        raise ResearchOperatorError(
+            "external_evidence artifact_ref is not present in the scoped node inputs.",
+            error_type="unverified_external_evidence",
+        )
+    path = validate_scoped_path(str(matching_ref.get("path") or ""), context.read_scope, workspace_root=context.workspace_root, must_exist=True)
+    data = path.read_bytes()
+    expected_hash = str(declared_ref.get("sha256") or matching_ref.get("sha256") or "")
+    actual_hash = sha256_bytes(data)
+    if expected_hash and expected_hash.lower() != actual_hash:
+        raise ResearchOperatorError("external_evidence artifact hash does not match its reference.", error_type="artifact_hash_mismatch")
+    try:
+        content = json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ResearchOperatorError("external_evidence artifact must be a UTF-8 JSON document.", error_type="invalid_input") from exc
+    return {
+        "seed_id": str(seed.get("seed_id") or "seed-external-evidence"),
+        "seed_kind": "external_evidence",
+        "source": str(declared_ref.get("path") or ""),
+        "fetched_at": str(provenance.get("captured_at")),
+        "sha256": actual_hash,
+        "content_type": "application/json",
+        "content": content,
+        "provenance": provenance,
+        "limitations": ["External evidence was imported from a scoped, provenance-bearing artifact; its claims remain subject to validation."],
     }
 
 
@@ -82,7 +165,7 @@ def _snapshot_inline(seed: dict[str, Any]) -> dict[str, Any]:
         "sha256": sha256_bytes(value.encode("utf-8")),
         "content_type": "text/plain",
         "content": value,
-        "limitations": ["External evidence seed was imported as context only."] if kind == "external_evidence" else [],
+        "limitations": [],
     }
 
 
@@ -97,8 +180,20 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
                 return no_provider_result(context, "fetch_url")
             snapshots.append(snapshot)
         elif kind in SUPPORTED_LOCAL_KINDS:
-            snapshots.append(_snapshot_local(seed, context))
-        elif kind in {"topic", "research_brief", "external_evidence"}:
+            try:
+                snapshots.append(_snapshot_local(seed, context))
+            except ResearchOperatorError as exc:
+                if exc.error_type != "pdf_extraction_unavailable":
+                    raise
+                return build_node_result(
+                    context,
+                    status="blocked",
+                    errors=[{"error_id": "seed_fetch.pdf_extraction", "error_type": exc.error_type, "message": str(exc)}],
+                    limitations=["A supported PDF extraction surface is required before this seed can be ingested."],
+                )
+        elif kind == "external_evidence":
+            snapshots.append(_snapshot_external_evidence(seed, context))
+        elif kind in {"topic", "research_brief"}:
             snapshots.append(_snapshot_inline(seed))
         else:
             raise ResearchOperatorError(f"Unsupported seed_kind: {kind}", error_type="invalid_input")

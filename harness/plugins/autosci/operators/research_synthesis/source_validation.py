@@ -10,6 +10,7 @@ from .base import (
     ResearchOperatorError,
     build_node_result,
     evidence_ref,
+    load_artifact,
     normalize_id,
     output_path,
     require_node,
@@ -20,14 +21,17 @@ from .base import (
 
 
 def _load_candidates(context: OperatorContext) -> list[dict[str, Any]]:
+    payload, _ref = load_artifact(
+        context,
+        schemas=("research_synthesis.source_discovery.v1",),
+        artifact_ids=("source_discovery",),
+        filenames=("source_discovery.json",),
+        payload_keys=(),
+    )
+    if payload:
+        return [item for item in payload.get("candidates", []) if isinstance(item, dict)]
     raw = context.payload.get("candidates") or context.payload.get("source_candidates")
-    if isinstance(raw, list):
-        return [item for item in raw if isinstance(item, dict)]
-    for artifact_ref in context.input_artifact_refs():
-        if artifact_ref.get("schema") == "research_synthesis.source_discovery.v1" or "discovery" in str(artifact_ref.get("artifact_id", "")):
-            payload = context.load_json_artifact(artifact_ref)
-            return [item for item in payload.get("candidates", []) if isinstance(item, dict)]
-    return []
+    return [item for item in raw if isinstance(item, dict)] if isinstance(raw, list) else []
 
 
 def _canonical_key(source: dict[str, Any]) -> str:
@@ -120,6 +124,20 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         artifact_id="source_validation",
         schema="research_synthesis.source_validation.v1",
     )
+    if not accepted:
+        return build_node_result(
+            context,
+            status="blocked",
+            output_artifacts=[artifact],
+            evidence=[evidence_ref("source_validation.review", "source_validation", f"0 accepted and {len(rejected)} rejected source(s).", artifact["artifact_id"])],
+            hashes=[hash_record],
+            errors=[{
+                "error_id": "source_validation.no_accepted_sources",
+                "error_type": "no_validated_sources",
+                "message": "Source validation produced no accepted sources.",
+            }],
+            limitations=artifact_payload["limitations"],
+        )
     return build_node_result(
         context,
         status="completed",

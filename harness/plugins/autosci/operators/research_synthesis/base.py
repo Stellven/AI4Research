@@ -72,8 +72,15 @@ class OperatorContext:
     def load_json_artifact(self, artifact_ref: dict[str, Any]) -> dict[str, Any]:
         path = validate_scoped_path(artifact_ref.get("path", ""), self.read_scope, workspace_root=self.workspace_root)
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
+            data = path.read_bytes()
+            expected_hash = str(artifact_ref.get("sha256") or "")
+            if expected_hash and sha256_bytes(data).lower() != expected_hash.lower():
+                raise ResearchOperatorError(
+                    f"Input artifact hash does not match reference: {artifact_ref.get('path')}",
+                    error_type="artifact_hash_mismatch",
+                )
+            payload = json.loads(data.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ResearchOperatorError(f"Input artifact is not valid JSON: {artifact_ref.get('path')}", error_type="invalid_input") from exc
         except OSError as exc:
             raise ResearchOperatorError(f"Input artifact cannot be read: {artifact_ref.get('path')}", error_type="scope_read_error") from exc
@@ -152,10 +159,35 @@ def display_path(path: Path, workspace_root: Path) -> str:
         return str(path)
 
 
-def redact_secrets(value: Any, secret_refs: list[str]) -> Any:
-    """Remove obvious secret values without preserving user-provided secret material."""
+_SENSITIVE_KEY = re.compile(
+    r"(?:^|[_-])(?:api[_-]?key|access[_-]?token|token|auth(?:orization)?|cookie|credential|password|private[_-]?key|secret)(?:$|[_-])",
+    re.IGNORECASE,
+)
+_SENSITIVE_TEXT_PATTERNS = (
+    re.compile(r"\b(?:sk|rk|pk)-[A-Za-z0-9_-]{8,}\b"),
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
+    re.compile(r"\bAIza[0-9A-Za-z_-]{20,}\b"),
+    re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+    re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]{8,}"),
+    re.compile(r"(?i)\b(?:api[_-]?key|access[_-]?token|password|secret)\s*[:=]\s*[^\s,;]+"),
+)
 
-    secret_markers = [item.lower() for item in secret_refs if item]
+
+def _scrub_sensitive_text(value: str) -> str:
+    redacted = value
+    for pattern in _SENSITIVE_TEXT_PATTERNS:
+        redacted = pattern.sub("[REDACTED]", redacted)
+    return redacted
+
+
+def redact_secrets(value: Any, secret_refs: list[str] | None = None) -> Any:
+    """Sanitize observable secret shapes.
+
+    ``secret_refs`` are identifiers for secrets held outside the operator.  They
+    are deliberately *not* treated as secret values: seeing ``OPENAI_API_KEY``
+    in a contract is not proof that the corresponding credential was exposed.
+    """
 
     def scrub(item: Any) -> Any:
         if isinstance(item, dict):
@@ -165,18 +197,66 @@ def redact_secrets(value: Any, secret_refs: list[str]) -> Any:
                 lowered = key_text.lower()
                 if key_text in {"secret_redaction_assertion", "no_secrets_observed", "redaction_review", "input_tokens", "output_tokens"}:
                     out[key_text] = scrub(child)
-                elif any(marker and marker in lowered for marker in [*secret_markers, "secret", "token", "api_key", "password"]):
+                elif _SENSITIVE_KEY.search(lowered):
                     out[key_text] = "[REDACTED]"
                 else:
                     out[key_text] = scrub(child)
             return out
         if isinstance(item, list):
             return [scrub(child) for child in item]
-        if isinstance(item, str) and any(marker and marker in item for marker in secret_refs):
-            return "[REDACTED]"
+        if isinstance(item, str):
+            return _scrub_sensitive_text(item)
         return item
 
     return scrub(value)
+
+
+def load_artifact(
+    context: OperatorContext,
+    *,
+    schemas: tuple[str, ...],
+    artifact_ids: tuple[str, ...],
+    filenames: tuple[str, ...] = (),
+    payload_keys: tuple[str, ...] = (),
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Load one upstream artifact by stable identity.
+
+    Preserved schema wins, followed by exact artifact id.  A filename fallback
+    is accepted only when the loaded document itself declares an expected
+    schema.  Inline payloads remain a compatibility fallback for isolated
+    operator calls, never a replacement for an available artifact reference.
+    """
+
+    candidates: list[tuple[int, int, dict[str, Any]]] = []
+    expected_schemas = set(schemas)
+    expected_ids = set(artifact_ids)
+    expected_filenames = {name.replace("\\", "/").rsplit("/", 1)[-1] for name in filenames}
+    for index, ref in enumerate(context.input_artifact_refs()):
+        schema = str(ref.get("schema") or "")
+        artifact_id = str(ref.get("artifact_id") or "")
+        filename = str(ref.get("path") or "").replace("\\", "/").rsplit("/", 1)[-1]
+        score = 300 if schema in expected_schemas else 200 if artifact_id in expected_ids else 100 if filename in expected_filenames else 0
+        if score:
+            candidates.append((score, index, ref))
+    for score, _index, ref in sorted(candidates, key=lambda item: (-item[0], item[1])):
+        payload = context.load_json_artifact(ref)
+        embedded_schema = str(payload.get("schema") or "")
+        if embedded_schema and embedded_schema not in expected_schemas:
+            raise ResearchOperatorError(
+                f"Input artifact identity does not match expected schema: {ref.get('path')}",
+                error_type="artifact_identity_mismatch",
+            )
+        if embedded_schema in expected_schemas:
+            return payload, ref
+    if context.input_artifact_refs():
+        # A referenced artifact is authoritative; do not silently replace a
+        # malformed/mismatched upstream result with convenient inline data.
+        return {}, None
+    for key in payload_keys:
+        value = context.payload.get(key)
+        if isinstance(value, dict):
+            return value, None
+    return {}, None
 
 
 def write_artifact(
