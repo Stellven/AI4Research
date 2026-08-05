@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from copy import deepcopy
 from datetime import UTC, datetime
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Callable
+
+import jsonschema
 
 
 class ResearchOrchestrationError(ValueError):
@@ -35,6 +39,9 @@ _SECRET_PATTERNS = (
     re.compile(r"(?i)(api[_-]?key|access[_-]?token|password|client[_-]?secret)\s*[:=]\s*['\"]?[^\s,'\"}]+"),
 )
 _SAFE_SECRET_METADATA_KEYS = {"secret_refs", "secret_redaction_assertion", "no_secrets_observed"}
+_HARNESS_ROOT = Path(__file__).resolve().parents[2]
+_TASK_SCHEMA_PATH = _HARNESS_ROOT / "schemas" / "draft" / "research_task_contract.v1.schema.json"
+_RESULT_SCHEMA_PATH = _HARNESS_ROOT / "schemas" / "evidence" / "research_node_result.v1.schema.json"
 
 
 class ResearchOrchestrator:
@@ -49,6 +56,7 @@ class ResearchOrchestrator:
         dispatch_callable: Callable[[dict], dict],
         evaluator_callable: Callable[[dict, dict, dict], dict],
         authorization: dict | None = None,
+        artifact_root: Path | None = None,
         clock: Callable[[], str] | None = None,
     ) -> None:
         self.task_contract = deepcopy(task_contract)
@@ -56,7 +64,10 @@ class ResearchOrchestrator:
         self.state_store = state_store
         self.dispatch_callable = dispatch_callable
         self.evaluator_callable = evaluator_callable
-        self.authorization = self._normalize_authorization(authorization or {})
+        normalized_authorization = self._normalize_authorization(authorization or {})
+        self._secret_values = tuple(normalized_authorization.pop("secret_values"))
+        self.authorization = normalized_authorization
+        self.artifact_root = Path(artifact_root or Path.cwd()).expanduser().resolve()
         self.clock = clock or _default_clock
         self._workflow: dict | None = None
         self._state_revision: str | None = None
@@ -167,8 +178,11 @@ class ResearchOrchestrator:
         unfulfilled provider or human gate as ready.
         """
 
+        self._validate_task_contract()
         if authorization is not None:
-            self.authorization = self._normalize_authorization(authorization)
+            normalized_authorization = self._normalize_authorization(authorization)
+            self._secret_values = tuple(normalized_authorization.pop("secret_values"))
+            self.authorization = normalized_authorization
         state = self._load_state()
         if state is None:
             if node_result is not None or redispatch_node_id is not None:
@@ -224,6 +238,7 @@ class ResearchOrchestrator:
         request = self._node_request(node, state, workflow)
         result = self._sanitize_result(deepcopy(raw_result))
         self._validate_result_boundary(request, result)
+        self._verify_completed_artifacts(request, result)
         if result["status"] not in TERMINAL_NODE_STATUSES:
             raise ResearchOrchestrationError("imported result must be terminal evidence")
         decision = self._evaluate(request, result, state)
@@ -235,6 +250,7 @@ class ResearchOrchestrator:
         return deepcopy(state)
 
     def _load_or_initialize(self) -> dict:
+        self._validate_task_contract()
         state = self._load_state()
         return self.initialize() if state is None else deepcopy(state)
 
@@ -259,8 +275,9 @@ class ResearchOrchestrator:
         missing = sorted(key for key in required if key not in self.task_contract)
         if missing:
             raise ResearchOrchestrationError(f"task contract missing fields: {', '.join(missing)}")
-        if _contains_secret_material(self.task_contract):
+        if _contains_secret_material(self.task_contract, self._secret_values):
             raise ResearchOrchestrationError("task contract must contain secret references, not secret values")
+        self._validate_json_schema(self.task_contract, _TASK_SCHEMA_PATH, "task contract")
         run_mode = self.task_contract["run_mode"]
         if run_mode == "execute":
             if self.task_contract.get("supplied_evidence"):
@@ -505,6 +522,7 @@ class ResearchOrchestrator:
                 raise ResearchOrchestrationError("dispatch_callable returned a non-object result")
             result = self._sanitize_result(result)
             self._validate_result_boundary(request, result)
+            self._verify_completed_artifacts(request, result)
             return result
         except Exception as exc:
             failure = self._failure_result(request, "dispatch_exception", type(exc).__name__, str(exc))
@@ -512,8 +530,8 @@ class ResearchOrchestrator:
             return failure
 
     def _sanitize_result(self, result: dict) -> dict:
-        sanitized = _sanitize_payload(deepcopy(result))
-        if _contains_secret_material(sanitized):
+        sanitized = _sanitize_payload(deepcopy(result), secret_values=self._secret_values)
+        if _contains_secret_material(sanitized, self._secret_values):
             raise ResearchOrchestrationError("result contains secret material after sanitization")
         sanitized["secret_redaction_assertion"] = {
             "no_secrets_observed": True,
@@ -522,6 +540,7 @@ class ResearchOrchestrator:
         return sanitized
 
     def _validate_result_boundary(self, request: dict, result: dict) -> None:
+        self._validate_json_schema(result, _RESULT_SCHEMA_PATH, "worker result")
         if result.get("schema") != "research_node_result.v1":
             raise ResearchOrchestrationError("worker result has invalid schema identity")
         for key in ("task_id", "run_id", "workflow_id", "node_id"):
@@ -559,12 +578,62 @@ class ResearchOrchestrator:
         if not isinstance(assertion, dict) or assertion.get("no_secrets_observed") is not True:
             raise ResearchOrchestrationError("worker result lacks a verified secret-redaction assertion")
 
+    def _verify_completed_artifacts(self, request: dict, result: dict) -> None:
+        if result.get("status") != "completed":
+            return
+        write_scopes = list(request.get("write_scope") or [])
+        if not write_scopes:
+            raise ResearchOrchestrationError("completed result has no declared write scope")
+        resolved_scopes = [self._resolve_scoped_path(scope, must_exist=False) for scope in write_scopes]
+        for scope in resolved_scopes:
+            if not _is_under_or_equal(scope, self.artifact_root):
+                raise ResearchOrchestrationError("declared write scope escapes artifact_root")
+        for artifact in result.get("output_artifacts") or []:
+            artifact_path = self._resolve_scoped_path(artifact.get("path"), must_exist=True)
+            if not artifact_path.is_file():
+                raise ResearchOrchestrationError("completed artifact must be an existing regular file")
+            if not _is_under_or_equal(artifact_path, self.artifact_root):
+                raise ResearchOrchestrationError("completed artifact escapes artifact_root")
+            if not any(_is_under_or_equal(artifact_path, scope) for scope in resolved_scopes):
+                raise ResearchOrchestrationError("completed artifact escapes node write_scope")
+            declared_hash = str(artifact.get("sha256") or "")
+            if not _SHA256_RE.match(declared_hash):
+                raise ResearchOrchestrationError("completed artifact must declare sha256")
+            actual_hash = _sha256_file(artifact_path)
+            if actual_hash.casefold() != declared_hash.casefold():
+                raise ResearchOrchestrationError("completed artifact sha256 does not match file content")
+
+    def _resolve_scoped_path(self, raw: Any, *, must_exist: bool) -> Path:
+        if not isinstance(raw, str) or not raw.strip() or "\x00" in raw:
+            raise ResearchOrchestrationError("artifact path must be a non-empty safe string")
+        text = raw.strip().replace("\\", "/")
+        if PureWindowsPath(text).is_absolute() or PurePosixPath(text).is_absolute():
+            candidate = Path(text)
+        else:
+            candidate = self.artifact_root / text
+        try:
+            return candidate.resolve(strict=must_exist)
+        except (OSError, RuntimeError) as exc:
+            raise ResearchOrchestrationError("completed artifact path does not exist or cannot be resolved") from exc
+
+    def _validate_json_schema(self, value: dict, schema_path: Path, label: str) -> None:
+        try:
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            jsonschema.Draft202012Validator(schema).validate(value)
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ResearchOrchestrationError(f"{label} schema is unavailable") from exc
+        except jsonschema.ValidationError as exc:
+            location = ".".join(str(part) for part in exc.path)
+            prefix = f"{location}: " if location else ""
+            message = _scrub_text(exc.message, self._secret_values)
+            raise ResearchOrchestrationError(f"{label} violates frozen Phase 0 schema: {prefix}{message}") from exc
+
     def _evaluate(self, request: dict, result: dict, state: dict) -> dict:
         try:
             raw = self.evaluator_callable(deepcopy(request), deepcopy(result), deepcopy(state))
             if not isinstance(raw, dict):
                 raise ResearchOrchestrationError("evaluator_callable must return an object")
-            raw = _sanitize_payload(raw)
+            raw = _sanitize_payload(raw, secret_values=self._secret_values)
             if any(not isinstance(raw.get(field, []), list) for field in ("evidence_refs", "errors", "limitations")):
                 raise ResearchOrchestrationError("evaluator evidence/errors/limitations must be lists")
             if not isinstance(raw.get("accepted"), bool):
@@ -601,7 +670,7 @@ class ResearchOrchestrator:
                 "accepted": False,
                 "status": "failed",
                 "evidence_refs": [],
-                "errors": [{"message": _scrub_text(str(exc))[:500] or "evaluator failed"}],
+                "errors": [{"message": _scrub_text(str(exc), self._secret_values)[:500] or "evaluator failed"}],
                 "limitations": ["Evaluator did not return a valid acceptance decision."],
             }
 
@@ -624,7 +693,7 @@ class ResearchOrchestrator:
                 {
                     "blocker_id": f"{node_id}_evaluation_error",
                     "node_id": node_id,
-                    "reason": _scrub_text(str(reason))[:500] or "evaluation failed",
+                    "reason": _scrub_text(str(reason), self._secret_values)[:500] or "evaluation failed",
                 }
             ]
         elif status in {"awaiting_human", "awaiting_external"}:
@@ -711,13 +780,11 @@ class ResearchOrchestrator:
         raise ResearchOrchestrationError(f"unknown workflow node: {node_id}")
 
     def _has_live_provider_approval(self) -> bool:
-        allow = self.authorization.get("allow_live_provider") is True or self.task_contract.get("constraints", {}).get("allow_live_provider") is True
+        allow = self.authorization.get("allow_live_provider") is True
         return allow and bool(self._explicit_approval_ref())
 
     def _explicit_approval_ref(self) -> str:
-        # task_contract support is legacy-only; Phase 0 callers should pass the
-        # separate authorization envelope because the task schema has no field.
-        value = self.authorization.get("approval_ref") or self.task_contract.get("approval_ref")
+        value = self.authorization.get("approval_ref")
         return str(value).strip() if value is not None else ""
 
     @staticmethod
@@ -730,15 +797,16 @@ class ResearchOrchestrator:
             "approval_ref": str(value.get("approval_ref") or "").strip(),
             "scope_id": str(value.get("scope_id") or "").strip(),
             "secret_refs": [str(item) for item in value.get("secret_refs") or [] if str(item).strip()],
+            "secret_values": _normalize_secret_values(value.get("secret_values")),
         }
-        if _contains_secret_material(result["approval_ref"]):
+        if _contains_secret_material(result["approval_ref"], result["secret_values"]):
             raise ResearchOrchestrationError("approval_ref resembles secret material")
-        if any(_contains_secret_material(item) for item in result["secret_refs"]):
+        if any(_contains_secret_material(item, result["secret_values"]) for item in result["secret_refs"]):
             raise ResearchOrchestrationError("secret_refs must contain names, not secret values")
         return result
 
     def _failure_result(self, request: dict, error_id: str, error_type: str, message: str) -> dict:
-        clean_message = _scrub_text(message)[:500] or "dispatch failed"
+        clean_message = _scrub_text(message, self._secret_values)[:500] or "dispatch failed"
         payload = {
             "schema": "research_node_result.v1",
             "task_id": request["task_id"],
@@ -751,16 +819,16 @@ class ResearchOrchestrator:
             "evidence": [],
             "hashes": [],
             "model_provider_usage": [],
-            "errors": [{"error_id": error_id, "error_type": _scrub_text(error_type)[:120], "message": clean_message}],
+            "errors": [{"error_id": error_id, "error_type": _scrub_text(error_type, self._secret_values)[:120], "message": clean_message}],
             "limitations": ["Dispatch failed before accepted node evidence was produced."],
             "secret_redaction_assertion": {"no_secrets_observed": True, "redaction_review": "passed"},
         }
-        if _contains_secret_material(payload):
+        if _contains_secret_material(payload, self._secret_values):
             payload["errors"][0]["message"] = "dispatch failed; sensitive exception text was discarded"
         return payload
 
 
-def _sanitize_payload(value: Any, key: str = "") -> Any:
+def _sanitize_payload(value: Any, key: str = "", secret_values: tuple[str, ...] = ()) -> Any:
     if isinstance(value, dict):
         clean: dict = {}
         for child_key, child_value in value.items():
@@ -768,19 +836,21 @@ def _sanitize_payload(value: Any, key: str = "") -> Any:
             if text_key not in _SAFE_SECRET_METADATA_KEYS and _SENSITIVE_KEY_RE.search(text_key):
                 clean[child_key] = "[REDACTED]"
             else:
-                clean[child_key] = _sanitize_payload(child_value, text_key)
+                clean[child_key] = _sanitize_payload(child_value, text_key, secret_values)
         return clean
     if isinstance(value, list):
-        return [_sanitize_payload(item, key) for item in value]
+        return [_sanitize_payload(item, key, secret_values) for item in value]
     if isinstance(value, tuple):
-        return [_sanitize_payload(item, key) for item in value]
+        return [_sanitize_payload(item, key, secret_values) for item in value]
     if isinstance(value, str):
-        return _scrub_text(value)
+        return _scrub_text(value, secret_values)
     return value
 
 
-def _scrub_text(value: str) -> str:
+def _scrub_text(value: str, secret_values: tuple[str, ...] = ()) -> str:
     result = str(value)
+    for secret in sorted(secret_values, key=len, reverse=True):
+        result = result.replace(secret, "[REDACTED]")
     for pattern in _SECRET_PATTERNS:
         if pattern.pattern.startswith("(?i)(api"):
             result = pattern.sub(lambda match: f"{match.group(1)}=[REDACTED]", result)
@@ -789,18 +859,18 @@ def _scrub_text(value: str) -> str:
     return result
 
 
-def _contains_secret_material(value: Any) -> bool:
+def _contains_secret_material(value: Any, secret_values: tuple[str, ...] = ()) -> bool:
     if isinstance(value, dict):
         for key, child in value.items():
             if str(key) not in _SAFE_SECRET_METADATA_KEYS and _SENSITIVE_KEY_RE.search(str(key)) and child != "[REDACTED]":
                 return True
-            if _contains_secret_material(child):
+            if _contains_secret_material(child, secret_values):
                 return True
         return False
     if isinstance(value, (list, tuple)):
-        return any(_contains_secret_material(item) for item in value)
+        return any(_contains_secret_material(item, secret_values) for item in value)
     if isinstance(value, str):
-        return any(pattern.search(value) for pattern in _SECRET_PATTERNS)
+        return any(secret in value for secret in secret_values) or any(pattern.search(value) for pattern in _SECRET_PATTERNS)
     return False
 
 
@@ -810,6 +880,38 @@ def _path_within_scope(path: str, scope: str) -> bool:
     if candidate == allowed:
         return True
     return candidate.startswith(allowed + "/")
+
+
+def _is_under_or_equal(path: Path, parent: Path) -> bool:
+    path_text = str(path.resolve(strict=False)).replace("\\", "/").casefold().rstrip("/")
+    parent_text = str(parent.resolve(strict=False)).replace("\\", "/").casefold().rstrip("/")
+    return path_text == parent_text or path_text.startswith(parent_text + "/")
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _normalize_secret_values(raw: Any) -> list[str]:
+    if raw is None:
+        values: list[Any] = []
+    elif isinstance(raw, dict):
+        values = list(raw.values())
+    elif isinstance(raw, (list, tuple, set)):
+        values = list(raw)
+    else:
+        raise ResearchOrchestrationError("secret_values must be a list or object of in-memory values")
+    normalized: list[str] = []
+    for value in values:
+        if not isinstance(value, str) or not value:
+            raise ResearchOrchestrationError("secret_values must contain non-empty strings")
+        if value not in normalized:
+            normalized.append(value)
+    return normalized
 
 
 def _dedupe(items: list[str]) -> list[str]:

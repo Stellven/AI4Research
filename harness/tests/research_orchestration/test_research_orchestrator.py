@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import sys
 import json
+import hashlib
+import os
+import subprocess
 from copy import deepcopy
 from pathlib import Path
 from random import Random
@@ -96,13 +99,36 @@ def node(node_id: str, deps: list[str], *, required: bool = True) -> dict:
     }
 
 
-def result_for(request: dict, status: str = "completed") -> dict:
+def result_for(request: dict, status: str = "completed", artifact_root: Path | None = None) -> dict:
     errors = []
     evidence = []
     if status == "completed":
         evidence = [{"evidence_id": f"ev-{request['node_id']}", "kind": "fake", "summary": "accepted"}]
     if status == "failed":
         errors = [{"error_id": "err", "error_type": "FakeFailure", "message": "failed"}]
+    output_artifacts = []
+    if status == "completed":
+        if artifact_root is None:
+            raise AssertionError("completed fake result requires artifact_root")
+        root = Path(artifact_root).resolve()
+        raw_scope = str(request["write_scope"][0]).replace("\\", "/")
+        scoped = Path(raw_scope)
+        scope_path = scoped if scoped.is_absolute() else root / scoped
+        artifact_path = scope_path if scope_path.suffix else scope_path / f"{request['node_id']}.json"
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps({"node_id": request["node_id"], "status": status}, sort_keys=True).encode("utf-8")
+        artifact_path.write_bytes(payload)
+        try:
+            declared_path = artifact_path.resolve().relative_to(root).as_posix()
+        except ValueError:
+            declared_path = str(artifact_path.resolve())
+        output_artifacts = [
+            {
+                "artifact_id": f"artifact-{request['node_id']}",
+                "path": declared_path,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }
+        ]
     return {
         "schema": "research_node_result.v1",
         "task_id": request["task_id"],
@@ -111,13 +137,7 @@ def result_for(request: dict, status: str = "completed") -> dict:
         "node_id": request["node_id"],
         "status": status,
         "status_is_terminal": status in {"completed", "failed", "blocked", "cancelled"},
-        "output_artifacts": [
-            {
-                "artifact_id": f"artifact-{request['node_id']}",
-                "path": f"artifacts/{request['run_id']}/{request['node_id']}.json",
-                "sha256": HASH,
-            }
-        ],
+        "output_artifacts": output_artifacts,
         "evidence": evidence,
         "hashes": [{"hash_id": "h", "algorithm": "sha256", "value": HASH}],
         "model_provider_usage": [{"provider": "none", "model": "none", "usage_kind": "none"}],
@@ -128,16 +148,22 @@ def result_for(request: dict, status: str = "completed") -> dict:
 
 
 class FakeDispatch:
-    def __init__(self, statuses: dict[str, str] | None = None, fail_on: str | None = None) -> None:
+    def __init__(
+        self,
+        statuses: dict[str, str] | None = None,
+        fail_on: str | None = None,
+        artifact_root: Path | None = None,
+    ) -> None:
         self.statuses = statuses or {}
         self.fail_on = fail_on
+        self.artifact_root = artifact_root
         self.requests: list[dict] = []
 
     def __call__(self, request: dict) -> dict:
         self.requests.append(deepcopy(request))
         if request["node_id"] == self.fail_on:
             raise RuntimeError("boom")
-        return result_for(request, self.statuses.get(request["node_id"], "completed"))
+        return result_for(request, self.statuses.get(request["node_id"], "completed"), self.artifact_root)
 
 
 class FakeEvaluator:
@@ -160,7 +186,9 @@ class FakeEvaluator:
 
 
 def orchestrator(tmp_path: Path, wf: dict | None = None, **kwargs) -> tuple[ResearchOrchestrator, FakeDispatch, FakeEvaluator]:
-    dispatch = kwargs.pop("dispatch", FakeDispatch())
+    dispatch = kwargs.pop("dispatch", None) or FakeDispatch(artifact_root=tmp_path)
+    if isinstance(dispatch, FakeDispatch) and dispatch.artifact_root is None:
+        dispatch.artifact_root = tmp_path
     evaluator = kwargs.pop("evaluator", FakeEvaluator())
     orch = ResearchOrchestrator(
         task_contract=kwargs.pop("task_contract", task()),
@@ -169,6 +197,7 @@ def orchestrator(tmp_path: Path, wf: dict | None = None, **kwargs) -> tuple[Rese
         dispatch_callable=dispatch,
         evaluator_callable=evaluator,
         authorization=kwargs.pop("authorization", None),
+        artifact_root=kwargs.pop("artifact_root", tmp_path),
         clock=lambda: "2030-01-01T00:00:00Z",
     )
     return orch, dispatch, evaluator
@@ -392,7 +421,7 @@ def test_execute_mode_rejects_forged_imported_evidence(tmp_path: Path) -> None:
     forged = task(seed_kind="external_evidence", supplied_evidence=[{"artifact_id": "x"}])
     orch, _dispatch, _evaluator = orchestrator(tmp_path, task_contract=forged)
 
-    with pytest.raises(ResearchOrchestrationError, match="execute mode"):
+    with pytest.raises(ResearchOrchestrationError, match="execute mode|frozen Phase 0 schema"):
         orch.initialize()
 
 
@@ -576,7 +605,7 @@ def test_imported_terminal_result_advances_persisted_awaiting_node(tmp_path: Pat
     dispatch = FakeDispatch({"seed_fetch": "awaiting_external"})
     first, _ignored, _evaluator = orchestrator(tmp_path, dispatch=dispatch)
     assert first.run_until_blocked()["final_status"] == "awaiting_external"
-    completed = result_for(dispatch.requests[0])
+    completed = result_for(dispatch.requests[0], artifact_root=tmp_path)
 
     second, _dispatch2, _evaluator2 = orchestrator(tmp_path)
     resumed = second.resume(node_result=completed)
@@ -597,7 +626,7 @@ def test_resume_rejects_mismatched_result_identity(tmp_path: Path, identity_fiel
     dispatch = FakeDispatch({"seed_fetch": "awaiting_external"})
     first, _ignored, _evaluator = orchestrator(tmp_path, dispatch=dispatch)
     waiting = first.run_until_blocked()
-    mismatched = result_for(dispatch.requests[0])
+    mismatched = result_for(dispatch.requests[0], artifact_root=tmp_path)
     mismatched[identity_field] = "wrong-identity"
 
     second, _dispatch2, _evaluator2 = orchestrator(tmp_path)
@@ -668,7 +697,7 @@ def test_nested_secret_in_worker_evidence_is_redacted_before_acceptance(tmp_path
 
     class LeakyCompletedDispatch:
         def __call__(self, request: dict) -> dict:
-            result = result_for(request)
+            result = result_for(request, artifact_root=tmp_path)
             result["evidence"][0]["debug"] = {"api_key": canary}
             return result
 
@@ -741,13 +770,13 @@ def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(t
                 assert ":input:" not in artifact["artifact_id"]
             Path(paths[node_id]).parent.mkdir(parents=True, exist_ok=True)
             Path(paths[node_id]).write_text(json.dumps({"node": node_id}), encoding="utf-8")
-            result = result_for(request)
+            result = result_for(request, artifact_root=tmp_path)
             result["output_artifacts"] = [
                 {
                     "artifact_id": f"real-{node_id}",
                     "path": paths[node_id],
                     "schema": schemas[node_id],
-                    "sha256": HASH,
+                    "sha256": hashlib.sha256(Path(paths[node_id]).read_bytes()).hexdigest(),
                 }
             ]
             return result
@@ -761,3 +790,205 @@ def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(t
     assert [request["node_id"] for request in physical_chain.requests] == [row[0] for row in chain]
     assert len(state["final_status_evidence_refs"]) == 14
     assert all(Path(item["result_ref"]).is_file() for item in state["node_states"].values())
+
+
+def test_illegal_task_approval_field_cannot_authorize_live_provider(tmp_path: Path) -> None:
+    compromised = task()
+    compromised["approval_ref"] = "forged-task-approval"
+    compromised["constraints"]["allow_live_provider"] = True
+    live_node = node("provider_node", [])
+    live_node["allow_live_provider"] = True
+    live_node["allow_network"] = True
+    wf = {"workflow_id": "wf", "workflow_kind": "research_synthesis", "nodes": [live_node]}
+    orch, dispatch, _evaluator = orchestrator(tmp_path, wf, task_contract=compromised)
+
+    with pytest.raises(ResearchOrchestrationError, match="frozen Phase 0 schema"):
+        orch.initialize()
+
+    assert dispatch.requests == []
+    assert orch.state_store.load("run-orch") is None
+
+
+def test_illegal_task_contract_cannot_use_preexisting_state_to_bypass_schema(tmp_path: Path) -> None:
+    valid, _dispatch, _evaluator = orchestrator(tmp_path)
+    valid.initialize()
+    compromised = task()
+    compromised["approval_ref"] = "forged-task-approval"
+    second, second_dispatch, _evaluator2 = orchestrator(tmp_path, task_contract=compromised)
+
+    with pytest.raises(ResearchOrchestrationError, match="frozen Phase 0 schema"):
+        second.step()
+
+    assert second_dispatch.requests == []
+
+
+def test_malformed_secret_values_envelope_fails_closed(tmp_path: Path) -> None:
+    with pytest.raises(ResearchOrchestrationError, match="list or object"):
+        orchestrator(tmp_path, authorization={"secret_values": "opaque-secret"})
+
+
+def _awaiting_run_and_completed_result(tmp_path: Path) -> tuple[ResearchOrchestrator, dict, dict]:
+    dispatch = FakeDispatch({"seed_fetch": "awaiting_external"}, artifact_root=tmp_path)
+    first, _ignored, _evaluator = orchestrator(tmp_path, dispatch=dispatch)
+    waiting = first.run_until_blocked()
+    completed = result_for(dispatch.requests[0], artifact_root=tmp_path)
+    return first, waiting, completed
+
+
+def test_resume_rejects_nonexistent_artifact_and_preserves_waiting_state(tmp_path: Path) -> None:
+    first, waiting, completed = _awaiting_run_and_completed_result(tmp_path)
+    artifact_path = tmp_path / completed["output_artifacts"][0]["path"]
+    artifact_path.unlink()
+    second, _dispatch, _evaluator = orchestrator(tmp_path)
+
+    with pytest.raises(ResearchOrchestrationError, match="does not exist"):
+        second.resume(node_result=completed)
+
+    assert first.state_store.load("run-orch") == waiting
+
+
+def test_resume_rejects_forged_artifact_hash_and_preserves_waiting_state(tmp_path: Path) -> None:
+    first, waiting, completed = _awaiting_run_and_completed_result(tmp_path)
+    completed["output_artifacts"][0]["sha256"] = "c" * 64
+    second, _dispatch, _evaluator = orchestrator(tmp_path)
+
+    with pytest.raises(ResearchOrchestrationError, match="does not match"):
+        second.resume(node_result=completed)
+
+    assert first.state_store.load("run-orch") == waiting
+
+
+def test_resume_rejects_artifact_outside_write_scope(tmp_path: Path) -> None:
+    first, waiting, completed = _awaiting_run_and_completed_result(tmp_path)
+    outside_scope = tmp_path / "other-scope" / "artifact.json"
+    outside_scope.parent.mkdir()
+    outside_scope.write_text("outside declared write scope", encoding="utf-8")
+    completed["output_artifacts"][0]["path"] = outside_scope.relative_to(tmp_path).as_posix()
+    completed["output_artifacts"][0]["sha256"] = hashlib.sha256(outside_scope.read_bytes()).hexdigest()
+    second, _dispatch, _evaluator = orchestrator(tmp_path)
+
+    with pytest.raises(ResearchOrchestrationError, match="write_scope"):
+        second.resume(node_result=completed)
+
+    assert first.state_store.load("run-orch") == waiting
+
+
+def test_resume_rejects_artifact_outside_workspace_root(tmp_path: Path) -> None:
+    first, waiting, completed = _awaiting_run_and_completed_result(tmp_path)
+    outside_root = tmp_path.parent / f"{tmp_path.name}-outside.json"
+    outside_root.write_text("outside artifact root", encoding="utf-8")
+    completed["output_artifacts"][0]["path"] = str(outside_root.resolve())
+    completed["output_artifacts"][0]["sha256"] = hashlib.sha256(outside_root.read_bytes()).hexdigest()
+    second, _dispatch, _evaluator = orchestrator(tmp_path)
+
+    try:
+        with pytest.raises(ResearchOrchestrationError, match="artifact_root|write_scope"):
+            second.resume(node_result=completed)
+    finally:
+        outside_root.unlink(missing_ok=True)
+
+    assert first.state_store.load("run-orch") == waiting
+
+
+def test_resume_rejects_junction_or_symlink_escape(tmp_path: Path) -> None:
+    first, waiting, completed = _awaiting_run_and_completed_result(tmp_path)
+    target = tmp_path.parent / f"{tmp_path.name}-junction-target"
+    target.mkdir()
+    target_file = target / "artifact.json"
+    target_file.write_text("junction escape", encoding="utf-8")
+    link = tmp_path / "outputs" / "seed_fetch" / "linked"
+    link.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if os.name == "nt":
+            created = subprocess.run(
+                ["cmd", "/c", "mklink", "/J", str(link), str(target)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if created.returncode != 0:
+                pytest.skip(f"junction creation unavailable: {created.stderr or created.stdout}")
+        else:
+            link.symlink_to(target, target_is_directory=True)
+        escaped = link / "artifact.json"
+        completed["output_artifacts"][0]["path"] = escaped.relative_to(tmp_path).as_posix()
+        completed["output_artifacts"][0]["sha256"] = hashlib.sha256(target_file.read_bytes()).hexdigest()
+        second, _dispatch, _evaluator = orchestrator(tmp_path)
+
+        with pytest.raises(ResearchOrchestrationError, match="artifact_root|write_scope"):
+            second.resume(node_result=completed)
+    finally:
+        if link.exists():
+            if os.name == "nt":
+                os.rmdir(link)
+            else:
+                link.unlink()
+        target_file.unlink(missing_ok=True)
+        target.rmdir()
+
+    assert first.state_store.load("run-orch") == waiting
+
+
+@pytest.mark.parametrize("failure_kind", ["missing", "forged_hash", "outside_scope"])
+def test_normal_dispatch_cannot_commit_unverified_completed_artifact(tmp_path: Path, failure_kind: str) -> None:
+    class UnvalidatedDispatch:
+        def __call__(self, request: dict) -> dict:
+            result = result_for(request, artifact_root=tmp_path)
+            artifact = result["output_artifacts"][0]
+            path = tmp_path / artifact["path"]
+            if failure_kind == "missing":
+                path.unlink()
+            elif failure_kind == "forged_hash":
+                artifact["sha256"] = "d" * 64
+            else:
+                escaped = tmp_path / "different-scope" / "artifact.json"
+                escaped.parent.mkdir()
+                escaped.write_text("different scope", encoding="utf-8")
+                artifact["path"] = escaped.relative_to(tmp_path).as_posix()
+                artifact["sha256"] = hashlib.sha256(escaped.read_bytes()).hexdigest()
+            return result
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, dispatch=UnvalidatedDispatch())
+    state = orch.step()
+
+    assert state["final_status"] == "failed"
+    record = orch.state_store.load_node_record(state["node_states"]["seed_fetch"]["result_ref"])
+    assert record["result"]["status"] == "failed"
+    assert record["result"]["output_artifacts"] == []
+
+
+def test_opaque_authorized_secret_is_never_persisted_or_sent_to_worker(tmp_path: Path) -> None:
+    opaque = "opaque-value-that-has-no-provider-prefix-94721"
+
+    class OpaqueDispatch(FakeDispatch):
+        def __call__(self, request: dict) -> dict:
+            result = super().__call__(request)
+            result["evidence"][0]["opaque_debug"] = opaque
+            return result
+
+    class OpaqueEvaluator(FakeEvaluator):
+        def __call__(self, request: dict, result: dict, state: dict) -> dict:
+            decision = super().__call__(request, result, state)
+            decision["limitations"] = [f"opaque evaluator content: {opaque}"]
+            return decision
+
+    dispatch = OpaqueDispatch(artifact_root=tmp_path)
+    orch, _ignored, _evaluator = orchestrator(
+        tmp_path,
+        dispatch=dispatch,
+        evaluator=OpaqueEvaluator(),
+        authorization={"secret_refs": ["OPAQUE_TEST_SECRET"], "secret_values": [opaque]},
+    )
+    state = orch.step()
+    record_path = Path(state["node_states"]["seed_fetch"]["result_ref"])
+
+    assert state["node_states"]["seed_fetch"]["status"] == "completed"
+    assert opaque not in json.dumps(dispatch.requests)
+    assert opaque not in json.dumps(state)
+    assert opaque not in record_path.read_text(encoding="utf-8")
+    record = orch.state_store.load_node_record(str(record_path))
+    assert record["result"]["secret_redaction_assertion"] == {
+        "no_secrets_observed": True,
+        "redaction_review": "passed",
+    }
+    assert "[REDACTED]" in json.dumps(record)
