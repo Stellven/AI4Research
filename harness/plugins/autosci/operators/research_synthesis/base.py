@@ -354,6 +354,13 @@ def write_artifact(
         artifact_payload.setdefault("task_id", str(context.node_request.get("task_id") or ""))
         artifact_payload.setdefault("run_id", str(context.node_request.get("run_id") or ""))
         artifact_payload.setdefault("workflow_id", str(context.node_request.get("workflow_id") or ""))
+        task_contract = context.payload.get("task_contract")
+        run_provenance = task_contract.get("run_provenance") if isinstance(task_contract, dict) else None
+        if isinstance(run_provenance, dict):
+            artifact_payload.setdefault(
+                "run_provenance",
+                redact_secrets(run_provenance, context.secret_refs, context.secret_values),
+            )
     redacted = redact_secrets(artifact_payload, context.secret_refs, context.secret_values)
     body = json.dumps(redacted, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     target.parent.mkdir(parents=True, exist_ok=True)

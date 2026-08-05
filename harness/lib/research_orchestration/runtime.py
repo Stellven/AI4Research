@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import shutil
+import subprocess
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
@@ -130,6 +131,15 @@ class SolarResearchRuntime:
             explicit_workflow=explicit_workflow,
             run_mode=run_mode,
         )
+        try:
+            configured_workflow = self.workflow_loader(decision)
+        except Exception as exc:
+            raise ResearchRuntimeError(f"workflow route resolution failed: {exc}") from exc
+        workflow_identity = {
+            "workflow_id": str(configured_workflow.get("workflow_id") or "unavailable"),
+            "workflow_version": configured_workflow.get("version", "unavailable"),
+            "workflow_kind": str(configured_workflow.get("workflow_kind") or decision.workflow_kind),
+        }
         task_contract = build_task_contract(
             prompt=prompt,
             run_id=run_id,
@@ -138,9 +148,11 @@ class SolarResearchRuntime:
             supplied_evidence=evidence,
             output_language=output_language,
             repository_inputs=repositories,
+            workflow_identity=workflow_identity,
+            run_provenance=_git_checkout_provenance(_HARNESS_ROOT.parent),
         )
         try:
-            workflow = apply_task_conditions(self.workflow_loader(decision), task_contract)
+            workflow = apply_task_conditions(configured_workflow, task_contract)
         except Exception as exc:
             raise ResearchRuntimeError(f"workflow route resolution failed: {exc}") from exc
         runtime_authorization = deepcopy(self.authorization)
@@ -228,6 +240,7 @@ class SolarResearchRuntime:
             "workflow_id": workflow.get("workflow_id"),
             "start_node": workflow.get("start_node"),
             "run_mode": run_mode,
+            "run_provenance": deepcopy(task_contract["run_provenance"]),
             "final_status": state.get("final_status"),
             "state_path": str(state_path),
             "final_status_evidence_refs": list(state.get("final_status_evidence_refs") or []),
@@ -252,10 +265,76 @@ def build_task_contract(
     supplied_evidence: list[dict] | None = None,
     output_language: str = "",
     repository_inputs: list[dict] | None = None,
+    workflow_identity: dict[str, Any] | None = None,
+    run_provenance: dict[str, Any] | None = None,
 ) -> dict:
     """Build the frozen Phase 0 task contract without truncating user intent."""
 
     language = str(output_language or "").strip() or "preserve_user_request"
+    local_lifecycle = decision.workflow_kind in {"paper_ingestion", "scientific_lifecycle"}
+    required_content: list[dict[str, Any]] = []
+    lowered_prompt = prompt.lower()
+    if re.search(r"\b(method|methods|methodology|procedure|approach)\b", lowered_prompt):
+        required_content.append({
+            "requirement_id": "method_evidence",
+            "description": "Render available method evidence, or explicitly disclose insufficient method evidence.",
+            "required": True,
+        })
+    if re.search(r"\b(result|results|finding|findings|claim|claims|conclusion|conclusions)\b", lowered_prompt):
+        required_content.append({
+            "requirement_id": "result_claims",
+            "description": "Preserve source-grounded result or claim semantics in the final report.",
+            "required": True,
+        })
+    if re.search(r"\b(limitation|limitations|caveat|caveats)\b", lowered_prompt):
+        required_content.append({
+            "requirement_id": "limitations",
+            "description": "Render known evidence limitations explicitly.",
+            "required": True,
+        })
+    if local_lifecycle:
+        artifact_expectations = [
+            "report",
+            "research_claims",
+            "research_method",
+            "artifact_review",
+            "publication_bundle",
+            "final_evaluation",
+        ]
+        success_criteria = [
+            "At least 1 parsed, non-empty local source",
+            "Every reported claim is linked to evidence sources",
+            "The final report contains non-empty body content",
+            "The local structural review is disclosed with its independent-review limitation",
+        ]
+        review_requirement = {
+            "expected_mode": "local_surrogate",
+            "independent_peer_review_required": False,
+            "limitation_disclosure_required": True,
+        }
+    else:
+        artifact_expectations = ["report", "evidence_synthesis", "source_validation", "independent_review"]
+        success_criteria = [
+            (
+                "At least 2 validated sources"
+                if decision.workflow_kind in {"research_synthesis", "literature_synthesis"}
+                else "At least 1 parsed, non-empty local source"
+            ),
+            "Every conclusion is linked to evidence sources",
+            "The final report contains non-empty body content",
+            "The independent review verdict is accept",
+        ]
+        review_requirement = {
+            "expected_mode": "independent_model_review",
+            "independent_peer_review_required": True,
+            "limitation_disclosure_required": False,
+        }
+    provenance = deepcopy(run_provenance) if isinstance(run_provenance, dict) else _git_checkout_provenance(_HARNESS_ROOT.parent)
+    provenance["workflow_identity"] = deepcopy(workflow_identity or {
+        "workflow_id": "unavailable",
+        "workflow_version": "unavailable",
+        "workflow_kind": decision.workflow_kind,
+    })
     return {
         "schema": "research_task_contract.v1",
         "task_id": f"{run_id}.research",
@@ -266,12 +345,9 @@ def build_task_contract(
             "kind": "evidence_backed_research_report",
             "description": "A non-empty, structurally usable report relevant to the complete user request.",
             "language": language,
-            "artifact_expectations": [
-                "report",
-                "evidence_synthesis",
-                "source_validation",
-                "independent_review",
-            ],
+            "artifact_expectations": artifact_expectations,
+            "required_content": required_content,
+            "review_requirement": review_requirement,
         },
         "workflow_kind": decision.workflow_kind,
         "run_mode": decision.run_mode,
@@ -283,17 +359,41 @@ def build_task_contract(
         },
         "provider_requirements": [],
         "platform_requirements": [],
-        "success_criteria": [
-            (
-                "At least 2 validated sources"
-                if decision.workflow_kind in {"research_synthesis", "literature_synthesis"}
-                else "At least 1 parsed, non-empty local source"
-            ),
-            "Every conclusion is linked to evidence sources",
-            "The final report contains non-empty body content",
-            "The independent review verdict is accept",
-        ],
+        "success_criteria": success_criteria,
+        "run_provenance": provenance,
         "supplied_evidence": deepcopy(supplied_evidence or []),
+    }
+
+
+def _git_checkout_provenance(repo_root: Path) -> dict[str, Any]:
+    """Capture only bounded, non-secret implementation identity from Git."""
+
+    captured_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(Path(repo_root).resolve()), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout.strip()
+        status = subprocess.run(
+            ["git", "-C", str(Path(repo_root).resolve()), "status", "--porcelain=v1", "--untracked-files=normal"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {
+            "repo_head": "unavailable",
+            "worktree_status": "unavailable",
+            "captured_at": captured_at,
+        }
+    return {
+        "repo_head": head if re.fullmatch(r"[0-9a-fA-F]{40,64}", head) else "unavailable",
+        "worktree_status": "dirty" if status.strip() else "clean",
+        "captured_at": captured_at,
     }
 
 

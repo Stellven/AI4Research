@@ -374,6 +374,22 @@ class ResearchOrchestrator:
 
     def _initial_state(self, workflow: dict) -> dict:
         now = self.clock()
+        run_provenance = deepcopy(self.task_contract.get("run_provenance") or {})
+        if not run_provenance:
+            run_provenance = {
+                "repo_head": "unavailable",
+                "worktree_status": "unavailable",
+                "captured_at": now,
+                "workflow_identity": {
+                    "workflow_id": str(workflow.get("workflow_id") or "unavailable"),
+                    "workflow_version": workflow.get("version", 1),
+                    "workflow_kind": str(workflow.get("workflow_kind") or self.task_contract.get("workflow_kind") or "research_synthesis"),
+                },
+            }
+        workflow_identity = run_provenance.get("workflow_identity") if isinstance(run_provenance.get("workflow_identity"), dict) else {}
+        graph_version = workflow_identity.get("workflow_version")
+        if not isinstance(graph_version, int) or graph_version < 1:
+            graph_version = 1
         node_states = {
             node["node_id"]: {
                 "node_id": node["node_id"],
@@ -393,9 +409,10 @@ class ResearchOrchestrator:
             "workflow_id": workflow["workflow_id"],
             "graph_identity": {
                 "graph_id": workflow["workflow_id"],
-                "graph_version": 1,
+                "graph_version": graph_version,
                 "workflow_kind": workflow["workflow_kind"],
             },
+            "run_provenance": run_provenance,
             "node_states": node_states,
             "ready_nodes": self._calculate_ready_nodes_from_states(node_states),
             "current_blockers": [],
@@ -407,6 +424,22 @@ class ResearchOrchestrator:
 
     def _failed_initial_state(self, workflow: dict, reason: str) -> dict:
         now = self.clock()
+        run_provenance = deepcopy(self.task_contract.get("run_provenance") or {})
+        if not run_provenance:
+            run_provenance = {
+                "repo_head": "unavailable",
+                "worktree_status": "unavailable",
+                "captured_at": now,
+                "workflow_identity": {
+                    "workflow_id": str(workflow.get("workflow_id") or "invalid_workflow"),
+                    "workflow_version": workflow.get("version", 1),
+                    "workflow_kind": str(workflow.get("workflow_kind") or self.task_contract.get("workflow_kind") or "research_synthesis"),
+                },
+            }
+        workflow_identity = run_provenance.get("workflow_identity") if isinstance(run_provenance.get("workflow_identity"), dict) else {}
+        graph_version = workflow_identity.get("workflow_version")
+        if not isinstance(graph_version, int) or graph_version < 1:
+            graph_version = 1
         workflow_id = str(workflow.get("workflow_id") or "invalid_workflow")
         workflow_kind = str(workflow.get("workflow_kind") or self.task_contract.get("workflow_kind") or "research_synthesis")
         return {
@@ -414,7 +447,8 @@ class ResearchOrchestrator:
             "task_id": self.task_contract["task_id"],
             "run_id": self.task_contract["run_id"],
             "workflow_id": workflow_id,
-            "graph_identity": {"graph_id": workflow_id, "graph_version": 1, "workflow_kind": workflow_kind},
+            "graph_identity": {"graph_id": workflow_id, "graph_version": graph_version, "workflow_kind": workflow_kind},
+            "run_provenance": run_provenance,
             "node_states": {
                 "__workflow__": {
                     "node_id": "__workflow__",

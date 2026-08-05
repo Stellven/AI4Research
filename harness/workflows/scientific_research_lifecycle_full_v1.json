@@ -1483,7 +1483,11 @@
       "logical_operator": "ScientificFinalEvaluator",
       "depends_on": [
         "publication_produce",
-        "artifact_review"
+        "artifact_review",
+        "report_draft",
+        "method_extract",
+        "claim_verify",
+        "paper_analyze"
       ],
       "required_capabilities": [
         "research_synthesis",
@@ -1491,7 +1495,11 @@
       ],
       "read_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/publication_bundle.v1.json",
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/artifact_review.v1.json"
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/artifact_review.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/03_methods/research_method.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/08_verdict/claim_verdict.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/research_paper_analysis.v1.json"
       ],
       "write_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json"
@@ -1499,7 +1507,7 @@
       "gate": "G_FINAL_EVALUATION",
       "acceptance": [
         "Evaluates the publication produced by the lifecycle rather than pre-supplied evidence.",
-        "Requires a non-empty report, source evidence, artifact hashes, and an accepted independent review.",
+        "Requires a relevant non-empty report, source-grounded claim and method fidelity, artifact hashes, and the review mode promised by the task contract.",
         "Does not mutate Solar graph or final state."
       ],
       "pass_conditions": [

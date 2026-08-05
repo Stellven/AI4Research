@@ -20,7 +20,7 @@ from ...research_synthesis.base import (
 )
 
 
-OPERATOR_VERSION = "1.0.0"
+OPERATOR_VERSION = "1.1.0"
 IMPLEMENTATION_PACKAGE = "plugins/autosci/operators/scientific_lifecycle/action"
 
 
@@ -70,6 +70,14 @@ def evidence_timestamp(context: OperatorContext) -> str:
     # A caller-supplied timestamp makes retry output byte-for-byte reproducible.
     # Otherwise the evidence truthfully records this execution time.
     return str(context.payload.get("evidence_timestamp") or utc_now())
+
+
+def run_provenance(context: OperatorContext) -> dict[str, Any]:
+    task_contract = context.payload.get("task_contract")
+    value = task_contract.get("run_provenance") if isinstance(task_contract, dict) else None
+    if not isinstance(value, dict):
+        return {}
+    return redact_secrets(value, context.secret_refs, context.secret_values)
 
 
 def output_location(context: OperatorContext, filename: str, *, scope_index: int = 0) -> str:
@@ -175,6 +183,7 @@ def write_evidence_artifact(
             "timestamp": evidence_timestamp(context),
             "input_sha256": input_hash,
             "output_sha256": output_hash,
+            "run_provenance": run_provenance(context),
         },
         "limitations": [str(item) for item in limitations or [] if str(item).strip()],
     }

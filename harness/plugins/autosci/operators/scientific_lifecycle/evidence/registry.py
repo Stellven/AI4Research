@@ -14,7 +14,7 @@ from . import operators
 from .base import OperatorSpec, execute_spec
 
 
-_VERSION = "1.0.0"
+_VERSION = "1.1.0"
 
 
 def _spec(node_id: str, operator_id: str, schema: str, filename: str, handler) -> OperatorSpec:

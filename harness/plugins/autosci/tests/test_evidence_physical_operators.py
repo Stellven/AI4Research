@@ -217,7 +217,7 @@ def validate_result_and_artifact(result: dict, workspace: Path) -> dict:
     artifact = json.loads((workspace / artifact_ref["path"]).read_text(encoding="utf-8"))
     artifact_schema = json.loads((SCHEMAS / f"{artifact['schema']}.schema.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(artifact_schema).validate(artifact)
-    assert artifact["provenance"]["operator_version"] == "1.0.0"
+    assert artifact["provenance"]["operator_version"] == "1.1.0"
     assert len(artifact["provenance"]["input_sha256"]) == 64
     assert len(artifact["provenance"]["output_sha256"]) == 64
     assert artifact["provenance"]["outcome_class"] == "success"
@@ -311,7 +311,7 @@ def test_package_local_registration_is_unique_and_resolvable() -> None:
     assert len(entries) == len(NODE_IDS) == 12
     assert len({item["node_id"] for item in entries}) == len(entries)
     assert len({item["operator_id"] for item in entries}) == len(entries)
-    assert all(item["operator_version"] == "1.0.0" for item in entries)
+    assert all(item["operator_version"] == "1.1.0" for item in entries)
     assert all(item["mutates_global_state"] is False for item in entries)
     for node_id in NODE_IDS:
         resolved = resolve_entrypoint(node_id)

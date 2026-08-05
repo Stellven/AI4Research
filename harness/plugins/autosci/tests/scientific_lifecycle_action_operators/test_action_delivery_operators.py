@@ -17,6 +17,7 @@ from harness.plugins.autosci.operators.scientific_lifecycle.action.registry impo
     execute_operator,
     registration_entries,
 )
+from harness.plugins.autosci.operators.scientific_lifecycle.action.common import stable_json_sha256  # noqa: E402
 
 
 NODE_RESULT_SCHEMA = json.loads(
@@ -48,6 +49,36 @@ def _request(
     approval_ref: str | None = None,
     capabilities: list[str] | None = None,
 ) -> dict:
+    task_contract = {
+        "user_intent": "Report bounded treatment scientific results.",
+        "deliverable": {
+            "required_content": [{
+                "requirement_id": "result_claims",
+                "description": "Preserve source-grounded result claims.",
+                "required": True,
+            }],
+            "review_requirement": {
+                "expected_mode": "local_surrogate",
+                "independent_peer_review_required": False,
+                "limitation_disclosure_required": True,
+            },
+        },
+        "success_criteria": [
+            "Every reported claim is linked to evidence sources",
+            "The final report contains non-empty body content",
+            "The local structural review is disclosed with its independent-review limitation",
+        ],
+        "run_provenance": {
+            "repo_head": "unavailable",
+            "worktree_status": "unavailable",
+            "captured_at": "2026-08-05T12:00:00Z",
+            "workflow_identity": {
+                "workflow_id": "scientific_research_lifecycle_full_v1",
+                "workflow_version": 1,
+                "workflow_kind": "scientific_lifecycle",
+            },
+        },
+    }
     authorization = {
         "scope_id": "phase3-action-test",
         "approved_capabilities": list(capabilities or ["write_artifact"]),
@@ -67,7 +98,7 @@ def _request(
         "physical_operator": {"operator_id": f"physical-{node_id}", "operator_kind": "physical"},
         "typed_inputs": {
             "input_schema": f"{node_id}.input.v1",
-            "payload": {"evidence_timestamp": "2026-08-05T12:00:00Z", **(payload or {})},
+            "payload": {"evidence_timestamp": "2026-08-05T12:00:00Z", "task_contract": task_contract, **(payload or {})},
         },
         "input_artifact_refs": refs or [],
         "authorization": authorization,
@@ -102,7 +133,14 @@ def _validate_evidence(tmp_path: Path, result: dict) -> None:
             )
 
 
-def _external_ref(tmp_path: Path, name: str, schema: str, outputs: dict) -> dict:
+def _external_ref(
+    tmp_path: Path,
+    name: str,
+    schema: str,
+    outputs: dict,
+    *,
+    limitations: list[str] | None = None,
+) -> dict:
     path = tmp_path / "inputs" / f"{name}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -119,7 +157,7 @@ def _external_ref(tmp_path: Path, name: str, schema: str, outputs: dict) -> dict
             "implementation_package": "test",
             "timestamp": "2026-08-05T12:00:00Z",
         },
-        "limitations": [],
+        "limitations": list(limitations or []),
     }
     path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
     return {
@@ -128,6 +166,123 @@ def _external_ref(tmp_path: Path, name: str, schema: str, outputs: dict) -> dict
         "schema": schema,
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     }
+
+
+def _strict_final_contract(*, independent_review: bool = False, extra_criterion: str = "") -> dict:
+    criteria = [
+        "At least 1 parsed, non-empty local source",
+        "Every reported claim is linked to evidence sources",
+        "The final report contains non-empty body content",
+        "The local structural review is disclosed with its independent-review limitation",
+    ]
+    if extra_criterion:
+        criteria.append(extra_criterion)
+    return {
+        "user_intent": "Synthesize bounded treatment results, methods, and limitations.",
+        "deliverable": {
+            "required_content": [
+                {"requirement_id": "method_evidence", "description": "Preserve methods.", "required": True},
+                {"requirement_id": "result_claims", "description": "Preserve results.", "required": True},
+                {"requirement_id": "limitations", "description": "Preserve limitations.", "required": True},
+            ],
+            "review_requirement": {
+                "expected_mode": "independent_model_review" if independent_review else "local_surrogate",
+                "independent_peer_review_required": independent_review,
+                "limitation_disclosure_required": not independent_review,
+            },
+        },
+        "success_criteria": criteria,
+        "run_provenance": {
+            "repo_head": "a" * 40,
+            "worktree_status": "clean",
+            "captured_at": "2026-08-05T12:00:00Z",
+            "workflow_identity": {
+                "workflow_id": "scientific_research_lifecycle_full_v1",
+                "workflow_version": 1,
+                "workflow_kind": "scientific_lifecycle",
+            },
+        },
+    }
+
+
+def _strict_final_refs(
+    tmp_path: Path,
+    *,
+    task_contract: dict,
+    markdown: str,
+    methods: list[dict] | None = None,
+    method_insufficient: bool = False,
+) -> list[dict]:
+    claim_text = "The bounded treatment improves the primary outcome over baseline."
+    method_values = list(methods or [])
+    method_limitations = ["The source does not contain enough evidence to identify a method without invention."] if method_insufficient else []
+    report = {
+        "report_id": "strict-report",
+        "title": "Bounded treatment",
+        "sections": [
+            {"section_id": "summary", "title": "Summary", "body": "Bounded treatment synthesis.", "evidence_ids": ["source:1"]},
+            {"section_id": "findings", "title": "Findings", "body": claim_text, "evidence_ids": ["source:1"]},
+            {"section_id": "limitations", "title": "Limitations", "body": "Evidence limitations are explicit.", "evidence_ids": ["source:1"]},
+        ],
+        "evidence_ids": ["source:1"],
+        "unsupported_claims": [],
+        "methods": method_values,
+        "method_evidence_status": "available" if method_values else "insufficient_evidence",
+        "markdown": markdown,
+    }
+    report_ref = _external_ref(tmp_path, "strict_report", "scientific_report.v1", {"report": report})
+    method_ref = _external_ref(
+        tmp_path,
+        "strict_method",
+        "research_method.v1",
+        {"methods": method_values},
+        limitations=method_limitations,
+    )
+    verdict_ref = _external_ref(tmp_path, "strict_verdict", "claim_verdict.v1", {
+        "verdicts": [{
+            "claim_id": "claim-001",
+            "claim_text": claim_text,
+            "support_classification": "supported",
+            "verdict": "supported",
+            "basis": "Source evidence is present.",
+            "evidence_ids": ["source:1"],
+        }]
+    })
+    paper_ref = _external_ref(tmp_path, "strict_paper", "research_paper.v1", {
+        "paper": {"paper_id": "paper-001", "sections": [{"title": "Results", "text": claim_text, "source_anchor": "source:1"}]}
+    })
+    review_ref = _external_ref(
+        tmp_path,
+        "strict_review",
+        "artifact_review.v1",
+        {"review": {
+            "artifact_id": "strict-report",
+            "target": "scientific_report",
+            "review_mode": "local_surrogate",
+            "review_available": True,
+            "difficulty": "standard",
+            "focus": "completeness",
+            "score": 1.0,
+            "recommendation": "pass_with_review_required",
+            "evidence_ids": ["source:1"],
+            "review_scope": "local_structural_only",
+            "independent_peer_review": False,
+            "task_contract_sha256": stable_json_sha256(task_contract),
+        }, "findings": []},
+        limitations=["Local structural review does not replace independent scientific peer review."],
+    )
+    bundle_ref = _external_ref(tmp_path, "strict_bundle", "publication_bundle.v1", {
+        "bundle": {
+            "bundle_id": "strict-bundle",
+            "publication_type": "paper",
+            "files": [{"type": "embedded_markdown", "path": "inputs/strict_bundle.json"}],
+            "source_report_id": "strict-report",
+            "evidence_ids": ["source:1"],
+            "compiled_markdown": markdown,
+            "review_score": 1.0,
+        }
+    })
+    return [bundle_ref, review_ref, report_ref, method_ref, verdict_ref, paper_ref]
 
 
 def _idea_generator(**kwargs) -> dict:
@@ -183,7 +338,7 @@ def test_registration_seam_lists_each_operator_once() -> None:
     assert {item["node_id"] for item in entries} == EXPECTED_NODES
     assert len(entries) == len(EXPECTED_NODES)
     assert len({item["operator_id"] for item in entries}) == len(EXPECTED_NODES)
-    assert all(item["operator_version"] == "1.0.0" for item in entries)
+    assert all(item["operator_version"] == "1.1.0" for item in entries)
 
 
 def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path: Path, monkeypatch) -> None:
@@ -273,16 +428,30 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
         services={},
     )
     results.append(planned)
+    method_ref = _external_ref(tmp_path, "method_extract", "research_method.v1", {
+        "methods": [{
+            "method_id": "method-001",
+            "name": "Bounded controlled comparison",
+            "summary": "Compare the treatment with a bounded baseline.",
+            "procedure": ["Run one isolated treatment and one baseline replicate."],
+            "source_papers": ["paper-001"],
+            "evidence_ids": ["claim-source-001"],
+            "extraction_basis": "explicit_method_heading",
+            "confidence": 1.0,
+        }]
+    })
     drafted = _execute_twice(
         tmp_path,
-        _request("report_draft", refs=[*planned["output_artifacts"], *verified["output_artifacts"]]),
+        _request("report_draft", refs=[*planned["output_artifacts"], *verified["output_artifacts"], method_ref]),
         services={},
     )
     results.append(drafted)
     report = _artifact(tmp_path, drafted)["outputs"]["report"]
     assert report["markdown"].strip()
-    assert len(report["sections"]) == 3
+    assert len(report["sections"]) == 4
     assert "Bounded treatment outcome" in report["markdown"]
+    assert "## Methods" in report["markdown"]
+    assert "Bounded controlled comparison" in report["markdown"]
 
     reviewed = _execute_twice(tmp_path, _request("artifact_review", refs=drafted["output_artifacts"]), services={})
     results.append(reviewed)
@@ -300,12 +469,18 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
 
     evaluated_final = _execute_twice(
         tmp_path,
-        _request("final_evaluation", refs=[*published["output_artifacts"], *reviewed["output_artifacts"]]),
+        _request("final_evaluation", refs=[
+            *published["output_artifacts"],
+            *reviewed["output_artifacts"],
+            *drafted["output_artifacts"],
+            *verified["output_artifacts"],
+            method_ref,
+        ]),
         services={},
     )
     results.append(evaluated_final)
     final_decision = _artifact(tmp_path, evaluated_final)["outputs"]["evaluation"]
-    assert final_decision["decision"] == "accepted"
+    assert final_decision["decision"] == "accepted_with_limitations"
     assert all(final_decision["checks"].values())
     assert final_decision["does_not_modify_graph_or_run_state"] is True
 
@@ -331,6 +506,137 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
         assert len(result["hashes"]) >= 1
         assert result["evidence"]
         assert all("\\" not in item["path"] for item in result["output_artifacts"])
+
+
+def _explicit_test_method() -> dict:
+    return {
+        "method_id": "method-001",
+        "name": "Bounded controlled comparison",
+        "summary": "Compare the treatment with a bounded baseline.",
+        "procedure": ["Run one isolated treatment and one baseline replicate."],
+        "source_papers": ["paper-001"],
+        "evidence_ids": ["source:1"],
+        "extraction_basis": "explicit_method_heading",
+        "confidence": 1.0,
+    }
+
+
+def _complete_test_markdown() -> str:
+    return """# Bounded treatment
+
+## Summary
+This synthesis evaluates bounded treatment results using source-grounded evidence.
+
+## Findings
+The bounded treatment improves the primary outcome over baseline.
+
+## Methods
+### Bounded controlled comparison
+- Summary: Compare the treatment with a bounded baseline.
+- Procedure:
+  1. Run one isolated treatment and one baseline replicate.
+- Evidence IDs: source:1
+- Extraction basis: explicit_method_heading
+
+## Limitations
+- Local structural review does not replace independent scientific peer review.
+"""
+
+
+@pytest.mark.parametrize(
+    ("case", "markdown", "independent_review", "extra_criterion"),
+    [
+        (
+            "method evidence omitted",
+            """# Bounded treatment\n\n## Findings\nThe bounded treatment improves the primary outcome over baseline.\n\n## Limitations\n- Review is local.\n""",
+            False,
+            "",
+        ),
+        (
+            "requested result omitted",
+            """# Bounded treatment\n\n## Summary\nThis report discusses the bounded treatment context but omits its result.\n\n## Methods\n### Bounded controlled comparison\n- Summary: Compare the treatment with a bounded baseline.\n- Procedure: Run one isolated treatment and one baseline replicate.\n- Evidence IDs: source:1\n- Extraction basis: explicit_method_heading\n\n## Limitations\n- Review is local.\n""",
+            False,
+            "",
+        ),
+        ("local surrogate claimed for independent review", _complete_test_markdown(), True, ""),
+        ("success criterion unchecked", _complete_test_markdown(), False, "The report has delightful prose"),
+        (
+            "nonempty unrelated report",
+            """# Gardening notes\n\n## Findings\nTomatoes benefit from regular watering and adequate sunlight throughout the growing season.\n\n## Methods\nNo relevant scientific method is discussed.\n\n## Limitations\nThese are general gardening notes.\n""",
+            False,
+            "",
+        ),
+    ],
+)
+def test_final_evaluation_rejects_contract_or_fidelity_failures(
+    tmp_path: Path,
+    monkeypatch,
+    case: str,
+    markdown: str,
+    independent_review: bool,
+    extra_criterion: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    task_contract = _strict_final_contract(
+        independent_review=independent_review,
+        extra_criterion=extra_criterion,
+    )
+    refs = _strict_final_refs(
+        tmp_path,
+        task_contract=task_contract,
+        markdown=markdown,
+        methods=[_explicit_test_method()],
+    )
+
+    result = execute_operator(
+        _request("final_evaluation", payload={"task_contract": task_contract}, refs=refs),
+        services={},
+    )
+
+    assert result["status"] == "failed", case
+    assert result["errors"][0]["error_type"] == "quality_gate_failed"
+    assert result["output_artifacts"] == []
+
+
+def test_final_evaluation_accepts_method_insufficiency_as_explicit_limitation(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    task_contract = _strict_final_contract()
+    limitation = "The source does not contain enough evidence to identify a method without invention."
+    markdown = f"""# Bounded treatment
+
+## Summary
+This synthesis evaluates bounded treatment results using source-grounded evidence.
+
+## Findings
+The bounded treatment improves the primary outcome over baseline.
+
+## Methods
+Method evidence status: insufficient_evidence.
+- Method limitation: {limitation}
+
+## Limitations
+- Method limitation: {limitation}
+"""
+    refs = _strict_final_refs(
+        tmp_path,
+        task_contract=task_contract,
+        markdown=markdown,
+        methods=[],
+        method_insufficient=True,
+    )
+
+    result = execute_operator(
+        _request("final_evaluation", payload={"task_contract": task_contract}, refs=refs),
+        services={},
+    )
+
+    assert result["status"] == "completed"
+    evaluation = _artifact(tmp_path, result)["outputs"]["evaluation"]
+    assert evaluation["accepted"] is True
+    assert evaluation["decision"] == "accepted_with_limitations"
+    assert evaluation["method_evaluation"] == "insufficient_evidence_disclosed"
+    assert all(item["status"] == "passed" for item in evaluation["criterion_results"])
+    _validate_evidence(tmp_path, result)
 
 
 @pytest.mark.parametrize("node_id", sorted(EXPECTED_NODES))

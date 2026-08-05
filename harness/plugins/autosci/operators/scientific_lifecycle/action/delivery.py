@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,7 @@ from .common import (
     output_location,
     require_list,
     require_text,
+    stable_json_sha256,
     write_scoped_text,
 )
 
@@ -195,10 +197,44 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
     title = require_text(plan.get("title"), "report title")
     sections: list[dict[str, Any]] = []
     markdown_parts = [f"# {title}"]
+    methods_rendered = False
     for section in require_list(plan.get("sections"), "report sections"):
         section_id = require_text(section.get("section_id"), "section_id")
         section_title = require_text(section.get("title"), "section title")
         evidence_ids = [str(item) for item in section.get("evidence_ids") or [] if str(item).strip()]
+        if section_id == "limitations" and not methods_rendered:
+            method_rows = ["\n## Methods"]
+            if methods:
+                for method in methods:
+                    name = require_text(method.get("name"), "method name")
+                    summary = require_text(method.get("summary"), "method summary")
+                    procedure = [str(item).strip() for item in method.get("procedure") or [] if str(item).strip()]
+                    evidence_ids_for_method = [str(item).strip() for item in method.get("evidence_ids") or [] if str(item).strip()]
+                    extraction_basis = require_text(method.get("extraction_basis"), "method extraction basis")
+                    method_rows.extend([
+                        f"\n### {name}",
+                        f"- Summary: {summary}",
+                        "- Procedure:",
+                        *[f"  {index}. {step}" for index, step in enumerate(procedure, start=1)],
+                        f"- Evidence IDs: {', '.join(evidence_ids_for_method) or 'unavailable'}",
+                        f"- Extraction basis: {extraction_basis}",
+                    ])
+            else:
+                method_rows.append("Method evidence status: insufficient_evidence.")
+                method_rows.extend(f"- Method limitation: {item}" for item in method_limitations)
+            markdown_parts.extend(method_rows)
+            sections.append({
+                "section_id": "methods",
+                "title": "Methods",
+                "body": "\n".join(method_rows[1:]).strip(),
+                "evidence_ids": sorted({
+                    str(evidence_id)
+                    for method in methods
+                    for evidence_id in method.get("evidence_ids") or []
+                    if str(evidence_id).strip()
+                }),
+            })
+            methods_rendered = True
         if section_id == "findings":
             body = "\n".join(
                 f"- {item['claim_id']} ({item['support_classification']}): {item['claim_text']} "
@@ -280,6 +316,9 @@ def review_artifact(node_request: dict[str, Any], context: OperatorContext) -> d
         findings.append({"finding_id": "weak-structure", "severity": "high", "category": "structure", "evidence": f"Only {len(sections)} sections are present.", "suggestion": "Include summary, findings, and limitations."})
     if not report.get("evidence_ids"):
         findings.append({"finding_id": "missing-evidence", "severity": "high", "category": "evidence", "evidence": "No report evidence IDs are present.", "suggestion": "Link supported findings to evidence."})
+    if report.get("methods") and "## Methods" not in markdown:
+        findings.append({"finding_id": "missing-method-section", "severity": "high", "category": "fidelity", "evidence": "Method evidence exists but the report has no Methods section.", "suggestion": "Render method summary, procedure, evidence IDs, and extraction basis."})
+    task_contract = context.payload.get("task_contract") if isinstance(context.payload.get("task_contract"), dict) else {}
     score = max(0.0, 1.0 - 0.3 * len(findings))
     recommendation = "pass_with_review_required" if not findings else "revise_required"
     review = {
@@ -292,6 +331,9 @@ def review_artifact(node_request: dict[str, Any], context: OperatorContext) -> d
         "score": score,
         "recommendation": recommendation,
         "evidence_ids": [str(item) for item in report.get("evidence_ids") or []] or ["review:missing-evidence"],
+        "review_scope": "local_structural_only",
+        "independent_peer_review": False,
+        "task_contract_sha256": stable_json_sha256(task_contract),
     }
     return completed_result(
         context,
@@ -387,41 +429,192 @@ def evaluate_final_publication(node_request: dict[str, Any], context: OperatorCo
 
     documents = load_documents(
         context,
-        schemas=("publication_bundle.v1", "artifact_review.v1"),
-        payload_keys=("publication_bundle", "artifact_review"),
+        schemas=(
+            "publication_bundle.v1",
+            "artifact_review.v1",
+            "scientific_report.v1",
+            "research_method.v1",
+            "claim_verdict.v1",
+            "research_paper.v1",
+        ),
+        payload_keys=("publication_bundle", "artifact_review", "report", "research_method", "verdicts", "research_paper"),
     )
     bundle: dict[str, Any] = {}
     review: dict[str, Any] = {}
+    report: dict[str, Any] = {}
+    methods: list[dict[str, Any]] = []
+    method_limitations: list[str] = []
+    verdicts: list[dict[str, Any]] = []
+    paper_present = False
+    review_limitations: list[str] = []
     for document in documents:
         values = _outputs(document)
         if isinstance(values.get("bundle"), dict):
             bundle = values["bundle"]
         if isinstance(values.get("review"), dict):
             review = values["review"]
+            review_limitations.extend(str(item) for item in document.get("limitations") or [] if str(item).strip())
+        if isinstance(values.get("report"), dict):
+            report = values["report"]
+        if isinstance(values.get("methods"), list):
+            methods.extend(item for item in values["methods"] if isinstance(item, dict))
+            method_limitations.extend(str(item) for item in document.get("limitations") or [] if str(item).strip())
+        if isinstance(values.get("verdicts"), list):
+            verdicts.extend(item for item in values["verdicts"] if isinstance(item, dict))
+        if isinstance(values.get("paper"), dict) and values["paper"].get("sections"):
+            paper_present = True
     markdown = str(bundle.get("compiled_markdown") or "").strip()
+    normalized_markdown = " ".join(markdown.split()).casefold()
+    body_without_headings = re.sub(r"(?m)^\s*#+\s+.*$", "", markdown).strip()
     evidence_ids = [str(item) for item in bundle.get("evidence_ids") or [] if str(item).strip()]
     files = [item for item in bundle.get("files") or [] if isinstance(item, dict)]
+    reportable_verdicts = [
+        item for item in verdicts
+        if str(item.get("claim_text") or "").strip() and _grounded_evidence_ids(item)
+    ]
+    claims_preserved = bool(reportable_verdicts) and all(
+        " ".join(str(item["claim_text"]).split()).casefold() in normalized_markdown
+        for item in reportable_verdicts
+    )
+    method_section_present = "## methods" in markdown.casefold() or "## method" in markdown.casefold()
+    if methods:
+        method_fidelity = method_section_present and all(
+            all(
+                " ".join(str(value).split()).casefold() in normalized_markdown
+                for value in (
+                    item.get("name"),
+                    item.get("summary"),
+                    *(item.get("procedure") or []),
+                    *(item.get("evidence_ids") or []),
+                    item.get("extraction_basis"),
+                )
+                if str(value or "").strip()
+            )
+            for item in methods
+        )
+        method_evaluation = "available_and_rendered" if method_fidelity else "available_but_not_rendered"
+    else:
+        method_fidelity = (
+            str(report.get("method_evidence_status") or "") == "insufficient_evidence"
+            and method_section_present
+            and "insufficient_evidence" in normalized_markdown
+            and bool(method_limitations)
+        )
+        method_evaluation = "insufficient_evidence_disclosed" if method_fidelity else "insufficient_evidence_not_disclosed"
+    task_contract = context.payload.get("task_contract") if isinstance(context.payload.get("task_contract"), dict) else {}
+    deliverable = task_contract.get("deliverable") if isinstance(task_contract.get("deliverable"), dict) else {}
+    review_requirement = deliverable.get("review_requirement") if isinstance(deliverable.get("review_requirement"), dict) else {}
+    expected_review_mode = str(review_requirement.get("expected_mode") or "local_surrogate")
+    independent_required = bool(review_requirement.get("independent_peer_review_required", False))
+    limitation_required = bool(review_requirement.get("limitation_disclosure_required", expected_review_mode == "local_surrogate"))
+    review_mode_matches = str(review.get("review_mode") or "") == expected_review_mode
+    independent_review_honest = (
+        (not independent_required and review.get("independent_peer_review") is False)
+        or (independent_required and review.get("independent_peer_review") is True)
+    )
+    review_limitation_disclosed = not limitation_required or bool(review_limitations)
+    review_contract_matches = str(review.get("task_contract_sha256") or "") == stable_json_sha256(task_contract)
+    review_passed = (
+        review.get("recommendation") == "pass_with_review_required"
+        and review_mode_matches
+        and independent_review_honest
+        and review_limitation_disclosed
+        and review_contract_matches
+    )
+    prompt = str(task_contract.get("user_intent") or "")
+    ignored_terms = {"report", "research", "paper", "source", "using", "synthesize", "synthesis", "attached", "local", "please"}
+    intent_terms = {
+        value.casefold() for value in re.findall(r"[^\W\d_]{4,}", prompt, flags=re.UNICODE)
+        if value.casefold() not in ignored_terms
+    }
+    overlap = {term for term in intent_terms if term in normalized_markdown}
+    relevance_passed = claims_preserved and (not intent_terms or bool(overlap))
     checks = {
         "publication_bundle_present": bool(bundle),
-        "non_empty_report": bool(markdown),
+        "non_empty_report": len(body_without_headings) >= 80,
         "evidence_linked": bool(evidence_ids),
         "usable_file_manifest": bool(files),
-        "artifact_review_passed": review.get("recommendation") == "pass_with_review_required",
+        "artifact_review_passed": review_passed,
+        "user_intent_relevance": relevance_passed,
+        "core_result_claims_present": claims_preserved,
+        "method_evidence_honestly_rendered": method_fidelity,
     }
-    accepted = all(checks.values())
+    requirement_results: list[dict[str, str]] = []
+    for requirement in deliverable.get("required_content") or []:
+        if not isinstance(requirement, dict):
+            continue
+        requirement_id = str(requirement.get("requirement_id") or "").strip()
+        if requirement_id == "method_evidence":
+            passed, evidence = method_fidelity, method_evaluation
+        elif requirement_id == "result_claims":
+            passed, evidence = claims_preserved, f"Preserved {len(reportable_verdicts)} source-grounded result claim(s)."
+        elif requirement_id == "limitations":
+            passed = "## limitations" in markdown.casefold() and bool(report.get("sections"))
+            evidence = "The final report has an explicit Limitations section." if passed else "The final report lacks an explicit Limitations section."
+        else:
+            passed, evidence = False, "No deterministic evaluator is registered for this explicit requirement."
+        requirement_results.append({
+            "requirement_id": requirement_id or "invalid_requirement",
+            "status": "passed" if passed else "failed",
+            "evidence": evidence,
+        })
+    criterion_results: list[dict[str, str]] = []
+    for criterion in task_contract.get("success_criteria") or []:
+        normalized = " ".join(re.sub(r"[^a-z0-9]+", " ", str(criterion).lower()).split())
+        if "parsed" in normalized and "local source" in normalized:
+            passed, evidence = paper_present, "A parsed research_paper.v1 with source sections is present."
+        elif ("reported claim" in normalized or "conclusion" in normalized) and ("evidence" in normalized or "source" in normalized):
+            passed, evidence = claims_preserved, "Source-grounded claim text and evidence IDs were checked against the final report."
+        elif "final report" in normalized and ("non empty" in normalized or "body content" in normalized):
+            passed, evidence = checks["non_empty_report"], f"Non-heading report body length is {len(body_without_headings)} characters."
+        elif "local structural review" in normalized and "limitation" in normalized:
+            passed, evidence = review_passed, "Review mode, task-contract hash, independence flag, and limitation disclosure were checked."
+        else:
+            passed, evidence = False, "Criterion was not evaluated because no deterministic evaluator is registered."
+        criterion_results.append({
+            "criterion": str(criterion),
+            "status": "passed" if passed else "failed",
+            "evidence": evidence,
+        })
+    accepted = (
+        all(checks.values())
+        and bool(criterion_results)
+        and all(item["status"] in {"passed", "not_applicable"} for item in criterion_results)
+        and all(item["status"] in {"passed", "not_applicable"} for item in requirement_results)
+    )
     if not accepted:
-        failed = ", ".join(key for key, value in checks.items() if not value)
+        failed_checks = [key for key, value in checks.items() if not value]
+        failed_checks.extend(f"criterion:{item['criterion']}" for item in criterion_results if item["status"] == "failed")
+        failed_checks.extend(f"requirement:{item['requirement_id']}" for item in requirement_results if item["status"] == "failed")
         raise ResearchOperatorError(
-            f"Final publication evaluation failed: {failed}",
+            f"Final publication evaluation failed: {', '.join(failed_checks)}",
             error_type="quality_gate_failed",
         )
+    evaluation_limitations = [
+        "Final evaluation assesses produced evidence; Solar alone derives and commits the run final status.",
+        *review_limitations,
+        *method_limitations,
+    ]
+    evaluation_limitations = list(dict.fromkeys(item for item in evaluation_limitations if item))
     evaluation = {
-        "decision": "accepted",
+        "decision": "accepted_with_limitations" if len(evaluation_limitations) > 1 else "accepted",
         "accepted": True,
         "checks": checks,
+        "criterion_results": criterion_results,
+        "requirement_results": requirement_results,
+        "method_evaluation": method_evaluation,
+        "review_assessment": {
+            "expected_mode": expected_review_mode,
+            "actual_mode": str(review.get("review_mode") or ""),
+            "independent_peer_review_required": independent_required,
+            "independent_peer_review_performed": review.get("independent_peer_review") is True,
+            "task_contract_matches": review_contract_matches,
+            "limitation_disclosed": review_limitation_disclosed,
+        },
         "source_report_id": str(bundle.get("source_report_id") or ""),
         "publication_bundle_id": str(bundle.get("bundle_id") or ""),
         "evidence_ids": evidence_ids,
+        "run_provenance": task_contract.get("run_provenance") if isinstance(task_contract.get("run_provenance"), dict) else {},
         "does_not_modify_graph_or_run_state": True,
     }
     return completed_result(
@@ -431,7 +624,7 @@ def evaluate_final_publication(node_request: dict[str, Any], context: OperatorCo
         outputs={"evaluation": evaluation},
         filename="research_final_evaluation.v1.json",
         artifact_id="research_final_evaluation",
-        limitations=["Final evaluation assesses produced evidence; Solar alone derives and commits the run final status."],
+        limitations=evaluation_limitations,
     )
 
 

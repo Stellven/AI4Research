@@ -166,6 +166,14 @@ def envelope(context: OperatorContext) -> dict[str, Any]:
     }
 
 
+def run_provenance(context: OperatorContext) -> dict[str, Any]:
+    task_contract = context.payload.get("task_contract")
+    value = task_contract.get("run_provenance") if isinstance(task_contract, dict) else None
+    if not isinstance(value, dict):
+        return {}
+    return redact_secrets(value, context.secret_refs, context.secret_values)
+
+
 def enrich_evidence(
     payload: dict[str, Any],
     *,
@@ -189,6 +197,7 @@ def enrich_evidence(
             "input_sha256": input_hash,
             "output_sha256": stable_json_sha256(payload.get("outputs") or {}),
             "outcome_class": outcome_class,
+            "run_provenance": run_provenance(context),
         }
     )
     return payload
@@ -341,6 +350,7 @@ def evidence_document(
             "workflow_id": str(context.node_request["workflow_id"]),
             "node_id": str(context.node_request["node_id"]),
             "timestamp": str(context.node_request.get("issued_at") or utc_now()),
+            "run_provenance": run_provenance(context),
         },
         "limitations": list(limitations or []),
     }

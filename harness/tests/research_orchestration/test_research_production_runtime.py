@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -11,7 +12,12 @@ sys.path.insert(0, str(ROOT / "lib"))
 
 from research_orchestration.evaluator import evaluate_production_result  # noqa: E402
 from research_orchestration.resolver import PhysicalOperatorBinding, PhysicalOperatorResolver  # noqa: E402
-from research_orchestration.runtime import SolarResearchRuntime  # noqa: E402
+from research_orchestration.runtime import (  # noqa: E402
+    FileWorkflowCatalog,
+    SolarResearchRuntime,
+    _git_checkout_provenance,
+    default_production_resolver,
+)
 
 
 def _workflow_loader(artifact_root: Path):
@@ -293,3 +299,72 @@ def test_explicit_live_provider_authorization_approves_provider_capability(tmp_p
     assert captured["allow_network"] is True
     assert captured["allow_live_provider"] is True
     assert captured["approved_capabilities"] == ["cap.research.source.discovery"]
+
+
+def test_real_markdown_lifecycle_preserves_method_result_and_git_provenance(tmp_path: Path) -> None:
+    fixture = ROOT / "plugins" / "autosci" / "tests" / "fixtures" / "sample_paper.md"
+    runtime = SolarResearchRuntime(
+        artifact_root=tmp_path,
+        workflow_loader=FileWorkflowCatalog(harness_root=ROOT).load,
+        operator_resolver=default_production_resolver(services={}, workspace_root=tmp_path),
+        authorization={
+            "allow_network": False,
+            "allow_live_provider": False,
+            "approval_ref": "unit-test-publication-approval",
+        },
+    )
+
+    result = runtime.run(
+        prompt="Synthesize the Markdown paper, preserving its method, results, and limitations.",
+        run_id="markdown-fidelity-e2e",
+        seed_inputs=[{"seed_kind": "markdown", "value": str(fixture)}],
+        max_steps=40,
+    )
+
+    assert result["final_status"] == "completed"
+    report_path = (
+        tmp_path
+        / "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/final-report.md"
+    )
+    report = report_path.read_text(encoding="utf-8")
+    for expected in (
+        "## Methods",
+        "deterministic bridge action",
+        "Solar Evidence ABI",
+        "result.json",
+        "evidence.jsonl",
+        "monolithic AutoSci workflow owner",
+    ):
+        assert expected in report
+    current_head = subprocess.run(
+        ["git", "-C", str(ROOT.parent), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert result["run_provenance"]["repo_head"] == current_head
+    assert result["run_provenance"]["workflow_identity"] == {
+        "workflow_id": "scientific_research_lifecycle_full_v1",
+        "workflow_version": 1,
+        "workflow_kind": "paper_ingestion",
+    }
+    state = json.loads(Path(result["state_path"]).read_text(encoding="utf-8"))
+    assert state["run_provenance"] == result["run_provenance"]
+    final_evaluation = json.loads(
+        (
+            tmp_path
+            / "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json"
+        ).read_text(encoding="utf-8")
+    )
+    evaluation = final_evaluation["outputs"]["evaluation"]
+    assert evaluation["accepted"] is True
+    assert evaluation["run_provenance"] == result["run_provenance"]
+    assert all(item["status"] == "passed" for item in evaluation["criterion_results"])
+
+
+def test_git_provenance_fails_closed_when_checkout_identity_is_unavailable(tmp_path: Path) -> None:
+    provenance = _git_checkout_provenance(tmp_path)
+
+    assert provenance["repo_head"] == "unavailable"
+    assert provenance["worktree_status"] == "unavailable"
+    assert set(provenance) == {"repo_head", "worktree_status", "captured_at"}

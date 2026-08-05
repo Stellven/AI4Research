@@ -122,6 +122,7 @@ def load_and_normalize_workflow(
 
     return {
         "workflow_id": str(selection_result.get("workflow_id") or payload.get("workflow_id") or workflow_path.stem),
+        "version": payload.get("version") or payload.get("schema_version") or "unavailable",
         "workflow_kind": str(selection_result.get("workflow_kind") or payload.get("workflow_kind") or ""),
         "workflow_path": str(workflow_path),
         "start_node": start_node,

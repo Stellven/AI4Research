@@ -30,7 +30,7 @@ from .base import (
 
 
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9_-]{2,}")
-_SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
+_SENTENCE = re.compile(r"(?<=[.!?。！？])\s+")
 _STOPWORDS = {
     "about", "after", "also", "and", "are", "because", "been", "before", "being", "between",
     "both", "can", "could", "from", "have", "into", "more", "most", "not", "only", "other",
@@ -286,6 +286,13 @@ def _section_texts(paper: dict[str, Any]) -> list[tuple[str, str, str]]:
     return values
 
 
+def _source_sentences(text: str, *, minimum_length: int) -> list[str]:
+    """Split prose without treating Markdown's soft line wrapping as meaning loss."""
+
+    unwrapped = re.sub(r"\s+", " ", str(text or "")).strip()
+    return [item.strip() for item in _SENTENCE.split(unwrapped) if len(item.strip()) >= minimum_length]
+
+
 def analyze_content(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
     paper = dict(_paper_from(context))
     sections = _section_texts(paper)
@@ -428,13 +435,13 @@ def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, An
     limit = max(1, min(int(context.payload.get("limit") or 12), 50))
     cue = re.compile(r"\b(?:show|shows|demonstrat|improv|reduc|increas|achiev|outperform|result|found|find)\w*\b", re.IGNORECASE)
     for _title, text, anchor in _section_texts(paper):
-        sentences = [re.sub(r"\s+", " ", item).strip() for item in _SENTENCE.split(text)]
+        sentences = _source_sentences(text, minimum_length=30)
         selected = [item for item in sentences if len(item) >= 30 and cue.search(item)]
         for sentence in selected:
             claims.append(
                 {
                     "claim_id": f"claim-{len(claims) + 1:03d}",
-                    "text": sentence[:1000],
+                    "text": sentence,
                     "claim_type": "result",
                     "source_anchor": anchor,
                     "testability": "testable" if re.search(r"\d|%|compared|than", sentence, re.IGNORECASE) else "partially_testable",
@@ -474,7 +481,7 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
     for title, text, anchor in _section_texts(paper):
         if not method_heading.search(title):
             continue
-        procedure = [re.sub(r"\s+", " ", item).strip() for item in _SENTENCE.split(text) if len(item.strip()) >= 15][:12]
+        procedure = _source_sentences(text, minimum_length=15)[:12]
         if not procedure:
             continue
         methods.append(
@@ -491,7 +498,7 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
         )
     if not methods:
         for title, text, anchor in _section_texts(paper):
-            sentences = [re.sub(r"\s+", " ", item).strip() for item in _SENTENCE.split(text) if len(item.strip()) >= 20]
+            sentences = _source_sentences(text, minimum_length=20)
             grounded = [item for item in sentences if description_cue.search(item)][:8]
             if not grounded:
                 continue

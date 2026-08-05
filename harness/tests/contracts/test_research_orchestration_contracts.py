@@ -182,6 +182,16 @@ def valid_run_state() -> dict:
             "graph_version": 1,
             "workflow_kind": "research_synthesis",
         },
+        "run_provenance": {
+            "repo_head": "a" * 40,
+            "worktree_status": "clean",
+            "captured_at": "2030-01-01T00:00:00Z",
+            "workflow_identity": {
+                "workflow_id": "workflow-phase0",
+                "workflow_version": 1,
+                "workflow_kind": "research_synthesis",
+            },
+        },
         "node_states": {
             "node-discover": {
                 "node_id": "node-discover",

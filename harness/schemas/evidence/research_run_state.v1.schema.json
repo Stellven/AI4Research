@@ -10,6 +10,7 @@
     "run_id",
     "workflow_id",
     "graph_identity",
+    "run_provenance",
     "node_states",
     "ready_nodes",
     "current_blockers",
@@ -24,6 +25,7 @@
     "run_id": {"$ref": "#/$defs/non_empty_string"},
     "workflow_id": {"$ref": "#/$defs/non_empty_string"},
     "graph_identity": {"$ref": "#/$defs/graph_identity"},
+    "run_provenance": {"$ref": "#/$defs/run_provenance"},
     "node_states": {
       "type": "object",
       "minProperties": 1,
@@ -131,6 +133,36 @@
             "scientific_lifecycle",
             "workflow_evolution"
           ]
+        }
+      }
+    },
+    "run_provenance": {
+      "type": "object",
+      "required": ["repo_head", "worktree_status", "captured_at", "workflow_identity"],
+      "additionalProperties": false,
+      "properties": {
+        "repo_head": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[A-Fa-f0-9]{40,64}$"},
+            {"const": "unavailable"}
+          ]
+        },
+        "worktree_status": {"enum": ["clean", "dirty", "unavailable"]},
+        "captured_at": {"type": "string", "format": "date-time"},
+        "workflow_identity": {
+          "type": "object",
+          "required": ["workflow_id", "workflow_version", "workflow_kind"],
+          "additionalProperties": false,
+          "properties": {
+            "workflow_id": {"$ref": "#/$defs/non_empty_string"},
+            "workflow_version": {
+              "oneOf": [
+                {"type": "integer", "minimum": 1},
+                {"$ref": "#/$defs/non_empty_string"}
+              ]
+            },
+            "workflow_kind": {"$ref": "#/$defs/non_empty_string"}
+          }
         }
       }
     },
