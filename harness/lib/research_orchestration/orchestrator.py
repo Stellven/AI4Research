@@ -727,12 +727,13 @@ class ResearchOrchestrator:
             "workflow_id": request.get("workflow_id"),
             "node_id": request.get("node_id"),
         }
-        present = [field for field in identity_fields if field in embedded]
-        if not present:
-            raise ResearchOrchestrationError("JSON artifact contains no verifiable schema or orchestration identity")
-        for field in present:
-            expected = identity_fields[field]
-            if expected is None or embedded.get(field) != expected:
+        missing = [field for field, expected in identity_fields.items() if expected is None or field not in embedded]
+        if missing:
+            raise ResearchOrchestrationError(
+                f"JSON artifact is missing required embedded identity: {', '.join(missing)}"
+            )
+        for field, expected in identity_fields.items():
+            if embedded.get(field) != expected:
                 raise ResearchOrchestrationError(f"JSON artifact embedded {field} does not match declared identity")
 
     def _resolve_scoped_path(self, raw: Any, *, must_exist: bool) -> Path:

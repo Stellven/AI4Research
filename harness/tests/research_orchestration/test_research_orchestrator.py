@@ -128,7 +128,20 @@ def result_for(request: dict, status: str = "completed", artifact_root: Path | N
         scope_path = scoped if scoped.is_absolute() else root / scoped
         artifact_path = scope_path if scope_path.suffix else scope_path / f"{request['node_id']}.json"
         artifact_path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps({"node_id": request["node_id"], "status": status}, sort_keys=True).encode("utf-8")
+        artifact_id = f"artifact-{request['node_id']}"
+        artifact_schema = f"{request['node_id']}.artifact.v1"
+        payload = json.dumps(
+            {
+                "schema": artifact_schema,
+                "task_id": request["task_id"],
+                "run_id": request["run_id"],
+                "workflow_id": request["workflow_id"],
+                "node_id": request["node_id"],
+                "artifact_id": artifact_id,
+                "status": status,
+            },
+            sort_keys=True,
+        ).encode("utf-8")
         artifact_path.write_bytes(payload)
         try:
             declared_path = artifact_path.resolve().relative_to(root).as_posix()
@@ -136,8 +149,9 @@ def result_for(request: dict, status: str = "completed", artifact_root: Path | N
             declared_path = str(artifact_path.resolve())
         output_artifacts = [
             {
-                "artifact_id": f"artifact-{request['node_id']}",
+                "artifact_id": artifact_id,
                 "path": declared_path,
+                "schema": artifact_schema,
                 "sha256": hashlib.sha256(payload).hexdigest(),
             }
         ]
@@ -809,12 +823,25 @@ def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(t
                 assert artifact["artifact_id"].startswith("real-")
                 assert ":input:" not in artifact["artifact_id"]
             Path(paths[node_id]).parent.mkdir(parents=True, exist_ok=True)
-            Path(paths[node_id]).write_text(json.dumps({"node_id": node_id}), encoding="utf-8")
+            real_artifact_id = f"real-{node_id}"
             result = result_for(request, artifact_root=tmp_path)
-            result["evidence"][0]["artifact_id"] = f"real-{node_id}"
+            Path(paths[node_id]).write_text(
+                json.dumps(
+                    {
+                        "schema": schemas[node_id],
+                        "task_id": request["task_id"],
+                        "run_id": request["run_id"],
+                        "workflow_id": request["workflow_id"],
+                        "node_id": node_id,
+                        "artifact_id": real_artifact_id,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result["evidence"][0]["artifact_id"] = real_artifact_id
             result["output_artifacts"] = [
                 {
-                    "artifact_id": f"real-{node_id}",
+                    "artifact_id": real_artifact_id,
                     "path": paths[node_id],
                     "schema": schemas[node_id],
                     "sha256": hashlib.sha256(Path(paths[node_id]).read_bytes()).hexdigest(),
@@ -996,6 +1023,57 @@ def test_normal_dispatch_cannot_commit_unverified_completed_artifact(tmp_path: P
     record = orch.state_store.load_node_record(state["node_states"]["seed_fetch"]["result_ref"])
     assert record["result"]["status"] == "failed"
     assert record["result"]["output_artifacts"] == []
+
+
+@pytest.mark.parametrize(
+    ("identity_case", "expected_status"),
+    [
+        ("only_task_id", "failed"),
+        ("only_schema", "failed"),
+        ("all_except_node", "failed"),
+        ("complete_valid", "completed"),
+    ],
+)
+def test_json_artifact_requires_complete_embedded_identity(
+    tmp_path: Path,
+    identity_case: str,
+    expected_status: str,
+) -> None:
+    identity_node = node("identity_node", [])
+    identity_node["write_scope"] = ["artifacts/identity/"]
+    wf = {"workflow_id": "identity-wf", "workflow_kind": "research_synthesis", "nodes": [identity_node]}
+
+    class PartialIdentityDispatch:
+        def __call__(self, request: dict) -> dict:
+            result = result_for(request, artifact_root=tmp_path)
+            artifact = result["output_artifacts"][0]
+            complete = {
+                "schema": artifact["schema"],
+                "task_id": request["task_id"],
+                "run_id": request["run_id"],
+                "workflow_id": request["workflow_id"],
+                "node_id": request["node_id"],
+                "artifact_id": artifact["artifact_id"],
+            }
+            if identity_case == "only_task_id":
+                embedded = {"task_id": complete["task_id"]}
+            elif identity_case == "only_schema":
+                embedded = {"schema": complete["schema"]}
+            elif identity_case == "all_except_node":
+                embedded = {key: value for key, value in complete.items() if key != "node_id"}
+            else:
+                embedded = complete
+            path = tmp_path / artifact["path"]
+            path.write_text(json.dumps(embedded), encoding="utf-8")
+            artifact["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+            return result
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, wf, dispatch=PartialIdentityDispatch())
+
+    state = orch.step()
+
+    assert state["node_states"]["identity_node"]["status"] == expected_status
+    assert state["final_status"] == expected_status
 
 
 def test_opaque_authorized_secret_is_never_persisted_or_sent_to_worker(tmp_path: Path) -> None:
