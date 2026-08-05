@@ -1,0 +1,52 @@
+{
+  "schema": "external_experiment_evidence.v1",
+  "canonical_payload": {
+    "experiment_identity": {
+      "experiment_id": "phase5-seed-portability-ext-exp-001",
+      "source_run_id": "external-lab-run-2026-08-05",
+      "subject": "local PDF seed portability validation"
+    },
+    "method": {
+      "name": "bounded external checklist replay",
+      "procedure": [
+        "Load the local PDF seed through the Solar research control plane.",
+        "Compare extracted method, result, and limitation snippets against the expected checklist.",
+        "Record whether the generated report cites the imported evidence identifier."
+      ],
+      "environment": "offline fixture laboratory"
+    },
+    "inputs": {
+      "seed_kind": "pdf",
+      "expected_title": "Seed Portability Micro Study",
+      "expected_records": 17
+    },
+    "results": {
+      "outcome": "supports",
+      "metrics": [
+        {
+          "name": "validated_records",
+          "value": 17,
+          "unit": "records"
+        },
+        {
+          "name": "title_method_result_limitations_present",
+          "value": true
+        }
+      ],
+      "criteria_results": {
+        "primary_outcome is recorded": true
+      }
+    },
+    "observed_at": "2026-08-05T15:30:00Z",
+    "provenance": {
+      "source": "external_fixture_lab",
+      "captured_at": "2026-08-05T15:31:00Z",
+      "operator_id": "external-checklist-runner-v1",
+      "authoritative_record": "phase5-seed-portability-ext-exp-001.json"
+    }
+  },
+  "hashes": {
+    "algorithm": "sha256",
+    "canonical_payload_sha256": "019de55f309adc27f0b091a233e797ca97f7ae3c6126c2c458f752baf6a554e9"
+  }
+}
