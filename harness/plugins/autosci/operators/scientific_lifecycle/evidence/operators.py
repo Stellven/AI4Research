@@ -475,7 +475,11 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
     description_cue = re.compile(
         r"\b(?:we\s+(?:use|used|apply|applied|implement|implemented|evaluate|evaluated|measure|measured|"
         r"compare|compared|collect|collected|train|trained|run|ran)|using|implemented\s+with|evaluated\s+(?:on|using)|"
-        r"measured\s+(?:with|using)|configured\s+to|dataset|benchmark\s+suite|experimental\s+setup)\b",
+        r"measured\s+(?:with|using)|configured\s+to|dataset|benchmark\s+suite|experimental\s+setup|"
+        r"(?:the|this|our)\s+(?:method|approach|procedure|implementation|protocol)\s+"
+        r"(?:uses?|used|applies?|applied|implements?|implemented|evaluates?|evaluated|measures?|measured|"
+        r"compares?|compared|collects?|collected|trains?|trained|runs?|ran|ingests?|ingested|preserves?|"
+        r"preserved|extracts?|extracted|records?|recorded|configures?|configured))\b",
         re.IGNORECASE,
     )
     for title, text, anchor in _section_texts(paper):

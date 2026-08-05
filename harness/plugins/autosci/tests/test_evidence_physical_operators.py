@@ -217,7 +217,8 @@ def validate_result_and_artifact(result: dict, workspace: Path) -> dict:
     artifact = json.loads((workspace / artifact_ref["path"]).read_text(encoding="utf-8"))
     artifact_schema = json.loads((SCHEMAS / f"{artifact['schema']}.schema.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(artifact_schema).validate(artifact)
-    assert artifact["provenance"]["operator_version"] == "1.1.0"
+    expected_version = "1.2.0" if artifact["provenance"]["node_id"] == "method_extract" else "1.1.0"
+    assert artifact["provenance"]["operator_version"] == expected_version
     assert len(artifact["provenance"]["input_sha256"]) == 64
     assert len(artifact["provenance"]["output_sha256"]) == 64
     assert artifact["provenance"]["outcome_class"] == "success"
@@ -311,7 +312,10 @@ def test_package_local_registration_is_unique_and_resolvable() -> None:
     assert len(entries) == len(NODE_IDS) == 12
     assert len({item["node_id"] for item in entries}) == len(entries)
     assert len({item["operator_id"] for item in entries}) == len(entries)
-    assert all(item["operator_version"] == "1.1.0" for item in entries)
+    assert all(
+        item["operator_version"] == ("1.2.0" if item["node_id"] == "method_extract" else "1.1.0")
+        for item in entries
+    )
     assert all(item["mutates_global_state"] is False for item in entries)
     for node_id in NODE_IDS:
         resolved = resolve_entrypoint(node_id)
@@ -331,6 +335,13 @@ def test_package_local_registration_is_unique_and_resolvable() -> None:
         (
             "Evaluation",
             "We evaluated the runtime using three benchmark suites and measured latency against the baseline.",
+            "extracted_with_inference",
+            "method_description_without_heading",
+            1,
+        ),
+        (
+            "Abstract",
+            "This study evaluates bounded adapters. Method The method ingests a local paper, preserves source hashes, extracts claims, and records a provenance ledger.",
             "extracted_with_inference",
             "method_description_without_heading",
             1,

@@ -17,11 +17,19 @@ from .base import OperatorSpec, execute_spec
 _VERSION = "1.1.0"
 
 
-def _spec(node_id: str, operator_id: str, schema: str, filename: str, handler) -> OperatorSpec:
+def _spec(
+    node_id: str,
+    operator_id: str,
+    schema: str,
+    filename: str,
+    handler,
+    *,
+    version: str = _VERSION,
+) -> OperatorSpec:
     return OperatorSpec(
         node_id=node_id,
         operator_id=operator_id,
-        version=_VERSION,
+        version=version,
         output_schema=schema,
         output_filename=filename,
         handler=handler,
@@ -60,7 +68,12 @@ OPERATOR_SPECS: dict[str, OperatorSpec] = {
         "claim_extract", "autosci-evidence-claim-extract", "research_claims.v1", "research_claims.v1.json", operators.extract_claims
     ),
     "method_extract": _spec(
-        "method_extract", "autosci-evidence-method-extract", "research_method.v1", "research_method.v1.json", operators.extract_methods
+        "method_extract",
+        "autosci-evidence-method-extract",
+        "research_method.v1",
+        "research_method.v1.json",
+        operators.extract_methods,
+        version="1.2.0",
     ),
     "code_evidence_map": _spec(
         "code_evidence_map", "autosci-evidence-code-evidence-map", "code_evidence_map.v1", "code_evidence_map.v1.json", operators.map_code_evidence
