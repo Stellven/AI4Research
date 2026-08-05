@@ -481,3 +481,13 @@ def test_monitor_and_status_server_do_not_classify_human_review_as_active() -> N
 
     assert "needs_human_review" not in monitor_active
     assert "needs_human_review" not in status_active
+
+
+def test_coordinator_never_delegates_human_decision_to_planner() -> None:
+    coordinator = (HARNESS / "coordinator.sh").read_text(encoding="utf-8")
+    start = coordinator.index("handle_needs_human() {")
+    end = coordinator.index("\n}\n", start) + 3
+    handler = coordinator[start:end]
+
+    assert 'dispatch_to_planner "$sid" "needs_human"' not in handler
+    assert '"awaiting_human_decision"' in handler

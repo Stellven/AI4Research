@@ -2,11 +2,15 @@
 """Run a Solar PM dispatch through Codex CLI non-interactively."""
 from __future__ import annotations
 
+import atexit
+import json
 import os
+import shutil
 import shlex
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -100,10 +104,9 @@ def _install_harness_command_shims(task_dir: Path, harness_dir: Path) -> Path:
 def _codex_exec_env(task_dir: Path) -> dict[str, str]:
     """Build a deterministic environment for non-interactive Codex operator runs.
 
-    Keep the user's CODEX_HOME/Auth as-is, but give Codex's SQLite/app-server
-    state a harness-owned writable home by default. Without this, daemonized
-    runs can inherit a cwd/sandbox context where Codex fails before the model
-    starts with read-only filesystem errors. The model shell must also resolve
+    The strict wrapper later gives each run a harness-owned CODEX_HOME and
+    exposes the user's auth/config through read-only symlinks. SQLite/app-server
+    state therefore stays inside the harness. The model shell must also resolve
     Solar helper commands from this active harness, not from any installed
     ~/.solar runtime left on the developer machine.
     """
@@ -116,6 +119,8 @@ def _codex_exec_env(task_dir: Path) -> dict[str, str]:
         or harness_dir / "run" / "codex-state"
     ).expanduser()
     state_home.mkdir(parents=True, exist_ok=True)
+    configured_codex_home = env.get("SOLAR_CODEX_SOURCE_HOME")
+    source_codex_home = Path(configured_codex_home).expanduser() if configured_codex_home else Path.home() / ".codex"
     sprints_dir = Path(
         env.get("SPRINTS_DIR")
         or env.get("HARNESS_SPRINTS_DIR")
@@ -127,6 +132,7 @@ def _codex_exec_env(task_dir: Path) -> dict[str, str]:
     env["HARNESS_SPRINTS_DIR"] = str(sprints_dir)
     env["SOLAR_HARNESS_SPRINTS_DIR"] = str(sprints_dir)
     env["SOLAR_HARNESS_CMD"] = str(shim_dir / "solar-harness")
+    env["SOLAR_CODEX_SOURCE_HOME"] = str(source_codex_home)
     env["CODEX_SQLITE_HOME"] = str(state_home)
     _prepend_env_path(env, "PATH", [shim_dir, harness_dir / "bin", harness_dir])
     _prepend_env_path(env, "PYTHONPATH", [harness_dir / "lib", harness_dir / "tools"])
@@ -164,6 +170,8 @@ def _codex_exec_command(model: str, effort: str, cwd: str, output_file: Path) ->
         model,
         "--config",
         f"model_reasoning_effort={effort}",
+        "--config",
+        'cli_auth_credentials_store="file"',
         "--dangerously-bypass-approvals-and-sandbox",
         "--cd",
         cwd,
@@ -172,6 +180,134 @@ def _codex_exec_command(model: str, effort: str, cwd: str, output_file: Path) ->
         "-",
     ])
     return cmd
+
+
+def _existing_paths(values: list[Path]) -> list[Path]:
+    result: list[Path] = []
+    seen: set[str] = set()
+    for value in values:
+        resolved = value.expanduser().resolve(strict=False)
+        key = str(resolved)
+        if resolved.exists() and key not in seen:
+            result.append(resolved)
+            seen.add(key)
+    return result
+
+
+def _filesystem_isolated_command(
+    command: list[str],
+    *,
+    task_dir: Path,
+    cwd: Path,
+    env: dict[str, str],
+) -> tuple[list[str], dict[str, object]]:
+    """Wrap a strict Solar operator in a kernel-enforced filesystem allowlist."""
+    strict = _truthy_env("SOLAR_OPERATOR_STRICT_FS_SCOPE", "0")
+    mode = env.get("SOLAR_CODEX_OPERATOR_FS_ISOLATION", "landlock").strip().lower()
+    if mode in {"0", "off", "disabled", "none"}:
+        if strict:
+            raise RuntimeError("strict operator filesystem scope cannot disable Landlock")
+        return command, {"mode": "disabled", "strict": False}
+    if sys.platform != "linux":
+        if strict:
+            raise RuntimeError("strict operator filesystem scope requires Linux Landlock")
+        return command, {"mode": "unsupported", "strict": False}
+
+    harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
+    state_root = Path(
+        env.get("SOLAR_CODEX_OPERATOR_STATE_ROOT")
+        or f"/tmp/solar-codex-operator-state-{os.getuid()}"
+    ).expanduser()
+    state_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    state_root.chmod(0o700)
+    state_home = Path(tempfile.mkdtemp(prefix=f"{os.getpid()}-", dir=state_root))
+    atexit.register(shutil.rmtree, state_home, ignore_errors=True)
+    env["CODEX_SQLITE_HOME"] = str(state_home)
+    tmp_dir = task_dir / "tmp"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    env["TMPDIR"] = str(tmp_dir)
+    env["TMP"] = str(tmp_dir)
+    env["TEMP"] = str(tmp_dir)
+
+    source_codex_home = Path(env["SOLAR_CODEX_SOURCE_HOME"]).expanduser()
+    codex_home = state_home / "home"
+    codex_home.mkdir(parents=True, exist_ok=True)
+    source = source_codex_home / "auth.json"
+    destination = codex_home / "auth.json"
+    if source.is_file():
+        shutil.copyfile(source, destination)
+        destination.chmod(0o600)
+    config = codex_home / "config.toml"
+    config.write_text('cli_auth_credentials_store = "file"\n', encoding="utf-8")
+    config.chmod(0o600)
+    env["CODEX_HOME"] = str(codex_home)
+    codex_arg0_dir = codex_home / "tmp" / "arg0"
+    codex_arg0_dir.mkdir(parents=True, exist_ok=True)
+    codex_binary = Path(shutil.which("codex", path=env.get("PATH")) or "codex")
+    resolved_binary = codex_binary.resolve(strict=False)
+    # WSL resolves /etc/resolv.conf into /mnt/wsl. Landlock authorizes the
+    # resolved inode, so /etc by itself is insufficient for DNS/token refresh.
+    resolved_system_network_files = [
+        path.resolve(strict=False)
+        for path in (
+            Path("/etc/resolv.conf"),
+            Path("/etc/hosts"),
+            Path("/etc/nsswitch.conf"),
+            Path("/etc/gai.conf"),
+        )
+        if path.exists()
+    ]
+    read_only = _existing_paths(
+        [
+            Path("/usr"),
+            Path("/bin"),
+            Path("/sbin"),
+            Path("/lib"),
+            Path("/lib64"),
+            Path("/etc"),
+            codex_binary,
+            resolved_binary.parent,
+            *resolved_system_network_files,
+            harness_dir,
+        ]
+    )
+    try:
+        declared_outputs = json.loads(env.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
+    except (TypeError, ValueError):
+        declared_outputs = []
+    exact_outputs = [
+        Path(str(value)).expanduser()
+        for value in declared_outputs
+        if isinstance(value, str) and value.strip()
+    ]
+    read_write = _existing_paths(
+        [
+            cwd,
+            task_dir,
+            state_home,
+            tmp_dir,
+            Path("/dev/null"),
+            Path("/dev/urandom"),
+            Path("/dev/random"),
+            codex_arg0_dir,
+            *exact_outputs,
+        ]
+    )
+    wrapper = Path(__file__).with_name("landlock_exec.py").resolve(strict=False)
+    if not wrapper.is_file():
+        raise RuntimeError(f"Landlock wrapper is missing: {wrapper}")
+    wrapped = [sys.executable, str(wrapper)]
+    for path in read_only:
+        wrapped.extend(["--read-only", str(path)])
+    for path in read_write:
+        wrapped.extend(["--read-write", str(path)])
+    wrapped.extend(["--", *command])
+    return wrapped, {
+        "mode": "landlock",
+        "strict": strict,
+        "read_only": [str(path) for path in read_only],
+        "read_write": [str(path) for path in read_write],
+    }
 
 
 def _pm_result_ready(started_wall: float) -> bool:
@@ -254,7 +390,17 @@ def main() -> int:
         return 72
 
     codex_env = _codex_exec_env(task_dir)
-    cmd = _codex_exec_command(model, effort, cwd, output_file)
+    raw_cmd = _codex_exec_command(model, effort, cwd, output_file)
+    try:
+        cmd, fs_scope = _filesystem_isolated_command(
+            raw_cmd,
+            task_dir=task_dir,
+            cwd=Path(cwd),
+            env=codex_env,
+        )
+    except RuntimeError as exc:
+        print(f"ERROR: Codex operator filesystem isolation refused: {exc}", file=sys.stderr)
+        return 78
     timeout_seconds = _timeout_seconds()
     pm_result_grace = float(os.environ.get("CODEX_PM_RESULT_GRACE_SECONDS", "20"))
     print(
@@ -263,6 +409,11 @@ def main() -> int:
         f"task_dir={shlex.quote(str(task_dir))} "
         f"CODEX_HOME={shlex.quote(codex_env.get('CODEX_HOME') or str(Path.home() / '.codex'))} "
         f"CODEX_SQLITE_HOME={shlex.quote(codex_env.get('CODEX_SQLITE_HOME') or '')}"
+    )
+    print(
+        "codex_operator: filesystem_scope "
+        f"mode={fs_scope.get('mode')} strict={str(bool(fs_scope.get('strict'))).lower()} "
+        f"ro={len(fs_scope.get('read_only', []))} rw={len(fs_scope.get('read_write', []))}"
     )
     print("codex_operator: invoking " + " ".join(shlex.quote(part) for part in cmd[:-1]) + " <dispatch>")
     cli_log = task_dir / "codex-cli-output.log"

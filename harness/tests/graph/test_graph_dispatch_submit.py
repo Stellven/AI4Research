@@ -871,6 +871,85 @@ class TestSendToPaneLiteral:
         assert node.get("eval_retry_reason") is None
         assert node.get("last_eval_closeout_failure") is None
 
+    def test_eval_reconcile_retries_current_failed_contract_closeout_with_empty_precreated_json(
+        self, tmp_harness, monkeypatch
+    ):
+        """A failed evaluator closeout must not leave a node reviewing forever."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_json.write_text("", encoding="utf-8")
+        node["eval_assignments"] = [
+            {
+                "pane": "operator:mini-codex-evaluator",
+                "dispatch_id": "eval-current",
+                "pm_task_id": "pm-test-graph-submit-N1-current",
+                "role": "primary",
+                "eval_md_path": str(sprints / f"{sid}.N1-eval.md"),
+                "eval_json_path": str(eval_json),
+            }
+        ]
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+
+        result_dir = (
+            tmp_path
+            / "run"
+            / "operator-results"
+            / "mini-codex-evaluator"
+            / "pm-test-graph-submit-N1-current"
+        )
+        result_dir.mkdir(parents=True)
+        result_json = result_dir / "result.json"
+        result_json.write_text(
+            json.dumps(
+                {
+                    "task_id": "pm-test-graph-submit-N1-current",
+                    "operator_id": "mini-codex-evaluator",
+                    "sprint_id": sid,
+                    "node_id": "N1",
+                    "status": "failed_contract_closeout",
+                    "exit_code": 67,
+                    "started_at": "2026-08-03T07:14:32Z",
+                    "finished_at": "2026-08-03T07:18:34Z",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        release_calls = []
+        monkeypatch.setattr(
+            gnd,
+            "release_lease",
+            lambda *args, **kwargs: release_calls.append(args) or {"released": True},
+        )
+        monkeypatch.setattr(
+            gnd,
+            "_cooldown_operator_after_contract_closeout",
+            lambda *args, **kwargs: {"ok": True},
+        )
+
+        repaired = gnd._reconcile_existing_dispatches(
+            graph, sprints / f"{sid}.task_graph.json"
+        )
+
+        assert repaired[0]["reason"] == "eval_failed_contract_closeout"
+        assert repaired[0]["operator_status"] == "failed_contract_closeout"
+        assert repaired[0]["result_json"] == str(result_json)
+        assert node["status"] == "reviewing"
+        assert "eval_assignments" not in node
+        assert node["eval_retry_reason"] == "eval_failed_contract_closeout"
+        assert node["last_eval_closeout_failure"]["pm_task_id"] == (
+            "pm-test-graph-submit-N1-current"
+        )
+        assert (
+            "operator:mini-codex-evaluator",
+            "eval-current",
+            "graph_eval_reconcile_failed_contract_closeout",
+        ) in release_calls
+
     def test_direct_node_verdict_fail_after_repair_limit_marks_terminal_failed(self, tmp_harness, monkeypatch):
         """Direct evaluator FAIL still terminal-fails once repair attempts are exhausted."""
         tmp_path, sprints, sid, graph = tmp_harness

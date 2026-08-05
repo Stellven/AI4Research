@@ -234,7 +234,7 @@ def _builder_rank(item: dict[str, str]) -> tuple[int, str]:
     return (2, pane)
 
 
-def discover_role_pool(role: str) -> list[dict[str, str]]:
+def discover_role_pool(role: str, *, strict_role_boundary: bool = False) -> list[dict[str, str]]:
     rows = []
     for item in list_tmux_panes():
         pane = item["pane"]
@@ -251,7 +251,10 @@ def discover_role_pool(role: str) -> list[dict[str, str]]:
             "host_role": effective_host_role,
             "registry_roles": sorted(registry_roles),
         }
-        if role == "pm":
+        if strict_role_boundary:
+            if effective_host_role == role:
+                rows.append(item)
+        elif role == "pm":
             if effective_host_role in {"pm", "observer"} or role in registry_roles:
                 rows.append(item)
         elif role == "planner":
@@ -414,6 +417,7 @@ def main(argv: list[str] | None = None) -> int:
 
     discover_cmd = sub.add_parser("discover-role-pool")
     discover_cmd.add_argument("--role", required=True)
+    discover_cmd.add_argument("--strict-role-boundary", action="store_true")
 
     clear_cmd = sub.add_parser("ensure-clean")
     clear_cmd.add_argument("--pane", required=True)
@@ -426,7 +430,14 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     if args.cmd == "discover-role-pool":
-        print(json.dumps({"role": args.role, "panes": discover_role_pool(args.role)}, ensure_ascii=False))
+        print(json.dumps({
+            "role": args.role,
+            "strict_role_boundary": args.strict_role_boundary,
+            "panes": discover_role_pool(
+                args.role,
+                strict_role_boundary=args.strict_role_boundary,
+            ),
+        }, ensure_ascii=False))
         return 0
     if args.cmd == "ensure-clean":
         result = ensure_clean_for_dispatch(

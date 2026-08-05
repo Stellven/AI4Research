@@ -485,22 +485,38 @@ choose_lab_observer_pane() {
   discover_pane_by_persona "$LAB_SESSION_NAME" 0 "observer" "$PANE_LAB_OBSERVER"
 }
 
+strict_role_boundary_required() {
+  local sid="${1:-}" graph="$SPRINTS_DIR/${1:-}.task_graph.json"
+  [[ -n "$sid" && -f "$graph" ]] || return 1
+  python3 - "$graph" <<'PY' >/dev/null 2>&1
+import json, sys
+try:
+    graph = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(0 if graph.get("strict_role_boundaries") is True else 1)
+PY
+}
+
 role_pool_candidates_via_python() {
-  local role="$1"
+  local role="$1" strict="${2:-0}"
   local helper="$HARNESS_DIR/lib/pane_role_pool.py"
   [[ -f "$helper" ]] || return 1
-  python3 "$helper" discover-role-pool --role "$role" 2>/dev/null | \
+  local args=(discover-role-pool --role "$role")
+  [[ "$strict" == "1" ]] && args+=(--strict-role-boundary)
+  python3 "$helper" "${args[@]}" 2>/dev/null | \
     python3 -c 'import json,sys; data=json.load(sys.stdin); [print(item.get("pane","")) for item in data.get("panes",[]) if item.get("pane")]' 2>/dev/null
 }
 
 role_candidate_panes() {
-  local role="$1" seen="" pane
+  local role="$1" sid="${2:-}" seen="" pane strict=0
+  strict_role_boundary_required "$sid" && strict=1
   while IFS= read -r pane; do
     [[ -z "$pane" ]] && continue
     case "$seen" in *" $pane "*) continue ;; esac
     printf '%s\n' "$pane"
     seen+=" $pane "
-  done < <(role_pool_candidates_via_python "$role" 2>/dev/null || true)
+  done < <(role_pool_candidates_via_python "$role" "$strict" 2>/dev/null || true)
   case "$role" in
     builder)
       pane="$(choose_builder_pane)"
@@ -543,21 +559,20 @@ role_candidate_panes() {
       if [[ -n "$pane" ]]; then
         case "$seen" in *" $pane "*) ;; *) printf '%s\n' "$pane"; seen+=" $pane " ;; esac
       fi
-      pane="$(choose_architect_pane 2>/dev/null || true)"
-      if [[ -n "$pane" ]]; then
-        case "$seen" in *" $pane "*) ;; *) printf '%s\n' "$pane"; seen+=" $pane " ;; esac
+      if [[ "$strict" != "1" ]]; then
+        pane="$(choose_architect_pane 2>/dev/null || true)"
+        if [[ -n "$pane" ]]; then
+          case "$seen" in *" $pane "*) ;; *) printf '%s\n' "$pane"; seen+=" $pane " ;; esac
+        fi
+        # Legacy/non-strict workflows may borrow lab builders for planning.
+        # Governed workflows with strict_role_boundaries queue instead.
+        while IFS= read -r pane; do
+          [[ -z "$pane" ]] && continue
+          case "$seen" in *" $pane "*) continue ;; esac
+          printf '%s\n' "$pane"
+          seen+=" $pane "
+        done < <(list_lab_persona_panes "lab-builder" 2>/dev/null || true)
       fi
-      # Planner is the preferred owner for design/plan work, but a stuck
-      # planner pane must not deadhead the whole harness. Lab builders are
-      # acceptable fallback workers for producing design.md/plan.md from an
-      # already-approved PRD because the dispatch text explicitly forbids code
-      # edits and live pane mutation.
-      while IFS= read -r pane; do
-        [[ -z "$pane" ]] && continue
-        case "$seen" in *" $pane "*) continue ;; esac
-        printf '%s\n' "$pane"
-        seen+=" $pane "
-      done < <(list_lab_persona_panes "lab-builder" 2>/dev/null || true)
       ;;
     *)
       return 1
@@ -580,7 +595,7 @@ choose_available_role_pane() {
     fi
     echo "$pane"
     return 0
-  done 9< <(role_candidate_panes "$role" 2>/dev/null || true)
+  done 9< <(role_candidate_panes "$role" "$sid" 2>/dev/null || true)
   return 1
 }
 
@@ -617,7 +632,7 @@ dispatch_to_role() {
       return 0
     fi
     log "${Y}[worker-select] ${role} target=${pane} dispatch rc=${last_rc}; trying next candidate${N}"
-  done 9< <(role_candidate_panes "$role" 2>/dev/null || true)
+  done 9< <(role_candidate_panes "$role" "$sid" 2>/dev/null || true)
 
   if (( last_rc == 3 && terminal_suppressible == 1 )); then
     log "${Y}[worker-select] suppress terminal ${role} queue sid=${sid} intent=${intent} reason=terminal_phase_wake_detected${N}"
@@ -2790,11 +2805,26 @@ compile_generic_plan_graph() {
     3)
       log "${Y}[plan-compile] ${sid} failed; planner bounce remains available: ${out}${N}"
       emit_event "$sid" "plan_compile_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+      local bounce_out bounce_rc
+      bounce_out=$(HARNESS_DIR="$HARNESS_DIR" HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
+        python3 "$HARNESS_DIR/lib/planner_bounce_dispatch.py" dispatch "$sid" --harness-dir "$HARNESS_DIR" 2>&1)
+      bounce_rc=$?
+      if (( bounce_rc == 0 )); then
+        log "${G}[plan-compile] ${sid} dispatched bounded Planner repair: ${bounce_out}${N}"
+        emit_event "$sid" "planner_bounce_dispatched" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"output": sys.argv[1][-2000:]}))' "$bounce_out" 2>/dev/null || echo '{}')"
+      else
+        log "${Y}[plan-compile] ${sid} Planner repair dispatch deferred rc=${bounce_rc}: ${bounce_out}${N}"
+        emit_event "$sid" "planner_bounce_dispatch_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$bounce_rc" "$bounce_out" 2>/dev/null || echo '{}')"
+      fi
       return 1
       ;;
     4)
       log "${R}[plan-compile] ${sid} exhausted planner bounce budget; terminal failed/plan_compile_failed written: ${out}${N}"
       emit_event "$sid" "plan_compile_terminal" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+      return 1
+      ;;
+    5)
+      log "${Y}[plan-compile] ${sid} deferred until the Planner operator publishes a durable successful result: ${out}${N}"
       return 1
       ;;
     *)
@@ -2864,7 +2894,19 @@ gate_check() {
 
   case "$st" in
 	    active)
-	      local guard_role guard_violations
+	      local guard_role guard_violations planner_operator_state
+	      planner_operator_state="$(planner_operator_compile_state "$sid")"
+	      case "$planner_operator_state" in
+	        running|pending)
+	          log "${Y}[plan-compile] ${sid} waits for the bounded Planner operator result (${planner_operator_state}); no certification, rollback, or Builder dispatch${N}"
+	          return 1
+	          ;;
+	        failed|abandoned)
+	          log "${R}[plan-compile] ${sid} Planner operator ended without a successful durable result; return ownership to Solar Planner routing${N}"
+	          runtime_status_transition "$sid" "drafting" "planner_operator_failed" "coordinator" '{"status_fields":{"phase":"prd_ready","handoff_to":"planner","target_role":"planner","planner_dispatch_claim":{"owner":"operator_pool","state":"failed","failure_reason":"durable_operator_result_failed"}}}' || true
+	          return 1
+	          ;;
+	      esac
 	      guard_role="$(workflow_guard_route_role "$sid")"
 	      guard_violations="$(workflow_guard_violations "$sid")"
 	      # G3 run-4 fix (p5-g3-live-rung-20260709T201817Z): the acceptance
@@ -3171,6 +3213,18 @@ role = sys.argv[3]
 node = sys.argv[4]
 prefix = f"pm-{sid}-{node}-"
 released = set()
+pending = set()
+results_root = h / "run" / "operator-results"
+
+def has_durable_result(task_id):
+    for result_path in results_root.glob(f"*/{task_id}/result.json"):
+        try:
+            data = json.loads(result_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(data, dict) and str(data.get("status") or "").strip():
+            return True
+    return False
 
 for task_path in (h / "run" / "pm-inbox").glob(f"{prefix}*.json"):
     try:
@@ -3181,12 +3235,12 @@ for task_path in (h / "run" / "pm-inbox").glob(f"{prefix}*.json"):
     if data and str(data.get("requested_role") or role) != role:
         continue
     status = str(data.get("status") or "").strip().lower()
-    if status in {"completed", "cancelled"} or status.startswith("failed"):
+    if has_durable_result(task_id) or status in {"completed", "cancelled"} or status.startswith("failed"):
         released.add(task_id)
         continue
     # Missing status is a legacy non-terminal record and remains active for
     # compatibility. New claims use explicit pending/submitting/submitted.
-    sys.exit(0)
+    pending.add(task_id)
 
 for status_path in (h / "run" / "operator-status").glob("*.json"):
     try:
@@ -3197,15 +3251,14 @@ for status_path in (h / "run" / "operator-status").glob("*.json"):
     if task_id.startswith(prefix) and task_id not in released:
         sys.exit(0)
 
-results_root = h / "run" / "operator-results"
 for operator_dir in results_root.glob("*"):
     if not operator_dir.is_dir():
         continue
     for result_path in operator_dir.glob(f"{prefix}*"):
-        if result_path.name not in released:
+        if result_path.name not in released and not has_durable_result(result_path.name):
             sys.exit(0)
 
-sys.exit(1)
+sys.exit(0 if pending - released else 1)
 PY
 }
 
@@ -3273,6 +3326,32 @@ sys.exit(1)
 PY
 }
 
+planner_operator_compile_state() {
+  local sid="$1"
+  python3 "$HARNESS_DIR/lib/planner_operator_gate.py" state "$sid" \
+    --harness-dir "$HARNESS_DIR" --field state 2>/dev/null || echo unmanaged
+}
+
+dispatch_planner_operator_retry() {
+  local sid="$1" out rc
+  out=$(HARNESS_DIR="$HARNESS_DIR" SOLAR_HARNESS_DIR="$HARNESS_DIR" \
+    SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" SOLAR_PM_DISPATCH_ALLOW_DIRECT=1 \
+    python3 "$HARNESS_DIR/tools/pm_dispatch.py" submit \
+      --role planner \
+      --objective "[Solar Planner recovery] Retry the bounded Planner stage for ${sid} after the prior operator ended without a successful durable result. Read the current sprint contract, requirement IR, PRD, design, plan, task graph, and any prior Planner artifacts. Produce corrected candidate design.md, plan.md, and task_graph.json only. Do not run the plan compiler, do not modify status.json or the Solar ledger, do not create a certificate, do not dispatch Builder or Evaluator, and do not perform Builder work." \
+      --sprint "$sid" --node N0 --task-type planning \
+      --context "source=solar_coordinator planner_operator_retry=1 prior_result=unsuccessful" 2>&1)
+  rc=$?
+  if (( rc == 0 )); then
+    log "${G}[planner-retry] ${sid} dispatched a new bounded Planner operator task: ${out}${N}"
+    emit_event "$sid" "planner_operator_retry_dispatched" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"output": sys.argv[1][-2000:]}))' "$out" 2>/dev/null || echo '{}')"
+    return 0
+  fi
+  log "${Y}[planner-retry] ${sid} retry dispatch failed rc=${rc}: ${out}${N}"
+  emit_event "$sid" "planner_operator_retry_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+  return "$rc"
+}
+
 handle_queued() {
   local sid="$1" sf="$2"
   local blocked_by
@@ -3313,6 +3392,33 @@ PY
   fi
 
   req_file=$(pm_requirements_file "$sid" 2>/dev/null || true)
+
+  # A role-pool Planner owns its candidate files until the bounded invocation
+  # has a durable terminal result.  File presence is not completion evidence.
+  # Keep Solar in control of status/certification and let autopilot replace a
+  # failed operator claim instead of falling through to the legacy pane path.
+  local planner_operator_state
+  planner_operator_state="$(planner_operator_compile_state "$sid")"
+  case "$planner_operator_state" in
+    running|pending)
+      log "${Y}Sprint ${sid} Planner operator is ${planner_operator_state}; wait for durable result before reading or certifying its artifacts${N}"
+      return 0
+      ;;
+    failed|abandoned)
+      if pm_operator_role_pool_enabled; then
+        if drafting_retry_blocked "$sid" "planner_operator_retry"; then
+          log "${Y}Sprint ${sid} Planner operator retry cooldown active${N}"
+          return 0
+        fi
+        if dispatch_planner_operator_retry "$sid"; then
+          return 0
+        fi
+        mark_drafting_retry "$sid" "planner_operator_retry" "dispatch_failed"
+      fi
+      log "${R}Sprint ${sid} Planner operator ended unsuccessfully; Solar retry remains pending${N}"
+      return 0
+      ;;
+  esac
 
   if [[ -z "$req_file" ]]; then
     if drafting_flow_marked "$sid" "pm"; then
@@ -3383,6 +3489,26 @@ PY
   local graph="$SPRINTS_DIR/${sid}.task_graph.json"
   local guard_role
   guard_role="$(workflow_guard_route_role "$sid")"
+
+  # The Planner no longer self-certifies or mutates lifecycle status.  Once
+  # its bounded operator result is durable (gate above) and all candidate
+  # artifacts exist, Solar annotates and compiles the final bytes, then
+  # re-reads workflow_guard before deciding whether Builder may run.
+  if [[ "$guard_role" != "builder_main" && "$guard_role" != "builder" ]] \
+    && planner_artifacts_present "$sid" \
+    && ! pm_operator_role_pool_task_seen "$sid" "planner"; then
+    if ! annotate_requirement_matrix_for_planning "$sid"; then
+      log "${R}Planner 产物存在但 Requirement Trace Matrix 注入失败，阻止 Solar 签证${N}"
+      emit_event "$sid" "gate_blocked" "coordinator" '{"stage":"planning","reason":"requirement_trace_annotation_failed"}'
+      rollback_state_cache "$sid"
+      return 0
+    fi
+    if ! compile_generic_plan_graph "$sid"; then
+      rollback_state_cache "$sid"
+      return 0
+    fi
+    guard_role="$(workflow_guard_route_role "$sid")"
+  fi
 
   if [[ "$guard_role" != "builder_main" && "$guard_role" != "builder" ]]; then
     if pm_operator_role_pool_enabled; then
@@ -3467,13 +3593,10 @@ PY
 
 9. plan 必须包含: 交付切片顺序、文件级写入范围、并发边界、验证命令、no-live-pane-mutation 保护、rollback/stop rule。
 
-10. 完成后更新 status.json:
-   - status: active
-   - phase: planning_complete
-   - handoff_to: builder_main
-   - artifacts 追加 design_html: sprints/${sid}.design.html
-   - artifacts 追加 planning_html: sprints/${sid}.planning.html
-   - history 追加 planner_plan_completed
+10. 完成所有 artifact 写入后结束本次受约束 Planner 调用。不得运行 plan compiler，
+    不得修改 status.json，也不得自行声明 planning_complete。Solar coordinator 会等待
+    durable operator result 成功，随后独立注入 trace matrix、执行 plan validator、签发
+    certificate，并决定是否推进到 builder_main。
 
 11. 不要直接给 Builder 写自然语言任务；Builder 派发必须由 graph scheduler / graph-dispatch 根据 task_graph.json 生成。
 
@@ -5311,15 +5434,13 @@ handle_needs_human() {
 
 注意: needs_human_review **不计入** 3 轮失败上限。"
 
-  local planner_rc
-  dispatch_to_planner "$sid" "needs_human" "$SPRINTS_DIR/${sid}.dispatch.md"
-  planner_rc=$?
-  if (( planner_rc != 0 )); then
-    log "${Y}[needs_human] planner dispatch failed (rc=${planner_rc}), inbox/event retained${N}"
-    emit_event "$sid" "dispatch_failed" "coordinator" "{\"to\":\"planner\",\"task\":\"needs_human\",\"reason\":\"${reason}\",\"rc\":${planner_rc}}"
-  else
-    emit_event "$sid" "dispatched" "coordinator" "{\"to\":\"planner\",\"task\":\"needs_human\",\"reason\":\"${reason}\"}"
-  fi
+  # A needs_human_review transition is an absorbing governance boundary.
+  # Planner is a model operator, not the human release owner: dispatching the
+  # generated menu to Planner let it choose `human_continue` autonomously and
+  # reopen a node that Solar had explicitly escalated.  Preserve the durable
+  # dispatch artifact for the real owner/UI, but do not send it to any model.
+  emit_event "$sid" "awaiting_human_decision" "coordinator" \
+    "{\"reason\":\"${reason}\",\"dispatch_file\":\"${SPRINTS_DIR}/${sid}.dispatch.md\"}"
 }
 
 # ================================================================

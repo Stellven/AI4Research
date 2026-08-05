@@ -80,9 +80,7 @@
         "data_extraction"
       ],
       "read_scope": [
-        "dispatch/envelope.json",
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/lifecycle_summary.json",
-        "artifacts/scientific/scientific_research_lifecycle_full_v1/evidence.jsonl"
+        "dispatch/envelope.json"
       ],
       "write_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/01_paper/literature_discovery.v1.json"

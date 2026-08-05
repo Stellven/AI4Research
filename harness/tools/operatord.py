@@ -294,6 +294,12 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     graph_path = str(envelope.get("graph_path") or "").strip()
     if graph_path:
         env["GRAPH"] = graph_path
+    if bool(envelope.get("strict_filesystem_boundaries")):
+        env["SOLAR_OPERATOR_STRICT_FS_SCOPE"] = "1"
+    if isinstance(envelope.get("read_scope"), list):
+        env["SOLAR_OPERATOR_READ_SCOPE_JSON"] = json.dumps(envelope["read_scope"], ensure_ascii=False)
+    if isinstance(envelope.get("write_scope"), list):
+        env["SOLAR_OPERATOR_WRITE_SCOPE_JSON"] = json.dumps(envelope["write_scope"], ensure_ascii=False)
     work_dir = str(envelope.get("work_dir") or "").strip()
     if not work_dir:
         sid = str(envelope.get("sprint_id") or "").strip()
@@ -312,10 +318,45 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
         env["TASK_ID"] = str(envelope["task_id"])
     if str(envelope.get("sprint_id") or "").strip():
         env["SID"] = str(envelope["sprint_id"])
+
+    allowed_output_roots = [
+        HARNESS_DIR.expanduser().resolve(strict=False),
+        result_dir.expanduser().resolve(strict=False),
+    ]
+    if work_dir:
+        allowed_output_roots.append(Path(work_dir).expanduser().resolve(strict=False))
+
+    def authorized_output(raw: str) -> Path:
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            path = result_dir / path
+        resolved = path.resolve(strict=False)
+        if not any(resolved == root or resolved.is_relative_to(root) for root in allowed_output_roots):
+            raise ValueError(f"operator output outside Solar-authorized roots: {resolved}")
+        return resolved
+
     result_path = str(envelope.get("result_path") or "").strip()
     if result_path:
+        result_file = authorized_output(result_path)
+        result_file.parent.mkdir(parents=True, exist_ok=True)
+        result_file.touch(exist_ok=True)
+        result_path = str(result_file)
         env["RESULT_PATH"] = result_path
         env["PM_RESULT_PATH"] = result_path
+    allowed_outputs: list[str] = []
+    for raw in envelope.get("expected_artifacts") or []:
+        if not str(raw or "").strip():
+            continue
+        path = authorized_output(str(raw).strip())
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch(exist_ok=True)
+        allowed_outputs.append(str(path))
+    if result_path:
+        allowed_outputs.append(str(Path(result_path).expanduser()))
+    if allowed_outputs:
+        env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"] = json.dumps(
+            sorted(set(allowed_outputs)), ensure_ascii=False
+        )
     pm_context = str(envelope.get("pm_context") or "").strip()
     if pm_context:
         env["PM_CONTEXT"] = pm_context
@@ -865,10 +906,15 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             if pm_result_path is not None:
                 try:
                     pm_result_path.parent.mkdir(parents=True, exist_ok=True)
-                    if pm_result_path.exists():
-                        pm_result_path.unlink()
+                    # Keep the exact output inode present for kernel-enforced
+                    # Landlock scopes.  Removing it here makes the later
+                    # file-level rule unusable because creating the directory
+                    # entry would require write access to the whole sprints
+                    # directory.  Truncation still clears stale content and
+                    # refreshes mtime without widening the operator's scope.
+                    pm_result_path.write_text("", encoding="utf-8")
                 except Exception as exc:
-                    _info(f"Unable to clear stale pm result {pm_result_path}: {exc}")
+                    _info(f"Unable to prepare pm result {pm_result_path}: {exc}")
 
             cmd = _build_command(config, envelope)
             _info(f"Executing: {' '.join(shlex.quote(part) for part in cmd[:8])}")
@@ -970,8 +1016,13 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 _state["current_task_id"] = None
 
             if _state["drain"]:
-                # Signal arrived mid-execution; mark draining then tidy up.
-                result_status = "draining"
+                # ``draining`` is a daemon lifecycle state, not a durable task
+                # result. Persisting it here leaves PM inbox records in
+                # ``submitted`` forever because no failure closeout runs.
+                result_status = "failed_interrupted"
+                if exit_code == 0:
+                    exit_code = 130
+                log_lines.append("[ERROR] operator task interrupted while daemon was draining")
                 _state["current_state"] = "draining"
 
             finished_at: str = _now_utc()
@@ -1033,7 +1084,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             # ── Write result artifact ─────────────────────────────────────────────
             log_tail = "\n".join(log_lines[-50:])
             flow_control_decision: dict[str, Any] | None = None
-            if result_status not in {"completed", "draining"} and log_tail.strip():
+            if result_status != "completed" and log_tail.strip():
                 try:
                     flow_control_decision = _apply_failure_runtime_override(
                         operator_id=operator_id,
@@ -1063,7 +1114,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             )
             _info(f"Result written: {result_path}")
 
-            if pm_result_path is not None and result_status not in {"completed", "draining"}:
+            if pm_result_path is not None and result_status != "completed":
                 try:
                     failed = subprocess.run(
                         _pm_dispatch_fail_command(task_id, result_status, log_tail or result_status),

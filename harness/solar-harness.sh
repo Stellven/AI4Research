@@ -579,7 +579,8 @@ pane_runtime_env_assignments() {
   case "$SOLAR_PANE_RUNTIME" in
     codex)
       printf 'SOLAR_PANE_RUNTIME=codex SOLAR_CODEX_BYPASS=%q' "${SOLAR_CODEX_BYPASS:-1}"
-      [[ -n "${CODEX_HOME:-}" ]] && printf ' CODEX_HOME=%q' "$CODEX_HOME"
+      printf ' SOLAR_HARNESS_SESSION=%q' "$SOLAR_HARNESS_SESSION"
+      [[ -n "${SOLAR_CODEX_SOURCE_HOME:-}" ]] && printf ' SOLAR_CODEX_SOURCE_HOME=%q' "$SOLAR_CODEX_SOURCE_HOME"
       [[ -n "${SOLAR_CODEX_BIN:-}" ]] && printf ' SOLAR_CODEX_BIN=%q' "$SOLAR_CODEX_BIN"
       [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && printf ' SOLAR_CODEX_MODEL=%q' "$SOLAR_CODEX_MODEL"
       [[ -n "${SOLAR_CODEX_EXTRA_FLAGS:-}" ]] && printf ' SOLAR_CODEX_EXTRA_FLAGS=%q' "$SOLAR_CODEX_EXTRA_FLAGS"
@@ -601,11 +602,13 @@ configure_tmux_pane_runtime_env() {
   tmux set-environment -t "$session" HARNESS_DIR "$HARNESS_DIR" 2>/dev/null || true
   tmux set-environment -t "$session" SOLAR_HARNESS_DIR "$HARNESS_DIR" 2>/dev/null || true
   tmux set-environment -t "$session" SOLAR_PANE_RUNTIME "$SOLAR_PANE_RUNTIME" 2>/dev/null || true
+  tmux set-environment -t "$session" SOLAR_HARNESS_SESSION "$SOLAR_HARNESS_SESSION" 2>/dev/null || true
   case "$SOLAR_PANE_RUNTIME" in
     codex)
       tmux set-environment -t "$session" SOLAR_CODEX_BYPASS "${SOLAR_CODEX_BYPASS:-1}" 2>/dev/null || true
       tmux set-environment -t "$session" -gu SOLAR_CLAUDE_BYPASS 2>/dev/null || true
-      for var in CODEX_HOME SOLAR_CODEX_BIN SOLAR_CODEX_MODEL SOLAR_CODEX_EXTRA_FLAGS SOLAR_CODEX_TRUST_WORKSPACE; do
+      tmux set-environment -t "$session" -gu CODEX_HOME 2>/dev/null || true
+      for var in SOLAR_CODEX_SOURCE_HOME SOLAR_CODEX_BIN SOLAR_CODEX_MODEL SOLAR_CODEX_EXTRA_FLAGS SOLAR_CODEX_TRUST_WORKSPACE; do
         if [[ -n "${!var:-}" ]]; then
           tmux set-environment -t "$session" "$var" "${!var}" 2>/dev/null || true
         else

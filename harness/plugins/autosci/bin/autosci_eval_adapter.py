@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""AutoSci evaluator adapter for Solar DAG nodes.
+"""AutoSci deterministic scientific gate adapter for Solar DAG nodes.
 
 The AutoSci bridge emits typed scientific evidence. The graph runtime gates
-nodes through ``solar.eval.v1`` sidecars. This adapter is the deterministic
-translator between those two contracts: find the node evidence, run the
-matching scientific gate, write eval.md/eval.json, and return the verdict in
-the shape consumed by ``graph_node_dispatcher.node_verdict``.
+nodes through ``solar.eval.v1`` sidecars. This adapter only translates and
+checks those evidence contracts. It never owns the independent evaluator role
+and never submits a graph verdict; Solar combines its policy result with a
+separate bounded Codex Evaluator report.
 """
 from __future__ import annotations
 
@@ -95,13 +95,20 @@ def _resolve_path(raw: str | Path, *, graph_path: Path | None = None) -> Path:
     path = Path(str(raw)).expanduser()
     if path.is_absolute():
         return path
-    candidates = [
-        HARNESS_DIR / path,
-        Path.cwd() / path,
-        HARNESS_DIR.parent / path,
-    ]
+    candidates: list[Path] = []
     if graph_path is not None:
-        candidates.insert(1, graph_path.parent / path)
+        graph_name = graph_path.name
+        sid = graph_name[: -len(".task_graph.json")] if graph_name.endswith(".task_graph.json") else ""
+        if sid:
+            candidates.append(graph_path.parent / sid / "workdir" / path)
+        candidates.append(graph_path.parent / path)
+    candidates.extend(
+        [
+            HARNESS_DIR / path,
+            Path.cwd() / path,
+            HARNESS_DIR.parent / path,
+        ]
+    )
     parts = path.parts
     if parts and parts[0] == "harness":
         candidates.insert(0, HARNESS_DIR / Path(*parts[1:]))
@@ -344,8 +351,8 @@ def _eval_payload(
         "summary": summary,
         "generated_by": OPERATOR_ID,
         "generation_mode": "autosci_eval_adapter",
-        "proof_level": "independent_verification",
-        "independent_author": OPERATOR_ID,
+        "proof_level": "deterministic_policy_gate",
+        "independent_author": "",
         "command_line": _command_line(),
         "workspace_root": _workspace_root(),
         "passed_conditions": passed_conditions,
@@ -386,7 +393,7 @@ def _write_markdown(path: Path, payload: dict[str, Any]) -> None:
     failed = payload.get("failed_conditions") if isinstance(payload.get("failed_conditions"), list) else []
     passed = payload.get("passed_conditions") if isinstance(payload.get("passed_conditions"), list) else []
     lines = [
-        f"# AutoSci Evaluation - {payload.get('sprint_id')} / {payload.get('node_id')}",
+        f"# AutoSci Scientific Gate - {payload.get('sprint_id')} / {payload.get('node_id')}",
         "",
         "## Verdict",
         str(payload.get("verdict") or "FAIL"),

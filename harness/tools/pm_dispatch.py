@@ -160,6 +160,7 @@ def _build_pm_operator_envelope(
     logical_operator: str = "",
     task_graph_node: dict[str, Any] | None = None,
     capsule_submit: dict[str, Any] | None = None,
+    expected_artifacts: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build the canonical PM/operator envelope.
 
@@ -168,6 +169,15 @@ def _build_pm_operator_envelope(
     workdir contract regardless of the path that submitted them.
     """
     capsule_submit = capsule_submit or {}
+    graph_path = _graph_path_for_sprint(sprint_id)
+    graph_policy: dict[str, Any] = {}
+    if graph_path:
+        try:
+            payload = json.loads(Path(graph_path).read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                graph_policy = payload
+        except (OSError, json.JSONDecodeError):
+            graph_policy = {}
     envelope: dict[str, Any] = {
         "task_id": task_id,
         "sprint_id": sprint_id,
@@ -182,12 +192,15 @@ def _build_pm_operator_envelope(
         "pm_context": context[:500] if context else "",
         "requested_role": normalize_role(role),
         "work_dir": _pm_work_dir_for_sprint(sprint_id, work_dir),
-        "graph_path": _graph_path_for_sprint(sprint_id),
+        "graph_path": graph_path,
         "runtime_mode": _runtime_mode_from_env(),
         "provider_policy": _provider_policy_label(),
         "operator_provider": str(operator.get("provider") or operator.get("vendor") or ""),
         "operator_backend": str(operator.get("backend") or ""),
         "operator_model": str(operator.get("model") or ""),
+        "workflow_contract": str(graph_policy.get("workflow_contract") or ""),
+        "strict_filesystem_boundaries": bool(graph_policy.get("strict_filesystem_boundaries")),
+        "expected_artifacts": list(expected_artifacts or []),
     }
     if not envelope["graph_path"]:
         envelope.pop("graph_path", None)
@@ -205,6 +218,10 @@ def _build_pm_operator_envelope(
             "acceptance": task_graph_node.get("acceptance", []),
             "requirement_ids": task_graph_node.get("requirement_ids", []),
         }
+        envelope["read_scope"] = list(task_graph_node.get("read_scope") or [])
+        envelope["write_scope"] = list(task_graph_node.get("write_scope") or [])
+        envelope["write_scope_root"] = envelope["work_dir"]
+        envelope["write_scope_resolution"] = "relative_to_write_scope_root"
     if capsule_submit.get("capability_capsule_id"):
         envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
         envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
@@ -1029,6 +1046,23 @@ def _operator_reject_reason_for_task(op: dict[str, Any], role: str, task_type: s
     """
     norm_role = normalize_role(role)
     task = str(task_type or "").strip().lower()
+    if task in {"research", "scientific-research"}:
+        research_markers = {
+            "research",
+            "scientific-research",
+            "web-research",
+            "knowledge-extraction",
+            "evidence",
+            "report-writing",
+        }
+        declared = {
+            str(item).strip().lower()
+            for field in ("task_classes", "strengths", "preferred_for")
+            for item in (op.get(field) or [])
+            if str(item or "").strip()
+        }
+        if not declared.intersection(research_markers):
+            return "operator_lacks_scientific_research_capability"
     requested_code_exec = norm_role in CODE_EXEC_ROLES or task in CODE_EXEC_TASK_TYPES
     if not requested_code_exec:
         return ""
@@ -1708,10 +1742,14 @@ def _builder_ready_nodes_for_sprint(sprint_id: str) -> tuple[list[dict[str, Any]
             )
         except Exception as guard_exc:
             if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
+                detail = " ".join(str(guard_exc).split())[:300]
                 return [], {
                     "ok": False,
                     "reason": "plan_validator_dispatch_refused",
-                    "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"],
+                    "errors": [
+                        f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"
+                        + (f":{detail}" if detail else "")
+                    ],
                     "graph": str(graph_path),
                 }
             plan_guard = {"ok": True}
@@ -1794,6 +1832,7 @@ def _pm_expected_artifacts(record: dict[str, Any]) -> list[Path]:
         canonical = [SPRINTS_DIR / f"{sprint_id}.{node_id}-handoff.md"]
     elif kind == "planner":
         canonical = [
+            SPRINTS_DIR / f"{sprint_id}.design.md",
             SPRINTS_DIR / f"{sprint_id}.plan.md",
             SPRINTS_DIR / f"{sprint_id}.task_graph.json",
         ]
@@ -2022,9 +2061,6 @@ def ensure_compiled_sprint_status(
         # but it cannot thereby turn a governed intake into legacy work.
         status["plan_compile_required"] = True
     else:
-        # Fixed workflow contracts (for example research.autosci.v1) already
-        # have their own structural guard and deliberately bypass the generic
-        # planner. Do not misclassify them as uncertified generic graphs.
         status.pop("plan_compile_required", None)
         status.pop("planner_dispatch_claim", None)
     if _pm_operator_pool_enabled() and target_role == "planner":
@@ -2146,16 +2182,14 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
         sprint_root=SPRINTS_DIR,
         sprint_id=sprint_id,
     )
-    task_graph_payload = payload.get("compiled_artifacts", {}).get("task_dag", {})
-    autosci_contract_bound = str(task_graph_payload.get("workflow_contract") or "") == "research.autosci.v1"
     status_path = ensure_compiled_sprint_status(
         sprint_id,
         title=payload["compiled_artifacts"]["product_brief"]["title"],
         summary=payload["compiled_artifacts"]["product_brief"]["problem"][:180],
-        status_value="active" if autosci_contract_bound else "drafting",
-        phase="planning_complete" if autosci_contract_bound else "prd_ready",
-        handoff_to="builder_main" if autosci_contract_bound else "planner",
-        target_role="builder_main" if autosci_contract_bound else "planner",
+        status_value="drafting",
+        phase="prd_ready",
+        handoff_to="planner",
+        target_role="planner",
     )
     emitted["status"] = str(status_path)
 
@@ -2174,7 +2208,7 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
         if rc != 0:
             return rc
 
-    print("✅ Requirement Compiler package ready")
+    print("OK: Requirement Compiler package ready")
     print(f"   sprint_id   = {sprint_id}")
     print(f"   workspace   = {workspace_root}")
     print(f"   pm_dir      = {emitted['pm_dir']}")
@@ -2411,6 +2445,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
         logical_operator=logical_operator,
         task_graph_node=task_graph_node,
         capsule_submit=capsule_submit,
+        expected_artifacts=expected_artifacts,
     )
 
     record: dict[str, Any] = {
@@ -2488,7 +2523,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
     write_pm_task_record(task_id, record)
 
     # 7. 输出
-    print(f"✅ PM 任务已提交")
+    print("OK: PM task submitted")
     print(f"   task_id     = {task_id}")
     print(f"   operator    = {operator_id} ({operator.get('model', '?')})")
     if operator.get("borrowed_for_role"):
@@ -2500,8 +2535,8 @@ def cmd_submit(args: argparse.Namespace) -> int:
     print(f"   dispatch    = {dispatch_file}")
     print(f"   result      = {result_path}")
     print()
-    print(f"查看结果：solar-harness pm-fleet inbox")
-    print(f"等待完成：watch cat '{result_path}'")
+    print("Inspect: solar-harness pm-fleet inbox")
+    print(f"Wait for completion: watch cat '{result_path}'")
 
     return 0
 

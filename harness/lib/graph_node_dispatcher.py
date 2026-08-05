@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -232,10 +233,14 @@ def _plan_validator_dispatch_guard(graph: dict[str, Any]) -> dict[str, Any] | No
             sid=str((graph or {}).get("sprint_id") or ""),
         )
     except Exception as exc:
+        detail = " ".join(str(exc).split())[:300]
         return {
             "ok": False,
             "reason": "plan_validator_dispatch_refused",
-            "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}"],
+            "errors": [
+                f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}"
+                + (f":{detail}" if detail else "")
+            ],
         }
     if verdict.get("ok"):
         return None
@@ -274,6 +279,7 @@ def _manifest_presence(sid: str, node_id: str) -> dict[str, Any]:
 
 
 _GENERIC_WORKFLOW_CONTRACT_ID = "pm.generic.v1"
+_AUTOSCI_WORKFLOW_CONTRACT_ID = "research.autosci.v1"
 _EVAL_ARTIFACT_SNAPSHOT_SCHEMA = "solar.eval_artifact_snapshot.v1"
 
 
@@ -298,9 +304,20 @@ def _manifest_anchor(
     gate-cwd fix (contract_gate_executor): certified-generic anchors at the sprint
     workdir with the contract's canonical root, and the contract's alias
     spellings (sprints/<sid>/workdir/X, workdir/X) normalize onto it. Fixed
-    contracts keep the HARNESS_DIR anchor and graph-carried roots (P2/P3 proven).
+    AutoSci operators also execute below the sprint workdir, but retain their
+    graph-carried ``artifacts/scientific/<sid>/`` root. Other fixed contracts
+    keep the HARNESS_DIR anchor and graph-carried roots (P2/P3 proven).
     A returned write_scope of None means "use the node's own write_scope"."""
     graph_roots = graph.get("artifact_roots") if isinstance(graph.get("artifact_roots"), dict) else {}
+    contract_id = str(
+        (graph or {}).get("workflow_contract_id")
+        or (graph or {}).get("workflow_contract")
+        or ""
+    ).strip()
+    if contract_id == _AUTOSCI_WORKFLOW_CONTRACT_ID:
+        workdir = SPRINTS_DIR / sid / "workdir"
+        if workdir.is_dir():
+            return workdir, graph_roots, None
     if not _graph_is_certified_generic(graph):
         return HARNESS_DIR, graph_roots, None
     workdir = SPRINTS_DIR / sid / "workdir"
@@ -437,6 +454,29 @@ def _scope_owner_for_read(
             if target == owner_path or (is_directory and target.is_relative_to(owner_path)):
                 return candidate
     return None
+
+
+def _current_operator_dispatch_read(
+    sid: str,
+    declared: str,
+    node: dict[str, Any],
+) -> Path | None:
+    """Resolve the exact immutable operator envelope for the active node attempt."""
+    if str(declared or "").strip().replace("\\", "/") != "dispatch/envelope.json":
+        return None
+    attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
+    task_id = str(attempt.get("task_id") or node.get("pm_task_id") or "").strip()
+    operator_id = str(attempt.get("operator_id") or node.get("operator_id") or "").strip()
+    if not task_id or not operator_id:
+        return None
+    if any(value in {".", ".."} or Path(value).name != value for value in (task_id, operator_id)):
+        return None
+    if str(attempt.get("sprint_id") or sid) != sid:
+        return None
+    node_id = str(node.get("id") or "").strip()
+    if str(attempt.get("node_id") or node_id) != node_id:
+        return None
+    return HARNESS_DIR / "run" / "operator-results" / operator_id / task_id / "envelope.json"
 
 
 def _snapshot_row_material(row: dict[str, Any]) -> dict[str, Any]:
@@ -805,6 +845,29 @@ def _capture_eval_artifact_snapshot(
             )
         return row
 
+    def add_operator_dispatch_read(declared: str, path: Path) -> dict[str, Any]:
+        task_root = path.parent
+        row = {
+            "scope": "read",
+            "authority": "operator_dispatch",
+            "declared": declared,
+            "path": str(Path(os.path.abspath(path.expanduser()))),
+            "resolved_root": "operator_result",
+            **_artifact_manifest.snapshot_path(path, root=task_root),
+        }
+        rows.append(row)
+        if row.get("unsafe") or not row.get("exists") or not row.get("sha256"):
+            violations.append(
+                {
+                    "code": "DECLARED_EVAL_BYTES_UNAVAILABLE",
+                    "scope": "read",
+                    "declared": declared,
+                    "path": str(row.get("path") or ""),
+                    "authority": "operator_dispatch",
+                }
+            )
+        return row
+
     def add_governed_graph_read(declared: str, path: Path) -> dict[str, Any]:
         """Bind task_graph reads to its stable certificate projection.
 
@@ -869,10 +932,20 @@ def _capture_eval_artifact_snapshot(
             )
         return row
 
+    autosci_gate = node.get("autosci_scientific_gate")
+    if isinstance(autosci_gate, dict) and str(autosci_gate.get("json_path") or "").strip():
+        add_sprint_sidecar_read(
+            "autosci_scientific_gate",
+            Path(str(autosci_gate["json_path"])),
+        )
+
     staging_reads: dict[str, dict[str, Any]] = {}
     for declared in _scope_values(node.get("read_scope")):
+        operator_dispatch = _current_operator_dispatch_read(sid, declared, node)
         sprint_sidecar = _current_sprint_control_read(sid, declared, graph)
-        if sprint_sidecar is not None:
+        if operator_dispatch is not None:
+            add_operator_dispatch_read(declared, operator_dispatch)
+        elif sprint_sidecar is not None:
             if sprint_sidecar.name == f"{sid}.task_graph.json":
                 add_governed_graph_read(declared, sprint_sidecar)
             else:
@@ -2971,7 +3044,9 @@ def _canonical_output_paths_block(node: dict[str, Any]) -> str:
     )
 
 
-def _generic_workdir_block(sid: str, graph: dict[str, Any]) -> str:
+def _generic_workdir_block(
+    sid: str, graph: dict[str, Any], node: dict[str, Any] | None = None
+) -> str:
     """Certified-generic builder teaching: STATE the workdir, name the trap.
 
     G4-lite run 2 (codex-cli-output.log:1938): with cwd correctly set to
@@ -2980,9 +3055,45 @@ def _generic_workdir_block(sid: str, graph: dict[str, Any]) -> str:
     sprint's dot-suffixed artifact files and invented sprints/<sid>.workdir.
     The runtime now recovers that stray spelling, but the dispatch text must
     stop inviting it."""
+    contract_id = str(
+        (graph or {}).get("workflow_contract_id")
+        or (graph or {}).get("workflow_contract")
+        or ""
+    ).strip()
+    workdir = SPRINTS_DIR / sid / "workdir"
+    if contract_id == _AUTOSCI_WORKFLOW_CONTRACT_ID:
+        mappings: list[str] = []
+        active_node = node or {}
+        for field in ("write_scope", "outputs"):
+            for raw in _iter_scope_values(active_node.get(field)):
+                scope = Path(raw).expanduser()
+                if scope.is_absolute() or any(ch in raw for ch in "*?[]"):
+                    continue
+                try:
+                    target = (workdir / scope).resolve()
+                    target.relative_to(workdir.resolve())
+                except (OSError, ValueError):
+                    continue
+                mappings.append(f"- `{field}` `{raw}` -> `{target}`")
+        mapping_block = "\n".join(mappings) if mappings else "- No relative output paths declared."
+        return (
+            "## AutoSci Staging Workdir\n\n"
+            f"The sole staging root for every relative `write_scope` and `outputs` path is: `{workdir}`.\n"
+            "Resolve relative paths against this directory, even when sprint sidecars live beside it.\n"
+            "Exact resolved paths for this node:\n\n"
+            f"{mapping_block}\n\n"
+            f"Do not create a second artifact tree at `{SPRINTS_DIR / sid / 'artifacts'}`; "
+            "Solar's evaluator snapshots only the authoritative staging workdir.\n\n"
+            "## Solar-Owned Control Plane\n\n"
+            f"`{SPRINTS_DIR / f'{sid}.task_graph.json'}`, the plan certificate, ledger, status, "
+            "and sibling sprint control sidecars are read-only Solar state. Do not edit, replace, "
+            "re-sign, or append runtime paths to them. In particular, never change `outputs`, "
+            "`write_scope`, `node_results`, or `plan_certificate` to repair discovery. Write only "
+            "the declared workdir output and the exact handoff/result files pre-authorized by Solar. "
+            "Solar applies node state transitions after consuming those files."
+        )
     if not _graph_is_certified_generic(graph):
         return ""
-    workdir = SPRINTS_DIR / sid / "workdir"
     return (
         "## Sprint Workdir\n\n"
         f"The sole staging write root for declared product outputs is: `{workdir}`\n"
@@ -3896,7 +4007,15 @@ def _latest_operator_result_for(
         if task_id and str(data.get("task_id") or "") != task_id:
             continue
         status = str(data.get("status") or "").strip().lower()
-        if status not in {"completed", "failed", "failed_missing_handoff", "failed_stale_handoff", "cancelled", "error"}:
+        if status not in {
+            "completed",
+            "failed",
+            "failed_contract_closeout",
+            "failed_missing_handoff",
+            "failed_stale_handoff",
+            "cancelled",
+            "error",
+        }:
             continue
         finished = str(data.get("finished_at") or data.get("updated_at") or data.get("started_at") or "")
         item = dict(data)
@@ -4910,13 +5029,23 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     operator_id=operator_id,
                     task_id=str(assignment.get("pm_task_id") or ""),
                 )
-                if result and not Path(str(assignment.get("eval_json_path") or _eval_json_file(sid, node_id))).exists():
+                eval_json_path = Path(
+                    str(assignment.get("eval_json_path") or _eval_json_file(sid, node_id))
+                )
+                eval_json_ready = (
+                    eval_json_path.is_file()
+                    and eval_json_path.stat().st_size > 0
+                )
+                operator_status = str((result or {}).get("status") or "").strip().lower()
+                if result and (
+                    operator_status == "failed_contract_closeout" or not eval_json_ready
+                ):
                     terminal_operator_assignment = {
                         "pane": pane,
                         "dispatch_id": str(assignment.get("dispatch_id") or "").strip(),
                         "pm_task_id": str(assignment.get("pm_task_id") or "").strip(),
                         "reason": "eval_failed_contract_closeout",
-                        "operator_status": str(result.get("status") or ""),
+                        "operator_status": operator_status,
                         "result_json": str(result.get("_result_json") or ""),
                     }
                     break
@@ -6235,6 +6364,19 @@ def _run_node_proof_seam(
             }
     proof = _evaluate_proof_obligations(sid, node, eval_json=eval_json)
     proof["manifest"] = manifest_summary
+    if _node_in_autosci_workflow(graph, node):
+        scientific_gate = _validate_autosci_scientific_gate(node)
+        proof["autosci_scientific_gate"] = scientific_gate
+        if not scientific_gate.get("ok"):
+            proof["ok"] = False
+            proof.setdefault("missing", []).append(
+                {
+                    "kind": "deterministic_policy_gate",
+                    "requirement": "autosci_scientific_gate_pass",
+                    "field": "autosci_scientific_gate",
+                    "reason": str(scientific_gate.get("reason") or "autosci_scientific_gate_failed"),
+                }
+            )
     return proof
 
 
@@ -6714,7 +6856,7 @@ def build_dispatch_text(payload: dict[str, Any], pane: str) -> str:
     )
     write_scope_preflight = _write_scope_preflight_block(str(sid), node)
     canonical_output_paths = _canonical_output_paths_block(node)
-    generic_workdir_block = _generic_workdir_block(str(sid), graph_for_policy)
+    generic_workdir_block = _generic_workdir_block(str(sid), graph_for_policy, node)
     repair_context_block = _node_repair_context_block(node)
 
     return f"""{STATE_READ_PREFLIGHT}
@@ -6786,7 +6928,8 @@ Graph: `{graph_path}`
 - 不要把 parent sprint 标成 passed。
 - 不要等待用户确认；遇到阻塞先写清楚证据和最小修复建议。
 - 不要停在“继续/要不要继续/等待 review”提示；只要本节点 acceptance 未完成，就自主继续执行。
-- 完成后必须写 handoff 并把本节点标记为 `reviewing`；这是释放下游和 evaluator 的唯一闭环。
+- 完成后必须写 handoff；Solar 在 operator result 和 handoff 都落盘后把节点标记为 `reviewing`。
+- TaskGraph、ledger、certificate 和 status 是 Solar 只读控制面；不得直接改写或重新签名。
 
 ## Work Steps
 
@@ -6824,10 +6967,8 @@ Graph: `{graph_path}`
    EOF
    ```
 
-5. 将节点状态置为 reviewing，等待 evaluator：
-   ```bash
-   {HARNESS_DIR}/solar-harness.sh graph-scheduler mark --graph "{graph_path}" --node "{node_id}" --status reviewing --in-place
-   ```
+5. 写完 handoff 后停止本节点调用。不要调用 `graph-scheduler mark`，不要直接修改
+   TaskGraph / ledger / certificate。Solar 会消费 operator result 与 handoff，随后更新状态并调度独立 Evaluator。
 """
 
 
@@ -6855,6 +6996,20 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
     contract = SPRINTS_DIR / f"{sid}.contract.md"
     architecture_block = dispatch_policy_block(node, graph) if dispatch_policy_block else "## Architecture Guard\n\n- unavailable"
     research_quality_gate_instruction = _deepresearch_quality_gate_eval_instruction(node, eval_json)
+    autosci_gate = node.get("autosci_scientific_gate") if isinstance(node.get("autosci_scientific_gate"), dict) else {}
+    autosci_scientific_gate_instruction = ""
+    if _node_in_autosci_workflow(graph, node):
+        autosci_scientific_gate_instruction = f"""
+
+## Solar AutoSci Scientific Gate
+
+- Solar deterministic gate JSON: `{autosci_gate.get('json_path') or 'MISSING'}`
+- Recorded verdict: `{autosci_gate.get('verdict') or 'MISSING'}`
+- Recorded SHA-256: `{autosci_gate.get('sha256') or 'MISSING'}`
+- You remain an independent Codex Evaluator: inspect the underlying evidence and make your own bounded assessment.
+- A deterministic gate FAIL, missing gate, digest mismatch, or generation mismatch is non-overridable. Your JSON verdict must be FAIL in that case.
+- Do not edit or regenerate the Solar gate sidecars.
+"""
     peer_eval_json_paths = peer_eval_json_paths or []
     canonical_eval_json_path = canonical_eval_json_path or str(_eval_json_file(sid, node_id))
     canonical_eval_md_path = canonical_eval_md_path or str(_eval_md_file(sid, node_id))
@@ -6873,15 +7028,9 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
         repair_context_created = repair_context_created_at.isoformat().replace("+00:00", "Z")
     eval_instruction_created_at = _utc_now()
     peer_block = "\n".join(f"- `{path}`" for path in peer_eval_json_paths) if peer_eval_json_paths else "- `N/A`"
-    verdict_step = f"""3. 提交节点 verdict。通过时会自动释放下游 ready node；失败时只阻塞依赖它的下游：
-   ```bash
-   {HARNESS_DIR}/solar-harness.sh graph-dispatch node-verdict --graph "{graph_path}" --node "{node_id}" --verdict pass --eval-json "{eval_json}"
-   ```
-
-   如果失败，改用：
-   ```bash
-   {HARNESS_DIR}/solar-harness.sh graph-dispatch node-verdict --graph "{graph_path}" --node "{node_id}" --verdict fail --eval-json "{eval_json}" --reason "写清楚失败原因"
-   ```
+    verdict_step = f"""3. 写完 canonical eval sidecar 后停止本次调用。
+   不要调用 `graph-dispatch node-verdict`，不要修改 TaskGraph / ledger / certificate。
+   Solar 将读取 eval sidecar、验证确定性 gate 与冻结快照，然后决定 PASS、repair 或 FAIL。
 """ if evaluator_role == "primary" else f"""3. 不要直接提交 node verdict。你是并行副评审，只负责产出 sidecar 评审结果：
    - Markdown sidecar: `{eval_md}`
    - JSON sidecar: `{eval_json}`
@@ -6992,6 +7141,7 @@ solar-harness session evaluate "{sid}" --json
   - `proof_checks`: 对 `self_check` 逐项填 `true/false`
   - `verification_results`: 记录 `checked_artifacts / missing_artifacts / proof_gate`
 {research_quality_gate_instruction}
+{autosci_scientific_gate_instruction}
 
 ## Required Outputs
 
@@ -9098,6 +9248,17 @@ def _worker_provider_aliases(worker: dict[str, Any]) -> set[str]:
 def _worker_matches_graph_provider_policy(worker: dict[str, Any], providers: set[str]) -> bool:
     if not providers:
         return True
+    # AutoSci command operators are local, deterministic runtime adapters; they
+    # do not select an LLM provider.  Treating them as provider-less workers
+    # caused an OpenAI-only research graph to discard its exact Scientific*
+    # operator and fall back to a generic Codex builder.  Keep the exemption
+    # explicit and narrowly scoped to the contract-owned AutoSci operator
+    # namespace so ordinary model workers still have to prove their provider.
+    if worker.get("model_provider_neutral") is True:
+        pane = str(worker.get("pane") or "")
+        operator_id = str(worker.get("operator_id") or "")
+        if pane == f"operator:{operator_id}" and operator_id.startswith("autosci-"):
+            return True
     return bool(_worker_provider_aliases(worker) & providers)
 
 
@@ -9505,7 +9666,8 @@ def _submit_builder_to_operator_pool(
         )
     objective = (
         f"你是 graph-dispatch {logical_role}。请严格执行下面这个 DAG 节点分发文件；"
-        "不要只总结，必须完成节点要求并按文件内的 graph node verdict/closeout 规则回写。\n\n"
+        "不要只总结，必须完成节点要求并写入声明的产物；TaskGraph、ledger、certificate "
+        "和节点状态由 Solar 掌控，不得直接改写。\n\n"
         f"Graph dispatch file: {instruction_file}\n"
         f"Sprint: {sid}\n"
         f"Node: {node_id}\n"
@@ -10986,6 +11148,135 @@ def _node_uses_autosci_evaluator(graph: dict[str, Any], node: dict[str, Any]) ->
     return _node_in_autosci_workflow(graph, node)
 
 
+def _autosci_scientific_gate_paths(sid: str, node_id: str) -> tuple[Path, Path]:
+    stem = SPRINTS_DIR / f"{sid}.{node_id}-scientific-gate"
+    return Path(f"{stem}.json"), Path(f"{stem}.md")
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _run_autosci_scientific_gate(
+    graph_path: str,
+    sid: str,
+    node: dict[str, Any],
+) -> dict[str, Any]:
+    """Run the Solar-owned scientific schema gate without consuming a verdict."""
+    node_id = str(node.get("id") or "")
+    gate_json, gate_md = _autosci_scientific_gate_paths(sid, node_id)
+    adapter = HARNESS_DIR / "plugins" / "autosci" / "bin" / "autosci_eval_adapter.py"
+    command = [
+        sys.executable,
+        str(adapter),
+        "--graph",
+        str(graph_path),
+        "--node",
+        node_id,
+        "--eval-json",
+        str(gate_json),
+        "--eval-md",
+        str(gate_md),
+    ]
+    env = _broker_env(sid)
+    env["HARNESS_DIR"] = str(HARNESS_DIR)
+    env.setdefault("SOLAR_PM_DISPATCH_SOURCE", "graph_node_dispatcher.autosci_scientific_gate")
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=120, env=env)
+    except Exception as exc:
+        return {
+            "required": True,
+            "invocation_ok": False,
+            "ok": False,
+            "reason": "autosci_scientific_gate_exception",
+            "error": str(exc),
+        }
+    try:
+        result = json.loads(completed.stdout)
+        if not isinstance(result, dict):
+            raise ValueError("adapter output was not a JSON object")
+    except Exception as exc:
+        result = {
+            "ok": False,
+            "reason": f"invalid_adapter_stdout:{type(exc).__name__}",
+        }
+    payload = _read_json_file_safe(gate_json)
+    invocation_ok = bool(
+        completed.returncode == 0
+        and result.get("ok")
+        and isinstance(payload, dict)
+        and gate_json.is_file()
+        and gate_md.is_file()
+    )
+    verdict = str((payload or {}).get("verdict") or result.get("verdict") or "").upper()
+    gate_result = (
+        (payload.get("evidence") or {}).get("gate_result")
+        if isinstance(payload, dict) and isinstance(payload.get("evidence"), dict)
+        else {}
+    )
+    policy_ok = bool(invocation_ok and verdict == "PASS" and isinstance(gate_result, dict) and gate_result.get("ok"))
+    return {
+        "required": True,
+        "invocation_ok": invocation_ok,
+        "ok": policy_ok,
+        "reason": "" if invocation_ok else str(result.get("reason") or "autosci_scientific_gate_failed"),
+        "verdict": verdict or "FAIL",
+        "json_path": str(gate_json),
+        "md_path": str(gate_md),
+        "sha256": _file_sha256(gate_json) if gate_json.is_file() else "",
+        "generation": _node_repair_attempts(node),
+        "expected_schema": str(result.get("expected_schema") or ""),
+        "evidence_path": str(result.get("evidence_path") or ""),
+        "generated_by": str((payload or {}).get("generated_by") or ""),
+        "generation_mode": str((payload or {}).get("generation_mode") or ""),
+        "proof_level": str((payload or {}).get("proof_level") or ""),
+        "returncode": completed.returncode,
+        "stderr": completed.stderr[-2000:],
+    }
+
+
+def _validate_autosci_scientific_gate(node: dict[str, Any]) -> dict[str, Any]:
+    metadata = node.get("autosci_scientific_gate")
+    if not isinstance(metadata, dict):
+        return {"required": True, "ok": False, "reason": "autosci_scientific_gate_missing"}
+    path = Path(str(metadata.get("json_path") or ""))
+    if not path.is_file():
+        return {"required": True, "ok": False, "reason": "autosci_scientific_gate_file_missing"}
+    expected_digest = str(metadata.get("sha256") or "")
+    actual_digest = _file_sha256(path)
+    payload = _read_json_file_safe(path)
+    evidence = payload.get("evidence") if isinstance(payload, dict) and isinstance(payload.get("evidence"), dict) else {}
+    gate_result = evidence.get("gate_result") if isinstance(evidence.get("gate_result"), dict) else {}
+    current_generation = _node_repair_attempts(node)
+    ok = bool(
+        metadata.get("invocation_ok")
+        and metadata.get("ok")
+        and str(metadata.get("verdict") or "").upper() == "PASS"
+        and expected_digest
+        and actual_digest == expected_digest
+        and str(payload.get("verdict") or "").upper() == "PASS"
+        and str(payload.get("generation_mode") or "") == "autosci_eval_adapter"
+        and str(payload.get("proof_level") or "") == "deterministic_policy_gate"
+        and bool(gate_result.get("ok"))
+        and metadata.get("generation") == current_generation
+    )
+    return {
+        "required": True,
+        "ok": ok,
+        "reason": "" if ok else "autosci_scientific_gate_failed_or_tampered",
+        "path": str(path),
+        "expected_sha256": expected_digest,
+        "actual_sha256": actual_digest,
+        "verdict": str(payload.get("verdict") or ""),
+        "generation": metadata.get("generation"),
+        "expected_generation": current_generation,
+    }
+
+
 def _autosci_operator_dispatch_enabled() -> bool:
     return str(os.environ.get("SOLAR_AUTOSCI_OPERATOR_DISPATCH_ENABLED", "1")).strip().lower() not in {
         "0",
@@ -11064,6 +11355,7 @@ def _autosci_contract_operator_workers(graph: dict[str, Any]) -> list[dict[str, 
             "host_role": "builder",
             "operator_role": str(spec.get("role") or ""),
             "operator_id": operator_id,
+            "model_provider_neutral": True,
             "busy": runtime_state not in {"", "idle"},
             "title": str(spec.get("display_name") or operator_id),
             "unavailable_reason": "" if runtime_state in {"", "idle"} else f"operator_runtime_{runtime_state}",
@@ -11162,36 +11454,9 @@ def _submit_eval_to_autosci_adapter(
             "instruction_file": str(instruction_file),
         }
 
-    verdict = str(adapter_result.get("verdict") or "").strip().lower()
-    if verdict not in {"pass", "fail"}:
-        return {
-            "ok": False,
-            "reason": "autosci_eval_adapter_invalid_verdict",
-            "adapter_result": adapter_result,
-            "node": node_id,
-            "pane": AUTOSCI_EVALUATOR_PANE,
-            "dispatch_id": dispatch_id,
-            "instruction_file": str(instruction_file),
-        }
-    summary = ""
-    eval_payload = _read_json_file_safe(eval_json_path)
-    if isinstance(eval_payload, dict):
-        summary = str(eval_payload.get("summary") or "")
-    verdict_result = node_verdict(
-        graph_path,
-        node_id,
-        verdict,
-        reason=summary or f"AutoSci evaluator verdict: {verdict.upper()}",
-        eval_json=str(eval_json_path),
-        dry_run=False,
-        ttl=ttl,
-        dispatch_downstream=True,
-    )
-    verdict_status = str(verdict_result.get("status") or "").strip().lower()
-    verdict_consumed = bool(verdict_result.get("ok")) or verdict_status in {"passed", "failed", "failed_review"}
     return {
-        "ok": verdict_consumed,
-        "reason": "" if verdict_consumed else str(verdict_result.get("reason") or "node_verdict_failed"),
+        "ok": False,
+        "reason": "autosci_adapter_final_verdict_route_retired",
         "node": node_id,
         "pane": AUTOSCI_EVALUATOR_PANE,
         "dispatch_id": dispatch_id,
@@ -11200,7 +11465,6 @@ def _submit_eval_to_autosci_adapter(
         "eval_json_path": str(eval_json_path),
         "dispatch_mode": "autosci_eval_adapter",
         "adapter_result": adapter_result,
-        "node_verdict": verdict_result,
         "dry_run": False,
     }
 
@@ -11327,7 +11591,51 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
         node_id = str(node.get("id") or "")
         if not _node_eval_needed(graph, sid, node, force=force):
             continue
-        if _node_uses_autosci_evaluator(graph, node):
+        # Every evaluator route consumes the Builder's output bytes.  A
+        # PM-dispatched Builder may create its handoff before its process has
+        # exited, so the handoff is not a durable completion boundary.  Gate
+        # AutoSci and generic evaluators alike on the exact operator result
+        # before emitting proof sidecars, freezing a snapshot, or evaluating.
+        builder_result_gate = _builder_operator_result_gate(sid, node)
+        if builder_result_gate.get("required") and not builder_result_gate.get("ok"):
+            skipped.append(
+                {
+                    "node": node_id,
+                    "reason": str(
+                        builder_result_gate.get("reason")
+                        or "builder_operator_result_pending"
+                    ),
+                    "task_id": builder_result_gate.get("task_id"),
+                    "operator_id": builder_result_gate.get("operator_id"),
+                    "complete": builder_result_gate.get("complete"),
+                    "result_json": builder_result_gate.get("result_json"),
+                }
+            )
+            continue
+        uses_autosci_double_gate = _node_uses_autosci_evaluator(graph, node)
+        if uses_autosci_double_gate and not dry_run:
+            scientific_gate = _run_autosci_scientific_gate(graph_path, sid, node)
+            node["autosci_scientific_gate"] = scientific_gate
+            save_graph(graph_path, graph)
+            _append_event(
+                sid,
+                {
+                    "event": "graph_autosci_scientific_gate_completed",
+                    "by": "graph-dispatch",
+                    "severity": "info" if scientific_gate.get("ok") else "warning",
+                    "data": {
+                        "node": node_id,
+                        "ok": bool(scientific_gate.get("ok")),
+                        "invocation_ok": bool(scientific_gate.get("invocation_ok")),
+                        "verdict": str(scientific_gate.get("verdict") or ""),
+                        "json_path": str(scientific_gate.get("json_path") or ""),
+                    },
+                },
+            )
+        # Legacy single-adapter final-verdict route is retained below only as
+        # dead compatibility code while old ledgers are readable. New AutoSci
+        # nodes always fall through to the independent evaluator pool.
+        if False and uses_autosci_double_gate:  # pragma: no cover - retired route
             requested_plan = _plan_node_evaluation(graph, node)
             requested_capacity = {
                 "total_evaluators": 1,
@@ -11367,6 +11675,26 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
             dispatch_id = f"{dispatch_group_id}-q1"
             eval_md_path = _eval_md_file(sid, node_id)
             eval_json_path = _eval_json_file(sid, node_id)
+            artifact_snapshot: dict[str, Any] = {}
+            if not dry_run and isinstance(graph.get("plan_certificate"), dict):
+                # Materialize every Solar-owned proof sidecar before freezing
+                # the evaluator's byte set. Creating them after the snapshot
+                # would make the snapshot self-invalidating on certified
+                # AutoSci graphs.
+                _emit_node_proof_sidecars(sid, node)
+                artifact_snapshot = _capture_eval_artifact_snapshot(sid, node, graph)
+                if not artifact_snapshot.get("ok"):
+                    skipped.append(
+                        {
+                            "node": node_id,
+                            "reason": str(
+                                artifact_snapshot.get("reason")
+                                or "eval_artifact_snapshot_invalid"
+                            ),
+                            "eval_artifact_snapshot": artifact_snapshot,
+                        }
+                    )
+                    continue
             instruction_file = _eval_dispatch_member_file(sid, node_id, 1)
             instruction_file.parent.mkdir(parents=True, exist_ok=True)
             instruction_file.write_text(
@@ -11395,6 +11723,9 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 "index": 1,
                 "eval_md_path": str(eval_md_path),
                 "eval_json_path": str(eval_json_path),
+                "artifact_snapshot_schema": str(artifact_snapshot.get("schema") or ""),
+                "artifact_snapshot_path": str(artifact_snapshot.get("path") or ""),
+                "artifact_snapshot_digest": str(artifact_snapshot.get("snapshot_digest") or ""),
             }
             if dry_run:
                 used_evaluator_panes.add(AUTOSCI_EVALUATOR_PANE)
@@ -11410,7 +11741,6 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 })
                 continue
 
-            _emit_node_proof_sidecars(sid, node)
             node["status"] = "reviewing"
             node["eval_dispatch_group_id"] = dispatch_group_id
             node.pop("eval_dispatch_failures", None)
@@ -11483,25 +11813,13 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 })
             graph = load_graph(graph_path)
             break
-        builder_result_gate = _builder_operator_result_gate(sid, node)
-        if builder_result_gate.get("required") and not builder_result_gate.get("ok"):
-            skipped.append(
-                {
-                    "node": node_id,
-                    "reason": str(
-                        builder_result_gate.get("reason")
-                        or "builder_operator_result_pending"
-                    ),
-                    "task_id": builder_result_gate.get("task_id"),
-                    "operator_id": builder_result_gate.get("operator_id"),
-                    "complete": builder_result_gate.get("complete"),
-                    "result_json": builder_result_gate.get("result_json"),
-                }
-            )
-            continue
         if not dry_run:
             _emit_node_proof_sidecars(sid, node)
-        gate_result = _maybe_execute_contract_gate(graph, sid, node, dry_run=dry_run)
+        gate_result = (
+            None
+            if uses_autosci_double_gate
+            else _maybe_execute_contract_gate(graph, sid, node, dry_run=dry_run)
+        )
         if gate_result is not None:
             if gate_result.get("skip_reason"):
                 skipped.append({
@@ -11520,6 +11838,19 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
         requested_capacity = _evaluation_capacity_snapshot(requested_plan, loop_evaluators)
         requested_plan["capacity"] = requested_capacity
         runtime_plan = _runtime_fallback_evaluation_plan(requested_plan, requested_capacity)
+        if uses_autosci_double_gate:
+            runtime_plan["planning_source"] = "workflow_contract_research_autosci_v1_double_gate"
+            runtime_plan["deterministic_gate"] = dict(node.get("autosci_scientific_gate") or {})
+            independence = runtime_plan.get("independence_policy")
+            if not isinstance(independence, dict):
+                independence = {}
+            independence.update(
+                {
+                    "writer_same_operator": "denied",
+                    "mechanism": "solar_policy_gate_plus_independent_codex_evaluator",
+                }
+            )
+            runtime_plan["independence_policy"] = independence
         runtime_capacity = _evaluation_capacity_snapshot(runtime_plan, loop_evaluators)
         runtime_plan["capacity"] = runtime_capacity
         node["evaluation_plan_requested"] = requested_plan

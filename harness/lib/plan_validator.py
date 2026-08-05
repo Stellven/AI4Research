@@ -32,8 +32,10 @@ from executable_node import (  # noqa: E402
     physical_role_is_compatible,
 )
 from physical_operator_catalog import is_operator_statically_selectable  # noqa: E402
+from planner_operator_gate import planner_operator_state  # noqa: E402
 
 GENERIC_CONTRACT_ID = "pm.generic.v1"
+AUTOSCI_CONTRACT_ID = "research.autosci.v1"
 
 # Mirrors pm.generic.v1.workflow.json artifact_roots; used only when the
 # contract file is unavailable so validation stays runnable standalone.
@@ -205,6 +207,12 @@ ERROR_PLAN_GENERIC_CONTRACT_MISSING = "PLAN_GENERIC_CONTRACT_MISSING"
 ERROR_PLAN_GRAPH_MISSING = "PLAN_GRAPH_MISSING"
 
 PLAN_CERTIFICATE_SCHEMA = "solar.plan_certificate.v1"
+REQUEST_GOVERNANCE_FIELDS = (
+    "source_request_excerpt",
+    "source_policy",
+    "research_deliverable_contract",
+    "pass_conditions",
+)
 
 # canonical_executable_node is the single source for the GOVERNED node subset
 # the certificate hashes. Runtime fields (status, pane, dispatch_id,
@@ -586,7 +594,7 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
     def governed_node(node: Dict[str, Any]) -> Dict[str, Any]:
         canonical = canonical_executable_node(node)
         materialized = node.get("executable_node")
-        return {
+        governed_record = {
             "canonical": canonical,
             # Stamp writes this projection into the graph so UI/evidence
             # readers consume the same identity.  Hash it independently from
@@ -597,6 +605,14 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
                 else canonical
             ),
         }
+        request_contract = {
+            field: copy.deepcopy(node.get(field))
+            for field in REQUEST_GOVERNANCE_FIELDS
+            if field in node
+        }
+        if request_contract:
+            governed_record["request_contract"] = request_contract
+        return governed_record
 
     governed = {
         # sprint_id binds the certificate to ONE sprint — a PASS stamped for
@@ -605,7 +621,11 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
         "sprint_id": str(task_graph.get("sprint_id") or ""),
         "workflow_contract_id": str(task_graph.get("workflow_contract_id") or ""),
         "workflow_contract_version": str(task_graph.get("workflow_contract_version") or ""),
+        "plan_compile_required": task_graph.get("plan_compile_required") is True,
+        "planner_stage": copy.deepcopy(task_graph.get("planner_stage") or {}),
+        "planner_artifacts": copy.deepcopy(task_graph.get("planner_artifacts") or {}),
         "dag_variant": str(task_graph.get("dag_variant") or ""),
+        "artifact_roots": copy.deepcopy(task_graph.get("artifact_roots") or {}),
         "required_gates": [str(item) for item in (task_graph.get("required_gates") or [])],
         "evidence_policy": copy.deepcopy(task_graph.get("evidence_policy") or {}),
         "nodes": [
@@ -616,6 +636,13 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
             )
         ],
     }
+    request_contract = {
+        field: copy.deepcopy(task_graph.get(field))
+        for field in REQUEST_GOVERNANCE_FIELDS
+        if field in task_graph
+    }
+    if request_contract:
+        governed["request_contract"] = request_contract
     canonical = json.dumps(governed, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -634,6 +661,16 @@ def stamp_plan_certificate(
             f"plan does not compile ({len(errors)} errors); refusing to stamp: "
             f"{[e.get('code') for e in errors]}"
         )
+    return _stamp_validated_plan_certificate(task_graph)
+
+
+def _stamp_validated_plan_certificate(task_graph: Dict[str, Any]) -> Dict[str, Any]:
+    """Stamp a graph only after its owning compiler has returned no errors.
+
+    Generic graphs call :func:`stamp_plan_certificate`; locked workflow
+    proposals such as AutoSci first run their contract-specific compiler and
+    then use this shared, private checksum writer.
+    """
     import time
 
     for node in task_graph.get("nodes", []) or []:
@@ -678,6 +715,40 @@ def check_plan_certificate(task_graph: Dict[str, Any]) -> List[Dict[str, Any]]:
             declared=stamped, admitted=expected,
         )]
     return []
+
+
+def _planner_artifact_errors(
+    task_graph: Dict[str, Any],
+    *,
+    sprints_dir: os.PathLike,
+    sid: str,
+) -> List[Dict[str, Any]]:
+    """Verify the Planner evidence files bound into an AutoSci certificate."""
+    import hashlib
+
+    declared = task_graph.get("planner_artifacts")
+    if not isinstance(declared, dict):
+        return [_error("AUTOSCI_PLANNER_ARTIFACTS_MISSING", "N0", "planner_artifacts hash manifest is missing")]
+    errors: List[Dict[str, Any]] = []
+    for suffix in ("design.md", "plan.md"):
+        path = Path(sprints_dir) / f"{sid}.{suffix}"
+        try:
+            payload = path.read_bytes()
+        except OSError:
+            payload = b""
+        expected = str((declared.get(suffix) or {}).get("sha256") or "")
+        actual = hashlib.sha256(payload).hexdigest() if payload else ""
+        if not payload or actual != expected:
+            errors.append(
+                _error(
+                    "AUTOSCI_PLANNER_ARTIFACT_HASH_MISMATCH",
+                    "N0",
+                    f"Planner artifact {path.name} is missing, empty, or differs from its certificate manifest",
+                    declared=expected,
+                    admitted=actual,
+                )
+            )
+    return errors
 
 
 def _validate_graph_structure(task_graph: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -762,7 +833,10 @@ def _is_epic_graph(task_graph: Dict[str, Any]) -> bool:
     return schema.startswith("solar.epic.")
 
 
-def _generic_graph_kind(task_graph: Dict[str, Any]) -> str:
+def _generic_graph_kind(
+    task_graph: Dict[str, Any],
+    workflows_dir: Optional[os.PathLike] = None,
+) -> str:
     """Governed-vs-grandfathered classification (G4 blocker 2, owner decision
     2026-07-10: default-on with grandfathering).
 
@@ -777,11 +851,42 @@ def _generic_graph_kind(task_graph: Dict[str, Any]) -> str:
     contract_id = str(task_graph.get("workflow_contract_id") or "").strip()
     if _is_epic_graph(task_graph):
         return "epic_graph"
-    if contract_id and contract_id != GENERIC_CONTRACT_ID:
-        return "non_generic_contract"
-    if contract_id == GENERIC_CONTRACT_ID or task_graph.get("plan_compile_required"):
+    if contract_id == GENERIC_CONTRACT_ID:
         return "generic"
+    if task_graph.get("plan_compile_required"):
+        if contract_id:
+            try:
+                contract = wc.find_contract(contract_id, workflows_dir)
+            except wc.ContractSchemaError:
+                contract = None
+            if contract and contract.get("stages_mode") == getattr(wc, "STAGES_MODE_PLANNER", "planner_generated"):
+                return "planner_generated_contract"
+            if contract:
+                return "non_generic_contract"
+            return (
+                "unregistered_planner_contract"
+                if contract_id == AUTOSCI_CONTRACT_ID
+                else "non_generic_contract"
+            )
+        return "generic"
+    if contract_id:
+        return "non_generic_contract"
     return "legacy_uncontracted"
+
+
+def _planner_contract(
+    task_graph: Dict[str, Any],
+    *,
+    workflows_dir: Optional[os.PathLike] = None,
+) -> tuple[str, Optional[Dict[str, Any]]]:
+    """Resolve the contract that owns Planner compilation for this graph."""
+    contract_id = str(task_graph.get("workflow_contract_id") or "").strip()
+    if not contract_id:
+        contract_id = GENERIC_CONTRACT_ID
+    try:
+        return contract_id, wc.find_contract(contract_id, workflows_dir)
+    except wc.ContractSchemaError:
+        return contract_id, None
 
 
 def _with_status_plan_provenance(
@@ -826,9 +931,13 @@ def _error(code: str, node_id: str, message: str, **extra: Any) -> Dict[str, Any
         return out
 
 
-def _graph_hash_for_bounce(task_graph: Dict[str, Any], contract_version: str = "") -> str:
+def _graph_hash_for_bounce(
+    task_graph: Dict[str, Any],
+    contract_version: str = "",
+    contract_id: str = GENERIC_CONTRACT_ID,
+) -> str:
     candidate = copy.deepcopy(task_graph)
-    candidate["workflow_contract_id"] = GENERIC_CONTRACT_ID
+    candidate["workflow_contract_id"] = contract_id
     candidate["workflow_contract_version"] = contract_version
     candidate.pop("plan_certificate", None)
     return plan_certificate_hash(candidate)
@@ -1061,19 +1170,34 @@ def compile_planner_graph(
         sprints_dir=sprints,
         sid=sid,
     )
-    graph_kind = _generic_graph_kind(task_graph)
-    if graph_kind != "generic":
+    graph_kind = _generic_graph_kind(task_graph, workflows_dir)
+    if graph_kind not in {"generic", "planner_generated_contract"}:
         verdict["skipped_reason"] = graph_kind
         return verdict
 
-    contract = _generic_contract(workflows_dir)
+    # Certification is a Solar lifecycle decision, not an action the bounded
+    # Planner model may take while it is still writing artifacts.  An
+    # operator-pool task therefore has to publish a durable successful result
+    # before any candidate graph can be stamped.  Legacy pane planning has no
+    # PM task record and remains supported as ``unmanaged``.
+    operator_gate = planner_operator_state(sprints.parent, sid)
+    if not operator_gate["ready_for_compile"]:
+        return {
+            **verdict,
+            "ok": False,
+            "deferred": True,
+            "skipped_reason": "planner_operator_not_complete",
+            "operator_gate": operator_gate,
+        }
+
+    contract_id, contract = _planner_contract(task_graph, workflows_dir=workflows_dir)
     if contract is None:
         error = _error(
             ERROR_PLAN_GENERIC_CONTRACT_MISSING,
             "?",
-            f"{GENERIC_CONTRACT_ID} workflow contract is missing; refusing ungoverned generic acceptance",
+            f"{contract_id} workflow contract is missing; refusing ungoverned planner acceptance",
         )
-        graph_hash = _graph_hash_for_bounce(task_graph)
+        graph_hash = _graph_hash_for_bounce(task_graph, contract_id=contract_id)
         bounce_count = _bounce_count_for_failure(sprints, sid, graph_hash)
         _record_status_bounce(sprints, sid, bounce_count, graph_hash)
         max_bounces = _max_planner_bounces(None)
@@ -1104,7 +1228,7 @@ def compile_planner_graph(
     contract_version = str(contract.get("version") or "")
     existing_certificate_valid = False
     if (
-        str(task_graph.get("workflow_contract_id") or "") == GENERIC_CONTRACT_ID
+        str(task_graph.get("workflow_contract_id") or "") == contract_id
         and str(task_graph.get("workflow_contract_version") or "") == contract_version
     ):
         cert_errors = check_plan_certificate(task_graph)
@@ -1119,26 +1243,84 @@ def compile_planner_graph(
     capsules = wc.load_capsule_registry(directory)
     operators = wc.load_operator_registry(directory / "physical-operators.json")
     candidate = copy.deepcopy(task_graph)
-    candidate["workflow_contract_id"] = GENERIC_CONTRACT_ID
+    candidate["workflow_contract_id"] = contract_id
     candidate["workflow_contract_version"] = contract_version
     candidate.pop("plan_certificate", None)
 
-    errors = validate_plan(
-        candidate,
-        capsules,
-        operators,
-        contract=contract,
-        expected_sprint_id=sid,
-    )
+    if contract_id == AUTOSCI_CONTRACT_ID:
+        import hashlib
+        from autosci_intake_contract import validate_autosci_planner_graph  # noqa: WPS433
+
+        errors: List[Dict[str, Any]] = []
+        planner_artifacts: Dict[str, Any] = {}
+        for suffix in ("design.md", "plan.md"):
+            artifact_path = sprints / f"{sid}.{suffix}"
+            try:
+                artifact_bytes = artifact_path.read_bytes()
+            except OSError:
+                artifact_bytes = b""
+            if not artifact_bytes.strip():
+                errors.append(
+                    _error(
+                        "AUTOSCI_PLANNER_ARTIFACT_MISSING",
+                        "N0",
+                        f"Planner artifact is missing or empty: {artifact_path}",
+                    )
+                )
+            else:
+                planner_artifacts[suffix] = {
+                    "path": artifact_path.name,
+                    "sha256": hashlib.sha256(artifact_bytes).hexdigest(),
+                }
+        planner_stage = dict(candidate.get("planner_stage") or {})
+        planner_stage.update({"status": "reviewed", "completed_by": "compiled_sprint_planner"})
+        candidate["planner_stage"] = planner_stage
+        candidate["planner_artifacts"] = planner_artifacts
+        requirement_ir_path = sprints / f"{sid}.requirement_ir.json"
+        expected_request_text = ""
+        try:
+            requirement_ir = json.loads(requirement_ir_path.read_text(encoding="utf-8"))
+            source_inputs = requirement_ir.get("source_inputs") if isinstance(requirement_ir, dict) else {}
+            if isinstance(source_inputs, dict):
+                expected_request_text = str(source_inputs.get("raw_request") or "").strip()
+            if not expected_request_text and isinstance(requirement_ir, dict):
+                expected_request_text = str(requirement_ir.get("user_intent") or "").strip()
+        except (OSError, ValueError, TypeError):
+            expected_request_text = ""
+        if not expected_request_text:
+            errors.append(
+                _error(
+                    "AUTOSCI_SOURCE_REQUEST_MISSING",
+                    "N0",
+                    f"Immutable AutoSci source request is missing from {requirement_ir_path}",
+                )
+            )
+        errors.extend(validate_autosci_planner_graph(
+            candidate,
+            harness_dir=wc.harness_dir(),
+            expected_sprint_id=sid,
+            expected_request_text=expected_request_text,
+        ))
+    else:
+        errors = validate_plan(
+            candidate,
+            capsules,
+            operators,
+            contract=contract,
+            expected_sprint_id=sid,
+        )
     if not errors:
         if existing_certificate_valid:
             verdict["skipped_reason"] = "already_certified"
             return verdict
-        stamp_plan_certificate(candidate, capsules, operators, contract=contract)
+        if contract_id == AUTOSCI_CONTRACT_ID:
+            _stamp_validated_plan_certificate(candidate)
+        else:
+            stamp_plan_certificate(candidate, capsules, operators, contract=contract)
         _atomic_write_json(graph_path, candidate)
-        return {**verdict, "stamped": True, "workflow_contract_id": GENERIC_CONTRACT_ID}
+        return {**verdict, "stamped": True, "workflow_contract_id": contract_id}
 
-    graph_hash = _graph_hash_for_bounce(candidate, contract_version)
+    graph_hash = _graph_hash_for_bounce(candidate, contract_version, contract_id)
     bounce_count = _bounce_count_for_failure(sprints, sid, graph_hash)
     _record_status_bounce(sprints, sid, bounce_count, graph_hash)
     max_bounces = _max_planner_bounces(contract)
@@ -1190,10 +1372,23 @@ def check_planner_graph_dispatchable(
         task_graph or {}, sprints_dir=sprints_dir, sid=sid
     )
     graph_kind = _generic_graph_kind(effective_graph)
-    if graph_kind != "generic":
+    if graph_kind == "unregistered_planner_contract":
+        contract_id = str(effective_graph.get("workflow_contract_id") or "")
+        return {
+            "ok": False,
+            "reason": "plan_validator_dispatch_refused",
+            "errors": [
+                _error(
+                    ERROR_PLAN_GENERIC_CONTRACT_MISSING,
+                    "?",
+                    f"{contract_id} workflow contract is missing or not planner-generated",
+                )
+            ],
+        }
+    if graph_kind not in {"generic", "planner_generated_contract"}:
         verdict["skipped_reason"] = graph_kind
         return verdict
-    contract = _generic_contract()
+    contract_id, contract = _planner_contract(effective_graph)
     if contract is None:
         return {
             "ok": False,
@@ -1202,13 +1397,13 @@ def check_planner_graph_dispatchable(
                 _error(
                     ERROR_PLAN_GENERIC_CONTRACT_MISSING,
                     "?",
-                    f"{GENERIC_CONTRACT_ID} workflow contract is missing; refusing generic dispatch",
+                    f"{contract_id} workflow contract is missing; refusing planner-governed dispatch",
                 )
             ],
         }
     graph_version = str(effective_graph.get("workflow_contract_version") or "")
     contract_version = str(contract.get("version") or "")
-    if str(effective_graph.get("workflow_contract_id") or "") == GENERIC_CONTRACT_ID and graph_version != contract_version:
+    if str(effective_graph.get("workflow_contract_id") or "") == contract_id and graph_version != contract_version:
         return {
             "ok": False,
             "reason": "plan_validator_dispatch_refused",
@@ -1216,13 +1411,28 @@ def check_planner_graph_dispatchable(
                 _error(
                     "WORKFLOW_CONTRACT_VERSION_MISMATCH",
                     "?",
-                    f"{GENERIC_CONTRACT_ID} version mismatch: graph={graph_version!r}, contract={contract_version!r}",
+                    f"{contract_id} version mismatch: graph={graph_version!r}, contract={contract_version!r}",
                     declared=graph_version,
                     admitted=contract_version,
                 )
             ],
         }
     errors = check_plan_certificate(effective_graph)
+    if not errors and contract_id == AUTOSCI_CONTRACT_ID:
+        if not sprints_dir or not str(sid or effective_graph.get("sprint_id") or "").strip():
+            errors = [
+                _error(
+                    "AUTOSCI_PLANNER_ARTIFACTS_UNCHECKABLE",
+                    "N0",
+                    "AutoSci dispatch requires sprints_dir and sid to verify Planner artifacts",
+                )
+            ]
+        else:
+            errors = _planner_artifact_errors(
+                effective_graph,
+                sprints_dir=sprints_dir,
+                sid=str(sid or effective_graph.get("sprint_id") or ""),
+            )
     if errors:
         return {
             "ok": False,
@@ -1259,6 +1469,29 @@ def planner_compile_policy_block(
         return ""
 
     from research.source_pack import CANONICAL_SOURCE_TYPES
+
+    if sprints_dir and sid:
+        try:
+            governed_graph = json.loads(
+                (Path(sprints_dir) / f"{sid}.task_graph.json").read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError, TypeError):
+            governed_graph = {}
+        if str(governed_graph.get("workflow_contract_id") or "") == AUTOSCI_CONTRACT_ID:
+            return "\n".join(
+                [
+                    f"## Plan compile policy ({AUTOSCI_CONTRACT_ID})",
+                    "",
+                    "This is an AutoSci graph PROPOSAL, not a Builder-ready graph.",
+                    "You are the distinct Planner stage (N0). Do not execute any Scientific* Builder node.",
+                    "Review the PRD, contract, requirement IR, and proposed task graph; preserve the locked",
+                    "Scientific* node set, dependencies, logical operators, capability capsules, scopes, and gates.",
+                    "Produce design.md and plan.md, finish every artifact write, then return from this bounded",
+                    "Planner invocation. Do not invoke the plan compiler and do not edit lifecycle status.",
+                    "After your durable operator result succeeds, Solar alone runs plan_validator, stamps any",
+                    "PASS certificate, and transitions the sprint to planning_complete. Never self-declare it.",
+                ]
+            )
 
     contract = _generic_contract(workflows_dir)
     artifact_roots = dict((contract or {}).get("artifact_roots") or FALLBACK_ARTIFACT_ROOTS)
@@ -1455,6 +1688,8 @@ def _main_compile_generic(argv: List[str]) -> int:
     print(json.dumps(verdict, indent=2, sort_keys=True, ensure_ascii=True))
     if verdict.get("ok"):
         return 0
+    if verdict.get("deferred"):
+        return 5
     if verdict.get("terminal") or verdict.get("exhausted"):
         return 4
     return 3

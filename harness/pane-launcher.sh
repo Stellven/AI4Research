@@ -358,9 +358,37 @@ prepare_codex_role_file() {
   printf '%s\n' "$role_dir/${persona}.md"
 }
 
+resolve_codex_source_home() {
+  if [[ -n "${SOLAR_CODEX_SOURCE_HOME:-}" ]]; then
+    printf '%s\n' "$SOLAR_CODEX_SOURCE_HOME"
+    return 0
+  fi
+  printf '%s\n' "$HOME/.codex"
+}
+
+codex_pane_state_home() {
+  local pane_safe="${TMUX_PANE:-standalone}"
+  pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
+  local session_safe="${SOLAR_HARNESS_SESSION:-solar-harness}"
+  session_safe="${session_safe//[^A-Za-z0-9_.-]/_}"
+  local pane_state_root="${SOLAR_CODEX_PANE_STATE_ROOT:-/tmp/solar-codex-pane-state-${UID}/${session_safe}}"
+  printf '%s\n' "$pane_state_root/${pane_safe}-${PERSONA}"
+}
+
+cleanup_codex_pane_state() {
+  local state_home root
+  state_home="$(readlink -m "$(codex_pane_state_home)")"
+  root="$(readlink -m "${state_home%/*}")"
+  case "$state_home" in
+    "$root"/*) rm -rf -- "$state_home" ;;
+    *) echo "FATAL: refusing unsafe Codex pane state cleanup: $state_home" >&2; return 78 ;;
+  esac
+}
+
 prepare_codex_trust_profile() {
   local work_dir="$1" session="$2" owner_id="$3"
-  local codex_home="${CODEX_HOME:-$HOME/.codex}"
+  local codex_home
+  codex_home="$(codex_pane_state_home)/home"
   local helper="$HARNESS_DIR/lib/codex_trust_profiles.py"
   [[ -f "$helper" ]] || {
     echo "FATAL: managed Codex trust profile helper missing: $helper" >&2
@@ -431,6 +459,92 @@ PY
   CODEX_ARGS+=("${parsed[@]:1}")
 }
 
+run_codex_with_filesystem_scope() {
+  local mode="${SOLAR_CODEX_PANE_FS_ISOLATION:-landlock}"
+  case "$mode" in
+    landlock) ;;
+    0|off|disabled|none)
+      if [[ "${SOLAR_CODEX_PANE_STRICT_FS_SCOPE:-1}" == "1" ]]; then
+        echo "FATAL: strict Codex pane filesystem scope cannot disable Landlock" >&2
+        return 78
+      fi
+      "${CODEX_ARGS[@]}"
+      return $?
+      ;;
+    *)
+      echo "FATAL: unsupported SOLAR_CODEX_PANE_FS_ISOLATION='$mode'" >&2
+      return 64
+      ;;
+  esac
+
+  local wrapper="$HARNESS_DIR/tools/landlock_exec.py"
+  [[ -f "$wrapper" ]] || {
+    echo "FATAL: Codex pane Landlock wrapper missing: $wrapper" >&2
+    return 78
+  }
+  local pane_safe="${TMUX_PANE:-standalone}"
+  pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
+  local pane_tmp_root="${SOLAR_CODEX_PANE_TMP_ROOT:-$HARNESS_DIR/run/pane-tmp}"
+  local state_home
+  state_home="$(codex_pane_state_home)"
+  local tmp_dir="$pane_tmp_root/${pane_safe}-${PERSONA}"
+  local source_codex_home
+  source_codex_home="$(resolve_codex_source_home)"
+  local sandbox_codex_home="$state_home/home"
+  mkdir -p "$sandbox_codex_home" "$tmp_dir" || return 78
+  local source_file destination_file
+  for source_file in "$source_codex_home/auth.json"; do
+    [[ -n "$source_file" && -f "$source_file" ]] || continue
+    destination_file="$sandbox_codex_home/${source_file##*/}"
+    if [[ -e "$destination_file" || -L "$destination_file" ]]; then
+      echo "FATAL: refusing unexpected file in sandboxed CODEX_HOME: $destination_file" >&2
+      return 78
+    else
+      install -m 600 "$source_file" "$destination_file" || return 78
+    fi
+  done
+  printf '%s\n' 'cli_auth_credentials_store = "file"' > "$sandbox_codex_home/config.toml" || return 78
+  chmod 600 "$sandbox_codex_home/config.toml" || return 78
+  export CODEX_HOME="$sandbox_codex_home"
+  export CODEX_SQLITE_HOME="$state_home"
+  export TMPDIR="$tmp_dir"
+  export TMP="$tmp_dir"
+  export TEMP="$tmp_dir"
+
+  local codex_home="$CODEX_HOME"
+  local codex_arg0_dir="$codex_home/tmp/arg0"
+  mkdir -p "$codex_arg0_dir" || return 78
+  local codex_real=""
+  codex_real="$(readlink -f "$CODEX_BIN" 2>/dev/null || true)"
+  # WSL commonly makes /etc/resolv.conf a symlink into /mnt/wsl. Landlock
+  # checks the resolved inode, so allowing /etc alone still blocks DNS and
+  # prevents Codex from refreshing an otherwise valid cached login.
+  local -a system_network_files=()
+  local resolved_system_file=""
+  for path in /etc/resolv.conf /etc/hosts /etc/nsswitch.conf /etc/gai.conf; do
+    [[ -e "$path" ]] || continue
+    resolved_system_file="$(readlink -f "$path" 2>/dev/null || true)"
+    [[ -n "$resolved_system_file" ]] && system_network_files+=("$resolved_system_file")
+  done
+  local -a scoped=(python3 "$wrapper")
+  local path
+  for path in \
+    /usr /bin /sbin /lib /lib64 /etc \
+    "$CODEX_BIN" "${codex_real%/*}" "${system_network_files[@]}"; do
+    [[ -n "$path" && -e "$path" ]] || continue
+    scoped+=(--read-only "$path")
+  done
+  for path in \
+    "$HARNESS_DIR" "$ORIGINAL_WORK_DIR" "$WORK_DIR" "$state_home" "$tmp_dir" \
+    "$codex_arg0_dir" /dev/null /dev/urandom /dev/random; do
+    [[ -e "$path" ]] || continue
+    scoped+=(--read-write "$path")
+  done
+  scoped+=(-- "${CODEX_ARGS[@]}")
+  echo -e "  Filesystem boundary: ${G}Landlock (strict)${N}"
+  "${scoped[@]}"
+}
+
 # 退出信号捕获 → pane-exit.jsonl
 EXIT_LOG="$HARNESS_DIR/logs/pane-exit.jsonl"
 mkdir -p "$(dirname "$EXIT_LOG")" 2>/dev/null || true
@@ -446,6 +560,7 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
   if [[ "$SOLAR_CODEX_BYPASS" == "1" ]]; then
     CODEX_ARGS+=("--dangerously-bypass-approvals-and-sandbox")
   fi
+  trap 'cleanup_codex_trust_profile || true; cleanup_codex_pane_state || true' EXIT
   SOLAR_CODEX_TRUST_WORKSPACE="${SOLAR_CODEX_TRUST_WORKSPACE:-$SOLAR_CODEX_BYPASS}"
   case "$SOLAR_CODEX_TRUST_WORKSPACE" in
     0) ;;
@@ -461,7 +576,6 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
       CODEX_TRUST_PROFILE_NAME="${CODEX_TRUST_PROFILE_RECORD[0]}"
       CODEX_TRUST_PROFILE_PATH="${CODEX_TRUST_PROFILE_RECORD[1]}"
       CODEX_ARGS+=("--profile" "$CODEX_TRUST_PROFILE_NAME")
-      trap 'cleanup_codex_trust_profile || true' EXIT
       ;;
     *)
       echo "FATAL: invalid SOLAR_CODEX_TRUST_WORKSPACE='$SOLAR_CODEX_TRUST_WORKSPACE' (expected 0|1)" >&2
@@ -475,15 +589,17 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
   if [[ "${SOLAR_CODEX_CHECK_FOR_UPDATE_ON_STARTUP:-0}" != "1" ]]; then
     CODEX_ARGS+=("-c" "check_for_update_on_startup=false")
   fi
+  CODEX_ARGS+=("-c" 'cli_auth_credentials_store="file"')
   [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && CODEX_ARGS+=("--model" "$SOLAR_CODEX_MODEL")
   append_codex_extra_args "${SOLAR_CODEX_EXTRA_FLAGS:-}" || exit $?
   CODEX_ROLE_FILE="$(prepare_codex_role_file "$PERSONA")"
   echo -e "${Y}[${PERSONA}] Codex runtime selected${N}"
   echo -e "  Role instructions: ${CODEX_ROLE_FILE}"
   echo -e "  Starting Codex idle; dispatcher prompts will include role + task files."
-  "${CODEX_ARGS[@]}"
+  run_codex_with_filesystem_scope
   RUNTIME_EXIT=$?
   cleanup_codex_trust_profile || true
+  cleanup_codex_pane_state || true
   trap - EXIT
 else
   CLAUDE_CMD=("$CLAUDE_BIN")
