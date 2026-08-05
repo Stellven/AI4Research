@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
+import subprocess
+import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+import pytest
 
 from harness.lib.research_orchestration.runtime_lease import ResearchLeaseAdapter
 
@@ -116,3 +123,219 @@ def test_concurrent_same_node_only_one_acquisition_succeeds(tmp_path) -> None:
         results = list(pool.map(acquire, range(4)))
 
     assert results.count(True) == 1
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = dict(os.environ)
+    repo_root = Path(__file__).resolve().parents[3]
+    env["PYTHONPATH"] = str(repo_root)
+    return env
+
+
+def test_independent_processes_same_node_have_exactly_one_winner(tmp_path) -> None:
+    """This is the contention that the old thread-only Windows test missed."""
+
+    start = tmp_path / "start"
+    script = """
+import json, pathlib, sys, time
+from harness.lib.research_orchestration.runtime_lease import ResearchLeaseAdapter
+root, start, output, operator_id = map(pathlib.Path, sys.argv[1:5])
+deadline = time.time() + 15
+while not start.exists() and time.time() < deadline:
+    time.sleep(0.005)
+result = ResearchLeaseAdapter(root).acquire('run-process', 'node-process', operator_id.name)
+output.write_text(json.dumps(result), encoding='utf-8')
+"""
+    processes: list[tuple[subprocess.Popen[str], Path]] = []
+    for index in range(4):
+        output = tmp_path / f"result-{index}.json"
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                script,
+                str(tmp_path / "harness"),
+                str(start),
+                str(output),
+                f"operator-{index}",
+            ],
+            env=_subprocess_env(),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        processes.append((process, output))
+    start.touch()
+
+    results = []
+    for process, output in processes:
+        stdout, stderr = process.communicate(timeout=20)
+        assert process.returncode == 0, (stdout, stderr)
+        results.append(json.loads(output.read_text(encoding="utf-8")))
+
+    assert sum(result.get("acquired") is True for result in results) == 1
+    assert sum(result.get("acquired") is False for result in results) == 3
+    lease_dir = tmp_path / "harness" / "run" / "operator-leases"
+    assert not list(lease_dir.rglob("*.tmp"))
+
+
+def test_abandoned_process_claim_is_recovered_after_crash(tmp_path) -> None:
+    root = tmp_path / "harness"
+    claim = root / "run" / "operator-leases" / ".research-run-run-crash-node-crash.claim"
+    marker = tmp_path / "claim-created"
+    script = """
+import json, os, pathlib, sys, time
+claim, marker = map(pathlib.Path, sys.argv[1:3])
+claim.mkdir(parents=True)
+(claim / 'owner.json').write_text(json.dumps({
+    'pid': os.getpid(), 'token': 'crashed-owner', 'created_at_epoch': time.time()
+}), encoding='utf-8')
+marker.touch()
+os._exit(23)
+"""
+    process = subprocess.Popen(
+        [sys.executable, "-c", script, str(claim), str(marker)],
+        env=_subprocess_env(),
+    )
+    deadline = time.time() + 10
+    while not marker.exists() and time.time() < deadline:
+        time.sleep(0.01)
+    assert marker.exists()
+    assert process.wait(timeout=10) == 23
+
+    result = ResearchLeaseAdapter(
+        root, claim_timeout_seconds=2, abandoned_claim_seconds=300
+    ).acquire("run-crash", "node-crash", "operator-after-crash")
+
+    assert result["acquired"] is True
+    assert not claim.exists()
+
+
+def test_nested_secrets_are_never_persisted(tmp_path) -> None:
+    metadata = {
+        "safe": {
+            "topic": "bounded synthesis",
+            "authorization": "Bearer nested-secret-canary",
+            "items": [
+                {"password": "password-canary", "note": "api_key=key-canary"},
+                {"accessToken": "token-canary", "label": "retained"},
+            ],
+        }
+    }
+    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    adapter.acquire("run-1", "N1", "operator-a", metadata=metadata)
+
+    persisted = (tmp_path / "run" / "operator-leases" / "operator-a.json").read_text(
+        encoding="utf-8"
+    )
+    emitted = json.dumps(
+        adapter.acquire("run-2", "N2", "operator-b", metadata=metadata)
+    )
+    assert "bounded synthesis" in persisted
+    assert "retained" in persisted
+    for secret in (
+        "nested-secret-canary",
+        "password-canary",
+        "key-canary",
+        "token-canary",
+    ):
+        assert secret not in persisted
+        assert secret not in emitted
+
+
+def test_fallback_record_uses_canonical_operator_lease_fields(tmp_path) -> None:
+    adapter = ResearchLeaseAdapter(tmp_path, clock=Clock())
+    result = adapter.acquire("run-compat", "node-compat", "operator-compat")
+    lease = json.loads(
+        (tmp_path / "run" / "operator-leases" / "operator-compat.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert result["acquired"] is True
+    assert {
+        "operator_id",
+        "task_id",
+        "sprint_id",
+        "node_id",
+        "leased_at",
+        "expires_at",
+        "state",
+    } <= set(lease)
+    assert lease["sprint_id"] == "run-compat"
+    assert "schema" not in lease
+
+
+def test_live_process_claim_is_never_stolen_only_because_it_is_old(tmp_path) -> None:
+    root = tmp_path / "harness"
+    claim = root / "run" / "operator-leases" / ".research-run-run-live-node-live.claim"
+    claim.mkdir(parents=True)
+    (claim / "owner.json").write_text(
+        json.dumps(
+            {
+                "pid": os.getpid(),
+                "token": "live-owner",
+                "created_at_epoch": time.time() - 3600,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    adapter = ResearchLeaseAdapter(
+        root, claim_timeout_seconds=0.1, abandoned_claim_seconds=1
+    )
+    with pytest.raises(TimeoutError, match="runtime claim"):
+        adapter.acquire("run-live", "node-live", "operator-new")
+
+    assert claim.exists()
+
+
+def test_adapter_delegates_acquire_to_canonical_operator_runtime_api(tmp_path) -> None:
+    class FakeOperatorRuntime:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, dict]] = []
+            self.lease: dict = {}
+
+        def acquire_operator_lease(self, **kwargs):
+            self.calls.append(("acquire", dict(kwargs)))
+            self.lease = {
+                "operator_id": kwargs["operator_id"],
+                "task_id": kwargs["task_id"],
+                "sprint_id": kwargs["sprint_id"],
+                "node_id": kwargs["node_id"],
+                "leased_at": "2026-08-05T12:00:00Z",
+                "expires_at": "2026-08-05T12:15:00Z",
+                "state": kwargs["initial_state"],
+            }
+            return dict(self.lease)
+
+        def update_operator_lease_metadata(self, operator_id, **fields):
+            self.calls.append(("metadata", {"operator_id": operator_id, **fields}))
+            self.lease.update(fields)
+            return dict(self.lease)
+
+    api = FakeOperatorRuntime()
+    result = ResearchLeaseAdapter(
+        tmp_path, clock=Clock(), operator_runtime_api=api
+    ).acquire("run-native", "node-native", "operator-native")
+
+    assert result["acquired"] is True
+    assert [name for name, _payload in api.calls] == ["acquire", "metadata"]
+    assert api.calls[0][1]["sprint_id"] == "run-native"
+    assert api.calls[0][1]["node_id"] == "node-native"
+    assert api.calls[1][1]["research_run_id"] == "run-native"
+
+
+def test_ownerless_abandoned_claim_is_cleaned_after_stale_threshold(tmp_path) -> None:
+    root = tmp_path / "harness"
+    claim = root / "run" / "operator-leases" / ".research-run-run-old-node-old.claim"
+    claim.mkdir(parents=True)
+    old = time.time() - 120
+    os.utime(claim, (old, old))
+
+    result = ResearchLeaseAdapter(
+        root, claim_timeout_seconds=1, abandoned_claim_seconds=1
+    ).acquire("run-old", "node-old", "operator-new")
+
+    assert result["acquired"] is True
+    assert not claim.exists()

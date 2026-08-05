@@ -34,7 +34,27 @@ def test_windows_native_does_not_require_bwrap() -> None:
     assert report["os_class"] == "windows_native"
     assert report["checks"]["bwrap"]["ok"] is True
     assert report["status"] == READY_WITH_LIMITATIONS
+    assert report["ready"] is True
+    assert report["blocked"] is False
     assert "tmux_unavailable" in report["limitations"]
+
+
+def test_windows_missing_optional_wsl_is_a_limitation_not_a_blocker() -> None:
+    report = check_research_runtime(
+        source_env={},
+        platform_system="Windows",
+        platform_release="11",
+        python_executable="C:/Python/python.exe",
+        which_func=_which("git", "codex", "tmux"),
+        sandbox_root=None,
+        wsl_available=False,
+        dns_probe=lambda: True,
+    )
+
+    assert report["status"] == READY_WITH_LIMITATIONS
+    assert report["ready"] is True
+    assert report["checks"]["wsl"]["required"] is False
+    assert "wsl_unavailable" in report["limitations"]
 
 
 def test_wsl_missing_bwrap_can_use_transport_fallback_as_limitation(tmp_path) -> None:
@@ -148,6 +168,33 @@ def test_required_provider_missing_blocks(tmp_path) -> None:
     )
     assert report["status"] == BLOCKED
     assert any(item["reason"] == "missing_provider_OPENAI_API_KEY" for item in report["blockers"])
+
+
+def test_every_required_provider_must_be_present(tmp_path) -> None:
+    report = check_research_runtime(
+        source_env={"OPENAI_API_KEY": "present-but-never-emitted"},
+        allowed_provider_env_names=("OPENAI_API_KEY", "SEMANTIC_SCHOLAR_API_KEY"),
+        require_provider=("OPENAI_API_KEY", "SEMANTIC_SCHOLAR_API_KEY"),
+        live_provider_approval_ref="approval-123",
+        platform_system="Linux",
+        platform_release="6.1",
+        python_executable="/usr/bin/python3",
+        which_func=_which("git", "codex", "bwrap", "tmux"),
+        sandbox_root=tmp_path,
+        dns_probe=lambda: True,
+    )
+
+    assert report["status"] == BLOCKED
+    assert report["ready"] is False
+    assert {
+        "check": "provider_environment",
+        "reason": "missing_provider_SEMANTIC_SCHOLAR_API_KEY",
+    } in report["blockers"]
+    assert report["provider_environment"] == {
+        "OPENAI_API_KEY": "present",
+        "SEMANTIC_SCHOLAR_API_KEY": "missing",
+    }
+    assert "present-but-never-emitted" not in json.dumps(report)
 
 
 def test_network_required_blocks_when_probe_fails(tmp_path) -> None:

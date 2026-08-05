@@ -19,7 +19,7 @@ def test_cli_exit_code_ready_with_limitations(monkeypatch, capsys) -> None:
         lambda **_kwargs: {"status": "ready_with_limitations", "blockers": [], "limitations": ["offline_mode"]},
     )
 
-    assert doctor.main(["--json", "--offline"]) == 2
+    assert doctor.main(["--json", "--offline"]) == 0
     assert "offline_mode" in capsys.readouterr().out
 
 
@@ -63,3 +63,30 @@ def test_cli_json_is_deterministic_and_secret_safe(monkeypatch, capsys) -> None:
 
     assert first == second
     assert secret not in first
+
+
+def test_cli_passes_every_repeated_required_provider(monkeypatch, capsys) -> None:
+    captured: dict = {}
+
+    def fake_check(**kwargs):
+        captured.update(kwargs)
+        return {"status": "blocked", "blockers": [], "limitations": []}
+
+    monkeypatch.setattr(doctor, "check_research_runtime", fake_check)
+    exit_code = doctor.main(
+        [
+            "--json",
+            "--require-provider",
+            "OPENAI_API_KEY",
+            "--require-provider",
+            "SEMANTIC_SCHOLAR_API_KEY",
+        ]
+    )
+
+    assert exit_code == 3
+    assert captured["require_provider"] == (
+        "OPENAI_API_KEY",
+        "SEMANTIC_SCHOLAR_API_KEY",
+    )
+    assert captured["allowed_provider_env_names"] == captured["require_provider"]
+    capsys.readouterr()

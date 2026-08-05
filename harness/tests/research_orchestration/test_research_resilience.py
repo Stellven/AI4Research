@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime as dt
+
 import pytest
 
 from harness.lib.research_orchestration.resilience import (
@@ -97,3 +99,51 @@ def test_plain_rate_limit_planning_text_is_not_classified_as_rate_limit() -> Non
 def test_max_attempts_must_be_positive() -> None:
     with pytest.raises(ValueError, match="max_attempts"):
         RetryController().run(lambda: {"ok": True}, {"max_attempts": 0})
+
+
+def test_http_date_retry_after_uses_injected_wall_clock() -> None:
+    sleeps: list[float] = []
+    calls = 0
+    now = dt.datetime(2030, 1, 1, 12, 0, tzinfo=dt.timezone.utc)
+    retry_at = "Tue, 01 Jan 2030 12:00:17 GMT"
+
+    def operation() -> dict:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return {
+                "status_code": 429,
+                "headers": {"Retry-After": retry_at},
+                "error": "too many requests",
+            }
+        return {"status": "completed"}
+
+    controller = RetryController(
+        sleeper=sleeps.append,
+        clock=lambda: 0.0,
+        wall_clock=lambda: now,
+    )
+    controller.run(
+        operation,
+        {"max_attempts": 2, "retry_on": [RATE_LIMIT], "cap_seconds": 60},
+    )
+
+    assert sleeps == [17.0]
+
+
+@pytest.mark.parametrize("interruption", [SystemExit(7), KeyboardInterrupt()])
+def test_process_interruptions_are_never_caught_or_retried(interruption) -> None:
+    sleeps: list[float] = []
+
+    def operation() -> None:
+        raise interruption
+
+    controller = RetryController(sleeper=sleeps.append, clock=lambda: 0.0)
+    with pytest.raises(type(interruption)):
+        controller.run(
+            operation,
+            {"max_attempts": 3, "retry_on": [TRANSIENT_FAILURE, RATE_LIMIT]},
+        )
+
+    assert sleeps == []
+    assert controller.attempt_metadata == []

@@ -25,7 +25,7 @@ from research_orchestration.runtime_readiness import (  # noqa: E402
 
 EXIT_CODES = {
     READY: 0,
-    READY_WITH_LIMITATIONS: 2,
+    READY_WITH_LIMITATIONS: 0,
     BLOCKED: 3,
 }
 
@@ -61,13 +61,12 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         return int(exc.code or 4)
 
-    require_provider = args.require_provider[-1] if args.require_provider else None
     provider_names = tuple(args.require_provider)
     try:
         report = check_research_runtime(
             source_env=os.environ,
             allowed_provider_env_names=provider_names,
-            require_provider=require_provider,
+            require_provider=provider_names,
             live_provider_approval_ref=args.approval_ref,
             offline=bool(args.offline),
             require_network=bool(args.require_network),

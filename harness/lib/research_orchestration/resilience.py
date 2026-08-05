@@ -70,6 +70,7 @@ class RetryController:
 
     sleeper: Callable[[float], Any] = time.sleep
     clock: Callable[[], float] = time.monotonic
+    wall_clock: Callable[[], float | datetime] = time.time
     classifier: Callable[[Any], str] | None = None
     attempt_metadata: list[dict[str, Any]] = field(default_factory=list)
 
@@ -86,17 +87,17 @@ class RetryController:
             raise ValueError("max_attempts must be >= 1")
 
         self.attempt_metadata = []
-        last_exception: BaseException | None = None
+        last_exception: Exception | None = None
         classifier = self.classifier or classify_runtime_failure
 
         for attempt in range(1, normalized.max_attempts + 1):
             started_at = self.clock()
             try:
                 result = operation()
-            except BaseException as exc:
+            except Exception as exc:
                 classification = classifier(exc)
                 last_exception = exc
-                retry_after = _retry_after_seconds(exc)
+                retry_after = _retry_after_seconds(exc, now=self.wall_clock())
                 will_retry = (
                     classification in retry_on
                     and attempt < normalized.max_attempts
@@ -140,7 +141,7 @@ class RetryController:
                 self._record_attempt(metadata, on_attempt)
                 return result
 
-            retry_after = _retry_after_seconds(result)
+            retry_after = _retry_after_seconds(result, now=self.wall_clock())
             will_retry = classification in retry_on and attempt < normalized.max_attempts
             delay = (
                 retry_delay_seconds(
@@ -305,7 +306,7 @@ def _attempt_record(
     elapsed_seconds: float,
     will_retry: bool,
     delay_seconds: float,
-    exception: BaseException | None = None,
+    exception: Exception | None = None,
 ) -> dict[str, Any]:
     record: dict[str, Any] = {
         "attempt": attempt,
@@ -361,7 +362,9 @@ def _value_from(item: Any, *keys: str) -> Any:
     return None
 
 
-def _retry_after_seconds(item: Any) -> float | None:
+def _retry_after_seconds(
+    item: Any, *, now: float | datetime | None = None
+) -> float | None:
     if isinstance(item, Mapping):
         headers = item.get("headers")
         value = item.get("retry_after_seconds") or item.get("retry_after")
@@ -371,10 +374,12 @@ def _retry_after_seconds(item: Any) -> float | None:
 
     if value is None and isinstance(headers, Mapping):
         value = headers.get("Retry-After") or headers.get("retry-after")
-    return _coerce_retry_after_seconds(value)
+    return _coerce_retry_after_seconds(value, now=now)
 
 
-def _coerce_retry_after_seconds(value: float | int | str | None) -> float | None:
+def _coerce_retry_after_seconds(
+    value: float | int | str | None, *, now: float | datetime | None = None
+) -> float | None:
     if value is None:
         return None
     try:
@@ -387,10 +392,22 @@ def _coerce_retry_after_seconds(value: float | int | str | None) -> float | None
             parsed = email.utils.parsedate_to_datetime(value)
             if parsed.tzinfo is None:
                 parsed = parsed.replace(tzinfo=timezone.utc)
-            return max(0.0, (parsed.astimezone(timezone.utc) - datetime.now(timezone.utc)).total_seconds())
+            current = _as_utc_datetime(now)
+            return max(
+                0.0,
+                (parsed.astimezone(timezone.utc) - current).total_seconds(),
+            )
         except Exception:
             return None
     return None
+
+
+def _as_utc_datetime(value: float | datetime | None) -> datetime:
+    if value is None:
+        return datetime.now(timezone.utc)
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc) if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return datetime.fromtimestamp(float(value), tz=timezone.utc)
 
 
 def _zero_jitter() -> float:

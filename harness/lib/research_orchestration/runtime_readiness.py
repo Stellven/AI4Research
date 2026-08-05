@@ -9,7 +9,7 @@ import socket
 import stat
 import subprocess
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +46,7 @@ def check_research_runtime(
     *,
     source_env: Mapping[str, Any] | None = None,
     allowed_provider_env_names: list[str] | tuple[str, ...] = (),
-    require_provider: str | None = None,
+    require_provider: str | Sequence[str] | None = None,
     live_provider_approval_ref: str | None = None,
     offline: bool = False,
     require_network: bool = False,
@@ -74,7 +74,8 @@ def check_research_runtime(
     release = (platform_release or platform.release() or "").strip()
     os_class = _classify_os(system, release, env)
 
-    provider_names = _provider_names(allowed_provider_env_names, require_provider)
+    required_providers = _required_provider_names(require_provider)
+    provider_names = _provider_names(allowed_provider_env_names, required_providers)
     provider_env = sanitize_provider_environment(env, provider_names)
     provider_presence = {
         name: ("present" if name in provider_env else "missing")
@@ -120,7 +121,9 @@ def check_research_runtime(
             limitations.append("sandbox_bwrap_unavailable_using_transport_fallback")
 
     wsl_ok = _detect_wsl_available(wsl_available, which)
-    _add_check(checks, "wsl", wsl_ok, required=system.lower() == "windows", available=wsl_ok)
+    _add_check(checks, "wsl", wsl_ok, required=False, available=wsl_ok)
+    if system.lower() == "windows" and not wsl_ok:
+        limitations.append("wsl_unavailable")
 
     sandbox = _check_sandbox_root(sandbox_root)
     _add_check(checks, "writable_sandbox_root", sandbox["ok"], path=sandbox.get("path", ""), message=sandbox["message"])
@@ -139,15 +142,25 @@ def check_research_runtime(
     _add_check(
         checks,
         "provider_environment",
-        not require_provider or provider_presence.get(require_provider) == "present",
+        all(provider_presence.get(name) == "present" for name in required_providers),
         providers=provider_presence,
+        required=required_providers,
     )
-    if require_provider and provider_presence.get(require_provider) != "present":
-        blockers.append({"check": "provider_environment", "reason": f"missing_provider_{require_provider}"})
+    for name in required_providers:
+        if provider_presence.get(name) != "present":
+            blockers.append(
+                {"check": "provider_environment", "reason": f"missing_provider_{name}"}
+            )
 
     approval_present = bool(str(live_provider_approval_ref or "").strip())
-    _add_check(checks, "live_provider_approval", approval_present, present="present" if approval_present else "missing")
-    if require_provider and not approval_present:
+    _add_check(
+        checks,
+        "live_provider_approval",
+        approval_present or not required_providers,
+        present="present" if approval_present else "missing",
+        required=bool(required_providers),
+    )
+    if required_providers and not approval_present:
         blockers.append({"check": "live_provider_approval", "reason": "missing_live_provider_approval_ref"})
 
     _add_check(checks, "stdin_transport", bool(stdin_transport_supported), supported=bool(stdin_transport_supported))
@@ -166,7 +179,7 @@ def check_research_runtime(
     return {
         "schema": "research_runtime_readiness.v1",
         "status": status,
-        "ready": status == READY,
+        "ready": status != BLOCKED,
         "ready_with_limitations": status == READY_WITH_LIMITATIONS,
         "blocked": status == BLOCKED,
         "os_class": os_class,
@@ -191,10 +204,23 @@ def _classify_os(system: str, release: str, env: Mapping[str, Any]) -> str:
     return "unknown"
 
 
-def _provider_names(allowed: list[str] | tuple[str, ...], require_provider: str | None) -> list[str]:
+def _provider_names(
+    allowed: list[str] | tuple[str, ...], required_providers: Sequence[str]
+) -> list[str]:
     names = [str(item).strip() for item in allowed if str(item).strip()]
-    if require_provider and require_provider not in names:
-        names.append(require_provider)
+    names.extend(required_providers)
+    return sorted(set(names))
+
+
+def _required_provider_names(value: str | Sequence[str] | None) -> list[str]:
+    if value is None:
+        return []
+    raw_names = [value] if isinstance(value, str) else list(value)
+    names: list[str] = []
+    for raw_name in raw_names:
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            raise ValueError("required provider names must be non-empty strings")
+        names.append(raw_name.strip())
     return sorted(set(names))
 
 
