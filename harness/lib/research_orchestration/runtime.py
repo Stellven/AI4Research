@@ -178,6 +178,23 @@ class SolarResearchRuntime:
             state = orchestrator.run_until_blocked(max_steps=max_steps)
         elif run_mode == "resume":
             state = orchestrator.resume(node_result=imported_result) if imported_result else orchestrator.resume()
+            if (
+                not imported_result
+                and state.get("final_status") == "awaiting_human"
+                and str(runtime_authorization.get("approval_ref") or "").strip()
+            ):
+                blocker = next(
+                    (
+                        item for item in state.get("current_blockers") or []
+                        if isinstance(item, dict) and str(item.get("node_id") or "")
+                    ),
+                    None,
+                )
+                if blocker is not None:
+                    state = orchestrator.resume(
+                        redispatch_node_id=str(blocker["node_id"]),
+                        authorization=runtime_authorization,
+                    )
             if state.get("final_status") not in {
                 "completed", "failed", "blocked", "cancelled", "awaiting_human", "awaiting_external"
             }:

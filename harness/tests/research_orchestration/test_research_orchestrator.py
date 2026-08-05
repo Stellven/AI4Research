@@ -640,6 +640,50 @@ def test_explicit_authorization_resumes_provider_node_after_restart(tmp_path: Pa
     assert "approved-by-task-contract" not in json.dumps(second_dispatch.requests[0])
 
 
+def test_explicit_human_approval_resumes_approval_gate_after_restart(tmp_path: Path) -> None:
+    gate = node("experiment_approval_gate", [])
+    gate["approval_gate"] = True
+    gate["required_capabilities"] = ["execute_experiment"]
+    wf = {
+        "workflow_id": "experiment-gate-wf",
+        "workflow_kind": "scientific_lifecycle",
+        "nodes": [gate],
+    }
+    first, first_dispatch, _evaluator = orchestrator(
+        tmp_path,
+        wf,
+        authorization={"approved_capabilities": []},
+    )
+
+    waiting = first.run_until_blocked()
+
+    assert waiting["final_status"] == "awaiting_human"
+    assert waiting["node_states"]["experiment_approval_gate"]["status"] == "awaiting_human"
+    assert first_dispatch.requests == []
+
+    second_dispatch = FakeDispatch(artifact_root=tmp_path)
+    second, _ignored, _evaluator2 = orchestrator(
+        tmp_path,
+        wf,
+        dispatch=second_dispatch,
+        authorization={
+            "approved_capabilities": ["execute_experiment"],
+            "approval_ref": "approval-human-001",
+        },
+    )
+    resumed = second.resume(redispatch_node_id="experiment_approval_gate")
+
+    assert resumed["final_status"] == "completed"
+    assert second_dispatch.requests[0]["authorization"] == {
+        "scope_id": "run-orch:experiment_approval_gate",
+        "approved_capabilities": ["execute_experiment"],
+        "allow_network": False,
+        "allow_live_provider": False,
+        "secret_refs": [],
+        "approval_ref": "approval-human-001",
+    }
+
+
 def test_plain_resume_does_not_relabel_awaiting_node(tmp_path: Path) -> None:
     evaluator = FakeEvaluator(
         {"seed_fetch": {"accepted": False, "status": "awaiting_external", "evidence_refs": ["receipt"], "errors": [], "limitations": []}}

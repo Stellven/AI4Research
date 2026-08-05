@@ -36,6 +36,7 @@
     "G_IDEA_GENERATE",
     "G_IDEA_EVALUATE",
     "G_EXPERIMENT_DESIGN",
+    "G_EXPERIMENT_APPROVAL",
     "G_EXPERIMENT_RUN",
     "G_EXPERIMENT_MONITOR",
     "G_CLAIM_VERIFY",
@@ -901,19 +902,51 @@
       }
     },
     {
-      "id": "experiment_run",
-      "goal": "Run only approved bounded experiment commands and emit result evidence.",
-      "logical_operator": "ScientificExperimentRunner",
+      "id": "experiment_approval_gate",
+      "goal": "Require explicit human approval for the exact bounded experiment plan before execution.",
+      "logical_operator": "ScientificExperimentApprovalGate",
+      "physical_operator": "experiment_approval_gate_worker",
       "depends_on": [
         "experiment_design"
       ],
       "required_capabilities": [
-        "cap.research-experiment-run",
-        "test_execution",
-        "code_impl"
+        "execute_experiment"
       ],
       "read_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/06_experiment_plan/experiment_plan.v1.json"
+      ],
+      "write_scope": [
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/06_experiment_plan/experiment_approval.v1.json"
+      ],
+      "gate": "G_EXPERIMENT_APPROVAL",
+      "acceptance": [
+        "The exact experiment plan hash is bound to an explicit approval reference.",
+        "Missing approval pauses the run without executing the experiment."
+      ],
+      "priority": 88,
+      "required_phase": "research_taskgraph_template",
+      "required_node_id": "experiment_design",
+      "required_node_status": "passed",
+      "research_stage": "experiment_approval",
+      "approval_gate": true,
+      "status": "pending"
+    },
+    {
+      "id": "experiment_run",
+      "goal": "Run only approved bounded experiment commands and emit result evidence.",
+      "logical_operator": "ScientificExperimentRunner",
+      "depends_on": [
+        "experiment_approval_gate"
+      ],
+      "required_capabilities": [
+        "cap.research-experiment-run",
+        "test_execution",
+        "code_impl",
+        "execute_experiment"
+      ],
+      "read_scope": [
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/06_experiment_plan/experiment_plan.v1.json",
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/06_experiment_plan/experiment_approval.v1.json"
       ],
       "write_scope": [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"

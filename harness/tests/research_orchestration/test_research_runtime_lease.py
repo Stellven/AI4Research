@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from harness.lib.research_orchestration.runtime_lease import ResearchLeaseAdapter
+from harness.lib.research_orchestration.runtime_lease import ResearchLeaseAdapter, _pid_exists
 
 
 class Clock:
@@ -297,6 +297,20 @@ os._exit(23)
 
     assert result["acquired"] is True
     assert not claim.exists()
+
+
+def test_exited_process_is_not_reported_alive_after_wait() -> None:
+    process = subprocess.Popen(
+        [sys.executable, "-c", "raise SystemExit(0)"],
+        env=_subprocess_env(),
+    )
+    pid = process.pid
+    assert process.wait(timeout=10) == 0
+
+    # On Windows OpenProcess can still succeed for an exited process while a
+    # parent-owned process handle remains open. GetExitCodeProcess is required
+    # to distinguish that state from a live claim owner.
+    assert _pid_exists(pid) is False
 
 
 def test_nested_secrets_are_never_persisted(tmp_path) -> None:

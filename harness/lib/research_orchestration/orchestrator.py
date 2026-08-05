@@ -119,7 +119,8 @@ class ResearchOrchestrator:
         authorization_error = self._authorization_gate_reason(node)
         if authorization_error:
             self._transition_node(state, node_id, "running")
-            self._transition_node(state, node_id, "awaiting_external")
+            wait_status = "awaiting_human" if node.get("approval_gate") else "awaiting_external"
+            self._transition_node(state, node_id, wait_status)
             state["current_blockers"] = [
                 {
                     "blocker_id": f"{node_id}_authorization_required",
