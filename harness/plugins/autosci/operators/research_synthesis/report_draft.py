@@ -52,6 +52,34 @@ def _deliverable_requirements(task_contract: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalized_heading(value: str) -> str:
+    without_numbering = re.sub(r"^\s*\d+(?:\.\d+)*[.)\u3001\uff0e]?\s*", "", str(value or ""))
+    return re.sub(r"[\W_]+", "", without_numbering.casefold())
+
+
+def _body_has_substantive_section(raw_body: str, title: str, section_body: str) -> bool:
+    normalized_body = " ".join(raw_body.split()).casefold()
+    normalized_section = " ".join(section_body.split()).casefold()
+    if normalized_section and normalized_section in normalized_body:
+        return True
+
+    target = _normalized_heading(title)
+    headings = list(re.finditer(r"(?m)^(#{1,6})\s+(.+?)\s*$", raw_body))
+    for index, heading in enumerate(headings):
+        if _normalized_heading(heading.group(2)) != target:
+            continue
+        level = len(heading.group(1))
+        section_end = len(raw_body)
+        for following in headings[index + 1:]:
+            if len(following.group(1)) <= level:
+                section_end = following.start()
+                break
+        candidate = raw_body[heading.end():section_end]
+        if re.search(r"[A-Za-z0-9\u4e00-\u9fff]", candidate):
+            return True
+    return False
+
+
 def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str, Any]:
     report = response.get("report") if isinstance(response.get("report"), dict) else response
     conclusions = report.get("conclusions") if isinstance(report.get("conclusions"), list) else []
@@ -87,14 +115,22 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
     raw_body = str(report.get("body") or report.get("markdown") or "").strip()
     if not raw_body and not sections:
         raise ResearchOperatorError("model_generate returned an empty report body", error_type="provider_contract")
-    if sections:
-        body_parts = [f"# {title}"]
-        if raw_body:
-            body_parts.append(f"## Summary\n\n{raw_body}")
-        body_parts.extend(f"## {section['title']}\n\n{section['body']}" for section in sections)
-        body = "\n\n".join(body_parts)
+    body_parts: list[str] = []
+    if raw_body:
+        has_markdown_heading = bool(re.search(r"(?m)^#{1,6}\s+", raw_body))
+        has_level_one_heading = bool(re.search(r"(?m)^#\s+", raw_body))
+        if has_markdown_heading:
+            body_parts.append(raw_body if has_level_one_heading else f"# {title}\n\n{raw_body}")
+        else:
+            body_parts.append(f"# {title}\n\n## Summary\n\n{raw_body}")
     else:
-        body = raw_body
+        body_parts.append(f"# {title}")
+    body_parts.extend(
+        f"## {section['title']}\n\n{section['body']}"
+        for section in sections
+        if not _body_has_substantive_section(raw_body, section["title"], section["body"])
+    )
+    body = "\n\n".join(body_parts)
     missing_conclusions = [
         item for item in normalized_conclusions
         if " ".join(str(item["text"]).split()).casefold() not in " ".join(body.split()).casefold()

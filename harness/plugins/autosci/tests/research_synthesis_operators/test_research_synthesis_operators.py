@@ -543,6 +543,50 @@ def test_report_draft_compiles_structured_sections_when_provider_omits_duplicate
     assert "The surveyed evidence is incomplete." in body
 
 
+def test_report_draft_deduplicates_sections_already_rendered_in_provider_body(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def model_generate(**kwargs) -> dict:
+        return {
+            "provider": "writer",
+            "model": "body-and-sections-model",
+            "report": {
+                "title": "WebAssembly optimization survey",
+                "body": (
+                    "# WebAssembly optimization survey\n\n"
+                    "## 1. Trade-offs\n\n"
+                    "Tiered compilation balances startup latency against peak throughput."
+                ),
+                "sections": [
+                    {"title": "Trade-offs", "body": "Tiered compilation balances startup latency against peak throughput."},
+                    {"title": "Open problems", "body": "Portable profiling remains an open research problem."},
+                ],
+                "conclusions": [{
+                    "conclusion_id": "c1",
+                    "text": "Tiered compilation has explicit performance trade-offs.",
+                    "evidence_ids": ["claim-alpha"],
+                }],
+            },
+        }
+
+    synthesis = {"claims": [{"claim_id": "claim-alpha", "text": "A", "evidence_ids": ["source-alpha"]}]}
+    result = execute_operator(
+        _request(tmp_path, "report_draft", payload={"task_contract": _task_contract(), "evidence_synthesis": synthesis}),
+        services={"model_generate": model_generate},
+    )
+
+    body = _read_artifact(tmp_path, result)["report"]["body"]
+    assert result["status"] == "completed"
+    assert body.count("# WebAssembly optimization survey") == 1
+    assert body.count("Tiered compilation balances startup latency against peak throughput.") == 1
+    assert body.count("## 1. Trade-offs") == 1
+    assert "## Open problems" in body
+    assert "Portable profiling remains an open research problem." in body
+
+
 def test_report_draft_localizes_compiled_conclusion_and_limitation_headings_for_chinese(
     tmp_path: Path,
     monkeypatch,
