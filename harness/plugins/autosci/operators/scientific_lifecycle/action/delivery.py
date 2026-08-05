@@ -1,0 +1,372 @@
+"""Claim verification, report, review, publication, and evolution operators."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from .common import (
+    OperatorContext,
+    ResearchOperatorError,
+    completed_result,
+    load_documents,
+    output_location,
+    require_list,
+    require_text,
+    write_scoped_text,
+)
+
+
+CLAIM_VERIFIER_ID = "autosci-claim-verification-physical"
+REPORT_PLANNER_ID = "autosci-report-planning-physical"
+REPORT_DRAFTER_ID = "autosci-report-drafting-physical"
+ARTIFACT_REVIEWER_ID = "autosci-artifact-review-physical"
+PUBLICATION_PRODUCER_ID = "autosci-publication-production-physical"
+WORKFLOW_EVOLVER_ID = "autosci-workflow-evolution-proposal-physical"
+
+
+def _outputs(document: dict[str, Any]) -> dict[str, Any]:
+    return document.get("outputs") if isinstance(document.get("outputs"), dict) else document
+
+
+def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    documents = load_documents(
+        context,
+        schemas=("research_claims.v1", "experiment_result.v1", "code_evidence_map.v1"),
+        payload_keys=("claims", "experiment_result"),
+    )
+    claims: list[dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
+    for document in documents:
+        if document.get("claim_id"):
+            claims.append(document)
+            continue
+        if document.get("experiment_id") and document.get("outcome"):
+            results.append(document)
+            continue
+        values = _outputs(document)
+        raw_claims = values.get("claims") if isinstance(values, dict) else None
+        if isinstance(raw_claims, list):
+            claims.extend(item for item in raw_claims if isinstance(item, dict))
+        raw_result = values.get("result") if isinstance(values, dict) else None
+        if isinstance(raw_result, dict):
+            results.append(raw_result)
+    require_list(claims, "claims")
+    experiment = results[0] if results else {}
+    outcome = str(experiment.get("outcome") or "inconclusive")
+    experiment_evidence = [str(item) for item in experiment.get("evidence_ids") or [] if str(item).strip()]
+    criteria_results = experiment.get("criteria_results") if isinstance(experiment.get("criteria_results"), dict) else {}
+    verdicts: list[dict[str, Any]] = []
+    for claim in claims:
+        claim_id = require_text(claim.get("claim_id"), "claim_id")
+        criteria = [str(item) for item in claim.get("acceptance_criteria") or [] if str(item).strip()]
+        matched = bool(criteria) and all(criteria_results.get(item) is True for item in criteria)
+        rejected = any(criteria_results.get(item) is False for item in criteria)
+        if outcome == "refutes" or rejected:
+            verdict, support_class, confidence = "not_supported", "unsupported", 0.9
+            basis = "Experiment evidence refutes the claim or fails an explicit acceptance criterion."
+        elif outcome == "supports" and experiment_evidence and matched:
+            verdict, support_class, confidence = "supported", "supported", 0.9
+            basis = "Experiment evidence supports every explicit claim acceptance criterion."
+        else:
+            verdict, support_class, confidence = "inconclusive", "insufficient_evidence", 0.3
+            basis = "Evidence does not establish every explicit acceptance criterion."
+        evidence_ids = sorted(set([*experiment_evidence, *[str(item) for item in claim.get("evidence_ids") or [] if str(item).strip()]]))
+        if not evidence_ids:
+            evidence_ids = [f"missing-evidence:{claim_id}"]
+        verdicts.append({
+            "claim_id": claim_id,
+            "verdict": verdict,
+            "support_classification": support_class,
+            "confidence": confidence,
+            "basis": basis,
+            "evidence_ids": evidence_ids,
+            "limitations": [] if support_class != "insufficient_evidence" else ["Missing or incomplete acceptance-criteria evidence."],
+            "acceptance_criteria_checked": criteria,
+        })
+    return completed_result(
+        context,
+        operator_id=CLAIM_VERIFIER_ID,
+        schema="claim_verdict.v1",
+        outputs={"verdicts": verdicts},
+        filename="claim_verdict.v1.json",
+        artifact_id="claim_verdict",
+    )
+
+
+def _verdicts(context: OperatorContext) -> list[dict[str, Any]]:
+    documents = load_documents(context, schemas=("claim_verdict.v1",), payload_keys=("verdicts", "claim_verdict"))
+    rows: list[dict[str, Any]] = []
+    for document in documents:
+        if document.get("claim_id") and document.get("verdict"):
+            rows.append(document)
+            continue
+        values = _outputs(document)
+        verdicts = values.get("verdicts") if isinstance(values, dict) else None
+        if isinstance(verdicts, list):
+            rows.extend(item for item in verdicts if isinstance(item, dict))
+    return require_list(rows, "verdicts")
+
+
+def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    verdicts = _verdicts(context)
+    supported = [item for item in verdicts if item.get("support_classification") == "supported"]
+    if not supported:
+        raise ResearchOperatorError("No supported claims are available for the report", error_type="insufficient_evidence")
+    topic = require_text(context.payload.get("topic") or context.payload.get("title"), "report topic")
+    evidence_ids = sorted({str(eid) for item in supported for eid in item.get("evidence_ids") or [] if str(eid).strip()})
+    sections = [
+        {"section_id": "summary", "title": f"Summary: {topic}", "purpose": "Answer the requested topic.", "evidence_ids": evidence_ids},
+        {"section_id": "findings", "title": "Supported findings", "purpose": "Present only verified claims.", "evidence_ids": evidence_ids},
+        {"section_id": "limitations", "title": "Limitations", "purpose": "List unsupported and insufficient claims.", "evidence_ids": evidence_ids},
+    ]
+    plan = {
+        "report_id": str(context.payload.get("report_id") or "scientific-report"),
+        "title": topic,
+        "audience": str(context.payload.get("audience") or "researcher"),
+        "sections": sections,
+        "supported_claim_ids": [str(item["claim_id"]) for item in supported],
+        "excluded_claim_ids": [str(item["claim_id"]) for item in verdicts if item not in supported],
+        "evidence_ids": evidence_ids,
+    }
+    return completed_result(
+        context,
+        operator_id=REPORT_PLANNER_ID,
+        schema="scientific_report_plan.v1",
+        outputs={"report_plan": plan},
+        filename="scientific_report_plan.v1.json",
+        artifact_id="scientific_report_plan",
+    )
+
+
+def _report_plan_and_verdicts(context: OperatorContext) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    documents = load_documents(
+        context,
+        schemas=("scientific_report_plan.v1", "claim_verdict.v1"),
+        payload_keys=("report_plan", "verdicts"),
+    )
+    plan: dict[str, Any] = {}
+    verdicts: list[dict[str, Any]] = []
+    for document in documents:
+        if document.get("report_id") and document.get("sections"):
+            plan = document
+            continue
+        if document.get("claim_id") and document.get("verdict"):
+            verdicts.append(document)
+            continue
+        values = _outputs(document)
+        if isinstance(values.get("report_plan"), dict):
+            plan = values["report_plan"]
+        if isinstance(values.get("verdicts"), list):
+            verdicts.extend(item for item in values["verdicts"] if isinstance(item, dict))
+    if not plan or not verdicts:
+        raise ResearchOperatorError("Report plan and claim verdict evidence are required", error_type="missing_input")
+    return plan, verdicts
+
+
+def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    plan, verdicts = _report_plan_and_verdicts(context)
+    supported_ids = set(str(item) for item in plan.get("supported_claim_ids") or [])
+    supported = [item for item in verdicts if str(item.get("claim_id")) in supported_ids and item.get("support_classification") == "supported"]
+    if not supported:
+        raise ResearchOperatorError("Report plan has no still-supported claim", error_type="insufficient_evidence")
+    title = require_text(plan.get("title"), "report title")
+    sections: list[dict[str, Any]] = []
+    markdown_parts = [f"# {title}"]
+    for section in require_list(plan.get("sections"), "report sections"):
+        section_id = require_text(section.get("section_id"), "section_id")
+        section_title = require_text(section.get("title"), "section title")
+        evidence_ids = [str(item) for item in section.get("evidence_ids") or [] if str(item).strip()]
+        if section_id == "findings":
+            body = "\n".join(f"- {item['claim_id']}: {item['basis']}" for item in supported)
+        elif section_id == "limitations":
+            excluded = [item for item in verdicts if item not in supported]
+            body = "\n".join(f"- {item['claim_id']}: {item['support_classification']}" for item in excluded) or "- No additional limitations recorded."
+        else:
+            body = f"This report addresses {title} using {len(supported)} supported claim(s)."
+        require_text(body, f"section {section_id} body")
+        sections.append({"section_id": section_id, "title": section_title, "body": body, "evidence_ids": evidence_ids})
+        markdown_parts.extend([f"\n## {section_title}", body])
+    markdown = "\n".join(markdown_parts).strip() + "\n"
+    if title.lower() not in markdown.lower():
+        raise ResearchOperatorError("Draft is not relevant to the requested topic", error_type="product_failure")
+    unsupported = [str(item.get("claim_id")) for item in verdicts if item not in supported]
+    report = {
+        "report_id": require_text(plan.get("report_id"), "report_id"),
+        "title": title,
+        "sections": sections,
+        "evidence_ids": sorted({str(eid) for item in supported for eid in item.get("evidence_ids") or []}),
+        "unsupported_claims": unsupported,
+        "markdown": markdown,
+    }
+    return completed_result(
+        context,
+        operator_id=REPORT_DRAFTER_ID,
+        schema="scientific_report.v1",
+        outputs={"report": report},
+        filename="scientific_report.v1.json",
+        artifact_id="scientific_report",
+    )
+
+
+def _report(context: OperatorContext) -> dict[str, Any]:
+    documents = load_documents(context, schemas=("scientific_report.v1",), payload_keys=("report", "scientific_report"))
+    values = _outputs(documents[0])
+    report = values.get("report") if isinstance(values.get("report"), dict) else values
+    if not isinstance(report, dict):
+        raise ResearchOperatorError("Scientific report is malformed", error_type="invalid_input")
+    return report
+
+
+def review_artifact(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    report = _report(context)
+    findings: list[dict[str, Any]] = []
+    markdown = str(report.get("markdown") or "").strip()
+    sections = report.get("sections") if isinstance(report.get("sections"), list) else []
+    if not markdown:
+        findings.append({"finding_id": "empty-report", "severity": "high", "category": "completeness", "evidence": "Report markdown is empty.", "suggestion": "Produce a non-empty report."})
+    if len(sections) < 3:
+        findings.append({"finding_id": "weak-structure", "severity": "high", "category": "structure", "evidence": f"Only {len(sections)} sections are present.", "suggestion": "Include summary, findings, and limitations."})
+    if not report.get("evidence_ids"):
+        findings.append({"finding_id": "missing-evidence", "severity": "high", "category": "evidence", "evidence": "No report evidence IDs are present.", "suggestion": "Link supported findings to evidence."})
+    score = max(0.0, 1.0 - 0.3 * len(findings))
+    recommendation = "pass_with_review_required" if not findings else "revise_required"
+    review = {
+        "artifact_id": require_text(report.get("report_id"), "report_id"),
+        "target": "scientific_report",
+        "review_mode": "local_surrogate",
+        "review_available": True,
+        "difficulty": str(context.payload.get("difficulty") or "standard"),
+        "focus": str(context.payload.get("focus") or "completeness"),
+        "score": score,
+        "recommendation": recommendation,
+        "evidence_ids": [str(item) for item in report.get("evidence_ids") or []] or ["review:missing-evidence"],
+    }
+    return completed_result(
+        context,
+        operator_id=ARTIFACT_REVIEWER_ID,
+        schema="artifact_review.v1",
+        outputs={"review": review, "findings": findings, "artifact": {"report_id": report.get("report_id"), "title": report.get("title")}},
+        filename="artifact_review.v1.json",
+        artifact_id="artifact_review",
+        limitations=["Local structural review does not replace independent scientific peer review."],
+    )
+
+
+def _report_and_review(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+    documents = load_documents(
+        context,
+        schemas=("scientific_report.v1", "artifact_review.v1"),
+        payload_keys=("report", "artifact_review"),
+    )
+    report: dict[str, Any] = {}
+    review: dict[str, Any] = {}
+    findings: list[dict[str, Any]] = []
+    for document in documents:
+        values = _outputs(document)
+        if isinstance(values.get("report"), dict):
+            report = values["report"]
+        if isinstance(values.get("review"), dict):
+            review = values["review"]
+            findings = [item for item in values.get("findings") or [] if isinstance(item, dict)]
+    if not report or not review:
+        raise ResearchOperatorError("Report and artifact review are required", error_type="missing_input")
+    return report, review, findings
+
+
+def produce_publication(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    report, review, findings = _report_and_review(context)
+    if review.get("recommendation") != "pass_with_review_required" or any(item.get("severity") == "high" for item in findings):
+        raise ResearchOperatorError("Artifact review requires revision before publication", error_type="quality_gate_failed")
+    publication_type = str(context.payload.get("publication_type") or "paper")
+    if publication_type not in {"paper", "poster", "rebuttal", "slides", "supplement", "mixed"}:
+        raise ResearchOperatorError("Unsupported publication type", error_type="invalid_input")
+    markdown = require_text(report.get("markdown"), "report markdown")
+    extra_artifacts: list[dict[str, Any]] = []
+    extra_hashes: list[dict[str, str]] = []
+    first_scope = context.write_scope[0] if context.write_scope else ""
+    if first_scope and not Path(first_scope).suffix:
+        compiled_ref, compiled_hash = write_scoped_text(
+            context,
+            relative_path=f"{first_scope.rstrip('/\\')}/publication.md",
+            content=markdown,
+            artifact_id="publication_markdown",
+            schema="text/markdown",
+        )
+        extra_artifacts.append(compiled_ref)
+        extra_hashes.append(compiled_hash)
+        files = [{"type": "markdown", "path": compiled_ref["path"], "sha256": compiled_ref["sha256"]}]
+    else:
+        files = [{"type": "embedded_markdown", "path": output_location(context, "publication_bundle.v1.json")}]
+    bundle = {
+        "bundle_id": str(context.payload.get("bundle_id") or f"bundle-{report.get('report_id', 'report')}"),
+        "publication_type": publication_type,
+        "files": files,
+        "source_report_id": require_text(report.get("report_id"), "source_report_id"),
+        "evidence_ids": [str(item) for item in report.get("evidence_ids") or []],
+        "compiled_markdown": markdown,
+        "review_score": review.get("score"),
+    }
+    return completed_result(
+        context,
+        operator_id=PUBLICATION_PRODUCER_ID,
+        schema="publication_bundle.v1",
+        outputs={"bundle": bundle},
+        filename="publication_bundle.v1.json",
+        artifact_id="publication_bundle",
+        extra_artifacts=extra_artifacts,
+        extra_hashes=extra_hashes,
+    )
+
+
+def propose_workflow_evolution(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    observations = load_documents(
+        context,
+        schemas=("artifact_review.v1", "experiment_status.v1", "claim_verdict.v1", "research_memory_update.v1"),
+        payload_keys=("observations", "findings"),
+    )
+    evidence_ids = sorted({
+        str(item)
+        for document in observations
+        for item in (
+            (_outputs(document).get("review") or {}).get("evidence_ids")
+            if isinstance((_outputs(document).get("review") or {}), dict)
+            else []
+        ) or []
+        if str(item).strip()
+    }) or ["workflow-observation:local"]
+    target = require_text(context.payload.get("target") or "scientific_research_lifecycle_full_v1", "target")
+    description = require_text(context.payload.get("description") or "Review lifecycle evidence and strengthen the failing gate.", "description")
+    change = {
+        "change_id": str(context.payload.get("change_id") or "workflow-change-001"),
+        "category": str(context.payload.get("category") or "gate"),
+        "target": target,
+        "description": description,
+        "evidence_ids": evidence_ids,
+        "review_required": True,
+        "application_state": "proposed_only",
+    }
+    evolution = {
+        "proposal_id": str(context.payload.get("proposal_id") or "workflow-evolution-001"),
+        "scope": target,
+        "change_type": str(context.payload.get("change_type") or "gate"),
+        "rationale": require_text(context.payload.get("rationale") or "Observed lifecycle evidence indicates a bounded improvement opportunity.", "rationale"),
+        "expected_effect": require_text(context.payload.get("expected_effect") or "Reduce recurrence of the observed failure without changing production state automatically.", "expected_effect"),
+        "approval_state": "proposed",
+        "evidence_ids": evidence_ids,
+        "proposed_changes": [change],
+        "review": {
+            "human_accept_reject_required": True,
+            "protected_core_edits_applied": False,
+            "application_state": "proposed_only",
+        },
+    }
+    return completed_result(
+        context,
+        operator_id=WORKFLOW_EVOLVER_ID,
+        schema="workflow_evolution.v1",
+        outputs={"evolution": evolution},
+        filename="workflow_evolution.v1.json",
+        artifact_id="workflow_evolution",
+        limitations=["This operator emits proposals only and never mutates workflow definitions."],
+    )

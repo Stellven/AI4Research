@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/experiment_approval.v1.schema.json",
+  "title": "Solar Evidence ABI - Experiment Approval",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "experiment_approval.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "inputs": {"type": "object", "additionalProperties": true},
+    "outputs": {
+      "type": "object",
+      "required": ["approval"],
+      "additionalProperties": false,
+      "properties": {
+        "approval": {
+          "type": "object",
+          "required": ["experiment_id", "decision", "approval_ref", "plan_sha256", "approved_capabilities", "sandbox", "reasons"],
+          "additionalProperties": false,
+          "properties": {
+            "experiment_id": {"type": "string", "minLength": 1},
+            "decision": {"type": "string", "enum": ["approved", "awaiting_human", "rejected"]},
+            "approval_ref": {"type": "string"},
+            "plan_sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+            "approved_capabilities": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "sandbox": {"type": "object", "additionalProperties": true},
+            "reasons": {"type": "array", "items": {"type": "string", "minLength": 1}}
+          }
+        }
+      }
+    },
+    "artifacts": {"type": "array"},
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "operator_version", "implementation_package", "timestamp", "input_sha256", "output_sha256"],
+      "additionalProperties": true
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  }
+}
