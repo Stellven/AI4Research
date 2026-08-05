@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any, Callable
 
@@ -14,7 +15,12 @@ from .result_validation import (
     validate_result_identity,
     validate_result_scopes,
 )
-from .transport import ResearchTransportError, run_json_worker
+from .transport import (
+    ResearchTransportError,
+    run_json_worker,
+    sanitize_diagnostic_value,
+    sanitize_text,
+)
 
 
 class ResearchDispatchError(ValueError):
@@ -28,28 +34,44 @@ def dispatch_research_node(
     request_schema_path: Path,
     result_schema_path: Path,
     artifact_root: Path,
+    operator_resolver: Callable[[str], Any] | None = None,
+    secret_values: Iterable[str] = (),
 ) -> dict:
     """Validate a node request, call the injected runner, and validate result."""
 
+    secrets = tuple(str(value) for value in secret_values if str(value))
+    request_diagnostics = _request_body_diagnostic_values(node_request)
     request_for_runner = copy.deepcopy(node_request)
-    validate_node_request(node_request, request_schema_path)
+    validate_node_request(node_request, request_schema_path, secret_values=secrets)
     _validate_operator_boundary(node_request)
     _validate_provider_authorization(node_request)
+    _validate_physical_operator_resolution(node_request, operator_resolver)
 
     try:
         result = runner(request_for_runner)
     except Exception as exc:
-        result = _failed_result_from_exception(node_request, exc)
+        result = _failed_result_from_exception(node_request, exc, secret_values=secrets)
 
     if not isinstance(result, dict):
         result = _failed_result_from_exception(
             node_request,
             ResearchDispatchError("runner returned a non-dictionary result"),
+            secret_values=secrets,
         )
 
-    validate_node_result(result, result_schema_path)
+    validate_node_result(
+        result,
+        result_schema_path,
+        secret_values=secrets,
+        diagnostic_values=request_diagnostics,
+    )
     validate_result_identity(node_request, result)
-    validate_result_scopes(node_request, result, artifact_root)
+    validate_result_scopes(
+        node_request,
+        result,
+        artifact_root,
+        secret_values=secrets,
+    )
     return result
 
 
@@ -62,6 +84,7 @@ def synchronous_json_command_runner(
     env_allowlist: set[str] | None = None,
     max_stdout_bytes: int = 1_048_576,
     max_stderr_bytes: int = 65_536,
+    secret_values: Iterable[str] = (),
 ) -> Callable[[dict], dict]:
     """Return a runner that executes a JSON stdin/stdout command worker."""
 
@@ -75,6 +98,7 @@ def synchronous_json_command_runner(
             env_allowlist=env_allowlist,
             max_stdout_bytes=max_stdout_bytes,
             max_stderr_bytes=max_stderr_bytes,
+            secret_values=secret_values,
         )
 
     return _runner
@@ -83,6 +107,7 @@ def synchronous_json_command_runner(
 def operator_runtime_submit_adapter(
     *,
     submit: Callable[[dict], dict] | None = None,
+    secret_values: Iterable[str] = (),
 ) -> Callable[[dict], dict]:
     """Return an adapter that submits to existing operator_runtime inboxes."""
 
@@ -92,6 +117,10 @@ def operator_runtime_submit_adapter(
             from operator_runtime import submit as submit_fn  # type: ignore
 
         receipt = submit_fn(_operator_runtime_envelope(node_request))
+        safe_receipt = _bounded_receipt(
+            receipt,
+            secret_values=(*secret_values, *_request_body_diagnostic_values(node_request)),
+        )
         return {
             "schema": "research_node_result.v1",
             "task_id": node_request["task_id"],
@@ -106,7 +135,7 @@ def operator_runtime_submit_adapter(
                     "evidence_id": f"receipt-{node_request['node_id']}",
                     "kind": "operator_runtime_receipt",
                     "summary": "Node request was submitted to operator_runtime and is awaiting external completion.",
-                    "receipt": copy.deepcopy(receipt),
+                    "receipt": safe_receipt,
                 }
             ],
             "hashes": [],
@@ -147,11 +176,44 @@ def _validate_provider_authorization(node_request: dict) -> None:
             raise ResearchDispatchError("live provider requires approval_ref")
 
 
-def _failed_result_from_exception(node_request: dict, exc: Exception) -> dict:
-    error_type = getattr(exc, "error_type", type(exc).__name__)
+def _validate_physical_operator_resolution(
+    node_request: dict,
+    resolver: Callable[[str], Any] | None,
+) -> None:
+    if resolver is None:
+        return
+    operator_id = str(node_request.get("physical_operator", {}).get("operator_id") or "")
+    try:
+        resolved = resolver(operator_id)
+    except Exception:
+        raise ResearchDispatchError("physical operator resolver failed") from None
+    if resolved is None or resolved is False:
+        raise ResearchDispatchError("physical operator is unknown or disabled")
+    if isinstance(resolved, Mapping):
+        resolved_id = str(resolved.get("operator_id") or resolved.get("id") or operator_id)
+        if resolved_id != operator_id:
+            raise ResearchDispatchError("physical operator resolver returned the wrong identity")
+        if resolved.get("enabled") is False or resolved.get("active") is False:
+            raise ResearchDispatchError("physical operator is disabled")
+    elif resolved is not True:
+        raise ResearchDispatchError("physical operator resolver returned an unsupported record")
+
+
+def _failed_result_from_exception(
+    node_request: dict,
+    exc: Exception,
+    *,
+    secret_values: Iterable[str] = (),
+) -> dict:
+    secrets = tuple(str(value) for value in secret_values if str(value))
+    diagnostic_secrets = (*secrets, *_request_body_diagnostic_values(node_request))
+    error_type = sanitize_text(
+        str(getattr(exc, "error_type", type(exc).__name__)), diagnostic_secrets
+    )
     message = str(getattr(exc, "message", exc))
     if isinstance(exc, ResearchTransportError):
         message = json.dumps(exc.to_dict(), sort_keys=True)
+    message = sanitize_text(message, diagnostic_secrets)
     return {
         "schema": "research_node_result.v1",
         "task_id": node_request.get("task_id", ""),
@@ -179,6 +241,22 @@ def _failed_result_from_exception(node_request: dict, exc: Exception) -> dict:
     }
 
 
+def _bounded_receipt(receipt: Any, *, secret_values: Iterable[str]) -> Any:
+    sanitized = sanitize_diagnostic_value(
+        receipt,
+        explicit_secret_values=secret_values,
+        omit_request_bodies=True,
+        max_depth=4,
+        max_items=20,
+        max_string_chars=512,
+    )
+    serialized = json.dumps(sanitized, ensure_ascii=False, sort_keys=True, default=repr)
+    if len(serialized.encode("utf-8")) <= 8_192:
+        return sanitized
+    summary = sanitize_text(serialized[:7_500], secret_values)
+    return {"receipt_summary": f"{summary}...[TRUNCATED]"}
+
+
 def _operator_runtime_envelope(node_request: dict) -> dict:
     physical = node_request.get("physical_operator") or {}
     operator_id = str(physical.get("operator_id") or "")
@@ -191,3 +269,26 @@ def _operator_runtime_envelope(node_request: dict) -> dict:
         "inputs": copy.deepcopy(node_request.get("typed_inputs", {}).get("payload") or {}),
         "research_node_request": copy.deepcopy(node_request),
     }
+
+
+def _request_body_diagnostic_values(node_request: dict) -> tuple[str, ...]:
+    typed_inputs = node_request.get("typed_inputs") if isinstance(node_request, dict) else None
+    payload = typed_inputs.get("payload") if isinstance(typed_inputs, dict) else None
+    collected: list[str] = []
+
+    def _walk(value: Any, depth: int = 0) -> None:
+        if depth > 10 or len(collected) >= 200:
+            return
+        if isinstance(value, Mapping):
+            for nested in value.values():
+                _walk(nested, depth + 1)
+        elif isinstance(value, (list, tuple)):
+            for nested in value:
+                _walk(nested, depth + 1)
+        elif isinstance(value, str) and len(value) >= 4:
+            collected.append(value)
+
+    _walk(payload)
+    if payload is not None:
+        collected.append(json.dumps(payload, ensure_ascii=False, sort_keys=True, default=repr))
+    return tuple(collected)

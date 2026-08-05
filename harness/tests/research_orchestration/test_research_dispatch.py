@@ -11,22 +11,30 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "lib"))
 
 from research_orchestration.dispatch import (  # noqa: E402
+    ResearchDispatchError,
     dispatch_research_node,
     operator_runtime_submit_adapter,
     synchronous_json_command_runner,
 )
 from research_orchestration.result_validation import ResearchResultValidationError  # noqa: E402
 from research_orchestration.transport import ResearchTransportError  # noqa: E402
-from test_research_result_validation import RESULT_SCHEMA, REQUEST_SCHEMA, valid_request, valid_result  # noqa: E402
+from test_research_result_validation import (  # noqa: E402
+    RESULT_SCHEMA,
+    REQUEST_SCHEMA,
+    materialize_result_artifacts,
+    valid_request,
+    valid_result,
+)
 
 
 def test_dispatch_returns_completed_worker_result(tmp_path: Path) -> None:
     request = valid_request()
+    completed = valid_result()
+    materialize_result_artifacts(tmp_path, completed)
 
     def runner(node_request: dict) -> dict:
-        result = valid_result()
         assert node_request == request
-        return result
+        return completed
 
     result = dispatch_research_node(
         request,
@@ -188,6 +196,7 @@ def test_live_provider_without_approval_or_network_is_rejected(tmp_path: Path) -
 def test_dispatch_does_not_mutate_request_or_result(tmp_path: Path) -> None:
     request = valid_request()
     result = valid_result()
+    materialize_result_artifacts(tmp_path, result)
     before_request = copy.deepcopy(request)
     before_result = copy.deepcopy(result)
     dispatch_research_node(
@@ -205,8 +214,13 @@ def test_synchronous_json_command_runner(tmp_path: Path) -> None:
     worker = tmp_path / "worker.py"
     worker.write_text(
         """
-import json, sys
+import hashlib, json, sys
+from pathlib import Path
 request = json.loads(sys.stdin.read())
+artifact = Path("artifacts/research/run-phase2/node-dispatch/result.json")
+artifact.parent.mkdir(parents=True, exist_ok=True)
+artifact.write_bytes(b"worker artifact")
+digest = hashlib.sha256(b"worker artifact").hexdigest()
 result = {
   "schema": "research_node_result.v1",
   "task_id": request["task_id"],
@@ -219,10 +233,10 @@ result = {
     "artifact_id": "discovery-result",
     "path": "artifacts/research/run-phase2/node-dispatch/result.json",
     "schema": "literature_discovery.v1",
-    "sha256": "a" * 64
+    "sha256": digest
   }],
   "evidence": [{"evidence_id": "ev", "kind": "worker", "summary": "done"}],
-  "hashes": [{"hash_id": "h", "algorithm": "sha256", "value": "a" * 64}],
+  "hashes": [{"hash_id": "discovery-result", "algorithm": "sha256", "value": digest}],
   "model_provider_usage": [{"provider": "none", "model": "none", "usage_kind": "none"}],
   "errors": [],
   "limitations": [],
@@ -246,3 +260,115 @@ print(json.dumps(result))
         artifact_root=tmp_path,
     )
     assert result["status"] == "completed"
+
+
+def test_generic_exception_and_nested_receipt_secrets_are_scrubbed(tmp_path: Path) -> None:
+    request = valid_request()
+    request_body = request["typed_inputs"]["payload"]["query"]
+    canary = "canary-explicit-credential-12345"
+
+    def failing_runner(_: dict) -> dict:
+        raise RuntimeError(
+            f"api_key={canary} nested password=hunter-two "
+            f"Bearer bearer-token-value-12345 request={request_body}"
+        )
+
+    failed = dispatch_research_node(
+        request,
+        runner=failing_runner,
+        request_schema_path=REQUEST_SCHEMA,
+        result_schema_path=RESULT_SCHEMA,
+        artifact_root=tmp_path,
+        secret_values=(canary,),
+    )
+    rendered = str(failed)
+    assert canary not in rendered
+    assert "hunter-two" not in rendered
+    assert "bearer-token-value" not in rendered
+    assert request_body not in rendered
+
+    receipt_runner = operator_runtime_submit_adapter(
+        submit=lambda _: {
+            "status": "submitted",
+            "nested": {"api_key": canary, "request_body": {"prompt": "private body"}},
+            "echoed_query": request_body,
+            "large": "x" * 50_000,
+        },
+        secret_values=(canary,),
+    )
+    receipt = dispatch_research_node(
+        request,
+        runner=receipt_runner,
+        request_schema_path=REQUEST_SCHEMA,
+        result_schema_path=RESULT_SCHEMA,
+        artifact_root=tmp_path,
+        secret_values=(canary,),
+    )
+    receipt_text = str(receipt["evidence"][0]["receipt"])
+    assert canary not in receipt_text
+    assert "private body" not in receipt_text
+    assert request_body not in receipt_text
+    assert len(receipt_text.encode("utf-8")) < 8_500
+    assert receipt["status"] == "awaiting_external"
+
+
+def test_malformed_secret_bearing_result_fails_closed_without_leak(tmp_path: Path) -> None:
+    canary = "malformed-result-canary-123456789"
+    malformed = valid_result()
+    malformed["errors"] = [
+        {
+            "error_id": "forged-success",
+            "error_type": "provider_error",
+            "message": f"api_key={canary}",
+        }
+    ]
+    with pytest.raises(ResearchResultValidationError) as excinfo:
+        dispatch_research_node(
+            valid_request(),
+            runner=lambda _: malformed,
+            request_schema_path=REQUEST_SCHEMA,
+            result_schema_path=RESULT_SCHEMA,
+            artifact_root=tmp_path,
+            secret_values=(canary,),
+        )
+    assert canary not in str(excinfo.value)
+
+
+def test_physical_operator_resolver_rejects_unknown_disabled_and_wrong_identity(
+    tmp_path: Path,
+) -> None:
+    request = valid_request()
+    called = False
+
+    def runner(_: dict) -> dict:
+        nonlocal called
+        called = True
+        return valid_result()
+
+    for resolver in (
+        lambda _: None,
+        lambda operator_id: {"operator_id": operator_id, "enabled": False},
+        lambda _: {"operator_id": "wrong", "enabled": True},
+    ):
+        with pytest.raises(ResearchDispatchError, match="operator"):
+            dispatch_research_node(
+                request,
+                runner=runner,
+                request_schema_path=REQUEST_SCHEMA,
+                result_schema_path=RESULT_SCHEMA,
+                artifact_root=tmp_path,
+                operator_resolver=resolver,
+            )
+    assert called is False
+
+    completed = valid_result()
+    materialize_result_artifacts(tmp_path, completed)
+    accepted = dispatch_research_node(
+        request,
+        runner=lambda _: completed,
+        request_schema_path=REQUEST_SCHEMA,
+        result_schema_path=RESULT_SCHEMA,
+        artifact_root=tmp_path,
+        operator_resolver=lambda operator_id: {"operator_id": operator_id, "enabled": True},
+    )
+    assert accepted["status"] == "completed"

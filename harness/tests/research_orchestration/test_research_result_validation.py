@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -103,9 +106,29 @@ def valid_result() -> dict:
     }
 
 
+def materialize_result_artifacts(
+    artifact_root: Path,
+    result: dict,
+    *,
+    content: bytes = b"bounded worker artifact",
+) -> Path:
+    artifact = result["output_artifacts"][0]
+    relative = str(artifact["path"]).replace("\\", "/")
+    path = artifact_root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    digest = hashlib.sha256(content).hexdigest()
+    artifact["sha256"] = digest
+    for record in result.get("hashes") or []:
+        if record.get("hash_id") == artifact.get("artifact_id"):
+            record["value"] = digest
+    return path
+
+
 def test_valid_request_result_identity_and_scopes_pass(tmp_path: Path) -> None:
     request = valid_request()
     result = valid_result()
+    materialize_result_artifacts(tmp_path, result)
     validate_node_request(request, REQUEST_SCHEMA)
     validate_node_result(result, RESULT_SCHEMA)
     validate_result_identity(request, result)
@@ -140,10 +163,12 @@ def test_windows_and_unix_path_normalization_accept_in_scope_paths(tmp_path: Pat
     request["write_scope"] = [r"artifacts\research\run-phase2\node-dispatch"]
     result = valid_result()
     result["output_artifacts"][0]["path"] = r"artifacts\research\run-phase2\node-dispatch\result.json"
+    materialize_result_artifacts(tmp_path, result)
     validate_result_scopes(request, result, tmp_path)
 
     request["write_scope"] = ["artifacts/research/run-phase2/node-dispatch"]
     result["output_artifacts"][0]["path"] = "artifacts/research/run-phase2/node-dispatch/result.json"
+    materialize_result_artifacts(tmp_path, result)
     validate_result_scopes(request, result, tmp_path)
 
 
@@ -163,6 +188,12 @@ def test_live_provider_requires_approval_and_network() -> None:
 
 
 def test_completed_failed_terminal_hash_and_secret_invariants() -> None:
+    usage_is_not_a_secret = valid_result()
+    usage_is_not_a_secret["model_provider_usage"][0].update(
+        {"input_tokens": 10, "output_tokens": 20}
+    )
+    validate_node_result(usage_is_not_a_secret, RESULT_SCHEMA)
+
     completed = valid_result()
     completed["evidence"] = []
     with pytest.raises(ResearchResultValidationError, match="evidence"):
@@ -189,6 +220,21 @@ def test_completed_failed_terminal_hash_and_secret_invariants() -> None:
     with pytest.raises(ResearchResultValidationError):
         validate_node_result(no_assertion, RESULT_SCHEMA)
 
+    leaked = valid_result()
+    leaked["evidence"][0]["summary"] = "password=visible-password-value"
+    with pytest.raises(ResearchResultValidationError, match="sensitive"):
+        validate_node_result(leaked, RESULT_SCHEMA)
+
+
+def test_schema_validation_message_scrubs_explicit_secret() -> None:
+    canary = "schema-validation-canary-987654321"
+    request = valid_request()
+    request["typed_inputs"]["payload"] = canary
+    with pytest.raises(ResearchResultValidationError) as excinfo:
+        validate_node_request(request, REQUEST_SCHEMA, secret_values=(canary,))
+    assert canary not in str(excinfo.value)
+    assert "[SCRUBBED]" in str(excinfo.value)
+
 
 def test_worker_cannot_expand_capability_read_or_write_scope(tmp_path: Path) -> None:
     request = valid_request()
@@ -205,6 +251,7 @@ def test_worker_cannot_expand_capability_read_or_write_scope(tmp_path: Path) -> 
 def test_result_validation_does_not_mutate_inputs(tmp_path: Path) -> None:
     request = valid_request()
     result = valid_result()
+    materialize_result_artifacts(tmp_path, result)
     before_request = copy.deepcopy(request)
     before_result = copy.deepcopy(result)
     validate_node_request(request, REQUEST_SCHEMA)
@@ -213,3 +260,50 @@ def test_result_validation_does_not_mutate_inputs(tmp_path: Path) -> None:
     validate_result_scopes(request, result, tmp_path)
     assert request == before_request
     assert result == before_result
+
+
+def test_output_artifact_must_exist_and_match_declared_hash(tmp_path: Path) -> None:
+    request = valid_request()
+    missing = valid_result()
+    with pytest.raises(ResearchResultValidationError, match="does not exist"):
+        validate_result_scopes(request, missing, tmp_path)
+
+    mismatch = valid_result()
+    path = materialize_result_artifacts(tmp_path, mismatch)
+    mismatch["output_artifacts"][0]["sha256"] = "f" * 64
+    with pytest.raises(ResearchResultValidationError, match="sha256"):
+        validate_result_scopes(request, mismatch, tmp_path)
+
+    matching_artifact_bad_record = valid_result()
+    materialize_result_artifacts(tmp_path, matching_artifact_bad_record)
+    matching_artifact_bad_record["hashes"][0]["value"] = "e" * 64
+    with pytest.raises(ResearchResultValidationError, match="hash record"):
+        validate_result_scopes(request, matching_artifact_bad_record, tmp_path)
+
+    assert path.is_file()
+
+
+def test_output_artifact_symlink_escape_is_rejected(tmp_path: Path) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    (outside / "result.json").write_bytes(b"outside")
+    link = tmp_path / "artifacts/research/run-phase2/node-dispatch"
+    link.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.symlink(outside, link, target_is_directory=True)
+    except OSError:
+        if sys.platform != "win32":
+            pytest.skip("symlink creation is unavailable on this platform")
+        created = subprocess.run(
+            ["cmd", "/d", "/c", "mklink", "/J", str(link), str(outside)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if created.returncode != 0:
+            pytest.skip("junction creation is unavailable on this platform")
+    result = valid_result()
+    result["output_artifacts"][0]["sha256"] = hashlib.sha256(b"outside").hexdigest()
+    result["hashes"][0]["value"] = result["output_artifacts"][0]["sha256"]
+    with pytest.raises(ResearchResultValidationError, match="artifact_root"):
+        validate_result_scopes(valid_request(), result, tmp_path)
