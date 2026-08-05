@@ -1972,6 +1972,9 @@ def write_ideate_workspace_projection_proof(
 
 
 def cmd_run_skill(args: argparse.Namespace) -> int:
+    skill = str(args.skill_name or "").strip().lstrip("/$")
+    if skill == "research" and args.solar_orchestrator:
+        return cmd_run_solar_research(args)
     payload, out_path = build_payload(args)
     write_json(out_path, payload)
     skill_run = payload["outputs"]["skill_run"]
@@ -2042,6 +2045,66 @@ def cmd_run_skill(args: argparse.Namespace) -> int:
         summary["workspace_updated_count"] = workspace_summary["updated_count"]
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0 if payload["status"] != "failed" else 2
+
+
+def cmd_run_solar_research(args: argparse.Namespace) -> int:
+    """Forward the complete `$research` request to the generic Solar runtime."""
+
+    prompt = target_ref(args)
+    if not prompt:
+        prompt = str(args.topic or args.paper or "").strip()
+    if not prompt:
+        print(json.dumps({"ok": False, "error": "$research requires a non-empty prompt"}, indent=2))
+        return 2
+    run_id = str(args.run_id or stable_run_id("research", args))
+    command = [
+        sys.executable,
+        str(REPO_HARNESS / "plugins" / "autosci" / "bin" / "autosci_bridge.py"),
+        "research",
+        "--prompt",
+        prompt,
+        "--run-id",
+        run_id,
+        "--run-mode",
+        str(args.research_run_mode),
+        "--artifact-root",
+        str(OUTPUT_HARNESS),
+        "--max-steps",
+        str(int(args.research_max_steps)),
+    ]
+    sources = []
+    if args.paper:
+        sources.append(str(args.paper))
+    elif args.topic:
+        sources.append(str(args.topic))
+    for source in sources:
+        command.extend(["--source", source])
+    for evidence_path in args.import_evidence or []:
+        command.extend(["--import-evidence", str(evidence_path)])
+    if args.research_workflow:
+        command.extend(["--workflow", str(args.research_workflow)])
+    if args.output_language:
+        command.extend(["--output-language", str(args.output_language)])
+    if args.online:
+        command.append("--allow-network")
+    if args.review_llm_provider:
+        command.append("--allow-live-provider")
+    if args.approval_ref:
+        command.extend(["--approval-ref", str(args.approval_ref)])
+    proc = subprocess.run(
+        command,
+        cwd=REPO_HARNESS,
+        env=dict(os.environ),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.stdout.strip():
+        print(proc.stdout.strip())
+    if proc.stderr.strip():
+        print(proc.stderr.strip(), file=sys.stderr)
+    return int(proc.returncode)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -2203,6 +2266,12 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--decisions", help="Native daily-arxiv local LLM decisions JSON for finalize")
     skill.add_argument("--no-external", action="store_true", help="Skip daily-arxiv S2/DeepXiv enrichment when local feed is supplied")
     skill.add_argument("--run-id", help="Stable run/artifact namespace")
+    skill.add_argument("--solar-orchestrator", action="store_true", help="For $research: use the generic Solar production route")
+    skill.add_argument("--research-run-mode", choices=["execute", "resume", "import_evidence"], default="execute", help="For generic $research: create, resume, or import evidence")
+    skill.add_argument("--import-evidence", action="append", help="For generic $research: provenance-bearing evidence path")
+    skill.add_argument("--research-workflow", choices=["research_synthesis", "paper_ingestion", "literature_synthesis", "scientific_lifecycle", "workflow_evolution"], help="Explicit generic research workflow kind")
+    skill.add_argument("--output-language", help="Preserve an explicit research output language")
+    skill.add_argument("--research-max-steps", type=int, default=100, help="Maximum Solar orchestration steps for this invocation")
     skill.add_argument("--work-dir", help="Output work dir relative to HARNESS_DIR")
     skill.add_argument("--route-config", default=str(ROUTE_CONFIG))
     skill.add_argument("--binding-config", default=str(BINDING_CONFIG))

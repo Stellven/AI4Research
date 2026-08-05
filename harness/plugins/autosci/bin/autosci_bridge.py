@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AutoSci backend bridge for Solar Evidence ABI fixture-mode actions."""
+"""AutoSci bridge for Solar production research and Evidence ABI actions."""
 
 from __future__ import annotations
 
@@ -25,10 +25,19 @@ HARNESS_DIR = Path(
 REPO_HARNESS_DIR = Path(__file__).resolve().parents[3]
 if str(REPO_HARNESS_DIR) not in sys.path:
     sys.path.insert(0, str(REPO_HARNESS_DIR))
+if str(REPO_HARNESS_DIR / "lib") not in sys.path:
+    sys.path.insert(0, str(REPO_HARNESS_DIR / "lib"))
 if str(PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(PLUGIN_DIR))
 
 from evaluators.scientific.lifecycle_runtime_gate import evaluate as evaluate_lifecycle_runtime
+from research_orchestration.runtime import (
+    FileWorkflowCatalog,
+    SolarResearchRuntime,
+    default_synthesis_resolver,
+    load_evidence_references,
+)
+from research_orchestration.routing import seed_kind_for_value
 
 from adapters.autosci_to_claim_verdict import convert as convert_claim_verdict
 from adapters.autosci_to_experiment_plan import convert as convert_experiment_plan
@@ -22637,6 +22646,72 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0 if not errors else 1
 
 
+def cmd_research(args: argparse.Namespace) -> int:
+    """Run the opt-in production research route through the Solar orchestrator."""
+
+    artifact_root = Path(args.artifact_root).expanduser().resolve()
+    sources = list(args.source or [])
+    seed_inputs = [
+        {
+            "seed_id": f"source-{index}",
+            "seed_kind": seed_kind_for_value(source),
+            "value": source,
+        }
+        for index, source in enumerate(sources, start=1)
+    ]
+    aliases = {
+        # These aliases name equivalent Phase 2 physical stages.  There is no
+        # alias for material_ingest: the current draft workflow lacks that
+        # physical stage and must fail closed until the unified graph supplies it.
+        "research_synthesis": {"web_fetch": "seed_fetch"},
+        "literature_synthesis": {"source_discovery": "source_discovery"},
+    }
+    authorization = {
+        "approved_capabilities": [],
+        "allow_network": bool(args.allow_network),
+        "allow_live_provider": bool(args.allow_live_provider),
+        "approval_ref": str(args.approval_ref or ""),
+        "secret_refs": [],
+    }
+    try:
+        evidence = load_evidence_references(args.import_evidence or [], artifact_root=artifact_root)
+        catalog = FileWorkflowCatalog(
+            harness_root=REPO_HARNESS_DIR,
+            selection_path=Path(args.workflow_selection),
+            entrypoint_aliases=aliases,
+        )
+        runtime = SolarResearchRuntime(
+            artifact_root=artifact_root,
+            workflow_loader=catalog.load,
+            operator_resolver=default_synthesis_resolver(),
+            authorization=authorization,
+        )
+        result = runtime.run(
+            prompt=args.prompt,
+            run_id=args.run_id,
+            seed_inputs=seed_inputs,
+            run_mode=args.run_mode,
+            explicit_workflow=args.workflow,
+            supplied_evidence=evidence,
+            output_language=args.output_language,
+            max_steps=args.max_steps,
+        )
+    except Exception as exc:
+        result = {
+            "schema": "solar_research_runtime_result.v1",
+            "run_id": args.run_id,
+            "prompt": args.prompt,
+            "run_mode": args.run_mode,
+            "final_status": "failed",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+        }
+        print(json.dumps(result, indent=2, ensure_ascii=True, sort_keys=True))
+        return 2
+    print(json.dumps(result, indent=2, ensure_ascii=True, sort_keys=True))
+    return 0 if result.get("final_status") not in {"failed", "blocked", "cancelled"} else 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="autosci_bridge.py",
@@ -22646,6 +22721,20 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("smoke", help="Run fixture-mode smoke conversion")
     validate = sub.add_parser("validate", help="Validate a bridge result or evidence payload")
     validate.add_argument("--result", required=True)
+    research = sub.add_parser("research", help="Run the Solar-owned production research orchestrator")
+    research.add_argument("--prompt", required=True, help="Complete, untruncated user request")
+    research.add_argument("--run-id", required=True, help="Stable research run identity")
+    research.add_argument("--run-mode", choices=["execute", "resume", "import_evidence"], default="execute")
+    research.add_argument("--source", action="append", help="Explicit URL, PDF, Markdown, text, or topic source")
+    research.add_argument("--import-evidence", action="append", help="Provenance-bearing evidence path below artifact-root")
+    research.add_argument("--workflow", help="Explicit workflow kind when the user requested one")
+    research.add_argument("--output-language", default="", help="Requested output language")
+    research.add_argument("--artifact-root", required=True, help="Writable root for Solar run state and artifacts")
+    research.add_argument("--workflow-selection", default=str(REPO_HARNESS_DIR / "config" / "research-workflow-selection.v1.json"))
+    research.add_argument("--max-steps", type=int, default=100)
+    research.add_argument("--allow-network", action="store_true")
+    research.add_argument("--allow-live-provider", action="store_true")
+    research.add_argument("--approval-ref")
     run = sub.add_parser("run", help="Run one fixture-mode backend action")
     run.add_argument("--action", required=True, choices=sorted(ACTIONS))
     run.add_argument("--envelope", required=True)
@@ -22664,6 +22753,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_smoke(args)
     if args.cmd == "validate":
         return cmd_validate(args)
+    if args.cmd == "research":
+        return cmd_research(args)
     if args.cmd == "run":
         return cmd_run(args)
     parser.print_help()
