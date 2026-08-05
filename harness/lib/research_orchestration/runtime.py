@@ -320,6 +320,7 @@ def build_task_contract(
                 if decision.workflow_kind in {"research_synthesis", "literature_synthesis"}
                 else "At least 1 parsed, non-empty local source"
             ),
+            "At least 2 cited sources",
             "Every conclusion is linked to evidence sources",
             "The final report contains non-empty body content",
             "The independent review verdict is accept",
@@ -438,7 +439,7 @@ def default_synthesis_resolver(*, services: dict | None = None) -> PhysicalOpera
         "final_acceptance_operator",
     )
     return PhysicalOperatorResolver(
-        [PhysicalOperatorBinding(operator_id=operator_id, runner=run, version="research_synthesis.v1.5") for operator_id in operator_ids]
+        [PhysicalOperatorBinding(operator_id=operator_id, runner=run, version="research_synthesis.v1.6") for operator_id in operator_ids]
     )
 
 

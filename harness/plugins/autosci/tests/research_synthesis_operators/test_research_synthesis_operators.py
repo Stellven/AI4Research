@@ -120,10 +120,12 @@ def _valid_acceptance_refs(
     verdict: str = "accept",
     findings: list[dict] | None = None,
     source_count: int = 2,
+    cited_source_count: int = 1,
     report_limitations: list[str] | None = None,
 ) -> list[dict]:
     sources = [f"source-{index}" for index in range(1, source_count + 1)]
     primary_source = sources[0] if sources else "missing-source"
+    claim_sources = sources[:cited_source_count] or [primary_source]
     refs: list[dict] = []
 
     def write_ref(node_id: str, payload: dict) -> dict:
@@ -155,14 +157,14 @@ def _valid_acceptance_refs(
         "node_id": "evidence_synthesis",
         "input_lineage": {"seed_snapshot": "seed_snapshot", "source_validation": "source_validation"},
         "input_artifact_hashes": {"seed_snapshot": "seed-hash-not-required-by-final", "source_validation": validation_ref["sha256"]},
-        "claims": [{"claim_id": "claim-1", "text": "Grounded", "evidence_ids": [primary_source]}],
+        "claims": [{"claim_id": "claim-1", "text": "Grounded", "evidence_ids": claim_sources}],
     })
     report_ref = write_ref("report_draft", {
         "schema": "research_synthesis.report_draft.v1",
         "node_id": "report_draft",
         "evidence_lineage": ["evidence_synthesis", "source_validation", "seed_snapshot"],
         "input_artifact_hashes": {"evidence_synthesis": synthesis_ref["sha256"]},
-        "claim_source_lineage": {"claim-1": [primary_source]},
+        "claim_source_lineage": {"claim-1": claim_sources},
         "limitations": list(report_limitations or []),
         "report": {
             "body": report_body,
@@ -664,7 +666,7 @@ def test_final_acceptance_checks_explicit_result_and_limitation_requirements(tmp
 
     localized_refs = _valid_acceptance_refs(
         tmp_path,
-        report_body="Grounded report body.\n\n## \u4e94\u3001\u5c40\u9650\u6027\u4e0e\u4e0d\u786e\u5b9a\u6027\u58f0\u660e\n\n- \u672a\u83b7\u53d6\u539f\u59cb\u6570\u636e\uff0c\u957f\u671f\u9884\u6d4b\u4ecd\u6709\u4e0d\u786e\u5b9a\u6027\u3002",
+        report_body="Grounded report body.\n\n## \u4e94\u3001\u8bc1\u636e\u8bc4\u4f30\u4e0e\u62a5\u544a\u5c40\u9650\n\n- \u672a\u83b7\u53d6\u539f\u59cb\u6570\u636e\uff0c\u957f\u671f\u9884\u6d4b\u4ecd\u6709\u4e0d\u786e\u5b9a\u6027\u3002",
     )
     localized = execute_operator(
         _request(tmp_path, "final_acceptance", payload={"task_contract": contract}, refs=localized_refs),
@@ -1049,6 +1051,32 @@ def test_numeric_success_criteria_use_exact_thresholds(tmp_path: Path, monkeypat
     check = _read_artifact(tmp_path, failed)["success_criteria_evaluation"][0]["checks"][0]
     assert check["status"] == "failed"
     assert "required threshold=3" in check["evidence"]
+
+    cited = _task_contract()
+    cited["success_criteria"] = ["At least 2 cited sources."]
+    cited_pass = execute_operator(
+        _request(
+            tmp_path,
+            "final_acceptance",
+            payload={"task_contract": cited},
+            refs=_valid_acceptance_refs(tmp_path, source_count=2, cited_source_count=2),
+        ),
+        services={},
+    )
+    assert cited_pass["status"] == "completed"
+    cited_fail = execute_operator(
+        _request(
+            tmp_path,
+            "final_acceptance",
+            payload={"task_contract": cited},
+            refs=_valid_acceptance_refs(tmp_path, source_count=2, cited_source_count=1),
+        ),
+        services={},
+    )
+    cited_check = _read_artifact(tmp_path, cited_fail)["success_criteria_evaluation"][0]["checks"][0]
+    assert cited_fail["status"] == "failed"
+    assert cited_check["status"] == "failed"
+    assert "cited_source_count=1" in cited_check["evidence"]
 
 
 @pytest.mark.parametrize(
