@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -67,7 +68,14 @@ class ResearchOrchestrator:
         normalized_authorization = self._normalize_authorization(authorization or {})
         self._secret_values = tuple(normalized_authorization.pop("secret_values"))
         self.authorization = normalized_authorization
-        self.artifact_root = Path(artifact_root or Path.cwd()).expanduser().resolve()
+        if isinstance(artifact_root, str) and not artifact_root.strip():
+            raise ResearchOrchestrationError("artifact_root must be a non-empty stable path")
+        trusted_root = artifact_root
+        if trusted_root is None and isinstance(getattr(state_store, "state_root", None), Path):
+            trusted_root = state_store.state_root.parent
+        if trusted_root is None:
+            raise ResearchOrchestrationError("artifact_root must be explicit or derived from a trusted state store root")
+        self.artifact_root = Path(trusted_root).expanduser().resolve()
         self.clock = clock or _default_clock
         self._workflow: dict | None = None
         self._state_revision: str | None = None
@@ -108,21 +116,36 @@ class ResearchOrchestrator:
 
         node_id = ready_nodes[0]
         node = self._node_by_id(workflow, node_id)
-        if node.get("allow_live_provider") and not self._has_live_provider_approval():
+        authorization_error = self._authorization_gate_reason(node)
+        if authorization_error:
             self._transition_node(state, node_id, "running")
             self._transition_node(state, node_id, "awaiting_external")
             state["current_blockers"] = [
                 {
-                    "blocker_id": f"{node_id}_provider_approval_required",
+                    "blocker_id": f"{node_id}_authorization_required",
                     "node_id": node_id,
-                    "reason": "Live provider execution requires explicit allow_live_provider=true and a non-empty approval_ref.",
+                    "reason": authorization_error,
                 }
             ]
             state = self._refresh_ready_and_status(state, workflow)
             self._save_state(state)
             return deepcopy(state)
 
-        request = self._node_request(node, state, workflow)
+        try:
+            request = self._node_request(node, state, workflow)
+        except Exception as exc:
+            self._transition_node(state, node_id, "running")
+            self._transition_node(state, node_id, "blocked")
+            state["current_blockers"] = [
+                {
+                    "blocker_id": f"{node_id}_request_evidence_invalid",
+                    "node_id": node_id,
+                    "reason": _scrub_text(str(exc), self._secret_values)[:500] or "node request evidence is invalid",
+                }
+            ]
+            state = self._refresh_ready_and_status(state, workflow)
+            self._save_state(state)
+            return deepcopy(state)
         self._transition_node(state, node_id, "running")
         state["final_status"] = "running"
         state["ready_nodes"] = self._calculate_ready_nodes_from_states(state["node_states"])
@@ -206,8 +229,9 @@ class ResearchOrchestrator:
                 "blocked",
             }:
                 raise ResearchOrchestrationError("redispatch target is not resumable")
-            if node.get("allow_live_provider") and not self._has_live_provider_approval():
-                raise ResearchOrchestrationError("live provider redispatch requires explicit approval_ref")
+            authorization_error = self._authorization_gate_reason(node)
+            if authorization_error:
+                raise ResearchOrchestrationError(authorization_error)
             if node_state["status"] == "running":
                 self._transition_node(state, redispatch_node_id, "failed")
             self._transition_node(state, redispatch_node_id, "ready")
@@ -433,18 +457,20 @@ class ResearchOrchestrator:
 
     def _node_request(self, node: dict, state: dict, workflow: dict) -> dict:
         live = bool(node.get("allow_live_provider"))
+        required_capabilities = list(node.get("required_capabilities") or [])
+        approved_capabilities = set(self.authorization.get("approved_capabilities") or [])
+        authorization_error = self._authorization_gate_reason(node)
+        if authorization_error:
+            raise ResearchOrchestrationError(authorization_error)
         auth = {
             "scope_id": str(self.authorization.get("scope_id") or f"{state['run_id']}:{node['node_id']}"),
-            "approved_capabilities": list(node.get("required_capabilities") or []),
-            "allow_network": bool(node.get("allow_network", False)),
-            "allow_live_provider": live,
+            "approved_capabilities": [item for item in required_capabilities if item in approved_capabilities],
+            "allow_network": bool((node.get("allow_network", False) or live) and self.authorization.get("allow_network") is True),
+            "allow_live_provider": bool(live and self.authorization.get("allow_live_provider") is True),
             "secret_refs": list(self.authorization.get("secret_refs") or []),
         }
         if live:
-            if not self._has_live_provider_approval():
-                raise ResearchOrchestrationError("live provider request cannot be built without explicit approval")
             auth["approval_ref"] = self._explicit_approval_ref()
-            auth["allow_network"] = True
         return {
             "schema": "research_node_request.v1",
             "task_id": state["task_id"],
@@ -454,7 +480,7 @@ class ResearchOrchestrator:
             "logical_operator": {
                 "operator_id": str(node.get("logical_operator") or node["node_id"]),
                 "operator_kind": "logical",
-                "capabilities": list(node.get("required_capabilities") or []),
+                "capabilities": required_capabilities,
             },
             "physical_operator": {
                 "operator_id": str(node.get("physical_operator") or f"{node['node_id']}_worker"),
@@ -486,9 +512,27 @@ class ResearchOrchestrator:
             upstream_state = state["node_states"].get(upstream_id) or {}
             if upstream_state.get("status") != "completed" or not upstream_state.get("result_ref"):
                 continue
-            record = self.state_store.load_node_record(upstream_state["result_ref"])
+            try:
+                record = self.state_store.load_node_record(
+                    upstream_state["result_ref"],
+                    expected_run_id=state["run_id"],
+                    expected_node_id=upstream_id,
+                )
+                upstream_node = self._node_by_id(workflow, upstream_id)
+                validation_request = self._artifact_validation_request(upstream_node, state)
+                upstream_result = record.get("result") or {}
+                if self._sanitize_result(deepcopy(upstream_result)) != upstream_result:
+                    raise ResearchOrchestrationError("accepted node record contains unsanitized content")
+                self._validate_result_boundary(validation_request, upstream_result)
+                self._verify_completed_artifacts(validation_request, upstream_result)
+                self._validate_record_evaluation(record.get("evaluation"), upstream_result)
+            except Exception as exc:
+                raise ResearchOrchestrationError(
+                    f"accepted upstream node record {upstream_id} failed integrity verification: "
+                    f"{_scrub_text(str(exc), self._secret_values)[:300]}"
+                ) from exc
             evaluation = record.get("evaluation") or {}
-            result = record.get("result") or {}
+            result = upstream_result
             if evaluation.get("accepted") is not True or result.get("status") != "completed":
                 continue
             for artifact in result.get("output_artifacts") or []:
@@ -502,6 +546,33 @@ class ResearchOrchestrator:
                 seen.add(key)
                 artifacts.append(deepcopy(artifact))
         return artifacts
+
+    def _artifact_validation_request(self, node: dict, state: dict) -> dict:
+        return {
+            "schema": "research_node_request.v1",
+            "task_id": state["task_id"],
+            "run_id": state["run_id"],
+            "workflow_id": state["workflow_id"],
+            "node_id": node["node_id"],
+            "typed_inputs": {"payload": {"node": deepcopy(node)}},
+            "write_scope": list(node.get("write_scope") or []),
+        }
+
+    def _validate_record_evaluation(self, raw: Any, result: dict) -> None:
+        if not isinstance(raw, dict):
+            raise ResearchOrchestrationError("node record evaluation must be an object")
+        if _sanitize_payload(deepcopy(raw), secret_values=self._secret_values) != raw:
+            raise ResearchOrchestrationError("node record evaluation contains unsanitized content")
+        if not isinstance(raw.get("accepted"), bool):
+            raise ResearchOrchestrationError("node record evaluation accepted flag must be boolean")
+        if raw.get("status") not in NODE_STATUSES - {"pending", "ready", "running"}:
+            raise ResearchOrchestrationError("node record evaluation status is invalid")
+        if any(not isinstance(raw.get(field), list) for field in ("evidence_refs", "errors", "limitations")):
+            raise ResearchOrchestrationError("node record evaluation lists are malformed")
+        if raw.get("accepted") is True and (
+            raw.get("status") != "completed" or result.get("status") != "completed"
+        ):
+            raise ResearchOrchestrationError("node record acceptance contradicts result status")
 
     def _reachable_dependencies(self, node_id: str, workflow: dict) -> set[str]:
         by_id = {item["node_id"]: item for item in workflow["nodes"]}
@@ -582,13 +653,28 @@ class ResearchOrchestrator:
         if result.get("status") != "completed":
             return
         write_scopes = list(request.get("write_scope") or [])
+        node = request.get("typed_inputs", {}).get("payload", {}).get("node") or {}
+        required_for_completion = bool(node.get("required_for_completion", True))
+        expected_outputs = _dedupe([
+            *[str(item) for item in node.get("expected_output_artifacts") or [] if str(item)],
+            *([str(node.get("gate_deliverable"))] if str(node.get("gate_deliverable") or "") else []),
+        ])
+        artifacts = list(result.get("output_artifacts") or [])
         if not write_scopes:
-            raise ResearchOrchestrationError("completed result has no declared write scope")
+            if artifacts or expected_outputs:
+                raise ResearchOrchestrationError("completed artifacts require a declared write scope")
+            return
+        if required_for_completion and write_scopes and not artifacts:
+            raise ResearchOrchestrationError("completed required node with declared write intent must produce an artifact")
         resolved_scopes = [self._resolve_scoped_path(scope, must_exist=False) for scope in write_scopes]
         for scope in resolved_scopes:
             if not _is_under_or_equal(scope, self.artifact_root):
                 raise ResearchOrchestrationError("declared write scope escapes artifact_root")
-        for artifact in result.get("output_artifacts") or []:
+        evidence_artifact_ids = {
+            str(item.get("artifact_id")) for item in result.get("evidence") or []
+            if isinstance(item, dict) and item.get("artifact_id")
+        }
+        for artifact in artifacts:
             artifact_path = self._resolve_scoped_path(artifact.get("path"), must_exist=True)
             if not artifact_path.is_file():
                 raise ResearchOrchestrationError("completed artifact must be an existing regular file")
@@ -602,12 +688,66 @@ class ResearchOrchestrator:
             actual_hash = _sha256_file(artifact_path)
             if actual_hash.casefold() != declared_hash.casefold():
                 raise ResearchOrchestrationError("completed artifact sha256 does not match file content")
+            artifact_id = str(artifact.get("artifact_id") or "")
+            if artifact_id not in evidence_artifact_ids:
+                raise ResearchOrchestrationError("completed artifact is not linked by accepted evidence artifact_id")
+            if expected_outputs and not any(
+                self._artifact_matches_expected_path(artifact_path, expected) for expected in expected_outputs
+            ):
+                raise ResearchOrchestrationError("completed artifact does not match workflow-declared output deliverable")
+            self._verify_embedded_artifact_identity(artifact_path, artifact, request)
+        for expected in expected_outputs:
+            if not any(
+                self._artifact_matches_expected_path(
+                    self._resolve_scoped_path(artifact.get("path"), must_exist=True),
+                    expected,
+                )
+                for artifact in artifacts
+            ):
+                raise ResearchOrchestrationError("workflow-declared output deliverable was not produced")
+
+    def _artifact_matches_expected_path(self, artifact_path: Path, expected: str) -> bool:
+        expected_path = self._resolve_scoped_path(expected, must_exist=False)
+        return artifact_path == expected_path
+
+    def _verify_embedded_artifact_identity(self, path: Path, artifact: dict, request: dict) -> None:
+        if path.suffix.casefold() != ".json":
+            return
+        try:
+            embedded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ResearchOrchestrationError("declared JSON artifact is not a valid JSON document") from exc
+        if not isinstance(embedded, dict):
+            raise ResearchOrchestrationError("declared JSON artifact must contain an object")
+        identity_fields = {
+            "artifact_id": artifact.get("artifact_id"),
+            "schema": artifact.get("schema"),
+            "task_id": request.get("task_id"),
+            "run_id": request.get("run_id"),
+            "workflow_id": request.get("workflow_id"),
+            "node_id": request.get("node_id"),
+        }
+        present = [field for field in identity_fields if field in embedded]
+        if not present:
+            raise ResearchOrchestrationError("JSON artifact contains no verifiable schema or orchestration identity")
+        for field in present:
+            expected = identity_fields[field]
+            if expected is None or embedded.get(field) != expected:
+                raise ResearchOrchestrationError(f"JSON artifact embedded {field} does not match declared identity")
 
     def _resolve_scoped_path(self, raw: Any, *, must_exist: bool) -> Path:
         if not isinstance(raw, str) or not raw.strip() or "\x00" in raw:
             raise ResearchOrchestrationError("artifact path must be a non-empty safe string")
         text = raw.strip().replace("\\", "/")
-        if PureWindowsPath(text).is_absolute() or PurePosixPath(text).is_absolute():
+        windows_absolute = PureWindowsPath(text).is_absolute()
+        posix_absolute = PurePosixPath(text).is_absolute()
+        if PureWindowsPath(text).drive and not windows_absolute:
+            raise ResearchOrchestrationError("drive-relative artifact paths are not allowed")
+        if os.name == "nt" and posix_absolute and not windows_absolute:
+            raise ResearchOrchestrationError("foreign POSIX absolute artifact path is not valid on Windows")
+        if os.name != "nt" and windows_absolute:
+            raise ResearchOrchestrationError("foreign Windows absolute artifact path is not valid on POSIX")
+        if windows_absolute or posix_absolute:
             candidate = Path(text)
         else:
             candidate = self.artifact_root / text
@@ -658,6 +798,21 @@ class ResearchOrchestrator:
                     str(item.get("evidence_id")) for item in result.get("evidence") or []
                     if isinstance(item, dict) and item.get("evidence_id")
                 ])
+            if accepted:
+                accepted_evidence = set(evidence_refs)
+                for artifact in result.get("output_artifacts") or []:
+                    artifact_id = str(artifact.get("artifact_id") or "")
+                    linked = {
+                        str(item.get("evidence_id"))
+                        for item in result.get("evidence") or []
+                        if isinstance(item, dict)
+                        and item.get("artifact_id") == artifact_id
+                        and item.get("evidence_id")
+                    }
+                    if not linked.intersection(accepted_evidence):
+                        raise ResearchOrchestrationError(
+                            "evaluator accepted result without accepting evidence linked to every artifact"
+                        )
             return {
                 "accepted": accepted,
                 "status": status,
@@ -726,9 +881,22 @@ class ResearchOrchestrator:
         elif all(item["status"] == "completed" for item in required) and all(
             item["status"] in {"completed", "cancelled"} for item in optional
         ):
-            state["final_status"] = "completed"
-            state["current_blockers"] = []
-            state["final_status_evidence_refs"] = self._accepted_evidence_refs(state)
+            try:
+                evidence_refs = self._accepted_evidence_refs(state, workflow)
+            except Exception as exc:
+                state["final_status"] = "blocked"
+                state["final_status_evidence_refs"] = []
+                state["current_blockers"] = [
+                    {
+                        "blocker_id": "accepted_node_record_integrity_failure",
+                        "node_id": "__run__",
+                        "reason": _scrub_text(str(exc), self._secret_values)[:500],
+                    }
+                ]
+            else:
+                state["final_status"] = "completed"
+                state["current_blockers"] = []
+                state["final_status_evidence_refs"] = evidence_refs
         else:
             state["final_status"] = "running" if any(
                 item["status"] in {"running", "completed"} for item in state["node_states"].values()
@@ -736,13 +904,24 @@ class ResearchOrchestrator:
         state["status_updated_at"] = self.clock()
         return state
 
-    def _accepted_evidence_refs(self, state: dict) -> list[str]:
+    def _accepted_evidence_refs(self, state: dict, workflow: dict) -> list[str]:
         refs: list[str] = []
         for node_id in sorted(state["node_states"]):
             item = state["node_states"][node_id]
             if item.get("status") != "completed" or not item.get("result_ref"):
                 continue
-            record = self.state_store.load_node_record(item["result_ref"])
+            record = self.state_store.load_node_record(
+                item["result_ref"],
+                expected_run_id=state["run_id"],
+                expected_node_id=node_id,
+            )
+            node = self._node_by_id(workflow, node_id)
+            validation_request = self._artifact_validation_request(node, state)
+            if self._sanitize_result(deepcopy(record.get("result") or {})) != (record.get("result") or {}):
+                raise ResearchOrchestrationError("accepted node record contains unsanitized content")
+            self._validate_result_boundary(validation_request, record.get("result") or {})
+            self._verify_completed_artifacts(validation_request, record.get("result") or {})
+            self._validate_record_evaluation(record.get("evaluation"), record.get("result") or {})
             if (record.get("evaluation") or {}).get("accepted") is not True:
                 continue
             refs.extend(str(ref) for ref in (record.get("evaluation") or {}).get("evidence_refs") or [] if str(ref))
@@ -780,8 +959,28 @@ class ResearchOrchestrator:
         raise ResearchOrchestrationError(f"unknown workflow node: {node_id}")
 
     def _has_live_provider_approval(self) -> bool:
-        allow = self.authorization.get("allow_live_provider") is True
-        return allow and bool(self._explicit_approval_ref())
+        return (
+            self.authorization.get("allow_live_provider") is True
+            and self.authorization.get("allow_network") is True
+            and bool(self._explicit_approval_ref())
+        )
+
+    def _authorization_gate_reason(self, node: dict) -> str:
+        required = set(node.get("required_capabilities") or [])
+        approved = set(self.authorization.get("approved_capabilities") or [])
+        missing = sorted(required - approved)
+        if missing:
+            return "Authorization envelope does not approve required capabilities: " + ", ".join(missing)
+        if node.get("allow_network") and self.authorization.get("allow_network") is not True:
+            return "Workflow node requires network access but authorization allow_network is false."
+        if node.get("allow_live_provider"):
+            if self.authorization.get("allow_live_provider") is not True:
+                return "Workflow node requires live-provider access but authorization allow_live_provider is false."
+            if self.authorization.get("allow_network") is not True:
+                return "Live-provider access requires authorization allow_network=true."
+            if not self._explicit_approval_ref():
+                return "Live-provider access requires a non-empty explicit approval_ref."
+        return ""
 
     def _explicit_approval_ref(self) -> str:
         value = self.authorization.get("approval_ref")
@@ -792,15 +991,20 @@ class ResearchOrchestrator:
         if not isinstance(value, dict):
             raise ResearchOrchestrationError("authorization must be an object")
         result = {
+            "approved_capabilities": _normalize_capabilities(value.get("approved_capabilities")),
             "allow_live_provider": value.get("allow_live_provider") is True,
             "allow_network": value.get("allow_network") is True,
             "approval_ref": str(value.get("approval_ref") or "").strip(),
             "scope_id": str(value.get("scope_id") or "").strip(),
-            "secret_refs": [str(item) for item in value.get("secret_refs") or [] if str(item).strip()],
+            "secret_refs": _normalize_secret_refs(value.get("secret_refs")),
             "secret_values": _normalize_secret_values(value.get("secret_values")),
         }
         if _contains_secret_material(result["approval_ref"], result["secret_values"]):
             raise ResearchOrchestrationError("approval_ref resembles secret material")
+        if _contains_secret_material(result["scope_id"], result["secret_values"]):
+            raise ResearchOrchestrationError("scope_id must not contain secret material")
+        if any(_contains_secret_material(item, result["secret_values"]) for item in result["approved_capabilities"]):
+            raise ResearchOrchestrationError("approved_capabilities must not contain secret material")
         if any(_contains_secret_material(item, result["secret_values"]) for item in result["secret_refs"]):
             raise ResearchOrchestrationError("secret_refs must contain names, not secret values")
         return result
@@ -883,9 +1087,20 @@ def _path_within_scope(path: str, scope: str) -> bool:
 
 
 def _is_under_or_equal(path: Path, parent: Path) -> bool:
-    path_text = str(path.resolve(strict=False)).replace("\\", "/").casefold().rstrip("/")
-    parent_text = str(parent.resolve(strict=False)).replace("\\", "/").casefold().rstrip("/")
-    return path_text == parent_text or path_text.startswith(parent_text + "/")
+    try:
+        path.resolve(strict=False).relative_to(parent.resolve(strict=False))
+    except ValueError:
+        return False
+    return True
+
+
+def _path_parts_contained(child: str, parent: str, *, case_sensitive: bool) -> bool:
+    child_parts = PurePosixPath(child.replace("\\", "/")).parts
+    parent_parts = PurePosixPath(parent.replace("\\", "/")).parts
+    if not case_sensitive:
+        child_parts = tuple(part.casefold() for part in child_parts)
+        parent_parts = tuple(part.casefold() for part in parent_parts)
+    return len(child_parts) >= len(parent_parts) and child_parts[: len(parent_parts)] == parent_parts
 
 
 def _sha256_file(path: Path) -> str:
@@ -912,6 +1127,34 @@ def _normalize_secret_values(raw: Any) -> list[str]:
         if value not in normalized:
             normalized.append(value)
     return normalized
+
+
+def _normalize_capabilities(raw: Any) -> list[str]:
+    if raw is None:
+        return []
+    if not isinstance(raw, (list, tuple, set)):
+        raise ResearchOrchestrationError("approved_capabilities must be a list")
+    capabilities: list[str] = []
+    for value in raw:
+        if not isinstance(value, str) or not value.strip():
+            raise ResearchOrchestrationError("approved_capabilities must contain non-empty strings")
+        if value not in capabilities:
+            capabilities.append(value)
+    return capabilities
+
+
+def _normalize_secret_refs(raw: Any) -> list[str]:
+    if raw is None:
+        return []
+    if not isinstance(raw, (list, tuple, set)):
+        raise ResearchOrchestrationError("secret_refs must be a list of reference names")
+    references: list[str] = []
+    for value in raw:
+        if not isinstance(value, str) or not value.strip():
+            raise ResearchOrchestrationError("secret_refs must contain non-empty strings")
+        if value not in references:
+            references.append(value)
+    return references
 
 
 def _dedupe(items: list[str]) -> list[str]:

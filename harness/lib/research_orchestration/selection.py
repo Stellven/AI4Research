@@ -177,6 +177,8 @@ def _normalize_node(raw: Any) -> dict[str, Any]:
         "required_capabilities": _string_list(raw.get("required_capabilities", [])),
         "read_scope": _string_list(read_scope),
         "write_scope": _string_list(write_scope),
+        "expected_output_artifacts": _string_list(raw.get("output_artifacts", [])),
+        "gate_deliverable": str(gate_contract.get("deliverable") or ""),
         "gate": str(gate),
         "physical_operator": str(_first(permission.get("approved_operators")) or raw.get("physical_operator") or f"{node_id}_worker"),
         "allow_network": bool((permission.get("network") or {}).get("enabled", False)) if isinstance(permission.get("network"), dict) else False,

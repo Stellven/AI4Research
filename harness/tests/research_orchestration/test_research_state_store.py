@@ -224,3 +224,26 @@ def test_node_records_are_immutable_content_addressed_sidecars(tmp_path: Path) -
     assert Path(first).is_file() and Path(second).is_file()
     assert store.load_node_record(first)["result"]["output_artifacts"][0]["artifact_id"] == "one"
     assert store.load_node_record(second)["result"]["output_artifacts"][0]["artifact_id"] == "two"
+
+
+def test_node_record_digest_and_requested_identity_are_verified(tmp_path: Path) -> None:
+    store = ResearchStateStore(tmp_path)
+    result_ref = store.store_node_record(
+        run_id="run-state",
+        node_id="a",
+        result={"status": "completed", "output_artifacts": []},
+        evaluation={"accepted": True, "evidence_refs": ["ev"]},
+    )
+    assert store.load_node_record(result_ref, expected_run_id="run-state", expected_node_id="a")
+
+    with pytest.raises(ResearchStateStoreError, match="run_id does not match"):
+        store.load_node_record(result_ref, expected_run_id="foreign", expected_node_id="a")
+    with pytest.raises(ResearchStateStoreError, match="node_id does not match"):
+        store.load_node_record(result_ref, expected_run_id="run-state", expected_node_id="foreign")
+
+    path = Path(result_ref)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["evaluation"]["accepted"] = False
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with pytest.raises(ResearchStateStoreError, match="digest"):
+        store.load_node_record(result_ref)

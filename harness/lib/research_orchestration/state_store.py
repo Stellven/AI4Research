@@ -7,6 +7,7 @@ import json
 import os
 import re
 import threading
+import time
 from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
@@ -112,8 +113,8 @@ class ResearchStateStore:
         # Immutable, content-addressed records ensure a stale writer can leave
         # only an unreferenced sidecar; it cannot replace evidence referenced
         # by a state commit that won the optimistic revision race.
-        record_digest = _sha256(encoded)[:20]
-        path = (self._records_root / f"{run_id}.{node_id}.{record_digest}.json").resolve()
+        record_digest = _sha256(encoded)
+        path = (self._records_root / f"{record_digest}.json").resolve()
         self._assert_below(path, self._records_root, "node record path escapes record root")
         with self._run_lock(run_id):
             self._atomic_write(path, encoded)
@@ -121,19 +122,38 @@ class ResearchStateStore:
             raise ResearchStateStoreError(f"node record was not persisted: {path}")
         return str(path)
 
-    def load_node_record(self, result_ref: str) -> dict:
+    def load_node_record(
+        self,
+        result_ref: str,
+        *,
+        expected_run_id: str | None = None,
+        expected_node_id: str | None = None,
+    ) -> dict:
         if not isinstance(result_ref, str) or not result_ref.strip():
             raise ResearchStateStoreError("result_ref must be a non-empty string")
         path = Path(result_ref).expanduser().resolve()
         self._assert_below(path, self._records_root, "result_ref escapes record root")
         if not path.is_file():
             raise ResearchStateStoreError(f"node record does not exist: {path}")
+        encoded = path.read_bytes()
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
+            payload = json.loads(encoded.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ResearchStateStoreError(f"node record JSON is corrupted: {path}") from exc
         if not isinstance(payload, dict) or payload.get("schema") != "research_orchestration_node_record.v1":
             raise ResearchStateStoreError(f"invalid node record: {path}")
+        run_id = payload.get("run_id")
+        node_id = payload.get("node_id")
+        self._validate_id(run_id, "record.run_id")
+        self._validate_id(node_id, "record.node_id")
+        digest = _sha256(encoded)
+        expected_name = f"{digest}.json"
+        if path.name != expected_name:
+            raise ResearchStateStoreError("node record content digest does not match content-addressed filename")
+        if expected_run_id is not None and run_id != expected_run_id:
+            raise ResearchStateStoreError("node record run_id does not match requested identity")
+        if expected_node_id is not None and node_id != expected_node_id:
+            raise ResearchStateStoreError("node record node_id does not match requested identity")
         return payload
 
     def _encode_state(self, state: dict) -> tuple[str, bytes]:
@@ -159,7 +179,14 @@ class ResearchStateStore:
         temp_path = self._temp_path(path)
         try:
             temp_path.write_bytes(encoded)
-            os.replace(temp_path, path)
+            for attempt in range(8):
+                try:
+                    os.replace(temp_path, path)
+                    break
+                except PermissionError:
+                    if os.name != "nt" or attempt == 7:
+                        raise
+                    time.sleep(0.01 * (attempt + 1))
         finally:
             if temp_path.exists():
                 temp_path.unlink()

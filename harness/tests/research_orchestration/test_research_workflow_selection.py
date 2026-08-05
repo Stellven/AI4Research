@@ -34,6 +34,10 @@ def test_url_synthesis_selection_loads_real_skeleton() -> None:
     assert workflow["start_node"] == "seed_fetch"
     assert workflow["nodes"][0]["node_id"] == "seed_fetch"
     assert all(REQUIRED_NORMALIZED_FIELDS <= set(node) for node in workflow["nodes"])
+    assert workflow["nodes"][0]["expected_output_artifacts"] == [
+        "artifacts/research_synthesis_v1/seed/seed_snapshot.json"
+    ]
+    assert workflow["nodes"][0]["gate_deliverable"] == "artifacts/research_synthesis_v1/seed/seed_snapshot.json"
 
 
 def test_topic_synthesis_uses_literature_route() -> None:

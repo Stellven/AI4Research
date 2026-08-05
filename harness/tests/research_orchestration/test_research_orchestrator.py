@@ -21,6 +21,7 @@ if str(LIB) not in sys.path:
 from research_orchestration.orchestrator import (  # noqa: E402
     ResearchOrchestrationError,
     ResearchOrchestrator,
+    _path_parts_contained,
 )
 from research_orchestration.selection import (  # noqa: E402
     load_and_normalize_workflow,
@@ -103,7 +104,14 @@ def result_for(request: dict, status: str = "completed", artifact_root: Path | N
     errors = []
     evidence = []
     if status == "completed":
-        evidence = [{"evidence_id": f"ev-{request['node_id']}", "kind": "fake", "summary": "accepted"}]
+        evidence = [
+            {
+                "evidence_id": f"ev-{request['node_id']}",
+                "kind": "fake",
+                "summary": "accepted",
+                "artifact_id": f"artifact-{request['node_id']}",
+            }
+        ]
     if status == "failed":
         errors = [{"error_id": "err", "error_type": "FakeFailure", "message": "failed"}]
     output_artifacts = []
@@ -111,7 +119,11 @@ def result_for(request: dict, status: str = "completed", artifact_root: Path | N
         if artifact_root is None:
             raise AssertionError("completed fake result requires artifact_root")
         root = Path(artifact_root).resolve()
-        raw_scope = str(request["write_scope"][0]).replace("\\", "/")
+        node_payload = request.get("typed_inputs", {}).get("payload", {}).get("node") or {}
+        declared_outputs = list(node_payload.get("expected_output_artifacts") or [])
+        if node_payload.get("gate_deliverable"):
+            declared_outputs.append(node_payload["gate_deliverable"])
+        raw_scope = str(declared_outputs[0] if declared_outputs else request["write_scope"][0]).replace("\\", "/")
         scoped = Path(raw_scope)
         scope_path = scoped if scoped.is_absolute() else root / scoped
         artifact_path = scope_path if scope_path.suffix else scope_path / f"{request['node_id']}.json"
@@ -186,17 +198,30 @@ class FakeEvaluator:
 
 
 def orchestrator(tmp_path: Path, wf: dict | None = None, **kwargs) -> tuple[ResearchOrchestrator, FakeDispatch, FakeEvaluator]:
+    selected_workflow = wf or workflow()
     dispatch = kwargs.pop("dispatch", None) or FakeDispatch(artifact_root=tmp_path)
     if isinstance(dispatch, FakeDispatch) and dispatch.artifact_root is None:
         dispatch.artifact_root = tmp_path
     evaluator = kwargs.pop("evaluator", FakeEvaluator())
+    if "authorization" in kwargs:
+        authorization = kwargs.pop("authorization")
+    else:
+        authorization = {
+            "approved_capabilities": sorted({
+                capability
+                for item in selected_workflow.get("nodes") or []
+                for capability in item.get("required_capabilities") or []
+            }),
+            "allow_network": any(item.get("allow_network") for item in selected_workflow.get("nodes") or []),
+            "allow_live_provider": False,
+        }
     orch = ResearchOrchestrator(
         task_contract=kwargs.pop("task_contract", task()),
-        workflow_selector=wf or workflow(),
+        workflow_selector=selected_workflow,
         state_store=ResearchStateStore(tmp_path / "states"),
         dispatch_callable=dispatch,
         evaluator_callable=evaluator,
-        authorization=kwargs.pop("authorization", None),
+        authorization=authorization,
         artifact_root=kwargs.pop("artifact_root", tmp_path),
         clock=lambda: "2030-01-01T00:00:00Z",
     )
@@ -211,7 +236,12 @@ def test_url_synthesis_full_offline_fake_dispatch_flow(tmp_path: Path) -> None:
         tmp_path,
         wf,
         task_contract=task(seed_kind="url"),
-        authorization={"allow_live_provider": True, "approval_ref": "approval-test-001"},
+        authorization={
+            "approved_capabilities": sorted({cap for item in wf["nodes"] for cap in item["required_capabilities"]}),
+            "allow_network": True,
+            "allow_live_provider": True,
+            "approval_ref": "approval-test-001",
+        },
     )
 
     state = orch.run_until_blocked(max_steps=20)
@@ -219,6 +249,11 @@ def test_url_synthesis_full_offline_fake_dispatch_flow(tmp_path: Path) -> None:
     assert state["final_status"] == "completed"
     assert len(dispatch.requests) == len(wf["nodes"])
     assert len(evaluator.calls) == len(wf["nodes"])
+    assert all(
+        request["authorization"]["allow_network"] is True
+        for request in dispatch.requests
+        if request["authorization"]["allow_live_provider"]
+    )
 
 
 def test_topic_synthesis_flow(tmp_path: Path) -> None:
@@ -541,7 +576,7 @@ def test_live_provider_never_fabricates_approval_and_stops_before_dispatch(tmp_p
     assert dispatch.requests == []
     persisted = json.dumps(state)
     assert "approved-by-task-contract" not in persisted
-    assert state["current_blockers"][0]["blocker_id"] == "provider_node_provider_approval_required"
+    assert state["current_blockers"][0]["blocker_id"] == "provider_node_authorization_required"
     run_schema = json.loads((ROOT / "schemas/evidence/research_run_state.v1.schema.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(run_schema).validate(state)
 
@@ -576,7 +611,12 @@ def test_explicit_authorization_resumes_provider_node_after_restart(tmp_path: Pa
         tmp_path,
         wf,
         dispatch=second_dispatch,
-        authorization={"allow_live_provider": True, "approval_ref": "approval-user-042"},
+        authorization={
+            "approved_capabilities": ["cap.provider_node"],
+            "allow_network": True,
+            "allow_live_provider": True,
+            "approval_ref": "approval-user-042",
+        },
     )
     state = second.resume(redispatch_node_id="provider_node")
 
@@ -769,8 +809,9 @@ def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(t
                 assert artifact["artifact_id"].startswith("real-")
                 assert ":input:" not in artifact["artifact_id"]
             Path(paths[node_id]).parent.mkdir(parents=True, exist_ok=True)
-            Path(paths[node_id]).write_text(json.dumps({"node": node_id}), encoding="utf-8")
+            Path(paths[node_id]).write_text(json.dumps({"node_id": node_id}), encoding="utf-8")
             result = result_for(request, artifact_root=tmp_path)
+            result["evidence"][0]["artifact_id"] = f"real-{node_id}"
             result["output_artifacts"] = [
                 {
                     "artifact_id": f"real-{node_id}",
@@ -977,7 +1018,11 @@ def test_opaque_authorized_secret_is_never_persisted_or_sent_to_worker(tmp_path:
         tmp_path,
         dispatch=dispatch,
         evaluator=OpaqueEvaluator(),
-        authorization={"secret_refs": ["OPAQUE_TEST_SECRET"], "secret_values": [opaque]},
+        authorization={
+            "approved_capabilities": ["cap.seed_fetch"],
+            "secret_refs": ["OPAQUE_TEST_SECRET"],
+            "secret_values": [opaque],
+        },
     )
     state = orch.step()
     record_path = Path(state["node_states"]["seed_fetch"]["result_ref"])
@@ -992,3 +1037,258 @@ def test_opaque_authorized_secret_is_never_persisted_or_sent_to_worker(tmp_path:
         "redaction_review": "passed",
     }
     assert "[REDACTED]" in json.dumps(record)
+
+
+@pytest.mark.parametrize(
+    ("authorization", "expected_reason"),
+    [
+        ({"approved_capabilities": [], "allow_network": False}, "required capabilities"),
+        ({"approved_capabilities": ["cap.network_node"], "allow_network": False}, "requires network"),
+        (
+            {
+                "approved_capabilities": ["cap.network_node"],
+                "allow_network": False,
+                "allow_live_provider": True,
+                "approval_ref": "approval-without-network",
+            },
+            "requires network",
+        ),
+    ],
+)
+def test_authorization_envelope_is_upper_bound_and_denial_never_dispatches(
+    tmp_path: Path,
+    authorization: dict,
+    expected_reason: str,
+) -> None:
+    restricted = node("network_node", [])
+    restricted["allow_network"] = True
+    restricted["allow_live_provider"] = True
+    wf = {"workflow_id": "wf", "workflow_kind": "research_synthesis", "nodes": [restricted]}
+    orch, dispatch, _evaluator = orchestrator(tmp_path, wf, authorization=authorization)
+
+    state = orch.run_until_blocked()
+
+    assert state["final_status"] == "awaiting_external"
+    assert dispatch.requests == []
+    assert expected_reason in state["current_blockers"][0]["reason"]
+
+
+def test_node_request_permissions_are_intersection_not_union(tmp_path: Path) -> None:
+    offline = node("offline_node", [])
+    wf = {"workflow_id": "wf", "workflow_kind": "research_synthesis", "nodes": [offline]}
+    orch, dispatch, _evaluator = orchestrator(
+        tmp_path,
+        wf,
+        authorization={
+            "approved_capabilities": ["cap.offline_node", "cap.unrelated"],
+            "allow_network": True,
+            "allow_live_provider": True,
+            "approval_ref": "approval-extra-permissions",
+        },
+    )
+
+    assert orch.step()["final_status"] == "completed"
+    request = dispatch.requests[0]
+    assert request["authorization"]["approved_capabilities"] == ["cap.offline_node"]
+    assert request["authorization"]["allow_network"] is False
+    assert request["authorization"]["allow_live_provider"] is False
+    assert "approval_ref" not in request["authorization"]
+
+
+def test_normal_dispatch_completed_empty_outputs_fails_closed(tmp_path: Path) -> None:
+    class EmptyOutputDispatch:
+        def __call__(self, request: dict) -> dict:
+            result = result_for(request, artifact_root=tmp_path)
+            result["output_artifacts"] = []
+            return result
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, dispatch=EmptyOutputDispatch())
+    state = orch.step()
+
+    assert state["final_status"] == "failed"
+    record = orch.state_store.load_node_record(state["node_states"]["seed_fetch"]["result_ref"])
+    assert record["result"]["status"] == "failed"
+    assert "must produce an artifact" in record["result"]["errors"][0]["message"]
+
+
+def test_resume_completed_empty_outputs_fails_closed_and_preserves_waiting_state(tmp_path: Path) -> None:
+    first, waiting, completed = _awaiting_run_and_completed_result(tmp_path)
+    completed["output_artifacts"] = []
+    second, _dispatch, _evaluator = orchestrator(tmp_path)
+
+    with pytest.raises(ResearchOrchestrationError, match="must produce an artifact"):
+        second.resume(node_result=completed)
+
+    assert first.state_store.load("run-orch") == waiting
+
+
+def test_evaluator_must_accept_artifact_linked_evidence(tmp_path: Path) -> None:
+    class UnlinkedEvaluator:
+        def __call__(self, request: dict, result: dict, state: dict) -> dict:
+            return {
+                "accepted": True,
+                "status": "completed",
+                "evidence_refs": ["unrelated-evidence"],
+                "errors": [],
+                "limitations": [],
+            }
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, evaluator=UnlinkedEvaluator())
+    state = orch.step()
+
+    assert state["final_status"] == "failed"
+    assert "linked to every artifact" in state["current_blockers"][0]["reason"]
+
+
+def test_every_workflow_declared_output_must_be_produced(tmp_path: Path) -> None:
+    multi = node("multi_output", [])
+    multi["write_scope"] = ["artifacts/multi/"]
+    multi["expected_output_artifacts"] = [
+        "artifacts/multi/first.json",
+        "artifacts/multi/second.json",
+    ]
+    wf = {"workflow_id": "multi-wf", "workflow_kind": "research_synthesis", "nodes": [multi]}
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, wf)
+    state = orch.step()
+
+    assert state["final_status"] == "failed"
+    assert "was not produced" in state["current_blockers"][0]["reason"]
+
+
+def test_tampered_node_record_blocks_downstream_with_diagnostic(tmp_path: Path) -> None:
+    first, _dispatch, _evaluator = orchestrator(tmp_path)
+    state = first.step()
+    record_path = Path(state["node_states"]["seed_fetch"]["result_ref"])
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["evaluation"]["limitations"] = ["tampered"]
+    record_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    second, second_dispatch, _evaluator2 = orchestrator(tmp_path)
+    blocked = second.step()
+
+    assert blocked["final_status"] == "blocked"
+    assert second_dispatch.requests == []
+    assert "digest" in blocked["current_blockers"][0]["reason"]
+
+
+def test_foreign_identity_node_record_blocks_downstream(tmp_path: Path) -> None:
+    first, _dispatch, _evaluator = orchestrator(tmp_path)
+    state = first.step()
+    original = first.state_store.load_node_record(state["node_states"]["seed_fetch"]["result_ref"])
+    foreign_ref = first.state_store.store_node_record(
+        run_id="foreign-run",
+        node_id="seed_fetch",
+        result=original["result"],
+        evaluation=original["evaluation"],
+    )
+    state["node_states"]["seed_fetch"]["result_ref"] = foreign_ref
+    first.state_store.save(state)
+
+    second, second_dispatch, _evaluator2 = orchestrator(tmp_path)
+    blocked = second.step()
+
+    assert blocked["final_status"] == "blocked"
+    assert second_dispatch.requests == []
+    assert "run_id does not match" in blocked["current_blockers"][0]["reason"]
+
+
+def test_mutated_accepted_artifact_blocks_before_upstream_propagation(tmp_path: Path) -> None:
+    first, _dispatch, _evaluator = orchestrator(tmp_path)
+    state = first.step()
+    record = first.state_store.load_node_record(state["node_states"]["seed_fetch"]["result_ref"])
+    artifact = record["result"]["output_artifacts"][0]
+    artifact_path = tmp_path / artifact["path"]
+    artifact_path.write_text("mutated after acceptance", encoding="utf-8")
+
+    second, second_dispatch, _evaluator2 = orchestrator(tmp_path)
+    blocked = second.step()
+
+    assert blocked["final_status"] == "blocked"
+    assert second_dispatch.requests == []
+    assert "sha256" in blocked["current_blockers"][0]["reason"]
+
+
+def test_artifact_root_has_no_cwd_fallback(tmp_path: Path) -> None:
+    class UnrootedStateStore:
+        pass
+
+    with pytest.raises(ResearchOrchestrationError, match="artifact_root must be explicit"):
+        ResearchOrchestrator(
+            task_contract=task(),
+            workflow_selector=workflow(),
+            state_store=UnrootedStateStore(),
+            dispatch_callable=FakeDispatch(artifact_root=tmp_path),
+            evaluator_callable=FakeEvaluator(),
+        )
+    with pytest.raises(ResearchOrchestrationError, match="non-empty stable path"):
+        ResearchOrchestrator(
+            task_contract=task(),
+            workflow_selector=workflow(),
+            state_store=ResearchStateStore(tmp_path / "states"),
+            dispatch_callable=FakeDispatch(artifact_root=tmp_path),
+            evaluator_callable=FakeEvaluator(),
+            artifact_root="",
+        )
+
+
+def test_pure_containment_proof_respects_case_sensitivity() -> None:
+    assert _path_parts_contained("/workspace/report.json", "/workspace", case_sensitive=True)
+    assert not _path_parts_contained("/Workspace/report.json", "/workspace", case_sensitive=True)
+    assert _path_parts_contained("C:/Workspace/report.json", "c:/workspace", case_sensitive=False)
+
+
+def test_foreign_flavor_absolute_path_is_rejected(tmp_path: Path) -> None:
+    orch, _dispatch, _evaluator = orchestrator(tmp_path)
+    foreign = "/etc/passwd" if os.name == "nt" else "C:/Windows/System32/config/SAM"
+
+    with pytest.raises(ResearchOrchestrationError, match="foreign"):
+        orch._resolve_scoped_path(foreign, must_exist=False)
+    with pytest.raises(ResearchOrchestrationError, match="drive-relative"):
+        orch._resolve_scoped_path("C:relative-artifact.json", must_exist=False)
+
+
+@pytest.mark.parametrize(
+    "semantic_defect",
+    ["wrong_expected_path", "missing_evidence_link", "wrong_embedded_node", "wrong_embedded_schema", "arbitrary_json"],
+)
+def test_hash_consistent_but_semantically_wrong_artifact_fails_closed(
+    tmp_path: Path,
+    semantic_defect: str,
+) -> None:
+    semantic_node = node("semantic_node", [])
+    semantic_node["write_scope"] = ["artifacts/semantic/"]
+    semantic_node["expected_output_artifacts"] = ["artifacts/semantic/expected.json"]
+    wf = {"workflow_id": "semantic-wf", "workflow_kind": "research_synthesis", "nodes": [semantic_node]}
+
+    class SemanticDefectDispatch:
+        def __call__(self, request: dict) -> dict:
+            result = result_for(request, artifact_root=tmp_path)
+            artifact = result["output_artifacts"][0]
+            if semantic_defect == "wrong_expected_path":
+                path = tmp_path / "artifacts" / "semantic" / "other.json"
+                embedded = {"node_id": "semantic_node"}
+            else:
+                path = tmp_path / artifact["path"]
+                embedded = {"node_id": "semantic_node"}
+            if semantic_defect == "missing_evidence_link":
+                result["evidence"][0].pop("artifact_id")
+            elif semantic_defect == "wrong_embedded_node":
+                embedded["node_id"] = "foreign-node"
+            elif semantic_defect == "wrong_embedded_schema":
+                artifact["schema"] = "expected.v1"
+                embedded["schema"] = "malicious.v1"
+            elif semantic_defect == "arbitrary_json":
+                embedded = {"message": "hash-consistent arbitrary payload"}
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(embedded), encoding="utf-8")
+            artifact["path"] = path.relative_to(tmp_path).as_posix()
+            artifact["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+            return result
+
+    orch, _dispatch, _evaluator = orchestrator(tmp_path, wf, dispatch=SemanticDefectDispatch())
+    state = orch.step()
+
+    assert state["final_status"] == "failed"
+    record = orch.state_store.load_node_record(state["node_states"]["semantic_node"]["result_ref"])
+    assert record["result"]["status"] == "failed"
