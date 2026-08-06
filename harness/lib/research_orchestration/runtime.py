@@ -417,7 +417,7 @@ def artifact_reference(path: Path, *, artifact_root: Path, artifact_id: str | No
 
 
 def default_synthesis_resolver(*, services: dict | None = None) -> PhysicalOperatorResolver:
-    """Expose the seven Phase 2 operators through explicit production bindings."""
+    """Expose the Phase 2 research synthesis operators through explicit production bindings."""
 
     try:
         from harness.plugins.autosci.operators.research_synthesis.registry import execute_operator
@@ -436,10 +436,11 @@ def default_synthesis_resolver(*, services: dict | None = None) -> PhysicalOpera
         "evidence_synthesis_operator",
         "report_draft_operator",
         "independent_review_operator",
+        "report_revision_operator",
         "final_acceptance_operator",
     )
     return PhysicalOperatorResolver(
-        [PhysicalOperatorBinding(operator_id=operator_id, runner=run, version="research_synthesis.v1.6") for operator_id in operator_ids]
+        [PhysicalOperatorBinding(operator_id=operator_id, runner=run, version="research_synthesis.v1.7") for operator_id in operator_ids]
     )
 
 

@@ -13,6 +13,7 @@ from .base import (
     load_artifact,
     output_path,
     require_node,
+    stable_json_sha256,
     utc_now,
     write_artifact,
 )
@@ -36,6 +37,10 @@ ARTIFACT_ALIASES = {
     "source_validation": {
         "source_validation", "validated_sources", "source_list",
         "validated_source_list", "source_index", "validated_source_index",
+    },
+    "report_revision": {
+        "report_revision", "revised_report", "report_repair",
+        "revision_report", "bounded_report_revision",
     },
 }
 
@@ -91,15 +96,16 @@ def _load_chain_artifacts(
     context: OperatorContext,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]], list[str]]:
     specs = {
-        "independent_review": "research_synthesis.independent_review.v1",
-        "report_draft": "research_synthesis.report_draft.v1",
-        "evidence_synthesis": "research_synthesis.evidence_synthesis.v1",
-        "source_validation": "research_synthesis.source_validation.v1",
+        "independent_review": ("research_synthesis.independent_review.v1", True),
+        "report_draft": ("research_synthesis.report_draft.v1", True),
+        "evidence_synthesis": ("research_synthesis.evidence_synthesis.v1", True),
+        "source_validation": ("research_synthesis.source_validation.v1", True),
+        "report_revision": ("research_synthesis.report_revision.v1", False),
     }
     artifacts: dict[str, dict[str, Any]] = {}
     refs: dict[str, dict[str, Any]] = {}
     issues: list[str] = []
-    for node_id, schema in specs.items():
+    for node_id, (schema, required) in specs.items():
         try:
             payload, ref = load_artifact(
                 context,
@@ -111,10 +117,12 @@ def _load_chain_artifacts(
                 require_hash=True,
             )
         except ResearchOperatorError as exc:
-            issues.append(f"{node_id}: {exc}")
+            if required:
+                issues.append(f"{node_id}: {exc}")
             continue
         if not payload or ref is None:
-            issues.append(f"{node_id}: actual scoped artifact reference is missing")
+            if required:
+                issues.append(f"{node_id}: actual scoped artifact reference is missing")
             continue
         artifacts[node_id] = payload
         refs[node_id] = ref
@@ -126,11 +134,49 @@ def _recompute_chain(
     refs: dict[str, dict[str, Any]],
 ) -> tuple[dict[str, Any], list[str]]:
     issues: list[str] = []
-    review = artifacts.get("independent_review", {})
+    base_review = artifacts.get("independent_review", {})
     report_draft = artifacts.get("report_draft", {})
+    report_revision = artifacts.get("report_revision", {})
     synthesis = artifacts.get("evidence_synthesis", {})
     validation = artifacts.get("source_validation", {})
-    report = report_draft.get("report") if isinstance(report_draft.get("report"), dict) else {}
+    review = base_review
+    active_report_payload = report_draft
+    active_report_artifact = "report_draft"
+    revision_applied = False
+    if report_revision:
+        base_hashes = report_revision.get("base_artifact_hashes") if isinstance(report_revision.get("base_artifact_hashes"), dict) else {}
+        for base_kind in BASELINE_ARTIFACTS:
+            if base_kind in refs and str(base_hashes.get(base_kind) or "") != str(refs[base_kind].get("sha256") or ""):
+                issues.append(f"report_revision base {base_kind} hash does not match the actual artifact")
+        first_verdict = str(base_review.get("verdict_suggestion") or "").strip().lower()
+        first_findings = [item for item in base_review.get("findings", []) if isinstance(item, dict)] if isinstance(base_review.get("findings"), list) else []
+        first_blocking = [
+            item for item in first_findings
+            if str(item.get("severity") or "").lower() in {"medium", "high", "critical"}
+        ]
+        revision_applied = bool(report_revision.get("revision_applied"))
+        if (first_verdict in {"revise", "revise_required", "reject"} or first_blocking) and not revision_applied:
+            issues.append("independent_review requested repair but report_revision did not apply a revision")
+        if revision_applied:
+            revised_report = report_revision.get("revised_report") if isinstance(report_revision.get("revised_report"), dict) else {}
+            revision_review = report_revision.get("revision_review") if isinstance(report_revision.get("revision_review"), dict) else {}
+            if not revised_report:
+                issues.append("report_revision marked revision_applied but contains no revised_report")
+            if not revision_review:
+                issues.append("report_revision marked revision_applied but contains no revision_review")
+            active_report_payload = {
+                **report_draft,
+                "report": revised_report,
+                "claim_source_lineage": report_revision.get("claim_source_lineage", report_draft.get("claim_source_lineage")),
+                "evidence_lineage": report_revision.get("evidence_lineage", report_draft.get("evidence_lineage")),
+                "input_artifact_hashes": report_revision.get("input_artifact_hashes", report_draft.get("input_artifact_hashes")),
+                "limitations": report_revision.get("limitations", report_draft.get("limitations")),
+            }
+            review = revision_review
+            active_report_artifact = "report_revision"
+            if str(report_revision.get("revised_report_sha256") or "") != stable_json_sha256(revised_report):
+                issues.append("report_revision revised_report hash does not match the embedded revised report")
+    report = active_report_payload.get("report") if isinstance(active_report_payload.get("report"), dict) else {}
     report_body = str(report.get("body") or "").strip()
     normalized_report_body = " ".join(report_body.split()).casefold()
     conclusions = [item for item in report.get("conclusions", []) if isinstance(item, dict)]
@@ -139,15 +185,15 @@ def _recompute_chain(
     accepted_source_ids = {str(item.get("source_id")) for item in accepted if item.get("source_id")}
     synthesis_lineage = synthesis.get("input_lineage") if isinstance(synthesis.get("input_lineage"), dict) else {}
     synthesis_hashes = synthesis.get("input_artifact_hashes") if isinstance(synthesis.get("input_artifact_hashes"), dict) else {}
-    report_hashes = report_draft.get("input_artifact_hashes") if isinstance(report_draft.get("input_artifact_hashes"), dict) else {}
+    report_hashes = active_report_payload.get("input_artifact_hashes") if isinstance(active_report_payload.get("input_artifact_hashes"), dict) else {}
     reviewed_hashes = review.get("reviewed_artifact_hashes") if isinstance(review.get("reviewed_artifact_hashes"), dict) else {}
-    report_lineage = {_artifact_kind(str(item)) for item in report_draft.get("evidence_lineage", []) if str(item).strip()}
+    report_lineage = {_artifact_kind(str(item)) for item in active_report_payload.get("evidence_lineage", []) if str(item).strip()}
     review_lineage = {_artifact_kind(str(item)) for item in review.get("evidence_lineage", []) if str(item).strip()}
     claim_sources = {
         str(item.get("claim_id")): {str(source_id) for source_id in item.get("evidence_ids", []) if str(source_id).strip()}
         for item in claims if item.get("claim_id")
     }
-    report_claim_sources = report_draft.get("claim_source_lineage") if isinstance(report_draft.get("claim_source_lineage"), dict) else {}
+    report_claim_sources = active_report_payload.get("claim_source_lineage") if isinstance(active_report_payload.get("claim_source_lineage"), dict) else {}
     cited_claim_ids: set[str] = set()
     cited_source_ids: set[str] = set()
 
@@ -160,11 +206,11 @@ def _recompute_chain(
     if str(synthesis_hashes.get("source_validation") or "") != str(refs.get("source_validation", {}).get("sha256") or ""):
         issues.append("evidence_synthesis source_validation hash lineage does not match the actual artifact")
     if "evidence_synthesis" not in report_lineage or "source_validation" not in report_lineage:
-        issues.append("report_draft does not preserve synthesis and validation lineage")
+        issues.append(f"{active_report_artifact} does not preserve synthesis and validation lineage")
     if str(report_hashes.get("evidence_synthesis") or "") != str(refs.get("evidence_synthesis", {}).get("sha256") or ""):
-        issues.append("report_draft synthesis hash lineage does not match the actual artifact")
+        issues.append(f"{active_report_artifact} synthesis hash lineage does not match the actual artifact")
     if not conclusions:
-        issues.append("report_draft contains no conclusions")
+        issues.append(f"{active_report_artifact} contains no conclusions")
     for claim_id, source_ids in claim_sources.items():
         if not source_ids:
             issues.append(f"synthesis claim `{claim_id}` has no source ids")
@@ -188,21 +234,29 @@ def _recompute_chain(
         conclusion_text = " ".join(str(conclusion.get("text") or "").split()).casefold()
         if not conclusion_text or conclusion_text not in normalized_report_body:
             issues.append(f"report conclusion {index} is not rendered in the report body")
-    expected_review_lineage = set(BASELINE_ARTIFACTS) - {"independent_review"}
+    expected_review_lineage = {"report_draft", "evidence_synthesis", "source_validation"}
+    if revision_applied:
+        expected_review_lineage.add("report_revision")
     if not expected_review_lineage.issubset(review_lineage):
-        issues.append("independent_review lineage omits an actual upstream artifact")
-    for reviewed_kind in ("report_draft", "source_validation"):
-        if str(reviewed_hashes.get(reviewed_kind) or "") != str(refs.get(reviewed_kind, {}).get("sha256") or ""):
-            issues.append(f"independent_review {reviewed_kind} hash does not match the actual artifact")
+        issues.append("active independent review lineage omits an actual upstream artifact")
+    if revision_applied:
+        if str(reviewed_hashes.get("revised_report") or "") != stable_json_sha256(report):
+            issues.append("revision_review revised_report hash does not match the active revised report")
+        if str(reviewed_hashes.get("source_validation") or "") != str(refs.get("source_validation", {}).get("sha256") or ""):
+            issues.append("revision_review source_validation hash does not match the actual artifact")
+    else:
+        for reviewed_kind in ("report_draft", "source_validation"):
+            if str(reviewed_hashes.get(reviewed_kind) or "") != str(refs.get(reviewed_kind, {}).get("sha256") or ""):
+                issues.append(f"independent_review {reviewed_kind} hash does not match the actual artifact")
 
     findings = [item for item in review.get("findings", []) if isinstance(item, dict)] if isinstance(review.get("findings"), list) else []
     high_risk = [item for item in findings if str(item.get("severity") or "").lower() in REJECTING_SEVERITIES]
     verdict = str(review.get("verdict_suggestion") or "").strip().lower()
     provider_limitations = [
         " ".join(str(item).split()).casefold()
-        for item in report_draft.get("limitations", [])
+        for item in active_report_payload.get("limitations", [])
         if str(item).strip()
-    ] if isinstance(report_draft.get("limitations"), list) else []
+    ] if isinstance(active_report_payload.get("limitations"), list) else []
     limitations_section_present = _has_substantive_report_section(
         report_body,
         r"limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3",
@@ -235,6 +289,8 @@ def _recompute_chain(
         "review_verdict": verdict,
         "high_risk_finding_count": len(high_risk),
         "review_finding_count": len(findings),
+        "revision_applied": revision_applied,
+        "active_report_artifact": active_report_artifact,
     }
     claimed_chain = review.get("chain_validation") if isinstance(review.get("chain_validation"), dict) else {}
     if claimed_chain and bool(claimed_chain.get("complete")) != bool(facts["chain_complete"]):
@@ -338,10 +394,9 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     artifacts, artifact_refs, chain_issues = _load_chain_artifacts(context)
     facts, cross_check_issues = _recompute_chain(artifacts, artifact_refs)
     chain_issues.extend(cross_check_issues)
-    review = artifacts.get("independent_review", {})
-    findings = [item for item in review.get("findings", []) if isinstance(item, dict)] if isinstance(review.get("findings"), list) else []
-    high_risk_findings = [item for item in findings if str(item.get("severity") or "").lower() in REJECTING_SEVERITIES]
-    verdict = str(review.get("verdict_suggestion") or "").strip().lower()
+    findings = []
+    high_risk_findings = [{}] * int(facts.get("high_risk_finding_count") or 0)
+    verdict = str(facts.get("review_verdict") or "").strip().lower()
     required_artifacts, unsupported_expectations = _required_artifacts(context)
     missing_artifacts = [kind for kind in required_artifacts if kind not in artifacts]
     task_contract = context.payload.get("task_contract") if isinstance(context.payload.get("task_contract"), dict) else {}
@@ -350,7 +405,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     required_content_evaluation = _evaluate_required_content(task_contract, facts)
     required_content_passed = all(item["status"] == "passed" for item in required_content_evaluation)
     accepted = (
-        len(artifacts) == len(BASELINE_ARTIFACTS)
+        all(kind in artifacts for kind in BASELINE_ARTIFACTS)
         and not chain_issues
         and not high_risk_findings
         and not missing_artifacts
@@ -390,12 +445,14 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "gate_outcome": "pass" if accepted else "fail",
         "reasons": reasons,
         "review_verdict_suggestion": verdict,
-        "review_finding_count": len(findings),
+        "review_finding_count": int(facts.get("review_finding_count") or 0),
         "missing_required_artifacts": missing_artifacts,
         "unsupported_artifact_expectations": unsupported_expectations,
         "recomputed_chain_facts": facts,
         "success_criteria_evaluation": criteria_evaluation,
         "required_content_evaluation": required_content_evaluation,
+        "revision_applied": bool(facts.get("revision_applied")),
+        "active_report_artifact": str(facts.get("active_report_artifact") or "report_draft"),
         "does_not_modify_graph_or_run_state": True,
     }
     artifact, hash_record = write_artifact(

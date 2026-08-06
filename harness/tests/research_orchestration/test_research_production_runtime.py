@@ -368,3 +368,217 @@ def test_git_provenance_fails_closed_when_checkout_identity_is_unavailable(tmp_p
     assert provenance["repo_head"] == "unavailable"
     assert provenance["worktree_status"] == "unavailable"
     assert set(provenance) == {"repo_head", "worktree_status", "captured_at"}
+
+
+def _revision_discovery(*, seed_snapshot: dict, payload: dict) -> dict:
+    del seed_snapshot, payload
+    return {
+        "trace": "unit:revision-loop",
+        "candidates": [
+            {
+                "source_id": "source-1",
+                "title": "Bounded report repair loops",
+                "url": "https://example.test/report-repair",
+                "metadata": {"kind": "paper"},
+                "provenance": {"provider": "unit", "trace": "source-1"},
+                "content_summary": "Report repair loops should revise review-identified defects before final acceptance.",
+            },
+            {
+                "source_id": "source-2",
+                "title": "Evidence-preserving final gates",
+                "url": "https://example.test/final-gates",
+                "metadata": {"kind": "paper"},
+                "provenance": {"provider": "unit", "trace": "source-2"},
+                "content_summary": "Final gates should preserve hash lineage and fail closed after unresolved review defects.",
+            },
+        ],
+        "provider_usage": [],
+        "limitations": ["Unit discovery fixture."],
+    }
+
+
+class _RevisionLoopModel:
+    def __init__(self, *, revised_review_verdict: str = "accept", revised_review_severity: str = "low") -> None:
+        self.calls: list[str] = []
+        self.revised_review_verdict = revised_review_verdict
+        self.revised_review_severity = revised_review_severity
+
+    def __deepcopy__(self, memo: dict) -> "_RevisionLoopModel":
+        del memo
+        return self
+
+    def __call__(self, *, node_id: str, **kwargs) -> dict:
+        self.calls.append(node_id)
+        usage = [{"provider": "unit", "model": "revision-loop", "usage_kind": "llm"}]
+        if node_id == "evidence_synthesis":
+            return {
+                "claims": [
+                    {
+                        "claim_id": "claim-1",
+                        "text": "Report repair loops revise review-identified defects before final acceptance.",
+                        "evidence_ids": ["source-1"],
+                        "uncertainty": "low",
+                        "limitations": [],
+                    },
+                    {
+                        "claim_id": "claim-2",
+                        "text": "Final gates preserve hash lineage and fail closed after unresolved review defects.",
+                        "evidence_ids": ["source-2"],
+                        "uncertainty": "low",
+                        "limitations": [],
+                    },
+                ],
+                "provider_usage": usage,
+            }
+        if node_id == "report_draft":
+            return {
+                "report": {
+                    "title": "Report Repair Loop",
+                    "body": "# Report Repair Loop\n\n## Findings\n\nReport repair loops revise review-identified defects before final acceptance.",
+                    "conclusions": [
+                        {
+                            "conclusion_id": "conclusion-1",
+                            "text": "Report repair loops revise review-identified defects before final acceptance.",
+                            "evidence_ids": ["claim-1"],
+                        },
+                        {
+                            "conclusion_id": "conclusion-2",
+                            "text": "Final gates preserve hash lineage and fail closed after unresolved review defects.",
+                            "evidence_ids": ["claim-2"],
+                        },
+                    ],
+                },
+                "provider_usage": usage,
+            }
+        if node_id == "report_revision":
+            prior_review = kwargs["independent_review"]
+            assert prior_review["verdict_suggestion"] == "revise"
+            return {
+                "report": {
+                    "title": "Report Repair Loop",
+                    "body": (
+                        "# Report Repair Loop\n\n"
+                        "## Findings\n\n"
+                        "Report repair loops revise review-identified defects before final acceptance.\n\n"
+                        "Final gates preserve hash lineage and fail closed after unresolved review defects.\n\n"
+                        "## Evidence Method\n\n"
+                        "The revision used the source-validation, synthesis, report draft, and independent-review artifacts."
+                    ),
+                    "conclusions": [
+                        {
+                            "conclusion_id": "conclusion-1",
+                            "text": "Report repair loops revise review-identified defects before final acceptance.",
+                            "evidence_ids": ["claim-1"],
+                        },
+                        {
+                            "conclusion_id": "conclusion-2",
+                            "text": "Final gates preserve hash lineage and fail closed after unresolved review defects.",
+                            "evidence_ids": ["claim-2"],
+                        },
+                    ],
+                },
+                "provider_usage": usage,
+            }
+        if node_id == "independent_review":
+            return {
+                "findings": [
+                    {
+                        "finding_id": "review.needs_revision",
+                        "severity": "high",
+                        "category": "completeness",
+                        "message": "The initial report needs revision before final acceptance.",
+                    }
+                ],
+                "verdict_suggestion": "revise",
+                "provider_usage": usage,
+            }
+        if node_id == "report_revision_review":
+            return {
+                "findings": [
+                    {
+                        "finding_id": "review.after_revision",
+                        "severity": self.revised_review_severity,
+                        "category": "completeness",
+                        "message": "The revised report was reviewed after the bounded repair attempt.",
+                    }
+                ],
+                "verdict_suggestion": self.revised_review_verdict,
+                "provider_usage": usage,
+            }
+        raise AssertionError(f"unexpected model node: {node_id}")
+
+
+def _run_revision_loop(tmp_path: Path, model: _RevisionLoopModel) -> dict:
+    runtime = SolarResearchRuntime(
+        artifact_root=tmp_path,
+        workflow_loader=FileWorkflowCatalog(
+            harness_root=ROOT,
+            entrypoint_aliases={"research_synthesis": {"web_fetch": "seed_fetch"}},
+        ).load,
+        operator_resolver=default_production_resolver(
+            services={
+                "discover_sources": _revision_discovery,
+                "model_generate": model,
+                "review_model_generate": model,
+            },
+            workspace_root=tmp_path,
+        ),
+        authorization={
+            "allow_network": True,
+            "allow_live_provider": True,
+            "approval_ref": "unit-approved-report-revision-loop",
+        },
+    )
+    return runtime.run(
+        prompt="Survey Solar report repair loop behavior.",
+        run_id="report-revision-loop",
+        seed_inputs=[{"seed_kind": "topic", "value": "Solar report repair loop"}],
+        max_steps=30,
+    )
+
+
+def test_report_revision_repairs_reviewed_report_before_final_acceptance(tmp_path: Path) -> None:
+    model = _RevisionLoopModel()
+
+    result = _run_revision_loop(tmp_path, model)
+
+    assert result["final_status"] == "completed"
+    assert model.calls.count("report_revision") == 1
+    assert model.calls.count("report_revision_review") == 1
+    revision = json.loads(
+        (
+            tmp_path
+            / "artifacts/research_synthesis_v1/revision/report_revision.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert revision["revision_applied"] is True
+    assert revision["revision_attempt"] == 1
+    assert revision["revision_review"]["verdict_suggestion"] == "accept"
+    final_gate = json.loads(
+        (
+            tmp_path
+            / "artifacts/research_synthesis_v1/final/final_acceptance.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert final_gate["accepted"] is True
+    assert final_gate["revision_applied"] is True
+    assert final_gate["active_report_artifact"] == "report_revision"
+
+
+def test_report_revision_keeps_final_status_failed_when_re_review_still_blocks(tmp_path: Path) -> None:
+    model = _RevisionLoopModel(revised_review_verdict="revise", revised_review_severity="high")
+
+    result = _run_revision_loop(tmp_path, model)
+
+    assert result["final_status"] == "failed"
+    assert model.calls.count("report_revision") == 1
+    assert model.calls.count("report_revision_review") == 1
+    final_gate = json.loads(
+        (
+            tmp_path
+            / "artifacts/research_synthesis_v1/final/final_acceptance.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert final_gate["accepted"] is False
+    assert final_gate["revision_applied"] is True
+    assert "review verdict suggestion is revise" in final_gate["reasons"]

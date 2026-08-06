@@ -29,6 +29,7 @@ EXPECTED_NODES = (
     "evidence_synthesis",
     "report_draft",
     "independent_review",
+    "report_revision",
     "final_acceptance",
 )
 
@@ -204,15 +205,25 @@ def _assertions_for_case(case: dict[str, Any], run_id: str, artifact_root: Path,
     synthesis = _read_json(_artifact_path(artifact_root, "synthesis", "evidence_synthesis.json"))
     report_draft = _read_json(_artifact_path(artifact_root, "report", "report_draft.json"))
     review = _read_json(_artifact_path(artifact_root, "review", "independent_review.json"))
+    report_revision = _read_json(_artifact_path(artifact_root, "revision", "report_revision.json"))
     final_gate = _read_json(_artifact_path(artifact_root, "final", "final_acceptance.json"))
-    report_path = _artifact_path(artifact_root, "report", "report.md")
+    active_report = (
+        report_revision.get("revised_report")
+        if report_revision.get("revision_applied") is True and isinstance(report_revision.get("revised_report"), dict)
+        else (report_draft.get("report") if isinstance(report_draft.get("report"), dict) else {})
+    )
+    report_path = (
+        _artifact_path(artifact_root, "revision", "report.md")
+        if report_revision.get("revision_applied") is True
+        else _artifact_path(artifact_root, "report", "report.md")
+    )
     report = report_path.read_text(encoding="utf-8") if report_path.is_file() else ""
     accepted_sources = [item for item in validation.get("accepted", []) if isinstance(item, dict)]
     source_ids = {str(item.get("source_id")) for item in accepted_sources}
     claims = [item for item in synthesis.get("claims", []) if isinstance(item, dict)]
     conclusions = [
         item
-        for item in ((report_draft.get("report") or {}).get("conclusions") or [])
+        for item in (active_report.get("conclusions") or [])
         if isinstance(item, dict)
     ]
     seeded = [item for item in seed.get("seeds", []) if isinstance(item, dict)]
@@ -300,6 +311,8 @@ def _case_record(case: dict[str, Any], result_root: Path, worker_commit: str, ba
         "report_draft": str(_artifact_path(artifact_root, "report", "report_draft.json").resolve()),
         "report_markdown": str(_artifact_path(artifact_root, "report", "report.md").resolve()),
         "independent_review": str(_artifact_path(artifact_root, "review", "independent_review.json").resolve()),
+        "report_revision": str(_artifact_path(artifact_root, "revision", "report_revision.json").resolve()),
+        "report_revision_markdown": str(_artifact_path(artifact_root, "revision", "report.md").resolve()),
         "final_acceptance": str(_artifact_path(artifact_root, "final", "final_acceptance.json").resolve()),
         "stdout_log": case_run["stdout_path"],
         "stderr_log": case_run["stderr_path"],

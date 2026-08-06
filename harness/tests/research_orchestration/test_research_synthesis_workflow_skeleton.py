@@ -25,10 +25,11 @@ EXPECTED_DEPENDENCIES = {
     "evidence_synthesis": ["seed_fetch", "source_validation"],
     "report_draft": ["evidence_synthesis"],
     "independent_review": ["report_draft", "source_validation"],
-    "final_acceptance": ["source_validation", "evidence_synthesis", "report_draft", "independent_review"],
+    "report_revision": ["source_validation", "evidence_synthesis", "report_draft", "independent_review"],
+    "final_acceptance": ["source_validation", "evidence_synthesis", "report_draft", "independent_review", "report_revision"],
 }
 NETWORK_ALLOWED_NODES = {"seed_fetch", "source_discovery"}
-PROVIDER_ALLOWED_NODES = {"evidence_synthesis", "report_draft", "independent_review"}
+PROVIDER_ALLOWED_NODES = {"evidence_synthesis", "report_draft", "independent_review", "report_revision"}
 
 
 def _load_json(path: Path) -> dict:
@@ -125,7 +126,7 @@ def test_graph_passes_own_schema() -> None:
 def test_skeleton_nodes_unique_and_counted() -> None:
     workflow = _load_json(WORKFLOW_PATH)
     nodes = workflow["nodes"]
-    assert len(nodes) == 7
+    assert len(nodes) == 8
     node_ids = [node["node_id"] for node in nodes]
     assert len(node_ids) == len(set(node_ids))
     assert node_ids == list(EXPECTED_DEPENDENCIES.keys())

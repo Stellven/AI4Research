@@ -126,10 +126,11 @@ def result_for(request: dict, status: str = "completed", artifact_root: Path | N
         declared_outputs = list(dict.fromkeys(declared_outputs))
         if not declared_outputs:
             declared_outputs = [request["write_scope"][0]]
-        elif request["node_id"] != "report_draft":
+        elif request["node_id"] not in {"report_draft", "report_revision"}:
             # The generic fake intentionally emits one artifact so tests can
             # verify that missing declared outputs fail closed. Report draft
-            # is the production multi-output case (JSON plus usable Markdown).
+            # and report revision are production multi-output cases (JSON
+            # plus usable Markdown).
             declared_outputs = declared_outputs[:1]
         for index, raw_output in enumerate(declared_outputs):
             raw_scope = str(raw_output).replace("\\", "/")
@@ -847,7 +848,7 @@ def test_evaluator_exception_secret_is_scrubbed_before_persistence(tmp_path: Pat
     assert state["final_status"] == "failed"
 
 
-def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(tmp_path: Path) -> None:
+def test_research_chain_receives_real_schema_discoverable_upstream_artifacts(tmp_path: Path) -> None:
     chain = [
         ("seed_fetch", [], []),
         ("source_discovery", ["seed_fetch"], ["seed_snapshot.v1"]),
@@ -855,7 +856,8 @@ def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(t
         ("evidence_synthesis", ["seed_fetch", "source_validation"], ["seed_snapshot.v1", "source_validation.v1"]),
         ("report_draft", ["evidence_synthesis"], ["evidence_synthesis.v1"]),
         ("independent_review", ["report_draft", "source_validation"], ["source_validation.v1", "report_draft.v1"]),
-        ("final_acceptance", ["independent_review"], ["independent_review.v1"]),
+        ("report_revision", ["independent_review", "report_draft", "evidence_synthesis", "source_validation"], ["source_validation.v1", "evidence_synthesis.v1", "report_draft.v1", "independent_review.v1"]),
+        ("final_acceptance", ["report_revision"], ["source_validation.v1", "evidence_synthesis.v1", "report_draft.v1", "independent_review.v1", "report_revision.v1"]),
     ]
     schemas = {
         "seed_fetch": "seed_snapshot.v1",
@@ -864,6 +866,7 @@ def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(t
         "evidence_synthesis": "evidence_synthesis.v1",
         "report_draft": "report_draft.v1",
         "independent_review": "independent_review.v1",
+        "report_revision": "report_revision.v1",
         "final_acceptance": "final_acceptance.v1",
     }
     paths = {node_id: str((tmp_path / "artifacts" / f"{node_id}.json").resolve()) for node_id in schemas}
@@ -922,7 +925,7 @@ def test_seven_node_chain_receives_real_schema_discoverable_upstream_artifacts(t
 
     assert state["final_status"] == "completed"
     assert [request["node_id"] for request in physical_chain.requests] == [row[0] for row in chain]
-    assert len(state["final_status_evidence_refs"]) == 14
+    assert len(state["final_status_evidence_refs"]) == 16
     assert all(Path(item["result_ref"]).is_file() for item in state["node_states"].values())
 
 

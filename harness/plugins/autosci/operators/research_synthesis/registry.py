@@ -10,6 +10,7 @@ from . import (
     final_acceptance,
     independent_review,
     report_draft,
+    report_revision,
     seed_fetch,
     source_discovery,
     source_validation,
@@ -24,6 +25,7 @@ _OPERATORS = {
     "evidence_synthesis": evidence_synthesis,
     "report_draft": report_draft,
     "independent_review": independent_review,
+    "report_revision": report_revision,
     "final_acceptance": final_acceptance,
 }
 

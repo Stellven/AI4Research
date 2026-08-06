@@ -298,6 +298,62 @@
       ]
     },
     {
+      "node_id": "report_revision",
+      "purpose": "Run one bounded report repair attempt when independent review identifies report defects.",
+      "logical_operator": "ResearchReportRevisionOperator",
+      "required_capabilities": [
+        "cap.research.report.revise"
+      ],
+      "input_artifacts": [
+        "artifacts/research_synthesis_v1/validation/source_validation.json",
+        "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json",
+        "artifacts/research_synthesis_v1/report/report_draft.json",
+        "artifacts/research_synthesis_v1/review/independent_review.json"
+      ],
+      "output_artifacts": [
+        "artifacts/research_synthesis_v1/revision/report_revision.json",
+        "artifacts/research_synthesis_v1/revision/report.md"
+      ],
+      "permission_profile": {
+        "network": {
+          "enabled": false,
+          "notes": "Revision uses only local report, review, synthesis, and source artifacts."
+        },
+        "provider_execution": true,
+        "read_scope": [
+          "artifacts/research_synthesis_v1/validation/source_validation.json",
+          "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json",
+          "artifacts/research_synthesis_v1/report/report_draft.json",
+          "artifacts/research_synthesis_v1/review/independent_review.json"
+        ],
+        "write_scope": [
+          "artifacts/research_synthesis_v1/revision/"
+        ],
+        "approved_operators": [
+          "report_revision_operator"
+        ]
+      },
+      "gate_contract": {
+        "entry_condition": "Independent review exists. If it requests revision or records blocking findings, one repair attempt is allowed.",
+        "exit_condition": "Revision artifact records whether repair was applied, preserves original review evidence, and includes a bounded re-review when edited.",
+        "deliverable": "artifacts/research_synthesis_v1/revision/report_revision.json",
+        "success_criteria": [
+          "Revision attempts are capped at one and preserve source, report, review, hash, and reviewer provenance."
+        ]
+      },
+      "binding_status": "planned",
+      "retry_policy": {
+        "mode": "once",
+        "max_attempts": 1
+      },
+      "depends_on": [
+        "source_validation",
+        "evidence_synthesis",
+        "report_draft",
+        "independent_review"
+      ]
+    },
+    {
       "node_id": "final_acceptance",
       "purpose": "Conclude final acceptance from independent review and synthesis lineage.",
       "logical_operator": "ResearchFinalAcceptanceOperator",
@@ -308,7 +364,8 @@
         "artifacts/research_synthesis_v1/validation/source_validation.json",
         "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json",
         "artifacts/research_synthesis_v1/report/report_draft.json",
-        "artifacts/research_synthesis_v1/review/independent_review.json"
+        "artifacts/research_synthesis_v1/review/independent_review.json",
+        "artifacts/research_synthesis_v1/revision/report_revision.json"
       ],
       "output_artifacts": [
         "artifacts/research_synthesis_v1/final/final_acceptance.json"
@@ -323,7 +380,8 @@
           "artifacts/research_synthesis_v1/validation/source_validation.json",
           "artifacts/research_synthesis_v1/synthesis/evidence_synthesis.json",
           "artifacts/research_synthesis_v1/report/report_draft.json",
-          "artifacts/research_synthesis_v1/review/independent_review.json"
+          "artifacts/research_synthesis_v1/review/independent_review.json",
+          "artifacts/research_synthesis_v1/revision/report_revision.json"
         ],
         "write_scope": [
           "artifacts/research_synthesis_v1/final/"
@@ -349,7 +407,8 @@
         "source_validation",
         "evidence_synthesis",
         "report_draft",
-        "independent_review"
+        "independent_review",
+        "report_revision"
       ]
     }
   ]
