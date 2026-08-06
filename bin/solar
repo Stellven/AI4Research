@@ -18,8 +18,7 @@ receipt_value() {
     file="$1"
     key="$2"
     [ -f "$file" ] || return 1
-    command -v python3 >/dev/null 2>&1 || return 1
-    python3 - "$file" "$key" <<'PY'
+    "$PYTHON_BIN" - "$file" "$key" <<'PY'
 import json
 import sys
 
@@ -51,6 +50,24 @@ resolve_script_dir() {
     done
     CDPATH= cd -- "$(dirname -- "$script")" && pwd -P
 }
+
+find_solar_python() {
+    if [ -n "${SOLAR_PYTHON:-}" ] && [ -x "$SOLAR_PYTHON" ]; then
+        case "$SOLAR_PYTHON" in
+            *Microsoft/WindowsApps*|*WindowsApps*) ;;
+            *) printf '%s\n' "$SOLAR_PYTHON"; return 0 ;;
+        esac
+    fi
+    for cand in python3 python python3.14 python3.13 python3.12 python3.11; do
+        found="$(command -v "$cand" 2>/dev/null || true)"
+        case "$found" in
+            *Microsoft/WindowsApps*|*WindowsApps*|"") ;;
+            *) printf '%s\n' "$found"; return 0 ;;
+        esac
+    done
+    printf 'python3\n'
+}
+PYTHON_BIN="$(find_solar_python)"
 
 SCRIPT_DIR="$(resolve_script_dir)"
 SCRIPT_SOLAR_HOME=""
@@ -93,7 +110,7 @@ EOF
 
 receipt_field() {
     [ -f "$RECEIPT_PATH" ] || return 1
-    RECEIPT_PATH="$RECEIPT_PATH" python3 - "$1" <<'PY'
+    RECEIPT_PATH="$RECEIPT_PATH" "$PYTHON_BIN" - "$1" <<'PY'
 import json
 import os
 import sys
@@ -124,7 +141,7 @@ do_version() {
     chan="$(receipt_field channel)"
     repo="$(receipt_field repo)"
     if [ "$json" = "true" ]; then
-        RV="$ver" RS="$sha" RC="$chan" RR="$repo" python3 - <<'PY'
+        RV="$ver" RS="$sha" RC="$chan" RR="$repo" "$PYTHON_BIN" - <<'PY'
 import json
 import os
 
@@ -181,7 +198,7 @@ do_status() {
         esac
     done
     SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" \
-    STATUS_JSON="$json" python3 - <<'PY'
+    STATUS_JSON="$json" "$PYTHON_BIN" - <<'PY'
 import http.client
 import json
 import os
@@ -201,15 +218,24 @@ def load_json(path):
 
 def run_cmd(argv, timeout=5):
     try:
+        # On Windows, directly executing a .sh script fails. Use bash to run the script.
+        exec_argv = list(argv)
+        if os.name == "nt":
+            first = Path(argv[0])
+            if not first.suffix.lower() in (".exe", ".bat", ".cmd"):
+                # Assume it's a shell script; prepend bash
+                exec_argv = ["bash"] + exec_argv
         proc = subprocess.run(
-            argv,
+            exec_argv,
             check=False,
             text=True,
             capture_output=True,
+            encoding='utf-8',
+            errors='replace',
             timeout=timeout,
         )
         return proc.returncode, proc.stdout, proc.stderr
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, OSError) as exc:
         return 127, "", str(exc)
     except subprocess.TimeoutExpired as exc:
         out = exc.stdout if isinstance(exc.stdout, str) else ""
@@ -226,8 +252,21 @@ def live_pid(raw):
     text = str(raw or "").strip()
     if not text.isdigit():
         return False
+    pid = int(text)
+    if os.name == "nt":
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            return False
+        except Exception:
+            return False
     try:
-        os.kill(int(text), 0)
+        os.kill(pid, 0)
         return True
     except OSError:
         return False
@@ -599,7 +638,7 @@ doctor() {
     mode="text"
     [ "${1:-}" = "--json" ] && mode="json"
     SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" \
-    DOCTOR_MODE="$mode" python3 - <<'PY'
+    SOLAR_PYTHON="${SOLAR_PYTHON:-$PYTHON_BIN}" DOCTOR_MODE="$mode" "$PYTHON_BIN" - <<'PY'
 import json
 import os
 import shutil
@@ -724,7 +763,11 @@ for key, path in checks.items():
         result["verdict"] = "fail"
         result["warnings"].append("path missing: " + key)
 
-py_path = shutil.which("python3") or ""
+py_env = os.environ.get("SOLAR_PYTHON", "").strip()
+if py_env and os.path.exists(py_env) and "WindowsApps" not in py_env:
+    py_path = py_env
+else:
+    py_path = sys.executable if "WindowsApps" not in sys.executable else (shutil.which("python") or shutil.which("python3") or "")
 py_version = ""
 py_min_ok = False
 if py_path:
@@ -959,7 +1002,7 @@ PY
 
 remove_sentinel() {
     [ -f "$CLAUDE_DIR/CLAUDE.md" ] || return 0
-    python3 - "$CLAUDE_DIR/CLAUDE.md" <<'PY'
+    "$PYTHON_BIN" - "$CLAUDE_DIR/CLAUDE.md" <<'PY'
 import pathlib
 import sys
 
@@ -1068,7 +1111,7 @@ guard_path() {
 remove_solar_settings() {
     settings_file="$CLAUDE_DIR/settings.json"
     [ -f "$settings_file" ] || return 0
-    python3 - "$settings_file" <<'PY'
+    "$PYTHON_BIN" - "$settings_file" <<'PY'
 import json
 import os
 import sys
@@ -1118,8 +1161,8 @@ PY
 remove_python_user_deps() {
     manifest="$SOLAR_HOME/python-user-deps.json"
     [ -f "$manifest" ] || return 0
-    command -v python3 >/dev/null 2>&1 || return 0
-    if ! python3 - "$manifest" <<'PY'
+    command -v "$PYTHON_BIN" >/dev/null 2>&1 || return 0
+    if ! "$PYTHON_BIN" - "$manifest" <<'PY'
 import importlib.metadata as metadata
 import json
 import os
@@ -1319,7 +1362,7 @@ uninstall() {
 
 components_list() {
     if [ -f "$RECEIPT_PATH" ]; then
-        python3 - "$RECEIPT_PATH" <<'PY'
+        "$PYTHON_BIN" - "$RECEIPT_PATH" <<'PY'
 import json
 import sys
 with open(sys.argv[1], encoding="utf-8") as f:
@@ -1354,8 +1397,8 @@ do_ui() {
         echo "Solar UI-lite helper not found; reinstall with harness or run from the source checkout." >&2
         exit 1
     fi
-    command -v python3 >/dev/null 2>&1 || { echo "python3 is required for solar ui" >&2; exit 1; }
-    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" exec python3 "$helper" "$@"
+    [ -n "$PYTHON_BIN" ] || { echo "python3 is required for solar ui" >&2; exit 1; }
+    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" exec "$PYTHON_BIN" "$helper" "$@"
 }
 
 do_harness() {

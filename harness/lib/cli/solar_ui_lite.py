@@ -64,15 +64,27 @@ class Style:
 
 def run_cmd(argv: list[str], timeout: float = 5.0) -> CmdResult:
     try:
+        exec_argv = list(argv)
+        if os.name == "nt":
+            first = Path(argv[0])
+            if first.suffix.lower() not in (".exe", ".bat", ".cmd", ".py"):
+                # Shell scripts are not directly executable on Windows; prefix with bash.
+                import shutil as _shutil
+                bash = _shutil.which("bash") or "bash"
+                exec_argv = [bash] + exec_argv
         proc = subprocess.run(
-            argv,
+            exec_argv,
             check=False,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             timeout=timeout,
         )
         return CmdResult(proc.returncode, proc.stdout, proc.stderr)
     except FileNotFoundError as exc:
+        return CmdResult(127, "", str(exc))
+    except OSError as exc:
         return CmdResult(127, "", str(exc))
     except subprocess.TimeoutExpired as exc:
         out = exc.stdout if isinstance(exc.stdout, str) else ""
@@ -455,5 +467,6 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    if hasattr(signal, "SIGPIPE"):
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     raise SystemExit(main(sys.argv[1:]))

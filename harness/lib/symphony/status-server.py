@@ -14023,7 +14023,10 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif path == "/status":
             sprint_id = params.get("sprint_id", [""])[0]
-            self._send_json(_status_payload(limit=50, sprint_id=sprint_id))
+            try:
+                self._send_json(_status_payload(limit=50, sprint_id=sprint_id))
+            except Exception as _exc:
+                self._send_json({"ok": True, "status": "degraded", "error": f"{type(_exc).__name__}: {_exc}", "panes": [], "current_sprint": {}})
 
         elif path == "/api/pane-model-call":
             target = params.get("target", [""])[0]
