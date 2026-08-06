@@ -398,10 +398,18 @@ def _revision_discovery(*, seed_snapshot: dict, payload: dict) -> dict:
 
 
 class _RevisionLoopModel:
-    def __init__(self, *, revised_review_verdict: str = "accept", revised_review_severity: str = "low") -> None:
+    def __init__(
+        self,
+        *,
+        revised_review_verdict: str = "accept",
+        revised_review_severity: str = "low",
+        revised_review_sequence: list[tuple[str, str]] | None = None,
+    ) -> None:
         self.calls: list[str] = []
         self.revised_review_verdict = revised_review_verdict
         self.revised_review_severity = revised_review_severity
+        self.revised_review_sequence = list(revised_review_sequence or [])
+        self._revision_review_count = 0
 
     def __deepcopy__(self, memo: dict) -> "_RevisionLoopModel":
         del memo
@@ -453,6 +461,7 @@ class _RevisionLoopModel:
         if node_id == "report_revision":
             prior_review = kwargs["independent_review"]
             assert prior_review["verdict_suggestion"] == "revise"
+            attempt = int(kwargs.get("revision_attempt") or 1)
             return {
                 "report": {
                     "title": "Report Repair Loop",
@@ -462,7 +471,8 @@ class _RevisionLoopModel:
                         "Report repair loops revise review-identified defects before final acceptance.\n\n"
                         "Final gates preserve hash lineage and fail closed after unresolved review defects.\n\n"
                         "## Evidence Method\n\n"
-                        "The revision used the source-validation, synthesis, report draft, and independent-review artifacts."
+                        "The revision used the source-validation, synthesis, report draft, and independent-review artifacts.\n\n"
+                        f"Revision attempt {attempt} handled the latest reviewer findings."
                     ),
                     "conclusions": [
                         {
@@ -493,16 +503,22 @@ class _RevisionLoopModel:
                 "provider_usage": usage,
             }
         if node_id == "report_revision_review":
+            if self.revised_review_sequence:
+                index = min(self._revision_review_count, len(self.revised_review_sequence) - 1)
+                verdict, severity = self.revised_review_sequence[index]
+            else:
+                verdict, severity = self.revised_review_verdict, self.revised_review_severity
+            self._revision_review_count += 1
             return {
                 "findings": [
                     {
                         "finding_id": "review.after_revision",
-                        "severity": self.revised_review_severity,
+                        "severity": severity,
                         "category": "completeness",
                         "message": "The revised report was reviewed after the bounded repair attempt.",
                     }
                 ],
-                "verdict_suggestion": self.revised_review_verdict,
+                "verdict_suggestion": verdict,
                 "provider_usage": usage,
             }
         raise AssertionError(f"unexpected model node: {node_id}")
@@ -565,14 +581,37 @@ def test_report_revision_repairs_reviewed_report_before_final_acceptance(tmp_pat
     assert final_gate["active_report_artifact"] == "report_revision"
 
 
+def test_report_revision_retries_once_when_re_review_still_blocks(tmp_path: Path) -> None:
+    model = _RevisionLoopModel(
+        revised_review_sequence=[
+            ("revise", "high"),
+            ("accept", "low"),
+        ]
+    )
+
+    result = _run_revision_loop(tmp_path, model)
+
+    assert result["final_status"] == "completed"
+    assert model.calls.count("report_revision") == 2
+    assert model.calls.count("report_revision_review") == 2
+    revision = json.loads(
+        (
+            tmp_path
+            / "artifacts/research_synthesis_v1/revision/report_revision.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert revision["revision_attempt"] == 2
+    assert revision["revision_review"]["verdict_suggestion"] == "accept"
+
+
 def test_report_revision_keeps_final_status_failed_when_re_review_still_blocks(tmp_path: Path) -> None:
     model = _RevisionLoopModel(revised_review_verdict="revise", revised_review_severity="high")
 
     result = _run_revision_loop(tmp_path, model)
 
     assert result["final_status"] == "failed"
-    assert model.calls.count("report_revision") == 1
-    assert model.calls.count("report_revision_review") == 1
+    assert model.calls.count("report_revision") == 2
+    assert model.calls.count("report_revision_review") == 2
     final_gate = json.loads(
         (
             tmp_path

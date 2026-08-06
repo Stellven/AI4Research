@@ -291,10 +291,37 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
         },
     )
     _system, review_user = service._prompt("independent_review", {"task_contract": task_contract})
+    _system, revision_user = service._prompt(
+        "report_revision",
+        {
+            "task_contract": task_contract,
+            "evidence_synthesis": {
+                "claims": [
+                    {"claim_id": "claim-1", "evidence_ids": ["source-1"], "limitations": ["bounded evidence"]},
+                ]
+            },
+            "original_report": {"report": {"body": "Draft"}},
+            "independent_review": {
+                "verdict_suggestion": "revise",
+                "findings": [{"severity": "high", "message": "Missing method section"}],
+            },
+        },
+    )
+    _system, revision_review_user = service._prompt(
+        "report_revision_review",
+        {
+            "task_contract": task_contract,
+            "report_draft": {"report": {"body": "Revised"}},
+            "source_validation": {"accepted": [{"source_id": "source-1"}]},
+            "prior_review": {"findings": [{"severity": "high", "message": "Missing method section"}]},
+        },
+    )
 
     synthesis_requirements = " ".join(synthesis_user["quality_requirements"])
     report_requirements = " ".join(report_user["quality_requirements"])
     review_rules = " ".join(review_user["review_rules"])
+    revision_requirements = " ".join(revision_user["quality_requirements"])
+    revision_review_rules = " ".join(revision_review_user["review_rules"])
     assert synthesis_user["allowed_source_ids"] == ["source-1", "source-2"]
     assert "at least two distinct exact source_id values" in synthesis_requirements
     assert "copied exactly from allowed_source_ids" in synthesis_requirements
@@ -306,6 +333,16 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
     assert "do not expand a source-specific finding into a general guarantee" in report_requirements
     assert "explicit Method or Evidence Method section" in review_rules
     assert "at least two cited source lineages" in review_rules
+    assert revision_user["basis_verdict"] == "revise"
+    assert "preserve exact claim_id values" in revision_requirements
+    assert "Repair only issues identified by the independent review" in revision_requirements
+    assert "Replace the report body instead of appending duplicate section summaries" in revision_requirements
+    assert "Do not claim immutable evidence_synthesis claim_source_lineage was removed" in revision_requirements
+    assert "resolves high and critical prior review findings" in revision_review_rules
+    assert "Do not require report_revision to mutate immutable evidence_synthesis claim_source_lineage" in revision_review_rules
+    assert "all remaining findings are low-severity nits" in revision_review_rules
+    assert "Return revise only for medium, high, or critical issues" in revision_review_rules
+    assert revision_review_user["prior_review_findings"][0]["severity"] == "high"
 
 
 def test_report_normalizer_adds_evidence_method_when_model_omits_it() -> None:
@@ -328,6 +365,59 @@ def test_report_normalizer_adds_evidence_method_when_model_omits_it() -> None:
 
     assert "## Evidence Method" in report["body"]
     assert "source-bounded synthesis" in report["body"]
+
+
+def test_report_normalizer_accepts_top_level_conclusions_with_nested_report_body() -> None:
+    report = _normalize_report(
+        {
+            "report": {
+                "title": "Traceable revision",
+                "body": "## Evidence Method\n\nOnly supplied claims are used.",
+            },
+            "conclusions": [
+                {
+                    "conclusion_id": "conclusion-1",
+                    "text": "The revised report is traceable.",
+                    "evidence_ids": ["claim-1"],
+                }
+            ],
+            "sections": [{"title": "Findings", "body": "The revised report is traceable."}],
+        },
+        {"claim-1"},
+    )
+
+    assert report["title"] == "Traceable revision"
+    assert report["conclusions"][0]["evidence_ids"] == ["claim-1"]
+    assert "## Findings" in report["body"]
+
+
+def test_report_normalizer_removes_repeated_markdown_sections() -> None:
+    report = _normalize_report(
+        {
+            "report": {
+                "title": "Traceable revision",
+                "body": (
+                    "# Traceable revision\n\n"
+                    "## 1. Evidence Method\n\nFirst method section.\n\n"
+                    "## Conclusions\n\nThe revised report is traceable.\n\n"
+                    "## Evidence Method\n\nDuplicate method section.\n\n"
+                    "## Conclusions\n\nDuplicate conclusion section."
+                ),
+                "conclusions": [
+                    {
+                        "conclusion_id": "conclusion-1",
+                        "text": "The revised report is traceable.",
+                        "evidence_ids": ["claim-1"],
+                    }
+                ],
+            }
+        },
+        {"claim-1"},
+    )
+
+    assert report["body"].count("Evidence Method") == 1
+    assert report["body"].count("## Conclusions") == 1
+    assert "Duplicate method section" not in report["body"]
 
 
 def test_topic_discovery_query_distills_research_subject_from_instruction() -> None:

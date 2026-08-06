@@ -30,6 +30,7 @@ from .report_draft import _deliverable_requirements, _normalize_report
 
 REPAIR_FINDING_SEVERITIES = {"medium", "high", "critical"}
 REPAIR_VERDICTS = {"revise", "revise_required", "reject"}
+MAX_REVISION_ATTEMPTS = 2
 
 
 def _load_artifact_by_schema(
@@ -164,69 +165,82 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         claim_ids = {str(item.get("claim_id")) for item in claims if item.get("claim_id")}
         if not claim_ids:
             raise ResearchOperatorError("No synthesis claims were available for report revision", error_type="missing_synthesis")
-        response = model_generate(
-            node_id="report_revision",
-            task_contract=task_contract,
-            deliverable_requirements=_deliverable_requirements(task_contract),
-            evidence_synthesis=synthesis,
-            source_validation=validation,
-            original_report=original_report,
-            independent_review=review,
-            revision_attempt=1,
-            max_revision_attempts=1,
-        )
-        if not isinstance(response, dict):
-            raise ResearchOperatorError("model_generate service must return a JSON object", error_type="provider_contract")
-        revised_report = _normalize_report(response, claim_ids)
-        writer_usage = provider_usage_from(response, usage_kind="llm")
-        limitations.extend(str(item) for item in response.get("limitations", []) if str(item).strip())
-        revised_report_payload = {
-            **original_report,
-            "schema": "research_synthesis.report_draft.v1",
-            "node_id": "report_draft",
-            "report": revised_report,
-            "claim_source_lineage": {
-                str(item.get("claim_id")): [str(source_id) for source_id in item.get("evidence_ids", []) if str(source_id).strip()]
-                for item in claims
-                if item.get("claim_id")
-            },
-            "evidence_lineage": [
-                "report_revision",
-                "report_draft",
-                "evidence_synthesis",
-                "source_validation",
-            ],
-            "input_artifact_hashes": {
-                "evidence_synthesis": str((synthesis_ref or {}).get("sha256") or ""),
-                "base_report_draft": str((report_ref or {}).get("sha256") or ""),
-                "base_independent_review": str((review_ref or {}).get("sha256") or ""),
-            },
-            "writer_usage": writer_usage,
-            "limitations": limitations,
-        }
-        review_response = review_model(
-            node_id="report_revision_review",
-            task_contract=task_contract,
-            report_draft=revised_report_payload,
-            source_validation=validation,
-            prior_review=review,
-        )
-        if not isinstance(review_response, dict):
-            raise ResearchOperatorError("review_model_generate service must return a JSON object", error_type="provider_contract")
-        revision_review = _normalize_review_response(
-            review_response,
-            report_payload=revised_report_payload,
-            validation=validation,
-            task_contract=task_contract,
-        )
-        reviewer_usage = revision_review["reviewer_usage"]
-        revision_review["writer_usage"] = writer_usage
-        revision_review["reviewed_artifact_hashes"] = {
-            "revised_report": stable_json_sha256(revised_report),
-            "source_validation": str((validation_ref or {}).get("sha256") or ""),
-        }
-        limitations.extend(revision_review.get("limitations") or [])
-        limitations.extend(_same_model_limitation(writer_usage, reviewer_usage))
+        current_report_payload = original_report
+        current_review = review
+        current_blocking_findings = blocking_findings
+        for attempt in range(1, MAX_REVISION_ATTEMPTS + 1):
+            response = model_generate(
+                node_id="report_revision",
+                task_contract=task_contract,
+                deliverable_requirements=_deliverable_requirements(task_contract),
+                evidence_synthesis=synthesis,
+                source_validation=validation,
+                original_report=current_report_payload,
+                independent_review=current_review,
+                revision_attempt=attempt,
+                max_revision_attempts=MAX_REVISION_ATTEMPTS,
+            )
+            if not isinstance(response, dict):
+                raise ResearchOperatorError("model_generate service must return a JSON object", error_type="provider_contract")
+            revised_report = _normalize_report(response, claim_ids)
+            attempt_writer_usage = provider_usage_from(response, usage_kind="llm")
+            writer_usage.extend(attempt_writer_usage)
+            limitations.extend(str(item) for item in response.get("limitations", []) if str(item).strip())
+            revised_report_payload = {
+                **original_report,
+                "schema": "research_synthesis.report_draft.v1",
+                "node_id": "report_draft",
+                "report": revised_report,
+                "claim_source_lineage": {
+                    str(item.get("claim_id")): [str(source_id) for source_id in item.get("evidence_ids", []) if str(source_id).strip()]
+                    for item in claims
+                    if item.get("claim_id")
+                },
+                "evidence_lineage": [
+                    "report_revision",
+                    "report_draft",
+                    "evidence_synthesis",
+                    "source_validation",
+                ],
+                "input_artifact_hashes": {
+                    "evidence_synthesis": str((synthesis_ref or {}).get("sha256") or ""),
+                    "base_report_draft": str((report_ref or {}).get("sha256") or ""),
+                    "base_independent_review": str((review_ref or {}).get("sha256") or ""),
+                },
+                "writer_usage": list(writer_usage),
+                "limitations": limitations,
+            }
+            review_response = review_model(
+                node_id="report_revision_review",
+                task_contract=task_contract,
+                report_draft=revised_report_payload,
+                source_validation=validation,
+                prior_review=current_review,
+            )
+            if not isinstance(review_response, dict):
+                raise ResearchOperatorError("review_model_generate service must return a JSON object", error_type="provider_contract")
+            revision_review = _normalize_review_response(
+                review_response,
+                report_payload=revised_report_payload,
+                validation=validation,
+                task_contract=task_contract,
+            )
+            attempt_reviewer_usage = revision_review["reviewer_usage"]
+            reviewer_usage.extend(attempt_reviewer_usage)
+            revision_review["writer_usage"] = list(writer_usage)
+            revision_review["reviewed_artifact_hashes"] = {
+                "revised_report": stable_json_sha256(revised_report),
+                "source_validation": str((validation_ref or {}).get("sha256") or ""),
+            }
+            revision_review["revision_attempt"] = attempt
+            revision_review["max_revision_attempts"] = MAX_REVISION_ATTEMPTS
+            limitations.extend(revision_review.get("limitations") or [])
+            limitations.extend(_same_model_limitation(attempt_writer_usage, attempt_reviewer_usage))
+            needs_more_revision, current_blocking_findings, _current_verdict = _repair_required(revision_review)
+            if not needs_more_revision:
+                break
+            current_report_payload = revised_report_payload
+            current_review = revision_review
 
     claim_source_lineage = (
         revised_report_payload.get("claim_source_lineage")
@@ -242,11 +256,12 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "schema": "research_synthesis.report_revision.v1",
         "node_id": "report_revision",
         "created_at": utc_now(),
-        "revision_attempt": 1,
-        "max_revision_attempts": 1,
+        "revision_attempt": attempt if repair_required and "attempt" in locals() else 0,
+        "max_revision_attempts": MAX_REVISION_ATTEMPTS,
         "revision_applied": repair_required,
         "basis_review_verdict": first_verdict,
         "basis_blocking_findings": blocking_findings,
+        "remaining_blocking_findings": current_blocking_findings if repair_required and "current_blocking_findings" in locals() else [],
         "base_artifact_hashes": {
             "report_draft": str((report_ref or {}).get("sha256") or ""),
             "independent_review": str((review_ref or {}).get("sha256") or ""),
@@ -298,7 +313,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             evidence_ref(
                 "report_revision.attempt",
                 "bounded_report_revision",
-                f"Revision attempt 1 applied={repair_required}; basis verdict={first_verdict or 'missing'}.",
+                f"Revision attempts={artifact_payload['revision_attempt']} applied={repair_required}; basis verdict={first_verdict or 'missing'}.",
                 artifact["artifact_id"],
             ),
             evidence_ref(

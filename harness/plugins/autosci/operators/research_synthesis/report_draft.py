@@ -56,7 +56,36 @@ def _deliverable_requirements(task_contract: dict[str, Any]) -> dict[str, Any]:
 
 def _normalized_heading(value: str) -> str:
     without_numbering = re.sub(r"^\s*\d+(?:\.\d+)*[.)\u3001\uff0e]?\s*", "", str(value or ""))
+    without_numbering = re.sub(r"^\s*[一二三四五六七八九十]+[\u3001.)\uff0e]?\s*", "", without_numbering)
     return re.sub(r"[\W_]+", "", without_numbering.casefold())
+
+
+def _dedupe_repeated_heading_sections(body: str) -> str:
+    headings = list(re.finditer(r"(?m)^(#{2,6})\s+(.+?)\s*$", body))
+    if not headings:
+        return body
+    keep_ranges: list[tuple[int, int]] = []
+    seen: set[tuple[int, str]] = set()
+    cursor = 0
+    for index, heading in enumerate(headings):
+        if heading.start() > cursor:
+            keep_ranges.append((cursor, heading.start()))
+        level = len(heading.group(1))
+        normalized = _normalized_heading(heading.group(2))
+        section_end = len(body)
+        for following in headings[index + 1:]:
+            if len(following.group(1)) <= level:
+                section_end = following.start()
+                break
+        key = (level, normalized)
+        if not normalized or key not in seen:
+            keep_ranges.append((heading.start(), section_end))
+            seen.add(key)
+        cursor = section_end
+    if cursor < len(body):
+        keep_ranges.append((cursor, len(body)))
+    compact = "".join(body[start:end] for start, end in keep_ranges)
+    return re.sub(r"\n{3,}", "\n\n", compact).strip()
 
 
 def _body_has_substantive_section(raw_body: str, title: str, section_body: str) -> bool:
@@ -84,7 +113,8 @@ def _body_has_substantive_section(raw_body: str, title: str, section_body: str) 
 
 def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str, Any]:
     report = response.get("report") if isinstance(response.get("report"), dict) else response
-    conclusions = report.get("conclusions") if isinstance(report.get("conclusions"), list) else []
+    conclusions = report.get("conclusions") if isinstance(report.get("conclusions"), list) else response.get("conclusions")
+    conclusions = conclusions if isinstance(conclusions, list) else []
     normalized_conclusions: list[dict[str, Any]] = []
     for index, item in enumerate(conclusions):
         if not isinstance(item, dict):
@@ -104,7 +134,8 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
         raise ResearchOperatorError("model_generate returned no traceable report conclusions", error_type="provider_contract")
     title = str(report.get("title") or "Research synthesis draft").strip()
     sections: list[dict[str, str]] = []
-    for index, item in enumerate(report.get("sections") or [], start=1):
+    raw_sections = report.get("sections") if isinstance(report.get("sections"), list) else response.get("sections")
+    for index, item in enumerate(raw_sections or [], start=1):
         if not isinstance(item, dict):
             continue
         section_body = str(item.get("body") or item.get("content") or item.get("text") or "").strip()
@@ -133,6 +164,7 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
         if not _body_has_substantive_section(raw_body, section["title"], section["body"])
     )
     body = "\n\n".join(body_parts)
+    body = _dedupe_repeated_heading_sections(body)
     missing_conclusions = [
         item for item in normalized_conclusions
         if " ".join(str(item["text"]).split()).casefold() not in " ".join(body.split()).casefold()

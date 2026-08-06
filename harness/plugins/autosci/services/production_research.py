@@ -1054,6 +1054,77 @@ class ResearchModelService:
                     "Do not create a high-severity finding merely because the evidence has explicit limitations.",
                 ],
             }
+        elif node_id == "report_revision":
+            synthesis = kwargs.get("evidence_synthesis") if isinstance(kwargs.get("evidence_synthesis"), dict) else {}
+            review = kwargs.get("independent_review") if isinstance(kwargs.get("independent_review"), dict) else {}
+            user = {
+                "node_id": node_id,
+                "complete_user_request": str(task_contract.get("user_intent") or ""),
+                "deliverable_requirements": kwargs.get("deliverable_requirements") or {},
+                "grounded_claims": synthesis.get("claims") or [],
+                "original_report": kwargs.get("original_report") or {},
+                "independent_review_findings": review.get("findings") or [],
+                "basis_verdict": str(review.get("verdict_suggestion") or ""),
+                "revision_attempt": int(kwargs.get("revision_attempt") or 1),
+                "max_revision_attempts": int(kwargs.get("max_revision_attempts") or 1),
+                "required_output": {
+                    "report": {
+                        "title": "specific revised report title",
+                        "body": "complete structured Markdown report body",
+                        "sections": [{"title": "section title", "body": "section body"}],
+                        "conclusions": [
+                            {
+                                "conclusion_id": "conclusion-001",
+                                "text": "bounded revised conclusion",
+                                "evidence_ids": ["one or more exact claim_id values"],
+                            }
+                        ],
+                    },
+                    "limitations": [],
+                },
+                "quality_requirements": [
+                    "Repair only issues identified by the independent review or deterministic quality checks.",
+                    "Use only supplied grounded_claims and preserve exact claim_id values in conclusion evidence_ids.",
+                    "Do not invent sources, evidence ids, benchmarks, metrics, or methods that are not supported by grounded_claims.",
+                    "Preserve uncertainty and limitation qualifiers from grounded_claims.",
+                    "The revised body must directly answer the complete user request in the requested language.",
+                    "Include an explicit Method or Evidence Method section when the requested deliverable is a survey or technical report.",
+                    "Replace the report body instead of appending duplicate section summaries from prior drafts.",
+                    "Keep one coherent set of Methods, Findings, Limitations, and Conclusions sections.",
+                    "Do not claim immutable evidence_synthesis claim_source_lineage was removed; instead restrict the report text to the source scopes supported by each claim limitation.",
+                ],
+            }
+        elif node_id == "report_revision_review":
+            prior_review = kwargs.get("prior_review") if isinstance(kwargs.get("prior_review"), dict) else {}
+            user = {
+                "node_id": node_id,
+                "complete_user_request": str(task_contract.get("user_intent") or ""),
+                "revised_report_draft": kwargs.get("report_draft") or {},
+                "source_validation": kwargs.get("source_validation") or {},
+                "prior_review_findings": prior_review.get("findings") or [],
+                "required_output": {
+                    "findings": [
+                        {
+                            "finding_id": "revision-review-001",
+                            "severity": "low|medium|high|critical",
+                            "category": "evidence|relevance|structure|language|truthfulness",
+                            "message": "specific finding",
+                        }
+                    ],
+                    "verdict_suggestion": "accept|revise|reject",
+                    "limitations": [],
+                },
+                "review_rules": [
+                    "Accept only if the revised report resolves high and critical prior review findings.",
+                    "Require conclusions to cite exact claim_id values present in the revised report lineage.",
+                    "Require the revised report to remain grounded in supplied source validation and evidence synthesis lineage.",
+                    "Do not require report_revision to mutate immutable evidence_synthesis claim_source_lineage; judge whether the revised report text uses sources within the stated claim limitations.",
+                    "For Chinese requests, require Chinese output.",
+                    "Return accept when all remaining findings are low-severity nits that do not require another writing pass.",
+                    "Return revise only for medium, high, or critical issues that require another writing pass.",
+                    "Return reject when unsupported new claims, missing methods, or language mismatch remain and cannot be repaired within the bounded loop.",
+                ],
+            }
         else:
             raise ResearchOperatorError(f"Unsupported production model node: {node_id}", error_type="invalid_input")
         return system, user
