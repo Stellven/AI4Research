@@ -1021,6 +1021,9 @@ class ResearchModelService:
                     "When grounded claims cite two or more distinct source ids, the report must preserve at least two distinct cited sources.",
                     "For a survey, include an explicit performance trade-offs section and an open research problems section.",
                     "For Chinese requests, write the report in Chinese.",
+                    "Use each requested dimension once; avoid repeating the same Failure modes, Observability, Conclusions, or Limitations material in multiple sections.",
+                    "Any recommendation, benchmark design, operational practice, or industry implication that is synthesized beyond a source's direct wording must be explicitly labeled as synthesis, proposed practice, or conditional inference.",
+                    "Preserve the uncertainty and limitation qualifiers from grounded_claims; do not expand a source-specific finding into a general guarantee.",
                     "State evidence limitations without inventing methods or conclusions.",
                 ],
             }

@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from harness.plugins.autosci.operators.research_synthesis.base import ResearchOperatorError
+from harness.plugins.autosci.operators.research_synthesis.report_draft import _normalize_report
 from harness.plugins.autosci.services.production_research import (
     BoundedUrlFetcher,
     LiteratureDiscoveryService,
@@ -300,8 +301,33 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
     assert "do not abbreviate, hash, prefix, suffix, or repair source ids" in synthesis_requirements
     assert "explicit Method or Evidence Method section" in report_requirements
     assert "at least two distinct cited sources" in report_requirements
+    assert "avoid repeating the same Failure modes" in report_requirements
+    assert "explicitly labeled as synthesis" in report_requirements
+    assert "do not expand a source-specific finding into a general guarantee" in report_requirements
     assert "explicit Method or Evidence Method section" in review_rules
     assert "at least two cited source lineages" in review_rules
+
+
+def test_report_normalizer_adds_evidence_method_when_model_omits_it() -> None:
+    report = _normalize_report(
+        {
+            "report": {
+                "title": "Traceable survey",
+                "body": "## Findings\n\nA bounded finding.",
+                "conclusions": [
+                    {
+                        "conclusion_id": "conclusion-001",
+                        "text": "A bounded finding.",
+                        "evidence_ids": ["claim-001"],
+                    }
+                ],
+            }
+        },
+        {"claim-001"},
+    )
+
+    assert "## Evidence Method" in report["body"]
+    assert "source-bounded synthesis" in report["body"]
 
 
 def test_topic_discovery_query_distills_research_subject_from_instruction() -> None:

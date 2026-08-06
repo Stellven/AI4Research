@@ -145,6 +145,15 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
             f"- {item['text']} {evidence_label}: {', '.join(item['evidence_ids'])}."
             for item in missing_conclusions
         )
+    if not re.search(r"(?im)^##\s+[^\r\n]*(?:methods?\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba)[^\r\n]*$", body):
+        method_heading = "æ–¹æ³•" if cjk_report else "Evidence Method"
+        method_body = (
+            "æœ¬æŠ¥å‘Šåªä½¿ç”¨ evidence_synthesis ä¸­å·²è¿½æº¯çš„ä¸»è¦åˆ¤æ–­ï¼›"
+            "ä»»ä½•è¶…å‡ºæ¥æºç›´æŽ¥è¡¨è¿°çš„å»ºè®®ã€æƒè¡¡æˆ–äº§ä¸šå«ä¹‰å‡åº”ç†è§£ä¸ºæ¥æºçº¦æŸä¸‹çš„ç»¼åˆæŽ¨æ–­ã€‚"
+            if cjk_report
+            else "This report uses only the traceable claims in evidence_synthesis; any recommendation, trade-off, or operational implication beyond direct source wording is a source-bounded synthesis."
+        )
+        body += f"\n\n## {method_heading}\n\n{method_body}"
     limitations = [str(item).strip() for item in response.get("limitations") or [] if str(item).strip()]
     if limitations:
         limitation_heading = "局限" if cjk_report else "Limitations"
