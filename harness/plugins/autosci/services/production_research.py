@@ -966,6 +966,7 @@ class ResearchModelService:
                     "Cover the complete user request.",
                     "For surveys, compare performance trade-offs and identify open research problems.",
                     "For webpage research, use the fetched webpage as evidence and distinguish supplemental sources.",
+                    "When two or more validated sources are available, cite at least two distinct exact source_id values across the claims.",
                     "Produce at least four substantive claims when evidence supports them.",
                 ],
             }
@@ -993,6 +994,8 @@ class ResearchModelService:
                 },
                 "quality_requirements": [
                     "The body must be non-empty, clearly structured Markdown and directly answer the whole request.",
+                    "Include an explicit Method or Evidence Method section that explains how supplied sources were used.",
+                    "When grounded claims cite two or more distinct source ids, the report must preserve at least two distinct cited sources.",
                     "For a survey, include an explicit performance trade-offs section and an open research problems section.",
                     "For Chinese requests, write the report in Chinese.",
                     "State evidence limitations without inventing methods or conclusions.",
@@ -1018,6 +1021,8 @@ class ResearchModelService:
                 },
                 "review_rules": [
                     "Accept only a non-empty relevant report whose conclusions are grounded in supplied source lineage.",
+                    "Require an explicit Method or Evidence Method section when the requested deliverable is a survey or technical report.",
+                    "Require at least two cited source lineages when two or more validated sources are available.",
                     "For surveys, require performance trade-offs and open research problems.",
                     "For Chinese requests, require Chinese output.",
                     "Do not create a high-severity finding merely because the evidence has explicit limitations.",

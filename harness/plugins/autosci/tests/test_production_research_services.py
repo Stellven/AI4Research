@@ -259,6 +259,47 @@ def test_openrouter_is_default_and_openai_key_is_not_bound_when_both_exist(tmp_p
     assert "OPENAI_API_KEY" not in services["secret_values"]
 
 
+def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_path: Path) -> None:
+    service = ResearchModelService(tmp_path, routes=[])
+    task_contract = {
+        "user_intent": "Generate a technical survey with traceable judgments.",
+        "deliverable": {"language": "en"},
+    }
+
+    _system, synthesis_user = service._prompt(
+        "evidence_synthesis",
+        {
+            "task_contract": task_contract,
+            "validated_sources": [
+                {"source_id": "source-1", "title": "One", "content_summary": "A"},
+                {"source_id": "source-2", "title": "Two", "content_summary": "B"},
+            ],
+        },
+    )
+    _system, report_user = service._prompt(
+        "report_draft",
+        {
+            "task_contract": task_contract,
+            "evidence_synthesis": {
+                "claims": [
+                    {"claim_id": "claim-1", "evidence_ids": ["source-1"]},
+                    {"claim_id": "claim-2", "evidence_ids": ["source-2"]},
+                ]
+            },
+        },
+    )
+    _system, review_user = service._prompt("independent_review", {"task_contract": task_contract})
+
+    synthesis_requirements = " ".join(synthesis_user["quality_requirements"])
+    report_requirements = " ".join(report_user["quality_requirements"])
+    review_rules = " ".join(review_user["review_rules"])
+    assert "at least two distinct exact source_id values" in synthesis_requirements
+    assert "explicit Method or Evidence Method section" in report_requirements
+    assert "at least two distinct cited sources" in report_requirements
+    assert "explicit Method or Evidence Method section" in review_rules
+    assert "at least two cited source lineages" in review_rules
+
+
 def test_research_model_retries_429_retry_after_on_same_route(tmp_path: Path) -> None:
     calls = []
 
