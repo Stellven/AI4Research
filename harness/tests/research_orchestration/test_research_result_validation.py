@@ -28,6 +28,21 @@ RESULT_SCHEMA = ROOT / "schemas/evidence/research_node_result.v1.schema.json"
 HASH = "a" * 64
 
 
+def _test_fs_path(path: Path) -> str:
+    resolved = str(path.resolve(strict=False))
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
+def _write_test_bytes(path: Path, content: bytes) -> None:
+    os.makedirs(_test_fs_path(path.parent), exist_ok=True)
+    with open(_test_fs_path(path), "wb") as handle:
+        handle.write(content)
+
+
 def valid_request() -> dict:
     return {
         "schema": "research_node_request.v1",
@@ -116,8 +131,7 @@ def materialize_result_artifacts(
     artifact = result["output_artifacts"][0]
     relative = str(artifact["path"]).replace("\\", "/")
     path = artifact_root / relative
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
+    _write_test_bytes(path, content)
     digest = hashlib.sha256(content).hexdigest()
     artifact["sha256"] = digest
     for record in result.get("hashes") or []:
@@ -135,8 +149,7 @@ def materialize_request_artifacts(
     artifact = request["input_artifact_refs"][0]
     relative = str(artifact["path"]).replace("\\", "/")
     path = artifact_root / relative
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
+    _write_test_bytes(path, content)
     artifact["sha256"] = hashlib.sha256(content).hexdigest()
     return path
 
@@ -188,6 +201,22 @@ def test_windows_and_unix_path_normalization_accept_in_scope_paths(tmp_path: Pat
     result["output_artifacts"][0]["path"] = "artifacts/research/run-phase2/node-dispatch/result.json"
     materialize_result_artifacts(tmp_path, result)
     validate_result_scopes(request, result, tmp_path)
+
+
+def test_result_scope_validation_accepts_existing_long_windows_artifact_path(tmp_path: Path) -> None:
+    artifact_root = (
+        tmp_path
+        / ("phase5-generalization-integration-" + "x" * 80)
+        / ("content-diversity-artifact-root-" + "y" * 80)
+        / ("run-with-long-id-" + "z" * 60)
+    )
+    request = valid_request()
+    request["write_scope"] = ["artifacts/research/run-phase2/node-dispatch/"]
+    result = valid_result()
+    materialized = materialize_result_artifacts(artifact_root, result)
+
+    assert len(str(materialized)) > 260
+    validate_result_scopes(request, result, artifact_root)
 
 
 def test_live_provider_requires_approval_and_network() -> None:

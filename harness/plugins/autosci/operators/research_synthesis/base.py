@@ -94,7 +94,7 @@ class OperatorContext:
     def load_json_artifact(self, artifact_ref: dict[str, Any]) -> dict[str, Any]:
         path = validate_scoped_path(artifact_ref.get("path", ""), self.read_scope, workspace_root=self.workspace_root)
         try:
-            data = path.read_bytes()
+            data = _read_bytes(path)
             expected_hash = str(artifact_ref.get("sha256") or "")
             if expected_hash and sha256_bytes(data).lower() != expected_hash.lower():
                 raise ResearchOperatorError(
@@ -149,6 +149,10 @@ def _write_bytes(path: Path, body: bytes) -> None:
 def _read_bytes(path: Path) -> bytes:
     with open(_fs_path(path), "rb") as handle:
         return handle.read()
+
+
+def _is_file(path: Path) -> bool:
+    return os.path.isfile(_fs_path(path))
 
 
 def _resolve(path_text: str | Path, workspace_root: Path) -> Path:

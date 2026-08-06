@@ -13,6 +13,8 @@ from .base import (
     evidence_ref,
     no_provider_result,
     output_path,
+    _is_file,
+    _read_bytes,
     require_node,
     sha256_bytes,
     utc_now,
@@ -70,9 +72,9 @@ def _snapshot_url(seed: dict[str, Any], context: OperatorContext) -> dict[str, A
 
 def _snapshot_local(seed: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     path = validate_scoped_path(str(seed.get("value") or ""), context.read_scope, workspace_root=context.workspace_root, must_exist=True)
-    if not path.is_file():
+    if not _is_file(path):
         raise ResearchOperatorError(f"Local seed is not a file: {seed.get('value')}", error_type="invalid_input")
-    data = path.read_bytes()
+    data = _read_bytes(path)
     kind = str(seed.get("seed_kind") or path.suffix.lstrip(".")).lower()
     limitations: list[str] = []
     if kind == "pdf":
@@ -147,7 +149,7 @@ def _snapshot_external_evidence(seed: dict[str, Any], context: OperatorContext) 
             error_type="unverified_external_evidence",
         )
     path = validate_scoped_path(str(matching_ref.get("path") or ""), context.read_scope, workspace_root=context.workspace_root, must_exist=True)
-    data = path.read_bytes()
+    data = _read_bytes(path)
     expected_hash = str(declared_ref.get("sha256") or matching_ref.get("sha256") or "")
     actual_hash = sha256_bytes(data)
     if expected_hash and expected_hash.lower() != actual_hash:

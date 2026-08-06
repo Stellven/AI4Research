@@ -45,6 +45,28 @@ _TASK_SCHEMA_PATH = _HARNESS_ROOT / "schemas" / "draft" / "research_task_contrac
 _RESULT_SCHEMA_PATH = _HARNESS_ROOT / "schemas" / "evidence" / "research_node_result.v1.schema.json"
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(Path(path).resolve(strict=False))
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
+def _exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
+def _is_file(path: Path) -> bool:
+    return os.path.isfile(_fs_path(path))
+
+
+def _read_text(path: Path) -> str:
+    with open(_fs_path(path), encoding="utf-8") as handle:
+        return handle.read()
+
+
 class ResearchOrchestrator:
     """Execute a research task contract while keeping Solar as state owner."""
 
@@ -734,7 +756,7 @@ class ResearchOrchestrator:
         }
         for artifact in artifacts:
             artifact_path = self._resolve_scoped_path(artifact.get("path"), must_exist=True)
-            if not artifact_path.is_file():
+            if not _is_file(artifact_path):
                 raise ResearchOrchestrationError("completed artifact must be an existing regular file")
             if not _is_under_or_equal(artifact_path, self.artifact_root):
                 raise ResearchOrchestrationError("completed artifact escapes artifact_root")
@@ -772,7 +794,7 @@ class ResearchOrchestrator:
         if path.suffix.casefold() != ".json":
             return
         try:
-            embedded = json.loads(path.read_text(encoding="utf-8"))
+            embedded = json.loads(_read_text(path))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ResearchOrchestrationError("declared JSON artifact is not a valid JSON document") from exc
         if not isinstance(embedded, dict):
@@ -817,7 +839,10 @@ class ResearchOrchestrator:
         else:
             candidate = self.artifact_root / text
         try:
-            return candidate.resolve(strict=must_exist)
+            resolved = candidate.resolve(strict=False)
+            if must_exist and not _exists(resolved):
+                raise ResearchOrchestrationError("completed artifact path does not exist or cannot be resolved")
+            return resolved
         except (OSError, RuntimeError) as exc:
             raise ResearchOrchestrationError("completed artifact path does not exist or cannot be resolved") from exc
 
@@ -1170,7 +1195,7 @@ def _path_parts_contained(child: str, parent: str, *, case_sensitive: bool) -> b
 
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
+    with open(_fs_path(path), "rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()

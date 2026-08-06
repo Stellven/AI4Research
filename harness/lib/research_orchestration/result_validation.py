@@ -32,6 +32,27 @@ NONTERMINAL_STATUSES = {"pending", "ready", "running", "awaiting_human", "awaiti
 _SHA256_RE = re.compile(r"^[A-Fa-f0-9]{64}$")
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(Path(path).resolve(strict=False))
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
+def _exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
+def _is_file(path: Path) -> bool:
+    return os.path.isfile(_fs_path(path))
+
+
+def _is_dir(path: Path) -> bool:
+    return os.path.isdir(_fs_path(path))
+
+
 def validate_node_request(
     request: dict,
     schema_path: Path,
@@ -112,7 +133,7 @@ def validate_request_artifact_scopes(request: dict, artifact_root: Path) -> None
         resolved = raw_path.resolve(strict=False)
         if not _is_under_or_equal(resolved, root):
             raise ResearchResultValidationError("declared read_scope escapes artifact_root")
-        if not resolved.exists():
+        if not _exists(resolved):
             raise ResearchResultValidationError("declared read_scope does not exist")
         _reject_reparse_escape(root, raw_path, [resolved])
         read_scopes.append(resolved)
@@ -130,7 +151,7 @@ def validate_request_artifact_scopes(request: dict, artifact_root: Path) -> None
         if not any(_is_under_or_equal(resolved, scope) for scope in read_scopes):
             raise ResearchResultValidationError("input artifact path escapes read_scope")
         _reject_reparse_escape(root, raw_path, read_scopes)
-        if not resolved.exists() or not resolved.is_file():
+        if not _exists(resolved) or not _is_file(resolved):
             raise ResearchResultValidationError("declared input artifact file does not exist")
         declared_hash = artifact.get("sha256")
         if declared_hash is not None and str(declared_hash).casefold() != _sha256_file(resolved):
@@ -169,7 +190,7 @@ def validate_result_scopes(
         if not any(_is_under_or_equal(artifact_path, scope) for scope in allowed_write_paths):
             raise ResearchResultValidationError("artifact path escapes write_scope")
         _reject_reparse_escape(root, raw_artifact_path, allowed_write_paths)
-        if not artifact_path.exists() or not artifact_path.is_file():
+        if not _exists(artifact_path) or not _is_file(artifact_path):
             raise ResearchResultValidationError("declared output artifact file does not exist")
         actual_hash = _sha256_file(artifact_path)
         declared_hash = artifact.get("sha256")
@@ -222,11 +243,8 @@ def _validate_schema(
 
 
 def _existing_artifact_root(artifact_root: Path) -> Path:
-    try:
-        root = Path(artifact_root).resolve(strict=True)
-    except OSError as exc:
-        raise ResearchResultValidationError("artifact_root must be an existing directory") from exc
-    if not root.is_dir():
+    root = Path(artifact_root).resolve(strict=False)
+    if not _is_dir(root):
         raise ResearchResultValidationError("artifact_root must be an existing directory")
     return root
 
@@ -300,7 +318,7 @@ def _reject_reparse_escape(root: Path, artifact_path: Path, scopes: list[Path]) 
     current = root
     for part in relative.parts:
         current = current / part
-        if not current.exists() and not current.is_symlink():
+        if not _exists(current) and not current.is_symlink():
             continue
         if _is_reparse_point(current):
             resolved = current.resolve(strict=True)
@@ -323,7 +341,7 @@ def _is_reparse_point(path: Path) -> bool:
 
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
+    with open(_fs_path(path), "rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
