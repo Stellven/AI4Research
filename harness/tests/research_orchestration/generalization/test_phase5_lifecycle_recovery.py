@@ -48,6 +48,12 @@ APPROVAL_REF = "phase5-test-approval-lifecycle-recovery-001"
 SECRET_CANARY = "opaquePhase5LifecycleRecoveryCanary"
 REQUEST_SCHEMA = HARNESS_ROOT / "schemas" / "draft" / "research_node_request.v1.schema.json"
 RESULT_SCHEMA = HARNESS_ROOT / "schemas" / "evidence" / "research_node_result.v1.schema.json"
+EXPERIMENT_RESULT_PATH = (
+    "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
+)
+EXPERIMENT_STATUS_PATH = (
+    "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_status.v1.json"
+)
 
 
 FULL_STAGE_NODES = [
@@ -112,10 +118,6 @@ def _load_phase5_workflow(_decision: Any) -> dict[str, Any]:
     idea_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/05_ideas/idea_candidate.v1.json"
     by_id["experiment_design"]["read_scope"] = list(
         dict.fromkeys([*by_id["experiment_design"]["read_scope"], idea_path])
-    )
-    result_path = "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
-    by_id["experiment_approval_gate"]["write_scope"] = list(
-        dict.fromkeys([*by_id["experiment_approval_gate"]["write_scope"], result_path])
     )
     return workflow
 
@@ -344,33 +346,6 @@ class Phase5ProbeResolver:
             payload["source"] = source
             payload["material_path"] = source
             payload["allow_network_fetch"] = False
-        elif node_id == "experiment_design":
-            payload["metrics"] = ["unsupported_claim_reduction_percent"]
-            payload["success_criteria"] = ["reduction_at_least_50_percent"]
-            payload["sandbox"] = {
-                "mode": "isolated",
-                "network": False,
-                "write_scope": [
-                    "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
-                ],
-            }
-        elif node_id == "claim_verify":
-            experiment = (
-                self.artifact_root
-                / "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
-            )
-            if experiment.is_file():
-                relative = experiment.relative_to(self.artifact_root).as_posix()
-                request["read_scope"] = list(dict.fromkeys([*request.get("read_scope", []), relative]))
-                request["input_artifact_refs"] = [
-                    *list(request.get("input_artifact_refs") or []),
-                    {
-                        "artifact_id": "experiment_result",
-                        "path": relative,
-                        "schema": "experiment_result.v1",
-                        "sha256": _sha256(experiment),
-                    },
-                ]
 
 
 def _prepare_artifact_root(artifact_root: Path) -> None:
@@ -450,15 +425,6 @@ def _task_and_workflow(artifact_root: Path, *, run_id: str = RUN_ID) -> tuple[di
         run_provenance=_git_checkout_provenance(REPO_ROOT),
     )
     workflow = apply_task_conditions(configured, task_contract)
-    by_id = {node["node_id"]: node for node in workflow["nodes"]}
-    if "claim_verify" in by_id and "experiment_monitor" in by_id:
-        experiment_result = "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
-        by_id["claim_verify"]["depends_on"] = list(
-            dict.fromkeys([*by_id["claim_verify"].get("depends_on", []), "experiment_monitor"])
-        )
-        by_id["claim_verify"]["read_scope"] = list(
-            dict.fromkeys([*by_id["claim_verify"].get("read_scope", []), experiment_result])
-        )
     return task_contract, workflow
 
 
@@ -540,6 +506,18 @@ def _assert_no_secret_persisted(artifact_root: Path) -> None:
             assert SECRET_CANARY not in path.read_text(encoding="utf-8", errors="ignore"), path
 
 
+def _assert_production_lifecycle_contract(artifact_root: Path) -> None:
+    _task_contract, workflow = _task_and_workflow(artifact_root)
+    by_id = {node["node_id"]: node for node in workflow["nodes"]}
+    claim_node = by_id["claim_verify"]
+    approval_node = by_id["experiment_approval_gate"]
+
+    assert "experiment_monitor" in claim_node.get("depends_on", [])
+    assert EXPERIMENT_STATUS_PATH in claim_node.get("read_scope", [])
+    assert EXPERIMENT_RESULT_PATH in claim_node.get("read_scope", [])
+    assert EXPERIMENT_RESULT_PATH in approval_node.get("write_scope", [])
+
+
 def _copy_run_tree(source_root: Path, target_root: Path) -> None:
     shutil.copytree(source_root, target_root)
     state_path = target_root / "state" / f"{RUN_ID}.research_run_state.json"
@@ -556,6 +534,7 @@ def _copy_run_tree(source_root: Path, target_root: Path) -> None:
 def test_phase5_complete_scientific_lifecycle_runs_with_real_experiment_and_final_evaluation(tmp_path: Path) -> None:
     artifact_root = tmp_path / "complete"
     result, resolver = _run_runtime(artifact_root)
+    _assert_production_lifecycle_contract(artifact_root)
 
     assert result["final_status"] == "completed"
     assert result["workflow_id"] == "scientific_research_lifecycle_full_v1"
@@ -576,7 +555,21 @@ def test_phase5_complete_scientific_lifecycle_runs_with_real_experiment_and_fina
         artifact_root
         / "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
     )
+    plan = _json(
+        artifact_root
+        / "artifacts/scientific/scientific_research_lifecycle_full_v1/06_experiment_plan/experiment_plan.v1.json"
+    )["outputs"]["experiment_plan"]
+    approval = _json(
+        artifact_root
+        / "artifacts/scientific/scientific_research_lifecycle_full_v1/06_experiment_plan/experiment_approval.v1.json"
+    )["outputs"]["approval"]
     experiment_result = experiment["outputs"]["result"]
+    assert plan["sandbox"]["mode"] == "isolated"
+    assert plan["sandbox"]["network"] is False
+    assert plan["sandbox"]["write_scope"] == [EXPERIMENT_RESULT_PATH]
+    assert approval["decision"] == "approved"
+    assert approval["sandbox"]["write_scope"] == plan["sandbox"]["write_scope"]
+    assert approval["plan_sha256"] == experiment_result["plan_sha256"]
     assert experiment_result["approval_ref"] == APPROVAL_REF
     assert experiment_result["sandbox_enforced"] is True
     assert any(item["name"] == "unsupported_claim_reduction_percent" and item["value"] >= 50 for item in experiment_result["metrics"])
@@ -622,6 +615,13 @@ def test_phase5_no_approval_does_not_execute_experiment(tmp_path: Path) -> None:
     assert "experiment_design" in dispatched
     assert "experiment_approval_gate" not in dispatched
     assert "experiment_run" not in dispatched
+    plan = _json(
+        artifact_root
+        / "artifacts/scientific/scientific_research_lifecycle_full_v1/06_experiment_plan/experiment_plan.v1.json"
+    )["outputs"]["experiment_plan"]
+    assert plan["sandbox"]["mode"] == "isolated"
+    assert plan["sandbox"]["network"] is False
+    assert plan["sandbox"]["write_scope"] == [EXPERIMENT_RESULT_PATH]
     assert not (artifact_root / "experiment-runtime" / "raw_observations.json").exists()
 
 
