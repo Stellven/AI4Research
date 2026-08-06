@@ -419,12 +419,32 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
         for item in seeds
         if str(item.get("seed_kind") or "") in {"topic", "research_brief"}
     ]
+    has_topic_seed = any(
+        isinstance(item, dict) and str(item.get("seed_kind") or "") in {"topic", "research_brief"}
+        for item in seeds
+    )
     # A fetched page title is normally a higher quality public-search query
     # than appending the full user instruction (which can swamp provider
-    # relevance ranking). Topic-only runs retain their full explicit topic.
+    # relevance ranking). Topic-only runs first distill the subject from
+    # common research-instruction phrasing while preserving the user's domain.
     query = " ".join(inline[:1] or titles[:1] or [intent]).strip()
-    query = re.sub(r"^(?:survey|review|research|analy[sz]e|synthesize)\s+", "", query, flags=re.IGNORECASE)
-    query = re.split(r"[,;]", query, maxsplit=1)[0].strip()
+    if has_topic_seed or not titles:
+        match = re.search(
+            r"\b(?:survey|review|report|analysis|brief)\s+(?:on|about|for)\s+(.+)",
+            query,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            query = match.group(1).strip()
+        query = re.split(
+            r"(?:\.\s+|\n+)(?:cover|include|discuss|address|compare|state|with)\b",
+            query,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0].strip()
+    else:
+        query = re.sub(r"^(?:survey|review|research|analy[sz]e|synthesize)\s+", "", query, flags=re.IGNORECASE)
+        query = re.split(r"[,;]", query, maxsplit=1)[0].strip()
     return re.sub(r"\s+", " ", query)[:500]
 
 
@@ -946,9 +966,11 @@ class ResearchModelService:
                 for item in kwargs.get("validated_sources") or []
                 if isinstance(item, dict)
             ]
+            allowed_source_ids = [str(item["source_id"]) for item in sources if str(item.get("source_id") or "").strip()]
             user = {
                 "node_id": node_id,
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
+                "allowed_source_ids": allowed_source_ids,
                 "validated_sources": sources,
                 "required_output": {
                     "claims": [
@@ -967,6 +989,7 @@ class ResearchModelService:
                     "For surveys, compare performance trade-offs and identify open research problems.",
                     "For webpage research, use the fetched webpage as evidence and distinguish supplemental sources.",
                     "When two or more validated sources are available, cite at least two distinct exact source_id values across the claims.",
+                    "Every evidence_ids entry must be copied exactly from allowed_source_ids; do not abbreviate, hash, prefix, suffix, or repair source ids.",
                     "Produce at least four substantive claims when evidence supports them.",
                 ],
             }

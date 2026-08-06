@@ -14,6 +14,7 @@ from harness.plugins.autosci.services.production_research import (
     LiteratureDiscoveryService,
     ResearchModelService,
     _ProviderRoute,
+    _topic_from_snapshot,
     production_services_from_environment,
 )
 
@@ -293,11 +294,37 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
     synthesis_requirements = " ".join(synthesis_user["quality_requirements"])
     report_requirements = " ".join(report_user["quality_requirements"])
     review_rules = " ".join(review_user["review_rules"])
+    assert synthesis_user["allowed_source_ids"] == ["source-1", "source-2"]
     assert "at least two distinct exact source_id values" in synthesis_requirements
+    assert "copied exactly from allowed_source_ids" in synthesis_requirements
+    assert "do not abbreviate, hash, prefix, suffix, or repair source ids" in synthesis_requirements
     assert "explicit Method or Evidence Method section" in report_requirements
     assert "at least two distinct cited sources" in report_requirements
     assert "explicit Method or Evidence Method section" in review_rules
     assert "at least two cited source lineages" in review_rules
+
+
+def test_topic_discovery_query_distills_research_subject_from_instruction() -> None:
+    query = _topic_from_snapshot(
+        {
+            "seeds": [
+                {
+                    "seed_kind": "topic",
+                    "content": (
+                        "Search public sources and generate an English technical survey on reliability and "
+                        "evaluation methods for retrieval-augmented generation systems. Cover evaluation "
+                        "dimensions, benchmark design, failure modes, observability, trade-offs, and open "
+                        "research problems."
+                    ),
+                }
+            ]
+        },
+        {"task_contract": {}},
+    )
+
+    assert query == "reliability and evaluation methods for retrieval-augmented generation systems"
+    assert "Search public sources" not in query
+    assert "Cover evaluation dimensions" not in query
 
 
 def test_research_model_retries_429_retry_after_on_same_route(tmp_path: Path) -> None:
