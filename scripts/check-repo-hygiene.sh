@@ -69,6 +69,41 @@ git ls-files -z | while IFS= read -r -d '' path; do
       record_violation "MACHINE_SOURCE_ARCHIVE" "$path"
       ;;
   esac
+
+  # R8 Governance: Excel lock files (created by MS Office while a workbook is open)
+  case "$path" in
+    '~$'*)
+      record_violation "EXCEL_LOCK_FILE" "$path"
+      ;;
+  esac
+
+  # R8 Governance: transient real-data test run outputs
+  case "$path" in
+    outputs/real-data-tests/*|outputs/phase22-real-journeys/*)
+      record_violation "TRANSIENT_TEST_OUTPUT" "$path"
+      ;;
+  esac
+
+  # R8 Governance: live-provider artifacts (secret scan required before any manual review)
+  case "$path" in
+    outputs/provider-artifacts/*|outputs/live-provider/*|provider-artifacts/*|live-provider-artifacts/*|*.provider-artifact)
+      record_violation "LIVE_PROVIDER_ARTIFACT" "$path"
+      ;;
+  esac
+
+  # R8 Governance: nested pytest / tool caches
+  case "$path" in
+    */.pytest_cache/*|*/.mypy_cache/*|*/.ruff_cache/*)
+      record_violation "LANGUAGE_CACHE" "$path"
+      ;;
+  esac
+
+  # R8 Governance: codex-tmp worker scratch areas
+  case "$path" in
+    .codex-tmp/*)
+      record_violation "CODEX_TMP_SCRATCH" "$path"
+      ;;
+  esac
 done
 
 if [ -s "$violations" ]; then

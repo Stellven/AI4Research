@@ -49,5 +49,12 @@ expect_rejected RAW_TEST_EVIDENCE "docs/testing/test-runs/run-1/log.txt"
 expect_rejected HARNESS_RUNTIME "harness/logs/pane-exit.jsonl"
 expect_rejected MACHINE_SOURCE_ARCHIVE "Feature list stuff/Solar_Harness_All_Sources_2099/files/state.txt"
 
+# R8 Governance negative controls
+expect_rejected EXCEL_LOCK_FILE '~$AI4RnD Feature List.xlsx'
+expect_rejected TRANSIENT_TEST_OUTPUT "outputs/real-data-tests/run-1/data.json"
+expect_rejected TRANSIENT_TEST_OUTPUT "outputs/phase22-real-journeys/j01/log.txt"
+expect_rejected LIVE_PROVIDER_ARTIFACT "outputs/provider-artifacts/serper-response.json"
+expect_rejected LANGUAGE_CACHE "harness/tests/.pytest_cache/v/cache/nodeids"
+
 bash "$fixture/scripts/check-repo-hygiene.sh" >/dev/null
 echo "repository hygiene negative controls passed"

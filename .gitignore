@@ -177,3 +177,46 @@ docs/SIHAO_CHANGE_LIST.md
 
 # Generated dev telemetry (written to ~/Solar/data by scripts/extract-usage-data.ts)
 data/usage-stats.json
+
+# ── R8 Governance additions ───────────────────────────────────────────────────
+# (G04) Transient real-data and journey test run outputs.  These directories
+# hold local run evidence and must never be committed.  Canonical reports and
+# their fixtures remain tracked under docs/ and tests/.
+outputs/real-data-tests/
+outputs/phase22-real-journeys/
+outputs/tmp-*/
+outputs/*.tmp
+outputs/*.temp
+
+# (G05) Live-provider artifacts produced during test runs.  Secret scan (S05)
+# must target these paths when they exist locally; they must not be staged.
+outputs/provider-artifacts/
+outputs/live-provider/
+provider-artifacts/
+live-provider-artifacts/
+*.provider-artifact
+
+# (G05) Excel lock files created by Microsoft Office / LibreOffice when a
+# workbook is open.  These must never be staged or committed.
+~$*.xlsx
+~$*.xlsm
+~$*.xls
+~$*.csv
+~$*
+
+# (G05) Nested pytest and tool caches that may appear in subdirectories.
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# (G05) codex-tmp worker result scratch areas written by worker agents.
+.codex-tmp/
+
+# (G05) Miscellaneous local-only environment files not already caught by the
+# root-level .env* rule.  The negation guards preserve committed templates.
+.env.local
+.env.production
+.env.development
+# Ensure templates and examples are always committed (redundant but explicit):
+!.env.example
+!.env.template
