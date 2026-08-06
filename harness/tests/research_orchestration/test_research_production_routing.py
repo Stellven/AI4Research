@@ -164,9 +164,19 @@ def test_conditional_graph_preserves_experiment_status_for_claim_verification() 
 
     selected = apply_task_conditions(workflow, contract)
 
-    claim_verify = {item["node_id"]: item for item in selected["nodes"]}["claim_verify"]
+    by_id = {item["node_id"]: item for item in selected["nodes"]}
+    claim_verify = by_id["claim_verify"]
+    approval_gate = by_id["experiment_approval_gate"]
     assert "experiment_monitor" in claim_verify["depends_on"]
     assert (
         "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_status.v1.json"
         in claim_verify["read_scope"]
+    )
+    assert (
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
+        in claim_verify["read_scope"]
+    )
+    assert (
+        "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
+        in approval_gate["write_scope"]
     )
