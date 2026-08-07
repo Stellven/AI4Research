@@ -40,7 +40,14 @@ from research_orchestration.runtime import (
     load_evidence_references,
 )
 from research_orchestration.runtime_lease import ResearchLeaseAdapter
-from research_orchestration.routing import seed_kind_for_value
+from research_control_plane import (
+    ResearchControlPlaneError,
+    classify_research_input,
+    clarification_result,
+    error_result,
+    prepare_runtime_inputs,
+    validate_request_constraints,
+)
 
 from adapters.autosci_to_claim_verdict import convert as convert_claim_verdict
 from adapters.autosci_to_experiment_plan import convert as convert_experiment_plan
@@ -22600,6 +22607,8 @@ def _visualize_graph_artifacts(
         artifacts.extend(canvas_artifacts)
         if not canvas_payload:
             status_reasons.append("AutoSci canvas generation produced no structured output.")
+        elif int(canvas_payload.get("nodes") or 0) == 0 and int(canvas_payload.get("edges") or 0) == 0:
+            status_reasons.append("AutoSci canvas generation produced no nodes or edges.")
 
     graph_payload: dict[str, Any] = {}
     graph_args = ["graph-data", "--wiki-root", str(wiki_root), "--out", str(graph_out)]
@@ -22620,6 +22629,8 @@ def _visualize_graph_artifacts(
     artifacts.extend(graph_artifacts)
     if code != 0:
         status_reasons.append("Graph data extraction failed.")
+    elif not graph_payload.get("nodes") and not graph_payload.get("edges"):
+        status_reasons.append("Graph data extraction produced no nodes or edges.")
 
     graph_edges = graph_payload.get("edges") if isinstance(graph_payload.get("edges"), list) else []
     edges = _normalize_visualization_edges(
@@ -22845,6 +22856,9 @@ def _action_visualize_graph(envelope: dict[str, Any]) -> dict[str, Any]:
         "artifacts": artifacts,
         "limitations": limitations,
     }, envelope)
+    evidence.setdefault("outputs", {})["source_ref"] = target
+    evidence.setdefault("outputs", {})["status_reasons"] = status_reasons
+    evidence.setdefault("outputs", {})["visualize_options"] = raw_output.get("visualize_options") or {}
     return _attach_policy_decision(evidence, policy_decision)
 
 
@@ -22975,14 +22989,38 @@ def cmd_research(args: argparse.Namespace) -> int:
 
     artifact_root = Path(args.artifact_root).expanduser().resolve()
     sources = list(args.source or [])
-    seed_inputs = [
-        {
-            "seed_id": f"source-{index}",
-            "seed_kind": seed_kind_for_value(source),
-            "value": source,
-        }
-        for index, source in enumerate(sources, start=1)
-    ]
+    try:
+        input_classification = classify_research_input(
+            prompt=args.prompt,
+            sources=sources,
+            import_evidence=list(args.import_evidence or []),
+            run_mode=args.run_mode,
+            explicit_workflow=args.workflow,
+        )
+        readiness = validate_request_constraints(args.prompt, input_classification)
+        if readiness.get("status") == "needs_clarification":
+            result = clarification_result(
+                run_id=args.run_id,
+                prompt=args.prompt,
+                run_mode=args.run_mode,
+                classification=input_classification,
+                readiness=readiness,
+            )
+            print(json.dumps(result, indent=2, ensure_ascii=True, sort_keys=True))
+            return 0
+        prepared_seed_inputs, prepared_evidence = prepare_runtime_inputs(
+            prompt=args.prompt,
+            sources=sources,
+            import_evidence=list(args.import_evidence or []),
+            run_mode=args.run_mode,
+            artifact_root=artifact_root,
+            run_id=args.run_id,
+            classification=input_classification,
+        )
+    except ResearchControlPlaneError as exc:
+        result = error_result(run_id=args.run_id, prompt=args.prompt, run_mode=args.run_mode, error=exc)
+        print(json.dumps(result, indent=2, ensure_ascii=True, sort_keys=True))
+        return 2
     aliases = {
         # Semantic aliases are explicit metadata, never import/name guessing.
         "research_synthesis": {"web_fetch": "seed_fetch"},
@@ -23002,7 +23040,9 @@ def cmd_research(args: argparse.Namespace) -> int:
         secret_values = dict(production_services.get("secret_values") or {})
         authorization["secret_refs"] = sorted(secret_values)
         authorization["secret_values"] = secret_values
-        evidence = load_evidence_references(args.import_evidence or [], artifact_root=artifact_root)
+        evidence = list(prepared_evidence)
+        if not evidence:
+            evidence.extend(load_evidence_references(args.import_evidence or [], artifact_root=artifact_root))
         catalog = FileWorkflowCatalog(
             harness_root=REPO_HARNESS_DIR,
             selection_path=Path(args.workflow_selection),
@@ -23020,20 +23060,24 @@ def cmd_research(args: argparse.Namespace) -> int:
         result = runtime.run(
             prompt=args.prompt,
             run_id=args.run_id,
-            seed_inputs=seed_inputs,
-            run_mode=args.run_mode,
-            explicit_workflow=args.workflow,
+            seed_inputs=prepared_seed_inputs,
+            run_mode="import_evidence" if input_classification.input_kind == "experiment_evidence" else args.run_mode,
+            explicit_workflow=args.workflow or input_classification.workflow_kind,
             supplied_evidence=evidence,
             output_language=args.output_language,
             repository_paths=list(args.repository or []),
             max_steps=args.max_steps,
         )
+        result["input_classification"] = input_classification.to_dict()
+        if input_classification.input_kind == "experiment_evidence" and args.run_mode != "import_evidence":
+            result["requested_run_mode"] = args.run_mode
     except Exception as exc:
         result = {
             "schema": "solar_research_runtime_result.v1",
             "run_id": args.run_id,
             "prompt": args.prompt,
             "run_mode": args.run_mode,
+            "input_classification": input_classification.to_dict() if "input_classification" in locals() else {},
             "final_status": "failed",
             "error_type": type(exc).__name__,
             "error": str(exc),
