@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import shutil
 import subprocess
@@ -35,6 +36,22 @@ _REQUEST_SCHEMA = _HARNESS_ROOT / "schemas" / "draft" / "research_node_request.v
 _RESULT_SCHEMA = _HARNESS_ROOT / "schemas" / "evidence" / "research_node_result.v1.schema.json"
 _DEFAULT_SELECTION = _HARNESS_ROOT / "config" / "research-workflow-selection.v1.json"
 _PROMPT_URL_RE = re.compile(r"https?://[^\s)>\]]+", re.IGNORECASE)
+_PROMPT_PDF_RE = re.compile(r"(?<!\w)[^\s]+\.pdf\b", re.IGNORECASE)
+_MARKDOWN_DELIVERABLE_RE = re.compile(r"\b(?:markdown|md)\b|\.md\b", re.IGNORECASE)
+_PDF_DELIVERABLE_RE = re.compile(
+    r"\b(?:deliver|produce|export|generate|output|format)\s+(?:as\s+)?(?:a\s+)?pdf\b|"
+    r"\bpdf\s+(?:deliverable|report|output)\b",
+    re.IGNORECASE,
+)
+_JSON_DELIVERABLE_RE = re.compile(r"\bjson\b", re.IGNORECASE)
+_CHINESE_RE = re.compile(r"[\u4e00-\u9fff]|\b(?:chinese|zh-cn|mandarin)\b", re.IGNORECASE)
+_ENGLISH_RE = re.compile(r"\b(?:english|en-us|en-gb)\b", re.IGNORECASE)
+_AMBIGUOUS_RESEARCH_RE = re.compile(r"^\s*research\s+[\w\s-]{1,80}\s*$", re.IGNORECASE)
+_CONFLICTING_LANGUAGE_RE = re.compile(
+    r"(?:\b(?:chinese|zh-cn|mandarin)\b|[\u4e00-\u9fff].*?(?:中文|汉语)).*?\b(?:english|en-us|en-gb)\b|"
+    r"\b(?:english|en-us|en-gb)\b.*?(?:中文|汉语|\b(?:chinese|zh-cn|mandarin)\b)",
+    re.IGNORECASE,
+)
 _REPOSITORY_CODE_SUFFIXES = {
     ".c", ".cc", ".cpp", ".cs", ".go", ".h", ".hpp", ".java", ".js", ".jsx",
     ".kt", ".m", ".php", ".py", ".rb", ".rs", ".scala", ".sh", ".swift", ".ts", ".tsx",
@@ -151,6 +168,34 @@ class SolarResearchRuntime:
             workflow_identity=workflow_identity,
             run_provenance=_git_checkout_provenance(_HARNESS_ROOT.parent),
         )
+        contract_path = _write_task_contract(self.artifact_root, run_id, task_contract)
+        readiness_gate = task_contract["constraints"].get("readiness_gate", {})
+        if readiness_gate.get("status") == "needs_clarification":
+            return {
+                "schema": "solar_research_runtime_result.v1",
+                "task_id": task_contract["task_id"],
+                "run_id": run_id,
+                "prompt": prompt,
+                "route": decision.to_dict(),
+                "workflow_id": workflow_identity["workflow_id"],
+                "start_node": None,
+                "run_mode": run_mode,
+                "run_provenance": deepcopy(task_contract["run_provenance"]),
+                "task_contract_path": str(contract_path),
+                "final_status": "awaiting_human",
+                "state_path": "",
+                "final_status_evidence_refs": [],
+                "node_states": {},
+                "current_blockers": [
+                    {
+                        "blocker_id": "research_readiness_needs_clarification",
+                        "node_id": "__intake__",
+                        "reason": "Core research requirements are missing or contradictory.",
+                        "questions": deepcopy(readiness_gate.get("questions") or []),
+                    }
+                ],
+                "conditionally_skipped_nodes": [],
+            }
         try:
             workflow = apply_task_conditions(configured_workflow, task_contract)
         except Exception as exc:
@@ -241,6 +286,7 @@ class SolarResearchRuntime:
             "start_node": workflow.get("start_node"),
             "run_mode": run_mode,
             "run_provenance": deepcopy(task_contract["run_provenance"]),
+            "task_contract_path": str(contract_path),
             "final_status": state.get("final_status"),
             "state_path": str(state_path),
             "final_status_evidence_refs": list(state.get("final_status_evidence_refs") or []),
@@ -270,7 +316,15 @@ def build_task_contract(
 ) -> dict:
     """Build the frozen Phase 0 task contract without truncating user intent."""
 
-    language = str(output_language or "").strip() or "preserve_user_request"
+    compiled = compile_research_requirements(
+        prompt=prompt,
+        decision=decision,
+        seed_inputs=seed_inputs,
+        output_language=output_language,
+        repository_inputs=repository_inputs or [],
+        supplied_evidence=supplied_evidence or [],
+    )
+    language = compiled["deliverable"]["language"]
     local_lifecycle = decision.workflow_kind in {"paper_ingestion", "scientific_lifecycle"}
     required_content: list[dict[str, Any]] = []
     lowered_prompt = prompt.lower()
@@ -346,8 +400,11 @@ def build_task_contract(
             "kind": "evidence_backed_research_report",
             "description": "A non-empty, structurally usable report relevant to the complete user request.",
             "language": language,
+            "format": compiled["deliverable"]["format"],
+            "delivery_type": compiled["deliverable"]["delivery_type"],
             "artifact_expectations": artifact_expectations,
             "required_content": required_content,
+            "compiled_acceptance": compiled["deliverable"]["compiled_acceptance"],
             "review_requirement": review_requirement,
         },
         "workflow_kind": decision.workflow_kind,
@@ -356,6 +413,9 @@ def build_task_contract(
             "no_live_provider_without_approval": True,
             "no_secret_logging": True,
             "repository_inputs": deepcopy(repository_inputs or []),
+            "request_capture": compiled["request_capture"],
+            "user_constraints": compiled["constraints"],
+            "readiness_gate": compiled["readiness_gate"],
             "conditional_skips": [],
         },
         "provider_requirements": [],
@@ -366,10 +426,186 @@ def build_task_contract(
     }
 
 
+def compile_research_requirements(
+    *,
+    prompt: str,
+    decision: ResearchRouteDecision,
+    seed_inputs: list[dict],
+    output_language: str = "",
+    repository_inputs: list[dict] | None = None,
+    supplied_evidence: list[dict] | None = None,
+) -> dict[str, Any]:
+    """Compile user-facing research requirements into machine-checkable fields."""
+
+    prompt_text = str(prompt or "")
+    prompt_lower = prompt_text.lower()
+    detected_urls = _dedupe_strings(_PROMPT_URL_RE.findall(prompt_text))
+    detected_pdfs = _dedupe_strings(_PROMPT_PDF_RE.findall(prompt_text))
+    language = _compile_output_language(prompt_text, output_language)
+    delivery_format = _compile_delivery_format(prompt_text)
+    minimum_sources = _requested_minimum(
+        prompt_text,
+        (
+            r"at\s+least\s+(\d+)\s+(?:traceable\s+)?(?:public\s+)?(?:links?|sources?)",
+            r"minimum\s+of\s+(\d+)\s+(?:traceable\s+)?(?:links?|sources?)",
+            r"至少\s*(?:提供|包含)?\s*(\d+)\s*(?:个|条)?\s*(?:可追溯|公开)?(?:来源|链接)",
+        ),
+        1 if decision.seed_kind == "url" else 0,
+    )
+    minimum_trends = _requested_minimum(
+        prompt_text,
+        (
+            r"at\s+least\s+(\d+)\s+(?:technical\s+)?trends?",
+            r"minimum\s+of\s+(\d+)\s+(?:technical\s+)?trends?",
+            r"至少\s*(?:总结|梳理|提炼|覆盖|列出)?\s*(\d+)\s*(?:个|项)?(?:相关|关键)?(?:技术)?趋势",
+        ),
+        0,
+    )
+    constraints = {
+        "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
+        "prompt_length_chars": len(prompt_text),
+        "detected_urls": detected_urls,
+        "detected_pdfs": detected_pdfs,
+        "output_language": language,
+        "delivery_format": delivery_format,
+        "minimum_traceable_sources": minimum_sources,
+        "minimum_trends": minimum_trends,
+        "online_retrieval_required": bool(detected_urls or re.search(r"\b(?:current|online|web|internet|live)\b|当前|互联网|公开网页|在线", prompt_lower)),
+        "claim_evidence_separation_required": bool(re.search(r"claim.*evidence.*inference|事实.*证据.*推断|证据.*推断", prompt_text, re.IGNORECASE)),
+        "repository_input_count": len(repository_inputs or []),
+        "supplied_evidence_count": len(supplied_evidence or []),
+    }
+    acceptance = [
+        "Preserve the complete user prompt in user_intent and request_capture.",
+        f"Select workflow_kind={decision.workflow_kind} and seed_kind={decision.seed_kind}.",
+        f"Produce deliverable format={delivery_format} and language={language}.",
+    ]
+    if minimum_sources:
+        acceptance.append(f"Preserve at least {minimum_sources} traceable sources or fail closed with explicit limitations.")
+    if minimum_trends:
+        acceptance.append(f"Cover at least {minimum_trends} trends or fail closed with explicit limitations.")
+    if constraints["claim_evidence_separation_required"]:
+        acceptance.append("Separate claims, evidence, and inference in the produced report.")
+
+    readiness = _compile_readiness_gate(
+        prompt_text=prompt_text,
+        decision=decision,
+        constraints=constraints,
+        seed_inputs=seed_inputs,
+        supplied_evidence=supplied_evidence or [],
+    )
+    return {
+        "request_capture": {
+            "raw_prompt": prompt_text,
+            "raw_prompt_sha256": constraints["prompt_sha256"],
+            "raw_prompt_length_chars": constraints["prompt_length_chars"],
+            "seed_inputs": deepcopy(seed_inputs),
+            "detected_urls": detected_urls,
+            "detected_pdfs": detected_pdfs,
+        },
+        "deliverable": {
+            "language": language,
+            "format": delivery_format,
+            "delivery_type": delivery_format,
+            "compiled_acceptance": acceptance,
+        },
+        "constraints": constraints,
+        "readiness_gate": readiness,
+    }
+
+
+def _compile_readiness_gate(
+    *,
+    prompt_text: str,
+    decision: ResearchRouteDecision,
+    constraints: dict[str, Any],
+    seed_inputs: list[dict],
+    supplied_evidence: list[dict],
+) -> dict[str, Any]:
+    missing: list[str] = []
+    contradictions: list[str] = []
+    questions: list[str] = []
+    stripped = prompt_text.strip()
+    if decision.requires_user_confirmation or _AMBIGUOUS_RESEARCH_RE.match(stripped):
+        missing.append("research_goal_or_acceptance")
+        questions.append("What exact research question, source scope, and acceptance criteria should Solar use?")
+    if decision.seed_kind == "url" and not constraints["detected_urls"] and not any(item.get("seed_kind") == "url" for item in seed_inputs):
+        missing.append("url_source")
+        questions.append("Which URL should Solar read as the research seed?")
+    if decision.seed_kind == "pdf" and not any(item.get("seed_kind") == "pdf" for item in seed_inputs):
+        missing.append("pdf_source")
+        questions.append("Which PDF file should Solar ingest?")
+    if decision.run_mode in {"resume", "import_evidence"} and not supplied_evidence and not any(
+        item.get("seed_kind") == "external_evidence" for item in seed_inputs
+    ):
+        missing.append("external_evidence")
+        questions.append("Which existing evidence artifact should Solar resume from?")
+    if _CONFLICTING_LANGUAGE_RE.search(prompt_text):
+        contradictions.append("output_language")
+        questions.append("Should the final deliverable be in Chinese or English?")
+    status = "needs_clarification" if missing or contradictions else "ready"
+    return {
+        "status": status,
+        "missing_core_requirements": missing,
+        "contradictions": contradictions,
+        "questions": _dedupe_strings(questions),
+        "requires_user_confirmation": bool(decision.requires_user_confirmation),
+    }
+
+
+def _compile_output_language(prompt: str, explicit: str) -> str:
+    requested = str(explicit or "").strip()
+    if requested:
+        return requested
+    if _CHINESE_RE.search(prompt):
+        return "zh-CN"
+    if _ENGLISH_RE.search(prompt):
+        return "en"
+    return "preserve_user_request"
+
+
+def _compile_delivery_format(prompt: str) -> str:
+    if _JSON_DELIVERABLE_RE.search(prompt):
+        return "json"
+    if _PDF_DELIVERABLE_RE.search(prompt):
+        return "pdf"
+    if _MARKDOWN_DELIVERABLE_RE.search(prompt):
+        return "markdown"
+    return "request_format"
+
+
+def _requested_minimum(text: str, patterns: tuple[str, ...], default: int) -> int:
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            try:
+                return max(1, int(match.group(1)))
+            except (TypeError, ValueError):
+                continue
+    return default
+
+
+def _dedupe_strings(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(str(item) for item in items if str(item)))
+
+
+def _write_task_contract(artifact_root: Path, run_id: str, task_contract: dict[str, Any]) -> Path:
+    path = artifact_root / "contracts" / f"{_safe_component(run_id)}.research_task_contract.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(task_contract, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
 def _git_checkout_provenance(repo_root: Path) -> dict[str, Any]:
     """Capture only bounded, non-secret implementation identity from Git."""
 
     captured_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    if not (Path(repo_root).resolve() / ".git").exists():
+        return {
+            "repo_head": "unavailable",
+            "worktree_status": "unavailable",
+            "captured_at": captured_at,
+        }
     try:
         head = subprocess.run(
             ["git", "-C", str(Path(repo_root).resolve()), "rev-parse", "HEAD"],

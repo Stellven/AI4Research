@@ -1,7 +1,23 @@
 {
   "schema_version": "research_workflow_selection.v1",
-  "status": "draft",
-  "active": false,
+  "status": "active",
+  "active": true,
+  "supported_input_kinds": [
+    "topic",
+    "url",
+    "pdf",
+    "markdown",
+    "external_evidence",
+    "experiment"
+  ],
+  "semantic_entry_stages": {
+    "topic": "source_discovery",
+    "url": "web_fetch",
+    "pdf": "paper_ingest",
+    "markdown": "material_ingest",
+    "external_evidence": "evidence_import",
+    "experiment": "experiment_design"
+  },
   "routes": [
     {
       "workflow_kind": "research_synthesis",

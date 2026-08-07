@@ -22,6 +22,15 @@ def test_english_url_report() -> None:
     assert result["workflow_kind"] == "research_synthesis"
 
 
+def test_url_seed_without_report_word_still_routes_to_research_synthesis() -> None:
+    result = classify_research_intent("Use https://example.org/systems in Chinese")
+
+    assert result["seed_kind"] == "url"
+    assert result["workflow_kind"] == "research_synthesis"
+    assert result["requires_user_confirmation"] is False
+    assert "url_seed_synthesis_signal" in result["reason_codes"]
+
+
 def test_local_pdf_routes_to_paper_ingestion() -> None:
     result = classify_research_intent("Ingest the local paper file C:/papers/skillgen.pdf")
 

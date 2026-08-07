@@ -122,9 +122,19 @@ def _yaml_text(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2)
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(Path(path).resolve(strict=False))
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
 def _write_text(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    os.makedirs(_fs_path(path.parent), exist_ok=True)
+    with open(_fs_path(path), "w", encoding="utf-8") as handle:
+        handle.write(content)
 
 
 def _write_json(path: Path, payload: Any) -> None:

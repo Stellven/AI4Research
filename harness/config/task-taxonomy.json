@@ -3,6 +3,56 @@
   "updated_at": "2026-05-30T00:00:00Z",
   "description": "APO task classification taxonomy. Defines task_classes, signal patterns, and workflow stage mappings used by the goal-driven APO classifier.",
   "task_classes": {
+    "RESEARCH_TOPIC_SYNTHESIS": {
+      "id": "RESEARCH_TOPIC_SYNTHESIS",
+      "description": "Topic-first research synthesis or literature survey requiring source discovery, evidence synthesis, and a report contract.",
+      "primary_signals": ["research", "survey", "literature", "related work", "state of the art", "synthesize", "report"],
+      "secondary_signals": ["topic", "trend", "compare", "analysis", "claim", "evidence"],
+      "negative_signals": ["implement", "build", "feature", "fix bug"],
+      "min_signal_score": 2,
+      "default_workflow": "research_synthesis_v1",
+      "preferred_capsule_tags": ["research", "synthesis", "literature"]
+    },
+    "RESEARCH_URL_SYNTHESIS": {
+      "id": "RESEARCH_URL_SYNTHESIS",
+      "description": "URL-seeded research request that must fetch or preserve the URL as a source seed before synthesis.",
+      "primary_signals": ["http://", "https://", "url", "webpage", "web page", "online source"],
+      "secondary_signals": ["research", "analyze", "report", "markdown", "source"],
+      "negative_signals": ["repository", "repo", "source tree", "frontend", "api endpoint"],
+      "min_signal_score": 1,
+      "default_workflow": "research_synthesis_v1",
+      "preferred_capsule_tags": ["research", "url", "source"]
+    },
+    "RESEARCH_PAPER_INGESTION": {
+      "id": "RESEARCH_PAPER_INGESTION",
+      "description": "PDF, Markdown, or local paper ingestion for the Solar scientific lifecycle.",
+      "primary_signals": ["pdf", ".pdf", "paper", "markdown", ".md", "ingest"],
+      "secondary_signals": ["claims", "methods", "limitations", "summarize", "analyze"],
+      "negative_signals": ["implement", "build", "deploy"],
+      "min_signal_score": 2,
+      "default_workflow": "scientific_research_lifecycle_full_v1",
+      "preferred_capsule_tags": ["research", "paper", "ingestion"]
+    },
+    "RESEARCH_EVIDENCE_RESUME": {
+      "id": "RESEARCH_EVIDENCE_RESUME",
+      "description": "Resume or import an existing evidence bundle without rerunning completed scientific lifecycle stages.",
+      "primary_signals": ["resume", "import evidence", "external evidence", "existing evidence", "evidence bundle"],
+      "secondary_signals": ["continue", "prior run", "provenance", "artifact"],
+      "negative_signals": ["execute from scratch", "new implementation"],
+      "min_signal_score": 2,
+      "default_workflow": "scientific_research_lifecycle_full_v1",
+      "preferred_capsule_tags": ["research", "evidence", "resume"]
+    },
+    "RESEARCH_EXPERIMENT_LIFECYCLE": {
+      "id": "RESEARCH_EXPERIMENT_LIFECYCLE",
+      "description": "Research lifecycle request that includes hypothesis, experiment design, execution, monitoring, or evaluation stages.",
+      "primary_signals": ["hypothesis", "experiment", "exp-design", "exp-run", "exp-eval", "benchmark"],
+      "secondary_signals": ["validate", "test", "measure", "protocol", "approval"],
+      "negative_signals": ["frontend", "ui", "css"],
+      "min_signal_score": 2,
+      "default_workflow": "scientific_research_lifecycle_full_v1",
+      "preferred_capsule_tags": ["research", "experiment", "lifecycle"]
+    },
     "PERFORMANCE_REGRESSION": {
       "id": "PERFORMANCE_REGRESSION",
       "description": "A previously-passing performance metric has degraded. Root cause is unknown and must be traced.",

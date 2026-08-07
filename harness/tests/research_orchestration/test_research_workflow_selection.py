@@ -40,6 +40,16 @@ def test_url_synthesis_selection_loads_real_skeleton() -> None:
     assert workflow["nodes"][0]["gate_deliverable"] == "artifacts/research_synthesis_v1/seed/seed_snapshot.json"
 
 
+def test_selection_config_declares_current_supported_research_inputs() -> None:
+    selection = load_workflow_selection(ROOT / "config" / "research-workflow-selection.v1.json")
+
+    assert selection["active"] is True
+    assert set(selection["supported_input_kinds"]) >= {"topic", "url", "pdf", "external_evidence"}
+    assert selection["semantic_entry_stages"]["url"] == "web_fetch"
+    assert selection["semantic_entry_stages"]["pdf"] == "paper_ingest"
+    assert selection["semantic_entry_stages"]["external_evidence"] == "evidence_import"
+
+
 def test_topic_synthesis_uses_literature_route() -> None:
     selection = load_workflow_selection(ROOT / "config" / "research-workflow-selection.v1.json")
     selected = select_research_workflow(

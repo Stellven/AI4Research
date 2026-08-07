@@ -156,10 +156,14 @@ def classify_research_intent(
         workflow_kind = "paper_ingestion"
         reason_codes.append(f"{seed_kind}_paper_ingestion_signal")
         confidence = 0.86
-    elif seed_kind == "url" and _has_any(prompt_lower, _REPORT_SIGNALS):
+    elif seed_kind == "url":
         workflow_kind = "research_synthesis"
-        reason_codes.append("url_report_synthesis_signal")
-        confidence = 0.86
+        if _has_any(prompt_lower, _REPORT_SIGNALS):
+            reason_codes.append("url_report_synthesis_signal")
+            confidence = 0.86
+        else:
+            reason_codes.append("url_seed_synthesis_signal")
+            confidence = 0.72
     elif seed_kind == "research_brief":
         workflow_kind = "research_synthesis"
         reason_codes.append("research_brief_synthesis_signal")

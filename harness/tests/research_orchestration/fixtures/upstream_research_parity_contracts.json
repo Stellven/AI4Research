@@ -1,0 +1,50 @@
+{
+  "schema": "upstream_autosci_research_parity_contracts.v1",
+  "capture_note": "Captured same-input semantic contract fixture. Live upstream /research was not executed in this regression because provider/runtime authorization is not available in unit CI.",
+  "cases": [
+    {
+      "case_id": "topic-survey",
+      "prompt": "Survey durable agent memory evaluation methods and produce a Markdown report with claims, evidence, and limitations.",
+      "upstream_contract": {
+        "workflow_kind": "literature_synthesis",
+        "key_stages": ["source_discovery", "source_validation", "evidence_synthesis", "report_draft", "independent_review"],
+        "output_language": "preserve_user_request",
+        "delivery_type": "markdown",
+        "semantic_goals": ["survey", "agent memory evaluation", "claims", "evidence", "limitations"]
+      }
+    },
+    {
+      "case_id": "url-report",
+      "prompt": "Analyze https://example.org/autosci-control-plane and produce a Chinese Markdown report with at least 4 traceable sources.",
+      "upstream_contract": {
+        "workflow_kind": "research_synthesis",
+        "key_stages": ["web_fetch", "source_validation", "evidence_synthesis", "report_draft", "independent_review"],
+        "output_language": "zh-CN",
+        "delivery_type": "markdown",
+        "semantic_goals": ["https://example.org/autosci-control-plane", "Chinese report", "traceable sources"]
+      }
+    },
+    {
+      "case_id": "pdf-ingest",
+      "prompt": "Ingest the supplied PDF and summarize methods, results, and limitations.",
+      "upstream_contract": {
+        "workflow_kind": "paper_ingestion",
+        "key_stages": ["paper_ingest", "paper_analyze", "claim_extract", "method_extract", "report_draft"],
+        "output_language": "preserve_user_request",
+        "delivery_type": "request_format",
+        "semantic_goals": ["PDF ingestion", "methods", "results", "limitations"]
+      }
+    },
+    {
+      "case_id": "evidence-resume",
+      "prompt": "Resume from the supplied external evidence bundle and produce a concise report.",
+      "upstream_contract": {
+        "workflow_kind": "scientific_lifecycle",
+        "key_stages": ["evidence_import", "claim_extract", "method_extract", "claim_verify", "report_draft"],
+        "output_language": "preserve_user_request",
+        "delivery_type": "request_format",
+        "semantic_goals": ["external evidence", "resume", "report"]
+      }
+    }
+  ]
+}
