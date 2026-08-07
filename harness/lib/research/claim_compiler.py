@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Optional, Protocol
 
+from research.evidence.review_proof import claim_support_assessment
+
 
 # ---------------------------------------------------------------------------
 # Alignment status
@@ -178,14 +180,35 @@ class NaiveClaimCompiler:
                 else:
                     neutral.append(eid)
 
+            # A relation label written by the claim generator is not proof.
+            # Re-check the linked persisted evidence text before allowing the
+            # alignment to call itself supported.  This blocks the historical
+            # false positive where a broad claim and an ordinary claim both
+            # inherited `supports` merely from a database link.
+            verified_supporting: list[str] = []
+            support_checks: dict[str, dict[str, Any]] = {}
+            for evidence_id in supporting:
+                try:
+                    evidence_row = conn.execute(
+                        "SELECT content FROM evidence_items WHERE id = ?",
+                        (evidence_id,),
+                    ).fetchone()
+                except sqlite3.Error:
+                    evidence_row = None
+                source_text = str(evidence_row["content"] if evidence_row else "").split("\x00", 1)[0]
+                assessment = claim_support_assessment(str(claim["claim_text"] or ""), source_text)
+                support_checks[evidence_id] = assessment
+                if assessment["supported"]:
+                    verified_supporting.append(evidence_id)
+
             confidence = claim["confidence"] or 0.0
             is_high_impact = confidence >= high_impact_threshold
 
-            if contradicting and not supporting:
+            if contradicting and not verified_supporting:
                 status = AlignmentStatus.CONTRADICTED
-            elif supporting and not contradicting:
+            elif verified_supporting and not contradicting:
                 status = AlignmentStatus.SUPPORTED
-            elif supporting and contradicting:
+            elif verified_supporting and contradicting:
                 status = AlignmentStatus.MIXED
             else:
                 status = AlignmentStatus.UNVERIFIED
@@ -201,6 +224,14 @@ class NaiveClaimCompiler:
                 confidence=confidence,
                 is_high_impact=is_high_impact,
                 counter_evidence_requested=enable_contradiction_search and is_high_impact,
+                metadata={
+                    "proof_normalization": {
+                        "checked_from_persisted_evidence": True,
+                        "declared_supporting_evidence_ids": supporting,
+                        "verified_supporting_evidence_ids": verified_supporting,
+                        "support_checks": support_checks,
+                    }
+                },
             ))
 
         return alignments

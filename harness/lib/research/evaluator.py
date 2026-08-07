@@ -1138,6 +1138,39 @@ def evaluate_artifacts(
     }
 
 
+def _reviewer_independence_issues(root: Path) -> list[str]:
+    """Fail closed when a present artifact-review record lacks normalized proof.
+
+    Runs without importing the AutoSci plugin so the research evaluator keeps a
+    small dependency surface.  A run with no artifact review remains governed
+    by its existing gate; a run that claims one must carry the reviewer proof.
+    """
+    candidates = [root / "artifact_review.json", root / "review.evidence.json"]
+    candidates.extend(root.glob("**/artifact_review.json") if root.exists() else [])
+    for candidate in candidates:
+        data = _read_json(candidate)
+        outputs = data.get("outputs") if isinstance(data.get("outputs"), dict) else {}
+        review = outputs.get("review") if isinstance(outputs.get("review"), dict) else {}
+        if not review:
+            continue
+        proof = review.get("proof_contract") if isinstance(review.get("proof_contract"), dict) else {}
+        issues: list[str] = []
+        if proof.get("schema") != "scientific_review_proof.v1":
+            issues.append("reviewer_proof_contract_missing")
+        if proof.get("verdict") != "supported" or proof.get("blockers"):
+            issues.append("reviewer_proof_contract_not_supported")
+        separation = proof.get("reviewer_separation") if isinstance(proof.get("reviewer_separation"), dict) else {}
+        if separation.get("artifact_reloaded_from_disk") is not True:
+            issues.append("reviewer_artifact_not_reloaded")
+        if separation.get("writer_output_excluded_from_reviewer_context") is not True:
+            issues.append("reviewer_writer_context_not_separated")
+        independence = separation.get("independence") if isinstance(separation.get("independence"), dict) else {}
+        if independence.get("status") not in {"independent_provider", "same_provider_limitation"}:
+            issues.append("reviewer_provider_provenance_missing")
+        return issues
+    return []
+
+
 def evaluate_final_closeout(
     output_dir: str | Path,
     strict: bool = True,
@@ -1217,6 +1250,11 @@ def evaluate_final_closeout(
             ok = bool(base_data.get("ok"))
             issues = base_data.get("errors") or []
 
+    reviewer_issues = _reviewer_independence_issues(root)
+    if reviewer_issues:
+        ok = False
+        issues = [*issues, *reviewer_issues]
+
     # 3. Map ok/issues to pass | repairable_fail | hard_fail
     if ok:
         verdict = "pass"
@@ -1286,7 +1324,8 @@ def evaluate_final_closeout(
             "verdict": base_data.get("verdict") or ("PASS" if ok else "FAIL"),
             "scorecard": base_data.get("scorecard") if is_survey else None,
             "metrics": base_data.get("metrics") if not is_survey else None,
-        }
+        },
+        "reviewer_independence_issues": reviewer_issues,
     }
 
     # 5. Persist only when an artifact-producing finalizer explicitly asks.

@@ -37,6 +37,18 @@ def payload(tmp_path: Path) -> dict:
                     "tool": "mcp__llm-review__chat",
                     "reason": "No Review LLM evidence was supplied.",
                 },
+                "proof_contract": {
+                    "schema": "scientific_review_proof.v1",
+                    "verdict": "supported",
+                    "blockers": [],
+                    "claims": [{"claim_id": "claim-1", "verdict": "supported"}],
+                    "reviewer_separation": {
+                        "artifact_reloaded_from_disk": True,
+                        "proof_bundle_reloaded_from_disk": True,
+                        "writer_output_excluded_from_reviewer_context": True,
+                        "independence": {"status": "same_provider_limitation"},
+                    },
+                },
             },
             "findings": [],
             "artifact": {"artifact_id": "artifact:review-target", "path": str(target), "target": str(target)},
@@ -50,7 +62,10 @@ def payload(tmp_path: Path) -> dict:
             "implementation_package": "test",
             "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         },
-        "limitations": ["Review LLM MCP evidence is not connected for this local surrogate."],
+        "limitations": [
+            "Review LLM MCP evidence is not connected for this local surrogate.",
+            "Same-provider limitation: no second reviewer provider is configured.",
+        ],
     }
 
 

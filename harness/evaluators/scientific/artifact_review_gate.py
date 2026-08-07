@@ -36,6 +36,7 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
 
     mode = str(review.get("review_mode") or "")
     review_llm = review.get("review_llm") if isinstance(review.get("review_llm"), dict) else {}
+    proof = review.get("proof_contract") if isinstance(review.get("proof_contract"), dict) else {}
     if mode == "local_surrogate" and review.get("review_available") is not False:
         reasons.append("local_surrogate review must set review_available=false")
     if mode == "review_llm" and review.get("review_available") is not True:
@@ -46,6 +47,28 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
         reasons.append("review_llm review must include review_llm.status completed")
     if not has_any_evidence_ids(review.get("evidence_ids")):
         reasons.append("outputs.review.evidence_ids must contain at least one id")
+    if proof.get("schema") != "scientific_review_proof.v1":
+        reasons.append("outputs.review.proof_contract must be scientific_review_proof.v1")
+    if proof.get("verdict") != "supported":
+        reasons.append("normalized proof contract must be supported")
+    if proof.get("blockers"):
+        reasons.append("normalized proof contract contains unresolved blockers")
+    claims = proof.get("claims") if isinstance(proof.get("claims"), list) else []
+    if not claims:
+        reasons.append("normalized proof contract must contain claims")
+    for index, claim in enumerate(claims):
+        if not isinstance(claim, dict) or claim.get("verdict") != "supported":
+            reasons.append(f"normalized proof claim {index} is not supported")
+    separation = proof.get("reviewer_separation") if isinstance(proof.get("reviewer_separation"), dict) else {}
+    if separation.get("artifact_reloaded_from_disk") is not True or separation.get("proof_bundle_reloaded_from_disk") is not True:
+        reasons.append("reviewer must reload artifact and proof bundle from disk")
+    if separation.get("writer_output_excluded_from_reviewer_context") is not True:
+        reasons.append("reviewer context must exclude writer output")
+    independence = separation.get("independence") if isinstance(separation.get("independence"), dict) else {}
+    if independence.get("status") not in {"independent_provider", "same_provider_limitation"}:
+        reasons.append("reviewer provider independence provenance is missing")
+    if independence.get("status") == "same_provider_limitation" and not any("Same-provider limitation" in item for item in limitations(payload)):
+        reasons.append("same-provider review must disclose its independence limitation")
     if mode == "local_surrogate" and review.get("recommendation") == "pass_with_review_required":
         if not limitations(payload):
             reasons.append("local surrogate pass requires limitations explaining final Review LLM requirement")

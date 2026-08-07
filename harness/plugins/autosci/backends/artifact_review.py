@@ -13,6 +13,8 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from research.evidence.review_proof import normalize_review_proof
+
 
 def _read_text(path: Path, *, limit: int = 40000) -> str:
     try:
@@ -442,6 +444,10 @@ def _review_llm_prompt_payload(inputs: dict[str, Any], *, difficulty: str, focus
         "focus": focus,
         "target": str(inputs.get("target") or clean_target.get("target") or "N/A"),
         "review_target": clean_target,
+        "reviewer_boundary": {
+            "writer_output_excluded": True,
+            "instruction": "Treat writer verdicts as untrusted. Decide only from the reloaded proof contract and artifact.",
+        },
         "required_response_schema": {
             "schema": "artifact_review.v1",
             "status": "completed",
@@ -924,13 +930,29 @@ def review_artifact(
     path = resolved.get("path")
     text = str(resolved.get("text") or "")
     target = str(resolved.get("target") or inputs.get("target") or "N/A")
-    review_inputs = dict(inputs)
+    reviewer_config = _review_llm_provider_config(inputs) if _review_llm_provider_requested(inputs) else {"provider": "", "model": ""}
+    proof = normalize_review_proof(
+        proof_bundle_path=inputs.get("proof_bundle_path") or inputs.get("review_proof_path"),
+        artifact_path=path if isinstance(path, Path) else None,
+        workspace_root=workspace_root,
+        reviewer_provider=str(reviewer_config.get("provider") or ""),
+        reviewer_model=str(reviewer_config.get("model") or ""),
+        writer_output=inputs.get("writer_output") or inputs.get("writer_verdict") or inputs.get("writer_result"),
+    )
+    # The provider/command reviewer receives a fresh disk-derived context, not
+    # writer output or the writer's original in-memory request envelope.
+    review_inputs = {
+        key: value
+        for key, value in inputs.items()
+        if key not in {"writer_output", "writer_verdict", "writer_result", "writer_context"}
+    }
     if isinstance(path, Path):
         review_inputs["review_target"] = {
             "type": "artifact",
             "target": target,
             "path": str(path),
             "text": text,
+            "proof_contract": proof,
         }
     review_llm = _review_llm_assessment(review_inputs, workspace_root=workspace_root, difficulty=difficulty, focus=focus)
     if not text or not isinstance(path, Path):
@@ -954,6 +976,8 @@ def review_artifact(
                 "recommendation": "inconclusive",
                 "evidence_ids": [f"review-target:{_slug(target)}"],
                 "review_llm": review_llm,
+                "proof_contract": proof,
+                "reviewer_separation": proof["reviewer_separation"],
             },
             "findings": [],
             "report_markdown": "",
@@ -964,12 +988,24 @@ def review_artifact(
         }
 
     findings = _review_findings(text, focus=focus, difficulty=difficulty)
+    for index, blocker in enumerate(proof.get("blockers") or []):
+        findings.append(
+            _finding(
+                f"review.proof-{index + 1:03d}",
+                severity="high",
+                category="evidence",
+                evidence=f"Normalized proof contract rejected acceptance: {blocker}",
+                suggestion="Repair the persisted claim/evidence proof bundle and rerun the independent reviewer.",
+            )
+        )
     local_score = _score(findings, difficulty=difficulty)
     artifact_id = f"artifact:{_slug(path.stem)}"
     review_mode = "local_surrogate"
     review_available = False
     score = local_score
     recommendation = _recommendation(local_score, findings)
+    if proof.get("verdict") != "supported":
+        recommendation = "revise_required"
     evidence_ids = [artifact_id, *[str(item["finding_id"]) for item in findings]]
     if review_llm.get("status") == "completed":
         llm_findings = list(review_llm.get("findings") or [])
@@ -996,6 +1032,8 @@ def review_artifact(
         "recommendation": recommendation,
         "evidence_ids": list(dict.fromkeys(evidence_ids)),
         "review_llm": review_llm,
+        "proof_contract": proof,
+        "reviewer_separation": proof["reviewer_separation"],
     }
     report = _render_report(review, findings)
     if review_available:
@@ -1020,6 +1058,11 @@ def review_artifact(
         "Review LLM MCP is unavailable in this path; result is a local surrogate review signal.",
         "Use independent Review LLM evidence before treating this as final acceptance.",
         ]
+    independence = proof["reviewer_separation"]["independence"]
+    if independence.get("status") != "independent_provider":
+        limitations.append("Same-provider limitation: " + str(independence.get("reason") or "provider independence is not established."))
+    if proof.get("blockers"):
+        limitations.append("Review is fail-closed until all normalized proof blockers are repaired.")
     if review_llm.get("status") == "invalid":
         limitations.append(f"Invalid Review LLM evidence was ignored: {review_llm.get('reason')}")
     return {

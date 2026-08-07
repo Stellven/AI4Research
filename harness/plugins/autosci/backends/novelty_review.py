@@ -770,17 +770,51 @@ def _review_llm_for_novelty(inputs: dict[str, Any], workspace_root: Path, idea: 
     native = inputs.get("native_options") if isinstance(inputs.get("native_options"), dict) else {}
     difficulty = str(inputs.get("difficulty") or native.get("difficulty") or "standard") or "standard"
     focus = str(inputs.get("focus") or native.get("focus") or "novelty") or "novelty"
-    review_inputs = dict(inputs)
-    review_inputs.setdefault("target", str(idea.get("title") or idea.get("idea_id") or inputs.get("target") or "N/A"))
-    review_inputs["review_target"] = {
-        "type": "idea",
+    # Persist then reload a reviewer snapshot.  The review path must not treat
+    # the caller's mutable idea dict as review evidence.
+    writer_snapshot = {
+        "schema": "autosci_novelty_reviewer_input.v1",
         "idea_id": str(idea.get("idea_id") or ""),
         "title": str(idea.get("title") or ""),
         "hypothesis": str(idea.get("hypothesis") or ""),
         "approach": str(idea.get("approach") or ""),
         "source_mode": str(idea.get("source_mode") or ""),
     }
-    return _review_llm_assessment(review_inputs, workspace_root=workspace_root, difficulty=difficulty, focus=focus)
+    serialized = json.dumps(writer_snapshot, ensure_ascii=False, sort_keys=True)
+    snapshot_hash = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+    snapshot_path = workspace_root / "artifacts" / "autosci" / "reviewer-inputs" / f"novelty-{snapshot_hash[:16]}.json"
+    try:
+        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_path.write_text(serialized + "\n", encoding="utf-8")
+        reloaded = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        reloaded_text = json.dumps(reloaded, ensure_ascii=False, sort_keys=True)
+        snapshot_reloaded = True
+    except (OSError, json.JSONDecodeError):
+        reloaded = {}
+        reloaded_text = ""
+        snapshot_reloaded = False
+    review_inputs = {
+        key: value
+        for key, value in inputs.items()
+        if key not in {"writer_output", "writer_verdict", "writer_result", "writer_context"}
+    }
+    review_inputs.setdefault("target", str(idea.get("title") or idea.get("idea_id") or inputs.get("target") or "N/A"))
+    review_inputs["review_target"] = {
+        "type": "persisted_novelty_snapshot",
+        "path": str(snapshot_path),
+        "sha256": snapshot_hash,
+        "text": reloaded_text,
+        "snapshot": reloaded,
+    }
+    result = _review_llm_assessment(review_inputs, workspace_root=workspace_root, difficulty=difficulty, focus=focus)
+    result["reviewer_separation"] = {
+        "reviewer_role": "independent_reviewer",
+        "snapshot_path": str(snapshot_path),
+        "snapshot_sha256": snapshot_hash,
+        "snapshot_reloaded_from_disk": snapshot_reloaded,
+        "writer_output_excluded_from_reviewer_context": True,
+    }
+    return result
 
 
 def _idea_recommendation_with_review(local: str, review_recommendation: str) -> str:
