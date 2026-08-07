@@ -48,6 +48,13 @@ except Exception:  # pragma: no cover
 SHORT_IMPL = "short_impl"
 FULL_SPEC = "full_spec"
 RESEARCH = "research"
+MAX_REQUEST_CHARS = 12_000
+# A RawIntent consumer envelope carries the same bounded request in up to
+# three semantic sections (objective, problem, and raw user intent), plus
+# metadata and policy sections. Bound that transport representation
+# separately so legitimate 12,000-character requests remain admissible while
+# malformed or padded envelopes cannot bypass the direct-request limit.
+MAX_RAWINTENT_ENVELOPE_CHARS = MAX_REQUEST_CHARS * 4
 CLASS_TO_CANONICAL = {
     SHORT_IMPL: "implementation",
     FULL_SPEC: "full_prd",
@@ -105,6 +112,18 @@ RAWINTENT_METADATA_PREFIXES = (
     "node_id:",
     "role:",
 )
+
+
+class RequestTooLargeError(ValueError):
+    """Raised when the direct compiler receives more text than it admits."""
+
+    def __init__(self, actual_chars: int, max_chars: int = MAX_REQUEST_CHARS) -> None:
+        self.actual_chars = actual_chars
+        self.max_chars = max_chars
+        super().__init__(
+            f"request_too_long: request contains {actual_chars} characters; "
+            f"maximum is {max_chars}"
+        )
 
 
 def _now() -> str:
@@ -169,6 +188,15 @@ def _extract_markdown_section(text: str, heading: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def _is_rawintent_consumer_envelope(text: str) -> bool:
+    return bool(
+        re.search(
+            r"(?im)^\s*#\s+RawIntent Consumer Request(?:\s+-.*)?\s*$",
+            text,
+        )
+    )
+
+
 def _collapse_goal_text(text: str) -> str:
     lines: list[str] = []
     for raw_line in _strip_yaml_frontmatter(text).splitlines():
@@ -194,7 +222,7 @@ def _collapse_goal_text(text: str) -> str:
 
 def _extract_effective_request_text(text: str) -> dict[str, str]:
     whole = _collapse_goal_text(text)
-    if "# RawIntent Consumer Request" not in text:
+    if not _is_rawintent_consumer_envelope(text):
         return {
             "effective_text": whole,
             "goal_text": whole,
@@ -213,6 +241,11 @@ def _extract_effective_request_text(text: str) -> dict[str, str]:
         "problem_text": problem or effective,
         "raw_user_text": raw_user_intent or effective,
     }
+
+
+def _enforce_request_size(text: str) -> None:
+    if len(text) > MAX_REQUEST_CHARS:
+        raise RequestTooLargeError(len(text))
 
 
 def _looks_like_raw_metadata_pollution(text: str) -> bool:
@@ -1469,11 +1502,21 @@ def build_pm_intake(
     papers = papers or []
     logs = logs or []
     repo_context = repo_context or []
+    if _is_rawintent_consumer_envelope(text):
+        if len(text) > MAX_RAWINTENT_ENVELOPE_CHARS:
+            raise RequestTooLargeError(len(text), MAX_RAWINTENT_ENVELOPE_CHARS)
+    else:
+        _enforce_request_size(text)
     effective_text = _extract_effective_request_text(text)
     compile_text = effective_text["effective_text"] or _normalized_text(text)
     goal_text = effective_text["goal_text"] or compile_text
     problem_text = effective_text["problem_text"] or compile_text
     raw_user_text = effective_text["raw_user_text"] or compile_text
+    # Keep semantic text lossless within the same explicit boundary used by
+    # status-server intake. Reject larger direct-router requests instead of
+    # silently slicing fields that later become requirements and contracts.
+    for semantic_text in (compile_text, goal_text, problem_text, raw_user_text):
+        _enforce_request_size(semantic_text)
     autosci_contract = is_autosci_research_intake_text(compile_text)
     request_type = RESEARCH if autosci_contract else classify_request_type(compile_text, papers)
     canonical_request_type = CLASS_TO_CANONICAL[request_type]
@@ -1493,9 +1536,12 @@ def build_pm_intake(
     if _is_code_understanding_request(compile_text, repo_context):
         task_graph = _adapt_graph_for_code_understanding(task_graph, request_type)
     task_graph["nodes"] = [_node_enrichment(request_type, lane_hint, node) for node in task_graph["nodes"]]
-    normalized_goal = _normalized_text(goal_text)[:400]
-    normalized_problem = _normalized_text(problem_text)[:400]
-    normalized_user_intent = _normalized_text(raw_user_text)[:400]
+    # Semantic fields must not be length-capped: REQ-000, the PRD view, and the
+    # product contract are compiled from them, so a silent slice here drops
+    # instructions from the end of long requests (title stays the bounded label).
+    normalized_goal = _normalized_text(goal_text)
+    normalized_problem = _normalized_text(problem_text)
+    normalized_user_intent = _normalized_text(raw_user_text)
     acceptance = _default_acceptance(request_type)
     if autosci_contract:
         acceptance = [
@@ -2010,14 +2056,33 @@ def main() -> int:
     text = _read_text(args)
     if not args.direct_compile and os.environ.get("SOLAR_PM_ROUTER_ALLOW_DIRECT") != "1":
         return _capture_and_consume_rawintent(args, text)
-    payload = build_pm_intake(
-        text,
-        papers=args.paper,
-        logs=args.log,
-        repo_context=args.repo_context,
-        sprint_id=args.sprint_id,
-        target_system=args.target_system,
-    )
+    try:
+        payload = build_pm_intake(
+            text,
+            papers=args.paper,
+            logs=args.log,
+            repo_context=args.repo_context,
+            sprint_id=args.sprint_id,
+            target_system=args.target_system,
+        )
+    except RequestTooLargeError as exc:
+        error = {
+            "ok": False,
+            "error": "request_too_long",
+            "actual_chars": exc.actual_chars,
+            "max_chars": exc.max_chars,
+        }
+        if args.format == "markdown":
+            sys.stdout.write(
+                "# Codex PM Router Request Rejected\n\n"
+                f"- error: `{error['error']}`\n"
+                f"- actual_chars: `{error['actual_chars']}`\n"
+                f"- max_chars: `{error['max_chars']}`\n"
+            )
+        else:
+            json.dump(error, sys.stdout, ensure_ascii=False, indent=2)
+            sys.stdout.write("\n")
+        return 2
     validation = validate_compiled_package(payload)
     if not validation["ok"]:
         if args.format == "markdown":

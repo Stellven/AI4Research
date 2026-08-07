@@ -415,7 +415,10 @@ def infer_mode(text: str) -> str:
 
 def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
     first = next((line.strip() for line in raw_text.splitlines() if line.strip()), raw_text.strip())
+    # Display shortening only — the semantic objective below must carry the
+    # complete request, or late instructions vanish from compiled requirements.
     title = re.sub(r"\s+", " ", first)[:90] or "Untitled Intent"
+    objective = re.sub(r"\s+", " ", raw_text).strip() or title
     mode = infer_mode(raw_text)
     constraints: list[str] = [
         "All execution must enter Solar-Harness through RawIntent and requirement compilation.",
@@ -449,7 +452,7 @@ def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
         "rewrite_method": "deterministic_fallback",
         "title": title,
         "problem": raw_text.strip(),
-        "objective": title,
+        "objective": objective,
         "outcome": "A compiled, dispatchable Solar-Harness work item with acceptance evidence.",
         "constraints": constraints,
         "non_goals": ["Do not dispatch raw natural language directly to builder panes."],

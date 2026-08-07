@@ -233,3 +233,43 @@ def test_legacy_tool_entrypoint_delegates_to_canonical_gateway():
     assert Path(tool.extract_research_artifact.__code__.co_filename).resolve() == SCRIPT.resolve()
     assert tool.extract_research_artifact.__code__.co_code == canonical.extract_research_artifact.__code__.co_code
     assert tool.bind_intent_artifacts.__code__.co_code == canonical.bind_intent_artifacts.__code__.co_code
+
+
+def test_deterministic_rewrite_objective_preserves_full_request():
+    gateway = _load_gateway("intent_gateway_full_objective")
+    request = (
+        "Search public information about AI Native Enterprise. "
+        "Deliver an evidence-backed analysis for technical leaders as a "
+        "self-contained HTML report."
+    )
+
+    rewritten = gateway.deterministic_rewrite(request)
+
+    assert rewritten["objective"] == request
+    assert "self-contained HTML report" in rewritten["objective"]
+    assert len(rewritten["title"]) <= 90
+
+
+def test_deterministic_rewrite_multiline_objective_keeps_middle_and_end():
+    gateway = _load_gateway("intent_gateway_multiline_objective")
+    request = (
+        "Research memory-efficient attention methods and select a promising approach.\n"
+        "Implement a proof of concept and benchmark it against a baseline.\n"
+        "Deliver the code, benchmark results, and a final report."
+    )
+
+    rewritten = gateway.deterministic_rewrite(request)
+
+    for marker in (
+        "memory-efficient attention",
+        "proof of concept",
+        "benchmark it against a baseline",
+        "final report",
+    ):
+        assert marker in rewritten["objective"]
+    assert len(rewritten["title"]) <= 90
+
+    raw_intent = {"raw": {"text": request}, "source": {}, "context": {}}
+    ir = gateway.build_requirement_ir("intent-test", raw_intent, rewritten)
+    assert "final report" in ir["objective"]
+    assert len(ir["title"]) <= 90
