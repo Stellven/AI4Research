@@ -18,7 +18,7 @@ component_install() {
     # systemd/launchd have no PATH, so the unit needs an absolute interpreter. Resolve the python3
     # the installer sees (not a hardcoded /usr/bin/python3 — wrong on some WSL distros / mac brew).
     export SOLAR_STATUS_PYTHON
-    SOLAR_STATUS_PYTHON="$(command -v python3 2>/dev/null || true)"
+    SOLAR_STATUS_PYTHON="${SOLAR_PYTHON:-$(command -v python3 2>/dev/null || true)}"
     [ -n "$SOLAR_STATUS_PYTHON" ] || { yellow "python3 not found; skipping status-daemon install"; return 0; }
     if ! "$SOLAR_STATUS_PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 8) else 1)' 2>/dev/null; then
         yellow "python3 ($SOLAR_STATUS_PYTHON) is < 3.8; skipping status-daemon install"

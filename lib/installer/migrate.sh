@@ -23,7 +23,7 @@ db_migrate() {
     migrations_dir="$SOURCE_DIR/core/db/migrations"
     dry_run_note "apply schema migrations from $migrations_dir" && return 0
     [ -f "$SOLAR_DB" ] || die "database missing for migration: $SOLAR_DB (run db_init first)"
-    SOLAR_DB="$SOLAR_DB" MIGRATIONS_DIR="$migrations_dir" python3 - <<'PY'
+    SOLAR_DB="$SOLAR_DB" MIGRATIONS_DIR="$migrations_dir" "${SOLAR_PYTHON:-python3}" - <<'PY'
 import glob
 import os
 import re

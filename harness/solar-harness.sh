@@ -3828,9 +3828,12 @@ print(json.dumps({
     _SS_TMUX_SESSION="solar-harness-status-server-$(printf '%s' "$HARNESS_DIR" | cksum | awk '{print $1}')"
     mkdir -p "$HARNESS_DIR/run"
     _status_server_live_pids() {
-      ps ax -o pid= -o args= | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
+      if [ "${OS_KIND:-}" = "windows" ] || [[ "$(uname -s)" =~ MINGW|MSYS|CYGWIN|Windows_NT ]]; then
+        return 0
+      fi
+      ps ax -o pid= -o args= 2>/dev/null | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
         $2 ~ /(^|\/)python([0-9]+([.][0-9]+)*)?$/ && $3 == script { print $1 }
-      '
+      ' || true
     }
     _ss_pid_owned() {
       # True when the pid's command line references THIS harness — the
@@ -3838,6 +3841,9 @@ print(json.dumps({
       # port sweep killed every /healthz listener on the machine).
       local _pid="$1"
       [[ "$_pid" =~ ^[0-9]+$ ]] || return 1
+      if [ "${OS_KIND:-}" = "windows" ] || [[ "$(uname -s)" =~ MINGW|MSYS|CYGWIN|Windows_NT ]]; then
+        return 0
+      fi
       ps -o args= -p "$_pid" 2>/dev/null | grep -qF -- "$HARNESS_DIR"
     }
     _ss_tmux_session_owned() {
@@ -3888,15 +3894,19 @@ print(json.dumps({
           ok "Status server 已在运行 (healed from live runtime; pid: $(printf '%s\n' "$_live_pids" | head -1), port: ${_port:-?})"
         else
           rm -f "$_SS_PID" "$_SS_PORT_FILE"
+          _ss_py="${SOLAR_PYTHON:-$(command -v python3 || echo python3)}"
           if command -v tmux >/dev/null 2>&1; then
             tmux new-session -d -s "$_SS_TMUX_SESSION" \
-              "cd '$HARNESS_DIR' && exec python3 '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
+              "cd '$HARNESS_DIR' && exec '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
             echo "tmux:${_SS_TMUX_SESSION}" > "$_SS_PID"
           else
-            nohup python3 "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
+            nohup "$_ss_py" "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
             echo $! > "$_SS_PID"
           fi
-          sleep 0.5
+          for _i in {1..30}; do
+            [[ -s "$_SS_PORT_FILE" ]] && break
+            sleep 0.1
+          done
           _port=$(cat "$_SS_PORT_FILE" 2>/dev/null || echo "8765")
           ok "Status server 启动 (port: $_port)"
           log "Dashboard: http://127.0.0.1:$_port/"

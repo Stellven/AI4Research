@@ -26,7 +26,7 @@ settings_merge() {
     dry_run_note "merge $# component hooks.json into $settings_file" && return 0
     mkdir -p "$CLAUDE_DIR"
     SETTINGS_MARKER="$SETTINGS_MARKER" SETTINGS_BACKUP_TS="$(date -u +%Y%m%d%H%M%S)" \
-    python3 - "$settings_file" "$CLAUDE_DIR" "$@" <<'PY'
+    "${SOLAR_PYTHON:-python3}" - "$settings_file" "$CLAUDE_DIR" "$@" <<'PY'
 import json
 import os
 import sys

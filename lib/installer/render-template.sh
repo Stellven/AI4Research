@@ -12,7 +12,7 @@ render_template() {
     SOLAR_SET_VARS="${SOLAR_SET_VARS:-}" \
     SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" OS_KIND="$OS_KIND" \
     SELECTED_COMPONENTS="$SELECTED_COMPONENTS" SOLAR_DB="$SOLAR_DB" \
-    python3 - "$template" "$output" <<'PY'
+    "${SOLAR_PYTHON:-python3}" - "$template" "$output" <<'PY'
 import os
 import re
 import sys

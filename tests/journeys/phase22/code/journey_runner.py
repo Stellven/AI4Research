@@ -98,6 +98,12 @@ def python_executable(repo_root: Path) -> str:
 
 def base_env(repo_root: Path, sandbox: Path, *, allow_live: bool = False) -> dict[str, str]:
     env = dict(os.environ)
+    py_exec = python_executable(repo_root)
+    py_dir = str(Path(py_exec).parent)
+    orig_path = env.get("PATH", "")
+    if py_dir not in orig_path:
+        env["PATH"] = f"{py_dir}{os.pathsep}{orig_path}"
+    env["SOLAR_PYTHON"] = py_exec
     if allow_live:
         env = bootstrap_live_environment(repo_root, env)
     env.update(
@@ -416,6 +422,8 @@ def find_bash(repo_root: Path | None = None) -> Path | None:
         except OSError:
             continue
         key = str(resolved).lower()
+        if "windowsapps" in key:
+            continue
         if key in seen:
             continue
         seen.add(key)

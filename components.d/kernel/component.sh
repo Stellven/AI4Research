@@ -29,7 +29,7 @@ component_install() {
     chmod +x "$CLAUDE_DIR/solar/hooks/"*.sh 2>/dev/null || true
     [ -d "$SOURCE_DIR/.claude/prompts" ] && copy_payload "$SOURCE_DIR/.claude/prompts" "$CLAUDE_DIR/solar/prompts"
 
-    python3 - "$CLAUDE_DIR/CLAUDE.md" <<'PY'
+    "${SOLAR_PYTHON:-python3}" - "$CLAUDE_DIR/CLAUDE.md" <<'PY'
 import pathlib
 import sys
 from datetime import datetime

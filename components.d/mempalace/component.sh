@@ -20,7 +20,7 @@ component_install() {
     render_template "$SOURCE_DIR/templates/config/mempalace.config.yaml.template" \
         "$SOLAR_HOME/mempalace/config.yaml"
     if [ ! -d "$SOLAR_HOME/venv" ]; then
-        python3 -m venv "$SOLAR_HOME/venv" || die "mempalace: failed to create venv at $SOLAR_HOME/venv"
+        "${SOLAR_PYTHON:-python3}" -m venv "$SOLAR_HOME/venv" || die "mempalace: failed to create venv at $SOLAR_HOME/venv"
     fi
     pip_install_reqs "$SOLAR_HOME/venv" "$SOURCE_DIR/$COMPONENT_PYTHON_REQS"
     return 0

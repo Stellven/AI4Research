@@ -13,18 +13,25 @@ pip_install_reqs() {
     if [ -x "$target/bin/python" ]; then
         py="$target/bin/python"
         install_scope="venv"
+    elif [ -x "$target/Scripts/python.exe" ]; then
+        py="$target/Scripts/python.exe"
+        install_scope="venv"
     elif [ -x "$target" ]; then
         py="$target"
         install_scope="interpreter"
     else
         die "python target missing: $target"
     fi
-    if [ "${SKIP_PY_DEPS:-false}" = "true" ]; then
+    if [ "${SKIP_PY_DEPS:-${SOLAR_SKIP_PY_DEPS:-false}}" = "true" ]; then
         # deps-light (CI): the venv already exists; skip the multi-GB install
         # entirely. Requirement resolution is validated separately and once
         # (scripts/mempalace-check.sh step a: pip --dry-run --no-deps), so the
         # installs need no network and leave no pip cache in the sandbox.
         info "deps-light: skipping pip install of $reqs (resolution validated separately)"
+        return 0
+    fi
+    if ! "$py" -m pip --version >/dev/null 2>&1; then
+        info "pip is not available for $py; skipping requirements install from $reqs"
         return 0
     fi
     # Real install on a user machine. Pin pip's cache inside SOLAR_HOME so it is

@@ -9,7 +9,7 @@ db_init() {
     [ -d "$schema_dir" ] || die "schema directory missing: $schema_dir"
     dry_run_note "initialize $SOLAR_DB from $schema_dir/*.sql" && return 0
     mkdir -p "$(dirname "$SOLAR_DB")"
-    SOLAR_DB="$SOLAR_DB" SCHEMA_DIR="$schema_dir" python3 - <<'PY'
+    SOLAR_DB="$SOLAR_DB" SCHEMA_DIR="$schema_dir" "${SOLAR_PYTHON:-python3}" - <<'PY'
 import glob
 import os
 import sqlite3

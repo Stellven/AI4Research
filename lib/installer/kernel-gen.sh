@@ -8,7 +8,7 @@
 render_kernel_vars() {
     file="$1"
     SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" SOLAR_DB="$SOLAR_DB" \
-    python3 - "$file" <<'PY'
+    "${SOLAR_PYTHON:-python3}" - "$file" <<'PY'
 import os
 import re
 import sys

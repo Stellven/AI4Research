@@ -119,6 +119,9 @@ try_install_system_deps() {
                 return 1
             fi
             ;;
+        windows)
+            info "Windows native environment detected: skipping automatic system package manager dependencies"
+            ;;
         *)
             yellow "unsupported OS for automatic system dependency install; run: $(system_dep_install_command "$@")"
             return 1

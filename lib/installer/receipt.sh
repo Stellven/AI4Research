@@ -10,7 +10,7 @@ write_receipt() {
     CLAUDE_DIR="$CLAUDE_DIR" \
     SOLAR_DB="$SOLAR_DB" \
     OS_KIND="$OS_KIND" \
-    python3 - "$tmp" <<'PY'
+    "${SOLAR_PYTHON:-python3}" - "$tmp" <<'PY'
 import json
 import os
 import subprocess

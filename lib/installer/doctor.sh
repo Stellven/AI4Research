@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 doctor_json() {
-    python3 - <<'PY'
+    "${SOLAR_PYTHON:-python3}" - <<'PY'
 import json
 import os
 from datetime import datetime, timezone

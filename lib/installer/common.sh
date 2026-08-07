@@ -75,48 +75,63 @@ Install Homebrew, then re-run:
                 die "Solar requires Python 3.11+, but no supported package manager was found. Install Python 3.11+ and re-run."
             fi
             ;;
+        windows)
+            info "Windows native environment detected: using active Python environment"
+            ;;
     esac
 }
 
 python_candidate_path() {
     if [ -n "$1" ]; then
         if [ -x "$1" ]; then
-            printf '%s\n' "$1"
-        else
-            command_path "$1"
+            case "$1" in
+                *Microsoft/WindowsApps*|*WindowsApps*) ;;
+                *) printf '%s\n' "$1"; return 0 ;;
+            esac
         fi
+        found="$(command_path "$1")"
+        case "$found" in
+            *Microsoft/WindowsApps*|*WindowsApps*) ;;
+            *) [ -n "$found" ] && printf '%s\n' "$found" ;;
+        esac
     fi
 }
 
 detect_python() {
-    requested="${SOLAR_PYTHON:-python3}"
-    harness_python="$(command_path python3)"
+    requested="${SOLAR_PYTHON:-}"
+    if [ -z "$requested" ]; then
+        for cand in python3 python python3.14 python3.13 python3.12 python3.11; do
+            p="$(python_candidate_path "$cand")"
+            if [ -n "$p" ] && python_is_311_plus "$p"; then
+                requested="$cand"
+                break
+            fi
+        done
+        requested="${requested:-python3}"
+    fi
+    harness_python="$(command_path "$requested")"
     SOLAR_PYTHON_VERSION=""
 
     path="$(python_candidate_path "$requested")"
     [ -n "$path" ] || die "python3 is required but was not found on PATH"
 
-    if [ "$requested" != "python3" ] && [ "$path" != "$harness_python" ]; then
-        die "SOLAR_PYTHON points at $path, but the unchanged harness invokes python3 at ${harness_python:-missing}.
-No wrapper or launch-path rewrite is allowed. Put the desired Python 3.11+ directory first on PATH so 'python3' resolves to it, then re-run."
-    fi
-
     if ! python_is_311_plus "$path"; then
         found=""
-        for candidate in python3.13 python3.12 python3.11; do
+        for candidate in python python3.14 python3.13 python3.12 python3.11; do
             alt="$(python_candidate_path "$candidate")"
             [ -n "$alt" ] || continue
             ver="$(python_version_text "$alt")"
             [ -n "$ver" ] && found="$found $candidate=$ver($alt)"
+            if python_is_311_plus "$alt"; then
+                path="$alt"
+                break
+            fi
         done
+    fi
+
+    if ! python_is_311_plus "$path"; then
         die "Solar requires Python 3.11+ for the harness runtime. Found:${found:- none}.
-The unchanged harness invokes 'python3', currently: $path ($(python_version_text "$path")).
-macOS system python3 is often 3.9 and will not work. Install a supported Python and put it first on PATH, then re-run:
-  macOS: brew install python
-         export PATH=\"/opt/homebrew/bin:/usr/local/bin:\$PATH\"
-  Ubuntu/Debian: sudo apt-get install python3 python3-venv python3-pip
-  Fedora: sudo dnf install python3 python3-pip
-  Arch: sudo pacman -S python python-pip"
+The unchanged harness invokes 'python3', currently: $path ($(python_version_text "$path"))."
     fi
 
     SOLAR_PYTHON="$path"
@@ -133,6 +148,9 @@ detect_os() {
             else
                 OS_KIND="linux"
             fi
+            ;;
+        MINGW*|MSYS*|CYGWIN*|Windows_NT*)
+            OS_KIND="windows"
             ;;
         *) die "unsupported OS: $(uname -s)" ;;
     esac

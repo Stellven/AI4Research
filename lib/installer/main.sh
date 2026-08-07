@@ -103,7 +103,7 @@ confirm_if_needed() {
 # JSON is not an onboarding step. Printed to stderr to match green()/the
 # wizard and keep stdout clean.
 installed_pane_runtime() {
-    python3 - "$SOLAR_HOME/harness/config/solar-user-config.json" <<'PY'
+    "${SOLAR_PYTHON:-python3}" - "$SOLAR_HOME/harness/config/solar-user-config.json" <<'PY'
 import json
 import sys
 
