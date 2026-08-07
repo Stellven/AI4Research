@@ -101,6 +101,13 @@ Usage:
   solar repair [extra install flags]
   solar backup [--out FILE]
   solar restore <archive>
+  solar identity register --local-only --username USER --password-stdin [--session-ttl SECONDS]
+  solar identity login --username USER --password-stdin [--session-ttl SECONDS]
+  solar identity session --token TOKEN
+  solar identity logout --token TOKEN
+  solar identity profile get|set ...
+  solar privacy export|redact|delete ...
+  solar channel status|route ...
   solar ui [--once] [--watch N] [--no-color]
   solar harness [verb] [args...]
   solar uninstall [--yes] [--keep-data] [--dry-run]
@@ -126,8 +133,8 @@ PY
 }
 
 # Data paths under SOLAR_HOME that backup/restore and --keep-data treat as
-# user data (config + secrets + receipt + database).
-SOLAR_DATA_PATHS="install-receipt.json config.env .env db"
+# user data (config + secrets + receipt + database + local identity/profile).
+SOLAR_DATA_PATHS="install-receipt.json config.env .env db identity"
 
 do_version() {
     json=false
@@ -1344,14 +1351,14 @@ uninstall() {
     fi
     rmdir "$CLAUDE_DIR" 2>/dev/null || true
     if [ "$keep_data" = "true" ]; then
-        # --keep-data contract: preserve ONLY the user's data (db/ + config.env
-        # + .env) and remove EVERYTHING else under SOLAR_HOME (code, venv, bin,
-        # node_modules, cache, logs, receipt, registered-*.txt, ...). Enumerate
+        # --keep-data contract: preserve ONLY the user's data (db/ + identity/
+        # + config.env + .env) and remove EVERYTHING else under SOLAR_HOME
+        # (code, venv, bin, node_modules, cache, logs, receipt, registered-*.txt, ...). Enumerate
         # what to KEEP (not what to remove) so new derived artifacts can never
         # silently survive a --keep-data uninstall.
         if guard_path "$SOLAR_HOME" && [ -d "$SOLAR_HOME" ]; then
             find "$SOLAR_HOME" -mindepth 1 -maxdepth 1 \
-                ! -name db ! -name config.env ! -name .env \
+                ! -name db ! -name identity ! -name config.env ! -name .env \
                 -exec rm -rf {} +
         fi
     elif guard_path "$SOLAR_HOME"; then
@@ -1433,6 +1440,55 @@ do_harness() {
     HARNESS_DIR="${HARNESS_DIR:-$harness_dir}" exec "$helper" "$@"
 }
 
+find_harness_lib_helper() {
+    helper_name="$1"
+    script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+    helper=""
+    for candidate in \
+        "$SOLAR_HOME/harness/lib/$helper_name" \
+        "$script_dir/../harness/lib/$helper_name"
+    do
+        if [ -f "$candidate" ]; then
+            helper="$candidate"
+            break
+        fi
+    done
+    if [ -z "$helper" ]; then
+        src=""
+        if src="$(receipt_field source_dir 2>/dev/null)"; then
+            if [ -f "$src/harness/lib/$helper_name" ]; then
+                helper="$src/harness/lib/$helper_name"
+            fi
+        fi
+    fi
+    [ -n "$helper" ] || return 1
+    printf '%s\n' "$helper"
+}
+
+run_harness_lib_helper() {
+    helper_name="$1"
+    shift
+    helper="$(find_harness_lib_helper "$helper_name" || true)"
+    if [ -z "$helper" ]; then
+        echo "Solar helper not found: $helper_name; reinstall with harness or run from the source checkout." >&2
+        exit 1
+    fi
+    command -v python3 >/dev/null 2>&1 || { echo "python3 is required for $helper_name" >&2; exit 1; }
+    SOLAR_HOME="$SOLAR_HOME" CLAUDE_DIR="$CLAUDE_DIR" RECEIPT_PATH="$RECEIPT_PATH" exec python3 "$helper" "$@"
+}
+
+do_identity() {
+    run_harness_lib_helper local_identity.py identity "$@"
+}
+
+do_privacy() {
+    run_harness_lib_helper local_identity.py privacy "$@"
+}
+
+do_channel() {
+    run_harness_lib_helper message_channel_adapters.py "$@"
+}
+
 cmd="${1:-}"
 case "$cmd" in
     version) shift; do_version "$@" ;;
@@ -1443,6 +1499,9 @@ case "$cmd" in
     repair) shift; do_repair "$@" ;;
     backup) shift; do_backup "$@" ;;
     restore) shift; do_restore "$@" ;;
+    identity) shift; do_identity "$@" ;;
+    privacy) shift; do_privacy "$@" ;;
+    channel) shift; do_channel "$@" ;;
     ui) shift; do_ui "$@" ;;
     harness) shift; do_harness "$@" ;;
     uninstall) shift; uninstall "$@" ;;

@@ -14,11 +14,13 @@ SOLAR_CLI = REPO / "bin" / "solar"
 
 
 def _bash_executable() -> str | None:
-    return shutil.which("bash") or (
-        str(Path(r"C:\Program Files\Git\bin\bash.exe"))
-        if Path(r"C:\Program Files\Git\bin\bash.exe").exists()
-        else None
-    )
+    git_bash = Path(r"C:\Program Files\Git\bin\bash.exe")
+    if git_bash.exists():
+        return str(git_bash)
+    executable = shutil.which("bash")
+    if executable and "WindowsApps" not in executable:
+        return executable
+    return None
 
 
 def _bash_path(path: Path) -> str:
@@ -45,6 +47,7 @@ def _seed_solar_home(home: Path) -> tuple[Path, Path]:
         solar_home / "node_modules",
         solar_home / "cache",
         solar_home / "db",
+        solar_home / "identity",
         claude_dir / "solar",
     ):
         path.mkdir(parents=True, exist_ok=True)
@@ -55,6 +58,10 @@ def _seed_solar_home(home: Path) -> tuple[Path, Path]:
     (solar_home / "config.env").write_text("SOLAR_TEST_CONFIG=1\n", encoding="utf-8")
     (solar_home / ".env").write_text("SOLAR_TEST_ENV=1\n", encoding="utf-8")
     (solar_home / "db" / "solar.db").write_text("sandbox database\n", encoding="utf-8")
+    (solar_home / "identity" / "local-accounts.json").write_text(
+        json.dumps({"schema_version": "test", "accounts": {"sandbox-user": {}}}),
+        encoding="utf-8",
+    )
     (solar_home / "bin" / "solar").write_text("# sandbox installed cli\n", encoding="utf-8")
     (solar_home / "harness" / "README.txt").write_text("sandbox harness\n", encoding="utf-8")
     (claude_dir / "solar" / "SOLAR.md").write_text("# sandbox kernel\n", encoding="utf-8")
@@ -137,6 +144,7 @@ def test_atomic_privacy_personal_data_controls__uninstall_delete_versus_keep_dat
     assert not delete_solar_home.exists()
     assert not (delete_claude_dir / "solar").exists()
     assert (keep_solar_home / "db" / "solar.db").is_file()
+    assert (keep_solar_home / "identity" / "local-accounts.json").is_file()
     assert (keep_solar_home / "config.env").is_file()
     assert (keep_solar_home / ".env").is_file()
     assert not (keep_solar_home / "install-receipt.json").exists()
