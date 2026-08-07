@@ -23,9 +23,9 @@ fi
 for a in "$@"; do LABELS+=("${a%%=*}"); REFS+=("${a#*=}"); done
 
 CUR_TESTS=(
-  "harness/status-server/test_settings_concurrency.py"
-  "harness/tests/test_status_server_session_scoping.py"
-  "harness/tests/test_s04_orchestration_routes.py"
+  "tests/harness/status_server/test_settings_concurrency.py"
+  "tests/harness/test_status_server_session_scoping.py"
+  "tests/harness/test_s04_orchestration_routes.py"
 )
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/webapp-ab.XXXXXX")"
@@ -52,13 +52,13 @@ run_ref() {  # run_ref <idx> <ref>
 
   # --- settings concurrency + CORS token ---
   local out
-  out="$(cd "$dir" && python3 harness/status-server/test_settings_concurrency.py 2>&1)"
+  out="$(cd "$dir" && python3 tests/harness/status_server/test_settings_concurrency.py 2>&1)"
   if grep -q 'PASS  F1 Allow-Headers advertises X-Solar-Token' <<<"$out"; then R_CORS[$idx]="allow"; else R_CORS[$idx]="**MISSING**"; fi
   R_SET[$idx]="$(grep -oE 'BACKEND-P0: [0-9]+/[0-9]+' <<<"$out" | grep -oE '[0-9]+/[0-9]+' | tail -1)"
   [ -n "${R_SET[$idx]:-}" ] || R_SET[$idx]="err"
 
   # --- session-scoping + orchestration pytest ---
-  out="$(cd "$dir" && python3 -m pytest -q harness/tests/test_status_server_session_scoping.py harness/tests/test_s04_orchestration_routes.py 2>&1)"
+  out="$(cd "$dir" && python3 -m pytest -q tests/harness/test_status_server_session_scoping.py tests/harness/test_s04_orchestration_routes.py 2>&1)"
   local p f e
   p="$(grep -oE '[0-9]+ passed' <<<"$out" | grep -oE '[0-9]+' | tail -1)"; p="${p:-0}"
   f="$(grep -oE '[0-9]+ failed'  <<<"$out" | grep -oE '[0-9]+' | tail -1)"; f="${f:-0}"

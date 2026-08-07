@@ -62,7 +62,7 @@ printf '{"user_prompt":"帮我基于大模型热力学分析注意力机制"}' \
 
 **Run full regression**:
 ```bash
-bash ~/.solar/harness/tests/test-solar-kb-qmd-fallback.sh
+bash ~/.solar/tests/harness/test_solar_kb_qmd_fallback.sh
 ```
 
 ## How to Disable

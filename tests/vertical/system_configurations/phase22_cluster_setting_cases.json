@@ -15,7 +15,7 @@
     "state_side_effects": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
     "failure_rejection_behavior": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
     "supported_boundaries_exclusions": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
-    "success_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+    "success_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
     "granularity_atomic_contracts": "Host type/address validation; local versus SSH/managed/tmux host; heartbeat fresh/stale; probe pass/fail; offline/degraded lifecycle; actor binding; concurrency available/exhausted; peer discovery; remote dispatch success/failure; stub topology not live.",
     "readme_product_docs": "core/hive/README.md: Phase 2, CLI, coordinator election and architecture; core/hive/QUICKSTART.md; docs/DISTRIBUTED_DEPLOYMENT_ANALYSIS.md; docs/migration-physical-operators-to-actor-hosts.md.",
     "cli_api_skill_interfaces": "core/hive CLI start/status/peers; harness remote-dispatch CLI/library; status-server physical-operator summary; actor/operator registry tools.",
@@ -42,9 +42,8 @@
       "harness/lib/operator_flow_control.py",
       "harness/lib/remote_dispatch.py",
       "harness/lib/symphony/status-server.py",
-      "harness/tests/integrations/test-remote-dispatch-productization.sh",
-      "harness/tests/remote/test_remote_dispatch_cli.py",
-      "harness/tests/remote/test_remote_dispatch_core.py"
+      "tests/harness/remote/test_remote_dispatch_cli.py",
+      "tests/harness/remote/test_remote_dispatch_core.py"
     ],
     "entrypoints": "core/hive/node.ts; core/hive/discovery/mdns.ts; core/hive/transport/p2p.ts; core/hive/scheduler.ts; core/hive/cli/node.ts; harness/lib/remote_dispatch.py; harness/lib/operator_flow_control.py; harness/lib/symphony/status-server.py: _physical_operator_summary.",
     "interfaces": "core/hive CLI start/status/peers; harness remote-dispatch CLI/library; status-server physical-operator summary; actor/operator registry tools.",
@@ -95,7 +94,7 @@
       ],
       "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -122,7 +121,7 @@
       ],
       "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -149,7 +148,7 @@
       ],
       "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -176,7 +175,7 @@
       ],
       "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -203,7 +202,7 @@
       ],
       "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -230,7 +229,7 @@
       ],
       "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -257,7 +256,7 @@
       ],
       "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -284,7 +283,7 @@
       ],
       "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -311,7 +310,7 @@
       ],
       "expected_result": "Schema-invalid host records fail validation; offline/stale/failed-probe hosts are unavailable; remote command/transport failures return explicit errors; concurrency and quota blocks prevent assignment.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -338,7 +337,7 @@
       ],
       "expected_result": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -363,9 +362,9 @@
         "Collect the contract-required status, provenance, artifact, and audit evidence.",
         "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
       ],
-      "expected_result": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "expected_result": "A run-specific cluster status and remote-dispatch evidence bundle attributable to the exercised host topology; quarantined wrappers and pre-existing runtime reports do not satisfy this result.",
       "state_and_side_effect_oracle": "Can update host heartbeat/probe/lifecycle state, start HIVE discovery/P2P services, create remote dispatch artifacts/processes, and allocate/release operator leases subject to policy.",
-      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "required_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former remote-dispatch report wrapper is quarantined because it writes into a pre-existing runtime and is not accepted evidence.",
       "supported_boundary": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     }

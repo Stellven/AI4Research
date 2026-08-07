@@ -37,8 +37,8 @@ because no project pytest environment was present.
 
 - `py_compile` on touched production and journey/test files: passed.
 - `pytest tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff`: passed.
-- `pytest harness/tests/research_orchestration/generalization/test_phase5_lifecycle_recovery.py`: passed, 4 tests.
-- `pytest harness/tests/research_orchestration/test_research_runtime_lease.py`: passed, 25 tests.
+- `pytest tests/harness/research_orchestration/generalization/test_phase5_lifecycle_recovery.py`: passed, 4 tests.
+- `pytest tests/harness/research_orchestration/test_research_runtime_lease.py`: passed, 25 tests.
 - Combined regression: J07, J21, state store, result validation, orchestrator,
   and production runtime: passed, 121 tests.
 - Final core regression: Phase 5 lifecycle recovery plus runtime lease: passed,

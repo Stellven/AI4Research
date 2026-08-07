@@ -78,12 +78,12 @@ python3 -m py_compile \
   harness/lib/route_proof.py
 
 python3 -m pytest -q \
-  harness/tests/graph/test_graph_status_sync.py \
-  harness/tests/graph/test_graph_dispatch_submit.py \
-  harness/tests/runtime/test_graph_node_dispatcher_patch_proof.py \
-  harness/tests/runtime/test_route_proof.py \
-  harness/tests/test_pm_dispatch.py \
-  harness/tests/runtime/test_codex_operator_contract.py
+  tests/harness/graph/test_graph_status_sync.py \
+  tests/harness/graph/test_graph_dispatch_submit.py \
+  tests/harness/runtime/test_graph_node_dispatcher_patch_proof.py \
+  tests/harness/runtime/test_route_proof.py \
+  tests/harness/test_pm_dispatch.py \
+  tests/harness/runtime/test_codex_operator_contract.py
 ```
 
 Result: `75 passed, 3 warnings`. The warnings were existing

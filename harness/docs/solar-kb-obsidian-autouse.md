@@ -42,7 +42,7 @@ solar-harness wiki capture-server start
 ### 4. Smoke-test
 
 ```bash
-bash ~/.solar/harness/tests/test-solar-kb-obsidian-autouse.sh
+bash ~/.solar/tests/harness/test_solar_kb_obsidian_autouse.sh
 ```
 
 ---
@@ -163,7 +163,7 @@ sqlite3 ~/.solar/solar.db ".schema evo_memory_semantic" | grep value
 | `~/.solar/harness/integrations/wiki-capture-server.py` | Capture UI + scheduler (port 8765) |
 | `~/.solar/harness/integrations/obsidian-wiki-bridge.sh` | DB→vault export with manifest cursor |
 | `~/.solar/harness/state/knowledge-manifest.json` | Export cursor (last_exported_at) |
-| `~/.solar/harness/tests/test-solar-kb-obsidian-autouse.sh` | A1-A7 smoke tests |
+| `~/.solar/tests/harness/test_solar_kb_obsidian_autouse.sh` | A1-A7 smoke tests |
 
 ---
 

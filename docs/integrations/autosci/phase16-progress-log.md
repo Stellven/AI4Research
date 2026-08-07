@@ -24,8 +24,8 @@ rejects each change.
 | Workflow evolution adapter | Added | `harness/plugins/autosci/adapters/autosci_to_workflow_evolution.py` |
 | Evaluator gate | Updated | `harness/evaluators/scientific/workflow_evolution_gate.py` |
 | Evidence schema docs | Updated | `harness/schemas/evidence/workflow_evolution.v1.schema.json`, sample fixture |
-| Fixture envelope | Added | `harness/plugins/autosci/tests/fixtures/envelope.evolve_workflow.failed_run.json` |
-| Gate fixtures/tests | Added/updated | `harness/tests/evaluators/scientific/test_workflow_evolution_gate.py`, workflow evolution fixtures |
+| Fixture envelope | Added | `tests/plugins/autosci/fixtures/envelope.evolve_workflow.failed_run.json` |
+| Gate fixtures/tests | Added/updated | `tests/harness/evaluators/scientific/test_workflow_evolution_gate.py`, workflow evolution fixtures |
 | Plugin metadata/tests | Updated | `harness/plugins/autosci/manifest.yaml`, README, plugin tests |
 | Capability capsule | Updated | `harness/capability-capsules/cap.research-workflow-evolve.yaml` |
 
@@ -66,7 +66,7 @@ rejects each change.
 | Phase 16 bridge smoke | ok | `evolve_workflow` generated `workflow_evolution.json`, `recommended_changes.md`, and `patch_candidates/`. |
 | Workflow evolution gate | ok | `workflow_evolution_gate.py artifacts/scientific/smoke/workflow_evolution.json` passed with no warnings. |
 | Python syntax | ok | `py_compile` passed for bridge, adapter, and gate. |
-| Plugin/evaluator tests | ok | `pytest harness/plugins/autosci/tests harness/tests/evaluators/scientific`: 50 passed. |
+| Plugin/evaluator tests | ok | `pytest harness/plugins/autosci/tests tests/harness/evaluators/scientific`: 50 passed. |
 | Plugin validation | ok | `plugin_loader.py validate --id autosci` passed. |
 | Schema validation | ok | Workflow evolution sample, pass fixture, and smoke artifact validate against `workflow_evolution.v1`. |
 | Whitespace check | ok | `git diff --check` passed for Phase 16 touched files. |

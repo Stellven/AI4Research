@@ -14,92 +14,92 @@
   "probes": {
     "wf_intent_capture": {
       "runner": "pytest",
-      "target": "harness/tests/test_intent_gateway.py::test_capture_writes_raw_rewritten_ir_and_trace",
+      "target": "tests/harness/test_intent_gateway.py::test_capture_writes_raw_rewritten_ir_and_trace",
       "rationale": "Executes request capture and verifies raw, normalized, IR, and trace artifacts."
     },
     "wf_paper_prepare": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_paper_prepare.py::test_prepare_pdf_prefers_arxiv_source_when_recovered",
+      "target": "tests/plugins/autosci/test_paper_prepare.py::test_prepare_pdf_prefers_arxiv_source_when_recovered",
       "rationale": "Executes current user-supplied paper material preparation."
     },
     "wf_intent_bind": {
       "runner": "pytest",
-      "target": "harness/tests/test_intent_gateway.py::test_bind_copies_intent_artifacts_to_sprint",
+      "target": "tests/harness/test_intent_gateway.py::test_bind_copies_intent_artifacts_to_sprint",
       "rationale": "Executes sprint/workspace context binding for intake artifacts."
     },
     "wf_intent_consume": {
       "runner": "pytest",
-      "target": "harness/tests/test_intent_consumer.py::test_consumer_compiles_rawintent_to_sprint_package",
+      "target": "tests/harness/test_intent_consumer.py::test_consumer_compiles_rawintent_to_sprint_package",
       "rationale": "Executes normalized intake consumption and deterministic package production."
     },
     "wf_intake_qualification": {
       "runner": "pytest",
-      "target": "harness/tests/livework/test_intake_state_machine.py::TestHappyPath::test_full_happy_path",
+      "target": "tests/harness/livework/test_intake_state_machine.py::TestHappyPath::test_full_happy_path",
       "rationale": "Executes qualification state transitions through dispatch-ready intake."
     },
     "wf_pm_build": {
       "runner": "pytest",
-      "target": "harness/tests/test_codex_pm_router.py::test_build_pm_intake_emits_capsule_plan_for_standard_request",
+      "target": "tests/harness/test_codex_pm_router.py::test_build_pm_intake_emits_capsule_plan_for_standard_request",
       "rationale": "Executes requirement interpretation, scoping, assumptions, priority, and acceptance compilation."
     },
     "wf_pm_reject": {
       "runner": "pytest",
-      "target": "harness/tests/test_codex_pm_router.py::test_validate_compiled_package_rejects_raw_metadata_pollution",
+      "target": "tests/harness/test_codex_pm_router.py::test_validate_compiled_package_rejects_raw_metadata_pollution",
       "rationale": "Executes compiled-requirement validation and explicit rejection behavior."
     },
     "wf_lit_strategy": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_literature_discover.py::test_from_wiki_uses_recent_arxiv_anchors_and_honors_limit",
+      "target": "tests/plugins/autosci/test_literature_discover.py::test_from_wiki_uses_recent_arxiv_anchors_and_honors_limit",
       "rationale": "Executes bounded search formation from current wiki and literature anchors."
     },
     "wf_lit_provider": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_literature_discover.py::test_topic_discovery_retries_semantic_scholar_429_then_returns_candidates",
+      "target": "tests/plugins/autosci/test_literature_discover.py::test_topic_discovery_retries_semantic_scholar_429_then_returns_candidates",
       "rationale": "Executes provider discovery, retry handling, candidate qualification, and deduplication."
     },
     "wf_grounded": {
       "runner": "pytest",
-      "target": "harness/tests/scenarios/test_p7_grounded_synthesis.py::test_fixed_source_packs_compile_to_a_passing_topic_general_report",
+      "target": "tests/harness/scenarios/test_p7_grounded_synthesis.py::test_fixed_source_packs_compile_to_a_passing_topic_general_report",
       "rationale": "Executes signal extraction, evidence linking, organization, gap analysis, and grounded synthesis."
     },
     "wf_ideate": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ideate_from_wiki_and_discovery_sources",
+      "target": "tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ideate_from_wiki_and_discovery_sources",
       "rationale": "Executes current multi-source idea generation and idea evidence production."
     },
     "wf_ideate_dedup": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ideate_active_idea_dedup_filters_duplicate",
+      "target": "tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_ideate_active_idea_dedup_filters_duplicate",
       "rationale": "Executes candidate consolidation, duplicate filtering, and bounded selection."
     },
     "wf_novelty": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_novelty_target_with_local_sources",
+      "target": "tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_novelty_target_with_local_sources",
       "rationale": "Executes the current technical novelty/opportunity screening surface."
     },
     "wf_claim_convert": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_conversion_to_solar_evidence.py::test_raw_claims_convert_to_unverified_solar_claims",
+      "target": "tests/plugins/autosci/test_conversion_to_solar_evidence.py::test_raw_claims_convert_to_unverified_solar_claims",
       "rationale": "Executes research-claim formation into the current evidence schema."
     },
     "wf_phase4_convert": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_conversion_to_solar_evidence.py::test_core_phase4_converters_emit_expected_schema_names",
+      "target": "tests/plugins/autosci/test_conversion_to_solar_evidence.py::test_core_phase4_converters_emit_expected_schema_names",
       "rationale": "Executes claim/method/experiment-plan modeling and schema boundaries."
     },
     "wf_exp_design": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_preflight",
+      "target": "tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_preflight",
       "rationale": "Executes verification-ready experiment/POC design and approval preflight."
     },
     "wf_poc_plan": {
       "runner": "pytest",
-      "target": "harness/tests/test_autosci_intake_contract.py::test_autosci_contract_task_graph_selects_autosci_physical_workers",
+      "target": "tests/harness/test_autosci_intake_contract.py::test_autosci_contract_task_graph_selects_autosci_physical_workers",
       "rationale": "Executes POC environment planning and operator preparation."
     },
     "wf_exp_run": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command",
+      "target": "tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command",
       "rationale": "Executes current local POC construction, integration, validation, and evidence handoff path."
     },
     "wf_core_benchmark": {
@@ -109,152 +109,152 @@
     },
     "wf_benchmark_registry": {
       "runner": "pytest",
-      "target": "harness/tests/benchmark/test_benchmark_registry.py::test_register_then_get_roundtrip",
+      "target": "tests/harness/benchmark/test_benchmark_registry.py::test_register_then_get_roundtrip",
       "rationale": "Executes benchmark asset registration and retrieval."
     },
     "wf_benchmark_execution": {
       "runner": "pytest",
-      "target": "harness/tests/benchmark/test_terminal_bench_adapter.py::test_empty_missing_prereqs_allows_dry_run_ok",
+      "target": "tests/harness/benchmark/test_terminal_bench_adapter.py::test_empty_missing_prereqs_allows_dry_run_ok",
       "rationale": "Executes the current Terminal-Bench dry-run path and asserts an executable-ready verdict."
     },
     "wf_benchmark_report": {
       "runner": "pytest",
-      "target": "harness/tests/benchmark/test_benchmark_report_schema.py::test_run_json_contains_all_required_fields",
+      "target": "tests/harness/benchmark/test_benchmark_report_schema.py::test_run_json_contains_all_required_fields",
       "rationale": "Executes benchmark result packaging and validates required run evidence."
     },
     "wf_evaluation": {
       "runner": "pytest",
-      "target": "harness/tests/research_unit/test_evaluator.py::test_evaluate_artifacts_passes_complete_artifact_set",
+      "target": "tests/harness/research_unit/test_evaluator.py::test_evaluate_artifacts_passes_complete_artifact_set",
       "rationale": "Executes evaluation assembly, completeness checks, and final verdict production."
     },
     "wf_artifact_review": {
       "runner": "pytest",
-      "target": "harness/tests/evaluators/scientific/test_artifact_review_gate.py::test_artifact_review_gate_accepts_local_surrogate_with_disclosure",
+      "target": "tests/harness/evaluators/scientific/test_artifact_review_gate.py::test_artifact_review_gate_accepts_local_surrogate_with_disclosure",
       "rationale": "Executes scientific/reasoning artifact review with explicit limitations."
     },
     "wf_claim_gate": {
       "runner": "pytest",
-      "target": "harness/tests/evaluators/scientific/test_claim_verdict_gate.py::test_claim_verdict_gate_accepts_evidence_linked_verdict",
+      "target": "tests/harness/evaluators/scientific/test_claim_verdict_gate.py::test_claim_verdict_gate_accepts_evidence_linked_verdict",
       "rationale": "Executes evidence-linked claim and acceptance comparison."
     },
     "wf_status_next": {
       "runner": "pytest",
-      "target": "harness/tests/research_survey/test_status_next.py::test_status_next_done_when_finalize_passed",
+      "target": "tests/harness/research_survey/test_status_next.py::test_status_next_done_when_finalize_passed",
       "rationale": "Executes refinement/follow-up state determination after evaluation."
     },
     "wf_paper_draft": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_writes_latex_source",
+      "target": "tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_writes_latex_source",
       "rationale": "Executes user-facing deliverable generation."
     },
     "wf_publication": {
       "runner": "pytest",
-      "target": "harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars",
+      "target": "tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars",
       "rationale": "Executes delivery packaging, reusable sidecars, and lifecycle handoff evidence."
     },
     "fn_capsule_def": {
       "runner": "pytest",
-      "target": "harness/tests/test_capability_capsules.py::test_validate_sample_capability_capsule_manifest_has_no_errors",
+      "target": "tests/harness/test_capability_capsules.py::test_validate_sample_capability_capsule_manifest_has_no_errors",
       "rationale": "Executes capsule definition normalization and semantic validation."
     },
     "fn_capsule_registry": {
       "runner": "pytest",
-      "target": "harness/tests/test_capability_capsules.py::test_registry_loader_and_query_skip_non_stable_by_default",
+      "target": "tests/harness/test_capability_capsules.py::test_registry_loader_and_query_skip_non_stable_by_default",
       "rationale": "Executes capsule registry governance and stable-only discovery."
     },
     "fn_capsule_select": {
       "runner": "pytest",
-      "target": "harness/tests/test_capability_capsules.py::test_default_capability_plan_for_logical_operator_maps_requirement_nodes",
+      "target": "tests/harness/test_capability_capsules.py::test_default_capability_plan_for_logical_operator_maps_requirement_nodes",
       "rationale": "Executes capability discovery and logical-task selection."
     },
     "fn_capsule_invoke": {
       "runner": "pytest",
-      "target": "harness/tests/test_capability_capsules.py::test_resolution_gate_attaches_guard_and_resource_capsules",
+      "target": "tests/harness/test_capability_capsules.py::test_resolution_gate_attaches_guard_and_resource_capsules",
       "rationale": "Executes capsule composition with guard and resource attachments."
     },
     "fn_gepa_promote": {
       "runner": "pytest",
-      "target": "harness/tests/integrations/gepa_optimizer/test_promote.py::test_promote_writes_target_and_backup",
+      "target": "tests/harness/integrations/gepa_optimizer/test_promote.py::test_promote_writes_target_and_backup",
       "rationale": "Executes current artifact evolution, promotion, and backup behavior."
     },
     "fn_logical_schema": {
       "runner": "pytest",
-      "target": "harness/tests/test_logical_operator_schema.py",
+      "target": "tests/harness/test_logical_operator_schema.py",
       "rationale": "Executes logical operator definition, binding, and registry schema tests."
     },
     "fn_verification_gate": {
       "runner": "pytest",
-      "target": "harness/tests/runtime/test_verification_gate.py::test_reject_code_task_without_test",
+      "target": "tests/harness/runtime/test_verification_gate.py::test_reject_code_task_without_test",
       "rationale": "Executes admission/governance and engineering-correctness rejection."
     },
     "fn_operator_select": {
       "runner": "pytest",
-      "target": "harness/tests/test_physical_operator_logical_selector.py::test_task_type_matching",
+      "target": "tests/harness/test_physical_operator_logical_selector.py::test_task_type_matching",
       "rationale": "Executes logical-to-physical operator matching and selection."
     },
     "fn_operator_runtime": {
       "runner": "pytest",
-      "target": "harness/tests/runtime/test_operator_runtime.py::test_operator_lease_lifecycle",
+      "target": "tests/harness/runtime/test_operator_runtime.py::test_operator_lease_lifecycle",
       "rationale": "Executes physical operator fleet lease lifecycle management."
     },
     "fn_operator_score": {
       "runner": "pytest",
-      "target": "harness/tests/runtime/test_operator_score.py::test_rank_actors",
+      "target": "tests/harness/runtime/test_operator_score.py::test_rank_actors",
       "rationale": "Executes operator capability scoring and ranking."
     },
     "fn_workflow_schema": {
       "runner": "pytest",
-      "target": "harness/tests/workflow_contract/test_contract_schema.py::test_all_shipped_contracts_schema_valid",
+      "target": "tests/harness/workflow_contract/test_contract_schema.py::test_all_shipped_contracts_schema_valid",
       "rationale": "Executes contract/schema conformance across shipped workflow contracts."
     },
     "fn_benchmark_report": {
       "runner": "pytest",
-      "target": "harness/tests/benchmark/test_benchmark_report_schema.py::test_run_json_contains_all_required_fields",
+      "target": "tests/harness/benchmark/test_benchmark_report_schema.py::test_run_json_contains_all_required_fields",
       "rationale": "Executes benchmark/performance result and evidence evaluation."
     },
     "fn_repo_hygiene": {
       "runner": "bash",
-      "target": "./tests/test-repo-hygiene.sh",
+      "target": "./tests/repository/governance/test_repo_hygiene.sh",
       "rationale": "Executes security/privacy/repository hygiene positive and negative controls."
     },
     "fn_evaluator": {
       "runner": "pytest",
-      "target": "harness/tests/research_unit/test_evaluator.py::test_evaluate_artifacts_passes_complete_artifact_set",
+      "target": "tests/harness/research_unit/test_evaluator.py::test_evaluate_artifacts_passes_complete_artifact_set",
       "rationale": "Executes evidence, factuality, and scientific-validity evaluation."
     },
     "fn_human_review": {
       "runner": "pytest",
-      "target": "harness/tests/workflow_contract/test_instantiate.py::test_on_human_review_policy_carried_per_node",
+      "target": "tests/harness/workflow_contract/test_instantiate.py::test_on_human_review_policy_carried_per_node",
       "rationale": "Executes lifecycle and human-review policy propagation."
     },
     "fn_model_registry": {
       "runner": "pytest",
-      "target": "harness/tests/test_model_registry_codex_aliases.py::test_codex_aliases_expose_provider_and_model_key",
+      "target": "tests/harness/test_model_registry_codex_aliases.py::test_codex_aliases_expose_provider_and_model_key",
       "rationale": "Executes foundational model registry alias resolution."
     },
     "fn_model_routing": {
       "runner": "pytest",
-      "target": "harness/tests/graph/test_graph_scheduler_model_matching.py::test_sonnet_preferred_matches_anthropic_sonnet_alias_before_glm",
+      "target": "tests/harness/graph/test_graph_scheduler_model_matching.py::test_sonnet_preferred_matches_anthropic_sonnet_alias_before_glm",
       "rationale": "Executes model matching, preference, and routing selection."
     },
     "fn_model_audit": {
       "runner": "pytest",
-      "target": "harness/tests/runtime/test_model_call_runtime.py",
+      "target": "tests/harness/runtime/test_model_call_runtime.py",
       "rationale": "Executes model-call event recording and usage audit behavior."
     },
     "fn_graph_scheduler": {
       "runner": "pytest",
-      "target": "harness/tests/graph/test_graph_scheduler_external_deps.py::test_external_depends_on_allows_ready_after_upstream_passed",
+      "target": "tests/harness/graph/test_graph_scheduler_external_deps.py::test_external_depends_on_allows_ready_after_upstream_passed",
       "rationale": "Executes DAG readiness and dependency-aware scheduling."
     },
     "fn_context_store": {
       "runner": "pytest",
-      "target": "harness/tests/test_context_store_runtime.py::test_save_and_load",
+      "target": "tests/harness/test_context_store_runtime.py::test_save_and_load",
       "rationale": "Executes persistent context/memory storage and retrieval."
     },
     "fn_evidence_ledger": {
       "runner": "pytest",
-      "target": "harness/tests/test_evidence_ledger.py::test_write_run_entry",
+      "target": "tests/harness/test_evidence_ledger.py::test_write_run_entry",
       "rationale": "Executes trace/evidence graph event persistence."
     },
     "fn_bun_data": {
@@ -264,17 +264,17 @@
     },
     "fn_workflow_instantiate": {
       "runner": "pytest",
-      "target": "harness/tests/workflow_contract/test_instantiate.py::test_instantiation_byte_identical_twice",
+      "target": "tests/harness/workflow_contract/test_instantiate.py::test_instantiation_byte_identical_twice",
       "rationale": "Executes deterministic workflow graph construction and management."
     },
     "fn_taskgraph_io": {
       "runner": "pytest",
-      "target": "harness/tests/graph/test_task_graph_io.py::test_save_and_load_spec",
+      "target": "tests/harness/graph/test_task_graph_io.py::test_save_and_load_spec",
       "rationale": "Executes TaskGraph persistence and lifecycle round-trip."
     },
     "fn_task_lifecycle": {
       "runner": "pytest",
-      "target": "harness/tests/runtime/test_task_lifecycle.py::test_exact_durable_result_converges_submitted_status",
+      "target": "tests/harness/runtime/test_task_lifecycle.py::test_exact_durable_result_converges_submitted_status",
       "rationale": "Executes run lifecycle convergence and recovery state handling."
     },
     "fn_agent_bus": {
@@ -284,37 +284,37 @@
     },
     "fn_actor_lease": {
       "runner": "pytest",
-      "target": "harness/tests/runtime/test_actor_lease.py::test_acquire_and_read",
+      "target": "tests/harness/runtime/test_actor_lease.py::test_acquire_and_read",
       "rationale": "Executes admission, lease acquisition, and concurrency state."
     },
     "fn_actor_runtime": {
       "runner": "pytest",
-      "target": "harness/tests/runtime/test_actor_runtime.py::test_submit_returns_lease_and_paths",
+      "target": "tests/harness/runtime/test_actor_runtime.py::test_submit_returns_lease_and_paths",
       "rationale": "Executes main-loop task submission and runtime supervision envelope creation."
     },
     "fn_intent_classify": {
       "runner": "pytest",
-      "target": "harness/tests/test_intent_gateway.py::test_general_user_research_requests_get_research_lane_and_roles",
+      "target": "tests/harness/test_intent_gateway.py::test_general_user_research_requests_get_research_lane_and_roles",
       "rationale": "Executes intent classification and compilation-variant selection."
     },
     "fn_plan_validator": {
       "runner": "pytest",
-      "target": "harness/tests/workflow_contract/test_plan_validator.py::test_valid_dag_has_no_graph_structure_errors",
+      "target": "tests/harness/workflow_contract/test_plan_validator.py::test_valid_dag_has_no_graph_structure_errors",
       "rationale": "Executes compiled constraints and TaskGraph feasibility validation."
     },
     "fn_intake_contract": {
       "runner": "pytest",
-      "target": "harness/tests/test_autosci_intake_contract.py::test_autosci_contract_task_graph_selects_autosci_physical_workers",
+      "target": "tests/harness/test_autosci_intake_contract.py::test_autosci_contract_task_graph_selects_autosci_physical_workers",
       "rationale": "Executes task contract and acceptance compilation."
     },
     "fn_compiled_planner": {
       "runner": "pytest",
-      "target": "harness/tests/test_compiled_sprint_planner.py::test_generate_planner_artifacts_for_compiled_sprint",
+      "target": "tests/harness/test_compiled_sprint_planner.py::test_generate_planner_artifacts_for_compiled_sprint",
       "rationale": "Executes task contract decomposition into planner artifacts."
     },
     "fn_apo_plan": {
       "runner": "pytest",
-      "target": "harness/tests/test_apo_plan_compiler.py::test_build_capsule_plan_node_inserts_guard_resource_and_verifier",
+      "target": "tests/harness/test_apo_plan_compiler.py::test_build_capsule_plan_node_inserts_guard_resource_and_verifier",
       "rationale": "Executes plan/build contract interpretation and guard/resource/verifier assembly."
     },
     "fn_build_prepare": {
@@ -324,32 +324,32 @@
     },
     "fn_code_construct": {
       "runner": "pytest",
-      "target": "harness/tests/runtime/test_codex_operator_contract.py::test_multi_task_operator_envelope_carries_work_dir_and_graph_path",
+      "target": "tests/harness/runtime/test_codex_operator_contract.py::test_multi_task_operator_envelope_carries_work_dir_and_graph_path",
       "rationale": "Executes the current code/operator construction envelope boundary."
     },
     "fn_release_contract": {
       "runner": "bash",
-      "target": "./tests/test-release-checklist.sh",
+      "target": "./tests/repository/release/test_release_checklist.sh",
       "rationale": "Executes runtime deliverable/release packaging contract checks."
     },
     "vt_status_scoping": {
       "runner": "pytest",
-      "target": "harness/tests/test_status_server_session_scoping.py::test_events_for_request_filters_global_events_for_requested_sprint",
+      "target": "tests/harness/test_status_server_session_scoping.py::test_events_for_request_filters_global_events_for_requested_sprint",
       "rationale": "Executes workflow status and trace scoping for visibility."
     },
     "vt_status_usage": {
       "runner": "pytest",
-      "target": "harness/tests/test_status_server_usage_runtime.py::test_codex_runtime_does_not_project_claude_quota_rows",
+      "target": "tests/harness/test_status_server_usage_runtime.py::test_codex_runtime_does_not_project_claude_quota_rows",
       "rationale": "Executes runtime/resource usage projection by active provider runtime."
     },
     "vt_windows_app": {
       "runner": "node",
-      "target": "desktop/src/runtime-detect.test.js",
+      "target": "tests/desktop/src/runtime-detect.test.cjs",
       "rationale": "Executes Windows/WSL desktop runtime detection."
     },
     "vt_macos_app": {
       "runner": "node",
-      "target": "desktop/bootstrap-contract.test.js",
+      "target": "tests/desktop/bootstrap-contract.test.cjs",
       "rationale": "Executes desktop bootstrap and macOS packaging contract tests."
     },
     "vt_cli": {
@@ -359,47 +359,47 @@
     },
     "vt_status_dashboard": {
       "runner": "python_script",
-      "target": "harness/tests/test-status-server-p0-dashboard.py",
+      "target": "tests/harness/test_status_server_p0_dashboard.py",
       "rationale": "Executes the legacy self-running web/status dashboard, settings payload, and rendered UI surface."
     },
     "vt_gui": {
       "runner": "node",
-      "target": "desktop/frontend-scenarios.test.js",
+      "target": "tests/desktop/frontend-scenarios.test.cjs",
       "rationale": "Executes desktop GUI frontend scenarios."
     },
     "vt_tui": {
       "runner": "pytest",
-      "target": "harness/tests/integration/test_tui_pane_e2e.py",
+      "target": "tests/harness/integration/test_tui_pane_e2e.py",
       "rationale": "Executes TUI pane state, recovery, and reinjection scenarios."
     },
     "vt_auth": {
       "runner": "pytest",
-      "target": "harness/tests/supervision/test_run_preflight.py::test_auth_absent_fails_closed",
+      "target": "tests/harness/supervision/test_run_preflight.py::test_auth_absent_fails_closed",
       "rationale": "Executes authentication/session preflight fail-closed behavior."
     },
     "vt_user_settings": {
       "runner": "pytest",
-      "target": "harness/tests/config/test_spine_registry.py::test_user_config_defaults_are_neutral",
+      "target": "tests/harness/config/test_spine_registry.py::test_user_config_defaults_are_neutral",
       "rationale": "Executes current user configuration defaults and settings boundary."
     },
     "vt_privacy": {
       "runner": "bash",
-      "target": "./tests/test-repo-hygiene.sh",
+      "target": "./tests/repository/governance/test_repo_hygiene.sh",
       "rationale": "Executes privacy/secret/repository hygiene controls."
     },
     "vt_wechat": {
       "runner": "bash",
-      "target": "./harness/tests/test-apple-notes-ingest.sh",
+      "target": "./tests/harness/test_apple_notes_ingest.sh",
       "rationale": "Executes the current WeChat-via-Apple-Notes ingestion surface."
     },
     "vt_tmux": {
       "runner": "pytest",
-      "target": "harness/tests/test_tmux_notification_bridge.py::test_notify_tmux_state_emits_tmux_commands",
+      "target": "tests/harness/test_tmux_notification_bridge.py::test_notify_tmux_state_emits_tmux_commands",
       "rationale": "Executes TMUX notification/state command emission."
     },
     "vt_cost_budget": {
       "runner": "pytest",
-      "target": "harness/tests/integrations/gepa_optimizer/test_budgets.py::TestBudget::test_valid_budget",
+      "target": "tests/harness/integrations/gepa_optimizer/test_budgets.py::TestBudget::test_valid_budget",
       "rationale": "Executes budget validation for cost/evaluation/wall-time controls."
     },
     "vt_cluster": {
@@ -1391,7 +1391,7 @@
       "purpose_user_function": "Define and normalize a loadable capability manifest used by routing and execution gates.",
       "valid_inputs": "YAML/JSON manifest or registry entry containing capsule ID, version, contracts, effects, bindings, resources, verification hooks, and compatibility metadata.",
       "expected_outputs": "Normalized capsule dictionary plus semantic/schema validation errors or a RegistryEntry.",
-      "success_evidence": "Validated normalized manifest matches harness/schemas/draft/capability-capsule.v1.draft.json and harness/tests/test_capability_capsules.py passes representative valid/invalid manifests.",
+      "success_evidence": "Validated normalized manifest matches harness/schemas/draft/capability-capsule.v1.draft.json and tests/harness/test_capability_capsules.py passes representative valid/invalid manifests.",
       "implementation_entrypoints": "harness/lib/capability_capsules.py: normalize_capability_capsule(), load_capability_capsule_manifest(), validate_capability_capsule_semantics(), validate_capability_capsule()",
       "supported_boundaries_exclusions": "Current code normalizes and validates manifests but does not build arbitrary dependency archives or install packaged resources.",
       "review_notes": "Shipped manifest assembly is contract normalization, not a general binary/package bundler.",
@@ -1409,7 +1409,7 @@
       "purpose_user_function": "Govern capsule admission through validation, a file-backed registry, stable/non-stable filtering, and binding audits.",
       "valid_inputs": "Capsule manifest/registry path, lifecycle status, version, referenced operator bindings, and include_nonstable policy.",
       "expected_outputs": "Loaded registry entries, selected lifecycle-visible entries, semantic findings, and binding-audit findings.",
-      "success_evidence": "Registry loads deterministically, validation findings are explicit, and harness/tests/test_skill_to_capsule_compiler.py plus harness/tests/test_capsule_operator_coherence.py cover registration/coherence.",
+      "success_evidence": "Registry loads deterministically, validation findings are explicit, and tests/harness/test_skill_to_capsule_compiler.py plus tests/harness/test_capsule_operator_coherence.py cover registration/coherence.",
       "implementation_entrypoints": "harness/lib/capability_capsules.py: load_capability_capsule_registry(), iter_registry_entries(), audit_stable_capsule_operator_bindings(), get_registry_entry(); harness/lib/skill_to_capsule_compiler.py",
       "supported_boundaries_exclusions": "Validation, lookup, and auditing are shipped. A complete publish/suspend/deprecate transaction API and immutable audit store were not found.",
       "review_notes": "Lifecycle verbs in the L2 are broader than the current file-backed loader and compiler.",
@@ -1427,7 +1427,7 @@
       "purpose_user_function": "Find eligible capsules and resolve the best contract for a task envelope.",
       "valid_inputs": "Task goal/text, task type, logical operator, required artifacts/capabilities, policy signals, registry path, and stable-status policy.",
       "expected_outputs": "Candidate capsule list/plan with scores or a resolved capsule containing bindings, effects, guards, resources, and rationale.",
-      "success_evidence": "Resolved plan identifies a registered capsule, explains rejected candidates, preserves effects/bindings, and passes harness/tests/test_capability_capsules.py and test_apo_plan_compiler.py.",
+      "success_evidence": "Resolved plan identifies a registered capsule, explains rejected candidates, preserves effects/bindings, and passes tests/harness/test_capability_capsules.py and test_apo_plan_compiler.py.",
       "implementation_entrypoints": "harness/lib/capability_capsules.py: classify_task_goal(), query_capability_capsules(), default_capability_plan_for_logical_operator(), resolve_capability_capsule_for_task()",
       "supported_boundaries_exclusions": "Compatibility/task heuristics and configured constraints are shipped; comprehensive learned quality/cost/performance ranking is partial.",
       "review_notes": "Selection is deterministic/config-based with limited runtime-derived scoring.",
@@ -1445,7 +1445,7 @@
       "purpose_user_function": "Attach a governed capsule plan to a task and dispatch its bound operator; compose referenced guard/resource/adapter capsules into the effective plan.",
       "valid_inputs": "Resolved task envelope, selected capsule, contract inputs, referenced capsules, chosen skills/MCP bindings, and physical operator binding.",
       "expected_outputs": "Execution/capsule plan, normalized task envelope, dispatch artifacts, result/evidence references, or a typed rejection.",
-      "success_evidence": "Envelope carries resolved capsule/effect summary, dispatch artifacts exist, and result/evidence conforms to manifest hooks as covered by harness/tests/test_skill_dispatch_operator.py.",
+      "success_evidence": "Envelope carries resolved capsule/effect summary, dispatch artifacts exist, and result/evidence conforms to manifest hooks as covered by tests/harness/test_skill_dispatch_operator.py.",
       "implementation_entrypoints": "harness/lib/capability_capsules.py: _attach_referenced_capsules(), resolve_capability_capsule_for_envelope(); harness/lib/apo_plan_compiler.py: build_capsule_plan_ir(); harness/tools/skill_dispatch_operator.py: execute path and artifact writers",
       "supported_boundaries_exclusions": "Resolution and referenced-capsule composition are shipped; no universal in-process executor supports every composition form described in the design document.",
       "review_notes": "Invocation is adapter/operator based; generic composition execution is partial.",
@@ -1463,7 +1463,7 @@
       "purpose_user_function": "Use evaluation evidence to propose and gate improved capability versions, then promote or roll back approved changes.",
       "valid_inputs": "Capability scorecards, failures/events, candidate version/patch, evaluation pack, regression result, and approval decision.",
       "expected_outputs": "Recommendation, evaluation evidence, promotion/demotion status, evolution event, or rollback indication.",
-      "success_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "success_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after evaluation and regression gates; tests/harness/integrations/gepa_optimizer/test_promote.py covers the accepted promotion control. The older stateful evolution shell probes are quarantined and are not accepted evidence.",
       "implementation_entrypoints": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), run_loop(); harness/tools/skill_evolution_runner.py: run_once()",
       "supported_boundaries_exclusions": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "review_notes": "Current evolution engine is capability/skill oriented and does not fully implement capsule-version migration.",
@@ -1481,7 +1481,7 @@
       "purpose_user_function": "Create a stable logical work definition independently of any concrete executor.",
       "valid_inputs": "Operator type/ID, version, role, inputs/outputs, capabilities, capsule requirements, effects, scopes, evidence, concurrency, candidate bindings, and fallback policy.",
       "expected_outputs": "Validated logical operator registry entry and binding metadata usable by planning/routing.",
-      "success_evidence": "Entry validates against logical-operators.schema.json and is resolved by harness/tests/test_logical_operator_schema.py and test_logical_operator_router.py.",
+      "success_evidence": "Entry validates against logical-operators.schema.json and is resolved by tests/harness/test_logical_operator_schema.py and test_logical_operator_router.py.",
       "implementation_entrypoints": "harness/lib/logical_operator_registry.py: load_logical_operator_registry(), logical_operator_def(), logical_operator_binding(); harness/config/logical-operators.json",
       "supported_boundaries_exclusions": "Registry loading and schema validation are shipped; no dynamic service-level registration API was found.",
       "review_notes": "Current source of truth is a versioned JSON registry.",
@@ -1499,7 +1499,7 @@
       "purpose_user_function": "Admit only operators that satisfy contract, policy, permission, safety, independence, reliability, and architecture requirements.",
       "valid_inputs": "Logical/physical operator spec, evaluator verdicts, enabled/status fields, capability/permission/risk metadata, provider/host state.",
       "expected_outputs": "Selectable/admitted decision with explicit rejection reasons, or disabled/deprecated status.",
-      "success_evidence": "Rejected operator includes a deterministic reason and is never assigned; qualifying cases are covered by harness/tests/scenarios/F-CLASS-19-disabled-operator-unselectable.scenario.json and operator schema tests.",
+      "success_evidence": "Rejected operator includes a deterministic reason and is never assigned; qualifying cases are covered by tests/harness/scenarios/F-CLASS-19-disabled-operator-unselectable.scenario.json and operator schema tests.",
       "implementation_entrypoints": "harness/lib/physical_operator_catalog.py: static_operator_rejection_reasons(), is_operator_statically_selectable(); harness/lib/plan_validator.py; harness/lib/verification_gate.py",
       "supported_boundaries_exclusions": "Static selectability and plan/runtime gates exist; a complete operator certification lifecycle service is not found.",
       "review_notes": "Qualification is distributed across validators, selectors, and gates.",
@@ -1517,7 +1517,7 @@
       "purpose_user_function": "Bind a logical DAG node to an eligible physical operator using constraints and ranked runtime characteristics.",
       "valid_inputs": "Logical operator/node, required capabilities/skills/capsules, role, model preference, host/provider, quota, health, cost/load, workers, and fallback policy.",
       "expected_outputs": "Selected physical operator/actor-host binding, ranked/rejected candidates, or unresolvable decision.",
-      "success_evidence": "Physical plan records selected/rejected candidates and rationale; tests include harness/tests/test_physical_operator_logical_selector.py and test_apo_plan_compiler.py.",
+      "success_evidence": "Physical plan records selected/rejected candidates and rationale; tests include tests/harness/test_physical_operator_logical_selector.py and test_apo_plan_compiler.py.",
       "implementation_entrypoints": "harness/lib/apo_plan_compiler.py: enumerate_physical_candidates(), build_physical_plan_for_capsule_node(); harness/lib/graph_scheduler.py: assign_workers(); harness/lib/logical_operator_router.py",
       "supported_boundaries_exclusions": "Local configured candidates and deterministic ranking are shipped; global optimal scheduling across every provider is not claimed.",
       "review_notes": "This is one of the strongest current Foundation mappings.",
@@ -1535,7 +1535,7 @@
       "purpose_user_function": "Maintain configured physical operators and actor-host execution surfaces with availability, capacity, leases, heartbeat, and result state.",
       "valid_inputs": "Operator/actor/host records, adapter command, environment, status, lease request, task envelope, heartbeat, and result.",
       "expected_outputs": "Catalog record, runtime state, acquired/released lease, inbox task, heartbeat, normalized result, or availability error.",
-      "success_evidence": "Atomic inbox/result writes, non-duplicated leases, explicit runtime status, and passing harness/tests/runtime/test_operator_runtime.py and test_operator_registry.py.",
+      "success_evidence": "Atomic inbox/result writes, non-duplicated leases, explicit runtime status, and passing tests/harness/runtime/test_operator_runtime.py and test_operator_registry.py.",
       "implementation_entrypoints": "harness/lib/physical_operator_catalog.py; harness/lib/operator_runtime.py: load_registry(), acquire_operator_lease(), submit(), write_heartbeat(), write_result(); harness/lib/actor_runtime.py: ActorRuntime",
       "supported_boundaries_exclusions": "Catalog/runtime support is shipped for configured surfaces; actual browser, CLI, remote, and subscription fleets remain environment-dependent.",
       "review_notes": "Fleet management is file-backed and adapter-driven rather than a central network service.",
@@ -1608,7 +1608,7 @@
       "valid_inputs": "Source/build artifact, test/lint/typecheck/compile commands, expected checks, architecture boundaries, timeouts, and logs.",
       "expected_outputs": "Per-check results plus pass/fail/blocked/inconclusive aggregate and artifact/log references.",
       "success_evidence": "Commands, exit codes, stdout/stderr tails, and verdict are captured; a pass requires all configured mandatory checks.",
-      "implementation_entrypoints": "harness/lib/eval_runner.py: run_pack(); harness/lib/contract_gate_executor.py: execute_gate(); tests/ and harness/tests/ suites",
+      "implementation_entrypoints": "harness/lib/eval_runner.py: run_pack(); harness/lib/contract_gate_executor.py: execute_gate(); tests/ and tests/harness/ suites",
       "supported_boundaries_exclusions": "Eval-pack and gate execution are generic; maintainability scoring and every scanner named in the L2 are not uniformly implemented.",
       "review_notes": "Current behavior is command/evidence orchestration rather than one monolithic quality analyzer.",
       "implementation_status": "IMPLEMENTED_CURRENT_SUBSET",
@@ -1625,7 +1625,7 @@
       "purpose_user_function": "Execute reproducible benchmarks and compare measured quality, latency, resource, and cost outcomes.",
       "valid_inputs": "Registered benchmark/task, solver/operator, budget, repetitions, baseline/threshold, environment metadata, and artifacts.",
       "expected_outputs": "BenchmarkRunResult, report, manifest/hashes, metrics, comparison, and verdict.",
-      "success_evidence": "Report and manifest include measured metrics and hashes; harness/tests/benchmark/test_benchmark_report_schema.py and terminal-bench adapter tests validate artifacts.",
+      "success_evidence": "Report and manifest include measured metrics and hashes; tests/harness/benchmark/test_benchmark_report_schema.py and terminal-bench adapter tests validate artifacts.",
       "implementation_entrypoints": "harness/lib/benchmark/runner.py: _cmd_plan(), _cmd_run(), _cmd_report(); harness/lib/benchmark/reports.py: write_run_artifacts()",
       "supported_boundaries_exclusions": "Terminal-bench/Harbor-style adapters and generic reports are shipped; universal scalability/load testing is task-specific.",
       "review_notes": "Benchmark framework is concrete; coverage depends on registered benchmarks.",
@@ -1644,7 +1644,7 @@
       "valid_inputs": "Code/artifacts, environment/config, requested effects, permissions, data classifications, dependency/license metadata, and policy.",
       "expected_outputs": "Security/privacy/policy findings, allowed/denied decision, warnings, and remediation evidence.",
       "success_evidence": "Deterministic finding names source/path/rule and denied cases cannot transition to pass; privacy scan and release-tree tests provide current evidence.",
-      "implementation_entrypoints": "core/security/checks/*.sh; core/config/privacy.ts; harness/lib/verification_gate.py; tests/test-release-public-tree.sh and tests/qa_audit/.../test_misc_side_effect_gate_contracts.py",
+      "implementation_entrypoints": "core/security/checks/*.sh; core/config/privacy.ts; harness/lib/verification_gate.py; tests/repository/release/test_release_public_tree.sh and tests/qa_audit/.../test_misc_side_effect_gate_contracts.py",
       "supported_boundaries_exclusions": "Secret/privacy/permission checks exist, but a unified regulatory/compliance/copyright/IP evaluator covering every jurisdiction was not found.",
       "review_notes": "Compliance and IP scope should be reviewed by a domain owner.",
       "implementation_status": "IMPLEMENTED_CURRENT_SUBSET",
@@ -1697,7 +1697,7 @@
       "purpose_user_function": "Normalize configured model identities and expose provider/model metadata to routing and runtime.",
       "valid_inputs": "Model registry JSON, aliases/model IDs, provider, model flags/keys, allowed roles/matrices, and defaults.",
       "expected_outputs": "Canonical model ID/spec, allowed matrix option, label/provider metadata, or validation error.",
-      "success_evidence": "Alias resolves deterministically to a configured spec and tests/harness/tests/test_model_registry_codex_aliases.py passes; absent capability fields remain explicitly unknown.",
+      "success_evidence": "Alias resolves deterministically to a configured spec and tests/tests/harness/test_model_registry_codex_aliases.py passes; absent capability fields remain explicitly unknown.",
       "implementation_entrypoints": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), validate_matrix(); harness/config/model-registry.json",
       "supported_boundaries_exclusions": "Current registry records identity/provider/allowlists, not all claimed modalities, context sizes, tool-use and verified quality capabilities.",
       "review_notes": "Spreadsheet description is broader than current registry schema.",
@@ -1715,7 +1715,7 @@
       "purpose_user_function": "Choose model/provider/operator routes based on configured scenario, role, availability, capabilities, model preference, and fallback.",
       "valid_inputs": "Task/scenario/role, preferred model, registry, provider enablement, physical workers, capability/skill requirements, health/quota, and strictness.",
       "expected_outputs": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
-      "success_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "success_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "implementation_entrypoints": "harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/graph_scheduler.py: _model_match(), assign_workers(); harness/config/model-scenario-routing.json",
       "supported_boundaries_exclusions": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "review_notes": "Provider health and quality signals are not uniformly represented in one selector.",
@@ -1734,7 +1734,7 @@
       "valid_inputs": "Pane/operator, provider/model, event/status, timestamps/duration, usage/tokens/cost where available, task/sprint/node IDs, and result metadata.",
       "expected_outputs": "Structured model event appended to runtime telemetry/ledger and visible to status/reporting.",
       "success_evidence": "Event is correlated to task/pane/provider/model and preserves measured usage fields; runtime tests verify the record path.",
-      "implementation_entrypoints": "harness/lib/model_call_runtime.py: pane_runtime_metadata(), record_model_event(), main(); harness/tests/runtime/test_model_call_runtime.py",
+      "implementation_entrypoints": "harness/lib/model_call_runtime.py: pane_runtime_metadata(), record_model_event(), main(); tests/harness/runtime/test_model_call_runtime.py",
       "supported_boundaries_exclusions": "Call/provider/model/status capture is shipped; consistent user identity, exact cost, quota consumption, and policy-decision accounting are partial.",
       "review_notes": "Missing provider usage is preserved as unknown rather than estimated.",
       "implementation_status": "IMPLEMENTED_CURRENT_SUBSET",
@@ -1751,7 +1751,7 @@
       "purpose_user_function": "Optimize text-based prompts/rules/rubrics as versioned candidates, evaluate them, and promote only passing candidates.",
       "valid_inputs": "Source text artifact, task/golden/holdout cases, budget, candidate generator/backend, hard policies, evaluation metrics, and active version.",
       "expected_outputs": "Candidate artifacts, evaluation comparison, budget/policy findings, promotion decision, and rollback-capable stored version.",
-      "success_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "success_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "implementation_entrypoints": "harness/integrations/gepa_optimizer/adapter.py, evaluator.py, hard_policy_checker.py, promote.py, cli.py; MIPROv2/TextGrad: Not found in current codebase",
       "supported_boundaries_exclusions": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
       "review_notes": "Annotate GEPA as current and the other named algorithms as unsupported/aspirational.",
@@ -1788,7 +1788,7 @@
       "valid_inputs": "Failures/trajectories, capsule/operator version, scorecard, candidate patch/manifest, compatibility tests, sandbox/benchmark pack, approval.",
       "expected_outputs": "Versioned improvement candidate, compatibility/benchmark verdict, promotion/demotion decision, and rollback evidence.",
       "success_evidence": "Candidate is versioned, compatibility and benchmark evidence are linked, and failed candidate leaves current registry/binding unchanged.",
-      "implementation_entrypoints": "harness/lib/evolution_engine.py; harness/tools/skill_evolution_runner.py; harness/tests/test_capability_capsules.py; general trajectory-mining/CEGIS synthesis: Not found as a unified implementation",
+      "implementation_entrypoints": "harness/lib/evolution_engine.py; harness/tools/skill_evolution_runner.py; tests/harness/test_capability_capsules.py; general trajectory-mining/CEGIS synthesis: Not found as a unified implementation",
       "supported_boundaries_exclusions": "Generic capability/skill evolution and capsule compatibility tests exist; a complete trajectory-mining/CEGIS loop is partial.",
       "review_notes": "Do not equate scorecard promotion with full autonomous code evolution.",
       "implementation_status": "IMPLEMENTED_CURRENT_SUBSET",
@@ -2400,7 +2400,7 @@
       "valid_inputs": "Benchmark specification, tasks/dataset, solver/operator adapter, metrics/baseline, budget, environment, and expected result schema.",
       "expected_outputs": "Registered benchmark assets and a doctor/plan/run-capable harness definition.",
       "success_evidence": "Doctor/list/plan/run accepts the assets, result schema validates, and baseline/metric behavior is independently checked.",
-      "implementation_entrypoints": "harness/lib/benchmark/registry.py, schemas.py, terminal_bench.py, runner.py; harness/tests/benchmark/",
+      "implementation_entrypoints": "harness/lib/benchmark/registry.py, schemas.py, terminal_bench.py, runner.py; tests/harness/benchmark/",
       "supported_boundaries_exclusions": "Benchmark runner/reporting framework is shipped; authoring arbitrary new datasets/workloads is a developer task.",
       "review_notes": "Strong infrastructure, but specific benchmark assets need their own evidence.",
       "implementation_status": "IMPLEMENTED_CURRENT_SUBSET",
@@ -2418,7 +2418,7 @@
       "valid_inputs": "Feature contract/acceptance criteria, implementation surface, runner/platform, fixtures/mocks, failure cases, and evidence requirements.",
       "expected_outputs": "Executable test files/fixtures/validators with stable assertions and documented prerequisites.",
       "success_evidence": "Tests collect/run on declared runner, fail against broken behavior, pass against current behavior, and emit reproducible evidence.",
-      "implementation_entrypoints": "skills/test/SKILL.md; tests/README.md; tests/** and harness/tests/**",
+      "implementation_entrypoints": "skills/test/SKILL.md; tests/README.md; tests/** and tests/harness/**",
       "supported_boundaries_exclusions": "Repository has multiple test suites/runners and skills/test; automated authoring is delegated to builders.",
       "review_notes": "Atomic granularity should follow observable contract classes, not every input combination.",
       "implementation_status": "IMPLEMENTED_CURRENT_SUBSET",
@@ -2561,7 +2561,7 @@
       "purpose_user_function": "Provide read-only operator views of sprint/workflow progress, task-graph and gate state, pane/operator health, blockers, queues, usage, integrations, and artifacts from runtime evidence.",
       "valid_inputs": "GET query parameters such as sprint_id, limit, and projection mode; local sprint/session JSON and JSONL artifacts; tmux pane state; operator/configuration registries; integration health artifacts.",
       "expected_outputs": "JSON status and orchestration projections, HTML dashboard views, and SSE updates containing current sprint, node/gate status, blockers, panes, recent events, KPIs, capability health, and evidence links.",
-      "success_evidence": "harness/lib/symphony/status-server.py: StatusHandler GET /status, /orchestration/dashboard, /orchestration/projection and _status_payload/_orchestration_projection_payload; harness/tests/test-status-server-p0-dashboard.py; harness/tests/test-status-server-idle-projection.py.",
+      "success_evidence": "harness/lib/symphony/status-server.py: StatusHandler GET /status, /orchestration/dashboard, /orchestration/projection and _status_payload/_orchestration_projection_payload; tests/harness/test_status_server_p0_dashboard.py; tests/harness/test_status_server_idle_projection.py.",
       "implementation_entrypoints": "harness/lib/symphony/status-server.py: _current_sprint, _main_screen, _physical_operator_summary, _capability_health_summary, _orchestration_projection_payload, StatusHandler; core/dashboard/server.ts: getHealthSummary and Bun.serve routes.",
       "supported_boundaries_exclusions": "Current behavior is local/operator visibility over available runtime artifacts. It is not an independent source of truth and does not promise that every external provider or data source has a live probe.",
       "review_notes": "Current code strongly supports local status visibility, but the L2 wording is broader than the set of health probes actually implemented.",
@@ -2633,7 +2633,7 @@
       "purpose_user_function": "Package an Electron Windows shell that provisions/uses WSL2, starts or attaches to the Solar status backend, guides setup failures, and renders the dashboard.",
       "valid_inputs": "Windows 11 host, WSL/distro state, optional installer flags/environment, packaged install.ps1 and get-solar.sh runtime resources, selected provider runtime, and local health/port/token files.",
       "expected_outputs": "Portable Windows app, WSL2 Solar runtime, setup logs, autostart task, dashboard window, diagnostics, and machine-readable evidence-doctor results.",
-      "success_evidence": "desktop/src/runtime-detect.test.js; desktop/bootstrap-contract.test.js; desktop/src/selftest-verdict.test.js; tests/install.Tests.ps1; tests/windows-evidence-doctor.Tests.ps1; docs/WINDOWS.md: The one manual step.",
+      "success_evidence": "tests/desktop/src/runtime-detect.test.cjs; tests/desktop/bootstrap-contract.test.cjs; tests/desktop/src/selftest-verdict.test.cjs; tests/platform/windows/install.Tests.ps1; tests/platform/windows/windows-evidence-doctor.Tests.ps1; docs/WINDOWS.md: The one manual step.",
       "implementation_entrypoints": "desktop/src/main.js: runWindowsBootstrap, classifyRuntimeState, startBackendWindows, createWindow and loadDashboard; desktop/src/runtime-detect.js: wslDistro/wslHasDistro/wslState/wslExec; install.ps1 main flow.",
       "supported_boundaries_exclusions": "Native non-WSL Windows runtime is out of scope. Windows support is experimental and full first-run proof on real hardware remains owner-manual.",
       "review_notes": "Update/repair applies mainly to the bundled WSL runtime; desktop-app self-update semantics should be clarified separately.",
@@ -2651,7 +2651,7 @@
       "purpose_user_function": "Build a macOS Electron DMG that bootstraps or synchronizes the local Solar runtime, installs a launchd status service, and opens the local dashboard with setup and health recovery screens.",
       "valid_inputs": "macOS host, packaged DMG/resources, get-solar.sh, local Solar installation state, Python/runtime availability, launchd permissions, provider selection and credentials.",
       "expected_outputs": "DMG/application bundle, installed or synchronized runtime, launchd agent, local dashboard window, install logs, health/self-test verdict, and uninstallable service artifacts.",
-      "success_evidence": "desktop/package.json: build:mac and mac target; desktop/verify-macos-package.sh; desktop/src/selftest-verdict.test.js; desktop/runtime/install-macos-agent.sh and uninstall-macos-agent.sh.",
+      "success_evidence": "desktop/package.json: build:mac and mac target; desktop/verify-macos-package.sh; tests/desktop/src/selftest-verdict.test.cjs; desktop/runtime/install-macos-agent.sh and uninstall-macos-agent.sh.",
       "implementation_entrypoints": "desktop/src/main.js: runUnixBootstrap, installMacLaunchAgent, syncBundledHarnessLocal, classifyRuntimeState and createWindow; desktop/prepackage-check.js; desktop/verify-macos-package.sh.",
       "supported_boundaries_exclusions": "Build wiring exists, but signed/notarized distribution and a fresh real-machine native DMG release proof are not established in current repository evidence.",
       "review_notes": "Desktop self-update is not a distinct implemented service; bundled runtime synchronization and CLI update are the current update mechanisms.",
@@ -2669,7 +2669,7 @@
       "purpose_user_function": "Install the user-local Solar CLI and selected components on macOS and provide deterministic lifecycle, health, backup, restore, update, repair, UI, and uninstall commands.",
       "valid_inputs": "Installer component flags and SOLAR_* environment twins, supported Python, Bash, git and optional Bun/tmux/jq/runtime dependencies, provider selection, config values, and backup archives.",
       "expected_outputs": "~/.solar layout, solar launcher, component receipt, configuration/secrets files, optional launchd service, doctor/status output, backup archive, restored data, and clean uninstall evidence.",
-      "success_evidence": "lib/installer/common.sh: detect_os/detect_python; lib/installer/system-deps.sh; bin/solar: doctor, backup, restore, update, repair and uninstall; harness/tests/installer/test-s1-installer.sh.",
+      "success_evidence": "lib/installer/common.sh: detect_os/detect_python; lib/installer/system-deps.sh; bin/solar: doctor, backup, restore, update, repair and uninstall; tests/harness/installer/test_s1_installer.sh.",
       "implementation_entrypoints": "lib/installer/main.sh: main; lib/installer/common.sh: detect_os/detect_python; lib/installer/components.sh: install_components; bin/solar: doctor/do_backup/do_restore/do_repair/do_update/uninstall.",
       "supported_boundaries_exclusions": "CLI installation is first-class on macOS, but live model behavior is not proven by deterministic install checks and macOS system Bash 3.2 is insufficient for live harness work.",
       "review_notes": "Differentiate deterministic CLI readiness from a live authenticated provider response.",
@@ -2687,7 +2687,7 @@
       "purpose_user_function": "Install and manage Solar as a user-local Linux CLI/runtime with optional systemd user service and the same deterministic lifecycle commands as macOS.",
       "valid_inputs": "Linux host, apt-compatible or pre-provisioned dependencies, installer flags/environment, selected components/runtime/provider, configuration values, and backup archives.",
       "expected_outputs": "~/.solar installation, CLI launcher, receipt and config, optional systemd user unit, status/doctor evidence, backup/restore artifacts, and uninstall result.",
-      "success_evidence": "lib/installer/common.sh: Linux detection and apt Python bootstrap; lib/installer/system-deps.sh: apt-get path; desktop/runtime/install-linux-service.sh; harness/tests/installer/test-s1-installer.sh; tests/qa_audit/20260710_full_audit/audit_tests/test_installer_component_contracts.py.",
+      "success_evidence": "lib/installer/common.sh: Linux detection and apt Python bootstrap; lib/installer/system-deps.sh: apt-get path; desktop/runtime/install-linux-service.sh; tests/harness/installer/test_s1_installer.sh. The obsolete QA-audit contract file is quarantined and is not accepted evidence.",
       "implementation_entrypoints": "lib/installer/main.sh and common.sh; lib/installer/system-deps.sh; bin/solar doctor/update/repair/backup/restore/uninstall; desktop/runtime/install-linux-service.sh.",
       "supported_boundaries_exclusions": "Repository code has explicit apt-get support and generic Linux paths, but not a declared exhaustive distro/package-manager matrix.",
       "review_notes": "The supported distribution set should be approved explicitly before an exhaustive matrix is created.",
@@ -2705,7 +2705,7 @@
       "purpose_user_function": "Serve the local browser dashboard/status API used by Electron and browsers for intake, settings, provider login readiness, orchestration visibility, events, integrations, artifacts, and health.",
       "valid_inputs": "HTTP GET/POST requests, optional loopback auth token, sprint/query identifiers, intake/settings/auth payloads, local runtime/config/artifact files, tmux and provider status.",
       "expected_outputs": "HTML/JS application, JSON APIs, SSE projection/event streams, healthz/runtime-info responses, artifact views/downloads, and explicit HTTP errors.",
-      "success_evidence": "harness/lib/symphony/status-server.py: StatusHandler and /healthz; harness/tests/test-status-server-p0-dashboard.py; desktop/frontend-scenarios.test.js; desktop/functional.test.js; scripts/verify-webapp-session.sh.",
+      "success_evidence": "harness/lib/symphony/status-server.py: StatusHandler and /healthz; tests/harness/test_status_server_p0_dashboard.py; tests/desktop/frontend-scenarios.test.cjs; tests/desktop/functional.test.cjs; scripts/verify-webapp-session.sh.",
       "implementation_entrypoints": "harness/lib/symphony/status-server.py: StatusHandler, _p0_dashboard_html and main server startup; core/dashboard/server.ts: Bun.serve; desktop/src/main.js: probeHealth, startBackend and loadDashboard.",
       "supported_boundaries_exclusions": "This is a local single-user operator application/status service, not a hosted multi-tenant web account platform. Several views depend on locally installed runtime files.",
       "review_notes": "The Python status server is the richer current product surface; core/dashboard/server.ts is a separate older/limited dashboard surface.",
@@ -2723,7 +2723,7 @@
       "purpose_user_function": "Expose Solar installation, lifecycle, status, backup, restore, UI, harness intake, model, runtime, and evidence operations to scripts and terminal users.",
       "valid_inputs": "Subcommands, flags, environment variables, task text, sprint IDs, component/config options, backup paths, runtime/model selections, and JSON-mode flags where supported.",
       "expected_outputs": "Human-readable stdout/stderr, selected JSON reports, generated artifacts/archives, and exit codes that distinguish success, bad usage, health failure, refusal, or unavailable dependency.",
-      "success_evidence": "bin/solar: usage and command dispatch; harness/tests/installer/test-s1-installer.sh; harness/tests/integration/test_autosci_cli_dispatch.py; harness/tests/remote/test_remote_dispatch_cli.py.",
+      "success_evidence": "bin/solar: usage and command dispatch; tests/harness/installer/test_s1_installer.sh; tests/harness/integration/test_autosci_cli_dispatch.py; tests/harness/remote/test_remote_dispatch_cli.py.",
       "implementation_entrypoints": "bin/solar command dispatcher and doctor/do_backup/do_restore/do_ui/uninstall; harness/control-plane.sh; harness/lib/runtime_bridge.py; harness/plugins/autosci/bin/autosci_skill_shim.py.",
       "supported_boundaries_exclusions": "Structured JSON is implemented for selected commands such as doctor/status evidence, not uniformly for every CLI verb. Live model behavior remains provider-dependent.",
       "review_notes": "Define which verbs must guarantee JSON before treating structured output as a universal contract.",
@@ -2741,7 +2741,7 @@
       "purpose_user_function": "Give local users a desktop/browser interface for setup, intake, runtime/auth settings, workflow and gate status, panes/operators, integrations, reports, assets, and deliverables.",
       "valid_inputs": "Clicks/forms for task intake, settings, runtime/provider login, sprint selection, filters and artifact actions; status API data and local packaged frontend assets.",
       "expected_outputs": "Electron/browser views with loading, installing, healthy, empty, error/recovery and dashboard states; JSON-backed workflow cards, events, artifacts, evidence and deliverable links.",
-      "success_evidence": "desktop/frontend-scenarios.test.js; desktop/screens.test.js; desktop/functional.test.js; desktop/src/selftest-verdict.test.js; desktop/overhaul-visual.test.js; harness/tests/test-status-server-p0-dashboard.py.",
+      "success_evidence": "tests/desktop/frontend-scenarios.test.cjs; tests/desktop/screens.test.cjs; tests/desktop/functional.test.cjs; tests/desktop/src/selftest-verdict.test.cjs; tests/desktop/overhaul-visual.test.cjs; tests/harness/test_status_server_p0_dashboard.py.",
       "implementation_entrypoints": "desktop/src/main.js: createWindow, classifyRuntimeState, runAction and loadDashboard; harness/lib/symphony/status-server.py: _p0_dashboard_html and StatusHandler; desktop/src/preload.js.",
       "supported_boundaries_exclusions": "Current GUI is a local Electron/web dashboard. Comprehensive accessibility behavior and every approval/control workflow are not proven across all views.",
       "review_notes": "Approval controls and accessibility should be broken out only where the current UI exposes a concrete action/state.",
@@ -2759,7 +2759,7 @@
       "purpose_user_function": "Render terminal dashboards for installation/runtime readiness, tmux panes, recent queue/runtime artifacts, agents, tasks, phases, tokens and logs.",
       "valid_inputs": "Local Solar/harness paths, tmux state and captured output, dependency probes, runtime/config files, refresh interval, once/watch and color options, and keyboard events for the TypeScript UI engine.",
       "expected_outputs": "ANSI/plain terminal dashboard with dependency, runtime, pane, blocker, queue and evidence summaries; TypeScript dashboard widgets and keyboard-driven panel rendering.",
-      "success_evidence": "harness/lib/cli/solar_ui_lite.py: collect_state/render/build_parser/main; bin/solar: do_ui; core/ui/dashboard.ts: SolarDashboard; tests/ui-engine.test.ts.",
+      "success_evidence": "harness/lib/cli/solar_ui_lite.py: collect_state/render/build_parser/main; bin/solar: do_ui; core/ui/dashboard.ts: SolarDashboard; tests/core/ui-engine.test.ts.",
       "implementation_entrypoints": "harness/lib/cli/solar_ui_lite.py: main, collect_state, collect_runtime and render; core/ui/dashboard.ts: SolarDashboard; core/ui/v2/runtime.ts: UIRuntime.",
       "supported_boundaries_exclusions": "Monitoring is shipped through the read-only UI-lite surface. Authorized workflow-control actions from the TUI description are not found in the current installed TUI path.",
       "review_notes": "Split the L2 into shipped read-only monitoring and a separate proposed authorized-control contract.",
@@ -2795,7 +2795,7 @@
       "purpose_user_function": "Current code protects the local status API with a generated bearer token when required and guides authentication to external Codex/Claude CLI sessions; it does not implement Solar product-account sessions.",
       "valid_inputs": "Loopback bearer token or injected X-Solar-Token/Authorization header; selected provider name; locally installed Codex/Claude CLI credential/session state; explicit login/reuse-host-credentials request.",
       "expected_outputs": "Authorized/403 API response, provider auth-readiness JSON, device-login subprocess status, and recovery guidance without returning raw provider tokens.",
-      "success_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "success_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "implementation_entrypoints": "harness/lib/symphony/status-server.py: _authorized, _auth_status_payload, _auth_login_start, _auth_reuse_host_creds and StatusHandler; harness/lib/operator_flow_control.py auth-failure classification.",
       "supported_boundaries_exclusions": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "review_notes": "Rename or split into local API security, provider authentication, and future product-account session security.",
@@ -2849,7 +2849,7 @@
       "purpose_user_function": "Ingest WeChat article URLs embedded in authorized Apple Notes input, fetch and parse article HTML, normalize/redact content, deduplicate by note/content hash, preserve source metadata, and create wiki-ingest dispatch artifacts.",
       "valid_inputs": "Apple Notes records or test fixtures containing a WeChat mp.weixin.qq.com URL, optional copied note body/source URL, apple-notes-ingest config, fetch timeout, dry-run/full/force-dispatch flags.",
       "expected_outputs": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
-      "success_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "success_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "implementation_entrypoints": "harness/lib/apple_notes_ingest.py: cmd_scan/main and WeChat parsing/fetch helpers; harness/tools/apple_notes_ingest.py mirrored tool surface; write_wiki_ingest_dispatch.",
       "supported_boundaries_exclusions": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "review_notes": "The L2 should explicitly name Apple Notes as the current supported intake path or define additional desired paths separately.",
@@ -2885,7 +2885,7 @@
       "purpose_user_function": "Use named tmux sessions/windows/panes as the primary local agent cockpit and physical-operator surface, with pane assignment, controlled dispatch, status capture, blocker detection, notifications and recovery hygiene.",
       "valid_inputs": "Session/window/pane targets, runtime/profile/model configuration, task/sprint dispatch files, pane output, operator registry entries, attach/detach/start/stop commands and explicit control actions.",
       "expected_outputs": "Created or reused isolated tmux sessions/panes, assignments and titles, dispatched commands, captured logs/state, runtime/blocker classification, notifications, recovery results, and status artifacts.",
-      "success_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "success_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "implementation_entrypoints": "harness/coordinator.sh dispatch and pane helpers; harness/coordinator-watchdog.sh recovery; harness/lib/symphony/status-server.py _run_tmux/_pane_snapshot/_main_screen; harness/lib/cli/solar_ui_lite.py collect_runtime.",
       "supported_boundaries_exclusions": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "review_notes": "This is one of the strongest code-backed Vertical L2s; split destructive recovery from read-only inspection in atomic tests.",
@@ -2903,7 +2903,7 @@
       "purpose_user_function": "Configure local provider/runtime choice, model registry aliases, role defaults, lab matrices and scenario routes while referencing credentials safely and validating effective routing.",
       "valid_inputs": "Provider IDs/endpoints/key references, model IDs/aliases, role assignments, lab matrix, selected runtime, Codex search/effort settings and operator/model registry files.",
       "expected_outputs": "Sanitized effective settings, resolved canonical model IDs/flags/provider routes, updated user config, model-doctor/readiness output, or explicit invalid/disabled/auth-missing errors.",
-      "success_evidence": "harness/config/model-registry.json; harness/config/model-scenario-routing.json; harness/lib/symphony/status-server.py: model alias/settings helpers; harness/tests/test-model-config-single-source.sh; harness/tests/test-model-registry-guard.sh; harness/tests/test_model_registry_codex_aliases.py.",
+      "success_evidence": "harness/config/model-registry.json; harness/config/model-scenario-routing.json; harness/lib/symphony/status-server.py: model alias/settings helpers; tests/harness/test_model_registry_codex_aliases.py. The older real-home shell guards are quarantined and are not accepted evidence.",
       "implementation_entrypoints": "harness/lib/symphony/status-server.py: _model_id_to_alias, _alias_to_model_id, _write_user_config_models, _write_user_config_runtime, _write_provider_keys and _settings_write_payload; harness/model_registry.py.",
       "supported_boundaries_exclusions": "Configured provider presence is not proof of live model availability. Some registries contain compatibility/deprecated entries and must not be treated as active without state checks.",
       "review_notes": "Use the active registry and selected runtime as truth; do not equate every listed model with presently reachable capacity.",
@@ -2921,7 +2921,7 @@
       "purpose_user_function": "Persist local single-user defaults for identity display, timezone, paths, runtime/models, Codex search/effort, UI startup and ingestion/integration behavior.",
       "valid_inputs": "solar-user-config JSON or dashboard settings payload with supported user, paths, models, providers, runtime, codex, wiki, mirage, apple_notes and ui keys plus environment/config overrides.",
       "expected_outputs": "Validated/sanitized effective settings returned to the dashboard and persisted in the local user-config file for later commands and runtime dispatch.",
-      "success_evidence": "harness/config/solar-user-config.json concrete settings; harness/lib/symphony/status-server.py: _settings_payload/_settings_write_payload; harness/tests/test-status-server-p0-dashboard.py settings/dashboard coverage.",
+      "success_evidence": "harness/config/solar-user-config.json concrete settings; harness/lib/symphony/status-server.py: _settings_payload/_settings_write_payload; tests/harness/test_status_server_p0_dashboard.py settings/dashboard coverage.",
       "implementation_entrypoints": "harness/lib/symphony/status-server.py: _settings_payload, _read_user_config, _write_user_config, _write_user_config_codex and _settings_write_payload; installer config merge/render scripts.",
       "supported_boundaries_exclusions": "There is no cloud synchronization or formal all-fields JSON Schema. Some desired preferences in the L2 wording are only represented as concrete existing keys.",
       "review_notes": "The workbook should record the exact supported setting keys rather than treating the examples as an open-ended profile.",
@@ -2939,7 +2939,7 @@
       "purpose_user_function": "Configure and enforce selected daily call/token budgets and per-operator/provider quota/cooldown policies, then prevent unavailable operators from receiving work.",
       "valid_inputs": "daily_call_limit, daily_token_limit, hard_stop and current counters in codex-budget.json; operator quota thresholds/actions/reset times; provider failure text and runtime-state evidence.",
       "expected_outputs": "Budget remaining/status, consume/reset results, operator available/blocked decision, cooldown/quota state, reset time, and status/dashboard warnings.",
-      "success_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "success_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "implementation_entrypoints": "harness/codex-budget.sh cmd_check/cmd_consume/cmd_reset/cmd_status; harness/lib/operator_flow_control.py ensure_operator_available, persist_operator_block, prune_expired_operator_config_blocks and apply_failure_flow_control.",
       "supported_boundaries_exclusions": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "review_notes": "Mark the broader monetary/compute/storage wording as future scope unless concrete units, stores and enforcement points are approved.",
@@ -2957,7 +2957,7 @@
       "purpose_user_function": "Register physical actor hosts and local/remote execution surfaces, validate host metadata, discover or probe peers, bind actors/operators to hosts, and expose capacity/availability to routing and scheduling.",
       "valid_inputs": "Actor-host registry entries with host_id/type, address/carrier metadata, lifecycle, heartbeat and probe configuration; remote dispatch target/config; HIVE node identity/capabilities; concurrency policies.",
       "expected_outputs": "Validated host registry/topology, peer/host status, heartbeat/probe state, operator-host bindings, remote dispatch result, capacity/concurrency decisions, and degraded/offline errors.",
-      "success_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; harness/tests/remote/test_remote_dispatch_core.py; harness/tests/remote/test_remote_dispatch_cli.py; harness/tests/integrations/test-remote-dispatch-productization.sh.",
+      "success_evidence": "harness/config/actor-hosts.schema.json and actor-hosts.json; core/hive/README.md and core/hive/QUICKSTART.md; tests/harness/remote/test_remote_dispatch_core.py; tests/harness/remote/test_remote_dispatch_cli.py. The former shell report wrapper is quarantined because it wrote into a personal runtime.",
       "implementation_entrypoints": "core/hive/node.ts; core/hive/discovery/mdns.ts; core/hive/transport/p2p.ts; core/hive/scheduler.ts; core/hive/cli/node.ts; harness/lib/remote_dispatch.py; harness/lib/operator_flow_control.py; harness/lib/symphony/status-server.py: _physical_operator_summary.",
       "supported_boundaries_exclusions": "actor-hosts.json contains documentation/stub hosts and must not be treated as live topology without probes. HIVE is documented as Phase 2 discovery/communication, not a fully proven production cluster manager.",
       "review_notes": "Test validated topology separately from live remote execution and from the deprecated physical-operators compatibility registry.",

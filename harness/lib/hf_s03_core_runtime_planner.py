@@ -141,7 +141,7 @@ def build_task_graph() -> dict[str, Any]:
                     "harness/lib/hf_paper_insight/storage.py",
                     "harness/lib/hf_paper_insight/state_machine.py",
                     "harness/lib/hf_paper_insight/compat.py",
-                    "harness/tests/test_hf_paper_insight_schema.py",
+                    "tests/harness/test_hf_paper_insight_schema.py",
                 ],
                 "read_scope": [
                     f"sprints/{SPRINT_ID}.prd.md",
@@ -168,7 +168,7 @@ def build_task_graph() -> dict[str, Any]:
                     "harness/lib/hf_paper_insight/providers/",
                     "harness/lib/hf_paper_insight/collector.py",
                     "harness/lib/hf_paper_insight/canonicalizer.py",
-                    "harness/tests/test_hf_paper_insight_collection.py",
+                    "tests/harness/test_hf_paper_insight_collection.py",
                 ],
                 "read_scope": [
                     f"sprints/{SPRINT_ID}.design.md",
@@ -191,7 +191,7 @@ def build_task_graph() -> dict[str, Any]:
                     "harness/lib/hf_paper_insight/taxonomy.py",
                     "harness/lib/hf_paper_insight/scoring.py",
                     "harness/lib/hf_paper_insight/packet.py",
-                    "harness/tests/test_hf_paper_insight_scoring.py",
+                    "tests/harness/test_hf_paper_insight_scoring.py",
                 ],
                 "read_scope": [
                     f"sprints/{SPRINT_ID}.design.md",
@@ -215,7 +215,7 @@ def build_task_graph() -> dict[str, Any]:
                     "harness/lib/hf_paper_insight/compiler.py",
                     "harness/lib/hf_paper_insight/knowledge_store.py",
                     "harness/lib/hf_paper_insight/watch.py",
-                    "harness/tests/test_hf_paper_insight_runtime.py",
+                    "tests/harness/test_hf_paper_insight_runtime.py",
                 ],
                 "read_scope": [
                     f"sprints/{SPRINT_ID}.design.md",
@@ -237,7 +237,7 @@ def build_task_graph() -> dict[str, Any]:
                 "write_scope": [
                     f"sprints/{SPRINT_ID}.handoff.md",
                     f"sprints/{SPRINT_ID}.traceability.json",
-                    "harness/tests/",
+                    "tests/harness/",
                 ],
                 "read_scope": [
                     f"sprints/{SPRINT_ID}.design.md",

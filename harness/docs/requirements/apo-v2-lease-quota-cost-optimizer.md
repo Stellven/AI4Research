@@ -469,9 +469,9 @@ JSON 可解析，Markdown 包含：
 现有测试必须继续通过：
 
 ```bash
-pytest -q harness/tests/test_apo_plan_compiler.py
-pytest -q harness/tests/runtime/test_operator_runtime.py
-pytest -q harness/tests/test_pm_dispatch.py
+pytest -q tests/harness/test_apo_plan_compiler.py
+pytest -q tests/harness/runtime/test_operator_runtime.py
+pytest -q tests/harness/test_pm_dispatch.py
 ```
 
 ### AC7：No learned optimizer

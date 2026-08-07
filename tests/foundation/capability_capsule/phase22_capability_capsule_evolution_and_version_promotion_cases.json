@@ -15,7 +15,7 @@
     "state_side_effects": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
     "failure_rejection_behavior": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
     "supported_boundaries_exclusions": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
-    "success_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+    "success_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
     "granularity_atomic_contracts": "candidate generation; evaluation pass/fail; regression pass/fail; approval required; promotion; demotion/rollback; unchanged version on failure.",
     "readme_product_docs": "README.md §Basic Workflow; docs/solar-architecture-code-map.md §7 Capability capsules; docs/CAPSULE_ARCHITECTURE.md §§2-6",
     "cli_api_skill_interfaces": "harness/lib/capability_capsules.py: load_capability_capsule_registry(), validate_capability_capsule(), query_capability_capsules(), resolve_capability_capsule_for_task(); harness/lib/capability_registry.py CLI main() with sync/list/query/scorecard",
@@ -32,7 +32,6 @@
       "harness/lib/capability_registry.py",
       "harness/lib/evolution_engine.py",
       "harness/schemas/draft/capability-capsule.v1.draft.json",
-      "harness/tests/evolution/test-s5-evolution-engine.sh",
       "harness/tools/skill_evolution_runner.py"
     ],
     "entrypoints": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), run_loop(); harness/tools/skill_evolution_runner.py: run_once()",
@@ -84,7 +83,7 @@
       ],
       "expected_result": "Recommendation, evaluation evidence, promotion/demotion status, evolution event, or rollback indication.",
       "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
-      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "required_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -111,7 +110,7 @@
       ],
       "expected_result": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
       "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
-      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "required_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -138,7 +137,7 @@
       ],
       "expected_result": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
       "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
-      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "required_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -165,7 +164,7 @@
       ],
       "expected_result": "Recommendation, evaluation evidence, promotion/demotion status, evolution event, or rollback indication.",
       "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
-      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "required_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -192,7 +191,7 @@
       ],
       "expected_result": "Recommendation, evaluation evidence, promotion/demotion status, evolution event, or rollback indication.",
       "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
-      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "required_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -219,7 +218,7 @@
       ],
       "expected_result": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
       "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
-      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "required_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -246,7 +245,7 @@
       ],
       "expected_result": "Failed evaluation/regression, missing evidence, policy rejection, low score, or unavailable candidate blocks promotion; unsafe silent rewrite is outside the approved flow.",
       "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
-      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "required_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -271,9 +270,9 @@
         "Collect the contract-required status, provenance, artifact, and audit evidence.",
         "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
       ],
-      "expected_result": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "expected_result": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "state_and_side_effect_oracle": "Writes scorecard/evolution rows and may update promoted skill/capability artifacts through dedicated evolution tooling.",
-      "required_evidence": "Versioned candidate and before/after evidence are persisted; promotion occurs only after eval+regression gates; harness/tests/evolution/test-s5-evolution-engine.sh and test-skill-evolution-runner.sh cover the shipped controls.",
+      "required_evidence": "Versioned candidate and before/after evidence must be persisted and promotion must require eval plus regression gates. The former stateful shell probes are quarantined pending a fully isolated runtime fixture.",
       "supported_boundary": "Generic scorecard/promotion controls and skill evolution exist; end-to-end capsule migration/version rollback as one transaction was not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     }

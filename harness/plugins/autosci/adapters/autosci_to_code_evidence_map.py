@@ -11,7 +11,7 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
     mappings = list(raw.get("mappings") or [{
         "mapping_id": "map-001",
         "claim_id": "claim-001",
-        "repo_or_path": "plugins/autosci/tests/fixtures/sample_repo",
+        "repo_or_path": "tests/plugins/autosci/fixtures/sample_repo",
         "files": ["N/A"],
         "execution_entrypoint": "fixture-mode",
         "mapping_status": "unknown",

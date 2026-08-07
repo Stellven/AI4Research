@@ -54,7 +54,7 @@ harness/lib/benchmark/
   reports.py          write_run_artifacts(), sha256_file(), latest pointers, artifacts manifest
   runner.py           argparse + dispatch + __main__; emits benchmark.* events
 
-harness/tests/benchmark/
+tests/harness/benchmark/
   test_benchmark_registry.py        pytest — registry roundtrip + seed discovery
   test_terminal_bench_adapter.py    pytest — argv shape, allowlist gate, budget gate, pending verdict, no-secret-logging
   test_benchmark_report_schema.py   pytest — run.json schema lock + tuple→list serialisation

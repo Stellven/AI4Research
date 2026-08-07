@@ -20,7 +20,7 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
             "ranking_rationale": "Fixture-mode candidate matches the requested Solar evidence adapter smoke test.",
             "dedup_status": "known",
             "fetch_status": "fetched",
-            "source_ref": "plugins/autosci/tests/fixtures/sample_paper.md",
+            "source_ref": "tests/plugins/autosci/fixtures/sample_paper.md",
         }
         ]
     outputs: dict[str, Any] = {

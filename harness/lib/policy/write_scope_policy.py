@@ -12,11 +12,12 @@ passes trivially (nothing to authorize).
 
 from __future__ import annotations
 
+import os
 from typing import Iterable
 
 
 def _normalize(path: str) -> str:
-    return path.rstrip("/")
+    return os.path.normcase(os.path.normpath(path)).replace("\\", "/").rstrip("/")
 
 
 def _in_scope(path: str, scope: Iterable[str]) -> bool:

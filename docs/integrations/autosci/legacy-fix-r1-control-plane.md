@@ -31,8 +31,8 @@ The intake package path also exposed a Windows long-path failure in PM contract 
 - `harness/tools/codex_pm_router.py`
   - Added Windows long-path-safe PM package writes.
 - Tests and fixtures:
-  - Added production-entrypoint control-plane tests in `harness/tests/research_orchestration/test_research_control_plane_contract.py`.
-  - Added captured upstream parity fixture `harness/tests/research_orchestration/fixtures/upstream_research_parity_contracts.json`.
+  - Added production-entrypoint control-plane tests in `tests/harness/research_orchestration/test_research_control_plane_contract.py`.
+  - Added captured upstream parity fixture `tests/harness/research_orchestration/fixtures/upstream_research_parity_contracts.json`.
   - Extended intent and workflow selection tests.
 
 ## Real Inputs And Artifacts
@@ -40,25 +40,25 @@ The intake package path also exposed a Windows long-path failure in PM contract 
 - URL prompt: `Analyze https://example.org/autosci-control-plane ... FULL_PROMPT_SENTINEL_R1_0123456789`
 - Ambiguous prompt: `Research better agent memory`
 - Parity fixture cases: topic, URL, PDF, evidence-resume.
-- PDF input: `harness/tests/research_orchestration/fixtures/phase5/seed_portability/local_pdf_synthesis_seed.pdf`
+- PDF input: `tests/harness/research_orchestration/fixtures/phase5/seed_portability/local_pdf_synthesis_seed.pdf`
 - Evidence-resume input created during tests: `.codex-tmp/r1-tests/bt-final/.../prior-evidence.json`
 - Production contract artifacts created during tests: `.codex-tmp/r1-tests/bt-final/.../contracts/*.research_task_contract.json`
 - Manual debug artifact confirming Markdown lifecycle path-length diagnosis: `.codex-tmp/r1-tests/manual-markdown-debug/`
 
 ## Test Results
 
-- `python -m pytest harness\tests\research_orchestration\test_research_control_plane_contract.py harness\tests\research_orchestration\test_research_intent.py harness\tests\research_orchestration\test_research_workflow_selection.py harness\tests\research_orchestration\test_research_production_routing.py harness\tests\research_orchestration\test_research_production_runtime.py --basetemp .codex-tmp\r1-tests\bt-all -o cache_dir=.codex-tmp\r1-tests\cache-all -q`
+- `python -m pytest tests\harness\research_orchestration\test_research_control_plane_contract.py tests\harness\research_orchestration\test_research_intent.py tests\harness\research_orchestration\test_research_workflow_selection.py tests\harness\research_orchestration\test_research_production_routing.py tests\harness\research_orchestration\test_research_production_runtime.py --basetemp .codex-tmp\r1-tests\bt-all -o cache_dir=.codex-tmp\r1-tests\cache-all -q`
   - Exit code: `0`
   - Result: `52 passed`
 - `python -m pytest tests\journeys\phase22\code\test_j16_tmux_requirements_builder.py --basetemp .codex-tmp\r1-tests\bt-j16 -o cache_dir=.codex-tmp\r1-tests\cache-j16 -q`
   - Exit code: `0`
   - Result: `1 skipped`
   - Reason: serial live/TMUX journey guard was not enabled.
-- `python -m pytest harness\tests\test_autosci_intake_contract.py --basetemp .codex-tmp\r1-tests\bt-intake3 -o cache_dir=.codex-tmp\r1-tests\cache-intake3 -q`
+- `python -m pytest tests\harness\test_autosci_intake_contract.py --basetemp .codex-tmp\r1-tests\bt-intake3 -o cache_dir=.codex-tmp\r1-tests\cache-intake3 -q`
   - Exit code: `0`
   - Result: `11 passed`
 - Final combined command:
-  - `python -m pytest harness\tests\research_orchestration\test_research_control_plane_contract.py harness\tests\research_orchestration\test_research_intent.py harness\tests\research_orchestration\test_research_workflow_selection.py harness\tests\research_orchestration\test_research_production_routing.py harness\tests\research_orchestration\test_research_production_runtime.py harness\tests\test_autosci_intake_contract.py --basetemp .codex-tmp\r1-tests\bt-final -o cache_dir=.codex-tmp\r1-tests\cache-final -q`
+  - `python -m pytest tests\harness\research_orchestration\test_research_control_plane_contract.py tests\harness\research_orchestration\test_research_intent.py tests\harness\research_orchestration\test_research_workflow_selection.py tests\harness\research_orchestration\test_research_production_routing.py tests\harness\research_orchestration\test_research_production_runtime.py tests\harness\test_autosci_intake_contract.py --basetemp .codex-tmp\r1-tests\bt-final -o cache_dir=.codex-tmp\r1-tests\cache-final -q`
   - Exit code: `0`
   - Result: `63 passed`
 

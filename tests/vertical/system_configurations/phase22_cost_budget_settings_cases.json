@@ -15,7 +15,7 @@
     "state_side_effects": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
     "failure_rejection_behavior": "Hard-stop returns failure at call/token limits; quota/auth/capacity evidence blocks the operator; expired blocks clear; malformed or missing budget files can make checks/status unavailable.",
     "supported_boundaries_exclusions": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
-    "success_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+    "success_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
     "granularity_atomic_contracts": "Counter defaults/reset; consume; hard-stop on/off; at/below/above token and call limits; operator quota/auth/capacity classification; cooldown expiry; fallback/reroute policy; missing budget file; unsupported monetary/compute/storage dimension.",
     "readme_product_docs": "README.md: provider quota fail-closed boundary; INSTALL.md: live provider readiness; docs/DISTRIBUTED_DEPLOYMENT_ANALYSIS.md: Cost estimates.",
     "cli_api_skill_interfaces": "harness/codex-budget.sh check/consume/reset/status; status-server GET /usage and /status; operator-flow-control library used by dispatch paths.",
@@ -30,8 +30,8 @@
       "harness/config/agent-actors.schema.json",
       "harness/config/physical-operators.schema.json",
       "harness/lib/operator_flow_control.py",
-      "harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh",
-      "harness/tests/integrations/gepa_optimizer/test_budgets.py"
+      "tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh",
+      "tests/harness/integrations/gepa_optimizer/test_budgets.py"
     ],
     "entrypoints": "harness/codex-budget.sh cmd_check/cmd_consume/cmd_reset/cmd_status; harness/lib/operator_flow_control.py ensure_operator_available, persist_operator_block, prune_expired_operator_config_blocks and apply_failure_flow_control.",
     "interfaces": "harness/codex-budget.sh check/consume/reset/status; status-server GET /usage and /status; operator-flow-control library used by dispatch paths.",
@@ -82,7 +82,7 @@
       ],
       "expected_result": "Budget remaining/status, consume/reset results, operator available/blocked decision, cooldown/quota state, reset time, and status/dashboard warnings.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -109,7 +109,7 @@
       ],
       "expected_result": "Budget remaining/status, consume/reset results, operator available/blocked decision, cooldown/quota state, reset time, and status/dashboard warnings.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -136,7 +136,7 @@
       ],
       "expected_result": "Budget remaining/status, consume/reset results, operator available/blocked decision, cooldown/quota state, reset time, and status/dashboard warnings.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -163,7 +163,7 @@
       ],
       "expected_result": "Budget remaining/status, consume/reset results, operator available/blocked decision, cooldown/quota state, reset time, and status/dashboard warnings.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -190,7 +190,7 @@
       ],
       "expected_result": "Hard-stop returns failure at call/token limits; quota/auth/capacity evidence blocks the operator; expired blocks clear; malformed or missing budget files can make checks/status unavailable.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -217,7 +217,7 @@
       ],
       "expected_result": "Budget remaining/status, consume/reset results, operator available/blocked decision, cooldown/quota state, reset time, and status/dashboard warnings.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -244,7 +244,7 @@
       ],
       "expected_result": "Budget remaining/status, consume/reset results, operator available/blocked decision, cooldown/quota state, reset time, and status/dashboard warnings.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -271,7 +271,7 @@
       ],
       "expected_result": "Hard-stop returns failure at call/token limits; quota/auth/capacity evidence blocks the operator; expired blocks clear; malformed or missing budget files can make checks/status unavailable.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -298,7 +298,7 @@
       ],
       "expected_result": "Hard-stop returns failure at call/token limits; quota/auth/capacity evidence blocks the operator; expired blocks clear; malformed or missing budget files can make checks/status unavailable.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -323,9 +323,9 @@
         "Collect the contract-required status, provenance, artifact, and audit evidence.",
         "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
       ],
-      "expected_result": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "expected_result": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "state_and_side_effect_oracle": "Consumes/resets daily counters atomically and persists operator quota/auth/cooldown blocks; expired blocks can be pruned; routing may avoid or delay blocked operators.",
-      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; harness/tests/integrations/gepa_optimizer/test_budgets.py; harness/tests/control_plane/test-autopilot-model-doctor-telemetry-only.sh.",
+      "required_evidence": "harness/codex-budget.sh; harness/lib/operator_flow_control.py; harness/config/physical-operators.schema.json quota block; tests/harness/integrations/gepa_optimizer/test_budgets.py; tests/harness/control_plane/test_autopilot_model_doctor_telemetry_only.sh.",
       "supported_boundary": "Token/call and operator quota controls are implemented. General monetary, compute and storage budgets by arbitrary provider/model/project/task, soft warning policy, and cost-based rerouting are incomplete or not found.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     }

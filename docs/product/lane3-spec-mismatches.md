@@ -219,10 +219,10 @@ Two honest bounds:
 
 ## Pre-existing reds (proven unchanged)
 
-- `harness/tests/graph/test_multi_task_runner_status_surface.py` — collection ERROR, identical
+- `tests/harness/graph/test_multi_task_runner_status_surface.py` — collection ERROR, identical
   on the integration base (the long-known B1 red).
-- `harness/tests/test_agent_actor_schema.py` — 7 fixture failures, identical set on base.
-- `harness/tests/test_operatord_daemon.py` — 6–7 env-sensitive failures (singleton/lease
+- `tests/harness/test_agent_actor_schema.py` — 7 fixture failures, identical set on base.
+- `tests/harness/test_operatord_daemon.py` — 6–7 env-sensitive failures (singleton/lease
   contention against machine state; varies run-to-run, base showed one MORE failure than HEAD).
   Identical on the untouched `contract/lane2-harness` worktree; the scenario engine's sandboxed
   coverage of the same seams is green.

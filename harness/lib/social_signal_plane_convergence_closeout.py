@@ -43,7 +43,7 @@ def _ensure_s2_bridged_artifact(runtime_root: Path) -> Path:
 - `harness/schemas/influence/**`
 - `harness/config/influence/**`
 - `harness/scripts/influence/**`
-- `harness/tests/influence/**`
+- `tests/harness/influence/**`
 
 ## Implementation Bridge
 
@@ -82,7 +82,7 @@ If rollout must be reverted, remove only:
 - `harness/schemas/influence/**`
 - `harness/config/influence/**`
 - `harness/scripts/influence/**`
-- `harness/tests/influence/**`
+- `tests/harness/influence/**`
 
 Do not modify legacy scripts or existing launchd plists during rollback.
 

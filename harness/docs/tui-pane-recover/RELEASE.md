@@ -143,18 +143,18 @@ rm -f ~/.solar/harness/run/spillover_config.yaml
 rm -f ~/.solar/harness/run/pane-hygiene.json
 
 # 9 test files
-rm -f ~/.solar/harness/tests/test_pane_hygiene_registry.py
-rm -f ~/.solar/harness/tests/test_pane_clear_manager.py
-rm -f ~/.solar/harness/tests/test_pane_constants.py
-rm -f ~/.solar/harness/tests/test_pane_handoff_evidence.py
-rm -f ~/.solar/harness/tests/test_pane_lifecycle_jobs.py
-rm -f ~/.solar/harness/tests/test_recover_detector.py
-rm -f ~/.solar/harness/tests/test_persona_reinjector.py
-rm -f ~/.solar/harness/tests/test_ledger_writer.py
-rm -f ~/.solar/harness/tests/test_dispatch_scheduler.py
+rm -f ~/.solar/tests/harness/test_pane_hygiene_registry.py
+rm -f ~/.solar/tests/harness/test_pane_clear_manager.py
+rm -f ~/.solar/tests/harness/test_pane_constants.py
+rm -f ~/.solar/tests/harness/test_pane_handoff_evidence.py
+rm -f ~/.solar/tests/harness/test_pane_lifecycle_jobs.py
+rm -f ~/.solar/tests/harness/test_recover_detector.py
+rm -f ~/.solar/tests/harness/test_persona_reinjector.py
+rm -f ~/.solar/tests/harness/test_ledger_writer.py
+rm -f ~/.solar/tests/harness/test_dispatch_scheduler.py
 
 # E2E test script
-rm -f ~/.solar/harness/lib/test_v2_autopilot_respawn_e2e.py
+rm -f ~/.solar/tests/harness/lib/test_v2_autopilot_respawn_e2e.py
 
 # Evidence directory
 rm -rf ~/.solar/harness/reports/tui-pane/

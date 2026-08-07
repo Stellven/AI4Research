@@ -37,7 +37,7 @@ completion.
 | Command | Result |
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py tools/poster.py` | ok |
-| `pytest -q harness/plugins/autosci/tests/test_root_tool_abi.py harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'poster or daily_arxiv or research_start_from'` | ok: 14 passed, 148 deselected |
+| `pytest -q tests/plugins/autosci/test_root_tool_abi.py tests/plugins/autosci/test_autosci_skill_shim.py -k 'poster or daily_arxiv or research_start_from'` | ok: 14 passed, 148 deselected |
 
 ## Agent B Remaining First-Class Native Execution Parity
 
@@ -69,10 +69,10 @@ AutoSci tool that owns the command semantics.
 | Command | Result |
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py` | ok |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_discover_from_wiki_limit harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics` | ok: 2 passed |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_discover_runtime_requires_provider_boundary harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_discover_runtime_attaches_provider_runtime_proof harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_discover_wiki_runtime_proof_is_not_live_provider harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki` | ok: 5 passed |
-| `pytest -q harness/plugins/autosci/tests/test_source_cli_tools.py harness/plugins/autosci/tests/test_root_tool_abi.py::test_side_effect_root_tools_emit_truthful_non_mutating_evidence` | ok: 8 passed |
-| `pytest -q harness/plugins/autosci/tests/test_literature_discover.py` | ok: 2 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_discover_from_wiki_limit tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics` | ok: 2 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_discover_runtime_requires_provider_boundary tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_discover_runtime_attaches_provider_runtime_proof tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_discover_wiki_runtime_proof_is_not_live_provider tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki` | ok: 5 passed |
+| `pytest -q tests/plugins/autosci/test_source_cli_tools.py tests/plugins/autosci/test_root_tool_abi.py::test_side_effect_root_tools_emit_truthful_non_mutating_evidence` | ok: 8 passed |
+| `pytest -q tests/plugins/autosci/test_literature_discover.py` | ok: 2 passed |
 
 ## Agent B First-Class Native Execution Parity Audit: Ingest
 
@@ -102,9 +102,9 @@ native AutoSci root tool after the `$visualize`, `$poster`, `$daily-arxiv`,
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py` | ok |
 | `pytest -q test_autosci_skill_shim.py::test_autosci_skill_shim_maps_positional_ingest_source test_autosci_skill_shim.py::test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leakage` | ok: 2 passed |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k ingest` | ok: 8 passed, 146 deselected |
-| `pytest -q harness/plugins/autosci/tests/test_source_cli_tools.py harness/plugins/autosci/tests/test_paper_prepare.py` | ok: 11 passed |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase20-progress-log.md` | ok |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k ingest` | ok: 8 passed, 146 deselected |
+| `pytest -q tests/plugins/autosci/test_source_cli_tools.py tests/plugins/autosci/test_paper_prepare.py` | ok: 11 passed |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase20-progress-log.md` | ok |
 
 ## Agent B Problem 3 Side-Effect Parity: Visualize Serve Policy Gate
 
@@ -138,10 +138,10 @@ emitting health/proposal evidence. This slice covers `$visualize --serve`.
 | Command | Result |
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/policy/gate_policy.py tools/serve.py` | ok |
-| `pytest -q harness/plugins/autosci/tests/test_gate_policy_modes.py` | ok: 9 passed |
-| `pytest -q harness/plugins/autosci/tests/test_root_tool_abi.py::test_side_effect_root_tools_emit_truthful_non_mutating_evidence` | ok: 1 passed |
+| `pytest -q tests/plugins/autosci/test_gate_policy_modes.py` | ok: 9 passed |
+| `pytest -q tests/plugins/autosci/test_root_tool_abi.py::test_side_effect_root_tools_emit_truthful_non_mutating_evidence` | ok: 1 passed |
 | `pytest -q test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_visualize_serve_flag_without_server_execution test_autosci_skill_shim.py::test_autosci_skill_shim_visualize_parity_demo_auto_runs_server_probe test_autosci_skill_shim.py::test_autosci_skill_shim_visualize_serve_emits_approved_runtime_proofs` | ok: 3 passed |
-| `pytest -q harness/plugins/autosci/tests/test_gate_policy_modes.py harness/plugins/autosci/tests/test_root_tool_abi.py::test_side_effect_root_tools_emit_truthful_non_mutating_evidence ...visualize serve tests` | ok: 13 passed |
+| `pytest -q tests/plugins/autosci/test_gate_policy_modes.py tests/plugins/autosci/test_root_tool_abi.py::test_side_effect_root_tools_emit_truthful_non_mutating_evidence ...visualize serve tests` | ok: 13 passed |
 | `env HARNESS_DIR=/private/tmp/opensolar_autosci_policy_smoke SOLAR_AUTOSCI_OUTPUT_HARNESS=/private/tmp/opensolar_autosci_policy_smoke python3 harness/plugins/autosci/bin/autosci_bridge.py smoke` | ok |
 | `env HARNESS_DIR=/private/tmp/opensolar_autosci_policy_smoke SOLAR_AUTOSCI_OUTPUT_HARNESS=/private/tmp/opensolar_autosci_policy_smoke python3 harness/plugins/autosci/bin/autosci_bridge.py validate --result /private/tmp/opensolar_autosci_policy_smoke/artifacts/autosci/smoke/result.json` | ok |
 | elevated demo: `.venv/bin/python harness/plugins/autosci/bin/autosci_skill_shim.py skill visualize "autosci graph" --serve --gate-mode parity_demo --run-id policy-demo-visualize-serve` | ok: `passed_count=1`; `visualize_web_health.json` has `server_started=true`, `server_stopped=true`; approval contract has `execution_verified=true`. |
@@ -179,8 +179,8 @@ preserving runtime semantic verification.
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/policy/gate_policy.py tools/serve.py` | ok |
 | `pytest -q test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_parity_demo_auto_executes_local_command test_autosci_skill_shim.py::test_autosci_skill_shim_paper_compile_parity_demo_auto_executes_executor test_autosci_skill_shim.py::test_autosci_skill_shim_poster_parity_demo_auto_executes_renderer` | ok: 3 passed |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_compile or poster or exp_run'` | ok: 28 passed, 130 deselected |
-| `pytest -q harness/plugins/autosci/tests/test_gate_policy_modes.py` | ok: 9 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_compile or poster or exp_run'` | ok: 28 passed, 130 deselected |
+| `pytest -q tests/plugins/autosci/test_gate_policy_modes.py` | ok: 9 passed |
 | `git diff --check -- <changed AutoSci problem3 files>` | ok |
 
 ## Agent B Problem 3 Side-Effect Parity: Init Source Fan-In
@@ -214,8 +214,8 @@ auto-running provider/network fetch, email, remote execution, or bulk ingest.
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py` | ok |
 | `pytest -q test_autosci_skill_shim.py::test_autosci_skill_shim_init_parity_demo_auto_fans_runtime_sources_into_wiki` | ok: 1 passed |
 | `pytest -q test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest test_autosci_skill_shim.py::test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki test_autosci_skill_shim.py::test_autosci_skill_shim_init_parity_demo_auto_fans_runtime_sources_into_wiki` | ok: 3 passed |
-| `pytest -q harness/plugins/autosci/tests/test_gate_policy_modes.py` | ok: 9 passed |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'init or daily_arxiv or discover or source_fan_in or ingest'` | ok: 22 passed, 137 deselected |
+| `pytest -q tests/plugins/autosci/test_gate_policy_modes.py` | ok: 9 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'init or daily_arxiv or discover or source_fan_in or ingest'` | ok: 22 passed, 137 deselected |
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/policy/gate_policy.py` | ok |
 
 ## Agent B Problem 3 Side-Effect Parity: High-Risk Reset Execution
@@ -279,9 +279,9 @@ behavior.
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/evaluators/scientific/workflow_evolution_gate.py` | ok |
 | `pytest -q test_autosci_skill_shim.py::test_autosci_skill_shim_keeps_setup_gated test_autosci_skill_shim.py::test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_secret_leakage` | ok: 2 passed |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'reset or setup'` | ok: 9 passed, 152 deselected |
-| `pytest -q harness/tests/evaluators/scientific/test_workflow_evolution_gate.py` | ok: 2 passed |
-| `pytest -q harness/tests/evaluators/scientific/test_workflow_evolution_gate.py harness/plugins/autosci/tests/test_gate_policy_modes.py` | ok: 11 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'reset or setup'` | ok: 9 passed, 152 deselected |
+| `pytest -q tests/harness/evaluators/scientific/test_workflow_evolution_gate.py` | ok: 2 passed |
+| `pytest -q tests/harness/evaluators/scientific/test_workflow_evolution_gate.py tests/plugins/autosci/test_gate_policy_modes.py` | ok: 11 passed |
 | `pytest -q test_autosci_skill_shim.py::test_autosci_skill_shim_refine_applies_approved_after_artifact` | ok: 1 passed |
 | `git diff --check -- <changed AutoSci setup/reset problem3 files>` | ok |
 
@@ -319,11 +319,11 @@ keeping provider, remote, and workflow mutation boundaries truthful.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 | `pytest -q test_autosci_skill_shim.py::<prefill/edit/ask/refine problem3 tests>` | ok: 4 passed |
 | `pytest -q test_autosci_skill_shim.py::<pilot-eval/exp-eval/pilot-run/status/collect problem3 tests>` | ok: 5 passed |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'exp_pilot_run or exp_status or exp_collect or pilot_eval or exp_eval'` | ok: 25 passed, 145 deselected |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_gate_policy_modes.py` | ok: 9 passed |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'not visualize_parity_demo_auto_runs_server_probe and not novelty_http_provider_marks_external_runtime and not review_invokes_openai_compatible_provider'` | ok: 167 passed, 3 deselected |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'exp_pilot_run or exp_status or exp_collect or pilot_eval or exp_eval'` | ok: 25 passed, 145 deselected |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest -q tests/plugins/autosci/test_gate_policy_modes.py` | ok: 9 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'not visualize_parity_demo_auto_runs_server_probe and not novelty_http_provider_marks_external_runtime and not review_invokes_openai_compatible_provider'` | ok: 167 passed, 3 deselected |
 | elevated rerun of socket-bound shim tests: visualize server probe, novelty HTTP provider, Review LLM OpenAI-compatible provider | ok: 3 passed |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |

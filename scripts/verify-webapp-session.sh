@@ -37,14 +37,14 @@ need() {  # need <thing> <reproducible-fix-cmd> ; emits NOT VERIFIED + returns 1
 backend_pytest() {
   command -v python3 >/dev/null || { need "python3 not on PATH" "install Python 3.10+"; return 1; }
   python3 -m pytest -q \
-    harness/tests/test_status_server_session_scoping.py \
-    harness/tests/test_s04_orchestration_routes.py 2>&1 | tail -3
+    tests/harness/test_status_server_session_scoping.py \
+    tests/harness/test_s04_orchestration_routes.py 2>&1 | tail -3
   return "${PIPESTATUS[0]}"
 }
 
 settings_concurrency() {
   command -v python3 >/dev/null || { need "python3 not on PATH" "install Python 3.10+"; return 1; }
-  python3 harness/status-server/test_settings_concurrency.py 2>&1 | tail -3
+  python3 tests/harness/status_server/test_settings_concurrency.py 2>&1 | tail -3
   return "${PIPESTATUS[0]}"
 }
 
@@ -74,21 +74,21 @@ bundle_consistency() {
 
 desktop_functional() {
   command -v node >/dev/null || { need "node not on PATH" "install Node.js 18+"; return 1; }
-  [ -f desktop/functional.test.js ] || { need "desktop/functional.test.js absent" "checkout the desktop tests"; return 1; }
+  [ -f tests/desktop/functional.test.js ] || { need "tests/desktop/functional.test.js absent" "checkout the desktop tests"; return 1; }
   if [ ! -d desktop/node_modules ] || [ ! -d desktop/node_modules/playwright ]; then
     need "desktop Playwright deps missing" "( cd desktop && npm ci && npx playwright install chromium )"; return 1
   fi
-  node desktop/functional.test.js 2>&1 | tail -5
+  node tests/desktop/functional.test.js 2>&1 | tail -5
   return "${PIPESTATUS[0]}"
 }
 
 desktop_rapid_switch() {
   command -v node >/dev/null || { need "node not on PATH" "install Node.js 18+"; return 1; }
-  [ -f desktop/rapid-switch.test.js ] || { need "desktop/rapid-switch.test.js absent" "checkout the desktop tests"; return 1; }
+  [ -f tests/desktop/rapid-switch.test.js ] || { need "tests/desktop/rapid-switch.test.js absent" "checkout the desktop tests"; return 1; }
   if [ ! -d desktop/node_modules/playwright ]; then
     need "desktop Playwright deps missing" "( cd desktop && npm ci && npx playwright install chromium )"; return 1
   fi
-  node desktop/rapid-switch.test.js 2>&1 | tail -4
+  node tests/desktop/rapid-switch.test.js 2>&1 | tail -4
   return "${PIPESTATUS[0]}"
 }
 
@@ -98,11 +98,11 @@ desktop_rapid_switch() {
 # no-worker note, and there is no mobile horizontal overflow.
 desktop_overhaul_visual() {
   command -v node >/dev/null || { need "node not on PATH" "install Node.js 18+"; return 1; }
-  [ -f desktop/overhaul-visual.test.js ] || { need "desktop/overhaul-visual.test.js absent" "checkout the desktop tests"; return 1; }
+  [ -f tests/desktop/overhaul-visual.test.js ] || { need "tests/desktop/overhaul-visual.test.js absent" "checkout the desktop tests"; return 1; }
   if [ ! -d desktop/node_modules/playwright ]; then
     need "desktop Playwright deps missing" "( cd desktop && npm ci && npx playwright install chromium )"; return 1
   fi
-  node desktop/overhaul-visual.test.js 2>&1 | tail -6
+  node tests/desktop/overhaul-visual.test.js 2>&1 | tail -6
   return "${PIPESTATUS[0]}"
 }
 

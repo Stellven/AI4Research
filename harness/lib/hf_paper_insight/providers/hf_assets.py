@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from providers.base import BaseEnrichmentProvider, PaperCanonicalProto
+from .base import BaseEnrichmentProvider, PaperCanonicalProto
 
 
 class HFAssetsProvider(BaseEnrichmentProvider):

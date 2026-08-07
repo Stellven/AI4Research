@@ -30,7 +30,7 @@ through Solar's real scheduler/operator path.
 | `git rev-parse HEAD` | ok: `721e6eee4eff39cd3a35cf7d240a67f2d493864f`. |
 | `git -C /Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci rev-parse HEAD` | ok: `71469e89eb1381e557661da0b90c0585c48288d7`. |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | error: 121 passed, 7 failed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-baseline.json` | ok: 28 native, 28 routed, 0 missing, 0 full, 17 partial, 11 gated. |
 | `python3 harness/lib/architecture_guard.py validate --graph harness/workflows/scientific_research_lifecycle_full_v1.json --strict` | ok: graph structure passed architecture guard. |
 | `python3 harness/lib/architecture_guard.py validate --graph harness/workflows/scientific_research_resume_v1.json --strict` | ok: graph structure passed architecture guard. |

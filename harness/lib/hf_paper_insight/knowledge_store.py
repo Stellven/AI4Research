@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from schema import PaperCanonical, PaperEnrichment, PaperEvidencePacket
+from .schema import PaperCanonical, PaperEnrichment, PaperEvidencePacket
 
 
 def _slug(value: str) -> str:

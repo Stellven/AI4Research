@@ -9,7 +9,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from schema import (
+from .schema import (
     PaperCanonical,
     PaperEnrichment,
     PaperEvidencePacket,

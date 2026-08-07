@@ -11,14 +11,14 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 
-from schema import (
+from .schema import (
     PaperCanonical,
     PaperSnapshot,
     _gen_id,
     _title_hash,
     _utc_now,
 )
-from storage import PaperStore
+from .storage import PaperStore
 
 
 class LegacyPaperFormat:

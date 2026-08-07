@@ -15,7 +15,7 @@
     "state_side_effects": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
     "failure_rejection_behavior": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
     "supported_boundaries_exclusions": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
-    "success_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+    "success_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
     "granularity_atomic_contracts": "API token absent/correct/incorrect; loopback versus NAT protection; provider authenticated/unauthenticated/expired; login start/status; unsupported provider/CLI missing; raw-secret non-disclosure; auth blocker prevents dispatch; distinguish provider session from product account.",
     "readme_product_docs": "README.md: selected-runtime authentication and fail-closed routing; INSTALL.md: provider readiness and Settings > Runtime; docs/WINDOWS.md: WSL reachability/security boundary.",
     "cli_api_skill_interfaces": "harness/lib/symphony/status-server.py: GET /auth/status, GET /auth/login/status, POST /auth/login, POST /auth/reuse-host-creds; codex login --device-auth or claude setup-token external CLI.",
@@ -30,8 +30,8 @@
       "harness/config/physical-operators.schema.json",
       "harness/lib/operator_flow_control.py",
       "harness/lib/symphony/status-server.py",
-      "harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json",
-      "harness/tests/test_antigravity_auth_bootstrap.py"
+      "tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json",
+      "tests/harness/test_antigravity_auth_bootstrap.py"
     ],
     "entrypoints": "harness/lib/symphony/status-server.py: _authorized, _auth_status_payload, _auth_login_start, _auth_reuse_host_creds and StatusHandler; harness/lib/operator_flow_control.py auth-failure classification.",
     "interfaces": "harness/lib/symphony/status-server.py: GET /auth/status, GET /auth/login/status, POST /auth/login, POST /auth/reuse-host-creds; codex login --device-auth or claude setup-token external CLI.",
@@ -82,7 +82,7 @@
       ],
       "expected_result": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
       "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
-      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -109,7 +109,7 @@
       ],
       "expected_result": "Authorized/403 API response, provider auth-readiness JSON, device-login subprocess status, and recovery guidance without returning raw provider tokens.",
       "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
-      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -136,7 +136,7 @@
       ],
       "expected_result": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
       "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
-      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -161,9 +161,9 @@
         "Collect the contract-required status, provenance, artifact, and audit evidence.",
         "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
       ],
-      "expected_result": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "expected_result": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
-      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -190,7 +190,7 @@
       ],
       "expected_result": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
       "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
-      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -217,7 +217,7 @@
       ],
       "expected_result": "Missing/wrong status token returns 403 where required; unsupported provider/login path or missing CLI returns explicit error; auth-expired panes/operators are blocked rather than silently rerouted.",
       "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
-      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -244,7 +244,7 @@
       ],
       "expected_result": "Authorized/403 API response, provider auth-readiness JSON, device-login subprocess status, and recovery guidance without returning raw provider tokens.",
       "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
-      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -271,7 +271,7 @@
       ],
       "expected_result": "Authorized/403 API response, provider auth-readiness JSON, device-login subprocess status, and recovery guidance without returning raw provider tokens.",
       "state_and_side_effect_oracle": "Provider login can start a device-auth/setup-token subprocess and external CLI may store credentials; status server writes a local auth-token file and in-memory login-process status. GET auth/status is read-only.",
-      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; harness/tests/test_antigravity_auth_bootstrap.py; harness/tests/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
+      "required_evidence": "harness/lib/symphony/status-server.py: AUTH_TOKEN/_authorized, _auth_status_payload, _auth_login_start, _auth_login_status and /auth routes; tests/harness/test_antigravity_auth_bootstrap.py; tests/harness/scenarios/F-CLASS-20-auth-absent-flow-control.scenario.json.",
       "supported_boundary": "Solar account sign-in/sign-out, password recovery, session inventory/revocation, and suspicious product-account access history were not found. Provider credentials are owned by external CLIs.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     }

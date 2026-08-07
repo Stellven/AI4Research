@@ -18,8 +18,8 @@ adapter behavior.
 | Artifact group | Count | Operation | Commit | Paths |
 |---|---:|---|---|---|
 | Scientific evaluator package | 14 | Added | this phase commit | `harness/evaluators/scientific/*.py` |
-| Gate tests | 5 | Added | this phase commit | `harness/tests/evaluators/scientific/test_*_gate.py` |
-| Gate fixtures | 27 | Added | this phase commit | `harness/tests/evaluators/scientific/fixtures/{pass,fail}/...` |
+| Gate tests | 5 | Added | this phase commit | `tests/harness/evaluators/scientific/test_*_gate.py` |
+| Gate fixtures | 27 | Added | this phase commit | `tests/harness/evaluators/scientific/fixtures/{pass,fail}/...` |
 | Phase log | 1 | Added | this phase commit | `docs/integrations/autosci/phase8-progress-log.md` |
 
 ## Evaluator Gates

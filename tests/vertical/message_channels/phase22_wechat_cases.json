@@ -15,7 +15,7 @@
     "state_side_effects": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
     "failure_rejection_behavior": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
     "supported_boundaries_exclusions": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
-    "success_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+    "success_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
     "granularity_atomic_contracts": "Valid article fixture; copied body with/without URL; fetch disabled/dry-run; timeout/network/parser/body failure; redaction versus full; new/changed/unchanged/duplicate content; provenance fields; dispatch creation/force; unsupported non-Apple-Notes intake.",
     "readme_product_docs": "README.md: /ingest command description; harness/config/apple-notes-ingest.json; docs/APPENDIX_B_CONFIG_FILES.md ingestion/config context.",
     "cli_api_skill_interfaces": "harness/lib/apple_notes_ingest.py commands doctor, scan, status, install-scheduler and uninstall-scheduler; wiki-ingest dispatch file interface; /ingest AutoSci skill is downstream, not direct WeChat transport.",
@@ -29,7 +29,7 @@
       "VERSION",
       "harness/config/apple-notes-ingest.json",
       "harness/lib/apple_notes_ingest.py",
-      "harness/tests/test-apple-notes-ingest.sh",
+      "tests/harness/test_apple_notes_ingest.sh",
       "harness/tools/apple_notes_ingest.py"
     ],
     "entrypoints": "harness/lib/apple_notes_ingest.py: cmd_scan/main and WeChat parsing/fetch helpers; harness/tools/apple_notes_ingest.py mirrored tool surface; write_wiki_ingest_dispatch.",
@@ -81,7 +81,7 @@
       ],
       "expected_result": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -108,7 +108,7 @@
       ],
       "expected_result": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -135,7 +135,7 @@
       ],
       "expected_result": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -162,7 +162,7 @@
       ],
       "expected_result": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -189,7 +189,7 @@
       ],
       "expected_result": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -216,7 +216,7 @@
       ],
       "expected_result": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -241,9 +241,9 @@
         "Collect the contract-required status, provenance, artifact, and audit evidence.",
         "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
       ],
-      "expected_result": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "expected_result": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -270,7 +270,7 @@
       ],
       "expected_result": "Normalized Markdown in the knowledge raw directory with WeChat provenance/frontmatter, manifest entries, JSON dispatch and wiki-ingest dispatch files, or explicit fetch/error/duplicate status.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -297,7 +297,7 @@
       ],
       "expected_result": "Missing body or fetch/parse failure records wechat_fetch_status/error; unchanged or duplicate content is not re-dispatched unless forced; dry-run avoids writes; redaction applies unless --full.",
       "state_and_side_effect_oracle": "On non-dry-run, fetches the article, writes raw Markdown, manifest and dispatch files, and updates last-scan/deduplication state. Scheduler install/uninstall can change a macOS LaunchAgent.",
-      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; harness/tests/test-apple-notes-ingest.sh.",
+      "required_evidence": "harness/lib/apple_notes_ingest.py: _select_wechat_url, _WechatArticleParser, _fetch_wechat_article, redact, content_hash and cmd_scan; tests/harness/test_apple_notes_ingest.sh.",
       "supported_boundary": "Implemented intake is the Apple Notes/macOS bridge, not a general WeChat account, Mini Program, clipboard, bot, login, or arbitrary channel connector. Authorization is implicit in user-provided note content, not a formal consent record.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     }

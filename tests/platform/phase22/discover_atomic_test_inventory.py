@@ -38,7 +38,16 @@ def repository_files() -> list[str]:
         check=True,
         capture_output=True,
     )
-    return sorted(item for item in completed.stdout.decode("utf-8").split("\0") if item)
+    candidates = completed.stdout.decode("utf-8").split("\0")
+    return sorted(
+        item
+        for item in candidates
+        if item
+        and item.replace("\\", "/").startswith("tests/")
+        and not item.replace("\\", "/").startswith("tests/quarantine/")
+        and "/fixtures/" not in item.replace("\\", "/")
+        and (ROOT / item).is_file()
+    )
 
 
 def compact_text(values: Iterable[str], limit: int = 4000) -> str:

@@ -23,7 +23,7 @@ and tests that enforce those boundaries.
 | Lifecycle gate | Updated | `harness/evaluators/scientific/lifecycle_gate.py` |
 | Evidence fixtures | Updated | `harness/schemas/evidence/fixtures/sample*.json` |
 | Plugin manifest/tests | Updated | `harness/plugins/autosci/manifest.yaml`, `test_manifest_capabilities.py` |
-| Naming regression test | Added | `harness/tests/evaluators/scientific/test_phase17_naming_cleanup.py` |
+| Naming regression test | Added | `tests/harness/evaluators/scientific/test_phase17_naming_cleanup.py` |
 | Persona wording | Updated | `harness/personas/scientific-literature-discoverer.md` |
 
 ## Cleanup Results
@@ -56,7 +56,7 @@ and tests that enforce those boundaries.
 | JSON validation | ok | Config, workflow, and schema sample JSON loaded successfully: 33 files. |
 | Naming grep | ok | No `cap.scientific`, `cap.autosci`, old AutoSci black-box policy ids, `sprint.autosci`, or `artifacts/autosci/fixtures` remain in checked Solar-facing paths. |
 | Lifecycle gate | ok | Full and resume lifecycle templates passed with no reasons or warnings. |
-| Plugin/evaluator tests | ok | `pytest harness/plugins/autosci/tests harness/tests/evaluators/scientific`: 53 passed. |
+| Plugin/evaluator tests | ok | `pytest harness/plugins/autosci/tests tests/harness/evaluators/scientific`: 53 passed. |
 | Plugin validation | ok | `plugin_loader.py validate --id autosci` passed. |
 | Whitespace check | ok | `git diff --check` passed. |
 

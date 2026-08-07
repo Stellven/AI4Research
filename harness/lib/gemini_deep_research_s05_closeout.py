@@ -88,7 +88,7 @@ def auto_closeout_gemini_dr_s05_verification_release(runtime_root: Path) -> dict
     # Run pytest verification
     e2e_pytest = _run_pytest(workspace, ["tests/gemini_deep_research/e2e/test_gemini_dr_e2e.py"])
     control_pytest = _run_pytest(workspace, ["tests/gemini_deep_research/control/test_gemini_dr_control.py"])
-    operator_pytest = _run_pytest(workspace, ["harness/tests/runtime/test_gemini_deep_research_operator.py"])
+    operator_pytest = _run_pytest(workspace, ["tests/harness/runtime/test_gemini_deep_research_operator.py"])
 
     # 1. Write README documentation (V3)
     readme_path = workspace / "integrations" / "gemini_deep_research" / "README.md"

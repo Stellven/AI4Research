@@ -72,7 +72,7 @@ python CLI (`python3 harness/lib/run_preflight.py`), no shell wiring.
 ## Coverage note (plan → tests)
 
 Plan scenarios "20/27" (F-CLASS-20 auth preservation, F-CLASS-27 no-live-workers) are covered
-deterministically in `harness/tests/supervision/test_run_preflight.py`; F-CLASS-21 (installed-harness
+deterministically in `tests/harness/supervision/test_run_preflight.py`; F-CLASS-21 (installed-harness
 contamination) by the path-consistency tests; F-CLASS-22/28 (process residue, supervision faults) by
 the registry tests plus the opt-in P1.6 real-daemon proof (`SOLAR_P16_REAL_PROCESS=1`). The Lane 2
 fake-operator scenario harness can wrap these as taxonomy scenario files when the catalogs merge.

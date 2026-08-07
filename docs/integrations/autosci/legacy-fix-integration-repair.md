@@ -154,7 +154,7 @@ production-path tests.
 
 ### Native Windows final correction
 
-The rework baseline reproduced `harness/tests/test_operatord_daemon.py` as
+The rework baseline reproduced `tests/harness/test_operatord_daemon.py` as
 **21 passed, 7 failed**. The seven failures were classified and repaired
 without skips or weaker assertions:
 
@@ -213,7 +213,7 @@ The final combined acceptance command was:
 
 ```powershell
 $env:PYTHONPATH=(Join-Path (Get-Location) 'harness')
-& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q harness/tests/benchmark/test_benchmark_report_schema.py harness/tests/benchmark/test_terminal_bench_adapter.py harness/tests/test_status_server_status_route.py harness/tests/test_advanced_ai4rnd_operator.py harness/tests/test_advanced_ai4rnd_product_entrypoint.py harness/tests/test_harness_config_python_selection.py harness/tests/evaluators/scientific/test_claim_verdict_gate.py tests/vertical/account_management/test_local_identity_privacy_channel_security.py tests/vertical/account_management/test_phase22_privacy_uninstall_atomic.py tests/test-safe-staging.py tests/test-secret-scan.py tests/test-windows-filenames.py harness/tests/research_orchestration/test_sandbox_fallback_matrix.py tests/journeys/phase22/code/test_j01_install_status.py tests/journeys/phase22/code/test_j15_cross_platform_install_matrix.py tests/journeys/phase22/code/test_j18_tmux_cli_status_config.py tests/journeys/phase22/code/test_j24_privacy_lifecycle.py --basetemp C:\tmp\oslf-final-combo-bt-20260807 -o cache_dir=C:\tmp\oslf-final-combo-cache-20260807
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q tests/harness/benchmark/test_benchmark_report_schema.py tests/harness/benchmark/test_terminal_bench_adapter.py tests/harness/test_status_server_status_route.py tests/harness/test_advanced_ai4rnd_operator.py tests/harness/test_advanced_ai4rnd_product_entrypoint.py tests/harness/test_harness_config_python_selection.py tests/harness/evaluators/scientific/test_claim_verdict_gate.py tests/vertical/account_management/test_local_identity_privacy_channel_security.py tests/vertical/account_management/test_phase22_privacy_uninstall_atomic.py tests/repository/governance/test_safe_staging.py tests/repository/governance/test_secret_scan.py tests/repository/governance/test_windows_filenames.py tests/harness/research_orchestration/test_sandbox_fallback_matrix.py tests/journeys/phase22/code/test_j01_install_status.py tests/journeys/phase22/code/test_j15_cross_platform_install_matrix.py tests/journeys/phase22/code/test_j18_tmux_cli_status_config.py tests/journeys/phase22/code/test_j24_privacy_lifecycle.py --basetemp C:\tmp\oslf-final-combo-bt-20260807 -o cache_dir=C:\tmp\oslf-final-combo-cache-20260807
 ```
 
 Exit `0`: **154 passed, 0 failed, 2 skipped**, 14 warnings, 127.05s. The skips
@@ -258,15 +258,15 @@ separate directories below `C:\tmp\legacy-final-correction-20260807-1710-*`:
 
 | Command scope | Exit | Result |
 |---|---:|---|
-| `tests/test-secret-scan.py` | 0 | 26 passed |
-| `tests/test-safe-staging.py` | 0 | 34 passed |
-| `harness/tests/test_advanced_ai4rnd_operator.py` | 0 | 3 passed |
-| `harness/tests/test_advanced_ai4rnd_product_entrypoint.py` | 0 | 4 passed |
-| `harness/tests/graph/test_advanced_ai4rnd_dispatcher_integration.py` | 0 | 2 passed |
-| `harness/tests/runtime/test_operator_runtime.py` | 0 | 24 passed |
-| `harness/tests/graph/test_runtime_status.py` | 0 | 1 passed |
-| `harness/tests/test_operatord_daemon.py` | 0 | 29 passed |
-| `harness/tests/test_file_lock_compat.py` | 0 | 5 passed |
+| `tests/repository/governance/test_secret_scan.py` | 0 | 26 passed |
+| `tests/repository/governance/test_safe_staging.py` | 0 | 34 passed |
+| `tests/harness/test_advanced_ai4rnd_operator.py` | 0 | 3 passed |
+| `tests/harness/test_advanced_ai4rnd_product_entrypoint.py` | 0 | 4 passed |
+| `tests/harness/graph/test_advanced_ai4rnd_dispatcher_integration.py` | 0 | 2 passed |
+| `tests/harness/runtime/test_operator_runtime.py` | 0 | 24 passed |
+| `tests/harness/graph/test_runtime_status.py` | 0 | 1 passed |
+| `tests/harness/test_operatord_daemon.py` | 0 | 29 passed |
+| `tests/harness/test_file_lock_compat.py` | 0 | 5 passed |
 
 One pre-fix non-live journey batch had J01 fail because WindowsApps `python3`
 output polluted the configured runtime. This was a real product portability
@@ -279,10 +279,10 @@ path.
 Additional exact executable checks:
 
 ```powershell
-& 'C:\Program Files\Git\bin\bash.exe' harness/tests/installer/test-s1-installer.sh
-& 'C:\Program Files\Git\bin\bash.exe' harness/tests/installer/test-tvs-doctor.sh
+& 'C:\Program Files\Git\bin\bash.exe' tests/harness/installer/test_s1_installer.sh
+& 'C:\Program Files\Git\bin\bash.exe' tests/harness/installer/test_tvs_doctor.sh
 & 'C:\Program Files\Git\bin\bash.exe' scripts/check-repo-hygiene.sh
-& 'C:\Program Files\Git\bin\bash.exe' tests/test-repo-hygiene.sh
+& 'C:\Program Files\Git\bin\bash.exe' tests/repository/governance/test_repo_hygiene.sh
 & 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' scripts/check-safe-staging.py
 & 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' scripts/check-secret-scan.py
 & 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' scripts/check-windows-filenames.py
@@ -296,7 +296,7 @@ scan passed over 4,447 tracked/staged/untracked candidates with no secret.
 The final-correction safety rerun also exited `0` for every required command:
 `check-safe-staging.py --all-tracked` reported no forbidden tracked paths;
 secret scan checked 4,447 candidates; Windows filename scan checked 4,447
-paths; `bash tests/test-repo-hygiene.sh` passed its negative controls; and
+paths; `bash tests/repository/governance/test_repo_hygiene.sh` passed its negative controls; and
 `git diff --check` passed.
 
 ## Legacy and L2 disposition

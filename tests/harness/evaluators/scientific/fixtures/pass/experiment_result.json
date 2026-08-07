@@ -1,0 +1,46 @@
+{
+  "schema": "experiment_result.v1",
+  "task_id": "task.phase1.sample.experiment_result",
+  "sprint_id": "sprint.autosci.phase1",
+  "node_id": "node.experiment_run",
+  "status": "completed",
+  "inputs": {
+    "experiment_id": "experiment.sample.001"
+  },
+  "outputs": {
+    "result": {
+      "experiment_id": "experiment.sample.001",
+      "outcome": "supports",
+      "metrics": [
+        {
+          "name": "covered_claim_count",
+          "value": 1,
+          "unit": "claims"
+        }
+      ],
+      "evidence_ids": [
+        "mapping.sample.001",
+        "claim.sample.001"
+      ],
+      "execution_mode": "fixture",
+      "command_run": "fixture-mode:no-external-command",
+      "logs": [
+        "Fixture run completed locally."
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "type": "experiment_result",
+      "path": "artifacts/experiment_result.txt"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificExperimentRunner",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": [
+    "Fixture result is deterministic and not a real benchmark run."
+  ]
+}

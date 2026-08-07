@@ -6,7 +6,10 @@ per-profile lock files for atomic exclusive acquire/release.
 from __future__ import annotations
 
 import datetime
-import fcntl
+try:
+    from .. import file_lock_compat as fcntl
+except ImportError:  # Script-style execution with harness/lib on sys.path.
+    import file_lock_compat as fcntl
 import json
 import os
 from dataclasses import dataclass

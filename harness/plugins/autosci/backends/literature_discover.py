@@ -630,7 +630,7 @@ def discover_literature(
                     "ranking_rationale": "Fixture-mode candidate matches the requested Solar evidence adapter smoke test.",
                     "dedup_status": "known",
                     "fetch_status": "fetched",
-                    "source_ref": "plugins/autosci/tests/fixtures/sample_paper.md",
+                    "source_ref": "tests/plugins/autosci/fixtures/sample_paper.md",
                 }
             ],
             "status": "completed",

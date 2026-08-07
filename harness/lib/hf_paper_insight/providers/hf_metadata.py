@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from providers.base import BaseEnrichmentProvider, ProviderResult, PaperCanonicalProto
+from .base import BaseEnrichmentProvider, ProviderResult, PaperCanonicalProto
 
 
 class HFMetadataProvider(BaseEnrichmentProvider):

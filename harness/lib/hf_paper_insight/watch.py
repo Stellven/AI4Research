@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from schema import PaperEvidencePacket
+from .schema import PaperEvidencePacket
 
 
 def _utc_now() -> str:

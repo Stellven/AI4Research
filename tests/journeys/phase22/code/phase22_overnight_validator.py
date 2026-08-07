@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -14,9 +15,14 @@ ROOT = Path(__file__).resolve().parents[4]
 RUN_ID = "overnight-phase22-20260729T044000Z"
 LEDGER_PATH = ROOT / "outputs" / "phase22-real-journeys" / RUN_ID / "l2-evidence-ledger.json"
 FULL_REPORT = ROOT / "docs" / "integrations" / "autosci" / "phase-22-test-report.xlsx"
-BRIEF_REPORT = Path("C:/Users/j50058254/Downloads/AI4RnD Feature List.xlsx")
+BRIEF_REPORT = Path(
+    os.environ.get(
+        "PHASE22_BRIEF_REPORT",
+        str(Path.home() / "Downloads" / "AI4RnD Feature List.xlsx"),
+    )
+)
 STAGED_BRIEF = ROOT / ".codex-tmp" / "phase22-worker-results" / "overnight-phase22" / "staged-reports" / "AI4RnD Feature List.xlsx"
-BRIEF_LOCK = Path("C:/Users/j50058254/Downloads/~$AI4RnD Feature List.xlsx")
+BRIEF_LOCK = BRIEF_REPORT.with_name(f"~${BRIEF_REPORT.name}")
 OUT_PATH = ROOT / ".codex-tmp" / "phase22-worker-results" / "overnight-phase22" / "final-validator.json"
 
 ALLOWED = {"PASS", "PASS_WITH_KNOWN_LIMITATIONS", "FAIL", "ENVIRONMENT_BLOCKED", "NOT_AVAILABLE"}

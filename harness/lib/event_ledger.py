@@ -4,7 +4,10 @@ S03 N2: sprint-20260519-solar-harness-vnext-code-as-harness-runtime-s03-core-run
 Upstream: S02 policy-decisions.md §1 (option C), state-machines.md §3
 """
 
-import fcntl
+try:
+    from . import file_lock_compat as fcntl
+except ImportError:  # Script-style execution with harness/lib on sys.path.
+    import file_lock_compat as fcntl
 import json
 import logging
 import os

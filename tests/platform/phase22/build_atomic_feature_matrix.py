@@ -125,21 +125,21 @@ ADDITIONAL_ATOMS: dict[str, list[str]] = {
 # named implementation behavior; these are not fuzzy-search promotions.
 CURATED_BINDINGS: dict[tuple[str, str], str] = {
     ("Capability Capsule Definition & Assembly", "Referenced-resource resolution"):
-        "harness/tests/test_capability_capsules.py::test_resolution_gate_attaches_guard_and_resource_capsules",
+        "tests/harness/test_capability_capsules.py::test_resolution_gate_attaches_guard_and_resource_capsules",
     ("Capability Capsule Definition & Assembly", "Missing referenced resource rejection"):
-        "harness/tests/test_capability_capsules.py::test_resolution_gate_blocks_missing_resource",
+        "tests/harness/test_capability_capsules.py::test_resolution_gate_blocks_missing_resource",
     ("TaskGraph Persistence & Lifecycle Management", "Node result"):
-        "harness/tests/graph/test_task_graph_io.py::test_set_node_result_in_state",
+        "tests/harness/graph/test_task_graph_io.py::test_set_node_result_in_state",
     ("TaskGraph Persistence & Lifecycle Management", "Gate result"):
-        "harness/tests/graph/test_task_graph_io.py::test_set_gate_result_in_state",
+        "tests/harness/graph/test_task_graph_io.py::test_set_gate_result_in_state",
     ("TaskGraph Persistence & Lifecycle Management", "Missing"):
-        "harness/tests/graph/test_task_graph_io.py::test_spec_valid_missing",
+        "tests/harness/graph/test_task_graph_io.py::test_spec_valid_missing",
     ("TaskGraph Persistence & Lifecycle Management", "Mirror"):
-        "harness/tests/graph/test_task_graph_io.py::test_compile_mirror_merges_spec_and_state",
+        "tests/harness/graph/test_task_graph_io.py::test_compile_mirror_merges_spec_and_state",
     ("TaskGraph Persistence & Lifecycle Management", "Backfill"):
-        "harness/tests/graph/test_task_graph_io.py::test_backfill_state_from_legacy",
+        "tests/harness/graph/test_task_graph_io.py::test_backfill_state_from_legacy",
     ("TaskGraph Persistence & Lifecycle Management", "Incomplete closure"):
-        "harness/tests/graph/test_task_graph_io.py::test_closure_complete_false",
+        "tests/harness/graph/test_task_graph_io.py::test_closure_complete_false",
 }
 
 PRESERVE_SLASH_PHRASES = {

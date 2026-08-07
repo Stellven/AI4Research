@@ -112,11 +112,11 @@ model-driven or evidence-driven paths with unsupported deterministic guesses.
 | `harness/schemas/evidence/autosci_operator_smoke.v1.schema.json` | ok | Evidence ABI for SkillGen-backed operator smoke results. |
 | `harness/evaluators/scientific/autosci_feature_parity_gate.py` | ok | Gate that fails on missing routes, bad counts, or false full-coverage claims. |
 | `harness/evaluators/scientific/autosci_operator_smoke_gate.py` | ok | Gate that fails on unbound/failed operator routes and enforces gated side-effect honesty. |
-| `harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md` | ok | Committed SkillGen smoke paper fixture. |
-| `harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok | Tests full inventory, single-skill route output, and unmapped future-skill failure. |
-| `harness/plugins/autosci/tests/test_phase19_operator_smoke.py` | ok | Tests SkillGen smoke execution, all operator bindings, and generated smoke gate acceptance. |
-| `harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok | Tests honest mixed coverage, missing route rejection, and full+approval misreport rejection. |
-| `harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py` | ok | Tests mixed completed/partial/gated smoke acceptance and unbound rejection. |
+| `tests/plugins/autosci/fixtures/skillgen_operator_smoke_paper.md` | ok | Committed SkillGen smoke paper fixture. |
+| `tests/plugins/autosci/test_phase19_parity_bridge.py` | ok | Tests full inventory, single-skill route output, and unmapped future-skill failure. |
+| `tests/plugins/autosci/test_phase19_operator_smoke.py` | ok | Tests SkillGen smoke execution, all operator bindings, and generated smoke gate acceptance. |
+| `tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok | Tests honest mixed coverage, missing route rejection, and full+approval misreport rejection. |
+| `tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py` | ok | Tests mixed completed/partial/gated smoke acceptance and unbound rejection. |
 | `docs/integrations/autosci/autosci-solar-feature-parity-matrix.md` | ok | Human-readable matrix and verification record. |
 
 ## Phase 19 Verification
@@ -129,9 +129,9 @@ model-driven or evidence-driven paths with unsupported deterministic guesses.
 | `python3 harness/evaluators/scientific/autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/parity_inventory.json` | ok: passed with non-full route warning |
 | `harness/bin/python3 harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out artifacts/autosci/operator-smoke/skillgen/autosci_operator_smoke.json` | ok: 28 bound, 0 failed, 0 unbound, 16 core actions |
 | `python3 harness/evaluators/scientific/autosci_operator_smoke_gate.py harness/artifacts/autosci/operator-smoke/skillgen/autosci_operator_smoke.json` | ok: passed with approval-gated warning |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 6 passed before operator-smoke expansion |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_phase19_operator_smoke.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py` | ok: 4 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 63 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 6 passed before operator-smoke expansion |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_phase19_operator_smoke.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py` | ok: 4 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 63 passed |
 
 ## Phase 19 Shim Follow-up
 
@@ -141,7 +141,7 @@ model-driven or evidence-driven paths with unsupported deterministic guesses.
 | Skill-run Evidence ABI | ok | Added `harness/schemas/evidence/autosci_skill_run.v1.schema.json`. |
 | Skill-run gate | ok | Added `harness/evaluators/scientific/autosci_skill_run_gate.py`. |
 | Runtime artifact resolver | ok | Scientific gate artifact checks now also resolve paths under runtime `HARNESS_DIR` while schemas remain repo-local. |
-| Shim tests | ok | Added `harness/plugins/autosci/tests/test_autosci_skill_shim.py`. |
+| Shim tests | ok | Added `tests/plugins/autosci/test_autosci_skill_shim.py`. |
 
 ## Phase 19 Dollar Skill Compatibility Follow-up
 
@@ -162,19 +162,19 @@ Logged: 2026-06-22 EDT
 |---|---|
 | `bash harness/solar-harness.sh autosci skills list` | ok: lists 28 configured native AutoSci skills. |
 | `bash harness/solar-harness.sh '$skills'` | ok: lists 28 configured native AutoSci skills through the AutoSci-compatible command surface. |
-| `bash harness/solar-harness.sh '$ingest' --paper "$PWD/harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md" --run-id solar-dollar-ingest-smoke` | ok: routes through the deterministic shim and generates `autosci_skill_run.v1` evidence. |
+| `bash harness/solar-harness.sh '$ingest' --paper "$PWD/tests/plugins/autosci/fixtures/skillgen_operator_smoke_paper.md" --run-id solar-dollar-ingest-smoke` | ok: routes through the deterministic shim and generates `autosci_skill_run.v1` evidence. |
 | `python3 harness/evaluators/scientific/autosci_skill_run_gate.py harness/artifacts/autosci/runs/solar-dollar-ingest-smoke/autosci_skill_run.json` | ok: passed. |
-| `bash scripts/solar-codex-intake.sh --dry-run '$ingest --paper harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md --run-id codex-dollar-dryrun'` | ok: resolves to direct `autosci_skill_shim.py text ...`, not `intake`. |
+| `bash scripts/solar-codex-intake.sh --dry-run '$ingest --paper tests/plugins/autosci/fixtures/skillgen_operator_smoke_paper.md --run-id codex-dollar-dryrun'` | ok: resolves to direct `autosci_skill_shim.py text ...`, not `intake`. |
 | `bash scripts/solar-chat.sh --trace '$skills'` | ok: lists 28 skills and reports direct AutoSci command without sprint DAG trace. |
 | `~/.solar/bin/solar-harness '$skills'` | ok: active installed harness returns `ok=True`, `count=28`. |
-| `bash harness/solar-harness.sh autosci skill ingest --paper "$PWD/harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md" --run-id solar-shim-ingest-smoke` | ok: generated `autosci_skill_run.v1`, `research_paper.json`, and `research_paper.analyzed.json`. |
-| `bash harness/solar-harness.sh autosci skill research --paper "$PWD/harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md" --topic "agent skill learning" --run-id solar-shim-research-smoke` | ok: ran 16 bounded bridge actions; 14 gate-passed, 2 schema-only; route honestly marked `gated`. |
+| `bash harness/solar-harness.sh autosci skill ingest --paper "$PWD/tests/plugins/autosci/fixtures/skillgen_operator_smoke_paper.md" --run-id solar-shim-ingest-smoke` | ok: generated `autosci_skill_run.v1`, `research_paper.json`, and `research_paper.analyzed.json`. |
+| `bash harness/solar-harness.sh autosci skill research --paper "$PWD/tests/plugins/autosci/fixtures/skillgen_operator_smoke_paper.md" --topic "agent skill learning" --run-id solar-shim-research-smoke` | ok: ran 16 bounded bridge actions; 14 gate-passed, 2 schema-only; route honestly marked `gated`. |
 | `bash harness/solar-harness.sh autosci skill setup --run-id solar-shim-setup-smoke` | ok: generated gated route evidence without writing secrets or executing setup side effects. |
 | `python3 harness/evaluators/scientific/autosci_skill_run_gate.py harness/artifacts/autosci/runs/solar-shim-research-smoke/autosci_skill_run.json` | ok: passed with gated-route warning. |
 | `python3 harness/evaluators/scientific/autosci_skill_run_gate.py harness/artifacts/autosci/runs/solar-shim-setup-smoke/autosci_skill_run.json` | ok: passed with gated-route warning. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok: 4 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok: 8 passed after dollar-command compatibility tests. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 71 passed after dollar-command compatibility tests. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py` | ok: 4 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py` | ok: 8 passed after dollar-command compatibility tests. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 71 passed after dollar-command compatibility tests. |
 
 ## Phase 19 Solar Skill Projection and Workspace Follow-up
 
@@ -187,8 +187,8 @@ Logged: 2026-06-22 EDT
 | Human-facing workspace projector | ok | Added `harness/plugins/autosci/bin/autosci_workspace_projector.py`; it projects run evidence into `harness/artifacts/autosci/workspace/wiki/`. |
 | Solar-managed logs boundary | ok | Workspace pages include research entities and outputs only; envelopes, logs, gate results, and operator state remain under Solar-managed run/runtime paths. |
 | Shim workspace handoff | ok | `autosci_skill_shim.py` writes run evidence first, projects workspace pages, then records workspace paths in `outputs.skill_run.workspace`. |
-| Skill projection tests | ok | Added `harness/plugins/autosci/tests/test_autosci_skill_projection.py`. |
-| Workspace projection tests | ok | Extended `harness/plugins/autosci/tests/test_autosci_skill_shim.py` to assert paper, idea, experiment, and report workspace pages. |
+| Skill projection tests | ok | Added `tests/plugins/autosci/test_autosci_skill_projection.py`. |
+| Workspace projection tests | ok | Extended `tests/plugins/autosci/test_autosci_skill_shim.py` to assert paper, idea, experiment, and report workspace pages. |
 
 ### Projection Output Shape
 
@@ -210,12 +210,12 @@ Logged: 2026-06-22 EDT
 |---|---|
 | `python3 harness/plugins/autosci/bin/project_autosci_codex_skills.py --source-skills "/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci/.agents/skills"` | ok: generated 28 OpenSolar wrapper skills. |
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_workspace_projector.py harness/plugins/autosci/bin/project_autosci_codex_skills.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_projection.py` | ok: 9 passed. |
-| `bash harness/solar-harness.sh '$ingest' --paper "$PWD/harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md" --run-id solar-projection-ingest-smoke` | ok: generated Solar run evidence and `workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md`. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_projection.py` | ok: 9 passed. |
+| `bash harness/solar-harness.sh '$ingest' --paper "$PWD/tests/plugins/autosci/fixtures/skillgen_operator_smoke_paper.md" --run-id solar-projection-ingest-smoke` | ok: generated Solar run evidence and `workspace/wiki/papers/paper-skillgen-operator-smoke-paper.md`. |
 | `python3 harness/evaluators/scientific/autosci_skill_run_gate.py harness/artifacts/autosci/runs/solar-projection-ingest-smoke/autosci_skill_run.json` | ok: passed. |
-| `bash harness/solar-harness.sh '$research' --paper "$PWD/harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md" --topic "agent skill learning" --run-id solar-projection-research-smoke` | ok: generated gated Solar research run and workspace pages for paper, method, ideas, experiment, claims, and report. |
+| `bash harness/solar-harness.sh '$research' --paper "$PWD/tests/plugins/autosci/fixtures/skillgen_operator_smoke_paper.md" --topic "agent skill learning" --run-id solar-projection-research-smoke` | ok: generated gated Solar research run and workspace pages for paper, method, ideas, experiment, claims, and report. |
 | `python3 harness/evaluators/scientific/autosci_skill_run_gate.py harness/artifacts/autosci/runs/solar-projection-research-smoke/autosci_skill_run.json` | ok: passed with gated-route warning. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 72 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 72 passed. |
 | `find .agents/skills -maxdepth 2 -name SKILL.md -print \| sort \| xargs -n1 dirname \| xargs -n1 harness/bin/python3 /Users/jamesyuan/.codex/skills/.system/skill-creator/scripts/quick_validate.py` | ok: 28 valid skills. |
 
 ## Phase 19 Lab Worktree Skill Discovery Follow-up
@@ -242,7 +242,7 @@ Logged: 2026-06-22 EDT
 | `env HARNESS_DIR="$PWD/harness" "$PWD/harness/solar-harness.sh" '$skills'` from `.worktrees/lab-builder-1` | ok: `True 28 True`, including `ingest`. |
 | `env HARNESS_DIR="$PWD/harness" "$PWD/harness/solar-harness.sh" '$ingest' --paper ... --run-id worktree-wrapper-ingest-smoke` from `.worktrees/lab-builder-1` | ok: generated completed Solar run evidence and workspace paths. |
 | `python3 harness/evaluators/scientific/autosci_skill_run_gate.py harness/artifacts/autosci/runs/worktree-wrapper-ingest-smoke/autosci_skill_run.json` | ok: passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_projection.py` | ok: 9 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_projection.py` | ok: 9 passed. |
 
 ## Phase 19 Acceptance State
 
@@ -290,9 +290,9 @@ Logged: 2026-06-22 EDT
 | Command | Result |
 |---|---|
 | `bash -n harness/lib/worktree.sh harness/pane-launcher.sh harness/start-incarnation.sh` | ok |
-| `bash harness/tests/test-d3-builder-worktree-consistency.sh` | ok: `PASS: 8 FAIL: 0`; verifies default-off and `SOLAR_BUILDER_WORKTREES=1` opt-in semantics. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_projection.py` | ok: 1 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_projection.py` | ok: 9 passed. |
+| `bash tests/harness/test_d3_builder_worktree_consistency.sh` | ok: `PASS: 8 FAIL: 0`; verifies default-off and `SOLAR_BUILDER_WORKTREES=1` opt-in semantics. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_projection.py` | ok: 1 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_projection.py` | ok: 9 passed. |
 | `bash harness/solar-harness.sh models apply-lab` | ok: respawned active lab panes after the default-off change. |
 | `tmux list-panes -a -F '#{session_name}:#{window_name}.#{pane_index} #{pane_id} cwd=#{pane_current_path} title=#{pane_title}'` | ok: four `solar-harness-lab` panes use `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar` as cwd. |
 | `find .agents/skills -mindepth 1 -maxdepth 1 -type d \| wc -l` | ok: 28 wrapper skill directories in the active Codex `--cd` project directory. |
@@ -322,7 +322,7 @@ Logged: 2026-06-22 EDT
 | Preservation bundle | ok | Tracked diffs, clean-apply subsets, untracked tarballs, and status inventory were saved under `harness/artifacts/worktree-sync/20260622-worktree-cleanup/`. |
 | Clean tracked sync | ok | Non-conflicting tracked changes from `/Users/jamesyuan/.codex/worktrees/05ae/OpenSolar` and `.worktrees/builder` were applied into the original checkout with `git apply --3way`. |
 | Conflict handling | warn | Conflicting tracked changes were not overwritten; full patches are preserved in `codex-05ae-tracked.diff` and `local-builder-tracked.diff`. |
-| Untracked sync | ok | Meaningful missing untracked files were copied into the original checkout: `codex-recovery/AI4Research-B-threads.md` and `harness/tests/test_report_deep_verifier_repair.py`. |
+| Untracked sync | ok | Meaningful missing untracked files were copied into the original checkout: `codex-recovery/AI4Research-B-threads.md` and `tests/harness/test_report_deep_verifier_repair.py`. |
 | Newer original files | ok | Original-checkout versions of `core/harness/harness-client.ts` and `scripts/solar-codex-intake.sh` were kept because they already contained newer Solar routing behavior than the worktree copies. |
 | Worktree deletion | ok | All registered non-main worktrees were removed with `git worktree remove --force`; local `.worktrees/` leftovers were removed after confirming they contained only disposable residue. |
 | Final worktree state | ok | `git worktree list --porcelain` reports only the original OpenSolar checkout. |
@@ -353,11 +353,11 @@ Logged: 2026-06-22 EDT
 | `find .worktrees -maxdepth 2 -print` | ok: no local `.worktrees` directory remains. |
 | `find /Users/jamesyuan/.codex/worktrees -maxdepth 2 -print` | ok: only the Codex worktree root and `.metadata_never_index` remain. |
 | `bash -n harness/lib/worktree.sh harness/pane-launcher.sh harness/start-incarnation.sh` | ok |
-| `bash harness/tests/test-d3-builder-worktree-consistency.sh` | ok: `PASS: 8 FAIL: 0`. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_projection.py` | ok: 9 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_ai_influence_youtube_report_pane_surface.py harness/tests/test_ai_influence_youtube_report_status_surface.py harness/tests/test_report_validation.py harness/tests/test_report_deep_verifier_repair.py harness/tests/test_unified_selector_binding_policy.py harness/tests/test_pm_dispatch.py harness/tests/test_physical_operator_logical_selector.py` | ok: 33 passed after updating the synced selector test to expect `gpt-5.5`. |
-| `bash harness/tests/test-model-registry-guard.sh` | ok: `PASS=23 FAIL=0`. |
-| `bash harness/tests/test-model-config-single-source.sh` | ok: `PASS=19 FAIL=0`. |
+| `bash tests/harness/test_d3_builder_worktree_consistency.sh` | ok: `PASS: 8 FAIL: 0`. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_projection.py` | ok: 9 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_ai_influence_youtube_report_pane_surface.py tests/harness/test_ai_influence_youtube_report_status_surface.py tests/harness/test_report_validation.py tests/harness/test_report_deep_verifier_repair.py tests/harness/test_unified_selector_binding_policy.py tests/harness/test_pm_dispatch.py tests/harness/test_physical_operator_logical_selector.py` | ok: 33 passed after updating the synced selector test to expect `gpt-5.5`. |
+| `bash tests/harness/test_model_registry_guard.sh` | ok: `PASS=23 FAIL=0`. |
+| `bash tests/harness/test_model_config_single_source.sh` | ok: `PASS=19 FAIL=0`. |
 
 ### Preserved Conflict Notes
 
@@ -390,7 +390,7 @@ Logged: 2026-06-22 EDT
 | Command | Result |
 |---|---|
 | `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/paper_prepare.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_research_paper.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_paper_prepare.py -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_paper_prepare.py -q` | ok: 2 passed. |
 | `bash -n harness/solar-harness.sh` | ok |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 38 passed. |
 | `env AUTOSCI_DISABLE_NETWORK_FETCH=1 bash harness/solar-harness.sh '$ingest' --paper /private/tmp/solar-autosci-pdf-smoke-2401.00003.pdf --run-id solar-pdf-ingest-smoke-2` | ok: `execution_status=completed`; `research_paper.v1` has `source_type=latex`, `arxiv=2401.00003`, `source_fetch_status=skipped_network_disabled`, `extracted_pdf_text`, and `synthetic_latex`. |
@@ -416,8 +416,8 @@ Logged: 2026-06-22 EDT
 | Command | Result |
 |---|---|
 | `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/literature_discover.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py harness/evaluators/scientific/literature_discovery_gate.py harness/plugins/autosci/bin/autosci_operator_smoke.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_literature_discover.py harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_discover_from_wiki_limit -q` | ok: 3 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_phase19_operator_smoke.py harness/plugins/autosci/tests/test_bridge_smoke.py harness/plugins/autosci/tests/test_literature_discover.py -q` | ok: 27 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_literature_discover.py tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_discover_from_wiki_limit -q` | ok: 3 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_phase19_operator_smoke.py tests/plugins/autosci/test_bridge_smoke.py tests/plugins/autosci/test_literature_discover.py -q` | ok: 27 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 42 passed. |
 | `bash -n harness/solar-harness.sh` | ok |
 | `git diff --check -- <discover compatibility files>` | ok |
@@ -445,9 +445,9 @@ Logged: 2026-06-24 EDT
 | `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/plugins/autosci/bin/autosci_parity_bridge.py` | ok |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` | ok |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_operator_bindings.v1.json` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_phase19_operator_smoke.py -q` | ok: 18 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_phase19_parity_bridge.py tests/plugins/autosci/test_phase19_operator_smoke.py -q` | ok: 18 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 46 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 5 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 5 passed. |
 | `git diff --check -- <native contract files>` | ok |
 | `harness/plugins/autosci/bin/autosci_skill_shim.py '$exp-run' exp-001 --env local --collect --run-id contract-exp-run` | ok: accepted native flags, recorded `target=exp-001`, `env=local`, `collect=true`, `execution_status=gated`, `action_count=0`. |
 | `harness/plugins/autosci/bin/autosci_skill_shim.py '$paper-plan' idea-001 --venue ICLR --title "Skill Generation for Inference-Time Agents" --run-id contract-paper-plan` | ok: accepted `--title`, recorded `target=idea-001`, `execution_status=partial`, `action_count=0`. |
@@ -481,9 +481,9 @@ Logged: 2026-06-24 EDT
 | Command | Result |
 |---|---|
 | `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/idea_source.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_idea_candidate.py harness/evaluators/scientific/idea_gate.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_bridge_smoke.py::test_phase11_generate_and_evaluate_ideas_write_native_evidence harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 18 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_bridge_smoke.py::test_phase11_generate_and_evaluate_ideas_write_native_evidence tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 18 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 48 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 8 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 8 passed. |
 
 ### Remaining Ideate Blocks
 
@@ -515,9 +515,9 @@ Logged: 2026-06-24 EDT
 | `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/backends/idea_source.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/evaluators/scientific/idea_gate.py` | ok |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` | ok |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_operator_bindings.v1.json` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_bridge_smoke.py::test_phase11_generate_and_evaluate_ideas_write_native_evidence harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 20 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_bridge_smoke.py::test_phase11_generate_and_evaluate_ideas_write_native_evidence tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 20 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 49 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 9 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 9 passed. |
 
 ### Remaining Deep Validation Blocks
 
@@ -544,11 +544,11 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 20 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 20 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 50 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 9 passed. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 9 passed. |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 
 ### Remaining Validation Blocks
 
@@ -575,13 +575,13 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/evaluators/scientific/artifact_review_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_artifact_review_gate.py` | ok |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/evaluators/scientific/artifact_review_gate.py tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_artifact_review_gate.py` | ok |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` | ok |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_operator_bindings.v1.json` | ok |
 | `python3 -m json.tool harness/schemas/evidence/artifact_review.v1.schema.json` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 23 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 23 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 51 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
 | `git diff --check -- <standalone review and novelty writeback files>` | ok |
 
 ### Remaining Review Blocks
@@ -608,10 +608,10 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/evaluators/scientific/artifact_review_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_artifact_review_gate.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_artifact_review_gate.py -q` | ok: 20 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/evaluators/scientific/artifact_review_gate.py tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_artifact_review_gate.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_artifact_review_gate.py -q` | ok: 20 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 52 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
 | `python3 -m json.tool harness/schemas/evidence/artifact_review.v1.schema.json` | ok |
 | `git diff --check -- <Review LLM evidence-state files>` | ok |
 
@@ -639,10 +639,10 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/evaluators/scientific/idea_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 23 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/evaluators/scientific/idea_gate.py tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 23 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 53 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
 | `git diff --check -- <external novelty evidence files>` | ok |
 
 ### Remaining External Novelty Blocks
@@ -668,11 +668,11 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 24 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 24 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 
 ### Remaining Novelty Write Blocks
 
@@ -699,11 +699,11 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 26 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 26 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 56 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
-| `git diff --check -- harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 11 passed. |
+| `git diff --check -- harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 
 ### Remaining Online Novelty Blocks
 
@@ -729,10 +729,10 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_bridge.py harness/evaluators/scientific/idea_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 28 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_bridge.py harness/evaluators/scientific/idea_gate.py tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 28 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 57 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 12 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 12 passed. |
 | `git diff --check -- <external novelty provenance files>` | ok |
 
 ### Remaining Provenance Blocks
@@ -759,11 +759,11 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/evaluators/scientific/idea_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 30 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/evaluators/scientific/idea_gate.py tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 30 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 58 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 13 passed. |
-| `git diff --check -- harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/evaluators/scientific/idea_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_idea_gate.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 13 passed. |
+| `git diff --check -- harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/evaluators/scientific/idea_gate.py tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_idea_gate.py` | ok |
 
 ### Remaining Review-Coupled Blocks
 
@@ -789,8 +789,8 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 25 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 25 passed. |
 
 ### Remaining Provider-Specific Blocks
 
@@ -816,8 +816,8 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 25 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 25 passed. |
 
 ### Remaining Provider Payload Blocks
 
@@ -844,7 +844,7 @@ Logged: 2026-06-24 EDT
 | Command | Result |
 |---|---|
 | `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_bridge.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 25 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 25 passed. |
 
 ### Remaining Provider Payload Archive Blocks
 
@@ -868,8 +868,8 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/adapters/autosci_to_idea_evaluation.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 25 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/adapters/autosci_to_idea_evaluation.py harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 25 passed. |
 
 ### Remaining Novelty Artifact Blocks
 
@@ -894,8 +894,8 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 27 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 27 passed. |
 
 ### Remaining Review LLM Blocks
 
@@ -919,9 +919,9 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/evaluators/scientific/autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 4 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py -q` | ok: 4 passed. |
+| `harness/bin/python3 -m py_compile harness/evaluators/scientific/autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/plugins/autosci/test_phase19_parity_bridge.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_phase19_parity_bridge.py -q` | ok: 4 passed. |
 
 ### Remaining Route Truthfulness Blocks
 
@@ -946,8 +946,8 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/tests/test_bridge_smoke.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_bridge_smoke.py -q` | ok: 16 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py tests/plugins/autosci/test_bridge_smoke.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_bridge_smoke.py -q` | ok: 16 passed. |
 
 ### Remaining Wiki Resolver Blocks
 
@@ -972,10 +972,10 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/evaluators/scientific/publication_gate.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_compile_checklist_without_bundle_fallback -q` | ok: 1 passed. |
+| `harness/bin/python3 -m py_compile harness/evaluators/scientific/publication_gate.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_compile_checklist_without_bundle_fallback -q` | ok: 1 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 63 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_report_gate.py -q` | ok: 18 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_report_gate.py -q` | ok: 18 passed. |
 
 ### Remaining Paper Compile Blocks
 
@@ -1000,11 +1000,11 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_workspace_projector.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_updates_with_external_and_review_llm_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_uses_review_llm_command_bridge harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_skips_without_external_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_skips_without_review_llm_evidence -q` | ok: 4 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_projection.py -q` | ok: 1 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_workspace_projector.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_updates_with_external_and_review_llm_evidence tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_uses_review_llm_command_bridge tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_skips_without_external_evidence tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_skips_without_review_llm_evidence -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_projection.py -q` | ok: 1 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 63 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_report_gate.py -q` | ok: 18 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_report_gate.py -q` | ok: 18 passed. |
 
 ### Remaining Wiki Mutation Blocks
 
@@ -1029,11 +1029,11 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_exp_run_native_options_without_fixture_fallback harness/plugins/autosci/tests/test_bridge_smoke.py::test_phase12_design_run_and_monitor_experiment_write_native_evidence harness/plugins/autosci/tests/test_bridge_smoke.py::test_phase12_run_without_plan_does_not_default_to_exp_001 -q` | ok: 3 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_experiment_status_gate.py -q` | ok: 2 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_exp_run_native_options_without_fixture_fallback tests/plugins/autosci/test_bridge_smoke.py::test_phase12_design_run_and_monitor_experiment_write_native_evidence tests/plugins/autosci/test_bridge_smoke.py::test_phase12_run_without_plan_does_not_default_to_exp_001 -q` | ok: 3 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_experiment_status_gate.py -q` | ok: 2 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 63 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_report_gate.py harness/tests/evaluators/scientific/test_experiment_status_gate.py -q` | ok: 20 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_report_gate.py tests/harness/evaluators/scientific/test_experiment_status_gate.py -q` | ok: 20 passed. |
 
 ### Remaining Experiment Lifecycle Blocks
 
@@ -1058,10 +1058,10 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars -q` | ok: 2 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars -q` | ok: 2 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 64 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_report_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 10 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_report_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 10 passed. |
 
 ### Remaining Publication And Report Blocks
 
@@ -1087,10 +1087,10 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_wiki_and_control_proposal_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_keeps_setup_gated -q` | ok: 2 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_wiki_and_control_proposal_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_keeps_setup_gated -q` | ok: 2 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 65 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_report_gate.py harness/tests/evaluators/scientific/test_experiment_status_gate.py harness/tests/evaluators/scientific/test_workflow_evolution_gate.py -q` | ok: 22 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_report_gate.py tests/harness/evaluators/scientific/test_experiment_status_gate.py tests/harness/evaluators/scientific/test_workflow_evolution_gate.py -q` | ok: 22 passed. |
 
 ### Remaining Wiki And Control Blocks
 
@@ -1115,10 +1115,10 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/adapters/autosci_to_research_memory_update.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics -q` | ok: 1 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/adapters/autosci_to_research_memory_update.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics -q` | ok: 1 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 66 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_report_gate.py harness/tests/evaluators/scientific/test_experiment_status_gate.py harness/tests/evaluators/scientific/test_workflow_evolution_gate.py -q` | ok: 22 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_report_gate.py tests/harness/evaluators/scientific/test_experiment_status_gate.py tests/harness/evaluators/scientific/test_workflow_evolution_gate.py -q` | ok: 22 passed. |
 
 ### Remaining Ask Check Init Blocks
 
@@ -1146,10 +1146,10 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/adapters/autosci_to_research_memory_update.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions -q` | ok: 1 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/adapters/autosci_to_research_memory_update.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions -q` | ok: 1 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 67 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_report_gate.py harness/tests/evaluators/scientific/test_experiment_status_gate.py harness/tests/evaluators/scientific/test_workflow_evolution_gate.py -q` | ok: 22 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_report_gate.py tests/harness/evaluators/scientific/test_experiment_status_gate.py tests/harness/evaluators/scientific/test_workflow_evolution_gate.py -q` | ok: 22 passed. |
 | `backend action coverage script` | ok: `missing_count: 0`. |
 
 ### Remaining Full-Parity Blocks
@@ -1175,11 +1175,11 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/evaluators/scientific/graph_update_gate.py harness/plugins/autosci/adapters/autosci_to_research_memory_update.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_phase19_operator_smoke.py harness/tests/evaluators/scientific/test_graph_update_gate.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ask_and_check_read_workspace_wiki -q` | ok: 2 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_graph_update_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions -q` | ok: 3 passed. |
+| `harness/bin/python3 -m py_compile harness/evaluators/scientific/graph_update_gate.py harness/plugins/autosci/adapters/autosci_to_research_memory_update.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_operator_smoke.py tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_phase19_operator_smoke.py tests/harness/evaluators/scientific/test_graph_update_gate.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_ask_and_check_read_workspace_wiki -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_graph_update_gate.py tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions -q` | ok: 3 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 68 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_report_gate.py harness/tests/evaluators/scientific/test_experiment_status_gate.py harness/tests/evaluators/scientific/test_workflow_evolution_gate.py harness/tests/evaluators/scientific/test_graph_update_gate.py -q` | ok: 24 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_report_gate.py tests/harness/evaluators/scientific/test_experiment_status_gate.py tests/harness/evaluators/scientific/test_workflow_evolution_gate.py tests/harness/evaluators/scientific/test_graph_update_gate.py -q` | ok: 24 passed. |
 
 ### Remaining Wiki Retrieval And Graph Blocks
 
@@ -1207,11 +1207,11 @@ Logged: 2026-06-24 EDT
 | Command | Result |
 |---|---|
 | `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_research_graph_update.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 33 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 33 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 69 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_artifact_review_gate.py harness/tests/evaluators/scientific/test_claim_verdict_gate.py harness/tests/evaluators/scientific/test_claims_gate.py harness/tests/evaluators/scientific/test_code_evidence_gate.py harness/tests/evaluators/scientific/test_experiment_plan_gate.py harness/tests/evaluators/scientific/test_experiment_result_gate.py harness/tests/evaluators/scientific/test_experiment_status_gate.py harness/tests/evaluators/scientific/test_graph_update_gate.py harness/tests/evaluators/scientific/test_idea_gate.py harness/tests/evaluators/scientific/test_lifecycle_gate.py harness/tests/evaluators/scientific/test_report_gate.py harness/tests/evaluators/scientific/test_workflow_evolution_gate.py -q` | ok: 38 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_artifact_review_gate.py tests/harness/evaluators/scientific/test_claim_verdict_gate.py tests/harness/evaluators/scientific/test_claims_gate.py tests/harness/evaluators/scientific/test_code_evidence_gate.py tests/harness/evaluators/scientific/test_experiment_plan_gate.py tests/harness/evaluators/scientific/test_experiment_result_gate.py tests/harness/evaluators/scientific/test_experiment_status_gate.py tests/harness/evaluators/scientific/test_graph_update_gate.py tests/harness/evaluators/scientific/test_idea_gate.py tests/harness/evaluators/scientific/test_lifecycle_gate.py tests/harness/evaluators/scientific/test_report_gate.py tests/harness/evaluators/scientific/test_workflow_evolution_gate.py -q` | ok: 38 passed. |
 | `env PYTHONPATH=harness HARNESS_DIR=/tmp/autosci-operator-smoke harness/bin/python3 harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci-operator-smoke/operator_smoke.json` | ok: 28 routes, 28 bound, 0 failed, 10 gated. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_research_graph_update.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_research_graph_update.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 
 ### Remaining Approval Runtime Blocks
 
@@ -1239,12 +1239,12 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_records_approval_runtime_contract_for_gated_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_compile_checklist_without_bundle_fallback -q` | ok: 4 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_records_approval_runtime_contract_for_gated_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_compile_checklist_without_bundle_fallback -q` | ok: 4 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 70 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific -q` | ok: 47 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific -q` | ok: 47 passed. |
 | `env PYTHONPATH=harness HARNESS_DIR=/tmp/autosci-operator-smoke harness/bin/python3 harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci-operator-smoke/operator_smoke_semantic.json` | ok: 28 routes, 28 bound, 0 failed, 10 gated. |
-| `git diff --check -- docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `git diff --check -- docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 
 ### Remaining Semantic Runtime Blocks
 
@@ -1272,13 +1272,13 @@ Logged: 2026-06-24 EDT
 | Command | Result |
 |---|---|
 | `python3 -m json.tool harness/schemas/evidence/autosci_runtime_evidence.v1.schema.json` | ok |
-| `harness/bin/python3 -m py_compile harness/evaluators/scientific/autosci_runtime_evidence_gate.py harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_records_approval_runtime_contract_for_gated_actions -q` | ok: 6 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_executes_approved_paper_compile_executor harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py -q` | ok: 6 passed. |
+| `harness/bin/python3 -m py_compile harness/evaluators/scientific/autosci_runtime_evidence_gate.py tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_records_approval_runtime_contract_for_gated_actions -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_executes_approved_paper_compile_executor tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py -q` | ok: 6 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 71 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific -q` | ok: 51 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific -q` | ok: 51 passed. |
 | `env PYTHONPATH=harness HARNESS_DIR=/tmp/autosci-operator-smoke harness/bin/python3 harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci-operator-smoke/operator_smoke_compile_executor.json` | ok: 28 routes, 28 bound, 0 failed, 10 gated. |
-| `git diff --check -- docs/integrations/autosci/phase19-progress-log.md harness/schemas/evidence/autosci_runtime_evidence.v1.schema.json harness/evaluators/scientific/autosci_runtime_evidence_gate.py harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `git diff --check -- docs/integrations/autosci/phase19-progress-log.md harness/schemas/evidence/autosci_runtime_evidence.v1.schema.json harness/evaluators/scientific/autosci_runtime_evidence_gate.py tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 
 ### Remaining Runtime Executor Blocks
 
@@ -1311,15 +1311,15 @@ Logged: 2026-06-24 EDT
 | Command | Result |
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_idea_candidate.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py` | ok |
-| `.venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_wiki_state_resolver_parses_entities_and_edges harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_status_resolves_wiki_experiment_without_default_fallback -q` | ok: 2 passed. |
+| `.venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_wiki_state_resolver_parses_entities_and_edges tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_status_resolves_wiki_experiment_without_default_fallback -q` | ok: 2 passed. |
 | `.venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 74 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 51 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 51 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen` | ok: 28 routes, 28 bound, 0 failed, 10 gated. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_wiki_state.json` | ok: 28 routed, 0 missing, 2 full, 16 partial, 10 gated. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_feature_parity_gate.py /tmp/autosci_feature_parity_wiki_state.json` | ok: passed with non-full route warning. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_operator_smoke_gate.py harness/artifacts/autosci/operator-smoke/skillgen/autosci_operator_smoke.json` | ok: passed with approval-gated warning. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_idea_gate.py -q` | ok: 7 passed after wiki-state gate hardening. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 52 passed after wiki-state gate hardening. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_idea_gate.py -q` | ok: 7 passed after wiki-state gate hardening. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 52 passed after wiki-state gate hardening. |
 
 ### Remaining Wiki/State Blocks
 
@@ -1347,12 +1347,12 @@ Logged: 2026-06-24 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_executes_approved_poster_executor harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_records_approval_runtime_contract_for_gated_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars -q` | ok: 3 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_executes_approved_poster_executor tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_records_approval_runtime_contract_for_gated_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars -q` | ok: 3 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | ok: 72 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/evaluators/scientific -q` | ok: 51 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/evaluators/scientific -q` | ok: 51 passed. |
 | `env PYTHONPATH=harness HARNESS_DIR=/tmp/autosci-operator-smoke harness/bin/python3 harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci-operator-smoke/operator_smoke_poster_executor.json` | ok: 28 routes, 28 bound, 0 failed, 10 gated. |
-| `git diff --check -- docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `git diff --check -- docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 
 ### Remaining Executor Blocks After Poster
 
@@ -1386,9 +1386,9 @@ This audit cross-checked the current AutoSci/Solar parity-related dirty paths ag
 | Command | Result |
 |---|---|
 | `bash harness/solar-harness.sh context inject --query "AutoSci parity progress log completeness audit changed files phase19 log coverage" --format markdown` | ok: Solar unified context loaded; source degraded to local Mirage/QMD/DB context. |
-| `git status --short -- docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci harness/evaluators/scientific harness/schemas/evidence harness/tests/evaluators/scientific` | ok: enumerated current AutoSci parity-related tracked and untracked dirty paths for coverage checking. |
+| `git status --short -- docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci harness/evaluators/scientific harness/schemas/evidence tests/harness/evaluators/scientific` | ok: enumerated current AutoSci parity-related tracked and untracked dirty paths for coverage checking. |
 | `rg -n "^## Phase 19|^### Remaining|autosci_runtime_evidence|autosci_skill_shim|autosci_bridge|idea_gate|test_idea_gate|test_autosci_skill_shim|autosci_to_idea_candidate|autosci_to_experiment_plan|Wiki State Resolver|Runtime Schema|Poster Approved|Compile Executor|approval|semantic|novelty|review|collect|paper compile|checklist|route truthfulness|model|gpt-5.5|worktree" docs/integrations/autosci/phase19-progress-log.md` | ok: found matching log coverage across all parity workstreams. |
-| `git diff --name-only -- docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci harness/evaluators/scientific harness/schemas/evidence harness/tests/evaluators/scientific` | ok: tracked AutoSci parity diffs are covered by existing Phase 19 sections or by this audit section. |
+| `git diff --name-only -- docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci harness/evaluators/scientific harness/schemas/evidence tests/harness/evaluators/scientific` | ok: tracked AutoSci parity diffs are covered by existing Phase 19 sections or by this audit section. |
 
 ### Coverage Audit Exclusions
 
@@ -1456,7 +1456,7 @@ reported as bound-but-partial/gated rather than completed.
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_feature_parity_gate.py /tmp/autosci_feature_parity_after_audit_update_20260625.json` | ok: gate passed with non-full route warning. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci_operator_smoke_after_audit_update_20260625.json` | ok: `bound_count=28`, `completed_count=0`, `partial_count=18`, `gated_count=10`, `failed_count=0`. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_operator_smoke_gate.py /tmp/autosci_operator_smoke_after_audit_update_20260625.json` | ok: gate passed with approval-gated runtime warning. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 52 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 52 passed. |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 74 passed. |
 
 ## Phase 19 P0 SkillGen PDF Ingest Repair
@@ -1484,7 +1484,7 @@ this repair only removes the PDF extraction/semantic-fidelity blocker.
 | `python3 - <<'PY' ... import fitz/pypdf/PyPDF2/pdfplumber ... PY` | ok: system `python3` has `pypdf` and no `fitz`; this reproduces the audit environment. |
 | `env HARNESS_DIR=/tmp/autosci-system-pypdf-ingest2 AUTOSCI_DISABLE_NETWORK_FETCH=1 python3 harness/plugins/autosci/bin/autosci_skill_shim.py text '$ingest /Users/jamesyuan/Downloads/SkillGen(1).pdf --run-id system-pypdf-ingest2'` | ok: `action_count=2`, `failed_count=0`, `execution_status=partial`. |
 | Semantic oracle over `/tmp/autosci-system-pypdf-ingest2/.../research_paper.json` | ok: title, three stages, analysis object, skill tuple, repairs/regressions/net gain, Best-of-K/verification gate, +3.27/+10.08 pp, seed 42, temperature 0, GPT-5.4-Mini, 70/30 split, and eight rounds are present in evidence. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_paper_prepare.py -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_paper_prepare.py -q` | ok: 4 passed. |
 | `.venv/bin/python -m py_compile harness/plugins/autosci/backends/paper_prepare.py` | ok |
 
 ### Remaining After PDF Repair
@@ -1531,16 +1531,16 @@ unexecuted lifecycle work explicitly gated/inconclusive.
 | `env HARNESS_DIR=/tmp/autosci-exp-status-pipeline-fixed python3 harness/plugins/autosci/bin/autosci_skill_shim.py text '$exp-status --pipeline skillgen-main --run-id exp-status-pipeline-fixed'` | ok: `action_count=1`, `schema_only_count=1`, `execution_status=partial`. |
 | `env HARNESS_DIR=/tmp/autosci-research-start-from-current python3 harness/plugins/autosci/bin/autosci_skill_shim.py text '$research skillgen-main --venue ICLR --start-from stage3-collect --skip-paper --run-id research-start-from-current'` | ok: `action_count=1`, `schema_only_count=1`, `execution_status=gated`, `workspace_updated_count=6`. |
 | `env HARNESS_DIR=/private/tmp/autosci-research-start-from-current PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/workflow_evolution_gate.py /private/tmp/autosci-research-start-from-current/artifacts/autosci/runs/research-start-from-current/workflow_evolution.research.json` | ok: gate returned `inconclusive` with no structural reasons, matching the non-executed lifecycle state. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts -q` | ok: 1 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts -q` | ok: 2 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_paper_prepare.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/tests/test_conversion_to_solar_evidence.py -q` | ok: 55 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts -q` | ok: 1 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_paper_prepare.py tests/plugins/autosci/test_autosci_skill_shim.py tests/plugins/autosci/test_conversion_to_solar_evidence.py -q` | ok: 55 passed. |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 84 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 52 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 52 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci_operator_smoke_after_cli_pipeline_repair_20260625.json` | ok: `bound_count=28`, `completed_count=0`, `partial_count=18`, `gated_count=10`, `failed_count=0`. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_cli_pipeline_repair_20260625.json` | ok: `full_count=0`, `partial_count=18`, `gated_count=10`, `missing_route_count=0`. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_operator_smoke_gate.py /tmp/autosci_operator_smoke_after_cli_pipeline_repair_20260625.json` | ok: gate passed with approval-gated warning. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_feature_parity_gate.py /tmp/autosci_feature_parity_after_cli_pipeline_repair_20260625.json` | ok: gate passed with non-full route warning. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_workflow_evolution.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/plugins/autosci/backends/paper_prepare.py harness/plugins/autosci/adapters/autosci_to_research_paper.py harness/plugins/autosci/tests/test_paper_prepare.py harness/plugins/autosci/tests/test_conversion_to_solar_evidence.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_workflow_evolution.py tests/plugins/autosci/test_autosci_skill_shim.py harness/plugins/autosci/backends/paper_prepare.py harness/plugins/autosci/adapters/autosci_to_research_paper.py tests/plugins/autosci/test_paper_prepare.py tests/plugins/autosci/test_conversion_to_solar_evidence.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After CLI/Pipeline Repair
 
@@ -1576,17 +1576,17 @@ instead of fixture fallback, stale repository fallback, or route-only output.
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_review_missing_slug_does_not_use_repo_workspace_fallback harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_review_as_artifact_review harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_review_uses_supplied_review_llm_evidence -q` | ok: 3 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_collect_uses_verified_runtime_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_exp_run_native_options_without_fixture_fallback -q` | ok: 4 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_writes_latex_source harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_paper_compile_fix_diagnostics harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback -q` | ok: 3 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ask_and_check_read_workspace_wiki -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_review_missing_slug_does_not_use_repo_workspace_fallback tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_review_as_artifact_review tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_review_uses_supplied_review_llm_evidence -q` | ok: 3 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_collect_uses_verified_runtime_evidence tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_exp_run_native_options_without_fixture_fallback -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_writes_latex_source tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_paper_compile_fix_diagnostics tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback -q` | ok: 3 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_ask_and_check_read_workspace_wiki -q` | ok: 2 passed. |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 88 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 52 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 52 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci_operator_smoke_after_runtime_draft_ask_repair_20260625.json` | ok: `bound_count=28`, `completed_count=0`, `partial_count=18`, `gated_count=10`, `failed_count=0`. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_runtime_draft_ask_repair_20260625.json` | ok: `full_count=0`, `partial_count=18`, `gated_count=10`, `missing_route_count=0`. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_operator_smoke_gate.py /tmp/autosci_operator_smoke_after_runtime_draft_ask_repair_20260625.json` | ok: gate passed with approval-gated warning. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_feature_parity_gate.py /tmp/autosci_feature_parity_after_runtime_draft_ask_repair_20260625.json` | ok: gate passed with non-full route warning. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_workspace_projector.py harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_workspace_projector.py harness/plugins/autosci/backends/artifact_review.py tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Runtime/Draft/Ask Repair
 
@@ -1619,13 +1619,13 @@ now exist as Solar AutoSci compatibility entrypoints over the local
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_web_visualization_compatibility_tools_generate_graph_artifacts harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_web_visualization_compatibility_tools_generate_graph_artifacts tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions -q` | ok: 2 passed. |
 | `.venv/bin/python -m py_compile tools/visualize.py tools/serve.py harness/plugins/autosci/bin/autosci_bridge.py` | ok |
 | `.venv/bin/python tools/visualize.py generate-obsidian-config --wiki-root /tmp/autosci-web-current/wiki` | ok: generated `.obsidian/graph.json`. |
 | `.venv/bin/python tools/visualize.py generate-canvas --wiki-root /tmp/autosci-web-current/wiki --graph-out /tmp/autosci-web-current/graph.json` | ok: generated Canvas and graph JSON with 2 nodes / 1 edge in the smoke wiki. |
 | `.venv/bin/python tools/serve.py --wiki-root /tmp/autosci-web-current/wiki --health-check` | ok: `node_count=2`, `edge_count=1`, app files present. |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 89 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 52 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 52 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci_operator_smoke_after_web_repair_20260625.json` | ok: `bound_count=28`, `completed_count=0`, `partial_count=18`, `gated_count=10`, `failed_count=0`. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_web_repair_20260625.json` | ok: `full_count=0`, `partial_count=18`, `gated_count=10`, `missing_route_count=0`. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_operator_smoke_gate.py /tmp/autosci_operator_smoke_after_web_repair_20260625.json` | ok: gate passed with approval-gated warning. |
@@ -1661,7 +1661,7 @@ integrated `$research` lifecycle and integrated paper PDF proof remain open.
 | Command | Result |
 |---|---|
 | `.venv/bin/python -m py_compile harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_review_as_artifact_review harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_review_uses_review_llm_command_bridge harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_review_invokes_openai_compatible_provider harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_uses_review_llm_command_bridge -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_review_as_artifact_review tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_review_uses_review_llm_command_bridge tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_review_invokes_openai_compatible_provider tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_write_uses_review_llm_command_bridge -q` | ok: 4 passed. |
 
 ### Remaining After Review LLM Provider Repair
 
@@ -1693,15 +1693,15 @@ stage evidence is available.
 | Command | Result |
 |---|---|
 | `.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_workflow_evolution.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_lifecycle_completes_from_verified_stage_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_research_pipeline -q` | ok: 3 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_research_lifecycle_completes_from_verified_stage_evidence tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_research_pipeline -q` | ok: 3 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json >/dev/null && python3 -m json.tool harness/plugins/autosci/config/feature_operator_bindings.v1.json >/dev/null` | ok |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 91 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 52 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 52 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci_operator_smoke_after_research_lifecycle_repair_20260625.json` | ok: `bound_count=28`, `completed_count=0`, `partial_count=18`, `gated_count=10`, `failed_count=0`. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_research_lifecycle_repair_20260625.json` | ok: `full_count=0`, `partial_count=18`, `gated_count=10`, `missing_route_count=0`. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_operator_smoke_gate.py /tmp/autosci_operator_smoke_after_research_lifecycle_repair_20260625.json` | ok: gate passed with approval-gated warning. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_feature_parity_gate.py /tmp/autosci_feature_parity_after_research_lifecycle_repair_20260625.json` | ok: gate passed with non-full route warning. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_workflow_evolution.py harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md tools/visualize.py tools/serve.py app/index.html app/styles.css app/modules/graph.js` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_workflow_evolution.py harness/plugins/autosci/backends/artifact_review.py harness/plugins/autosci/backends/novelty_review.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md tools/visualize.py tools/serve.py app/index.html app/styles.css app/modules/graph.js` | ok |
 
 ### Remaining After Research Lifecycle Repair
 
@@ -1729,8 +1729,8 @@ semantic failure as current behavior.
 
 | Command | Result |
 |---|---|
-| `.venv/bin/python -m py_compile harness/evaluators/scientific/paper_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/evaluators/scientific/test_paper_gate.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leakage harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_maps_positional_ingest_source harness/tests/evaluators/scientific/test_paper_gate.py -q` | ok: 4 passed. |
+| `.venv/bin/python -m py_compile harness/evaluators/scientific/paper_gate.py tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/evaluators/scientific/test_paper_gate.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_ingests_pdf_with_extracted_text_and_no_fixture_leakage tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_maps_positional_ingest_source tests/harness/evaluators/scientific/test_paper_gate.py -q` | ok: 4 passed. |
 
 ### Remaining After PDF Gate Hardening
 
@@ -1759,8 +1759,8 @@ as a local, bounded, auditable tool.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile tools/research_wiki.py harness/plugins/autosci/tests/test_research_wiki_tool.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_research_wiki_tool.py -q` | ok: 1 passed. |
+| `python3 -m py_compile tools/research_wiki.py tests/plugins/autosci/test_research_wiki_tool.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_research_wiki_tool.py -q` | ok: 1 passed. |
 | `python3 tools/research_wiki.py set-meta ideas/skillgen.md status=reviewed --wiki-root <tmp>/wiki --json && python3 tools/research_wiki.py query SkillGen --wiki-root <tmp>/wiki --json` | ok: CLI smoke emitted consumable JSON. |
 
 ### Remaining After Research Wiki Tool ABI Repair
@@ -1791,8 +1791,8 @@ Solar AutoSci backends where available and report unavailable providers as
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile tools/prepare_paper_source.py tools/discover.py tools/fetch_s2.py tools/fetch_deepxiv.py harness/plugins/autosci/tests/test_source_cli_tools.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_source_cli_tools.py -q` | ok: 3 passed. |
+| `python3 -m py_compile tools/prepare_paper_source.py tools/discover.py tools/fetch_s2.py tools/fetch_deepxiv.py tests/plugins/autosci/test_source_cli_tools.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_source_cli_tools.py -q` | ok: 3 passed. |
 
 ### Remaining After Source Discovery CLI ABI Repair
 
@@ -1823,7 +1823,7 @@ truthful: launch, email send, reset, and browser/PNG render paths report
 | Command | Result |
 |---|---|
 | `python3 -m py_compile tools/lint.py tools/init_discovery.py tools/remote.py tools/daily_arxiv.py tools/send_email.py tools/rasterize_latex.py tools/wiki2dag.py tools/poster.py tools/reset_wiki.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_root_tool_abi.py harness/plugins/autosci/tests/test_source_cli_tools.py harness/plugins/autosci/tests/test_research_wiki_tool.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_root_tool_abi.py tests/plugins/autosci/test_source_cli_tools.py tests/plugins/autosci/test_research_wiki_tool.py -q` | ok: 6 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json >/dev/null && python3 -m json.tool harness/plugins/autosci/config/feature_operator_bindings.v1.json >/dev/null` | ok |
 | Root `tools/*.py` route inventory script | ok: `{}` missing root tools. |
 
@@ -1854,7 +1854,7 @@ referenced by the setup route.
 | Command | Result |
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_parity_bridge.py harness/evaluators/scientific/autosci_feature_parity_gate.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_root_tool_abi.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_phase19_parity_bridge.py tests/plugins/autosci/test_root_tool_abi.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_tool_abi_gate_20260625.json` | ok: `full_count=0`, `partial_count=18`, `gated_count=10`, `missing_route_count=0`. |
 | `env PYTHONPATH=harness .venv/bin/python harness/evaluators/scientific/autosci_feature_parity_gate.py /tmp/autosci_feature_parity_after_tool_abi_gate_20260625.json` | ok: gate passed with non-full warning. |
 
@@ -1885,8 +1885,8 @@ from discovery, paper, and wiki paper evidence.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_plan_completes_with_citations_and_review_llm harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_survey_completes_with_citation_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_survey_format_latex -q` | ok: 5 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_plan_completes_with_citations_and_review_llm tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_survey_completes_with_citation_evidence tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_survey_format_latex -q` | ok: 5 passed. |
 
 ### Remaining After Publication Citation Map Repair
 
@@ -1914,8 +1914,8 @@ produce completed `claim_verdict.v1` evidence.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_pilot_eval_uses_runtime_evidence -q` | ok: 2 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_pilot_eval_uses_runtime_evidence -q` | ok: 2 passed. |
 
 ### Remaining After Pilot Evaluation Runtime Evidence Repair
 
@@ -1941,8 +1941,8 @@ plans when supplied Review LLM / `artifact_review.v1` findings are available.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_rebuttal_maps_review_llm_findings -q` | ok: 2 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_survey_rebuttal_and_poster_native_sidecars tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_rebuttal_maps_review_llm_findings -q` | ok: 2 passed. |
 
 ### Remaining After Rebuttal Mapping Repair
 
@@ -1969,8 +1969,8 @@ completed `literature_discovery.v1` evidence.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest -q` | ok: 2 passed. |
+| `python3 -m py_compile tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest -q` | ok: 2 passed. |
 
 ### Remaining After Init Runtime Source Manifest Coverage
 
@@ -1996,8 +1996,8 @@ scheduling, and auto-ingest side effects.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest -q` | ok: 2 passed. |
+| `python3 -m py_compile tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest -q` | ok: 2 passed. |
 
 ### Remaining After Daily arXiv Runtime Digest Coverage
 
@@ -2017,7 +2017,7 @@ and daily runtime digest repairs.
 | Item | Status | Evidence |
 |---|---|---|
 | AutoSci plugin tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` passed: 104 tests. |
-| Scientific evaluator tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` passed: 54 tests. |
+| Scientific evaluator tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` passed: 54 tests. |
 | Operator smoke gate | ok | `bound_count=28`, `completed_count=0`, `partial_count=18`, `gated_count=10`, `failed_count=0`; gate passed with approval-gated warning. |
 | Feature parity gate | warn | `full_count=0`, `partial_count=18`, `gated_count=10`, `missing_route_count=0`; gate passed with non-full warning. |
 | Config and whitespace checks | ok | Route/operator JSON validation passed; `git diff --check` passed over changed AutoSci/code/log files. |
@@ -2050,11 +2050,11 @@ This follow-up closes the local wiki mutation gap for approved `/prefill` and
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` | ok |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_operator_bindings.v1.json` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_wiki_and_control_proposal_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_prefill_applies_approved_wiki_mutation harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_edit_applies_approved_after_artifact -q` | ok: 3 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_phase19_operator_smoke.py -q` | ok: 3 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_wiki_and_control_proposal_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_prefill_applies_approved_wiki_mutation tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_edit_applies_approved_after_artifact -q` | ok: 3 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_phase19_operator_smoke.py -q` | ok: 3 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_executor_repairs_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen --out /tmp/autosci_operator_smoke_after_executor_repairs_20260625.json` | ok: `bound_count=28`, `completed_count=0`, `partial_count=17`, `gated_count=11`, `failed_count=0`. |
 
@@ -2084,8 +2084,8 @@ allowlisted TeX engine.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_executes_approved_paper_compile_executor harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_executes_approved_paper_compile_with_pdflatex_fallback harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_compile_checklist_without_bundle_fallback -q` | ok: 4 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_executes_approved_paper_compile_executor tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_executes_approved_paper_compile_with_pdflatex_fallback tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_uses_semantic_runtime_evidence_for_gated_results tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_paper_compile_checklist_without_bundle_fallback -q` | ok: 4 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` | ok |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_executor_repairs_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
 
@@ -2116,9 +2116,9 @@ fixes the runtime evidence schema/gate mismatch for experiment execution.
 | Command | Result |
 |---|---|
 | `python3 -m json.tool harness/schemas/evidence/autosci_runtime_evidence.v1.schema.json` | ok |
-| `python3 -m py_compile tools/remote.py harness/evaluators/scientific/autosci_runtime_evidence_gate.py harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/tests/test_root_tool_abi.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/tests/test_root_tool_abi.py -q` | ok: 7 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_collect_uses_verified_runtime_evidence -q` | ok: 3 passed. |
+| `python3 -m py_compile tools/remote.py harness/evaluators/scientific/autosci_runtime_evidence_gate.py tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py tests/plugins/autosci/test_root_tool_abi.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py tests/plugins/autosci/test_root_tool_abi.py -q` | ok: 7 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_collect_uses_verified_runtime_evidence -q` | ok: 3 passed. |
 
 ### Remaining After Remote Runtime Executor Repair
 
@@ -2147,8 +2147,8 @@ an approval-gated SMTP executor with runtime evidence.
 | Command | Result |
 |---|---|
 | `python3 -m json.tool harness/schemas/evidence/autosci_runtime_evidence.v1.schema.json` | ok |
-| `python3 -m py_compile tools/send_email.py harness/evaluators/scientific/autosci_runtime_evidence_gate.py harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/tests/test_root_tool_abi.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py harness/plugins/autosci/tests/test_root_tool_abi.py -q` | ok: 8 passed. |
+| `python3 -m py_compile tools/send_email.py harness/evaluators/scientific/autosci_runtime_evidence_gate.py tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py tests/plugins/autosci/test_root_tool_abi.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py tests/plugins/autosci/test_root_tool_abi.py -q` | ok: 8 passed. |
 
 ### Remaining After SMTP Executor Repair
 
@@ -2176,8 +2176,8 @@ has the same approval-gated runtime evidence behavior.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile tools/poster.py harness/plugins/autosci/tests/test_root_tool_abi.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_root_tool_abi.py harness/tests/evaluators/scientific/test_autosci_runtime_evidence_gate.py -q` | ok: 9 passed. |
+| `python3 -m py_compile tools/poster.py tests/plugins/autosci/test_root_tool_abi.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_root_tool_abi.py tests/harness/evaluators/scientific/test_autosci_runtime_evidence_gate.py -q` | ok: 9 passed. |
 
 ### Remaining After Root Poster Render Repair
 
@@ -2204,8 +2204,8 @@ Paper Copilot source evidence is visible outside the internal discovery backend.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile tools/fetch_paper_copilot.py harness/plugins/autosci/tests/test_source_cli_tools.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_source_cli_tools.py -q` | ok: 4 passed. |
+| `python3 -m py_compile tools/fetch_paper_copilot.py tests/plugins/autosci/test_source_cli_tools.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_source_cli_tools.py -q` | ok: 4 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` | ok |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_executor_repairs_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
 
@@ -2228,7 +2228,7 @@ repairs.
 | Item | Status | Evidence |
 |---|---|---|
 | AutoSci plugin tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` passed: 112 tests. |
-| Scientific evaluator tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` passed: 54 tests. |
+| Scientific evaluator tests | ok | `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` passed: 54 tests. |
 | Operator smoke gate | ok | `bound_count=28`, `completed_count=0`, `partial_count=17`, `gated_count=11`, `failed_count=0`; generated evidence passed with approval-gated warning. |
 | Feature parity gate | warn | `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`; generated inventory passed with non-full warning. |
 | Config/whitespace checks | ok | Route/operator/runtime schema JSON validation passed; `git diff --check` passed for changed AutoSci/tool/log files. |
@@ -2264,15 +2264,15 @@ stdin and returns normalized model evidence on stdout.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ask_and_check_read_workspace_wiki harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_check_uses_model_command_for_quality_review -q` | ok: 4 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_workflow_evolution_gate.py harness/tests/evaluators/scientific/test_lifecycle_gate.py -q` | ok: 8 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ask_check_and_init_diagnostics tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_ask_and_check_read_workspace_wiki tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_check_uses_model_command_for_quality_review -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_workflow_evolution_gate.py tests/harness/evaluators/scientific/test_lifecycle_gate.py -q` | ok: 8 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` and `feature_operator_bindings.v1.json` | ok |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 114 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_ask_check_model_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Ask/Check Model Evidence Repair
 
@@ -2304,15 +2304,15 @@ outcomes.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_eval_merges_experiment_code_and_review_llm_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_pilot_eval_uses_runtime_evidence harness/tests/evaluators/scientific/test_claim_verdict_gate.py -q` | ok: 6 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_eval_merges_experiment_code_and_review_llm_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_eval_write_updates_wiki_with_approval harness/tests/evaluators/scientific/test_claim_verdict_gate.py -q` | ok: 6 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_eval_merges_experiment_code_and_review_llm_evidence tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_pilot_eval_uses_runtime_evidence tests/harness/evaluators/scientific/test_claim_verdict_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_eval_merges_experiment_code_and_review_llm_evidence tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_eval_write_updates_wiki_with_approval tests/harness/evaluators/scientific/test_claim_verdict_gate.py -q` | ok: 6 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` and `feature_operator_bindings.v1.json` | ok |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 116 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_exp_eval_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Exp-Eval Review Evidence Repair
 
@@ -2341,14 +2341,14 @@ The design route can now attach completed Review LLM evidence directly to
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_design_attaches_review_llm_validation harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support harness/tests/evaluators/scientific/test_experiment_plan_gate.py -q` | ok: 4 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_design_attaches_review_llm_validation tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support tests/harness/evaluators/scientific/test_experiment_plan_gate.py -q` | ok: 4 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` and `feature_operator_bindings.v1.json` | ok |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 117 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_exp_design_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Exp-Design Review Evidence Repair
 
@@ -2374,14 +2374,14 @@ verdicts. The route still requires explicit approval before mutating wiki state.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_pilot_eval_uses_runtime_evidence harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_pilot_eval_write_updates_wiki_with_approval harness/tests/evaluators/scientific/test_claim_verdict_gate.py -q` | ok: 6 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_pilot_eval_uses_runtime_evidence tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_pilot_eval_write_updates_wiki_with_approval tests/harness/evaluators/scientific/test_claim_verdict_gate.py -q` | ok: 6 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` and `feature_operator_bindings.v1.json` | ok |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 118 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_pilot_writeback_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Pilot Eval Writeback Repair
 
@@ -2410,14 +2410,14 @@ threads the compiled PDF into report and publication-bundle artifacts.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_scientific_report.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_writes_latex_source harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff harness/tests/evaluators/scientific/test_report_gate.py harness/tests/evaluators/scientific/test_paper_gate.py -q` | ok: 8 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_scientific_report.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_writes_latex_source tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff tests/harness/evaluators/scientific/test_report_gate.py tests/harness/evaluators/scientific/test_paper_gate.py -q` | ok: 8 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` and `feature_operator_bindings.v1.json` | ok |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 119 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_paper_draft_compile_handoff_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/adapters/autosci_to_scientific_report.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/adapters/autosci_to_scientific_report.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Paper Draft Compile Handoff Repair
 
@@ -2446,14 +2446,14 @@ approved.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_plan_completes_with_citations_and_review_llm harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_plan_attaches_verified_compile_handoff harness/tests/evaluators/scientific/test_report_gate.py -q` | ok: 6 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_plan_completes_with_citations_and_review_llm tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_plan_attaches_verified_compile_handoff tests/harness/evaluators/scientific/test_report_gate.py -q` | ok: 6 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` and `feature_operator_bindings.v1.json` | ok |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 120 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_paper_plan_compile_audit_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/adapters/autosci_to_scientific_report.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_claim_verdict.py harness/plugins/autosci/adapters/autosci_to_experiment_plan.py harness/plugins/autosci/adapters/autosci_to_scientific_report.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Paper Plan Compile Audit Repair
 
@@ -2483,16 +2483,16 @@ candidates into the Solar AutoSci wiki state layer.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_write_auto_ingests_runtime_digest -q` | ok: 2 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_write_auto_ingests_runtime_digest -q` | ok: 2 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` and `feature_operator_bindings.v1.json` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest -q` | ok: 2 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_init_uses_verified_runtime_source_manifest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 4 passed. |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 122 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_source_fan_in_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Source Fan-In Writeback Repair
 
@@ -2521,14 +2521,14 @@ supplies a verified approval contract plus an approved `after_artifact`.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/evaluators/scientific/workflow_evolution_gate.py harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
+| `python3 -m py_compile harness/evaluators/scientific/workflow_evolution_gate.py harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
 | `python3 -m json.tool harness/schemas/evidence/workflow_evolution.v1.schema.json` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_workflow_evolution_gate.py harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_refine_applies_approved_after_artifact harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_workflow_evolution_gate.py tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_refine_applies_approved_after_artifact tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_remaining_gated_backend_actions -q` | ok: 4 passed. |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 123 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_refine_apply_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/evaluators/scientific/workflow_evolution_gate.py harness/schemas/evidence/workflow_evolution.v1.schema.json docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py harness/evaluators/scientific/workflow_evolution_gate.py harness/schemas/evidence/workflow_evolution.v1.schema.json docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Refine Apply Repair
 
@@ -2557,14 +2557,14 @@ source before diagnostics or approved TeX executor execution.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_paper_compile_fix_diagnostics harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_compile_fix_applies_approved_after_artifact harness/tests/evaluators/scientific/test_paper_gate.py -q` | ok: 4 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_paper_compile_fix_diagnostics tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_compile_fix_applies_approved_after_artifact tests/harness/evaluators/scientific/test_paper_gate.py -q` | ok: 4 passed. |
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` and `feature_operator_bindings.v1.json` | ok |
 | `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests -q` | ok: 124 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 54 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 54 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py -q` | ok: 6 passed. |
 | `.venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci_feature_parity_after_paper_compile_fix_20260625.json` | ok: `full_count=0`, `partial_count=17`, `gated_count=11`, `missing_route_count=0`. |
-| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/evaluators/scientific/workflow_evolution_gate.py harness/schemas/evidence/workflow_evolution.v1.schema.json docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `git diff --check -- harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/adapters/autosci_to_literature_discovery.py harness/plugins/autosci/config/feature_parity_routes.v1.json harness/plugins/autosci/config/feature_operator_bindings.v1.json tests/plugins/autosci/test_autosci_skill_shim.py harness/evaluators/scientific/workflow_evolution_gate.py harness/schemas/evidence/workflow_evolution.v1.schema.json docs/integrations/autosci/phase19-progress-log.md` | ok |
 
 ### Remaining After Paper Compile Fix Repair
 
@@ -2579,7 +2579,7 @@ Logged: 2026-06-25 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 This fixes single-token `$` command parsing so one-shot invocations such as
@@ -2588,8 +2588,8 @@ invalid skill name.
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_single_token_dollar_command_with_flags -q` | ok: 1 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_single_token_dollar_command_with_flags -q` | ok: 1 passed. |
 
 ### Remaining After Dollar Command Repair
 
@@ -2605,7 +2605,7 @@ Logged: 2026-06-25 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 ### Exp-Run Execution Fix
@@ -2626,10 +2626,10 @@ Added regression test:
 
 | Command | Result |
 |---|---|
-| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_executes_approved_native_command -q` | ok: 1 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki -q` | ok: 1 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 76 passed. |
+| `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_executes_approved_native_command -q` | ok: 1 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki -q` | ok: 1 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 76 passed. |
 
 ### Remaining After Exp-Run Execution Repair
 
@@ -2655,9 +2655,9 @@ Fix summary:
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_executes_approved_native_command -q` | ok: 1 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_collect_uses_verified_runtime_evidence -q` | ok: 2 passed. |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_executes_approved_native_command` | ok: 1 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_executes_approved_native_command -q` | ok: 1 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_collect_uses_verified_runtime_evidence -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_executes_approved_native_command` | ok: 1 passed. |
 
 ### Remaining After Exp-Run Artifact Return Repair
 
@@ -2683,7 +2683,7 @@ Planned file changes (pre-fix):
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_review_resolves_harness_prefixed_workspace_path -q` | ok: 1 passed. |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_review_resolves_harness_prefixed_workspace_path -q` | ok: 1 passed. |
 | `python3 harness/plugins/autosci/bin/autosci_skill_shim.py text "\$review --paper harness/artifacts/autosci/workspace/wiki/ideas/idea-001.md --difficulty hard --focus method --run-id harness-review-test-review-fixed"` | ok: resolved to `harness/artifacts/autosci/workspace/wiki/ideas/idea-001.md` with `status=completed`, `passed_count=1`, `schema_only_count=0`. |
 
 ## Phase 19 Route Truthfulness Sync For Steps 45-48
@@ -2732,7 +2732,7 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -2754,9 +2754,9 @@ Review LLM boundary object instead of only a permissive boolean completion flag.
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_plan_completes_with_citations_and_review_llm or paper_plan_rejects_weak_review_llm_boundary or paper_plan_attaches_verified_compile_handoff' -q` | ok: 3 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_plan or paper_draft or paper_compile or research_scheduler_executes_approved_publication_compile' -q` | ok: 13 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 101 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_plan_completes_with_citations_and_review_llm or paper_plan_rejects_weak_review_llm_boundary or paper_plan_attaches_verified_compile_handoff' -q` | ok: 3 passed |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_plan or paper_draft or paper_compile or research_scheduler_executes_approved_publication_compile' -q` | ok: 13 passed |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 101 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step49.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 49 files | ok before log write |
 
@@ -2767,8 +2767,8 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `harness/tools/run_scientific_lifecycle_smoke.py`
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -2793,8 +2793,8 @@ lifecycle runs.
 | Runner + shim targeted tests | ok: 2 passed |
 | Lifecycle smoke + runtime gate subset | ok: 25 passed |
 | `$research` scheduler shim subset | ok: 8 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 87 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 102 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 87 passed |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 102 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step50.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 50 files | ok before log write |
 
@@ -2805,7 +2805,7 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
 - `harness/plugins/autosci/adapters/autosci_to_literature_discovery.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -2830,8 +2830,8 @@ provider channels before source runtime evidence is treated as completed.
 | Source-boundary targeted tests | ok: 2 passed |
 | Literature backend/source CLI subset | ok: 6 passed |
 | Source-related shim subset | ok: 6 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 87 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 103 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 87 passed |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 103 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step51.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 51 files | ok before log write |
 
@@ -2841,7 +2841,7 @@ Logged: 2026-06-26 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -2868,7 +2868,7 @@ SSH/provider polling.
 | `$exp-status` approved remote-check boundary test | ok: 1 passed |
 | exp-status/run/collect remote subset | ok: 12 passed |
 | runtime binding audit | ok: 28 nodes, 2 workflows, 0 issues |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 103 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 103 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step52.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 52 files | ok before log write |
 
@@ -2879,7 +2879,7 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `tools/remote.py`
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -2906,7 +2906,7 @@ remote poll boundary without weakening allowlist or approval requirements.
 | local + live `$exp-status` targeted tests | ok: 2 passed |
 | exp-status/run/collect remote subset | ok: 13 passed |
 | runtime binding audit | ok: 28 nodes, 2 workflows, 0 issues |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 104 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 104 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step53.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 53 files | ok before log write |
 
@@ -2917,7 +2917,7 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `tools/remote.py`
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -2944,7 +2944,7 @@ boundary so local result-dir reads are not counted as live provider collection.
 | local + live pull-results targeted tests | ok: 2 passed |
 | exp-status/run/collect remote subset | ok: 15 passed |
 | runtime binding audit | ok: 28 nodes, 2 workflows, 0 issues |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step54.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 54 files | ok before log write |
 
@@ -2954,8 +2954,8 @@ Logged: 2026-06-26 EDT
 
 Planned file changes (pre-fix):
 - `harness/tools/run_scientific_lifecycle_smoke.py`
-- `harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -2979,9 +2979,9 @@ mistaken for production parity without durable node state and no-rerun proof.
 | `py_compile` runner/test | ok |
 | route config `json.tool` | ok |
 | human-gate resume targeted test | ok: 1 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 87 passed |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 87 passed |
 | `$research` scheduler shim subset | ok: 8 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step55.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 55 files | ok before log write |
 
@@ -2991,7 +2991,7 @@ Logged: 2026-06-26 EDT
 
 Planned file changes (pre-fix):
 - `harness/tools/run_scientific_lifecycle_smoke.py`
-- `harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py`
+- `tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3015,9 +3015,9 @@ lease ownership is visible and not confused with distributed production leases.
 | `py_compile` runner/test | ok |
 | route config `json.tool` | ok |
 | blocked lifecycle + resume targeted tests | ok: 2 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/tests/evaluators/scientific -q` | ok: 87 passed |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/harness/evaluators/scientific -q` | ok: 87 passed |
 | `$research` scheduler shim subset | ok: 8 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step56.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 56 files | ok before log write |
 
@@ -3027,7 +3027,7 @@ Logged: 2026-06-26 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3053,7 +3053,7 @@ not confused with submission/anonymity/page/font readiness.
 | route config `json.tool` | ok |
 | submission checklist boundary targeted test | ok: 1 passed |
 | paper-compile/paper-plan/paper-draft publication subset | ok: 10 passed |
-| `env PYTHONPATH=harness .venv/bin/python -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
+| `env PYTHONPATH=harness .venv/bin/python -m pytest tests/plugins/autosci/test_autosci_skill_shim.py -q` | ok: 105 passed with elevated local bind permission |
 | `env PYTHONPATH=harness .venv/bin/python harness/plugins/autosci/bin/autosci_parity_bridge.py inventory --out /tmp/autosci-parity-step57.json` | warn: 28 routed, 0 missing, 0 full, 17 partial, 11 gated |
 | `git diff --check` over Step 57 files | ok before log write |
 
@@ -3063,7 +3063,7 @@ Logged: 2026-06-26 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3100,7 +3100,7 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3137,7 +3137,7 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3175,7 +3175,7 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3213,7 +3213,7 @@ Logged: 2026-06-26 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3250,7 +3250,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3288,7 +3288,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3325,7 +3325,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3363,7 +3363,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3401,7 +3401,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3439,7 +3439,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3478,7 +3478,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3526,7 +3526,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3566,7 +3566,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3608,7 +3608,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3647,7 +3647,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3686,7 +3686,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3725,7 +3725,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3764,7 +3764,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3803,7 +3803,7 @@ Logged: 2026-06-28 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
@@ -3882,8 +3882,8 @@ Logged: 2026-06-28 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
 - `harness/evaluators/scientific/autosci_feature_parity_gate.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
-- `harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
+- `tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
 - `docs/integrations/autosci/phase19-progress-log.md`
@@ -3908,7 +3908,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/evaluators/scientific/autosci_skill_run_gate.py`
-- `harness/tests/evaluators/scientific/test_autosci_skill_run_gate.py`
+- `tests/harness/evaluators/scientific/test_autosci_skill_run_gate.py`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
 - `docs/integrations/autosci/phase19-progress-log.md`
@@ -4003,8 +4003,8 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
 - `harness/evaluators/scientific/autosci_feature_parity_gate.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
-- `harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
+- `tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
 - `docs/integrations/autosci/phase19-progress-log.md`
@@ -4033,8 +4033,8 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
 - `harness/evaluators/scientific/autosci_feature_parity_gate.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
-- `harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
+- `tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
 - `docs/integrations/autosci/phase19-progress-log.md`
@@ -4052,7 +4052,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/evaluators/scientific/autosci_feature_parity_gate.py`
-- `harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py`
+- `tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
 - `docs/integrations/autosci/phase19-progress-log.md`
@@ -4081,8 +4081,8 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
 - `harness/evaluators/scientific/autosci_feature_parity_gate.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
-- `harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
+- `tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
 - `docs/integrations/autosci/phase19-progress-log.md`
@@ -4110,7 +4110,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/native-lifecycle-continuation-log.md`
 - `docs/integrations/autosci/phase15-progress-log.md`
 - `docs/integrations/autosci/phase19-progress-log.md`
@@ -4162,7 +4162,7 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `harness/config/capability-capsules.registry.yaml`
 - `harness/capability-capsules/cap.research-artifact-review.yaml`
-- `harness/tests/config/test_autosci_research_capsule_registry.py`
+- `tests/harness/config/test_autosci_research_capsule_registry.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: register all AutoSci manifest research capsules, restore the missing
@@ -4179,7 +4179,7 @@ side effects, or claim live provider proof.
 | Manifest/registry drift | ok | AutoSci manifest 19 research capsules are all registered; missing registry/files/unregistered counts are zero. |
 | Missing capsule file | ok | Restored `cap.research-artifact-review.yaml` with artifact review evidence contract and no side-effect execution semantics. |
 | Registry loader | ok | `iter_registry_entries()` resolves 19 stable `cap.research-*` entries and `cap.research-artifact-review`. |
-| Regression tests | ok | `harness/tests/config/test_autosci_research_capsule_registry.py`: 2 passed; capability capsule group: 10 passed. |
+| Regression tests | ok | `tests/harness/config/test_autosci_research_capsule_registry.py`: 2 passed; capability capsule group: 10 passed. |
 | Parity inventory/gate | ok | Inventory gate passes after registry restore; inventory remains 0 full / 17 partial / 11 gated with 25 pending runtime proof slots. |
 | Full parity claim | warn | Registry ABI drift is fixed, but runtime proof/live provider/approved side-effect evidence remains pending. |
 
@@ -4190,7 +4190,7 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `harness/tools/run_scientific_node_smoke.py`
 - `harness/tools/run_scientific_workflow.py`
-- `harness/tests/evaluators/scientific/test_scientific_workflow_runner.py`
+- `tests/harness/evaluators/scientific/test_scientific_workflow_runner.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: add a config-driven scientific workflow runner that reuses the existing
@@ -4219,7 +4219,7 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: route explicit `$research --scheduler-run` through the generic
@@ -4248,7 +4248,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `tools/research_wiki.py`
-- `harness/plugins/autosci/tests/test_research_wiki_tool.py`
+- `tests/plugins/autosci/test_research_wiki_tool.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: add an explicit wiki state resolver command for slug/page status,
@@ -4299,7 +4299,7 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
 - `harness/evaluators/scientific/autosci_feature_parity_gate.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: require runtime proof manifests to carry auditable provenance,
@@ -4329,7 +4329,7 @@ Planned file changes (pre-fix):
 - `tools/fetch_s2.py`
 - `tools/fetch_deepxiv.py`
 - `tools/fetch_paper_copilot.py`
-- `harness/plugins/autosci/tests/test_source_cli_tools.py`
+- `tests/plugins/autosci/test_source_cli_tools.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: let completed provider fetch helpers persist source evidence and emit
@@ -4358,7 +4358,7 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `tools/review_model_runtime_proof.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
-- `harness/plugins/autosci/tests/test_review_model_runtime_proof.py`
+- `tests/plugins/autosci/test_review_model_runtime_proof.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: convert completed Review LLM/model evidence into
@@ -4386,7 +4386,7 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `tools/approval_runtime_proof.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
-- `harness/plugins/autosci/tests/test_approval_runtime_proof.py`
+- `tests/plugins/autosci/test_approval_runtime_proof.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: convert verified `autosci_approval_contract.v1` sidecars into
@@ -4413,7 +4413,7 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `tools/wiki_mutation_runtime_proof.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
-- `harness/plugins/autosci/tests/test_wiki_mutation_runtime_proof.py`
+- `tests/plugins/autosci/test_wiki_mutation_runtime_proof.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: convert completed wiki writeback sidecars into parity-ingestable
@@ -4439,7 +4439,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `tools/semantic_parity_runtime_proof.py`
-- `harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py`
+- `tests/plugins/autosci/test_semantic_parity_runtime_proof.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: convert completed semantic parity audit reports into
@@ -4468,8 +4468,8 @@ Planned file changes (pre-fix):
 - `tools/fetch_deepxiv.py`
 - `tools/fetch_paper_copilot.py`
 - `tools/approval_runtime_proof.py`
-- `harness/plugins/autosci/tests/test_source_cli_tools.py`
-- `harness/plugins/autosci/tests/test_approval_runtime_proof.py`
+- `tests/plugins/autosci/test_source_cli_tools.py`
+- `tests/plugins/autosci/test_approval_runtime_proof.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: ensure completed live provider fetches and verified approval contracts
@@ -4496,7 +4496,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: let parity inventory/route commands recursively attach
@@ -4523,7 +4523,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make supplied `semantic_equivalence_evidence` runtime proof satisfy the
@@ -4548,7 +4548,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: compute `runtime_proof_status=verified` when all runtime/source/
@@ -4573,7 +4573,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/evaluators/scientific/autosci_feature_parity_gate.py`
-- `harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py`
+- `tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: add a strict acceptance check for final full parity so the existing
@@ -4601,7 +4601,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `harness/plugins/autosci/config/feature_parity_routes.v1.json`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
@@ -4628,7 +4628,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: accept and record native-style `$poster --render` requests so the
@@ -4655,7 +4655,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: accept and record native-style `$visualize --serve` requests so web UI
@@ -4700,7 +4700,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make `$exp-status` attach a runtime proof only when the remote status
@@ -4727,7 +4727,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make `$research` attach route-level runtime proof manifests when its
@@ -4756,7 +4756,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make `$edit` and `$refine` attach runtime proof manifests only when an
@@ -4784,7 +4784,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make `$exp-run` and `$paper-compile` attach runtime proof manifests from
@@ -4832,7 +4832,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `tools/reset_wiki.py`
-- `harness/plugins/autosci/tests/test_root_tool_abi.py`
+- `tests/plugins/autosci/test_root_tool_abi.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: restore the original AutoSci `/reset` scope planner and reset
@@ -4859,7 +4859,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `tools/serve.py`
-- `harness/plugins/autosci/tests/test_root_tool_abi.py`
+- `tests/plugins/autosci/test_root_tool_abi.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: restore the original AutoSci/OmegaWiki local server API surface for
@@ -4885,7 +4885,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `tools/poster.py`
-- `harness/plugins/autosci/tests/test_root_tool_abi.py`
+- `tests/plugins/autosci/test_root_tool_abi.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: restore the original AutoSci/PaperX DAG-to-poster mechanical pipeline
@@ -4911,7 +4911,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `tools/send_email.py`
-- `harness/plugins/autosci/tests/test_root_tool_abi.py`
+- `tests/plugins/autosci/test_root_tool_abi.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: restore the original AutoSci daily-arxiv SMTP ABI for env-based
@@ -4956,7 +4956,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: allow parity inventory to promote `coverage_status` only when semantic
@@ -4982,7 +4982,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: let `/research` reach strict full-parity proof level E4 from verified
@@ -5025,7 +5025,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: fix `--runtime-proof-dir harness/...` resolution so repo-relative
@@ -5050,7 +5050,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: let parity inventory consume strict route-level
@@ -5080,7 +5080,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make `$ideate` emit explicit native five-phase pipeline evidence and
@@ -5109,7 +5109,7 @@ Logged: 2026-06-30 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/backends/idea_source.py`
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: extend source-grounded deterministic `/ideate` candidates to cover
@@ -5138,7 +5138,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make `$ideate --skip-validation` skip the `evaluate_ideas` action, as
@@ -5164,7 +5164,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/backends/idea_source.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make native `$ideate --max-ideas N` affect candidate selection by
@@ -5191,7 +5191,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: require completed Review LLM evidence, not merely a
@@ -5217,7 +5217,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: make native `$exp-run --full` route through deploy plus monitor/collect
@@ -5264,7 +5264,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: expose `$ask` workspace wiki retrieval as source-channel runtime proof
@@ -5292,7 +5292,7 @@ Logged: 2026-06-30 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/backends/idea_source.py`
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: expose source-grounded ideate candidates as `provider_source_evidence`
@@ -5319,7 +5319,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: expose `$survey` citation-map source evidence as
@@ -5347,7 +5347,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: reuse the strict citation-map source proof path for `$paper-plan` and
@@ -5376,7 +5376,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: expose the concrete artifact reviewed by `$review` as
@@ -5402,7 +5402,7 @@ Logged: 2026-06-30 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: expose `$ingest` paper source preparation and parse provenance as
@@ -5448,7 +5448,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$novelty` has completed external novelty provider evidence and
@@ -5476,7 +5476,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$novelty --write` actually applies the wiki novelty-score
@@ -5503,7 +5503,7 @@ and do not promote semantic parity or coverage status from writeback alone.
 Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: verify that `$novelty --online` marks external provider runtime proof
@@ -5529,7 +5529,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$discover` produces a completed non-fixture source-provider
@@ -5557,7 +5557,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$init` or `$daily-arxiv` has verified approved source runtime
@@ -5585,7 +5585,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$init` or `$daily-arxiv` has a verified approval contract,
@@ -5612,7 +5612,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when source fan-in writeback completes for `$init --write` or
@@ -5641,7 +5641,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$daily-arxiv` reaches its final provider-delivery boundary
@@ -5670,7 +5670,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$daily-arxiv` receives completed Review LLM digest-selection
@@ -5698,7 +5698,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_parity_bridge.py`
-- `harness/plugins/autosci/tests/test_phase19_parity_bridge.py`
+- `tests/plugins/autosci/test_phase19_parity_bridge.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: promote a route to `semantic_parity=full` only when supplied runtime
@@ -5755,7 +5755,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: accept and preserve native `/daily-arxiv` option inputs
@@ -5784,7 +5784,7 @@ Logged: 2026-06-29 EDT
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_skill_shim.py`
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: route native `/daily-arxiv setup|status|disable` subcommands through
@@ -5841,7 +5841,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$review` obtains completed Review LLM evidence through supplied
@@ -5868,7 +5868,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$review` completes through a live OpenAI-compatible provider,
@@ -6033,7 +6033,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `tools/lint.py`
-- `harness/plugins/autosci/tests/test_root_tool_abi.py`
+- `tests/plugins/autosci/test_root_tool_abi.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: replace the lightweight Solar wiki lint helper with the corrected
@@ -6137,7 +6137,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$ask` or `$check` obtains completed `autosci_model_response.v1`
@@ -6165,7 +6165,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$ideate` obtains completed `autosci_model_response.v1`
@@ -6192,7 +6192,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$exp-design` receives completed Review LLM design validation
@@ -6219,7 +6219,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$paper-plan` receives completed Review LLM boundary evidence,
@@ -6246,7 +6246,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$paper-draft` receives completed Review LLM boundary evidence,
@@ -6273,7 +6273,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$rebuttal` receives completed Review LLM reviewer-comment
@@ -6300,7 +6300,7 @@ Logged: 2026-06-29 EDT
 
 Planned file changes (pre-fix):
 - `harness/plugins/autosci/bin/autosci_bridge.py`
-- `harness/plugins/autosci/tests/test_autosci_skill_shim.py`
+- `tests/plugins/autosci/test_autosci_skill_shim.py`
 - `docs/integrations/autosci/phase19-progress-log.md`
 
 Intent: when `$exp-eval` receives completed Review LLM evidence for claim
@@ -6350,7 +6350,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Attach verified approval and side-effect runtime proof manifests to approved `$prefill` wiki writes without emitting undeclared provider-source or wiki-mutation categories. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Extend the approved `$prefill` regression test with allowlist/runtime/before/after artifacts and proof manifest assertions. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Extend the approved `$prefill` regression test with allowlist/runtime/before/after artifacts and proof manifest assertions. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record implementation, verification, and refreshed inventory result for the `$prefill` parity blocker. |
 
 ### Prefill Runtime Proof Fix Result
@@ -6371,7 +6371,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Convert approved `$visualize --serve` health-check execution into approval and side-effect runtime proof manifests without changing unapproved serve behavior. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add approved `$visualize --serve` regression coverage with allowlist/runtime/before/after artifacts and proof category assertions. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add approved `$visualize --serve` regression coverage with allowlist/runtime/before/after artifacts and proof category assertions. |
 | `harness/artifacts/autosci/runs/codex-visualize-proof-check-20260630/` | pending | Persist real CLI smoke output for inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-visualize-proof.json` | pending | Refresh parity inventory after the visualize proof. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record implementation, verification, inventory status, and remaining blockers. |
@@ -6395,7 +6395,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Attach approval and side-effect runtime proof manifests when approved `$poster --render` execution verifies browser render, overflow probe, and PNG export. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Extend the approved poster executor regression test with proof manifest assertions and category boundary checks. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Extend the approved poster executor regression test with proof manifest assertions and category boundary checks. |
 | `harness/artifacts/autosci/runs/codex-poster-proof-check-20260630/` | pending | Persist real CLI smoke output with an approved fake renderer for inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-poster-proof.json` | pending | Refresh parity inventory after the poster proof. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record implementation, verification, inventory status, and remaining blockers. |
@@ -6418,7 +6418,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Attach approval and side-effect runtime proof manifests for `$setup` and `$reset` only from explicit approved external runtime evidence; do not execute local config writes or destructive reset. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add approved external-runtime regression coverage for `$setup` and `$reset` with proof category assertions. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add approved external-runtime regression coverage for `$setup` and `$reset` with proof category assertions. |
 | `harness/artifacts/autosci/runs/codex-setup-proof-check-20260630/` | pending | Persist real CLI smoke output for `$setup` proof inventory scanning. |
 | `harness/artifacts/autosci/runs/codex-reset-proof-check-20260630/` | pending | Persist real CLI smoke output for `$reset` proof inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-setup-reset-proofs.json` | pending | Refresh parity inventory after setup/reset proofs. |
@@ -6443,7 +6443,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Attach runtime/approval/side-effect/wiki proof manifests for approved `$exp-pilot-run`, and runtime/approval/wiki proof manifests for approved `$exp-pilot-eval` writeback. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Extend pilot run/eval tests with approved proof assertions and wiki mutation category checks. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Extend pilot run/eval tests with approved proof assertions and wiki mutation category checks. |
 | `harness/artifacts/autosci/runs/codex-pilot-run-proof-check-20260630/` | pending | Persist real CLI smoke output for `$exp-pilot-run` proof inventory scanning. |
 | `harness/artifacts/autosci/runs/codex-pilot-eval-proof-check-20260630/` | pending | Persist real CLI smoke output for `$exp-pilot-eval` proof inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-pilot-proofs.json` | pending | Refresh parity inventory after pilot proofs. |
@@ -6467,7 +6467,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Add `external_runtime_evidence` to completed model/Review LLM proof manifests where the route already has explicit model/review evidence; do not change local fallback behavior. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Update model/review proof assertions and add coverage where needed for ask/review/rebuttal category boundaries. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Update model/review proof assertions and add coverage where needed for ask/review/rebuttal category boundaries. |
 | `harness/artifacts/autosci/runs/` | pending | Regenerate affected route smoke artifacts so inventory scans updated proof manifests. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-model-external-proofs.json` | pending | Refresh inventory after model/review external runtime proof categories. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining blockers. |
@@ -6497,7 +6497,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Attach approval and wiki-mutation runtime proof manifests after completed approved `$exp-eval --write` claim verdict writeback. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Extend `$exp-eval --write` regression coverage with approval/wiki proof category assertions. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Extend `$exp-eval --write` regression coverage with approval/wiki proof category assertions. |
 | `harness/artifacts/autosci/runs/codex-exp-eval-writeback-proof-20260630/` | pending | Persist real CLI smoke output for inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-exp-eval-writeback-proof.json` | pending | Refresh inventory after exp-eval writeback proof. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining blockers. |
@@ -6521,7 +6521,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Emit an ingest wiki-registration proof manifest only when final source registration boundary confirms paper page, log, graph edge, index, and context rebuild are all present. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Extend ingest final-registration regression coverage with wiki mutation proof assertions. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Extend ingest final-registration regression coverage with wiki mutation proof assertions. |
 | `harness/artifacts/autosci/runs/codex-ingest-wiki-proof-20260630/` | pending | Persist real CLI smoke output with a registered wiki source for inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-ingest-wiki-proof.json` | pending | Refresh inventory after ingest wiki proof. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining blockers. |
@@ -6544,7 +6544,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Add `external_runtime_evidence` to completed publication citation/source proof manifests for paper-plan, paper-draft, and survey. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Update paper-plan, paper-draft, and survey source proof category assertions. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Update paper-plan, paper-draft, and survey source proof category assertions. |
 | `harness/artifacts/autosci/runs/` | pending | Regenerate affected publication smoke artifacts for inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-publication-external-proof.json` | pending | Refresh inventory after publication source proof category fix. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining blockers. |
@@ -6567,7 +6567,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | After `$paper-draft` workspace projection, emit a wiki mutation proof manifest that references actual updated wiki output/index paths. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add paper-draft projection proof assertion at the skill-run level. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add paper-draft projection proof assertion at the skill-run level. |
 | `harness/artifacts/autosci/runs/codex-paper-draft-wiki-proof-20260630/` | pending | Persist real CLI smoke output for inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-paper-draft-wiki-proof.json` | pending | Refresh inventory after paper-draft wiki projection proof. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining blockers. |
@@ -6591,7 +6591,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `tools/semantic_parity_audit_matrix.py` | pending | Add a route-level semantic audit matrix generator that references native AutoSci skill docs and Solar wrapper/config evidence without auto-promoting routes to full parity. |
-| `harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | pending | Cover partial audit generation, full-audit guard behavior, and evidence-ref validity. |
+| `tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | pending | Cover partial audit generation, full-audit guard behavior, and evidence-ref validity. |
 | `harness/artifacts/autosci/phase19/semantic-audits-current/` | pending | Generate the current 28-route semantic audit snapshot for inventory ingestion. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-semantic-audit-matrix.json` | pending | Refresh inventory with generated semantic audits to verify current semantic state remains honest. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining semantic blockers. |
@@ -6603,7 +6603,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/evaluators/scientific/autosci_feature_parity_gate.py` | pending | Permit blocked `semantic_audit` proof sources only when they are limited to `semantic_equivalence_evidence`, so partial semantic audits can be attached without failing the ordinary honesty gate. |
-| `harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | pending | Add regression coverage that partial semantic audit proof sources pass ordinary gate while non-semantic blocked runtime proof sources still fail. |
+| `tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | pending | Add regression coverage that partial semantic audit proof sources pass ordinary gate while non-semantic blocked runtime proof sources still fail. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining semantic blockers. |
 
 ### Semantic Audit Matrix Tooling Fix Result
@@ -6635,7 +6635,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Replace `$check` simplified local structure checks with evidence-backed execution of `tools/lint.py --wiki-dir <wiki> --json`, while preserving model evidence final-quality boundary. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Update `$check` model-command regression fixture to satisfy native lint semantics and assert lint report artifacts/feed-through. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Update `$check` model-command regression fixture to satisfy native lint semantics and assert lint report artifacts/feed-through. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification, semantic parity impact, and remaining blockers. |
 
 ### Check Semantic Full Assessment Fix Plan
@@ -6656,7 +6656,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_parity_bridge.py` | pending | Declare `external_runtime_evidence` as supplied when a non-runtime-required route provides that category through model/review proof, without changing runtime policy from `not_required`. |
-| `harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | pending | Add regression coverage for a pure/model route that supplies optional external model proof categories. |
+| `tests/plugins/autosci/test_phase19_parity_bridge.py` | pending | Add regression coverage for a pure/model route that supplies optional external model proof categories. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and `check` route strict-gate result. |
 
 ### Check Native Lint Semantics Fix Result
@@ -6695,7 +6695,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Add `external_runtime_evidence` to completed ingest source-preparation proof manifests while keeping dry-run execution policy unchanged. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Update ingest source proof category assertions for PDF and registered-source smokes. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Update ingest source proof category assertions for PDF and registered-source smokes. |
 | `harness/artifacts/autosci/runs/codex-ingest-wiki-proof-20260630/` | pending | Regenerate real ingest smoke proof manifests for inventory scanning. |
 | `harness/artifacts/autosci/phase19/current-parity-inventory-after-ingest-external-source-proof.json` | pending | Refresh inventory after ingest source proof category fix. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining semantic blockers. |
@@ -6720,7 +6720,7 @@ Logged: 2026-06-30 EDT
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Accept native `$visualize` flags `--obsidian`, `--canvas`, `--focus`, `--depth`, `--types`, and `--edge-types` without breaking review focus pass-through. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Pass visualize mode/filter options into `tools/visualize.py`, archive recommendations, and keep serve execution approval-gated. |
 | `tools/visualize.py` | pending | Add canvas node-type and edge-type filtering used by original `$visualize` docs. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add/adjust visualize CLI and artifact assertions for focused/filtered canvas generation. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add/adjust visualize CLI and artifact assertions for focused/filtered canvas generation. |
 | `harness/artifacts/autosci/runs/codex-visualize-proof-check-20260630/` | pending | Regenerate real visualize proof smoke for inventory scanning. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and whether semantic full assessment is now defensible. |
 
@@ -6765,7 +6765,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Accept and pass through native `$reset --scope wiki|raw|log|checkpoints|all`. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Replace generic reset proposal with bounded `tools/reset_wiki.py` dry-run/runtime execution evidence while keeping approval gating. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add reset dry-run and approved isolated execution assertions. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add reset dry-run and approved isolated execution assertions. |
 | `harness/artifacts/autosci/runs/codex-reset-native-proof-20260630/` | pending | Regenerate real reset smoke evidence against an isolated wiki fixture, not the production workspace. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining reset semantic blockers after the fix. |
 
@@ -6807,7 +6807,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Replace generic `$setup` proposal with read-only setup guide/env-template/env/Python/venv status evidence while preserving approval-gated secret writes. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add assertions that setup status evidence reports set/unset booleans and never records secret values. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add assertions that setup status evidence reports set/unset booleans and never records secret values. |
 | `harness/artifacts/autosci/runs/codex-setup-native-status-20260630/` | pending | Regenerate a real setup status smoke for semantic audit input. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and whether setup can be promoted to semantic full. |
 
@@ -6849,7 +6849,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Move approved prefill writes from `wiki/topics/foundation-*.md` to native `wiki/foundations/{slug}.md`, preserve idempotence, and emit wiki mutation proof. |
 | `harness/plugins/autosci/bin/autosci_workspace_projector.py` | pending | Include `wiki/foundations/` in human workspace scaffold/index so prefill pages are not hidden by projection. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Update prefill approved mutation assertions for `wiki/foundations`, terminal frontmatter, and wiki mutation proof. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Update prefill approved mutation assertions for `wiki/foundations`, terminal frontmatter, and wiki mutation proof. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Align prefill route declaration with approved wiki mutation capability if needed by parity gate. |
 | `harness/artifacts/autosci/runs/codex-prefill-proof-check-20260630/` | pending | Regenerate prefill proof smoke after the foundation path correction. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining prefill semantic blockers after the fix. |
@@ -6873,7 +6873,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Accept native `$ask --crystallize` and map it to write-back intent without changing default read-only ask. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Add approval-gated ask crystallize writeback to `wiki/outputs/{query-slug}.md`, graph edge, wiki log, and rebuilt views. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add ask crystallize parser/writeback assertions and preserve default no-op behavior. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add ask crystallize parser/writeback assertions and preserve default no-op behavior. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Align ask route proof declaration with approved wiki mutation evidence if gates require it. |
 | `harness/artifacts/autosci/runs/codex-ask-crystallize-proof-20260630/` | pending | Regenerate a real ask crystallize smoke after implementation. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining ask semantic blockers after the fix. |
@@ -6885,7 +6885,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Let `$check` local edge validation accept both legacy `source/target/relation` and current lint `from/to/type` edge fields. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Keep ask/check fixture on current lint edge schema and verify local structure readiness remains true. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Keep ask/check fixture on current lint edge schema and verify local structure readiness remains true. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record regression test result after the compatibility fix. |
 
 ### Optional Proof Requirement Declaration Fix Plan
@@ -6895,7 +6895,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_parity_bridge.py` | pending | Treat supplied optional approval/side-effect proof categories as declared requirements without changing default route side-effect policy. |
-| `harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | pending | Add/adjust coverage if needed so optional supplied proof categories pass the feature parity gate. |
+| `tests/plugins/autosci/test_phase19_parity_bridge.py` | pending | Add/adjust coverage if needed so optional supplied proof categories pass the feature parity gate. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record inventory/gate verification after the declaration fix. |
 
 ### Ask Crystallize Writeback Fix Result
@@ -6935,7 +6935,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Pass native `$ask --format table|timeline|bullets` into ask inputs in addition to native options. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Render ask answers/crystallized outputs in requested table, timeline, or bullets format using only retrieved/model evidence. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add ask format mode regression assertions for answer markdown and retrieval sidecar. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add ask format mode regression assertions for answer markdown and retrieval sidecar. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Mention native ask output format modes in route capability/limitation text. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record tests and remaining ask semantic blockers after format support. |
 
@@ -6959,7 +6959,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Preserve positional ask query while treating `--target` as crystallize destination when write/crystallize is requested. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Resolve crystallize targets for `concept:`, `idea:`, `method:`, `output:`, and explicit wiki markdown paths under the configured wiki root. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add regression for approved ask crystallize into a concept target without query overwrite. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add regression for approved ask crystallize into a concept target without query overwrite. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Update ask route capability text for typed crystallize target selection. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining ask blockers after target selection. |
 
@@ -6981,7 +6981,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Add explicit `$ask` context evidence for `context_brief.md`, `open_questions.md`, `index.md`, and graph edges; surface gap annotations and crystallize recommendation without inventing facts. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add ask regression assertions for context metadata, gap annotations, and crystallize recommendation in answer/retrieval evidence. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add ask regression assertions for context metadata, gap annotations, and crystallize recommendation in answer/retrieval evidence. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Update ask route limitation/capability text to include native context/gap/recommendation evidence. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and whether ask is ready for semantic full audit after context/gap evidence is added. |
 
@@ -7027,7 +7027,7 @@ Logged: 2026-06-30 EDT
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Add native `$prefill --add` parsing and preserve domain/target inputs in the envelope. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Emit prefill plan evidence for domain/add mode, existing-foundation dedup state, terminal foundation template, and approved writeback metadata. |
 | `.agents/skills/prefill/foundations-catalog.yaml` | pending | Add a small advisory foundation catalog so catalog-mode prefill can read a user-extensible seed list instead of hard-coded fixtures. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add/extend prefill regression coverage for `--add`, domain metadata, dedup, and terminal page constraints. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add/extend prefill regression coverage for `--add`, domain metadata, dedup, and terminal page constraints. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Update prefill required capabilities/limitations to reflect native add/catalog/domain evidence. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining prefill semantic blockers after the fix. |
 
@@ -7049,7 +7049,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Add native-compatible `--source-evidence` input for prefill background evidence without pretending live Wikipedia fetch exists. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Load supplied Wikipedia/source evidence, record source status in `prefill_plan.json`, and render source-backed definition/sections/source_url when available; keep fallback explicit otherwise. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add prefill source evidence regression covering source_url and non-LLM source-backed page content. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add prefill source evidence regression covering source_url and non-LLM source-backed page content. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Update prefill limitation text to distinguish supplied source evidence from live fetch gap. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining prefill blockers. |
 
@@ -7072,7 +7072,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `tools/fetch_wikipedia.py` | pending | Add native-compatible `summary`, `sections`, `section`, and `wikitext` commands with explicit network failure/page-missing statuses. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | When `$prefill --online` has no supplied source evidence, call the fetch tool and record fetch attempts/success/failure in `prefill_plan.json`; do not mark failed fetches as source-backed. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add regression for prefill online fetch failure/fallback boundary without requiring network. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add regression for prefill online fetch failure/fallback boundary without requiring network. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Add fetch tool to prefill route primary tools and adjust limitation text. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and whether prefill can move to semantic audit after live tool boundary exists. |
 
@@ -7120,7 +7120,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Add native-compatible delete/remove intent flag for `$edit` without changing existing wiki edit defaults. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Add approval-gated raw source create/delete handling for `raw/...` targets, preserving existing raw-file read-only protection. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add regressions for raw add, raw existing-file block, and raw delete approval path. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add regressions for raw add, raw existing-file block, and raw delete approval path. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Update `$edit` required capabilities/limitations to include raw add/delete proof boundaries. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and whether `$edit` is ready for semantic full assessment. |
 
@@ -7166,7 +7166,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Pass native refine `--difficulty`, `--focus`, and Review LLM evidence/command controls into the refine envelope. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Emit a refine loop report with score trajectory, termination reason, fixed/unresolved issue buckets, and explicit Review LLM evidence status. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add regression for refine loop report and review parameter propagation. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add regression for refine loop report and review parameter propagation. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Update `$refine` required capabilities/limitations to reflect loop evidence boundary and remaining execution gap. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining refine blockers. |
 
@@ -7177,7 +7177,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Emit a `review_model_runtime_proof_manifest_json` from completed `$refine --review-llm-evidence` records so route requirements can verify Review LLM evidence without changing gate rules. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Extend the approved refine regression to assert the Review LLM runtime proof artifact and categories. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Extend the approved refine regression to assert the Review LLM runtime proof artifact and categories. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record whether `$refine` runtime proof moves from `supplied` to `verified` and list remaining semantic blockers. |
 
 ### Refine Review LLM Runtime Proof Result
@@ -7200,7 +7200,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Pass `$refine` Review LLM provider/model/endpoint controls through the native shim. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Reuse the existing `/review` backend to run one post-apply Review LLM command/provider quality-gate round when `$refine` has no sufficient supplied review result. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add regression for `$refine --review-llm-command` producing an automatic review round, score trajectory, and runtime proof. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add regression for `$refine --review-llm-command` producing an automatic review round, score trajectory, and runtime proof. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Update `$refine` limitation text after the automatic review loop boundary is proven. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and whether `$refine` is ready for semantic full assessment. |
 
@@ -7279,7 +7279,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Add/forward native `$rebuttal` reviewer-thread, paper-slug, stress-test, and submission audit controls. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Parse reviewer-thread evidence/direct text into RvX-CY concerns, map concerns to wiki evidence, emit formal/rich rebuttal artifacts, stress-test boundary, and submission audit boundary. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add regression for reviewer-thread ingestion, wiki evidence mapping, formal output, stress-test boundary, and submission audit evidence. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add regression for reviewer-thread ingestion, wiki evidence mapping, formal output, stress-test boundary, and submission audit evidence. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Update `$rebuttal` route truthfulness only after runtime proof shows reviewer-thread/submission audit coverage. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining `$rebuttal` blockers after the fix. |
 
@@ -7351,7 +7351,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Forward poster paper_dir and format/header controls needed by the native content path without changing unrelated routes. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Replace scaffold-only poster content with paper_dir -> `wiki2dag.py build` -> outline -> `poster.py build/inject-title/inject-figures/validate`, keeping render/export approval-gated. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add regression for `$poster` building DAG/outline/HTML from real LaTeX paper source before approved render. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add regression for `$poster` building DAG/outline/HTML from real LaTeX paper source before approved render. |
 | `harness/artifacts/autosci/phase19/poster-content-proof-inputs/` | pending | Add bounded paper source fixture for runtime proof. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record proof/gate result before semantic assessment. |
 
@@ -7374,7 +7374,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Forward `$poster --review/--require-review-llm` and Review LLM evidence/command/provider options into `build_poster` inputs. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Attach Review LLM critique/refine evidence to poster generation, emit a poster critique boundary, remove the extractive-only limitation when review evidence completes, and include runtime proof artifacts. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Add regression for `$poster` with paper source plus completed Review LLM critique evidence. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Add regression for `$poster` with paper source plus completed Review LLM critique evidence. |
 | `harness/artifacts/autosci/phase19/poster-content-proof-inputs/` | pending | Add bounded poster Review LLM critique fixture for the proof run. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining semantic parity status after the fix. |
 
@@ -7409,7 +7409,7 @@ Logged: 2026-06-30 EDT
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Add/forward native `$survey --max-papers` and keep existing `--format` behavior. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Cap citations, generate source-bound thematic related-work sections, write BibTeX coverage sidecar for LaTeX, archive survey output to wiki/outputs, append derived_from edges/log, and emit wiki mutation proof. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | pending | Declare survey archive/log/edge and BibTeX coverage capabilities so proof requirements match the native skill. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Extend survey regression to cover archive writeback, wiki mutation proof, max-papers cap, and BibTeX sidecar. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Extend survey regression to cover archive writeback, wiki mutation proof, max-papers cap, and BibTeX sidecar. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification and remaining semantic parity status after the fix. |
 
 ### Survey Native Archive And Citation Fix Result
@@ -7447,7 +7447,7 @@ Logged: 2026-06-30 EDT
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | pending | Forward `--wiki-root` for `$paper-plan` so native idea graph inputs are available to `plan_report`. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Read target idea pages, linked experiments, and referenced method/concept/topic/paper pages into a `paper_plan_idea_graph_map.json` artifact, add an evidence-map section, and require idea-graph readiness in final acceptance. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Update paper-plan final acceptance regression to include a validated idea graph with succeeded experiment evidence. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Update paper-plan final acceptance regression to include a validated idea graph with succeeded experiment evidence. |
 | `harness/artifacts/autosci/phase19/paper-plan-proof-inputs/wiki/` | pending | Add bounded wiki idea graph fixture for the final proof run. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification before semantic audit. |
 
@@ -7484,7 +7484,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Generate `paper/references.bib` and `paper_draft_bibtex_coverage.json` from the source-backed citation map, using `[UNCONFIRMED]` placeholders when verified BibTeX is unavailable. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Extend paper-draft final manuscript regression to assert references.bib and BibTeX coverage artifacts. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Extend paper-draft final manuscript regression to assert references.bib and BibTeX coverage artifacts. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification before semantic assessment. |
 
 ### Paper Draft Semantic Full Assessment Result
@@ -7506,7 +7506,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Require compile runtime semantic verification to prove the emitted PDF is structurally readable, not merely present on disk. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Replace fake one-line PDF executor tests with minimal valid PDF bytes and add a rejection regression for invalid PDF artifacts. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Replace fake one-line PDF executor tests with minimal valid PDF bytes and add a rejection regression for invalid PDF artifacts. |
 | `harness/artifacts/autosci/phase19/paper-compile-proof-inputs/` | pending | Add bounded submission profile, PDF inspection, and submission audit evidence for a complete native paper-compile proof run. |
 | `harness/artifacts/autosci/phase19/semantic-audits-paper-compile-full/` | pending | Generate full semantic audit/proof only after compile, page/font/anonymity, and checklist evidence pass. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record verification, strict route gate result, and remaining global blockers. |
@@ -7544,7 +7544,7 @@ Logged: 2026-06-30 EDT
 | File | Status | Planned Scope |
 |---|---|---|
 | `harness/plugins/autosci/bin/autosci_bridge.py` | pending | Stop treating direct wiki fan-in as native `/daily-arxiv auto-ingest`; emit `/ingest` handoff evidence and require actual delivery/ingest proof before final delivery readiness. |
-| `harness/plugins/autosci/tests/test_autosci_skill_shim.py` | pending | Update daily-arxiv write regression so provider/Review LLM proof stays valid but final readiness is not claimed without `/ingest` completion. |
+| `tests/plugins/autosci/test_autosci_skill_shim.py` | pending | Update daily-arxiv write regression so provider/Review LLM proof stays valid but final readiness is not claimed without `/ingest` completion. |
 | `docs/integrations/autosci/phase19-progress-log.md` | pending | Record that daily-arxiv is route-truthful but remains semantic partial until native `/ingest` handoff execution is complete. |
 
 ### Daily ArXiv Route Truthfulness And Auto-Ingest Fix Result
@@ -7570,7 +7570,7 @@ Logged: 2026-06-30 EDT
 | `harness/bin/python3` wrapper hazard | warn | The wrapper resets `HARNESS_DIR` to the wrapper's own harness directory. Product entry must preserve the caller-selected runtime harness through `SOLAR_AUTOSCI_OUTPUT_HARNESS`; otherwise isolated runs leak back into the repo harness. |
 | Human lifecycle projection | ok | `$research --scheduler-run` now projects `wiki/outputs/lifecycle_summary.md` from `scientific_lifecycle.v1`, including node results, gate status, blocked-node fields, and evidence refs. |
 | Route truthfulness cleanup | ok | `ask`, `paper-draft`, `paper-plan`, and `survey` were corrected to avoid overclaiming route coverage without the corresponding runtime/semantic proof state in this branch. |
-| Priority contract tests | ok | Added `harness/tests/test_autosci_priority_a_contracts.py` and `harness/tests/test_autosci_priority_b_demo_contracts.py` for product entry roots, route ABI, registries, scientific root, and human lifecycle workspace projection. |
+| Priority contract tests | ok | Added `tests/harness/test_autosci_priority_a_contracts.py` and `tests/harness/test_autosci_priority_b_demo_contracts.py` for product entry roots, route ABI, registries, scientific root, and human lifecycle workspace projection. |
 
 ### Issues Encountered And Guardrails
 
@@ -7586,9 +7586,9 @@ Logged: 2026-06-30 EDT
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_a_contracts.py -q` | ok: 4 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py harness/tests/test_autosci_priority_a_contracts.py harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_scheduler_run_attaches_blocked_summary -q` | ok: 6 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_phase19_operator_smoke.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py harness/tests/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 36 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_a_contracts.py -q` | ok: 4 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py tests/harness/test_autosci_priority_a_contracts.py tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_research_scheduler_run_attaches_blocked_summary -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_phase19_parity_bridge.py tests/plugins/autosci/test_phase19_operator_smoke.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py tests/harness/evaluators/scientific/test_autosci_operator_smoke_gate.py -q` | ok: 36 passed. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests -q` | warn: 222 passed and 3 local socket-bind tests failed under sandbox. |
 | `env PYTHONPATH=harness harness/bin/python3 -m pytest <three local socket tests> -q` with approved unsandboxed execution | ok: 3 passed. |
 
@@ -7601,7 +7601,7 @@ Logged: 2026-06-30 EDT
 | Review diagnostics workspace output | ok | `$review` now projects `wiki/outputs/review.md` from `artifact_review.v1`, including target, focus, difficulty, review mode, Review LLM status, final acceptance boundary, findings, blocking reasons, and limitations. |
 | Ideate candidate/evaluation workspace output | ok | `$ideate` now projects `wiki/outputs/ideas.md` from `idea_candidate.v1` plus `idea_evaluation.v1` when present, including candidate/evaluation status, idea rows, selected details, novelty/review boundary status, blocking reasons, and limitations. |
 | Truthfulness boundary | ok | The new pages render local surrogate, missing external novelty, and missing Review LLM states as incomplete/blocked evidence instead of promoting them to provider-backed completion. |
-| Priority B contract tests | ok | `harness/tests/test_autosci_priority_b_demo_contracts.py` now verifies product entry projection for `$review` and `$ideate --from-wiki`, plus the existing `$research --scheduler-run` lifecycle summary. |
+| Priority B contract tests | ok | `tests/harness/test_autosci_priority_b_demo_contracts.py` now verifies product entry projection for `$review` and `$ideate --from-wiki`, plus the existing `$research --scheduler-run` lifecycle summary. |
 
 ### Issues Encountered And Guardrails
 
@@ -7616,9 +7616,9 @@ Logged: 2026-06-30 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py harness/tests/test_autosci_priority_b_demo_contracts.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py -q` | ok: 3 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_review_as_artifact_review harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ideate_from_wiki_and_discovery_sources -q` | ok: 2 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py tests/harness/test_autosci_priority_b_demo_contracts.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py -q` | ok: 3 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_review_as_artifact_review tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_ideate_from_wiki_and_discovery_sources -q` | ok: 2 passed. |
 
 ### Pause Checkpoint
 
@@ -7679,8 +7679,8 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/tests/test_autosci_priority_b_demo_contracts.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py -q` | ok: 4 passed. |
+| `harness/bin/python3 -m py_compile tests/harness/test_autosci_priority_b_demo_contracts.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py -q` | ok: 4 passed. |
 
 ## Priority B Discover Product Entry Workspace Projection Follow-up
 
@@ -7705,10 +7705,10 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py harness/tests/test_autosci_priority_b_demo_contracts.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py::test_discover_projects_human_shortlist_summary -q` | ok: 1 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py -q` | ok: 5 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_discover_from_wiki_limit -q` | ok: 1 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py tests/harness/test_autosci_priority_b_demo_contracts.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py::test_discover_projects_human_shortlist_summary -q` | ok: 1 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py -q` | ok: 5 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_discover_from_wiki_limit -q` | ok: 1 passed. |
 
 ## Priority B Skills And Paper Draft Product Entry Follow-up
 
@@ -7734,11 +7734,11 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py harness/tests/test_autosci_priority_b_demo_contracts.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py::test_skills_product_entry_lists_route_statuses harness/tests/test_autosci_priority_b_demo_contracts.py::test_paper_draft_projects_demo_visible_report_summary -q` | ok: 2 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py -q` | ok: 7 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_lists_configured_skills harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_lists_skills_with_dollar_alias harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_writes_latex_source -q` | ok: 3 passed. |
-| `bash harness/tests/test-autosci-harness-entrypoint.sh` | ok |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py tests/harness/test_autosci_priority_b_demo_contracts.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py::test_skills_product_entry_lists_route_statuses tests/harness/test_autosci_priority_b_demo_contracts.py::test_paper_draft_projects_demo_visible_report_summary -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py -q` | ok: 7 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_lists_configured_skills tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_lists_skills_with_dollar_alias tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_draft_writes_latex_source -q` | ok: 3 passed. |
+| `bash tests/harness/test_autosci_harness_entrypoint.sh` | ok |
 
 ## Priority B Exp Run Product Entry Follow-up
 
@@ -7763,10 +7763,10 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py harness/tests/test_autosci_priority_b_demo_contracts.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py::test_exp_run_projects_demo_runtime_boundary_summary -q` | ok: 1 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py -q` | ok: 8 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_exp_run_native_options_without_fixture_fallback harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_full_routes_deploy_and_collect_actions harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support -q` | ok: 3 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py tests/harness/test_autosci_priority_b_demo_contracts.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py::test_exp_run_projects_demo_runtime_boundary_summary -q` | ok: 1 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py -q` | ok: 8 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_accepts_exp_run_native_options_without_fixture_fallback tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_exp_run_full_routes_deploy_and_collect_actions tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_blocks_unapproved_exp_run_deploy_without_fixture_support -q` | ok: 3 passed. |
 
 ## Priority B Workspace Projection Overall Acceptance Follow-up
 
@@ -7791,9 +7791,9 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py harness/tests/test_autosci_priority_b_demo_contracts.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py::test_workspace_index_explains_demo_entry_points -q` | ok: 1 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_priority_b_demo_contracts.py -q` | ok: 9 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py tests/harness/test_autosci_priority_b_demo_contracts.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py::test_workspace_index_explains_demo_entry_points -q` | ok: 1 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_priority_b_demo_contracts.py -q` | ok: 9 passed. |
 
 ## Phase C Solar Unification Import Manifest Follow-up
 
@@ -7807,7 +7807,7 @@ Logged: 2026-07-01 EDT
 | Manual merge boundary | ok | Shared files such as `README.md`, `AGENTS.md`, `CLAUDE.md`, `harness/solar-harness.sh`, operator registries, capsule registry, `bin/solar`, and `core/daemon/skill-dispatcher.ts` are explicitly marked manual-merge-only. |
 | Local/generated state exclusion | ok | `.git`, `.DS_Store`, `__pycache__`, `*.pyc`, AutoSci run artifacts, operator smoke outputs, coordinator/watchdog/pane state, planner inbox, logs, and run directories are explicitly excluded. |
 | Unified repo smoke checklist | ok | The manifest records the Phase C unified-repo smoke files still required after import, including route listing, CLI dispatch, ingest/review demo artifacts, scheduler lifecycle, and artifact-root isolation. |
-| Static guard test | ok | Added `harness/tests/test_autosci_phase_c_unification_contracts.py` to enforce the manifest schema, import paths, excludes, manual-merge boundary, dispatcher boundary, and no-claim premerge verification policy. |
+| Static guard test | ok | Added `tests/harness/test_autosci_phase_c_unification_contracts.py` to enforce the manifest schema, import paths, excludes, manual-merge boundary, dispatcher boundary, and no-claim premerge verification policy. |
 
 ### Issues Encountered And Guardrails
 
@@ -7822,9 +7822,9 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/tests/test_autosci_phase_c_unification_contracts.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_phase_c_unification_contracts.py -q` | ok: 5 passed. |
-| `git diff --check -- docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json harness/tests/test_autosci_phase_c_unification_contracts.py docs/integrations/autosci/phase19-progress-log.md` | ok |
+| `harness/bin/python3 -m py_compile tests/harness/test_autosci_phase_c_unification_contracts.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_phase_c_unification_contracts.py -q` | ok: 5 passed. |
+| `git diff --check -- docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json tests/harness/test_autosci_phase_c_unification_contracts.py docs/integrations/autosci/phase19-progress-log.md` | ok |
 | `git fsck --connectivity-only --no-dangling` | ok |
 
 ## Phase C Product-Level Smoke And Cleanup Follow-up
@@ -7836,7 +7836,7 @@ Logged: 2026-07-01 EDT
 | Attachment review | ok | Read `/Users/jamesyuan/.codex/attachments/eb647a4d-8eca-40be-85ae-cdb20f7726ec/pasted-text.txt` and reconciled its P0 list against current code. |
 | Product CLI dispatch status | ok | Current `harness/solar-harness.sh` already has `autosci)` dispatch and `$*)` direct AutoSci dispatch through `do_autosci_command()`, so the attachment's P0-1 blocker is no longer current. |
 | Wrapper path status | ok | `.agents/skills/*/SKILL.md` direct `$command` examples are compatible with the current `$*)` dispatch path, while `solar-harness.sh autosci "$cmd"` remains the preferred explicit product path for tests. |
-| Product-level integration smokes | ok | Added `harness/tests/integration/test_autosci_routes_list.py`, `test_autosci_cli_dispatch.py`, `test_autosci_ingest_demo.py`, `test_autosci_review_demo.py`, `test_autosci_research_scheduler_demo.py`, and `test_autosci_artifact_root.py` plus `autosci_product_smoke_helpers.py`. |
+| Product-level integration smokes | ok | Added `tests/harness/integration/test_autosci_routes_list.py`, `test_autosci_cli_dispatch.py`, `test_autosci_ingest_demo.py`, `test_autosci_review_demo.py`, `test_autosci_research_scheduler_demo.py`, and `test_autosci_artifact_root.py` plus `autosci_product_smoke_helpers.py`. |
 | Smoke isolation | ok | The new smokes run `solar-harness.sh autosci ...` through an isolated temporary `HARNESS_DIR`, asserting outputs remain under that root and do not appear under the repo harness artifact root. |
 | Scheduler demo preset | ok | Added explicit `$research --scheduler-run --scheduler-demo`; the preset is paper-grounded and limited to `paper_ingest`, `paper_analyze`, `claim_extract`, and `method_extract` so it does not falsely pass model/provider-dependent nodes. |
 | Tracked generated artifact cleanup | ok | Removed generated AutoSci artifacts from the Git index with `git rm --cached`, preserving local files: 2541 tracked run files, 62 operator-smoke files, and 62 phase19 inventory JSON files were cleaned from tracking; scientific workflow-runs had 0 tracked files. |
@@ -7847,8 +7847,8 @@ Logged: 2026-07-01 EDT
 | Issue | Status | Guardrail |
 |---|---|---|
 | The attachment's product CLI blocker was stale relative to the latest branch | warn | Verify current code before acting on inspection notes; `solar-harness.sh autosci` and direct `$*` dispatch now exist. |
-| Product-level smoke tests initially had no files under `harness/tests/integration/test_autosci_*.py` | warn | Keep dedicated product-entry smokes separate from lower-level shim tests so a future Stellven merge can catch CLI/artifact-root regressions. |
-| Test import failed because pytest collects `harness/tests/integration` as a package | warn | Use relative imports from `.autosci_product_smoke_helpers` inside integration tests. |
+| Product-level smoke tests initially had no files under `tests/harness/integration/test_autosci_*.py` | warn | Keep dedicated product-entry smokes separate from lower-level shim tests so a future Stellven merge can catch CLI/artifact-root regressions. |
+| Test import failed because pytest collects `tests/harness/integration` as a package | warn | Use relative imports from `.autosci_product_smoke_helpers` inside integration tests. |
 | `$ingest` route status is still `partial` even when `research_paper.v1` is written | warn | Tests assert the required typed evidence rather than overclaiming route completion. |
 | `artifact_review.v1` stores `review_available` under `outputs.review`, not directly under `outputs` | warn | Assert the schema's actual structure to avoid brittle or misleading review readiness checks. |
 | `git rm --cached` was blocked by sandbox permissions while creating `.git/index.lock` | warn | Use approved escalation for index-only cleanup; keep local generated files in place and rely on `.gitignore` after removing tracking. |
@@ -7858,15 +7858,15 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py harness/tests/integration/autosci_product_smoke_helpers.py harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py harness/tests/test_autosci_phase_c_unification_contracts.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py -q` | ok: 6 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_scheduler_run_attaches_blocked_summary harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_research_scheduler_demo_uses_multi_node_preset -q` | ok: 2 passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_phase_c_unification_contracts.py -q` | ok: 5 passed. |
+| `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_skill_shim.py tests/harness/integration/autosci_product_smoke_helpers.py tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py tests/harness/test_autosci_phase_c_unification_contracts.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py -q` | ok: 6 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_research_scheduler_run_attaches_blocked_summary tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_research_scheduler_demo_uses_multi_node_preset -q` | ok: 2 passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_phase_c_unification_contracts.py -q` | ok: 5 passed. |
 | `git ls-files 'harness/artifacts/autosci/runs/*' \| wc -l` | ok: 0. |
 | `git ls-files 'harness/artifacts/autosci/operator-smoke/*' \| wc -l` | ok: 0. |
 | `git ls-files 'harness/artifacts/autosci/phase19/current-parity-inventory-*.json' \| wc -l` | ok: 0. |
 | `git ls-files 'harness/artifacts/scientific/workflow-runs/*' \| wc -l` | ok: 0. |
-| `git diff --check -- docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py harness/tests/test_autosci_phase_c_unification_contracts.py harness/tests/integration/autosci_product_smoke_helpers.py harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok |
+| `git diff --check -- docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json docs/integrations/autosci/phase19-progress-log.md harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py tests/harness/test_autosci_phase_c_unification_contracts.py tests/harness/integration/autosci_product_smoke_helpers.py tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok |
 | `git fsck --connectivity-only --no-dangling` | ok |
 
 ## Phase C Premerge Readiness Audit Follow-up
@@ -7879,7 +7879,7 @@ Logged: 2026-07-01 EDT
 | Merge not started | ok | No integration branch was created, no Stellven product branch was modified, and no fetch/merge/repack/maintenance command was run for this follow-up. |
 | Wrapper CLI wording | ok | Updated `.agents/skills/*/SKILL.md` to prefer `solar-harness.sh autosci '$<skill> <user args>'`, matching the explicit product-level entrypoint requested by the attachment. |
 | Readiness audit artifact | ok | Added `docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json` to record P0 reconciliation, no-merge activity, post-import gates, and residual risks. |
-| Static readiness guard | ok | Added `harness/tests/test_autosci_phase_c_premerge_readiness.py` to verify product dispatch, wrapper wording, scheduler-demo coverage, product smoke presence, and generated artifact tracking hygiene. |
+| Static readiness guard | ok | Added `tests/harness/test_autosci_phase_c_premerge_readiness.py` to verify product dispatch, wrapper wording, scheduler-demo coverage, product smoke presence, and generated artifact tracking hygiene. |
 | Manifest linkage | ok | Linked the readiness audit from `phase-c-solar-unification-import-manifest.v1.json` without claiming the Stellven merge already happened. |
 
 ### Issues Encountered And Guardrails
@@ -7895,9 +7895,9 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `harness/bin/python3 -m py_compile harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py -q` | ok: 10 passed. |
-| `git diff --check -- docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json docs/integrations/autosci/phase19-progress-log.md harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py .agents/skills` | ok |
+| `harness/bin/python3 -m py_compile tests/harness/test_autosci_phase_c_premerge_readiness.py tests/harness/test_autosci_phase_c_unification_contracts.py` | ok |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_phase_c_premerge_readiness.py tests/harness/test_autosci_phase_c_unification_contracts.py -q` | ok: 10 passed. |
+| `git diff --check -- docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json docs/integrations/autosci/phase19-progress-log.md tests/harness/test_autosci_phase_c_premerge_readiness.py tests/harness/test_autosci_phase_c_unification_contracts.py .agents/skills` | ok |
 | `git fsck --connectivity-only --no-dangling` | ok |
 
 ## Phase C Local/CI Premerge Gate Follow-up
@@ -7908,10 +7908,10 @@ Logged: 2026-07-01 EDT
 |---|---|---|
 | Latest attachment review | ok | Read `/Users/jamesyuan/.codex/attachments/3735d5e6-b4f4-4abf-a7d3-c368f88a54f0/pasted-text.txt`; it recommends entering integration branch only after local/CI smoke proof, not direct product-main merge. |
 | Merge not started | ok | No integration branch was created, no Stellven branch was fetched/merged, and no product-main merge was attempted. |
-| Local gate script | ok | Added `harness/tests/test-autosci-premerge-gate.sh` to run Phase C contracts, product-level AutoSci smokes, scheduler-demo shim tests, artifact tracking guard, and git connectivity check. |
+| Local gate script | ok | Added `tests/harness/test_autosci_premerge_gate.sh` to run Phase C contracts, product-level AutoSci smokes, scheduler-demo shim tests, artifact tracking guard, and git connectivity check. |
 | CI gate wiring | ok | Added `autosci-premerge-gate` to `.github/workflows/solar-ci.yml`; the job runs the same local script on PR/main CI. |
 | Readiness audit update | ok | Updated `phase-c-premerge-readiness-audit.v1.json` to point at the latest attachment and record the local/CI gate without claiming full AutoSci parity. |
-| Static guard update | ok | Extended `harness/tests/test_autosci_phase_c_premerge_readiness.py` to assert the gate is wired and does not contain fetch/merge/branch-creation commands. |
+| Static guard update | ok | Extended `tests/harness/test_autosci_phase_c_premerge_readiness.py` to assert the gate is wired and does not contain fetch/merge/branch-creation commands. |
 
 ### Issues Encountered And Guardrails
 
@@ -7925,9 +7925,9 @@ Logged: 2026-07-01 EDT
 
 | Command | Result |
 |---|---|
-| `bash harness/tests/test-autosci-premerge-gate.sh` | ok: Phase C contracts 11 passed; product smokes 6 passed; scheduler-demo shim tests 2 passed; artifact tracking and git connectivity checks passed. |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py -q` | ok: covered by premerge gate. |
-| `git diff --check -- .github/workflows/solar-ci.yml docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json docs/integrations/autosci/phase19-progress-log.md harness/tests/test-autosci-premerge-gate.sh harness/tests/test_autosci_phase_c_premerge_readiness.py` | ok |
+| `bash tests/harness/test_autosci_premerge_gate.sh` | ok: Phase C contracts 11 passed; product smokes 6 passed; scheduler-demo shim tests 2 passed; artifact tracking and git connectivity checks passed. |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_phase_c_premerge_readiness.py tests/harness/test_autosci_phase_c_unification_contracts.py -q` | ok: covered by premerge gate. |
+| `git diff --check -- .github/workflows/solar-ci.yml docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json docs/integrations/autosci/phase19-progress-log.md tests/harness/test_autosci_premerge_gate.sh tests/harness/test_autosci_phase_c_premerge_readiness.py` | ok |
 | `git fsck --connectivity-only --no-dangling` | ok: covered by premerge gate. |
 
 ## Agent B Full-Parity Continuation
@@ -7955,10 +7955,10 @@ Logged: 2026-07-01 EDT / 2026-07-02 UTC
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/tests/evaluators/scientific/test_common_schema_fallback.py` | ok: 3 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_parity_inventory_tool.py` | ok: 2 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_research_wiki_native_parity_commands.py` | ok: 4 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/harness/evaluators/scientific/test_common_schema_fallback.py` | ok: 3 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_parity_inventory_tool.py` | ok: 2 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_research_wiki_native_parity_commands.py` | ok: 4 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
 
 ## Agent B Full-Parity Continuation Verification Follow-up
 
@@ -7968,7 +7968,7 @@ Logged: 2026-07-01 EDT / 2026-07-02 UTC
 |---|---|---|
 | Lifecycle smoke gate alignment | ok | Full-external lifecycle smoke tests now seed an isolated validated wiki idea plus succeeded experiment, so `paper-plan` completion is backed by the current idea-graph gate rather than a relaxed validator. |
 | Publication PDF fixture repair | ok | Lifecycle compile/resume smoke tests now use a minimal structural PDF fixture; byte-header-only `%PDF-1.4` files correctly remained inconclusive. |
-| Full relevant suite | warn | `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` produced 332 passed and 3 sandbox socket-bind failures. |
+| Full relevant suite | warn | `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` produced 332 passed and 3 sandbox socket-bind failures. |
 | Socket-bound rerun | ok | Elevated rerun of the three localhost-bound tests passed: novelty HTTP provider, Review LLM OpenAI-compatible provider, and approved SMTP delivery. |
 | Product integration smokes | ok | Product AutoSci route/CLI/ingest/review/scheduler-demo/artifact-root smokes passed: 6 passed. |
 | Parity inventory rerun | ok | `/tmp/autosci_parity_inventory_current.json` regenerated with 28 routes, 17 partial, 11 gated, 0 full, 0 missing routes. |
@@ -7986,10 +7986,10 @@ Logged: 2026-07-01 EDT / 2026-07-02 UTC
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_accepts_combined_full_external_evidence harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_executes_approved_publication_compile harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_can_resume_external_blocked_nodes` | ok: 3 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | warn: 332 passed, 3 sandbox socket-bind failures |
-| elevated `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_http_provider_marks_external_runtime harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_review_invokes_openai_compatible_provider harness/plugins/autosci/tests/test_root_tool_abi.py::test_send_email_tool_executes_approved_smtp_delivery` | ok: 3 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_accepts_combined_full_external_evidence tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_executes_approved_publication_compile tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_can_resume_external_blocked_nodes` | ok: 3 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | warn: 332 passed, 3 sandbox socket-bind failures |
+| elevated `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_novelty_http_provider_marks_external_runtime tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_review_invokes_openai_compatible_provider tests/plugins/autosci/test_root_tool_abi.py::test_send_email_tool_executes_approved_smtp_delivery` | ok: 3 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
 | `env PYTHONPATH=harness harness/bin/python3 harness/tools/autosci_parity_inventory.py --native-repo "/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci" --out /tmp/autosci_parity_inventory_current.json` | ok: 28 routes, 17 partial, 11 gated, 0 full, 0 missing |
 
 ## Agent B P2 Ideate Writeback Boundary Follow-up
@@ -8013,8 +8013,8 @@ Logged: 2026-07-02 EDT
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ideate'` | ok: 5 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_research_pipeline` | ok: 1 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'ideate'` | ok: 5 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_research_pipeline` | ok: 1 passed |
 
 ## Agent B P2 Ideate Promotion/Growth Evidence Follow-up
 
@@ -8042,9 +8042,9 @@ Logged: 2026-07-02 EDT
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ideate'` | ok: 7 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'novelty'` | ok: 13 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_draft or paper-draft or workspace_projection'` | ok: 2 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'ideate'` | ok: 7 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'novelty'` | ok: 13 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_draft or paper-draft or workspace_projection'` | ok: 2 passed |
 
 ## Agent B P3 Experiment Runtime Report Follow-up
 
@@ -8070,9 +8070,9 @@ Logged: 2026-07-02 EDT
 | Command | Result |
 |---|---|
 | `env PYTHONPATH=harness harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'exp_run_executes_approved_native_command or exp_collect_writes_multiseed_metric_aggregate_report'` | ok: 2 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'exp_run or exp_status or exp_collect or exp_design'` | ok: 24 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 339 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'exp_run_executes_approved_native_command or exp_collect_writes_multiseed_metric_aggregate_report'` | ok: 2 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'exp_run or exp_status or exp_collect or exp_design'` | ok: 24 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 339 passed |
 | smoke pollution cleanup | ok: reverted `harness/artifacts/autosci/workspace/wiki/canvases/knowledge-map.canvas` and `harness/artifacts/autosci/workspace/wiki/log.md` after the full suite |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
 
@@ -8099,9 +8099,9 @@ Logged: 2026-07-02 EDT
 | Command | Result |
 |---|---|
 | `env PYTHONPATH=harness harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_draft_writes_latex_source or paper_draft_includes_verified_compile_pdf_handoff'` | ok: 2 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_draft or paper-draft or paper_compile or paper-compile'` | ok: 13 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 339 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_draft_writes_latex_source or paper_draft_includes_verified_compile_pdf_handoff'` | ok: 2 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_draft or paper-draft or paper_compile or paper-compile'` | ok: 13 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 339 passed |
 | smoke pollution cleanup | ok: reverted `harness/artifacts/autosci/workspace/wiki/canvases/knowledge-map.canvas` and `harness/artifacts/autosci/workspace/wiki/log.md` after the full suite |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
 
@@ -8129,10 +8129,10 @@ Logged: 2026-07-02 EDT
 | Command | Result |
 |---|---|
 | `python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
-| `python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_compile'` | warn: system Python has no pytest |
-| `harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_compile'` | warn: worktree `.venv/bin/python` missing |
+| `python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_compile'` | warn: system Python has no pytest |
+| `harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_compile'` | warn: worktree `.venv/bin/python` missing |
 | `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_compile'` | ok: 12 passed, 135 deselected |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_compile'` | ok: 12 passed, 135 deselected |
 
 ## Agent B P6/P7 Poster And Rebuttal Native Input Follow-up
 
@@ -8157,9 +8157,9 @@ Logged: 2026-07-02 EDT
 | Command | Result |
 |---|---|
 | `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'rebuttal or poster'` | ok: 8 passed, 140 deselected |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 341 passed |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'rebuttal or poster'` | ok: 8 passed, 140 deselected |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 341 passed |
 | smoke pollution cleanup | ok: reverted `harness/artifacts/autosci/workspace/wiki/canvases/knowledge-map.canvas` and `harness/artifacts/autosci/workspace/wiki/log.md` after the full suite |
 | `git diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -8198,10 +8198,10 @@ Logged: 2026-07-02 EDT
 
 | Command | Result |
 |---|---|
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py` | ok |
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py` | ok: 6 skipped by design |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 341 passed, 6 skipped |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile tests/plugins/autosci/test_autosci_live_provider_env_gated.py` | ok |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_live_provider_env_gated.py` | ok: 6 skipped by design |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 341 passed, 6 skipped |
 | smoke pollution cleanup | ok: reverted `harness/artifacts/autosci/workspace/wiki/canvases/knowledge-map.canvas` and `harness/artifacts/autosci/workspace/wiki/log.md` after the full suite |
 | `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python harness/tools/autosci_parity_inventory.py --native-repo "/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci" --out /tmp/autosci_parity_inventory_current.json` | ok: 28 routes, 17 partial, 11 gated, 0 full, 0 missing |
 | `git diff --check` | ok |
@@ -8234,8 +8234,8 @@ were tested separately but not in one accepted approved execution.
 
 | Command | Result |
 |---|---|
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_compile_approved_runtime_submission_audit_closes_boundaries` | ok: 1 passed |
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_compile or paper-compile'` | ok: 13 passed, 136 deselected |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_compile_approved_runtime_submission_audit_closes_boundaries` | ok: 1 passed |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_compile or paper-compile'` | ok: 13 passed, 136 deselected |
 | First full suite after P5 combined regression | warn: 341 passed, 6 skipped, 1 failed; failure was the borderline research scheduler timeout above. |
 | Sandboxed full suite after environment permission switch | warn: 339 passed, 6 skipped, 3 failed; failures were local `127.0.0.1:0` HTTP/SMTP test servers blocked by sandbox `PermissionError`, not product assertion failures. |
 | P5 full suite with loopback server permission | ok: 342 passed, 6 skipped |
@@ -8269,10 +8269,10 @@ idea-page projection blocked unless the full ideate pipeline is ready.
 
 | Command | Result |
 |---|---|
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ideate'` | ok: 9 passed, 142 deselected |
-| Projector graph-edge follow-up: `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py harness/plugins/autosci/bin/autosci_skill_shim.py harness/plugins/autosci/tests/test_autosci_skill_shim.py` | ok |
-| Projector graph-edge follow-up: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ideate'` | ok: 9 passed, 142 deselected |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'ideate'` | ok: 9 passed, 142 deselected |
+| Projector graph-edge follow-up: `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_workspace_projector.py harness/plugins/autosci/bin/autosci_skill_shim.py tests/plugins/autosci/test_autosci_skill_shim.py` | ok |
+| Projector graph-edge follow-up: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'ideate'` | ok: 9 passed, 142 deselected |
 | Product integration smoke rerun | ok: 6 passed |
 | Full suite with loopback server permission | ok: 344 passed, 6 skipped |
 | Smoke pollution cleanup | ok: reverted `harness/artifacts/autosci/workspace/wiki/canvases/knowledge-map.canvas` and `harness/artifacts/autosci/workspace/wiki/log.md` after the full suite |
@@ -8305,9 +8305,9 @@ worktrees and separate artifact roots without weakening evidence validation.
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_parity_bridge.py tools/semantic_parity_runtime_proof.py tools/semantic_parity_audit_matrix.py harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | ok |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok: 20 passed |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | ok: 7 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_parity_bridge.py tools/semantic_parity_runtime_proof.py tools/semantic_parity_audit_matrix.py tests/plugins/autosci/test_phase19_parity_bridge.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | ok |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py` | ok: 20 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | ok: 7 passed |
 | `AUTOSCI_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci SOLAR_AUTOSCI_EVIDENCE_ROOTS=/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar ... autosci_parity_bridge.py route --skill ask --semantic-audit harness/artifacts/autosci/phase19/semantic-audits-ask-full/ask.semantic-audit.json` | ok: `semantic_full_count=1` |
 | `AUTOSCI_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci SOLAR_AUTOSCI_EVIDENCE_ROOTS=/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar ... semantic_parity_runtime_proof.py from-audit harness/artifacts/autosci/phase19/semantic-audits-ask-full/ask.semantic-audit.json --native-skill ask` | ok: runtime proof manifest written |
 | `AUTOSCI_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci SOLAR_AUTOSCI_EVIDENCE_ROOTS=/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_with_roots.json --runtime-proof-dir /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/harness/artifacts/autosci/runs --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `full_count=7`, `partial_count=10`, `gated_count=11`, `semantic_full_count=15`, `semantic_partial_count=13`, runtime proof counts `{not_required: 5, pending: 0, supplied: 1, verified: 22}` |
@@ -8348,9 +8348,9 @@ without promoting the route beyond its approval-gated execution boundary.
 | `AUTOSCI_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci SOLAR_AUTOSCI_EVIDENCE_ROOTS=/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_after_exp_pilot_eval_semantic_full.json --runtime-proof-dir /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/harness/artifacts/autosci/runs --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `full_count=7`, `partial_count=9`, `gated_count=12`, `semantic_full_count=16`, `semantic_partial_count=12`, runtime proof counts `{not_required: 5, pending: 0, supplied: 1, verified: 22}` |
 | `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python harness/evaluators/scientific/autosci_feature_parity_gate.py /tmp/autosci_detailed_inventory_after_exp_pilot_eval_semantic_full.json` | ok: ordinary global gate passed with expected non-full warnings |
 | `jq empty harness/artifacts/autosci/phase19/exp-pilot-eval-semantic-assessment-20260702.json harness/artifacts/autosci/phase19/semantic-audits-exp-pilot-eval-full/exp-pilot-eval.semantic-audit.json harness/artifacts/autosci/phase19/semantic-audits-exp-pilot-eval-full/exp-pilot-eval.semantic-proof.json harness/artifacts/autosci/phase19/semantic-audits-exp-pilot-eval-full/semantic-audit-index.json` | ok |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'pilot_eval or exp_pilot_eval'` | ok: 2 passed, 149 deselected |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | ok: 27 passed |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'pilot_eval or exp_pilot_eval'` | ok: 2 passed, 149 deselected |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | ok: 27 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
 
@@ -8479,10 +8479,10 @@ runtime proof is captured.
 | `env PYTHONPATH=harness AUTOSCI_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci SOLAR_AUTOSCI_EVIDENCE_ROOTS=/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar:/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.worktrees/autosci-parity ... autosci_parity_bridge.py route --skill ingest --semantic-audit harness/artifacts/autosci/phase19/semantic-audits-ingest-full/ingest.semantic-audit.json --runtime-proof-dir /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/harness/artifacts/autosci/runs --runtime-proof-dir harness/artifacts/autosci/runs` | ok: `semantic_full_count=1`, runtime `not_required=1`; evidence path `harness/artifacts/autosci/phase19/autosci_feature_parity.ingest.json` |
 | `env PYTHONPATH=harness AUTOSCI_REPO=/Users/jamesyuan/Developer/Github Repos (On Git)/AutoSci SOLAR_AUTOSCI_EVIDENCE_ROOTS=/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar:/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.worktrees/autosci-parity ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_after_ingest_semantic_full.json --runtime-proof-dir /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/harness/artifacts/autosci/runs --runtime-proof-dir harness/artifacts/autosci/runs --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `full_count=8`, `partial_count=7`, `gated_count=13`, `semantic_full_count=19`, `semantic_partial_count=9` |
 | `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python harness/evaluators/scientific/autosci_feature_parity_gate.py /tmp/autosci_detailed_inventory_after_ingest_semantic_full_verify.json` | ok: ordinary global gate passed with expected non-full warnings after route limitation wording fix. |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ingest or exp_run or exp_status or exp_collect'` | ok: 30 passed, 122 deselected |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py` | ok: 6 skipped by design; no live provider/remote proof was claimed |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | ok: 27 passed |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'ingest or exp_run or exp_status or exp_collect'` | ok: 30 passed, 122 deselected |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_live_provider_env_gated.py` | ok: 6 skipped by design; no live provider/remote proof was claimed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | ok: 27 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok after moving `.git/refs/.DS_Store` to `/private/tmp/OpenSolar_git_ref_quarantine_20260702_ingest_exp_status/.DS_Store.refs` |
 
@@ -8565,15 +8565,15 @@ is still missing.
 |---|---|
 | `python3 -m json.tool harness/plugins/autosci/config/feature_parity_routes.v1.json` | ok |
 | `env PYTHONPATH=harness ... py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'discover'` | ok: 5 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'discover'` | ok: 5 passed |
 | `env HARNESS_DIR=... autosci_skill_shim.py skill discover --from-wiki --limit 3 --approval-ref approval-discover-local-wiki-20260702 --runtime-evidence artifacts/autosci/phase19/discover-local-wiki-proof-inputs/source-runtime.json --run-id codex-discover-local-wiki-proof-20260702` | ok: action passed; `literature_discovery.v1` completed with final shortlist ready |
 | `env PYTHONPATH=harness ... semantic_parity_audit_matrix.py generate --skill discover --assessment-json harness/artifacts/autosci/phase19/discover-local-wiki-semantic-assessment-20260702.json --out-dir harness/artifacts/autosci/phase19/semantic-audits-discover-local-full` | ok: `semantic_full_count=1`, `semantic_partial_count=0` |
 | `env PYTHONPATH=harness ... semantic_parity_runtime_proof.py from-audit harness/artifacts/autosci/phase19/semantic-audits-discover-local-full/discover.semantic-audit.json --native-skill discover --runtime-proof-out .../discover.semantic-proof.json` | ok: runtime proof manifest written |
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py route --skill discover --semantic-audit ... --runtime-proof-dir ...` | ok: `semantic_full_count=1`, `runtime_proof_status=verified` |
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_after_discover_local_semantic_full.json --runtime-proof-dir ... --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `full_count=10`, `partial_count=5`, `gated_count=13`, `semantic_full_count=22`, `semantic_partial_count=6` |
 | `env PYTHONPATH=harness ... autosci_feature_parity_gate.py /tmp/autosci_detailed_inventory_after_discover_local_semantic_full.json` | ok: passed with expected non-full warnings |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | ok: 27 passed |
-| `env PYTHONPATH=harness ... pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_artifact_root.py harness/tests/test_autosci_priority_b_demo_contracts.py::test_discover_projects_human_shortlist_summary` | ok: 4 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | ok: 27 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_artifact_root.py tests/harness/test_autosci_priority_b_demo_contracts.py::test_discover_projects_human_shortlist_summary` | ok: 4 passed |
 
 ## Agent B Novelty Local Supplied-Evidence Parity
 
@@ -8616,10 +8616,10 @@ wiki writeback root instead of live provider/network execution.
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py route --skill novelty --semantic-audit ... --runtime-proof-dir ...` | ok: `semantic_full_count=1`, `runtime_proof_status=verified` |
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_after_novelty_local_semantic_full.json --runtime-proof-dir ... --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `full_count=11`, `partial_count=4`, `gated_count=13`, `semantic_full_count=23`, `semantic_partial_count=5` |
 | `env PYTHONPATH=harness ... autosci_feature_parity_gate.py /tmp/autosci_detailed_inventory_after_novelty_local_semantic_full.json` | ok: passed with expected non-full warnings |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'novelty'` | warn: 12 passed; 1 sandbox socket-bind failure before product assertions |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'novelty'` | warn: 12 passed; 1 sandbox socket-bind failure before product assertions |
 | Elevated single-test rerun: `test_autosci_skill_shim_novelty_http_provider_marks_external_runtime` | ok: 1 passed |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | ok: 27 passed |
-| `env PYTHONPATH=harness ... pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 3 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | ok: 27 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 3 passed |
 
 ## Agent B Ideate Local Supplied-Evidence Parity
 
@@ -8663,10 +8663,10 @@ live provider and pilot execution claims out of scope.
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py route --skill ideate --semantic-audit ... --runtime-proof-dir ... --out harness/artifacts/autosci/phase19/autosci_feature_parity.ideate.local-full.json` | ok: `semantic_full_count=1`, runtime `verified=1` |
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_after_ideate_local_semantic_full.json --runtime-proof-dir ... --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `full_count=12`, `partial_count=3`, `gated_count=13`, `semantic_full_count=24`, `semantic_partial_count=4` |
 | `env PYTHONPATH=harness ... autosci_feature_parity_gate.py /tmp/autosci_detailed_inventory_after_ideate_local_semantic_full.json` | ok: passed with expected non-full warnings after route limitation wording fix |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ideate or novelty or review_resolves'` | warn: 21 passed; 1 sandbox socket-bind failure before product assertions |
-| Elevated focused rerun: `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ideate or novelty or review_resolves'` | ok: 22 passed |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok: 27 passed |
-| `env PYTHONPATH=harness ... pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 3 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'ideate or novelty or review_resolves'` | warn: 21 passed; 1 sandbox socket-bind failure before product assertions |
+| Elevated focused rerun: `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'ideate or novelty or review_resolves'` | ok: 22 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_semantic_parity_audit_matrix.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_phase19_parity_bridge.py` | ok: 27 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 3 passed |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
 
@@ -8712,9 +8712,9 @@ subagents, or visualization refresh.
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py route --skill init --semantic-audit ... --runtime-proof-dir ... --out harness/artifacts/autosci/phase19/autosci_feature_parity.init.local-fan-in.json` | ok: `semantic_full_count=1`, runtime `verified=1` |
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_after_init_local_semantic_full.json --runtime-proof-dir ... --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `full_count=12`, `partial_count=2`, `gated_count=14`, `semantic_full_count=25`, `semantic_partial_count=3` |
 | `env PYTHONPATH=harness ... autosci_feature_parity_gate.py /tmp/autosci_detailed_inventory_after_init_local_semantic_full.json` | ok: passed with expected non-full warnings |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'init or ingest'` | ok: 11 passed, 142 deselected |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok: 27 passed |
-| `env PYTHONPATH=harness ... pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 3 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'init or ingest'` | ok: 11 passed, 142 deselected |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_semantic_parity_audit_matrix.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_phase19_parity_bridge.py` | ok: 27 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 3 passed |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
 
@@ -8759,9 +8759,9 @@ experiment run audit.
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py route --skill exp-design --semantic-audit ... --runtime-proof-dir ... --out harness/artifacts/autosci/phase19/autosci_feature_parity.exp-design.local-readiness.json` | ok: `semantic_full_count=1`, runtime `not_required=1` |
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_after_exp_design_local_semantic_full.json --runtime-proof-dir runs --runtime-proof-dir harness/artifacts/autosci/runs --runtime-proof-dir harness/artifacts/autosci/phase19 --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `semantic_full_count=26`, `semantic_partial_count=2` |
 | `env PYTHONPATH=harness ... autosci_feature_parity_gate.py /tmp/autosci_detailed_inventory_after_exp_design_local_semantic_full.json` | ok: passed with expected non-full warnings |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k exp_design` | ok: 2 passed, 151 deselected |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok: 27 passed |
-| `env PYTHONPATH=harness ... pytest -q harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py` | ok: 12 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k exp_design` | ok: 2 passed, 151 deselected |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_semantic_parity_audit_matrix.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_phase19_parity_bridge.py` | ok: 27 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py` | ok: 12 passed |
 | JSON parse check for new exp-design assessment/audit/proof/route files and `/tmp/autosci_detailed_inventory_after_exp_design_local_semantic_full.json` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -8809,9 +8809,9 @@ unapproved sub-skill execution.
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py route --skill research --semantic-audit ... --runtime-proof-dir ... --out harness/artifacts/autosci/phase19/autosci_feature_parity.research.local-lifecycle.json` | ok: `semantic_full_count=1`, runtime `verified=1` |
 | `env PYTHONPATH=harness ... autosci_parity_bridge.py inventory --out /tmp/autosci_detailed_inventory_after_research_local_semantic_full.json --runtime-proof-dir runs --runtime-proof-dir harness/artifacts/autosci/runs --runtime-proof-dir harness/artifacts/autosci/phase19 --semantic-audit-dir harness/artifacts/autosci/phase19` | ok: `semantic_full_count=27`, `semantic_partial_count=1` |
 | `env PYTHONPATH=harness ... autosci_feature_parity_gate.py /tmp/autosci_detailed_inventory_after_research_local_semantic_full.json` | ok: passed with expected non-full warnings |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k research` | ok: 15 passed, 138 deselected |
-| `env PYTHONPATH=harness ... pytest -q harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok: 27 passed |
-| `env PYTHONPATH=harness ... pytest -q harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py` | ok: 12 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k research` | ok: 15 passed, 138 deselected |
+| `env PYTHONPATH=harness ... pytest -q tests/plugins/autosci/test_semantic_parity_audit_matrix.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_phase19_parity_bridge.py` | ok: 27 passed |
+| `env PYTHONPATH=harness ... pytest -q tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py` | ok: 12 passed |
 | JSON parse check for new research assessment/audit/proof/route/run files and `/tmp/autosci_detailed_inventory_after_research_local_semantic_full.json` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -8859,10 +8859,10 @@ scheduling, or auto-ingest side effects.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.daily-arxiv.local-final.json` | ok: strict full gate passed |
 | `env SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir runs --runtime-proof-dir harness/artifacts/autosci/runs --runtime-proof-dir harness/artifacts/autosci/phase19 --semantic-audit-dir harness/artifacts/autosci/phase19 --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-daily-arxiv-local-final.json` | ok: `semantic_full_count=28`, `semantic_partial_count=0`, runtime pending `0` |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-daily-arxiv-local-final.json` | ok: passed with expected non-full coverage warnings |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok: 21 passed |
-| `pytest -q harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 14 passed |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k daily_arxiv` | ok: 5 passed, 148 deselected |
-| `pytest -q harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py` | ok: 7 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py` | ok: 21 passed |
+| `pytest -q tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 14 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k daily_arxiv` | ok: 5 passed, 148 deselected |
+| `pytest -q tests/plugins/autosci/test_semantic_parity_audit_matrix.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py` | ok: 7 passed |
 | JSON parse check for new daily inputs, run artifacts, assessment, audit, route, and inventory JSON | ok: 19 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -8909,9 +8909,9 @@ remote/provider execution or side-effecting `--fix` behavior.
 | `env SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-check-local-quality.json` | ok: `full_count=5`, `partial_count=9`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.check.local-quality.json` | ok: strict full gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-check-local-quality.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k check` | ok: 7 passed, 146 deselected |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
-| `pytest -q harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py` | ok: 7 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k check` | ok: 7 passed, 146 deselected |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
+| `pytest -q tests/plugins/autosci/test_semantic_parity_audit_matrix.py tests/plugins/autosci/test_semantic_parity_runtime_proof.py` | ok: 7 passed |
 | JSON parse check for new check inputs, run artifacts, audit, route, and inventory JSON | ok: 10 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -8952,7 +8952,7 @@ remote run-dir collection, or distributed exactly-once remote collection.
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-status-local-source.json` | ok: `full_count=6`, `partial_count=8`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.exp-status.local-source.json` | ok: strict full gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-status-local-source.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k exp_status` | ok: 9 passed, 144 deselected |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k exp_status` | ok: 9 passed, 144 deselected |
 | JSON parse check for exp-status local proof manifest, route, and inventory JSON | ok: 3 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -8992,7 +8992,7 @@ search, Review LLM, paper compilation, or PDF generation.
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-paper-plan-local-source-review.json` | ok: `full_count=7`, `partial_count=7`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.paper-plan.local-source-review.json` | ok: strict full gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-paper-plan-local-source-review.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k paper_plan` | ok: 4 passed, 149 deselected |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k paper_plan` | ok: 4 passed, 149 deselected |
 | JSON parse check for paper-plan review/source proof manifests, route, and inventory JSON | ok: 4 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9031,7 +9031,7 @@ non-ignored phase19 artifacts. This does not invoke a new live provider review.
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-review-local-source-review.json` | ok: `full_count=8`, `partial_count=6`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.review.local-source-review.json` | ok: strict full gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-review-local-source-review.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k review` | ok after sandbox escalation: 19 passed, 134 deselected |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k review` | ok after sandbox escalation: 19 passed, 134 deselected |
 | JSON parse check for review proof manifests, route, and inventory JSON | ok: 4 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9069,7 +9069,7 @@ This does not run a new reviewer thread or submission workflow.
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-rebuttal-local-final.json` | ok: `full_count=9`, `partial_count=5`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.rebuttal.local-final.json` | ok: strict full gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-rebuttal-local-final.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k rebuttal` | ok: 4 passed, 149 deselected |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k rebuttal` | ok: 4 passed, 149 deselected |
 | JSON parse check for rebuttal final proof manifest, route, and inventory JSON | ok: 3 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9108,7 +9108,7 @@ or mutate the wiki again.
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-survey-local-archive.json` | ok: `full_count=10`, `partial_count=4`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.survey.local-archive.json` | ok: strict full gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-survey-local-archive.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k survey` | ok: 3 passed, 150 deselected |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k survey` | ok: 3 passed, 150 deselected |
 | JSON parse check for survey source/wiki mutation proof manifests, route, and inventory JSON | ok: 4 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9150,8 +9150,8 @@ the manuscript, re-run PDF compilation, or mutate the wiki again.
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-paper-draft-local-final.json` | ok: `full_count=11`, `partial_count=3`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.paper-draft.local-final.json` | ok: strict full gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-paper-draft-local-final.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k paper_draft` | ok: 2 passed, 151 deselected |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k paper_draft` | ok: 2 passed, 151 deselected |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
 | JSON parse check for paper-draft proof manifests, route, and inventory JSON | ok: 5 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9193,9 +9193,9 @@ artifacts. This does not re-run the pilot evaluation or mutate the wiki again.
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-pilot-eval-local-final.json` | ok: `full_count=11`, `partial_count=2`, `gated_count=15`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.exp-pilot-eval.local-final.json` | ok: strict full gate passed with expected non-full coverage warning for gated route |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-pilot-eval-local-final.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k exp_pilot_eval` | warn: no matching tests, 153 deselected, pytest exit 5 |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k pilot_eval` | ok: 2 passed, 151 deselected |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k exp_pilot_eval` | warn: no matching tests, 153 deselected, pytest exit 5 |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k pilot_eval` | ok: 2 passed, 151 deselected |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
 | JSON parse check for exp-pilot-eval proof manifests, route, and inventory JSON | ok: 4 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9237,8 +9237,8 @@ This does not re-run the ask model command or mutate the wiki again.
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-ask-local-final.json` | ok: `full_count=12`, `partial_count=1`, `gated_count=15`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.ask.local-final.json` | ok: strict full gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-ask-local-final.json` | ok: passed with expected non-full coverage warning |
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k ask` | ok: 6 passed, 147 deselected |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k ask` | ok: 6 passed, 147 deselected |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
 | JSON parse check for ask proof manifests, route, and inventory JSON | ok: 5 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9278,14 +9278,14 @@ This does not execute experiment code.
 
 | Command | Result |
 |---|---|
-| `pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k exp_design` | ok: 2 passed, 151 deselected |
+| `pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k exp_design` | ok: 2 passed, 151 deselected |
 | `autosci_skill_shim.py skill '$exp-design' idea-local-design --review --review-llm-evidence artifacts/autosci/phase19/exp-design-local-ready-proof-inputs/review.json --approval-ref approval-exp-design-local-ready-20260702 --allowlist-evidence artifacts/autosci/phase19/exp-design-local-ready-proof-inputs/allowlist.json --before-artifact artifacts/autosci/phase19/exp-design-local-ready-proof-inputs/before.json --run-id codex-exp-design-local-ready-proof4-20260702` | ok: action passed, workspace updated 4 paths |
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... route --skill exp-design --runtime-proof-manifest artifacts/autosci/runs/codex-exp-design-local-ready-proof4-20260702/design_experiment_review_llm_runtime_proof.json --runtime-proof-manifest artifacts/autosci/runs/codex-exp-design-local-ready-proof4-20260702/exp_design_workspace_wiki_mutation_runtime_proof.json --semantic-audit-dir artifacts/autosci/phase19/semantic-audits-exp-design-local-full --out artifacts/autosci/phase19/autosci_feature_parity.exp-design.local-final.json` | ok: route `coverage_status=full`, all exp-design proof requirements supplied |
 | `AUTOSCI_REPO=... SOLAR_AUTOSCI_EVIDENCE_ROOTS=... autosci_parity_bridge.py --autosci-repo ... inventory --runtime-proof-dir <worktree runs> --runtime-proof-dir <worktree phase19> --semantic-audit-dir <worktree phase19> --out artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-design-local-final.json` | ok: `full_count=13`, `partial_count=0`, `gated_count=15`, `semantic_full_count=28` |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.exp-design.local-final.json` | ok: strict route gate passed |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-design-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-design-local-final.json` | warn: failed as expected because 15 gated routes still lack final approved runtime proof |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 35 passed |
 | JSON parse check for exp-design route, final inventory, review proof, and workspace mutation proof JSON | ok: 4 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9326,7 +9326,7 @@ evidence only, does not mutate wiki pages, and leaves verdict/writeback to
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.exp-pilot-run.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-pilot-run-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-pilot-run-local-final.json` | warn: failed as expected for remaining gated routes |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for exp-pilot-run route and inventory JSON | ok: 2 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9367,7 +9367,7 @@ or protected config changes.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.setup.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-setup-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-setup-local-final.json` | warn: failed as expected for remaining gated routes |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for setup proof manifests, route, and inventory JSON | ok: 4 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9406,7 +9406,7 @@ phase19 artifacts. This does not start a server or open a browser.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.visualize.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-visualize-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-visualize-local-final.json` | warn: failed as expected for remaining gated routes |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for visualize proof manifests, route, and inventory JSON | ok: 4 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9448,7 +9448,7 @@ mutation evidence and does not run a new destructive reset.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.reset.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-reset-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-reset-local-final.json` | warn: failed as expected for remaining gated routes |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for reset proof manifests, route, and inventory JSON | ok: 5 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9490,7 +9490,7 @@ and does not start a server or open a browser.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.poster.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-poster-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-poster-local-final.json` | warn: failed as expected for remaining gated routes |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for poster proof manifests, route, and inventory JSON | ok: 5 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9533,7 +9533,7 @@ captured source evidence and does not perform a fresh network/provider fetch.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.prefill.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-prefill-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-prefill-local-final.json` | warn: failed as expected for remaining gated routes |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for prefill proof manifests, route, and inventory JSON | ok: 6 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9573,7 +9573,7 @@ or submission command.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.paper-compile.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-paper-compile-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-paper-compile-local-final.json` | warn: failed as expected for remaining gated routes |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for paper-compile proof manifest, route, and inventory JSON | ok: 3 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9616,7 +9616,7 @@ refine writeback evidence and does not run a fresh refine mutation.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.refine.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-refine-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-refine-local-final.json` | warn: failed as expected for remaining gated routes |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for refine proof manifests, route, and inventory JSON | ok: 6 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9657,7 +9657,7 @@ fresh experiment, remote job, or provider configuration command.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.exp-run.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-run-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-exp-run-local-final.json` | warn: failed as expected for remaining gated route |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for exp-run proof manifest, route, and inventory JSON | ok: 3 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9700,7 +9700,7 @@ evidence and does not run a fresh edit mutation.
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.edit.local-final.json` | ok: strict route gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-edit-local-final.json` | ok: ordinary gate passed with expected non-full coverage warning |
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-edit-local-final.json` | ok: strict final inventory gate passed |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | JSON parse check for edit proof manifests, route, and inventory JSON | ok: 6 files |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
@@ -9740,7 +9740,7 @@ approval/provider gates.
 | Command | Result |
 |---|---|
 | `autosci_feature_parity_gate.py --require-full-parity harness/artifacts/autosci/phase19/autosci_feature_parity.inventory-after-edit-local-final.json` | ok: strict final inventory gate passed |
-| `pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
+| `pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py` | ok: 36 passed |
 | `pytest -q harness/plugins/autosci/tests` outside sandbox | ok: 250 passed, 6 skipped |
 | JSON unresolved-runtime check on final inventory | ok: no item has runtime proof status outside `verified` or `not_required` |
 | `git -c maintenance.auto=false -c gc.auto=0 diff --check` | ok |

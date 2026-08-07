@@ -20,7 +20,7 @@
     "readme_product_docs": "README.md §Basic Workflow and Appendix AutoSci Commands; docs/WORKFLOW_DESIGN.md Phases 2-5; AGENTS.md Scope and Local Workflow",
     "cli_api_skill_interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
     "config_schemas": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt",
-    "implementation_entrypoints": "skills/test/SKILL.md; tests/README.md; tests/** and harness/tests/**",
+    "implementation_entrypoints": "skills/test/SKILL.md; tests/README.md; tests/** and tests/harness/**",
     "platform_provider_limitations": "Solar ships primarily as a Claude Code overlay. Concrete builds depend on selected physical operators, language toolchains, credentials, datasets, hardware, and approval/write-scope policy."
   },
   "implementation": {
@@ -38,7 +38,7 @@
       "skills/test/SKILL.md",
       "tests/README.md"
     ],
-    "entrypoints": "skills/test/SKILL.md; tests/README.md; tests/** and harness/tests/**",
+    "entrypoints": "skills/test/SKILL.md; tests/README.md; tests/** and tests/harness/**",
     "interfaces": "Builder work is dispatched through harness/lib/operator_runtime.py and physical operators; task-specific interfaces include .agents/skills/exp-run/SKILL.md, .agents/skills/paper-draft/SKILL.md, .agents/skills/paper-compile/SKILL.md, skills/test/SKILL.md",
     "schemas_and_config": "harness/schemas/request-envelope.schema.json; harness/schemas/task-graph.schema.json; harness/config/physical-operators.json; package.json; requirements/*.txt"
   },

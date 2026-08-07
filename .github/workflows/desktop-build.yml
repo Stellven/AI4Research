@@ -84,7 +84,7 @@ jobs:
         shell: bash
         env:
           SOLAR_ELECTRON_EXECUTABLE_PATH: ${{ github.workspace }}/desktop/dist/linux-unpacked/solar-desktop
-        run: xvfb-run -a node selftest-electron.test.js
+        run: xvfb-run -a node ../tests/desktop/selftest-electron.test.cjs
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
@@ -127,11 +127,11 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # autotest.sh runs all deterministic desktop gates: WSL/runtime-detection logic
-      # (runtime-detect.test.js), the backend HTTP contract (contract.js — CORS/OPTIONS/HEAD/auth,
+      # (runtime-detect.test.cjs), the backend HTTP contract (contract.js — CORS/OPTIONS/HEAD/auth,
       # no token leak), the dashboard render (verify.js — spawns the real status-server, renders in
       # headless chromium, asserts the UI), the source Electron shell against a real local
-      # status-server (selftest-electron.test.js), and the first-run/recovery screens
-      # (screens.test.js).
+      # status-server (selftest-electron.test.cjs), and the first-run/recovery screens
+      # (screens.test.cjs).
       # autotest.sh self-manages xvfb for the Electron screen gate, so we don't wrap it here (no
       # nested xvfb). Deterministic and isolated; it starts a local runtime fixture but makes no
       # live model call. Real Windows .exe / WSL2 provisioning and packaged-artifact launch remain

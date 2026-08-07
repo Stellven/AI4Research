@@ -48,7 +48,7 @@ curl -fsS http://127.0.0.1:8789/api/status | python3 -c '
 import json,sys; d=json.load(sys.stdin); print(json.dumps(d["checks"]["mirage"], indent=2))'
 
 # Run security boundary probes
-bash ~/.solar/harness/tests/test-mirage-substrate.sh
+bash ~/.solar/tests/harness/test_mirage_substrate.sh
 ```
 
 ## 5. Configuration

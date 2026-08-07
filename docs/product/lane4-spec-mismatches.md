@@ -19,7 +19,7 @@ parity report. **Disposition:** accept mirror; documented.
 The prompt/design say to vendor "its committed tests." The mirror @ e2480290 ships **no**
 `test_deepdive_requirement_compiler.py` (only `test_figure_grounding.py`, already vendored here). The
 test exists on `upstream/codex/evaluator-control-plane`
-(`harness/tests/research_survey/test_deepdive_requirement_compiler.py`) and is byte-identical to what
+(`tests/harness/research_survey/test_deepdive_requirement_compiler.py`) and is byte-identical to what
 the mirror compiler needs. **Disposition:** ported the test from the codex ref (recorded in the parity
 report); it runs green (9 tests) against the mirror compiler because the only delta is insight-node
 keys the test does not assert.
@@ -66,7 +66,7 @@ it.
 
 The prompt phrases the golden as "instantiate `research.deepdive.rsi_demo` … and commit the golden;
 assert the compiler's output is admissible." Lane 1 **already** committed the contract-instantiate
-golden (`harness/tests/workflow_contract/goldens/research.deepdive.rsi_demo.instantiated.golden.json`).
+golden (`tests/harness/workflow_contract/goldens/research.deepdive.rsi_demo.instantiated.golden.json`).
 Re-committing it in Lane 4 would duplicate. **Disposition (interpretation, documented):** Lane 4's
 distinct golden is the vendored front-end's native `build_deepdive_evidence_dag` output
 (`deepdive_dgraph.golden.json`) — the "D-graph" (D1–D9), byte-stable — and Lane 4 separately **asserts
@@ -108,6 +108,6 @@ must be a dict. The tests pass the shipped contract's own `provider_policy` obje
 ## Pre-existing reds (proven unchanged, not chased)
 
 Identical to the Lane 3 base (`lane3-spec-mismatches.md`), and I edited none of these files:
-`harness/tests/graph/test_multi_task_runner_status_surface.py` (collection ImportError — B1),
-`harness/tests/test_agent_actor_schema.py` (7 failed), `harness/tests/test_operatord_daemon.py`
+`tests/harness/graph/test_multi_task_runner_status_surface.py` (collection ImportError — B1),
+`tests/harness/test_agent_actor_schema.py` (7 failed), `tests/harness/test_operatord_daemon.py`
 (6 failed, env-sensitive). Evidence: `~/opensolar-state/run-archive/lane4-deepdive/`.

@@ -20,7 +20,7 @@
     "readme_product_docs": "README.md §What You Get and 'Choose or inspect models'; docs/solar-architecture-code-map.md §§2-4",
     "cli_api_skill_interfaces": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), main(); harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/model_call_runtime.py: record_model_event(), main(); README.md: solar harness models show/set-main",
     "config_schemas": "harness/config/model-registry.json; harness/config/model-scenario-routing.json; harness/config/physical-operators.json",
-    "implementation_entrypoints": "harness/lib/model_call_runtime.py: pane_runtime_metadata(), record_model_event(), main(); harness/tests/runtime/test_model_call_runtime.py",
+    "implementation_entrypoints": "harness/lib/model_call_runtime.py: pane_runtime_metadata(), record_model_event(), main(); tests/harness/runtime/test_model_call_runtime.py",
     "platform_provider_limitations": "Routes are configuration-driven; real calls depend on enabled local CLI/OAuth sessions or API keys, provider availability, model entitlement, local services, and quota."
   },
   "implementation": {
@@ -33,9 +33,9 @@
       "harness/lib/model_call_runtime.py",
       "harness/lib/model_registry.py",
       "harness/lib/operator_model_selection.py",
-      "harness/tests/runtime/test_model_call_runtime.py"
+      "tests/harness/runtime/test_model_call_runtime.py"
     ],
-    "entrypoints": "harness/lib/model_call_runtime.py: pane_runtime_metadata(), record_model_event(), main(); harness/tests/runtime/test_model_call_runtime.py",
+    "entrypoints": "harness/lib/model_call_runtime.py: pane_runtime_metadata(), record_model_event(), main(); tests/harness/runtime/test_model_call_runtime.py",
     "interfaces": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), main(); harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/model_call_runtime.py: record_model_event(), main(); README.md: solar harness models show/set-main",
     "schemas_and_config": "harness/config/model-registry.json; harness/config/model-scenario-routing.json; harness/config/physical-operators.json"
   },

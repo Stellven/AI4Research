@@ -44,12 +44,12 @@
       "id": "p0_3_product_level_smoke_tests",
       "status": "ok",
       "current_branch_evidence": [
-        "harness/tests/integration/test_autosci_routes_list.py",
-        "harness/tests/integration/test_autosci_cli_dispatch.py",
-        "harness/tests/integration/test_autosci_ingest_demo.py",
-        "harness/tests/integration/test_autosci_review_demo.py",
-        "harness/tests/integration/test_autosci_research_scheduler_demo.py",
-        "harness/tests/integration/test_autosci_artifact_root.py"
+        "tests/harness/integration/test_autosci_routes_list.py",
+        "tests/harness/integration/test_autosci_cli_dispatch.py",
+        "tests/harness/integration/test_autosci_ingest_demo.py",
+        "tests/harness/integration/test_autosci_review_demo.py",
+        "tests/harness/integration/test_autosci_research_scheduler_demo.py",
+        "tests/harness/integration/test_autosci_artifact_root.py"
       ],
       "notes": "Current-branch product smokes use isolated HARNESS_DIR roots; the unified Stellven repo must rerun equivalent tests after import."
     },
@@ -58,7 +58,7 @@
       "status": "ok",
       "current_branch_evidence": [
         "harness/plugins/autosci/bin/autosci_skill_shim.py: --scheduler-demo",
-        "harness/plugins/autosci/tests/test_autosci_skill_shim.py: scheduler demo preset test"
+        "tests/plugins/autosci/test_autosci_skill_shim.py: scheduler demo preset test"
       ],
       "notes": "The demo preset is intentionally paper-grounded and does not promote provider/model-dependent nodes without evidence."
     },
@@ -91,7 +91,7 @@
   },
   "local_ci_gate": {
     "status": "wired",
-    "script_path": "harness/tests/test-autosci-premerge-gate.sh",
+    "script_path": "tests/harness/test_autosci_premerge_gate.sh",
     "ci_workflow_path": ".github/workflows/solar-ci.yml",
     "ci_job": "autosci-premerge-gate",
     "runs_current_branch_contracts": true,
@@ -116,7 +116,7 @@
     },
     {
       "id": "ingest_demo",
-      "command": "solar harness autosci '$ingest harness/plugins/autosci/tests/fixtures/sample_paper.md --run-id demo-ingest'",
+      "command": "solar harness autosci '$ingest tests/plugins/autosci/fixtures/sample_paper.md --run-id demo-ingest'",
       "required": true
     },
     {
@@ -153,10 +153,10 @@
     }
   ],
   "verification_commands": [
-    "bash harness/tests/test-autosci-premerge-gate.sh",
-    "harness/bin/python3 -m py_compile harness/tests/test_autosci_phase_c_premerge_readiness.py",
-    "env PYTHONPATH=harness harness/bin/python3 -m pytest harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py -q",
-    "git diff --check -- docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json docs/integrations/autosci/phase19-progress-log.md harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py .agents/skills",
+    "bash tests/harness/test_autosci_premerge_gate.sh",
+    "harness/bin/python3 -m py_compile tests/harness/test_autosci_phase_c_premerge_readiness.py",
+    "env PYTHONPATH=harness harness/bin/python3 -m pytest tests/harness/test_autosci_phase_c_premerge_readiness.py tests/harness/test_autosci_phase_c_unification_contracts.py -q",
+    "git diff --check -- docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json docs/integrations/autosci/phase-c-solar-unification-import-manifest.v1.json docs/integrations/autosci/phase19-progress-log.md tests/harness/test_autosci_phase_c_premerge_readiness.py tests/harness/test_autosci_phase_c_unification_contracts.py .agents/skills",
     "git fsck --connectivity-only --no-dangling"
   ]
 }

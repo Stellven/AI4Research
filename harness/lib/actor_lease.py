@@ -7,7 +7,10 @@ acquired_at, expires_at, renewable, preemptible, heartbeat_timeout_sec, evidence
 from __future__ import annotations
 
 import datetime
-import fcntl
+try:
+    from . import file_lock_compat as fcntl
+except ImportError:  # Script-style execution with harness/lib on sys.path.
+    import file_lock_compat as fcntl
 import json
 import os
 import uuid

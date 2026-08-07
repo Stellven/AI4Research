@@ -131,7 +131,7 @@ evidence, or an approval-gated operator.
 
 Smoke input:
 
-- `harness/plugins/autosci/tests/fixtures/skillgen_operator_smoke_paper.md`
+- `tests/plugins/autosci/fixtures/skillgen_operator_smoke_paper.md`
 
 Core actions executed:
 
@@ -179,15 +179,15 @@ python3 harness/plugins/autosci/bin/autosci_parity_bridge.py inventory \
 python3 harness/evaluators/scientific/autosci_feature_parity_gate.py \
   harness/artifacts/autosci/phase19/parity_inventory.json
 env PYTHONPATH=harness harness/bin/python3 -m pytest \
-  harness/plugins/autosci/tests/test_phase19_parity_bridge.py \
-  harness/tests/evaluators/scientific/test_autosci_feature_parity_gate.py
+  tests/plugins/autosci/test_phase19_parity_bridge.py \
+  tests/harness/evaluators/scientific/test_autosci_feature_parity_gate.py
 harness/bin/python3 harness/plugins/autosci/bin/autosci_operator_smoke.py skillgen \
   --out artifacts/autosci/operator-smoke/skillgen/autosci_operator_smoke.json
 python3 harness/evaluators/scientific/autosci_operator_smoke_gate.py \
   harness/artifacts/autosci/operator-smoke/skillgen/autosci_operator_smoke.json
 env PYTHONPATH=harness harness/bin/python3 -m pytest \
   harness/plugins/autosci/tests \
-  harness/tests/evaluators/scientific
+  tests/harness/evaluators/scientific
 ```
 
 Observed result:
@@ -196,4 +196,4 @@ Observed result:
 - Gate: `passed` with warning that non-full routes must respect limitations.
 - Operator smoke: `bound_count=28`, `completed_count=0`, `partial_count=18`, `gated_count=10`, `failed_count=0`, `unbound_count=0`, `core_action_count=16`.
 - Operator smoke gate: `passed` with warning that approval-gated operators were not externally executed.
-- Latest focused regression after the audit update: `harness/plugins/autosci/tests` passes 74 tests and `harness/tests/evaluators/scientific` passes 52 tests.
+- Latest focused regression after the audit update: `harness/plugins/autosci/tests` passes 74 tests and `tests/harness/evaluators/scientific` passes 52 tests.

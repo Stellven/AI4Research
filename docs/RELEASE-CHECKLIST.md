@@ -44,9 +44,9 @@ Then run the repository checks before building artifacts:
 ```bash
 bash scripts/check-privacy.sh
 bash scripts/check-release-coherence.sh
-bash tests/test-release-cut-safety.sh
-bash tests/test-release-public-tree.sh
-bash tests/test-release-checklist.sh
+bash tests/repository/release/test_release_cut_safety.sh
+bash tests/repository/release/test_release_public_tree.sh
+bash tests/repository/release/test_release_checklist.sh
 bash scripts/check-installed-clean.sh
 bash scripts/check-kernel-gen.sh
 bash scripts/check-daemons-render.sh

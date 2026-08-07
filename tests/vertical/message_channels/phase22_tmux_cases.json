@@ -15,7 +15,7 @@
     "state_side_effects": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
     "failure_rejection_behavior": "Missing tmux/session/pane is surfaced; busy, auth/quota/modal or unsafe pane state prevents dispatch; capture verification failure records a failed dispatch; ownership/hygiene rules prevent unsafe reuse/teardown.",
     "supported_boundaries_exclusions": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
-    "success_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+    "success_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 path-escape probe is quarantined because it writes to the real user home and is not accepted evidence.",
     "granularity_atomic_contracts": "Session create/existing/absent; pane ownership/isolation; attach/detach; literal dispatch and verification; busy/modal/auth/quota blocker; capture/log inspection; notification; crash/recovery/respawn; cleanup without cross-run teardown; Windows/WSL path.",
     "readme_product_docs": "README.md: four-pane tmux cockpit and Platform Support; INSTALL.md: live-harness requirements and solar harness preflight; docs/FIRST-SESSION.md: Open The Cockpit And Submit Work.",
     "cli_api_skill_interfaces": "solar harness start/stop/status; harness/coordinator.sh; harness/coordinator-watchdog.sh; status-server pane APIs; tmux CLI as external runtime dependency.",
@@ -33,9 +33,8 @@
       "harness/coordinator.sh",
       "harness/lib/cli/solar_ui_lite.py",
       "harness/lib/symphony/status-server.py",
-      "harness/tests/test-d5-tmux-path-escape.sh",
-      "harness/tests/test_no_direct_tmux_send_keys.py",
-      "harness/tests/test_tmux_notification_bridge.py"
+      "tests/harness/test_no_direct_tmux_send_keys.py",
+      "tests/harness/test_tmux_notification_bridge.py"
     ],
     "entrypoints": "harness/coordinator.sh dispatch and pane helpers; harness/coordinator-watchdog.sh recovery; harness/lib/symphony/status-server.py _run_tmux/_pane_snapshot/_main_screen; harness/lib/cli/solar_ui_lite.py collect_runtime.",
     "interfaces": "solar harness start/stop/status; harness/coordinator.sh; harness/coordinator-watchdog.sh; status-server pane APIs; tmux CLI as external runtime dependency.",
@@ -86,7 +85,7 @@
       ],
       "expected_result": "Missing tmux/session/pane is surfaced; busy, auth/quota/modal or unsafe pane state prevents dispatch; capture verification failure records a failed dispatch; ownership/hygiene rules prevent unsafe reuse/teardown.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -113,7 +112,7 @@
       ],
       "expected_result": "Created or reused isolated tmux sessions/panes, assignments and titles, dispatched commands, captured logs/state, runtime/blocker classification, notifications, recovery results, and status artifacts.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -140,7 +139,7 @@
       ],
       "expected_result": "Created or reused isolated tmux sessions/panes, assignments and titles, dispatched commands, captured logs/state, runtime/blocker classification, notifications, recovery results, and status artifacts.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -167,7 +166,7 @@
       ],
       "expected_result": "Created or reused isolated tmux sessions/panes, assignments and titles, dispatched commands, captured logs/state, runtime/blocker classification, notifications, recovery results, and status artifacts.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -194,7 +193,7 @@
       ],
       "expected_result": "Missing tmux/session/pane is surfaced; busy, auth/quota/modal or unsafe pane state prevents dispatch; capture verification failure records a failed dispatch; ownership/hygiene rules prevent unsafe reuse/teardown.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -219,9 +218,9 @@
         "Collect the contract-required status, provenance, artifact, and audit evidence.",
         "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
       ],
-      "expected_result": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "expected_result": "A run-specific tmux dispatch, capture, status, notification, or recovery result attributable to the isolated test session; quarantined real-home probes do not satisfy this result.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -248,7 +247,7 @@
       ],
       "expected_result": "Created or reused isolated tmux sessions/panes, assignments and titles, dispatched commands, captured logs/state, runtime/blocker classification, notifications, recovery results, and status artifacts.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -275,7 +274,7 @@
       ],
       "expected_result": "Created or reused isolated tmux sessions/panes, assignments and titles, dispatched commands, captured logs/state, runtime/blocker classification, notifications, recovery results, and status artifacts.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -302,7 +301,7 @@
       ],
       "expected_result": "Missing tmux/session/pane is surfaced; busy, auth/quota/modal or unsafe pane state prevents dispatch; capture verification failure records a failed dispatch; ownership/hygiene rules prevent unsafe reuse/teardown.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -329,7 +328,7 @@
       ],
       "expected_result": "Created or reused isolated tmux sessions/panes, assignments and titles, dispatched commands, captured logs/state, runtime/blocker classification, notifications, recovery results, and status artifacts.",
       "state_and_side_effect_oracle": "Creates/kills/respawns/selects/attaches/detaches tmux sessions or panes, sends commands, writes assignments/runtime events and hygiene state, and may update operator cooldown/block state.",
-      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; harness/tests/test-d5-tmux-path-escape.sh; harness/tests/test_no_direct_tmux_send_keys.py; harness/tests/test_tmux_notification_bridge.py.",
+      "required_evidence": "harness/coordinator.sh: tmux dispatch/capture and runtime_status_transition; harness/lib/symphony/status-server.py: _pane_snapshot/_main_screen; tests/harness/test_no_direct_tmux_send_keys.py; tests/harness/test_tmux_notification_bridge.py. The former d5 real-home probe is quarantined and is not accepted evidence.",
       "supported_boundary": "tmux is a POSIX/WSL terminal surface, not native Windows. Private model reasoning is not observable; only pane text, events, assignments and artifacts are evidence.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     }

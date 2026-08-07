@@ -180,8 +180,8 @@ during this test campaign.
 | Local source mismatch | identified | The existing local `openJiuwen-Solar` checkout tracks `Stellven/AI4Research`, not `Coconut-ch1ken/OpenSolar`; the two branch histories have diverged. QA commits must therefore be based explicitly on the `Coconut-ch1ken/OpenSolar` branch history. |
 | Atomic registry versus code | verified | The workbook contains 2,297 registry rows representing 524 unique atomic-test names, but exact symbol-name matching found no executable implementation for those names in the original local repository. The registry is currently a test specification and mapping inventory, not a set of existing test files. |
 | Historical workbook file mapping | absent | In the old colored workbook, all 2,117 `Existing Test Map` rows have blank `existing test files` and `existing test cases` fields. All 2,117 `Function Inventory` rows also have blank discovered-path and symbol fields. The colored workbook therefore does not identify an executable file for any atomic row. |
-| Historical execution receipts | located | At commit `718aae9a`, `docs/testing/test-runs/20260709-qa-execution/` contained 780 status JSON receipts. Of these, 685 name a source file, representing 684 unique source paths: 667 under `harness/tests/` and 17 under root `tests/`. In the original checkout, 666 of those paths still exist and 18 are missing. These receipts show which suites were executed, but they are not bound one-to-one to the 2,117 atomic rows and are no longer stored in the current source tree. |
-| Original repository test-file inventory | complete | The original local history contains 988 tracked executable test-like files: 37 under root `tests/` and 951 elsewhere. The largest existing locations are `harness/tests/` (814), other `harness/` test files (70), and `harness/plugins/autosci/tests/` (22). |
+| Historical execution receipts | located | At commit `718aae9a`, `docs/testing/test-runs/20260709-qa-execution/` contained 780 status JSON receipts. Of these, 685 name a source file, representing 684 unique source paths: 667 under `tests/harness/` and 17 under root `tests/`. In the original checkout, 666 of those paths still exist and 18 are missing. These receipts show which suites were executed, but they are not bound one-to-one to the 2,117 atomic rows and are no longer stored in the current source tree. |
+| Original repository test-file inventory | complete | The original local history contains 988 tracked executable test-like files: 37 under root `tests/` and 951 elsewhere. The largest existing locations are `tests/harness/` (814), other `harness/` test files (70), and `tests/plugins/autosci/` (22). |
 | New-source test-file inventory | complete | The requested `Coconut-ch1ken/OpenSolar` branch contains 773 tracked executable test-like files: 32 under root `tests/` and 741 elsewhere, primarily under `harness/`. |
 | Phase 22 atomic-test location | required | Every new atomic-test implementation created for this campaign must be stored under the repository root `tests/` directory. Categorize tests as `tests/workflow/<level-1-slug>/`, `tests/foundation/<level-1-slug>/`, `tests/vertical/<level-1-slug>/`, or `tests/platform/<surface>/`; shared fixtures and helpers belong under `tests/shared/`. Do not use a single `tests/atomic/` bucket. |
 | Legacy relocation | conditional | Existing repository suites have not been moved wholesale. A legacy file may move into the appropriate root-`tests/` category only after its atomic-feature bindings are reconstructed and its imports, fixtures, runner commands, and baseline result pass from the new path. Until then, keep it in place and reference or wrap it from the new categorized suite. |
@@ -766,16 +766,16 @@ behavior.
 
 ### Failures or external gates that configuration cannot honestly erase
 
-- `harness/tests/benchmark/test_terminal_bench_adapter.py`: **12 passed, 1
+- `tests/harness/benchmark/test_terminal_bench_adapter.py`: **12 passed, 1
   failed**; dry-run verdict mismatch.
-- `harness/tests/test_provider_actor_generation.py`: **4 failed**; current
+- `tests/harness/test_provider_actor_generation.py`: **4 failed**; current
   physical/provider/actor registries and schema have drifted (unknown browser
   provider, unsupported backend/provider pairs, removed expected operator,
   top-level provenance schema mismatch, and unresolved fallback targets).
 - Model single-source/registry/live-route shell gates fail because the checked-in
   user model matrix and UI registry no longer match the GLM-oriented assertions;
   this is current configuration/contract drift, not missing credentials.
-- `harness/tests/test_no_direct_tmux_send_keys.py`: **10 passed, 1 failed**;
+- `tests/harness/test_no_direct_tmux_send_keys.py`: **10 passed, 1 failed**;
   direct `tmux send-keys` call sites remain outside the policy allowlist.
 - Electron process launch still exits before Playwright can attach in the
   current Codex Windows GUI session. Headless Web/GUI tests pass, but packaged
@@ -845,7 +845,7 @@ one live-provider test. The key value was never printed, copied into a tracked
 file, or written to the progress log.
 
 - Exact selector:
-  `harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py::test_autosci_live_review_llm_provider_produces_runtime_proof`
+  `tests/plugins/autosci/test_autosci_live_provider_env_gated.py::test_autosci_live_review_llm_provider_produces_runtime_proof`
 - The first pytest attempt failed during `tmp_path` setup because the default
   Windows pytest temp root was not accessible. It never entered the test
   function and made no provider call.
@@ -883,7 +883,7 @@ authorized one additional live-provider test. The ignored `harness/.env` was
 loaded into the test process without printing or copying the key.
 
 - Exact selector:
-  `harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py::test_autosci_live_review_llm_provider_produces_runtime_proof`
+  `tests/plugins/autosci/test_autosci_live_provider_env_gated.py::test_autosci_live_review_llm_provider_produces_runtime_proof`
 - The single authorized call reached OpenAI and returned a Chat Completions
   model response from `gpt-5.5-2026-04-23`; the provider/authentication path was
   therefore live for this run.
@@ -1512,7 +1512,7 @@ directory.
 
 Rerun command:
 
-`C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe -m pytest harness/tests/contracts/test_research_orchestration_contracts.py harness/tests/research_orchestration -q --basetemp .codex-tmp\pytest-phase02-baseline-rerun -o cache_dir=.codex-tmp\pytest-cache-phase02-baseline-rerun`
+`C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe -m pytest tests/harness/contracts/test_research_orchestration_contracts.py tests/harness/research_orchestration -q --basetemp .codex-tmp\pytest-phase02-baseline-rerun -o cache_dir=.codex-tmp\pytest-cache-phase02-baseline-rerun`
 
 Rerun result: `269 passed, 1 failed` in 79.31 seconds. The remaining failure is
 `test_abandoned_process_claim_is_recovered_after_crash`. The child process had
@@ -1560,7 +1560,7 @@ Validation results:
   `87 passed in 27.64s`.
 - Real Markdown production command used
   `autosci_bridge.py research --source
-  harness/plugins/autosci/tests/fixtures/sample_paper.md --max-steps 2` with
+  tests/plugins/autosci/fixtures/sample_paper.md --max-steps 2` with
   run id `phase3-md-smoke-006`. It completed `material_ingest` and
   `paper_analyze`, produced durable artifacts and node records under
   `.codex-tmp/phase3-md-smoke-006/`, and then truthfully returned `blocked`
@@ -1820,7 +1820,7 @@ fixed before `topic-002`.
 Exact bridge command:
 
 ```text
-python harness/plugins/autosci/bin/autosci_bridge.py research --prompt 'Synthesize this local Markdown into an evidence-backed technical report about Solar-native adapter boundaries, preserving the method and result.' --run-id phase4-rework-md-001 --source harness/plugins/autosci/tests/fixtures/sample_paper.md --artifact-root .codex-tmp/phase4-rework/md-001 --max-steps 100 --approval-ref phase4-user-authorized
+python harness/plugins/autosci/bin/autosci_bridge.py research --prompt 'Synthesize this local Markdown into an evidence-backed technical report about Solar-native adapter boundaries, preserving the method and result.' --run-id phase4-rework-md-001 --source tests/plugins/autosci/fixtures/sample_paper.md --artifact-root .codex-tmp/phase4-rework/md-001 --max-steps 100 --approval-ref phase4-user-authorized
 ```
 
 Exit code 0; final Solar state `completed`; final evaluation `accepted`. The
@@ -1881,7 +1881,7 @@ nodes were conditionally removed before graph execution.
 Final production-service and action-operator command:
 
 ```text
-& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q harness/plugins/autosci/tests/scientific_lifecycle_action_operators/test_action_delivery_operators.py harness/plugins/autosci/tests/test_production_research_services.py --basetemp='C:\tmp\p4-rework-bt-core-evidence' -o cache_dir='C:\tmp\p4-rework-cache-core-evidence'
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q tests/plugins/autosci/scientific_lifecycle_action_operators/test_action_delivery_operators.py tests/plugins/autosci/test_production_research_services.py --basetemp='C:\tmp\p4-rework-bt-core-evidence' -o cache_dir='C:\tmp\p4-rework-cache-core-evidence'
 ```
 
 Exit code 0; 30 passed, 0 failed, 0 skipped in 0.56 seconds. Output tail:
@@ -1892,7 +1892,7 @@ evaluation, and the missing-core-evidence failure boundary.
 Final Phase 2-4 high-signal command:
 
 ```text
-& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q harness/tests/contracts/test_research_orchestration_contracts.py harness/tests/research_orchestration/ harness/plugins/autosci/tests/research_synthesis_operators/ harness/plugins/autosci/tests/test_evidence_physical_operators.py harness/plugins/autosci/tests/scientific_lifecycle_action_operators/ --basetemp='C:\tmp\p4-rework-bt-highsignal5' -o cache_dir='C:\tmp\p4-rework-cache-highsignal5'
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q tests/harness/contracts/test_research_orchestration_contracts.py tests/harness/research_orchestration/ tests/plugins/autosci/research_synthesis_operators/ tests/plugins/autosci/test_evidence_physical_operators.py tests/plugins/autosci/scientific_lifecycle_action_operators/ --basetemp='C:\tmp\p4-rework-bt-highsignal5' -o cache_dir='C:\tmp\p4-rework-cache-highsignal5'
 ```
 
 Exit code 0; 411 passed, 0 failed, 0 skipped in 143.39 seconds. Output tail:
@@ -2007,11 +2007,11 @@ Modified implementation/schema/test files in this inspector repair are:
 - `harness/schemas/evidence/research_final_evaluation.v1.schema.json`
 - `harness/schemas/evidence/research_run_state.v1.schema.json`
 - `harness/workflows/scientific_research_lifecycle_full_v1.json`
-- `harness/plugins/autosci/tests/research_synthesis_operators/test_research_synthesis_operators.py`
-- `harness/plugins/autosci/tests/scientific_lifecycle_action_operators/test_action_delivery_operators.py`
-- `harness/plugins/autosci/tests/test_evidence_physical_operators.py`
-- `harness/tests/contracts/test_research_orchestration_contracts.py`
-- `harness/tests/research_orchestration/test_research_production_runtime.py`
+- `tests/plugins/autosci/research_synthesis_operators/test_research_synthesis_operators.py`
+- `tests/plugins/autosci/scientific_lifecycle_action_operators/test_action_delivery_operators.py`
+- `tests/plugins/autosci/test_evidence_physical_operators.py`
+- `tests/harness/contracts/test_research_orchestration_contracts.py`
+- `tests/harness/research_orchestration/test_research_production_runtime.py`
 
 #### Final production environment and commands
 
@@ -2075,7 +2075,7 @@ criteria passed.
 Local Markdown command:
 
 ```text
-& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' harness/plugins/autosci/bin/autosci_bridge.py research --prompt 'Synthesize this local Markdown into an evidence-backed technical report about Solar-native adapter boundaries, preserving the method and result.' --run-id phase4-rework2-md-009 --source harness/plugins/autosci/tests/fixtures/sample_paper.md --artifact-root .codex-tmp/phase4-rework2/md-009 --max-steps 100 --approval-ref phase4-user-authorized
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' harness/plugins/autosci/bin/autosci_bridge.py research --prompt 'Synthesize this local Markdown into an evidence-backed technical report about Solar-native adapter boundaries, preserving the method and result.' --run-id phase4-rework2-md-009 --source tests/plugins/autosci/fixtures/sample_paper.md --artifact-root .codex-tmp/phase4-rework2/md-009 --max-steps 100 --approval-ref phase4-user-authorized
 ```
 
 Exit code 0; duration 1.34 seconds; run ID `phase4-rework2-md-009`;
@@ -2130,7 +2130,7 @@ not applicable. The report dependency chain continued across these skips.
 Final targeted operator/registry/routing command:
 
 ```text
-& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q harness/plugins/autosci/tests/research_synthesis_operators harness/tests/research_orchestration/test_phase3_unified_production_registry.py harness/tests/research_orchestration/test_research_production_routing.py --basetemp C:\tmp\p4-cited-gate-bt -o cache_dir=C:\tmp\p4-cited-gate-cache
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q tests/plugins/autosci/research_synthesis_operators tests/harness/research_orchestration/test_phase3_unified_production_registry.py tests/harness/research_orchestration/test_research_production_routing.py --basetemp C:\tmp\p4-cited-gate-bt -o cache_dir=C:\tmp\p4-cited-gate-cache
 ```
 
 Exit code 0; 70 passed, 0 failed, 0 skipped in 6.57 seconds; command duration
@@ -2140,7 +2140,7 @@ Final Phase 2-4 high-signal command, including the production-service tests
 used by the inspector:
 
 ```text
-& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q harness/tests/contracts/test_research_orchestration_contracts.py harness/tests/research_orchestration harness/plugins/autosci/tests/research_synthesis_operators harness/plugins/autosci/tests/test_evidence_physical_operators.py harness/plugins/autosci/tests/scientific_lifecycle_action_operators harness/plugins/autosci/tests/test_production_research_services.py --basetemp C:\tmp\p4-cited-final-bt -o cache_dir=C:\tmp\p4-cited-final-cache
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q tests/harness/contracts/test_research_orchestration_contracts.py tests/harness/research_orchestration tests/plugins/autosci/research_synthesis_operators tests/plugins/autosci/test_evidence_physical_operators.py tests/plugins/autosci/scientific_lifecycle_action_operators tests/plugins/autosci/test_production_research_services.py --basetemp C:\tmp\p4-cited-final-bt -o cache_dir=C:\tmp\p4-cited-final-cache
 ```
 
 Exit code 0; **432 passed, 0 failed, 0 skipped in 113.01 seconds**; command

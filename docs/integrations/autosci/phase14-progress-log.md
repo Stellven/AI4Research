@@ -26,10 +26,10 @@ require human approval before any external handoff.
 | Publication adapter | Added | `harness/plugins/autosci/adapters/autosci_to_publication_bundle.py` |
 | Report gate | Updated | `harness/evaluators/scientific/report_gate.py` |
 | Publication gate | Added | `harness/evaluators/scientific/publication_gate.py` |
-| Fixture envelopes | Added/updated | `harness/plugins/autosci/tests/fixtures/envelope.write_report*.json` |
+| Fixture envelopes | Added/updated | `tests/plugins/autosci/fixtures/envelope.write_report*.json` |
 | Plugin manifest | Updated | `harness/plugins/autosci/manifest.yaml` |
-| Plugin/evaluator tests | Updated | `harness/plugins/autosci/tests/test_bridge_smoke.py`, `harness/plugins/autosci/tests/test_manifest_capabilities.py`, `harness/tests/evaluators/scientific/test_report_gate.py` |
-| Test fixtures | Added/updated | `harness/tests/evaluators/scientific/fixtures/{pass,fail}/publication_bundle.json`, publication file artifacts, pass report fixture |
+| Plugin/evaluator tests | Updated | `tests/plugins/autosci/test_bridge_smoke.py`, `tests/plugins/autosci/test_manifest_capabilities.py`, `tests/harness/evaluators/scientific/test_report_gate.py` |
+| Test fixtures | Added/updated | `tests/harness/evaluators/scientific/fixtures/{pass,fail}/publication_bundle.json`, publication file artifacts, pass report fixture |
 | README | Updated | `harness/plugins/autosci/README.md` |
 | Progress log | Added | `docs/integrations/autosci/phase14-progress-log.md` |
 

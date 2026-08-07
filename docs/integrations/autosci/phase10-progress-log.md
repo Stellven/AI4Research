@@ -21,9 +21,9 @@ verification behavior.
 |---|---|---|
 | Bridge actions | Updated | `harness/plugins/autosci/bin/autosci_bridge.py` |
 | Method/code adapters | Updated | `harness/plugins/autosci/adapters/autosci_to_{research_method,code_evidence_map}.py` |
-| Fixture envelopes | Added/updated | `harness/plugins/autosci/tests/fixtures/envelope.{extract_claims,extract_methods,map_code_evidence}.json` |
-| Sample repo fixture | Added | `harness/plugins/autosci/tests/fixtures/sample_repo/bridge_fixture.py` |
-| Plugin tests | Updated | `harness/plugins/autosci/tests/test_*.py` |
+| Fixture envelopes | Added/updated | `tests/plugins/autosci/fixtures/envelope.{extract_claims,extract_methods,map_code_evidence}.json` |
+| Sample repo fixture | Added | `tests/plugins/autosci/fixtures/sample_repo/bridge_fixture.py` |
+| Plugin tests | Updated | `tests/plugins/autosci/test_*.py` |
 | Physical operators | Updated | `harness/config/physical-operators.json` |
 | README | Updated | `harness/plugins/autosci/README.md` |
 

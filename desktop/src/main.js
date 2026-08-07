@@ -186,7 +186,7 @@ async function waitForSelftestVerdict(
 // On Windows the Electron app runs on the HOST; the runtime lives in WSL2. We drive
 // it through wsl.exe and reach it over localhost (WSL2 localhostForwarding maps
 // 127.0.0.1:<port> in the distro to the host). Distro is discovered, not hardcoded.
-// WSL detection lives in a no-electron module so it's unit-testable (see runtime-detect.test.js).
+// WSL detection lives in a no-electron module so it's unit-testable (see runtime-detect.test.cjs).
 // Call sites below are unchanged.
 const {
   wslDistro,

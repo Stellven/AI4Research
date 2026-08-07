@@ -87,7 +87,7 @@ worktree:
   is absent.
 - `harness/integrations/gepa_optimizer/cli.py` uses `os.sep` for resolved
   `/tmp` safety checks.
-- `harness/tests/integrations/gepa_optimizer/test_promote.py` uses
+- `tests/harness/integrations/gepa_optimizer/test_promote.py` uses
   platform-native path resolution for the `/tmp` acceptance test.
 
 ## PARTIAL
@@ -161,19 +161,19 @@ Installed lightweight dependency:
 Commands run:
 
 ```powershell
-& '.codex-tmp\r7-advanced-venv\Scripts\python.exe' -m pytest harness\tests\test_advanced_ai4rnd_operator.py -q --basetemp .codex-tmp\pytest-r7-advanced-new
+& '.codex-tmp\r7-advanced-venv\Scripts\python.exe' -m pytest tests\harness\test_advanced_ai4rnd_operator.py -q --basetemp .codex-tmp\pytest-r7-advanced-new
 ```
 
 Result: `3 passed`
 
 ```powershell
-& '.codex-tmp\r7-advanced-venv\Scripts\python.exe' -m pytest harness\tests\test_advanced_ai4rnd_operator.py harness\tests\integrations\gepa_optimizer harness\tests\graph\test_task_graph_state_io.py -q --basetemp .codex-tmp\pytest-r7-advanced-all-focused2
+& '.codex-tmp\r7-advanced-venv\Scripts\python.exe' -m pytest tests\harness\test_advanced_ai4rnd_operator.py tests\harness\integrations\gepa_optimizer tests\harness\graph\test_task_graph_state_io.py -q --basetemp .codex-tmp\pytest-r7-advanced-all-focused2
 ```
 
 Result: `151 passed, 24 warnings`
 
 ```powershell
-& '.codex-tmp\r7-advanced-venv\Scripts\python.exe' -m pytest harness\tests\test_model_registry_codex_aliases.py harness\tests\runtime\test_logical_operator_router.py -q --basetemp .codex-tmp\pytest-r7-advanced-registry
+& '.codex-tmp\r7-advanced-venv\Scripts\python.exe' -m pytest tests\harness\test_model_registry_codex_aliases.py tests\harness\runtime\test_logical_operator_router.py -q --basetemp .codex-tmp\pytest-r7-advanced-registry
 ```
 
 Result: `22 passed`

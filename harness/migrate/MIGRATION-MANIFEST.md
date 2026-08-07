@@ -16,7 +16,7 @@
 | `~/.solar/harness/personas/` | 人格定义 (builder/evaluator/planner) | 低 | 必须 |
 | `~/.solar/harness/templates/` | Sprint 模板 | 低 | 必须 |
 | `~/.solar/harness/migrate/` | 迁移工具自身 | 低 | 必须 |
-| `~/.solar/harness/tests/` | 回归测试 | 低 | 可选 |
+| `~/.solar/tests/harness/` | 回归测试 | 低 | 可选 |
 | `~/.solar/harness/logs/` | 协调器日志 | 低 | 可选 |
 | `~/.solar/harness/sprints/` | Sprint 历史 | 低 | 可选 |
 | `~/.solar/reports/` | 报告输出 | 低 | 可选 |

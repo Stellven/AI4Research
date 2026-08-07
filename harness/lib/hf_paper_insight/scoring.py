@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Optional
 
-from schema import (
+from .schema import (
     PaperCanonical,
     PaperEnrichment,
     PaperSignal,

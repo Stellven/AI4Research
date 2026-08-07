@@ -15,7 +15,7 @@
     "state_side_effects": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
     "failure_rejection_behavior": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
     "supported_boundaries_exclusions": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
-    "success_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+    "success_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
     "granularity_atomic_contracts": "candidate schema; budget boundary; hard-policy rejection; holdout improvement/regression; promote; rollback/no-change.",
     "readme_product_docs": "docs/SOLAR_EVOLUTION_ANALYSIS.md; docs/SELF_EVALUATION_SYSTEM_DESIGN.md; docs/solar-architecture-code-map.md §8",
     "cli_api_skill_interfaces": "harness/lib/evolution_engine.py: scorecard(), promote(), demote_degraded(), recommend(), run_loop(); harness/tools/skill_evolution_runner.py: run_once(); core/nerve/evolution-engine.ts: EvolutionEngine",
@@ -83,7 +83,7 @@
       ],
       "expected_result": "Candidate artifacts, evaluation comparison, budget/policy findings, promotion decision, and rollback-capable stored version.",
       "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
-      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -110,7 +110,7 @@
       ],
       "expected_result": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
       "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
-      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -137,7 +137,7 @@
       ],
       "expected_result": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
       "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
-      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -164,7 +164,7 @@
       ],
       "expected_result": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
       "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
-      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -191,7 +191,7 @@
       ],
       "expected_result": "Candidate artifacts, evaluation comparison, budget/policy findings, promotion decision, and rollback-capable stored version.",
       "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
-      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -218,7 +218,7 @@
       ],
       "expected_result": "Budget/policy violation, invalid candidate, holdout regression, evaluation failure, or promotion conflict leaves current artifact active.",
       "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
-      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -243,9 +243,9 @@
         "Collect the contract-required status, provenance, artifact, and audit evidence.",
         "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
       ],
-      "expected_result": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "expected_result": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "state_and_side_effect_oracle": "Writes candidate/evaluation artifacts and, on approved promotion, updates the promoted artifact pointer/version.",
-      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under harness/tests/integrations/gepa_optimizer/.",
+      "required_evidence": "Versioned GEPA candidate and evaluation artifacts satisfy hard policies and promotion tests under tests/harness/integrations/gepa_optimizer/.",
       "supported_boundary": "GEPA integration is shipped. MIPROv2 and TextGrad implementations were not found in current codebase.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     }

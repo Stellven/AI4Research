@@ -21,8 +21,8 @@ updates are emitted as `operation: propose`; no wiki or memory state is mutated.
 | Bridge actions | Updated | `harness/plugins/autosci/bin/autosci_bridge.py` |
 | Phase 9 converters | Added | `harness/plugins/autosci/adapters/autosci_to_{literature_discovery,research_memory_update,research_graph_update}.py` |
 | Paper converter | Updated | `harness/plugins/autosci/adapters/autosci_to_research_paper.py` |
-| Fixture envelopes | Added/updated | `harness/plugins/autosci/tests/fixtures/envelope.*.json` |
-| Plugin tests | Updated | `harness/plugins/autosci/tests/test_*.py` |
+| Fixture envelopes | Added/updated | `tests/plugins/autosci/fixtures/envelope.*.json` |
+| Plugin tests | Updated | `tests/plugins/autosci/test_*.py` |
 | Physical operators | Updated | `harness/config/physical-operators.json` |
 | README | Updated | `harness/plugins/autosci/README.md` |
 | Evaluator environment shim | Added/updated | `harness/bin/python3`, `harness/evaluators/scientific/common.py` |
@@ -61,7 +61,7 @@ bare Python, and fail closed if no Draft 2020-12 validator is available.
 | Issue | Status | Cause | Fix approach | Resolution / disposition |
 |---|---|---|---|---|
 | Direct PDF ingest failed on `SkillGen.pdf` | scoped out | `ingest_paper` reads `inputs.paper_path` as UTF-8 markdown/text; it does not run a PDF extractor. | Do not add PDF parsing to Phase 9; keep the phase focused on native paper/memory/graph ABI flow. | Treat Phase 9 paper input as markdown fixture input. PDF-native ingestion is a future capability, not a Phase 9 blocker. |
-| Temporary PDF-derived paper lived under runtime artifacts | fixed | The first SkillGen check used `artifacts/scientific/.../skillgen_paper.md` as a runnable workaround. | Promote the reusable sample into the AutoSci fixture tree so future tests do not depend on run artifacts. | Added canonical fixture `harness/plugins/autosci/tests/fixtures/skillgen_sample_paper.md`; redo check uses that fixture. |
+| Temporary PDF-derived paper lived under runtime artifacts | fixed | The first SkillGen check used `artifacts/scientific/.../skillgen_paper.md` as a runnable workaround. | Promote the reusable sample into the AutoSci fixture tree so future tests do not depend on run artifacts. | Added canonical fixture `tests/plugins/autosci/fixtures/skillgen_sample_paper.md`; redo check uses that fixture. |
 | Graph artifact naming did not match the human plan | fixed | The human plan expected `graph_edges.jsonl`, but the implemented Solar Evidence ABI is `research_graph_update.v1` JSON with edges in `outputs.edges`. | Prefer the existing Evidence ABI contract over inventing a second graph file format in Phase 9. | Canonical output is now documented as `research_graph_update.json`; optional `graph_edges.jsonl` can be added later as a derived export. |
 | `graph_edges.jsonl` could be created with the wrong content if named in an envelope | fixed by contract | The generic evidence writer writes a full Evidence ABI JSON object to `evidence_payload_path` regardless of file extension. | Stop naming the Evidence ABI payload as `.jsonl`; reserve `.jsonl` for future line-delimited exports only. | Envelopes and docs should use `research_graph_update.json` for the graph evidence payload. |
 | Bare `python3` did not import `jsonschema` | fixed | Bare `python3` is the mise-managed runtime, while `jsonschema` is installed in OpenSolar `.venv` and as a separate pipx CLI. | Add a project-local Python entrypoint instead of installing Python libraries into the shared mise runtime. | Added `harness/bin/python3` wrapper to run repo `.venv/bin/python`; dependency record updated. |

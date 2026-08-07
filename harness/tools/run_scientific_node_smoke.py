@@ -25,7 +25,7 @@ DEFAULT_NODE_ID = "paper_ingest"
 DEFAULT_LOGICAL_OPERATOR = "ScientificPaperIngestor"
 DEFAULT_ACTION = "ingest_paper"
 DEFAULT_EXPECTED_SCHEMA = "research_paper.v1"
-DEFAULT_PAPER = "plugins/autosci/tests/fixtures/sample_paper.md"
+DEFAULT_PAPER = "tests/plugins/autosci/fixtures/sample_paper.md"
 ACTION_BY_OPERATOR = {
     "autosci-literature-discover-worker": "discover_literature",
     "autosci-paper-ingest-worker": "ingest_paper",

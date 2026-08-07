@@ -46,22 +46,22 @@
       "evidence": "PASS in the isolated WSL fixture; intake from the harness directory failed closed with workspace guidance."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_save_and_load_spec",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_save_and_load_spec",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); round-trip spec persistence verified."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_patch_state",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_patch_state",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); state patch persisted."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_set_node_result_in_state",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_set_node_result_in_state",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); node result persisted."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_set_gate_result_in_state",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_set_gate_result_in_state",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); gate result persisted."
     },
@@ -71,27 +71,27 @@
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); corrupt JSON returns an empty load and parse_error validation."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_spec_valid_missing",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_spec_valid_missing",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); missing spec returns the explicit missing verdict."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_compile_mirror_merges_spec_and_state",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_compile_mirror_merges_spec_and_state",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); mirror compilation merged spec and state."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_backfill_state_from_legacy",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_backfill_state_from_legacy",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); legacy state backfill persisted provenance."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_closure_complete_true",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_closure_complete_true",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); complete closure returns true."
     },
     {
-      "selector": "harness/tests/graph/test_task_graph_io.py::test_closure_complete_false",
+      "selector": "tests/harness/graph/test_task_graph_io.py::test_closure_complete_false",
       "result": "PASS",
       "evidence": "PASS in the current 27-test TaskGraph persistence suite (4.27s); incomplete closure returns false."
     },
@@ -116,12 +116,12 @@
       "evidence": "PASS in the current capability-capsule atomic suite (1.27s); invalid contract semantics return a validation error."
     },
     {
-      "selector": "harness/tests/test_capability_capsules.py::test_resolution_gate_attaches_guard_and_resource_capsules",
+      "selector": "tests/harness/test_capability_capsules.py::test_resolution_gate_attaches_guard_and_resource_capsules",
       "result": "PASS",
       "evidence": "PASS in the current capability-capsule atomic suite (1.27s); referenced guard and resource capsules resolve and attach."
     },
     {
-      "selector": "harness/tests/test_capability_capsules.py::test_resolution_gate_blocks_missing_resource",
+      "selector": "tests/harness/test_capability_capsules.py::test_resolution_gate_blocks_missing_resource",
       "result": "PASS",
       "evidence": "PASS in the current capability-capsule atomic suite (1.27s); a missing referenced resource blocks resolution."
     },

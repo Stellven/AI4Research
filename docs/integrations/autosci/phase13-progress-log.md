@@ -23,9 +23,9 @@ ownership. Claim verification remains a bounded fixture-mode adapter path.
 | Bridge action | Updated | `harness/plugins/autosci/bin/autosci_bridge.py` |
 | Claim verdict adapter | Updated | `harness/plugins/autosci/adapters/autosci_to_claim_verdict.py` |
 | Evaluator gate | Updated | `harness/evaluators/scientific/claim_verdict_gate.py` |
-| Fixture envelopes | Added/updated | `harness/plugins/autosci/tests/fixtures/envelope.verify_claim*.json` |
-| Experiment result fixtures | Added | `harness/plugins/autosci/tests/fixtures/{supported,partially_supported,not_supported,inconclusive}_experiment_result.json` |
-| Plugin/evaluator tests | Updated | `harness/plugins/autosci/tests/test_bridge_smoke.py`, `harness/tests/evaluators/scientific/test_claim_verdict_gate.py` |
+| Fixture envelopes | Added/updated | `tests/plugins/autosci/fixtures/envelope.verify_claim*.json` |
+| Experiment result fixtures | Added | `tests/plugins/autosci/fixtures/{supported,partially_supported,not_supported,inconclusive}_experiment_result.json` |
+| Plugin/evaluator tests | Updated | `tests/plugins/autosci/test_bridge_smoke.py`, `tests/harness/evaluators/scientific/test_claim_verdict_gate.py` |
 | README | Updated | `harness/plugins/autosci/README.md` |
 | Progress log | Added | `docs/integrations/autosci/phase13-progress-log.md` |
 

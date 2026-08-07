@@ -7,7 +7,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from typing import Optional
 
-from providers.base import BaseEnrichmentProvider, PaperCanonicalProto
+from .base import BaseEnrichmentProvider, PaperCanonicalProto
 
 
 class ArxivMetadataProvider(BaseEnrichmentProvider):

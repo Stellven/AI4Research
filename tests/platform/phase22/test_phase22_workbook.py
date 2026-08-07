@@ -20,7 +20,7 @@ from phase22_workbook_validation import (
 
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.resolve().parents[3]
+ROOT = HERE.resolve().parents[2]
 MATRIX_PATH = HERE / "atomic_feature_matrix.json"
 WORKBOOK_PATH = ROOT / ".codex-tmp/phase22-i1/phase-22-test-report.generated.xlsx"
 

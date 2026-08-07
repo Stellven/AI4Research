@@ -1,0 +1,24 @@
+{
+  "schema": "opensolar.test_quarantine.v1",
+  "count": 17,
+  "reason": "These scripts require or mutate a pre-existing personal runtime, database, service, or skill-health state. They are not accepted repository test evidence until they receive controlled fixtures and isolated state.",
+  "records": [
+    {"original_path": "tests/mempalace/test_mcp_tools.sh", "class": "personal-database-dependency"},
+    {"original_path": "tests/mempalace/test_diary.sh", "class": "personal-database-dependency"},
+    {"original_path": "tests/mempalace/test_count_50.sh", "class": "preseeded-count-assumption"},
+    {"original_path": "tests/harness/external-integrations/test_audit_uploads.sh", "class": "personal-upload-state"},
+    {"original_path": "tests/harness/external-integrations/test_endpoint_view.sh", "class": "unmanaged-live-service"},
+    {"original_path": "tests/harness/external-integrations/test_schema_health.sh", "class": "personal-runtime-dependency"},
+    {"original_path": "tests/harness/external-integrations/test_upload_ingest_coverage.sh", "class": "personal-upload-state"},
+    {"original_path": "tests/harness/external-integrations/test_wording_flags.sh", "class": "personal-runtime-dependency"},
+    {"original_path": "tests/harness/legacy_shell/test_chain_watcher_contract_regression.sh", "class": "personal-inbox-mutation"},
+    {"original_path": "tests/harness/legacy_shell/test_chain_watcher_notify.sh", "class": "personal-inbox-mutation"},
+    {"original_path": "tests/harness/legacy_shell/test_chain_watcher_pane0_notify.sh", "class": "personal-inbox-mutation"},
+    {"original_path": "tests/harness/legacy_shell/test_chain_watcher_pane0_throttle.sh", "class": "personal-inbox-mutation"},
+    {"original_path": "tests/harness/runtime/test_model_call_runtime.sh", "class": "personal-runtime-mutation"},
+    {"original_path": "tests/harness/legacy_shell/test_data_plane_db_concurrency.sh", "class": "personal-database-mutation"},
+    {"original_path": "tests/harness/legacy_shell/test_symphony_d6_guard.sh", "class": "installed-runtime-dependency"},
+    {"original_path": "tests/harness/integrations/test_remote_dispatch_productization.sh", "class": "writes-reports-into-runtime"},
+    {"original_path": "tests/harness/evolution/test_skill_evolution_runner.sh", "class": "preseeded-skill-health-state"}
+  ]
+}

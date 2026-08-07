@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional, Protocol
 
-from schema import PaperSnapshot, WindowType, _gen_id, _utc_now
+from .schema import PaperSnapshot, WindowType, _gen_id, _utc_now
 
 
 class StoreProto(Protocol):

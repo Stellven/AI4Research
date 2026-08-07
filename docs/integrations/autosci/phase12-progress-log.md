@@ -24,8 +24,8 @@ explicit approval.
 | Bridge actions | Updated | `harness/plugins/autosci/bin/autosci_bridge.py` |
 | Experiment adapters | Added/updated | `harness/plugins/autosci/adapters/autosci_to_experiment_{plan,result,status}.py` |
 | Evaluator gates | Added/updated | `harness/evaluators/scientific/experiment_{plan,result,status}_gate.py` |
-| Fixture envelopes | Added/updated | `harness/plugins/autosci/tests/fixtures/envelope.{design_experiment,run_experiment,run_experiment.fixture,monitor_experiment}.json` |
-| Plugin/evaluator tests | Added/updated | `harness/plugins/autosci/tests/test_*.py`, `harness/tests/evaluators/scientific/test_experiment_status_gate.py` |
+| Fixture envelopes | Added/updated | `tests/plugins/autosci/fixtures/envelope.{design_experiment,run_experiment,run_experiment.fixture,monitor_experiment}.json` |
+| Plugin/evaluator tests | Added/updated | `tests/plugins/autosci/test_*.py`, `tests/harness/evaluators/scientific/test_experiment_status_gate.py` |
 | Physical/logical operators | Updated | `harness/config/{physical,logical}-operators.json` |
 | README | Updated | `harness/plugins/autosci/README.md` |
 

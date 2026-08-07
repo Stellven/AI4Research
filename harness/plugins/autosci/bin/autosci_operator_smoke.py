@@ -281,7 +281,7 @@ def build_envelope(action: str, *, paper_path: str, base_rel: str, sample_repo: 
             **common,
             "inputs": {
                 "experiment_plan_evidence": f"{base_rel}/experiment_plan.json",
-                "experiment_result": "plugins/autosci/tests/fixtures/sample_autosci_raw_experiment_result.json",
+                "experiment_result": "tests/plugins/autosci/fixtures/sample_autosci_raw_experiment_result.json",
                 "execution_mode": "fixture",
             },
             "outputs": base_outputs(base_rel, action, "experiment_result.json"),

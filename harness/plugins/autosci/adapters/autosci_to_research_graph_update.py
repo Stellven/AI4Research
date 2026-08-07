@@ -9,7 +9,7 @@ from .common import evidence_base
 
 def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict[str, Any]:
     paper_id = str(raw.get("paper_id") or "paper-autosci-fixture")
-    source_ref = str(raw.get("source_ref") or "plugins/autosci/tests/fixtures/sample_paper.md")
+    source_ref = str(raw.get("source_ref") or "tests/plugins/autosci/fixtures/sample_paper.md")
     evidence_ids = list(raw.get("evidence_ids") or [paper_id])
     edges = list(raw.get("edges") or [
         {

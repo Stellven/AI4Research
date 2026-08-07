@@ -12,7 +12,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-from schema import (
+from .schema import (
     ALL_DDL,
     ENTITY_TABLE_MAP,
     PaperCanonical,

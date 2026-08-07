@@ -23,11 +23,11 @@ the workflow authority.
 | Bridge entrypoint | 1 | Added | `ac5869c6` | `harness/plugins/autosci/bin/autosci_bridge.py` |
 | Adapter modules | 11 | Added | `ac5869c6` | `harness/plugins/autosci/adapters/*.py` |
 | Raw schemas | 3 | Added | `ac5869c6` | `harness/plugins/autosci/schemas/raw/*.schema.json` |
-| Fixtures | 9 | Added | `ac5869c6` | `harness/plugins/autosci/tests/fixtures/*` |
-| Tests | 2 | Added | `ac5869c6` | `harness/plugins/autosci/tests/test_*.py` |
+| Fixtures | 9 | Added | `ac5869c6` | `tests/plugins/autosci/fixtures/*` |
+| Tests | 2 | Added | `ac5869c6` | `tests/plugins/autosci/test_*.py` |
 | Eval pack | 1 | Added | `ac5869c6` | `harness/plugins/autosci/eval_packs/autosci_adapter_smoke.yaml` |
 | Phase log | 1 | Added | this log commit | `docs/integrations/autosci/phase4-progress-log.md` |
-| Plugin test harness path hardening | 4 | Modified | `62cd8650` | `harness/tests/plugins/test-s4-plugins.sh`, `test-s4-extension-framework.sh`, `test-autoresearch-integration.sh`, `test-ruflo-integration.sh` |
+| Plugin test harness path hardening | 4 | Modified | `62cd8650` | `tests/harness/plugins/test_s4_plugins.sh`, `test-s4-extension-framework.sh`, `test-autoresearch-integration.sh`, `test-ruflo-integration.sh` |
 | Registry warning cleanup | 1 | Modified | `62cd8650` | `harness/lib/capability_registry.py` |
 
 ## Bridge Actions
@@ -59,7 +59,7 @@ the workflow authority.
 | Plugin tests | ok | `../.venv/bin/python -m pytest plugins/autosci/tests` passed: 5 tests. |
 | Existing manifest fallback smoke | ok | System `python3` without PyYAML validated existing `empirical-research` and `autoresearch` manifests after fallback parser fix. |
 | Commit and push | ok | Commit `ac5869c6` pushed to `origin/feature/autosci-solar-native`. |
-| Plugin test path grep | ok | No `harness/tests/plugins` script still defaults to `$HOME/.solar/harness` or `$HOME/.solar/bin/solar-harness`. |
+| Plugin test path grep | ok | No `tests/harness/plugins` script still defaults to `$HOME/.solar/harness` or `$HOME/.solar/bin/solar-harness`. |
 | Plugin test shell syntax | ok | `bash -n` passed for `test-s4-plugins.sh`, `test-s4-extension-framework.sh`, `test-autoresearch-integration.sh`, and `test-ruflo-integration.sh`. |
 | S4 plugin regression | ok | `bash tests/plugins/test-s4-plugins.sh` passed: `PASS=30 FAIL=0`. |
 | S4 extension framework regression | ok | `bash tests/plugins/test-s4-extension-framework.sh` passed: `PASS=23 FAIL=0`. |

@@ -9,7 +9,7 @@ import json
 import re
 from typing import Optional
 
-from schema import PaperEnrichment, PaperTaxonomy, _gen_id, _utc_now
+from .schema import PaperEnrichment, PaperTaxonomy, _gen_id, _utc_now
 
 
 _DOMAIN_KEYWORDS: dict[str, list[str]] = {

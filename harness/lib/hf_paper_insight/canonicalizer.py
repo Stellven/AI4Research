@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 from typing import Optional, Protocol, Tuple
 
-from schema import (
+from .schema import (
     PaperCanonical,
     PaperSnapshot,
     _gen_id,

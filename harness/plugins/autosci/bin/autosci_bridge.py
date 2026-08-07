@@ -23,6 +23,8 @@ HARNESS_DIR = Path(
     or os.environ.get("HARNESS_DIR", Path(__file__).resolve().parents[3])
 ).resolve()
 REPO_HARNESS_DIR = Path(__file__).resolve().parents[3]
+REPO_ROOT = REPO_HARNESS_DIR.parent
+TEST_FIXTURE_DIR = REPO_ROOT / "tests" / "plugins" / "autosci" / "fixtures"
 if str(REPO_HARNESS_DIR) not in sys.path:
     sys.path.insert(0, str(REPO_HARNESS_DIR))
 if str(REPO_HARNESS_DIR / "lib") not in sys.path:
@@ -92,7 +94,7 @@ _SIDE_EFFECT_ACCESS_ENV_HINTS = {
 
 
 def _fixture_path(name: str) -> Path:
-    return PLUGIN_DIR / "tests" / "fixtures" / name
+    return TEST_FIXTURE_DIR / name
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -109,6 +111,9 @@ def _resolve_harness_path(raw_path: str | Path) -> Path:
     repo_candidate = REPO_HARNESS_DIR / path
     if repo_candidate.exists():
         return repo_candidate
+    repository_candidate = REPO_ROOT / path
+    if repository_candidate.exists():
+        return repository_candidate
     return harness_candidate
 
 
@@ -1978,7 +1983,7 @@ def _paper_update_raw(envelope: dict[str, Any], evidence: dict[str, Any] | None 
     return {
         "paper_id": str(paper.get("paper_id") or "paper-autosci-fixture"),
         "title": str(paper.get("title") or "AutoSci Fixture Paper"),
-        "source_ref": str(paper.get("source_ref") or "plugins/autosci/tests/fixtures/sample_paper.md"),
+        "source_ref": str(paper.get("source_ref") or "tests/plugins/autosci/fixtures/sample_paper.md"),
         "memory_path": f"knowledge/research/papers/{paper.get('paper_id') or 'paper-autosci-fixture'}.md",
         "evidence_ids": [str(paper.get("paper_id") or "paper-autosci-fixture")],
     }
@@ -7532,7 +7537,7 @@ def _action_extract_methods(envelope: dict[str, Any]) -> dict[str, Any]:
 
 def _action_map_code_evidence(envelope: dict[str, Any]) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
-    raw_repo = inputs.get("repo_path") or "plugins/autosci/tests/fixtures/sample_repo"
+    raw_repo = inputs.get("repo_path") or "tests/plugins/autosci/fixtures/sample_repo"
     repo_path = _resolve_harness_path(str(raw_repo))
     claim_id = str(inputs.get("claim_id") or "claim-001")
     claim_text = _claim_text_from_evidence(envelope, claim_id)
@@ -22945,7 +22950,7 @@ def cmd_smoke(args: argparse.Namespace) -> int:
         "node_id": "node-autosci-smoke",
         "mode": "fixture",
         "output_dir": "artifacts/autosci/smoke",
-        "inputs": {"fixture": "plugins/autosci/tests/fixtures/sample_autosci_raw_claims.json"},
+        "inputs": {"fixture": "tests/plugins/autosci/fixtures/sample_autosci_raw_claims.json"},
     })
     evidence = _action_extract_claims(envelope)
     result = _write_result("smoke", envelope, evidence)

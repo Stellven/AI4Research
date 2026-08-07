@@ -34,7 +34,7 @@ The user authorized OpenRouter/OpenAI live provider use and prohibited `gpt-5.6-
 Final live command summary:
 
 ```powershell
-python -m pytest harness/tests/research_orchestration/generalization/test_phase5_content_diversity.py -q --basetemp C:\tmp\p5qualbt20260806084035 -o cache_dir=C:\tmp\p5qualcache20260806084035
+python -m pytest tests/harness/research_orchestration/generalization/test_phase5_content_diversity.py -q --basetemp C:\tmp\p5qualbt20260806084035 -o cache_dir=C:\tmp\p5qualcache20260806084035
 ```
 
 Environment summary: `AUTOSCI_LIVE_PROVIDER_TESTS=1`, provider `openrouter`, model `gpt-5.6-luna`, result root `C:/tmp/p5qual20260806084035`.
@@ -73,13 +73,13 @@ Integration rerun: `11 passed in 46.51s`.
 
 | Area | Command summary | Exit code | Result |
 | --- | --- | --- | --- |
-| Content diversity live | `pytest harness/tests/research_orchestration/generalization/test_phase5_content_diversity.py -q` with OpenRouter `gpt-5.6-luna` and result root `C:/tmp/p5qual20260806084035` | 0 | `3 passed in 205.47s`; `zh=PASS_WITH_KNOWN_LIMITATIONS`, `en=FAIL` by gate evidence |
-| Seed portability | `pytest harness/tests/research_orchestration/generalization/test_phase5_seed_portability.py -q -p no:cacheprovider` | 0 | `7 passed in 12.67s` |
-| Lifecycle recovery | `pytest harness/tests/research_orchestration/generalization/test_phase5_lifecycle_recovery.py -q` | 0 | `4 passed in 20.67s` |
-| Platform/provider | `pytest harness/tests/research_orchestration/generalization/test_phase5_platform_provider_resilience.py -q --tb=short` | 0 | `11 passed in 46.51s` |
+| Content diversity live | `pytest tests/harness/research_orchestration/generalization/test_phase5_content_diversity.py -q` with OpenRouter `gpt-5.6-luna` and result root `C:/tmp/p5qual20260806084035` | 0 | `3 passed in 205.47s`; `zh=PASS_WITH_KNOWN_LIMITATIONS`, `en=FAIL` by gate evidence |
+| Seed portability | `pytest tests/harness/research_orchestration/generalization/test_phase5_seed_portability.py -q -p no:cacheprovider` | 0 | `7 passed in 12.67s` |
+| Lifecycle recovery | `pytest tests/harness/research_orchestration/generalization/test_phase5_lifecycle_recovery.py -q` | 0 | `4 passed in 20.67s` |
+| Platform/provider | `pytest tests/harness/research_orchestration/generalization/test_phase5_platform_provider_resilience.py -q --tb=short` | 0 | `11 passed in 46.51s` |
 | State/routing | `pytest test_research_state_store.py test_research_production_routing.py -q` | 0 | `25 passed in 4.15s` |
-| Production services, final HEAD | `pytest harness/plugins/autosci/tests/test_production_research_services.py -q` | 0 | `13 passed in 1.02s` |
-| Research synthesis operators, final HEAD | `pytest harness/plugins/autosci/tests/research_synthesis_operators -q` | 0 | `50 passed in 0.86s` |
+| Production services, final HEAD | `pytest tests/plugins/autosci/test_production_research_services.py -q` | 0 | `13 passed in 1.02s` |
+| Research synthesis operators, final HEAD | `pytest tests/plugins/autosci/research_synthesis_operators -q` | 0 | `50 passed in 0.86s` |
 | Result validation/evaluator/runtime, final HEAD | `pytest test_research_result_validation.py test_research_orchestrator.py test_research_production_runtime.py -q` | 0 | `103 passed in 18.73s` |
 | Phase 4 full selector | Phase 4 selector plus accepted Phase 5 tests and service regressions, run before the latest content repair commits | 0 | `472 passed in 895.72s` |
 

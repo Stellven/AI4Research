@@ -69,10 +69,10 @@ def uniq_feature_id(base: str, seen: Counter[str]) -> str:
 def tracked_tests(files: Iterable[str]) -> list[str]:
     test_prefixes = (
         "tests/",
-        "harness/tests/",
-        "distribution/pipx/tests/",
+        "tests/harness/",
+        "tests/distribution/pipx/",
         "skills/fast-browser-use/tests/",
-        "skills/email-to-calendar/scripts/tests/",
+        "tests/skills/email_to_calendar/",
     )
     tests = []
     for f in files:
@@ -116,7 +116,7 @@ DOMAIN_RULES: list[tuple[str, tuple[str, str]]] = [
     ("harness/lib/benchmark", ("Benchmarks", "Benchmark runtime")),
     ("harness/lib/graph", ("Harness", "Graph orchestration")),
     ("harness/lib/", ("Harness", "Python runtime library")),
-    ("harness/tests/", ("Tests", "Harness test suite")),
+    ("tests/harness/", ("Tests", "Harness test suite")),
     ("harness/", ("Harness", "Solar-Harness shell/runtime")),
     ("core/daemon", ("Core", "Daemon runtime")),
     ("core/orchestrator", ("Core", "Orchestrator")),
@@ -290,7 +290,7 @@ def shell_script_features(files: list[str], seen: Counter[str]) -> list[Feature]
         if not path.startswith(prefixes):
             continue
         name = Path(path).name
-        if path.startswith("harness/tests/") or path.startswith("tests/") or name.startswith("test-") or name.startswith("test_"):
+        if path.startswith("tests/harness/") or path.startswith("tests/") or name.startswith("test-") or name.startswith("test_"):
             continue
         if "/vendor/" in path or "/run/" in path or "/logs/" in path:
             continue
@@ -325,7 +325,7 @@ def parse_python_cli_commands(text: str) -> list[str]:
 def python_cli_features(files: list[str], seen: Counter[str]) -> list[Feature]:
     out: list[Feature] = []
     for path in sorted(f for f in files if f.endswith(".py")):
-        if "/vendor/" in path or path.startswith("harness/tests/") or path.startswith("tests/"):
+        if "/vendor/" in path or path.startswith("tests/harness/") or path.startswith("tests/"):
             continue
         name = Path(path).name
         if name.startswith("test_") or name.startswith("test-") or ".test." in name:
@@ -421,7 +421,7 @@ def route_features(files: list[str], seen: Counter[str]) -> list[Feature]:
     route_files = [f for f in files if f.endswith((".py", ".ts", ".js", ".mjs")) and ("server" in f or "routes" in f or "dashboard" in f)]
     patterns: set[tuple[str, str]] = set()
     for path in route_files:
-        if "/vendor/" in path or path.startswith("tests/") or path.startswith("harness/tests/"):
+        if "/vendor/" in path or path.startswith("tests/") or path.startswith("tests/harness/"):
             continue
         try:
             text = read_text(path)
@@ -572,7 +572,7 @@ def domain_module_features(files: list[str], seen: Counter[str]) -> list[Feature
             "Ingestion",
             "Documents",
             "PDF/PPTX/DOCX and data-plane extraction",
-            "harness/lib/mineru_extract.py;harness/lib/source_manifest.py;harness/tests/data_plane",
+            "harness/lib/mineru_extract.py;harness/lib/source_manifest.py;tests/harness/data_plane",
             "Document fixtures extract into valid text/source manifests; corrupt or scanned-only files produce explicit unsupported/error states.",
         ),
         (
@@ -614,7 +614,7 @@ def domain_module_features(files: list[str], seen: Counter[str]) -> list[Feature
             "AutoSci",
             "Scientific evaluators",
             "scientific lifecycle artifact gates",
-            "harness/evaluators/scientific;harness/tests/evaluators/scientific",
+            "harness/evaluators/scientific;tests/harness/evaluators/scientific",
             "Pass/fail fixtures validate schemas and gates for idea, paper, experiment, claims, report, publication, and lifecycle artifacts.",
         ),
         (

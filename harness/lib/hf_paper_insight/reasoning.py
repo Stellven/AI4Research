@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from schema import PaperEvidencePacket, ResonanceLevel
+from .schema import PaperEvidencePacket, ResonanceLevel
 
 
 def _load_packet_json(packet: PaperEvidencePacket, field_name: str) -> dict:

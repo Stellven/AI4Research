@@ -1,0 +1,768 @@
+{
+  "schema": "opensolar.test_quarantine.v1",
+  "count": 127,
+  "records": [
+    {
+      "original_path": "outputs/qa_csv_merge/test_merge.mjs",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/outputs/qa_csv_merge/disabled_test_merge.mjs",
+      "class": "nonportable-ad-hoc-script",
+      "cause": "hard-coded a developer-specific absolute output path and contained no assertion about workbook correctness"
+    },
+    {
+      "original_path": "tests/harness/test_multi_task_canonical_status.py",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/harness/disabled_multi_task_canonical_status.py",
+      "class": "stale-product-expectation",
+      "cause": "the script ran assertions during import and expected status_summary_for_graph to create a status file, but that production function is read-only"
+    },
+    {
+      "original_path": "core/test-agents.ts",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/core/disabled_agent_system.ts",
+      "class": "ad-hoc-script-not-discoverable",
+      "cause": "custom console runner with process.exit; not a Bun test module and not isolated from process-global agent state"
+    },
+    {
+      "original_path": "core/test-call-agent.ts",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/core/disabled_call_agent_demo.ts",
+      "class": "misleading-demo",
+      "cause": "prints PASS after swallowing contact/permission failures and does not execute the advertised real call behavior"
+    },
+    {
+      "original_path": "core/test-call-quick.ts",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/core/disabled_call_quick_demo.ts",
+      "class": "misleading-demo",
+      "cause": "prints a success banner and UI mock-up without assertions"
+    },
+    {
+      "original_path": "core/test-e2e.ts",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/core/disabled_e2e_demo.ts",
+      "class": "ad-hoc-script-not-discoverable",
+      "cause": "custom process-level runner rather than a discoverable, independently isolated Bun test"
+    },
+    {
+      "original_path": "core/test-monitor.ts",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/core/disabled_monitor_demo.ts",
+      "class": "misleading-assertion",
+      "cause": "includes hard-coded true checks and custom process exits, so its PASS summary overstates exercised behavior"
+    },
+    {
+      "original_path": "core/hive/cli/test-discovery.ts",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/core/hive/cli/disabled_discovery.ts",
+      "class": "unsafe-network-script",
+      "cause": "opens fixed discovery/P2P ports and relies on sleeps without deterministic assertions or resource fixtures"
+    },
+    {
+      "original_path": "core/hive/cli/test-integration.ts",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/core/hive/cli/disabled_integration.ts",
+      "class": "unsafe-process-script",
+      "cause": "spawns long-lived integration processes and exits the host process instead of using an isolated test fixture"
+    },
+    {
+      "original_path": "core/message-listener/test-priorities.ts",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/core/message-listener/disabled_priorities.ts",
+      "class": "ad-hoc-stateful-script",
+      "cause": "uses a custom database/process runner with no temporary-state fixture and is not discoverable by Bun test"
+    },
+    {
+      "original_path": "tests/harness/lib/github_intelligence/test_v3_budget_enforcement.py",
+      "quarantined_path": "tests/quarantine/misleading_legacy_scripts/harness/lib/github_intelligence/disabled_v3_budget_enforcement.py",
+      "class": "non-pytest-acceptance-script",
+      "cause": "pytest collected dependent script steps as independent tests; the script also wrote reports outside pytest temporary directories"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_approved_gated_atomic_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_approved_gated_atomic_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_autosci_foundation_direct_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_autosci_foundation_direct_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_capability_plane_direct_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_capability_plane_direct_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_ci_workflow_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_ci_workflow_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_cli_direct_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_cli_direct_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_evidence_schema_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_evidence_schema_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_included_feature_structural_preconditions.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_included_feature_structural_preconditions.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_installer_component_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_installer_component_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_integration_discovery_direct_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_integration_discovery_direct_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_knowledge_remaining_direct_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_knowledge_remaining_direct_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_manual_oracle_atomic_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_manual_oracle_atomic_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_misc_side_effect_gate_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_misc_side_effect_gate_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_qa_inventory_area_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_qa_inventory_area_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_remaining_app_browser_provider_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_remaining_app_browser_provider_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_remaining_core_direct_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_remaining_core_direct_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_remaining_safe_atomic_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_remaining_safe_atomic_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_scientific_gate_cli_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_scientific_gate_cli_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/qa_audit/20260710_full_audit/audit_tests/test_source_provider_direct_contracts.py",
+      "quarantined_path": "tests/quarantine/qa_audit_archive/20260710_full_audit/audit_tests/disabled_source_provider_direct_contracts.py",
+      "class": "archived-checkout-only",
+      "cause": "targets tests/qa_audit/.../tmp/codex-not-run-checkout rather than the current repository"
+    },
+    {
+      "original_path": "tests/harness/control_plane/test_graph_scheduler.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/control_plane/disabled_graph_scheduler.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/control_plane/test_s6_control_plane.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/control_plane/disabled_s6_control_plane.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/evolution/test_s5_evolution_engine.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/evolution/disabled_s5_evolution_engine.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_capsule_ledger.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_capsule_ledger.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_codex_bridge.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_codex_bridge.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_control_plane.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_control_plane.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_coord_startup.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_coord_startup.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_coordinator_routing.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_coordinator_routing.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_deadhead.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_deadhead.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_degrade_real.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_degrade_real.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_dispatch.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_dispatch.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_dispatch_overlap.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_dispatch_overlap.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_dispatch_sid_required.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_dispatch_sid_required.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_dual_quadrant_layout.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_dual_quadrant_layout.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_events_emit.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_events_emit.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_final_handoff.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_final_handoff.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_gateway_compat.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_gateway_compat.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_get_latest_sprint.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_get_latest_sprint.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_handoff_sync.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_handoff_sync.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_harness_resilience.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_harness_resilience.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_heal_never_runs.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_heal_never_runs.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_lab_routing.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_lab_routing.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_mixture_topology.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_mixture_topology.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_multi_sprint_race.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_multi_sprint_race.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_obsidian_wiki_integration.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_obsidian_wiki_integration.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_passed_runtime_heal.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_passed_runtime_heal.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_passed_skip.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_passed_skip.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_pidfile_lifecycle.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_pidfile_lifecycle.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_plan_review_stuck.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_plan_review_stuck.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_plan_stuck.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_plan_stuck.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_prd_first_governance.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_prd_first_governance.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_product_brief_schema.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_product_brief_schema.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_recursive_refine.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_recursive_refine.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_role_dispatch_fallback.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_role_dispatch_fallback.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_save_state_race.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_save_state_race.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_status_auto_advance.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_status_auto_advance.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_status_server.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_status_server.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_symphony_hooks.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_symphony_hooks.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_symphony_issue_adapter.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_symphony_issue_adapter.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_symphony_no_live_pane_mutation.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_symphony_no_live_pane_mutation.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_symphony_scheduler_dry_run.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_symphony_scheduler_dry_run.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_symphony_workspace.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_symphony_workspace.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_telemetry.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_telemetry.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/legacy_shell/test_telemetry_real_data.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/legacy_shell/disabled_telemetry_real_data.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/plugins/test_autoresearch_integration.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/plugins/disabled_autoresearch_integration.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/plugins/test_ruflo_integration.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/plugins/disabled_ruflo_integration.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/plugins/test_s4_extension_framework.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/plugins/disabled_s4_extension_framework.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/plugins/test_s4_plugins.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/plugins/disabled_s4_plugins.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/regression/run-vnext-regression-suite.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/regression/disabled_run-vnext-regression-suite.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/regression/test_libomp_import_guard.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/regression/disabled_libomp_import_guard.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/regression/test_vnext_graph_scheduler_shim.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/regression/disabled_vnext_graph_scheduler_shim.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/regression/test_vnext_no_side_effect.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/regression/disabled_vnext_no_side_effect.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/release/test_s7_release.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/release/disabled_s7_release.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/skills/test_s2_skill_lifecycle.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/skills/disabled_s2_skill_lifecycle.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/snapshot/test_s0_snapshot_roundtrip.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/snapshot/disabled_s0_snapshot_roundtrip.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/storage/test_s3_storage.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/storage/disabled_s3_storage.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_ack_contract.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_ack_contract.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_b4_plan_mode_guard.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_b4_plan_mode_guard.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_bg_entrypoint.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_bg_entrypoint.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_config_server_health_normalization.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_config_server_health_normalization.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_coordinator_pidfile.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_coordinator_pidfile.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_d2_wake_no_block.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_d2_wake_no_block.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_d3_builder_worktree_consistency.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_d3_builder_worktree_consistency.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_d4_no_plaintext_tokens.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_d4_no_plaintext_tokens.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_d5_tmux_path_escape.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_d5_tmux_path_escape.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_deepresearch_human_search_status_ui.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_deepresearch_human_search_status_ui.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_diff_backup.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_diff_backup.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_dispatch_ledger.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_dispatch_ledger.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_dispatch_thinking.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_dispatch_thinking.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_everything_claude_code_integration.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_everything_claude_code_integration.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_harness_resilience.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_harness_resilience.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_hot_reload.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_hot_reload.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_hot_reload_noop.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_hot_reload_noop.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_hot_reload_trigger.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_hot_reload_trigger.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_intake_entrypoint.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_intake_entrypoint.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_knowledge_probe_coverage.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_knowledge_probe_coverage.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_loud_notify.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_loud_notify.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_migrate.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_migrate.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_mirage_unified_vfs.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_mirage_unified_vfs.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_model_config_single_source.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_model_config_single_source.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_model_registry_guard.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_model_registry_guard.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_multi_task_screen_health.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_multi_task_screen_health.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_notification_e2e.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_notification_e2e.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_pane_lease.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_pane_lease.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_prompt_quarantine.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_prompt_quarantine.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_qmd_resolver.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_qmd_resolver.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_role_dispatch_fallback.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_role_dispatch_fallback.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_round_n_plus_1_dispatch.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_round_n_plus_1_dispatch.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_ssh_migrate.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_ssh_migrate.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_startup_resilience.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_startup_resilience.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_state_mapper.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_state_mapper.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_status_capability_health_projection.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_status_capability_health_projection.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_status_identity_repair.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_status_identity_repair.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_tvs_render_entrypoint.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_tvs_render_entrypoint.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_watchdog_singleton.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_watchdog_singleton.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_wiki_dispatch_state_preflight.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_wiki_dispatch_state_preflight.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_wiki_quality_gate_pdf_page_dump.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_wiki_quality_gate_pdf_page_dump.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    },
+    {
+      "original_path": "tests/harness/test_wiki_upload_ingest_closure.sh",
+      "quarantined_path": "tests/quarantine/unsafe_home_shell/disabled_wiki_upload_ingest_closure.sh",
+      "class": "unsafe-real-home",
+      "cause": "defaults to or forces $HOME/.solar/harness instead of a sandbox home"
+    }
+  ]
+}

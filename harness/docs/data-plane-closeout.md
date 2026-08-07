@@ -94,7 +94,7 @@ All DB connections now use:
 ### Concurrency Test
 
 ```bash
-bash ~/.solar/harness/test-data-plane-db-concurrency.sh
+bash ~/.solar/tests/harness/legacy_shell/test_data_plane_db_concurrency.sh
 ```
 
 5 parallel processes read + write simultaneously. Should PASS without `database is locked`.

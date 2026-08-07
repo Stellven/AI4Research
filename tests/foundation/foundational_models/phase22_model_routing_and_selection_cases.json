@@ -15,7 +15,7 @@
     "state_side_effects": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
     "failure_rejection_behavior": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
     "supported_boundaries_exclusions": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
-    "success_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+    "success_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
     "granularity_atomic_contracts": "preferred exact; alias; scenario default; disabled provider; strict mismatch; quota; fallback; no route.",
     "readme_product_docs": "README.md §What You Get and 'Choose or inspect models'; docs/solar-architecture-code-map.md §§2-4",
     "cli_api_skill_interfaces": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), main(); harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/model_call_runtime.py: record_model_event(), main(); README.md: solar harness models show/set-main",
@@ -34,7 +34,7 @@
       "harness/lib/model_call_runtime.py",
       "harness/lib/model_registry.py",
       "harness/lib/operator_model_selection.py",
-      "harness/tests/graph/test_graph_scheduler_model_matching.py"
+      "tests/harness/graph/test_graph_scheduler_model_matching.py"
     ],
     "entrypoints": "harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/graph_scheduler.py: _model_match(), assign_workers(); harness/config/model-scenario-routing.json",
     "interfaces": "harness/lib/model_registry.py: load_registry(), normalize(), spec(), main(); harness/lib/operator_model_selection.py: apply_model_selections(); harness/lib/model_call_runtime.py: record_model_event(), main(); README.md: solar harness models show/set-main",
@@ -85,7 +85,7 @@
       ],
       "expected_result": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -112,7 +112,7 @@
       ],
       "expected_result": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -139,7 +139,7 @@
       ],
       "expected_result": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -166,7 +166,7 @@
       ],
       "expected_result": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -193,7 +193,7 @@
       ],
       "expected_result": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -220,7 +220,7 @@
       ],
       "expected_result": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -247,7 +247,7 @@
       ],
       "expected_result": "Selected canonical model/operator route with fallback/rejection rationale, or unresolvable decision.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -274,7 +274,7 @@
       ],
       "expected_result": "Disabled provider, unavailable session/service, strict-model mismatch, quota exhaustion, missing capability, or no eligible worker blocks/falls back.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     },
@@ -299,9 +299,9 @@
         "Collect the contract-required status, provenance, artifact, and audit evidence.",
         "Assert that the evidence is attributable to this run and is sufficient to distinguish pass, fail, blocked, and skipped outcomes where applicable."
       ],
-      "expected_result": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "expected_result": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "state_and_side_effect_oracle": "May update effective main/lab model config or reserve a worker during dispatch; pure selection is read-only.",
-      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and harness/tests/graph/test_graph_scheduler_model_matching.py passes.",
+      "required_evidence": "Selected route is configured and eligible, rejected candidates have reasons, and tests/harness/graph/test_graph_scheduler_model_matching.py passes.",
       "supported_boundary": "Scenario routing and worker model matching are shipped; comprehensive learned quality/cost optimization is partial.",
       "execution_status": "DESIGNED_NOT_YET_IMPLEMENTED"
     }

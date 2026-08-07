@@ -39,7 +39,7 @@ python harness/lib/nightly_release_doctor.py --harness-dir harness --require-ful
 
 ## Full gate coverage
 
-Full mode runs `harness/tests/release/test-s7-release.sh`, including real release
+Full mode runs `tests/harness/release/test_s7_release.sh`, including real release
 tarball creation, checksum and manifest validation, publish audit, capability
 plane E2E, expanded capability plane E2E, capability fusion benchmark, platform
 workflow benchmark, Mirage `/drive`, Bun, and TVS renderer checks.

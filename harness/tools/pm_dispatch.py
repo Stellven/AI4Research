@@ -1705,13 +1705,13 @@ def _node_builder_objective(sprint_id: str, node: dict[str, Any]) -> str:
         lines.append("")
         lines.append("验收条件：")
         lines.extend(f"- {item}" for item in acceptance)
-    if any("harness/tests/" in str(item) for item in acceptance):
+    if any("tests/harness/" in str(item) for item in acceptance):
         lines.extend(
             [
                 "",
                 "路径提示：",
                 "- 如果当前工作目录是 live harness 根目录（例如 `~/.solar/harness`），"
-                "请将 repo-relative `harness/tests/...` 映射为 `tests/...` 后执行；"
+                "请将 repo-relative `tests/harness/...` 映射为 `tests/...` 后执行；"
                 "不要因为 cwd 差异把已存在的测试误判为缺失。",
             ]
         )

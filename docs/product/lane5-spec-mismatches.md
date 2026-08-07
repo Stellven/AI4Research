@@ -11,8 +11,8 @@ the v8/v9 repair lineage (`1240285a`) and already contained the producer-complet
 multi-root artifact logic the plan requires retaining.
 
 Disposition: restore that historical wrapper file and add the `--contract` path additively. Existing
-v8/v9 replay coverage in the Lane 3 base lives in `harness/tests/workflow_contract/` and
-`harness/tests/gate_ledger/test_artifact_manifest.py`, not in wrapper-specific tests.
+v8/v9 replay coverage in the Lane 3 base lives in `tests/harness/workflow_contract/` and
+`tests/harness/gate_ledger/test_artifact_manifest.py`, not in wrapper-specific tests.
 
 ## D2 — status-server implementation path is `harness/lib/symphony/status-server.py`
 

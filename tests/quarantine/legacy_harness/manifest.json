@@ -1,0 +1,102 @@
+{
+    "schema":  "opensolar.test_quarantine.v1",
+    "count":  16,
+    "records":  [
+                    {
+                        "original_path":  "tests/harness/graph/test_multi_task_runner_status_surface.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/graph/disabled_multi_task_runner_status_surface.py",
+                        "class":  "B stale-import",
+                        "cause":  "expects removed multi_task_runner.epic_child_status_lines API"
+                    },
+                    {
+                        "original_path":  "tests/harness/integration/test_youtube_e2e.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/integration/disabled_youtube_e2e.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_001/youtube_002/youtube_004/youtube_005/youtube_010 migrations"
+                    },
+                    {
+                        "original_path":  "tests/harness/research/survey/activation_proof/test_status_epic_activation.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/research/survey/activation_proof/disabled_status_epic_activation.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing cli.cmd_status_epic module"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_briefs.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_briefs.py",
+                        "class":  "B stale-import",
+                        "cause":  "expects removed github_intelligence.briefs.generate_planning_brief API"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_cards.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_cards.py",
+                        "class":  "B stale-import",
+                        "cause":  "expects removed github_intelligence.cards.generate_analysis_card API"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_detectors.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_detectors.py",
+                        "class":  "B stale-import",
+                        "cause":  "expects removed github_intelligence detector classes and run_all_detectors API"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_evidence_compression.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_evidence_compression.py",
+                        "class":  "B stale-import",
+                        "cause":  "expects removed github_intelligence.evidence helper APIs such as clean_readme"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_youtube_cli.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_youtube_cli.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_005_transcript_jobs migration"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_youtube_dashboard.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_youtube_dashboard.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_001/youtube_002/youtube_004/youtube_005/youtube_010 migrations"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_youtube_job_scheduler.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_youtube_job_scheduler.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_005_transcript_jobs migration"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_youtube_migration.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_youtube_migration.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_001_subtitle_tracks migration"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_youtube_pollution_repair.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_youtube_pollution_repair.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_002_transcripts migration"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_youtube_premium_escape.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_youtube_premium_escape.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_010_premium_asr_calls migration"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_youtube_quality_gate.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_youtube_quality_gate.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_002_transcripts/youtube_008_quality_checks migrations"
+                    },
+                    {
+                        "original_path":  "tests/harness/test_youtube_transcript_storage.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/disabled_youtube_transcript_storage.py",
+                        "class":  "C dead-module",
+                        "cause":  "imports missing youtube_002_transcripts migration"
+                    },
+                    {
+                        "original_path":  "tests/harness/research/integration/test_deepresearch_s6_integration.py",
+                        "quarantined_path":  "tests/quarantine/legacy_harness/research/integration/disabled_deepresearch_s6_integration.py",
+                        "class":  "stale-product-api",
+                        "cause":  "expects removed research.cli.write_s6_evidence_entry and compile_figures_to_dag APIs, while browser search no longer writes the asserted legacy job shape"
+                    }
+                ]
+}

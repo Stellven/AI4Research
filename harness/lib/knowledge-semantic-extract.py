@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import datetime as dt
-import fcntl
+import file_lock_compat as fcntl
 import hashlib
 import json
 import os

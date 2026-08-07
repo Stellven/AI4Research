@@ -21,8 +21,8 @@ wiki or research memory state is mutated.
 |---|---|---|
 | Bridge actions | Updated | `harness/plugins/autosci/bin/autosci_bridge.py` |
 | Idea adapters | Added/updated | `harness/plugins/autosci/adapters/autosci_to_{idea_candidate,idea_evaluation}.py` |
-| Fixture envelopes | Added | `harness/plugins/autosci/tests/fixtures/envelope.{generate_ideas,evaluate_ideas}.json` |
-| Plugin tests | Updated | `harness/plugins/autosci/tests/test_*.py` |
+| Fixture envelopes | Added | `tests/plugins/autosci/fixtures/envelope.{generate_ideas,evaluate_ideas}.json` |
+| Plugin tests | Updated | `tests/plugins/autosci/test_*.py` |
 | Physical operators | Updated | `harness/config/physical-operators.json` |
 | README | Updated | `harness/plugins/autosci/README.md` |
 

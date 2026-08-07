@@ -8,8 +8,8 @@ import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Protocol
 
-from schema import PaperCanonical, PaperEnrichment, _gen_id, _utc_now
-from providers.base import BaseEnrichmentProvider, ProviderResult
+from .schema import PaperCanonical, PaperEnrichment, _gen_id, _utc_now
+from .providers.base import BaseEnrichmentProvider, ProviderResult
 
 
 class StoreProto(Protocol):

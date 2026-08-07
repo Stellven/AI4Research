@@ -41,7 +41,7 @@ Remove these directories/files to revert:
 - `harness/config/code-signal-plane.yaml`
 - `harness/scripts/code_signal_plane.py`
 - `harness/scripts/code_signal_plane/`
-- `harness/tests/code_signal/`
+- `tests/harness/code_signal/`
 - `harness/docs/architecture/code-signal-plane-migration.md`
 
 No legacy files are modified; rollback is clean deletion of additive code.

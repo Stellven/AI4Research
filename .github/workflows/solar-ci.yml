@@ -45,7 +45,7 @@ jobs:
         run: bash scripts/check-repo-hygiene.sh
 
       - name: Verify hygiene gate negative controls
-        run: bash tests/test-repo-hygiene.sh
+        run: bash tests/repository/governance/test_repo_hygiene.sh
 
       - name: Enforce safe staging on changed paths
         shell: bash
@@ -72,10 +72,10 @@ jobs:
       - name: Verify repository safety fixtures
         run: |
           python -m pytest -q \
-            tests/test-safe-staging.py \
-            tests/test-secret-scan.py \
-            tests/test-windows-filenames.py \
-            harness/tests/research_orchestration/test_sandbox_fallback_matrix.py
+            tests/repository/governance/test_safe_staging.py \
+            tests/repository/governance/test_secret_scan.py \
+            tests/repository/governance/test_windows_filenames.py \
+            tests/harness/research_orchestration/test_sandbox_fallback_matrix.py
 
   python-smoke:
     name: Python smoke
@@ -107,15 +107,15 @@ jobs:
           SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
         run: |
           python -m pytest -q \
-            harness/tests/graph/test_pm_inbox_closeout_reconcile.py \
-            harness/tests/graph/test_graph_status_sync.py \
-            harness/tests/graph/test_parent_ready_closeout.py \
-            harness/tests/graph/test_task_graph_state_io.py \
-            harness/tests/graph/test_graph_dispatch_lease_busy.py \
-            harness/tests/graph/test_graph_dispatch_submit.py \
-            harness/tests/graph/test_worker_assignment_reasons.py \
-            harness/tests/test_eval_verdict_evidence_gate_wiring.py \
-            harness/tests/test_pm_dispatch.py
+            tests/harness/graph/test_pm_inbox_closeout_reconcile.py \
+            tests/harness/graph/test_graph_status_sync.py \
+            tests/harness/graph/test_parent_ready_closeout.py \
+            tests/harness/graph/test_task_graph_state_io.py \
+            tests/harness/graph/test_graph_dispatch_lease_busy.py \
+            tests/harness/graph/test_graph_dispatch_submit.py \
+            tests/harness/graph/test_worker_assignment_reasons.py \
+            tests/harness/test_eval_verdict_evidence_gate_wiring.py \
+            tests/harness/test_pm_dispatch.py
 
   hf-ai-influence-smoke:
     name: HF and AI Influence smoke
@@ -138,12 +138,12 @@ jobs:
       - name: Run HF and report center smoke tests
         run: |
           python -m pytest -q \
-            harness/tests/test_tech_hotspot_browser_agent_cmd.py \
-            harness/tests/test_hf_paper_insight_runtime.py \
-            harness/tests/test_hf_paper_insight_schema.py \
-            harness/tests/test_hf_paper_insight_scoring.py \
-            harness/tests/test_ai_influence_status_server.py
-          python harness/tests/test-status-server-ai-influence.py
+            tests/harness/test_tech_hotspot_browser_agent_cmd.py \
+            tests/harness/test_hf_paper_insight_runtime.py \
+            tests/harness/test_hf_paper_insight_schema.py \
+            tests/harness/test_hf_paper_insight_scoring.py \
+            tests/harness/test_ai_influence_status_server.py
+          python tests/harness/test_status_server_ai_influence.py
 
   harness-shell-smoke:
     name: Harness shell smoke
@@ -167,11 +167,11 @@ jobs:
         env:
           SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
         run: |
-          bash harness/tests/test-autopilot-prereq-dict.sh
-          bash harness/tests/test-coordinator-dispatch-template-escaping.sh
-          bash harness/tests/test-graph-dispatch-pane-role-guard.sh
-          bash harness/tests/test-multi-task-entrypoint.sh
-          bash harness/tests/test-pm-planner-html-artifacts.sh
+          bash tests/harness/test_autopilot_prereq_dict.sh
+          bash tests/harness/test_coordinator_dispatch_template_escaping.sh
+          bash tests/harness/test_graph_dispatch_pane_role_guard.sh
+          bash tests/harness/test_multi_task_entrypoint.sh
+          bash tests/harness/test_pm_planner_html_artifacts.sh
           bash scripts/check-harness-plumbing.sh
           bash scripts/check-solar-ui-lite.sh
 
@@ -199,7 +199,7 @@ jobs:
 
       - name: Run AutoSci premerge gate
         run: |
-          bash harness/tests/test-autosci-premerge-gate.sh
+          bash tests/harness/test_autosci_premerge_gate.sh
 
   verification-release-gate:
     name: Verification release gate
@@ -225,18 +225,18 @@ jobs:
       - name: Run evaluator and closeout gate tests
         run: |
           python -m pytest -q \
-            harness/tests/graph/test_acceptance_closeout.py \
-            harness/tests/graph/test_node_proof_obligations.py \
-            harness/tests/graph/test_evaluation_plan_dispatch.py \
-            harness/tests/graph/test_evaluator_pool_discovery.py \
-            harness/tests/runtime/test_verification_gate.py \
-            harness/tests/test_compile_eval.py \
-            harness/tests/test_compiled_sprint_review_closeout.py \
-            harness/tests/test_hf_s05_verification_release_closeout.py \
-            harness/tests/test_thunderomlx_kvtc_s05_closeout.py \
-            harness/tests/research_unit/test_evaluator.py \
-            harness/tests/research_unit/test_cli.py \
-            harness/tests/research_survey/test_survey_evaluator.py
+            tests/harness/graph/test_acceptance_closeout.py \
+            tests/harness/graph/test_node_proof_obligations.py \
+            tests/harness/graph/test_evaluation_plan_dispatch.py \
+            tests/harness/graph/test_evaluator_pool_discovery.py \
+            tests/harness/runtime/test_verification_gate.py \
+            tests/harness/test_compile_eval.py \
+            tests/harness/test_compiled_sprint_review_closeout.py \
+            tests/harness/test_hf_s05_verification_release_closeout.py \
+            tests/harness/test_thunderomlx_kvtc_s05_closeout.py \
+            tests/harness/research_unit/test_evaluator.py \
+            tests/harness/research_unit/test_cli.py \
+            tests/harness/research_survey/test_survey_evaluator.py
 
   release-packaging-smoke:
     name: Release packaging smoke

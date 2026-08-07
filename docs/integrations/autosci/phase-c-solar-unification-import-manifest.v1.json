@@ -213,57 +213,57 @@
   "integration_smoke_tests_to_create_in_unified_repo": [
     {
       "path": "tests/integration/test_autosci_routes_list.py",
-      "current_branch_test_path": "harness/tests/integration/test_autosci_routes_list.py",
+      "current_branch_test_path": "tests/harness/integration/test_autosci_routes_list.py",
       "minimum_assertion": "solar harness autosci '$skills' works"
     },
     {
       "path": "tests/integration/test_autosci_cli_dispatch.py",
-      "current_branch_test_path": "harness/tests/integration/test_autosci_cli_dispatch.py",
+      "current_branch_test_path": "tests/harness/integration/test_autosci_cli_dispatch.py",
       "minimum_assertion": "$review --help reaches the shim"
     },
     {
       "path": "tests/integration/test_autosci_ingest_demo.py",
-      "current_branch_test_path": "harness/tests/integration/test_autosci_ingest_demo.py",
+      "current_branch_test_path": "tests/harness/integration/test_autosci_ingest_demo.py",
       "minimum_assertion": "$ingest writes research_paper.v1"
     },
     {
       "path": "tests/integration/test_autosci_review_demo.py",
-      "current_branch_test_path": "harness/tests/integration/test_autosci_review_demo.py",
+      "current_branch_test_path": "tests/harness/integration/test_autosci_review_demo.py",
       "minimum_assertion": "$review writes artifact_review.v1"
     },
     {
       "path": "tests/integration/test_autosci_research_scheduler_demo.py",
-      "current_branch_test_path": "harness/tests/integration/test_autosci_research_scheduler_demo.py",
+      "current_branch_test_path": "tests/harness/integration/test_autosci_research_scheduler_demo.py",
       "minimum_assertion": "$research --scheduler-run writes scientific_lifecycle.v1"
     },
     {
       "path": "tests/integration/test_autosci_artifact_root.py",
-      "current_branch_test_path": "harness/tests/integration/test_autosci_artifact_root.py",
+      "current_branch_test_path": "tests/harness/integration/test_autosci_artifact_root.py",
       "minimum_assertion": "AutoSci outputs stay under the unified HARNESS_DIR"
     }
   ],
   "current_branch_product_smoke_helper": {
-    "path": "harness/tests/integration/autosci_product_smoke_helpers.py",
+    "path": "tests/harness/integration/autosci_product_smoke_helpers.py",
     "policy": "current_branch_only_test_helper",
     "notes": "Uses an isolated temporary HARNESS_DIR so product-level smoke tests do not write under the repo harness artifact root."
   },
   "existing_branch_contract_tests": [
     {
-      "path": "harness/tests/test_autosci_priority_a_contracts.py",
+      "path": "tests/harness/test_autosci_priority_a_contracts.py",
       "purpose": "Current-branch product entry, route ABI, registry, and artifact-root contracts."
     },
     {
-      "path": "harness/tests/test_autosci_priority_b_demo_contracts.py",
+      "path": "tests/harness/test_autosci_priority_b_demo_contracts.py",
       "purpose": "Current-branch demo-visible AutoSci workspace projection contracts."
     },
     {
-      "path": "harness/tests/test-autosci-harness-entrypoint.sh",
+      "path": "tests/harness/test_autosci_harness_entrypoint.sh",
       "purpose": "Current-branch harness autosci entrypoint smoke contract."
     }
   ],
   "premerge_readiness_audit": {
     "path": "docs/integrations/autosci/phase-c-premerge-readiness-audit.v1.json",
-    "test_path": "harness/tests/test_autosci_phase_c_premerge_readiness.py",
+    "test_path": "tests/harness/test_autosci_phase_c_premerge_readiness.py",
     "status": "ready_for_integration_branch_premerge",
     "does_not_claim_stellven_merge_executed": true,
     "does_not_start_merge_branch": true

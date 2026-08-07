@@ -42,7 +42,7 @@ raises an exception:
   are not returned;
 - the HTTP server remains available after the error.
 
-`harness/tests/test_status_server_status_route.py` starts the production
+`tests/harness/test_status_server_status_route.py` starts the production
 `StatusHandler`, injects a payload failure containing path/token markers,
 requests `/status`, verifies the exact sanitized response, and confirms that a
 subsequent `/healthz` request succeeds.
@@ -59,15 +59,15 @@ Python.
    - Exit `0`: `2 passed, 1 skipped` in 49.04s.
    - J18 skip reason: `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS=1` was not enabled.
 2. Installer/doctor scripts:
-   `bash harness/tests/installer/test-s1-installer.sh` and
-   `bash harness/tests/installer/test-tvs-doctor.sh`
+   `bash tests/harness/installer/test_s1_installer.sh` and
+   `bash tests/harness/installer/test_tvs_doctor.sh`
    - Exit `0`: installer `38/38` checks passed; TVS doctor skipped because no
      sandbox TVS installation was present.
 3. Status route tests:
-   `python -m pytest harness/tests/test_status_server_status_route.py harness/tests/test_status_server_contract_route.py harness/tests/test_status_server_deliverables.py harness/tests/test_status_server_session_scoping.py -q --basetemp .../r5-status-targeted-bt -o cache_dir=.../r5-status-targeted-cache`
+   `python -m pytest tests/harness/test_status_server_status_route.py tests/harness/test_status_server_contract_route.py tests/harness/test_status_server_deliverables.py tests/harness/test_status_server_session_scoping.py -q --basetemp .../r5-status-targeted-bt -o cache_dir=.../r5-status-targeted-cache`
    - Exit `0`: `14 passed` in 4.94s.
 4. Existing self-running P0 dashboard script:
-   `python harness/tests/test-status-server-p0-dashboard.py`
+   `python tests/harness/test_status_server_p0_dashboard.py`
    - Exit `1`: its legacy assertion expects `settings.write_supported is
      False`, while current production settings behavior reports write support.
      This is an existing test/contract mismatch outside the R5 platform diff;

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from schema import PaperEvidencePacket
+from .schema import PaperEvidencePacket
 
 
 def _load_packet_json(packet: PaperEvidencePacket, field_name: str) -> dict:

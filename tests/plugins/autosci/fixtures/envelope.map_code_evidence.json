@@ -1,0 +1,19 @@
+{
+  "task_id": "task-autosci-code-evidence-fixture",
+  "sprint_id": "sprint-autosci-phase10",
+  "node_id": "node-map-code-evidence",
+  "mode": "fixture",
+  "output_dir": "artifacts/scientific/smoke",
+  "inputs": {
+    "claim_id": "claim-001",
+    "claims_evidence": "artifacts/scientific/smoke/research_claims.json",
+    "method_evidence": "artifacts/scientific/smoke/research_method.json",
+    "repo_path": "tests/plugins/autosci/fixtures/sample_repo"
+  },
+  "outputs": {
+    "result_path": "artifacts/scientific/smoke/map_code_evidence.result.json",
+    "evidence_payload_path": "artifacts/scientific/smoke/code_evidence_map.json",
+    "evidence_jsonl": "artifacts/scientific/smoke/evidence.jsonl",
+    "handoff_path": "artifacts/scientific/smoke/handoff.md"
+  }
+}

@@ -78,7 +78,7 @@ done
 ## 测试
 
 ```bash
-bash ~/.solar/harness/test-dispatch.sh [--skip-tmux-check]
+bash ~/.solar/tests/harness/legacy_shell/test_dispatch.sh [--skip-tmux-check]
 ```
 
 ---

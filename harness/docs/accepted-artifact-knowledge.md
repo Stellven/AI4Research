@@ -189,10 +189,10 @@ for sid, e in sorted(entries.items(), key=lambda x: x[1].get('knowledge_exported
 
 ```bash
 # Run all acceptance tests
-bash ~/.solar/harness/tests/test-accepted-artifact-knowledge-sync.sh
+bash ~/.solar/tests/harness/test_accepted_artifact_knowledge_sync.sh
 
 # Run a specific case
-bash ~/.solar/harness/tests/test-accepted-artifact-knowledge-sync.sh --case pass-only
-bash ~/.solar/harness/tests/test-accepted-artifact-knowledge-sync.sh --case redaction
-bash ~/.solar/harness/tests/test-accepted-artifact-knowledge-sync.sh --case idempotent
+bash ~/.solar/tests/harness/test_accepted_artifact_knowledge_sync.sh --case pass-only
+bash ~/.solar/tests/harness/test_accepted_artifact_knowledge_sync.sh --case redaction
+bash ~/.solar/tests/harness/test_accepted_artifact_knowledge_sync.sh --case idempotent
 ```

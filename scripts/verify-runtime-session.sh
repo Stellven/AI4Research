@@ -36,7 +36,7 @@ export PYTHONPATH="$repo/harness/lib"
 
 # ── 1. REAL dispatch (ActorRuntime.submit) + deterministic fake operator ──────
 OUT="$SANDBOX/e2e.json"
-if python3 "$repo/harness/tests/runtime_session_e2e.py" >"$OUT" 2>"$SANDBOX/e2e.err"; then
+if python3 "$repo/tests/harness/runtime_session_e2e.py" >"$OUT" 2>"$SANDBOX/e2e.err"; then
   PASS "engine driver ran: real submit -> lease/scheduler/envelope/evidence -> fake operator -> result/artifact/event"
 else
   FAIL "engine driver failed"; sed 's/^/      /' "$SANDBOX/e2e.err" | tail -6

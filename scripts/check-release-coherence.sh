@@ -81,7 +81,7 @@ VERSIONED_PATHS=(
     distribution/pipx
     desktop/package.json
     desktop/package-lock.json
-    desktop/bootstrap-contract.test.js
+    tests/desktop/bootstrap-contract.test.js
 )
 PUBLIC_STALE_TAGS="$(git grep -hoE 'v1\.0\.0-rc\.[0-9]+' -- "${VERSIONED_PATHS[@]}" \
     | grep -v "^$TAG$" | sort -u || true)"

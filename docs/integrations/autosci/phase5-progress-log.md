@@ -146,8 +146,8 @@ temporarily with the active capsule token:
   "capability_capsule_id": "cap.research-claim-extract",
   "output_dir": "artifacts/autosci/smoke",
   "inputs": {
-    "paper_path": "plugins/autosci/tests/fixtures/sample_paper.md",
-    "source_evidence": "plugins/autosci/tests/fixtures/sample_paper.md"
+    "paper_path": "tests/plugins/autosci/fixtures/sample_paper.md",
+    "source_evidence": "tests/plugins/autosci/fixtures/sample_paper.md"
   },
   "outputs": {
     "result_path": "artifacts/autosci/smoke/result.json",

@@ -28,14 +28,14 @@ Imported missing OpenSolar parity assets:
 
 - `harness/tools/audit_scientific_runtime_bindings.py`
 - `harness/schemas/evidence/fixtures/`
-- `harness/tests/config/test_autosci_research_capsule_registry.py`
-- `harness/tests/evaluators/scientific/`, excluding bytecode caches
-- `harness/tests/test_autosci_phase_c_premerge_readiness.py`
-- `harness/tests/test_autosci_phase_c_unification_contracts.py`
-- `harness/tests/test_autosci_priority_a_contracts.py`
-- `harness/tests/test_autosci_priority_b_demo_contracts.py`
-- `harness/tests/test-autosci-harness-entrypoint.sh`
-- `harness/tests/test-autosci-premerge-gate.sh`
+- `tests/harness/config/test_autosci_research_capsule_registry.py`
+- `tests/harness/evaluators/scientific/`, excluding bytecode caches
+- `tests/harness/test_autosci_phase_c_premerge_readiness.py`
+- `tests/harness/test_autosci_phase_c_unification_contracts.py`
+- `tests/harness/test_autosci_priority_a_contracts.py`
+- `tests/harness/test_autosci_priority_b_demo_contracts.py`
+- `tests/harness/test_autosci_harness_entrypoint.sh`
+- `tests/harness/test_autosci_premerge_gate.sh`
 
 Merged BetterSolar-specific CI wiring:
 
@@ -62,10 +62,10 @@ Verification added in this sync:
 
 - `harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py`
 - `harness/bin/python3 -m py_compile harness/tools/audit_scientific_runtime_bindings.py`
-- `pytest -q harness/tests/test_autosci_phase_c_premerge_readiness.py harness/tests/test_autosci_phase_c_unification_contracts.py harness/tests/test_autosci_priority_a_contracts.py harness/tests/test_autosci_priority_b_demo_contracts.py`: `24 passed`
-- `pytest -q harness/tests/evaluators/scientific harness/tests/config/test_autosci_research_capsule_registry.py`: `102 passed`
-- `bash harness/tests/test-autosci-premerge-gate.sh`: passed
-- `bash harness/tests/test-autosci-harness-entrypoint.sh`: passed
+- `pytest -q tests/harness/test_autosci_phase_c_premerge_readiness.py tests/harness/test_autosci_phase_c_unification_contracts.py tests/harness/test_autosci_priority_a_contracts.py tests/harness/test_autosci_priority_b_demo_contracts.py`: `24 passed`
+- `pytest -q tests/harness/evaluators/scientific tests/harness/config/test_autosci_research_capsule_registry.py`: `102 passed`
+- `bash tests/harness/test_autosci_premerge_gate.sh`: passed
+- `bash tests/harness/test_autosci_harness_entrypoint.sh`: passed
 
 Local hygiene note: the first premerge gate run was blocked only by local Finder metadata at `.git/refs/.DS_Store`; that invalid local ref file was removed and the gate then passed.
 
@@ -83,8 +83,8 @@ Imported from the OpenSolar AutoSci source snapshot into BetterSolar:
 - `harness/evaluators/scientific/`
 - `harness/schemas/evidence/*.schema.json`
 - `harness/capability-capsules/cap.research-*.yaml`
-- `harness/tests/integration/autosci_product_smoke_helpers.py`
-- `harness/tests/integration/test_autosci_*.py`
+- `tests/harness/integration/autosci_product_smoke_helpers.py`
+- `tests/harness/integration/test_autosci_*.py`
 - `harness/personas/scientific-*.md`
 - `requirements/autosci-solar-native-dev.txt`
 - `harness/bin/python3`
@@ -181,7 +181,7 @@ AutoSci module presence:
 - `harness/plugins/autosci/bin/autosci_bridge.py`: present
 - `harness/tools/run_scientific_workflow.py`: present
 - `harness/workflows/scientific_research_lifecycle_full_v1.json`: present
-- `harness/tests/integration/test_autosci_routes_list.py`: present
+- `tests/harness/integration/test_autosci_routes_list.py`: present
 
 Registry/config checks:
 

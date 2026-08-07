@@ -30,7 +30,7 @@ import run_scientific_node_smoke as node_runtime  # noqa: E402
 
 DEFAULT_WORKFLOW_ID = "scientific_research_lifecycle_full_v1"
 DEFAULT_WORKFLOW_CONFIG = REPO_HARNESS_DIR / "workflows" / f"{DEFAULT_WORKFLOW_ID}.json"
-DEFAULT_PAPER = "plugins/autosci/tests/fixtures/sample_paper.md"
+DEFAULT_PAPER = "tests/plugins/autosci/fixtures/sample_paper.md"
 NODE_SPEC_BY_ID = {
     spec["node_id"]: spec
     for spec in [*lifecycle_smoke.NODE_SPECS, *lifecycle_smoke.EXTERNAL_NODE_SPECS]

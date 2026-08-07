@@ -586,7 +586,7 @@ monitor 在 {iso(checked_at)} 发现 Mac mini multi-task 僵死/漂移风险。
                 "goal": "Implement the minimum fix for multi-task state synchronization.",
                 "depends_on": ["B1"],
                 "read_scope": ["harness/lib/multi_task_runner.py", "harness/lib/graph_scheduler.py"],
-                "write_scope": ["harness/lib/", "harness/tests/"],
+                "write_scope": ["harness/lib/", "tests/harness/"],
                 "acceptance": ["fixture regression prevents recurrence", "no destructive recovery action is introduced"],
                 "preferred_model": "sonnet",
             },

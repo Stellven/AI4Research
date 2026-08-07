@@ -22,7 +22,7 @@ if str(REPO_HARNESS_DIR / "tools") not in sys.path:
 import run_scientific_node_smoke as node_smoke  # noqa: E402
 
 
-DEFAULT_PAPER = "plugins/autosci/tests/fixtures/sample_paper.md"
+DEFAULT_PAPER = "tests/plugins/autosci/fixtures/sample_paper.md"
 DEFAULT_WORKFLOW_ID = "scientific_research_lifecycle_full_v1"
 DEFAULT_WORKFLOW_CONFIG = REPO_HARNESS_DIR / "workflows" / f"{DEFAULT_WORKFLOW_ID}.json"
 NODE_SPECS = [
@@ -823,7 +823,7 @@ def _extra_inputs_for(
         if method_path:
             inputs["method_evidence"] = method_path
     if node_id == "code_evidence_map":
-        inputs["repo_path"] = "plugins/autosci/tests/fixtures/sample_repo"
+        inputs["repo_path"] = "tests/plugins/autosci/fixtures/sample_repo"
     if node_id in {"idea_generate", "idea_evaluate"}:
         if paper_path:
             inputs["paper_evidence"] = paper_path
@@ -863,7 +863,7 @@ def _extra_inputs_for(
                 inputs["execute_approved_side_effect"] = True
                 inputs["executor_timeout_seconds"] = experiment_executor_timeout
         else:
-            inputs["experiment_result"] = "plugins/autosci/tests/fixtures/sample_autosci_raw_experiment_result.json"
+            inputs["experiment_result"] = "tests/plugins/autosci/fixtures/sample_autosci_raw_experiment_result.json"
     if node_id == "experiment_monitor":
         inputs["execution_mode"] = "human_approved" if has_experiment_runtime_contract else "fixture"
         if experiment_plan_path:

@@ -22,7 +22,7 @@ missing front-end.
 | `harness/lib/research/deepdive_brief_expander.py` | mirror @ e2480290 | `9a376ab9` | codex identical | byte-identical (both) |
 | `harness/lib/research/profiles/__init__.py` | mirror @ e2480290 | `62853991` | codex identical | byte-identical (both) |
 | `harness/lib/research/profiles/cais_agent_insight.yaml` | mirror @ e2480290 | `e12f34bf` | codex identical | byte-identical (both) |
-| `harness/tests/research_survey/test_deepdive_requirement_compiler.py` | **codex ref** (`upstream/codex/evaluator-control-plane`) | `da4adb80` | — | byte-identical to codex; **mirror does not ship this test** |
+| `tests/harness/research_survey/test_deepdive_requirement_compiler.py` | **codex ref** (`upstream/codex/evaluator-control-plane`) | `da4adb80` | — | byte-identical to codex; **mirror does not ship this test** |
 | `harness/docs/deepdive-requirement-compiler-isolation.md` | mirror @ e2480290 | (identical to codex) | codex identical | byte-identical; vendored for self-documentation |
 
 Every file was written with `git show <ref>:<path>` and hash-compared with `git hash-object`; all
@@ -61,8 +61,8 @@ It only enriches the optional insight overlay, which the 5-artifact demo does no
 
 ## Present upstream, deliberately NOT ported
 
-- **Insight-runtime engine + its tests** — `harness/tests/research_survey/test_deepdive_insight_release_gates.py`,
-  `test_insight_data_builders.py`, `harness/tests/graph/test_deepdive_insight_parent_release_guard.py`
+- **Insight-runtime engine + its tests** — `tests/harness/research_survey/test_deepdive_insight_release_gates.py`,
+  `test_insight_data_builders.py`, `tests/harness/graph/test_deepdive_insight_parent_release_guard.py`
   (codex refs). These exercise the D10–D18 insight overlay and its release gates. Per
   `rsi-deepdive-workflow-lock.md` §1 the "D10–D18 insight overlay [is] not needed for the 5-artifact
   demo." The compiler *code* that supports `insight_mode` is present (it lives in the one vendored

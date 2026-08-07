@@ -25,8 +25,8 @@ The spec-review dispositions file (`opensolar-spec-review-dispositions.md` §jus
   commit on any branch (`git cat-file -e <branch>:docs/product/opensolar-implementation-plan.md`
   fails for feat/p0-gui-react, integration, and contract/lane1-compiler).
 - **Consequence:** the Lane 2 files authored here are net-new and self-contained (they touch only
-  `harness/tools/fake_operator.py`, `harness/tests/run_scenario.py`,
-  `harness/tests/scenarios/**`, `harness/tests/test_lane2_scenarios.py`, a CI job, and this doc),
+  `harness/tools/fake_operator.py`, `tests/harness/run_scenario.py`,
+  `tests/harness/scenarios/**`, `tests/harness/test_lane2_scenarios.py`, a CI job, and this doc),
   so they carry cleanly, **but the branch must be rebased onto the real base before merge** and the
   planning docs must be committed somewhere first. Lane 2's *harness* does not depend on the base
   difference; Lane 2's *green scenarios for other lanes' classes* do (see §2).
@@ -57,7 +57,7 @@ The spec-review dispositions file (`opensolar-spec-review-dispositions.md` §jus
     `GRAPH`, `HARNESS_DIR`, `SPRINTS_DIR` — `operatord.py:275-307`), runs it as a real subprocess
     with a real timeout, captures the log, and writes `run/operator-results/<op>/<task_id>/result.json`
     via `operator_runtime.write_result` (`operator_runtime.py:648`).
-  - This is **proven hermetic** by `harness/tests/test_operatord_daemon.py` (temp HARNESS_DIR,
+  - This is **proven hermetic** by `tests/harness/test_operatord_daemon.py` (temp HARNESS_DIR,
     `submit` → `daemon --once` → assert on `result.json`; `test_command_backend_uses_materialized_dispatch_file`,
     `test_pm_dispatch_result_path_and_complete_hook`).
 - **Consequence:** `fake_operator.py` is built as a **real operator worker** invoked through this
@@ -86,7 +86,7 @@ The spec-review dispositions file (`opensolar-spec-review-dispositions.md` §jus
   Writing such a scenario as passing would require the harness itself to re-implement the compiler /
   ledger / manifest — that would be testing a mock, which the no-mock rule and Guard #3 forbid.
   These classes are therefore **catalogued as `pending_lane_1` / `pending_lane_3`** in
-  `harness/tests/scenarios/catalog.json` with the exact missing module named, and their scenario
+  `tests/harness/scenarios/catalog.json` with the exact missing module named, and their scenario
   files are authored to run **red-only** (asserting current-code behavior *fails* the class), so
   that when the owning lane merges, flipping the `expect` to the retired behavior is a one-line
   change with the red half already proven. This is the plan's own discipline ("a live failure is
@@ -94,10 +94,10 @@ The spec-review dispositions file (`opensolar-spec-review-dispositions.md` §jus
 
 ## 3. Deviation from "F-CLASS-01…30.scenario.json" (30 always-present files)
 
-- **Spec:** Lane 2 file list — "`harness/tests/scenarios/F-CLASS-01…30.scenario.json`."
+- **Spec:** Lane 2 file list — "`tests/harness/scenarios/F-CLASS-01…30.scenario.json`."
 - **Decision (Guard #3):** only classes whose retiring mechanism is **present and exercisable on
   this branch** get a runnable `*.scenario.json` that is red-green-proven now. The remaining
-  classes are recorded in a single `harness/tests/scenarios/catalog.json` with
+  classes are recorded in a single `tests/harness/scenarios/catalog.json` with
   `status ∈ {verified_here, pending_lane_0, pending_lane_1, pending_lane_3, non_hermetic_p1_6,
   delegated_lane_6}` and the specific missing seam. Rationale: 30 JSON files that cannot run their
   class (because the fix is unbuilt) would be decorative and read as "covered" when they are not —
@@ -157,4 +157,4 @@ non-consumable). `pending_lane_0`: the allowlist half of **19** (spine). `non_he
 **22**. `delegated_lane_6`: **24**.
 
 The full 30-row ledger with the precise missing module per class lives in
-`harness/tests/scenarios/catalog.json`.
+`tests/harness/scenarios/catalog.json`.

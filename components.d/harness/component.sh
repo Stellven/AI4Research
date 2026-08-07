@@ -12,7 +12,7 @@ component_install() {
     dry_run_note "prepare harness runtime helpers" && return 0
     chmod +x "$SOLAR_HOME/harness/"*.sh 2>/dev/null || true
     chmod +x "$SOLAR_HOME/harness/lib/"*.sh 2>/dev/null || true
-    chmod +x "$SOLAR_HOME/harness/tests/"*.sh 2>/dev/null || true
+    chmod +x "$SOLAR_HOME/tests/harness/"*.sh 2>/dev/null || true
     chmod +x "$SOLAR_HOME/harness/tools/"*.sh 2>/dev/null || true
     chmod +x "$SOLAR_HOME/harness/tools/"*.py 2>/dev/null || true
     if [ -f "$SOLAR_HOME/harness/solar-harness.sh" ]; then

@@ -49,14 +49,14 @@ jobs:
         run: |
           python -m py_compile \
             harness/tools/fake_operator.py \
-            harness/tests/run_scenario.py \
-            harness/tests/test_lane2_scenarios.py
+            tests/harness/run_scenario.py \
+            tests/harness/test_lane2_scenarios.py
 
       - name: Validate catalog + scenario JSON
         run: |
           python - <<'PY'
           import json, pathlib
-          root = pathlib.Path("harness/tests/scenarios")
+          root = pathlib.Path("tests/harness/scenarios")
           catalog = json.loads((root / "catalog.json").read_text())
           assert {c["class"] for c in catalog["classes"]} == set(range(1, 31)), "catalog must cover 1..30"
           for p in root.glob("F-CLASS-*.scenario.json"):
@@ -69,4 +69,4 @@ jobs:
           SOLAR_OPERATORD_AUTO_KICK: "0"
         run: |
           python -m pytest -q -p no:cacheprovider \
-            harness/tests/test_lane2_scenarios.py
+            tests/harness/test_lane2_scenarios.py

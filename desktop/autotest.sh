@@ -7,7 +7,7 @@
 #   HARNESS_DIR=/path/to/harness bash desktop/autotest.sh
 #
 # Gates:
-#   runtime-detect.test.js — WSL/runtime detection logic (stub-but-no-distro classification, etc.).
+#   runtime-detect.test.cjs — WSL/runtime detection logic (stub-but-no-distro classification, etc.).
 #                  Pure Node, mocks wsl.exe — no display/electron. Runs on Linux/macOS/Windows node.exe.
 #   contract.js  — backend HTTP contract (CORS/OPTIONS/HEAD/auth/runtime-info; no token leak). Pure Node;
 #                  runs on Linux/macOS/Windows node.exe. Locks in the dashboard-backend fixes.
@@ -37,13 +37,13 @@ run_gate() {
 }
 
 echo; echo "-- gate: bootstrap logic --"
-run_gate node src/runtime-detect.test.js
+run_gate node ../tests/desktop/src/runtime-detect.test.cjs
 
 echo; echo "-- gate: bootstrap/package contract --"
-run_gate node bootstrap-contract.test.js
+run_gate node ../tests/desktop/bootstrap-contract.test.cjs
 
 echo; echo "-- gate: desktop selftest truth --"
-run_gate node src/selftest-verdict.test.js
+run_gate node ../tests/desktop/src/selftest-verdict.test.cjs
 
 echo; echo "-- gate: backend contract --"
 run_gate node contract.js
@@ -57,7 +57,7 @@ fi
 
 echo; echo "-- gate: functional e2e (real backend: intake form, Settings persistence, SSE) --"
 if [ -d node_modules/playwright ]; then
-  run_gate node functional.test.js     # isolated temp HARNESS_DIR+SOLAR_DB; headless chromium
+  run_gate node ../tests/desktop/functional.test.cjs     # isolated temp HARNESS_DIR+SOLAR_DB; headless chromium
 else
   not_verified "playwright not installed; functional gate did not run"
 fi
@@ -66,10 +66,10 @@ echo; echo "-- gate: source Electron selftest e2e --"
 if [ ! -d node_modules/playwright ]; then
   not_verified "playwright not installed; source Electron selftest did not run"
 elif command -v xvfb-run >/dev/null 2>&1; then
-  run_gate xvfb-run -a node selftest-electron.test.js
+  run_gate xvfb-run -a node ../tests/desktop/selftest-electron.test.cjs
 elif [ -n "${DISPLAY:-}" ]; then
   echo "(no xvfb; rendering to \$DISPLAY=$DISPLAY — windows may briefly appear)"
-  run_gate node selftest-electron.test.js
+  run_gate node ../tests/desktop/selftest-electron.test.cjs
 else
   not_verified "no display/xvfb; source Electron selftest did not run"
 fi
@@ -80,10 +80,10 @@ echo; echo "-- gate: first-run screens (Electron via SOLAR_SIMULATE) --"
 if [ ! -d node_modules/playwright ]; then
   not_verified "playwright not installed; Electron screen gate did not run"
 elif command -v xvfb-run >/dev/null 2>&1; then
-  run_gate xvfb-run -a node screens.test.js
+  run_gate xvfb-run -a node ../tests/desktop/screens.test.cjs
 elif [ -n "${DISPLAY:-}" ]; then
   echo "(no xvfb; rendering to \$DISPLAY=$DISPLAY — windows may briefly appear)"
-  run_gate node screens.test.js
+  run_gate node ../tests/desktop/screens.test.cjs
 else
   not_verified "no display/xvfb; Electron screen gate did not run"
 fi

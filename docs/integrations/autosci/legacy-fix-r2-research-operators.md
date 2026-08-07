@@ -31,7 +31,7 @@ Branch: `codex/legacy-fix-r2-research-operators`
 
 ## Tests Run
 
-- `python -m pytest -q harness/plugins/autosci/tests/research_synthesis_operators/test_research_synthesis_operators.py harness/plugins/autosci/tests/scientific_lifecycle_action_operators/test_action_delivery_operators.py harness/plugins/autosci/tests/test_paper_prepare.py harness/plugins/autosci/tests/test_source_cli_tools.py --basetemp .codex-tmp/r2-tests/regression-final-bt -o cache_dir=.codex-tmp/r2-tests/regression-final-cache`
+- `python -m pytest -q tests/plugins/autosci/research_synthesis_operators/test_research_synthesis_operators.py tests/plugins/autosci/scientific_lifecycle_action_operators/test_action_delivery_operators.py tests/plugins/autosci/test_paper_prepare.py tests/plugins/autosci/test_source_cli_tools.py --basetemp .codex-tmp/r2-tests/regression-final-bt -o cache_dir=.codex-tmp/r2-tests/regression-final-cache`
   - Result: `96 passed in 5.69s`
 - `python -m pytest -q tests/journeys/phase22/code/test_j04_paper_ingestion.py tests/journeys/phase22/code/test_j05_literature_discovery.py tests/journeys/phase22/code/test_j06_idea_generation.py tests/journeys/phase22/code/test_j09_report_delivery.py tests/journeys/phase22/code/test_j20_research_synthesis.py tests/journeys/phase22/code/test_j22_evidence_review_followup.py --basetemp .codex-tmp/r2-tests/journeys-final-bt -o cache_dir=.codex-tmp/r2-tests/journeys-final-cache`
   - Result: `4 passed, 2 skipped in 42.58s`

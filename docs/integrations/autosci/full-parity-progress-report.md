@@ -48,11 +48,11 @@ Logged: 2026-07-01 EDT / 2026-07-02 UTC
 | Path | Purpose |
 |---|---|
 | `harness/evaluators/scientific/common.py` | Limited schema fallback when `jsonschema` is unavailable. |
-| `harness/tests/evaluators/scientific/test_common_schema_fallback.py` | Regression coverage for missing `jsonschema` behavior. |
+| `tests/harness/evaluators/scientific/test_common_schema_fallback.py` | Regression coverage for missing `jsonschema` behavior. |
 | `harness/tools/autosci_parity_inventory.py` | Prompt B parity inventory tool. |
-| `harness/plugins/autosci/tests/test_autosci_parity_inventory_tool.py` | Inventory field/action/capability tests. |
-| `harness/plugins/autosci/tests/test_research_wiki_native_parity_commands.py` | P1 OmegaWiki native command parity tests. |
-| `harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py` | P8 live-provider and remote-status acceptance tests, skipped unless explicit live-provider env gates are set. |
+| `tests/plugins/autosci/test_autosci_parity_inventory_tool.py` | Inventory field/action/capability tests. |
+| `tests/plugins/autosci/test_research_wiki_native_parity_commands.py` | P1 OmegaWiki native command parity tests. |
+| `tests/plugins/autosci/test_autosci_live_provider_env_gated.py` | P8 live-provider and remote-status acceptance tests, skipped unless explicit live-provider env gates are set. |
 | `harness/plugins/autosci/bin/autosci_parity_bridge.py` | Semantic audit verification now supports explicit native/evidence roots for linked-worktree and external-artifact verification. |
 | `tools/semantic_parity_runtime_proof.py` | Semantic runtime proof generation now resolves audit refs through explicit native/evidence roots. |
 | `tools/semantic_parity_audit_matrix.py` | Full semantic assessment missing-ref checks now use the same explicit evidence-root resolver. |
@@ -74,10 +74,10 @@ Logged: 2026-07-01 EDT / 2026-07-02 UTC
 | `harness/artifacts/autosci/phase19/autosci_feature_parity.ingest.json` | Captured the single-route root-aware `$ingest` parity evidence after semantic full audit loading. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | Reworded the `$ingest` limitation from `fixture-leakage guards` to `sample-content leakage guards` so dynamic full coverage does not look fixture-only; no static route promotion. |
 | `harness/plugins/autosci/config/feature_parity_routes.v1.json` | `$exp-pilot-run` limitation now states approved command runtime evidence is supported and wiki verdict/writeback is delegated to `$exp-pilot-eval`; no route was promoted. |
-| `harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | Added semantic audit evidence-root portability coverage. |
-| `harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py` | Added semantic proof evidence-root portability coverage. |
-| `harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | Added semantic matrix evidence-root portability coverage. |
-| `harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py` | Full-external lifecycle smoke fixtures now satisfy current paper-plan and publication gates. |
+| `tests/plugins/autosci/test_phase19_parity_bridge.py` | Added semantic audit evidence-root portability coverage. |
+| `tests/plugins/autosci/test_semantic_parity_runtime_proof.py` | Added semantic proof evidence-root portability coverage. |
+| `tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | Added semantic matrix evidence-root portability coverage. |
+| `tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py` | Full-external lifecycle smoke fixtures now satisfy current paper-plan and publication gates. |
 | `harness/plugins/autosci/bin/autosci_skill_shim.py` | `/ideate --write` is passed to action envelopes and direct ideate idea-page projection is approval-gated. |
 | `harness/plugins/autosci/bin/autosci_workspace_projector.py` | Added an `include_idea_pages` projection switch so evidence summaries can remain visible without writing durable candidate pages. |
 | `harness/plugins/autosci/bin/autosci_bridge.py` | `/ideate` promotion boundary validates completed novelty/review evidence and writes `ideate_growth_report.json`; approved experiment run/collect now writes deploy/run/multi-seed aggregate reports; `/paper-draft` writes full tree and section evidence map artifacts; `/paper-compile` writes a compile audit report sidecar; `/rebuttal` accepts comma-separated raw review file targets. |
@@ -91,43 +91,43 @@ Logged: 2026-07-01 EDT / 2026-07-02 UTC
 
 | Command | Result |
 |---|---|
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/tests/evaluators/scientific/test_common_schema_fallback.py` | ok: 3 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_parity_inventory_tool.py` | ok: 2 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_research_wiki_native_parity_commands.py` | ok: 4 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_accepts_combined_full_external_evidence harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_executes_approved_publication_compile harness/tests/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_can_resume_external_blocked_nodes` | ok: 3 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | warn in sandbox: 332 passed, 3 failed due localhost socket bind permission |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/harness/evaluators/scientific/test_common_schema_fallback.py` | ok: 3 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_parity_inventory_tool.py` | ok: 2 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_research_wiki_native_parity_commands.py` | ok: 4 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_accepts_combined_full_external_evidence tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_executes_approved_publication_compile tests/harness/evaluators/scientific/test_scientific_lifecycle_runtime_smoke.py::test_scientific_lifecycle_smoke_can_resume_external_blocked_nodes` | ok: 3 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | warn in sandbox: 332 passed, 3 failed due localhost socket bind permission |
 | elevated rerun of socket-bound tests: novelty HTTP provider, Review LLM OpenAI-compatible provider, approved SMTP delivery | ok: 3 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
-| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'ideate'` | ok: 9 passed, 142 deselected |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_research_pipeline` | ok: 1 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'novelty'` | ok: 13 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_draft or paper-draft or workspace_projection'` | ok: 2 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'ideate'` | ok: 9 passed, 142 deselected |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_runs_research_pipeline` | ok: 1 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'novelty'` | ok: 13 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_draft or paper-draft or workspace_projection'` | ok: 2 passed |
 | `env PYTHONPATH=harness harness/bin/python3 -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'exp_run or exp_status or exp_collect or exp_design'` | ok: 24 passed |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 339 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'exp_run or exp_status or exp_collect or exp_design'` | ok: 24 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 339 passed |
 | `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
-| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_draft or paper-draft or paper_compile or paper-compile'` | ok: 13 passed |
-| P4 full rerun: `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 339 passed |
+| `env PYTHONPATH=harness harness/bin/python3 -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_draft or paper-draft or paper_compile or paper-compile'` | ok: 13 passed |
+| P4 full rerun: `env PYTHONPATH=harness harness/bin/python3 -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 339 passed |
 | `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m py_compile harness/plugins/autosci/bin/autosci_bridge.py harness/plugins/autosci/bin/autosci_skill_shim.py` | ok |
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_compile'` | ok: 12 passed, 135 deselected |
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'rebuttal or poster'` | ok: 8 passed, 140 deselected |
-| Step 11 product integration rerun: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
-| P6/P7 full rerun: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 341 passed |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_compile'` | ok: 12 passed, 135 deselected |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'rebuttal or poster'` | ok: 8 passed, 140 deselected |
+| Step 11 product integration rerun: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| P6/P7 full rerun: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 341 passed |
 | P6/P7 smoke pollution cleanup | ok: reverted `harness/artifacts/autosci/workspace/wiki/canvases/knowledge-map.canvas` and `harness/artifacts/autosci/workspace/wiki/log.md` |
 | P6/P7 `git diff --check` and `git -c maintenance.auto=false -c gc.auto=0 fsck --connectivity-only --no-dangling` | ok |
 | P6/P7 parity inventory rerun | ok: 28 routes, 17 partial, 11 gated, 0 full, 0 missing |
-| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_live_provider_env_gated.py` | ok: 6 skipped by design |
-| P8 product integration rerun: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/tests/integration/test_autosci_routes_list.py harness/tests/integration/test_autosci_cli_dispatch.py harness/tests/integration/test_autosci_ingest_demo.py harness/tests/integration/test_autosci_review_demo.py harness/tests/integration/test_autosci_research_scheduler_demo.py harness/tests/integration/test_autosci_artifact_root.py` | ok: 6 passed |
-| P8/P2 full module rerun: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests harness/tests/evaluators/scientific` | ok: 344 passed, 6 skipped |
-| P5 combined runtime/submission regression: `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_compile_approved_runtime_submission_audit_closes_boundaries` | ok: 1 passed |
-| P5 paper-compile subset after combined closure: `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_autosci_skill_shim.py -k 'paper_compile or paper-compile'` | ok: 13 passed, 136 deselected |
+| `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_live_provider_env_gated.py` | ok: 6 skipped by design |
+| P8 product integration rerun: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/harness/integration/test_autosci_routes_list.py tests/harness/integration/test_autosci_cli_dispatch.py tests/harness/integration/test_autosci_ingest_demo.py tests/harness/integration/test_autosci_review_demo.py tests/harness/integration/test_autosci_research_scheduler_demo.py tests/harness/integration/test_autosci_artifact_root.py` | ok: 6 passed |
+| P8/P2 full module rerun: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests tests/harness/evaluators/scientific` | ok: 344 passed, 6 skipped |
+| P5 combined runtime/submission regression: `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_paper_compile_approved_runtime_submission_audit_closes_boundaries` | ok: 1 passed |
+| P5 paper-compile subset after combined closure: `/Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_autosci_skill_shim.py -k 'paper_compile or paper-compile'` | ok: 13 passed, 136 deselected |
 | Sandbox-restricted full module rerun | warn: 339 passed, 6 skipped, 3 failed from local loopback bind denial; rerun with loopback permission passed. |
 | P8 smoke pollution cleanup | ok: reverted `harness/artifacts/autosci/workspace/wiki/canvases/knowledge-map.canvas` and `harness/artifacts/autosci/workspace/wiki/log.md` |
 | P8/P2 parity inventory rerun | ok: 28 routes, 17 partial, 11 gated, 0 full, 0 missing |
 | P8 git safety cleanup | ok: quarantined invalid `.git/refs/.DS_Store` to `/Users/jamesyuan/Desktop/OpenSolar_git_ref_quarantine_20260702_111754/.DS_Store.refs`; repeated Finder ref pollution was later quarantined to `/Users/jamesyuan/Desktop/OpenSolar_git_ref_quarantine_20260702_121720/.DS_Store.refs` and `/Users/jamesyuan/Desktop/OpenSolar_git_ref_quarantine_20260702_130807/.DS_Store.refs`; `git fsck --connectivity-only --no-dangling` passed |
 | P8 `git diff --check` | ok |
-| Semantic audit portability: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_phase19_parity_bridge.py` | ok: 20 passed |
-| Semantic audit portability: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q harness/plugins/autosci/tests/test_semantic_parity_runtime_proof.py harness/plugins/autosci/tests/test_semantic_parity_audit_matrix.py` | ok: 7 passed |
+| Semantic audit portability: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_phase19_parity_bridge.py` | ok: 20 passed |
+| Semantic audit portability: `env PYTHONPATH=harness /Users/jamesyuan/Developer/Github Repos (On Git)/OpenSolar/.venv/bin/python -m pytest -q tests/plugins/autosci/test_semantic_parity_runtime_proof.py tests/plugins/autosci/test_semantic_parity_audit_matrix.py` | ok: 7 passed |
 | Semantic audit portability real-root smoke | ok: historical `ask` semantic audit verifies with `AUTOSCI_REPO` and `SOLAR_AUTOSCI_EVIDENCE_ROOTS`, reporting `semantic_full_count=1`; standalone runtime proof CLI writes a proof manifest. |
 | Root-aware detailed parity inventory | ok: with `AUTOSCI_REPO` and `SOLAR_AUTOSCI_EVIDENCE_ROOTS`, detailed inventory reports `full_count=7`, `partial_count=10`, `gated_count=11`, `semantic_full_count=15`, `semantic_partial_count=13`, runtime proof counts `{not_required: 5, pending: 0, supplied: 1, verified: 22}`. |
 | Root-aware ordinary feature parity gate | ok: `/tmp/autosci_detailed_inventory_with_roots.json` passes the ordinary gate; warnings correctly state that non-full and semantic-partial routes remain authoritative. |
