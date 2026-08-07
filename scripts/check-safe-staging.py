@@ -15,6 +15,7 @@ Exit 0 = clean; exit 1 = violations found.
 """
 from __future__ import annotations
 
+import argparse
 import re
 import subprocess
 import sys
@@ -28,20 +29,40 @@ class Violation:
     path: str
 
 
-def _list_staged_files() -> list[str]:
-    """Return list of files currently staged in the Git index."""
+def _git_paths(args: list[str]) -> list[str]:
+    """Run a NUL-delimited Git path query without exposing file contents."""
     result = subprocess.run(
-        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRT"],
-        capture_output=True, text=True, check=False,
+        ["git", *args, "-z"],
+        capture_output=True,
+        check=False,
     )
     if result.returncode != 0:
-        # Fall back to ls-files if not in a git context
-        result = subprocess.run(
-            ["git", "ls-files"],
-            capture_output=True, text=True, check=False,
-        )
-    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
-    return lines
+        raise RuntimeError("git path query failed")
+    return [
+        path
+        for path in result.stdout.decode("utf-8", errors="replace").split("\x00")
+        if path
+    ]
+
+
+def _list_staged_files() -> list[str]:
+    """Return list of files currently staged in the Git index."""
+    return _git_paths(["diff", "--cached", "--name-only", "--diff-filter=ACMRT"])
+
+
+def _list_all_tracked_files() -> list[str]:
+    return _git_paths(["ls-files"])
+
+
+def _list_diff_files(base: str) -> list[str]:
+    return _git_paths(["diff", "--name-only", "--diff-filter=ACMRT", "--find-renames", base, "HEAD"])
+
+
+def _read_paths_stdin() -> list[str]:
+    raw = sys.stdin.buffer.read()
+    separator = b"\x00" if b"\x00" in raw else None
+    chunks = raw.split(separator) if separator else raw.splitlines()
+    return [chunk.decode("utf-8", errors="replace") for chunk in chunks if chunk]
 
 
 _ENV_PATTERN = re.compile(
@@ -120,11 +141,37 @@ def run_check(staged: list[str]) -> list[Violation]:
     return violations
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Reject forbidden repository paths")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--paths-stdin", action="store_true", help="read newline- or NUL-delimited paths from stdin")
+    mode.add_argument("--all-tracked", action="store_true", help="check every tracked path")
+    mode.add_argument("--diff-base", metavar="COMMIT", help="check changed paths from COMMIT to HEAD")
+    return parser.parse_args()
+
+
 def main() -> int:
-    staged = _list_staged_files()
-    violations = run_check(staged)
+    args = _parse_args()
+    try:
+        if args.paths_stdin:
+            paths = _read_paths_stdin()
+            scope = "supplied"
+        elif args.all_tracked:
+            paths = _list_all_tracked_files()
+            scope = "tracked"
+        elif args.diff_base:
+            paths = _list_diff_files(args.diff_base)
+            scope = "changed"
+        else:
+            paths = _list_staged_files()
+            scope = "staged"
+    except RuntimeError:
+        print("check-safe-staging ERROR: unable to enumerate Git paths", file=sys.stderr)
+        return 2
+
+    violations = run_check(paths)
     if not violations:
-        print("check-safe-staging passed: no forbidden files staged")
+        print(f"check-safe-staging passed: no forbidden {scope} paths")
         return 0
 
     print("check-safe-staging FAILED: forbidden staged files detected:", file=sys.stderr)

@@ -18,7 +18,7 @@ Usage::
 """
 from __future__ import annotations
 
-import fcntl
+import file_lock_compat as fcntl
 import base64
 import json
 import os

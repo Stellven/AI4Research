@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -45,9 +47,25 @@ jobs:
       - name: Verify hygiene gate negative controls
         run: bash tests/test-repo-hygiene.sh
 
-      - name: Enforce safe staging, secret, and Windows filename gates
+      - name: Enforce safe staging on changed paths
+        shell: bash
         run: |
-          python scripts/check-safe-staging.py
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            merge_base="$(git merge-base HEAD "${{ github.event.pull_request.base.sha }}")"
+            python scripts/check-safe-staging.py --diff-base "$merge_base"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            before="${{ github.event.before }}"
+            if [[ -z "$before" || "$before" =~ ^0+$ ]] || ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+              python scripts/check-safe-staging.py --all-tracked
+            else
+              python scripts/check-safe-staging.py --diff-base "$before"
+            fi
+          else
+            python scripts/check-safe-staging.py --all-tracked
+          fi
+
+      - name: Enforce secret and Windows filename gates
+        run: |
           python scripts/check-secret-scan.py
           python scripts/check-windows-filenames.py
 

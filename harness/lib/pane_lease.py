@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import fcntl
+import file_lock_compat as fcntl
 import json
 import os
 import subprocess

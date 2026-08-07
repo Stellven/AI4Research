@@ -55,6 +55,7 @@ SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR = {
     "ScientificArtifactReviewer": "autosci-artifact-review-worker",
     "ScientificPublicationProducer": "autosci-publication-compile-worker",
     "ScientificWorkflowEvolver": "autosci-workflow-evolve-worker",
+    "ScientificAdvancedAI4RnDExecutor": "autosci-advanced-ai4rnd-worker",
 }
 
 

@@ -127,9 +127,6 @@ _ALLOWLISTED_PATHS: list[re.Pattern[str]] = [
     re.compile(r"tests/test-secret-scan\.py$"),
     re.compile(r"tests/test-safe-staging\.py$"),
     re.compile(r"harness/lib/research_orchestration/transport\.py$"),
-    re.compile(r"\.env\.template$"),
-    re.compile(r"\.env\.example$"),
-    re.compile(r"\.env\.sample$"),
 ]
 
 _PLACEHOLDER_ALLOWLIST = Path(__file__).resolve().parents[1] / ".secret-scan-allowlist"

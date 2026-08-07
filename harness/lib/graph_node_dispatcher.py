@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import fcntl
+import file_lock_compat as fcntl
 import hashlib
 import json
 import os
@@ -10149,7 +10149,7 @@ def _build_autosci_operator_envelope(
         "write_scope": list(node.get("write_scope") or []),
     }
     inputs.update(_autosci_dependency_inputs(graph, sid, node))
-    return {
+    envelope = {
         "task_id": dispatch_id,
         "sprint_id": sid,
         "node_id": node_id,
@@ -10181,6 +10181,26 @@ def _build_autosci_operator_envelope(
         "plan_artifacts": payload.get("plan_artifacts") if isinstance(payload.get("plan_artifacts"), dict) else {},
         "lease_ttl_seconds": int(ttl),
     }
+    if operator_id == "autosci-advanced-ai4rnd-worker":
+        advanced = node.get("operator_payload") if isinstance(node.get("operator_payload"), dict) else {}
+        envelope.update(
+            {
+                "operator_kind": str(advanced.get("operator_kind") or ""),
+                "algorithm": str(advanced.get("algorithm") or ""),
+                "run_id": str(advanced.get("run_id") or f"{sid}-{node_id}"),
+                "artifact_root": str(
+                    advanced.get("artifact_root") or (output_dir / "advanced-ai4rnd-runs")
+                ),
+                "inputs": dict(advanced.get("inputs") or {}),
+                "parameters": dict(advanced.get("parameters") or {}),
+                "metadata": {
+                    **dict(advanced.get("metadata") or {}),
+                    "graph_path": graph_path,
+                    "logical_operator": str(node.get("logical_operator") or ""),
+                },
+            }
+        )
+    return envelope
 
 
 def _submit_autosci_node_to_operator(

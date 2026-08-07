@@ -77,12 +77,15 @@ production-path tests.
 
 ### R6 token and identity safety
 
+- Register and login responses return each newly issued token once to the
+  caller. The token is not placed in subprocess argv.
+- Later session, profile, privacy, and logout responses do not echo the token.
+  Raw tokens are not retained in the identity store, export, audit trail, or
+  ordinary logs. Authentication failures do not disclose whether a username
+  exists.
 - Session/profile/privacy/logout read tokens from stdin by default;
-  `--token-stdin` is explicit. `--token` remains only as deprecated
-  compatibility and is warned against in the CLI documentation.
-- Tests assert raw tokens are absent from subprocess argv, stdout/stderr,
-  stores, exports, and environment artifacts. Authentication failures do not
-  disclose whether a username exists.
+  `--token-stdin` is explicit. Deprecated `--token` compatibility remains a
+  known limitation and is warned against in the CLI documentation.
 
 ### R7 production binding
 
@@ -94,6 +97,12 @@ production-path tests.
 - TaskGraph state, evidence ledger, model lineage, artifacts, and output hashes
   are traceable. All non-reference algorithms remain explicit `unsupported`;
   results are not copied across algorithm names.
+- Final correction added a real dispatcher integration path:
+  `TaskGraph -> graph scheduler -> exact physical-operator selection ->
+  operator_runtime inbox -> operatord command backend ->
+  advanced_ai4rnd_operator.py -> TaskGraph state -> evidence ledger`. The
+  Bayesian reference path records the same output hash in node state and the
+  ledger; LoRA remains explicit `unsupported` and produces no PASS.
 
 ### R8 enforced governance
 
@@ -103,6 +112,13 @@ production-path tests.
 - Secret scanning covers tracked files, exact staged index blobs, and untracked
   commit candidates. Output is restricted to rule, path, and line; matched
   values are never printed.
+- `.env.example`, `.env.template`, and `.env.sample` are scanned normally;
+  none is a whole-file exception. Reviewed placeholders can only use an exact
+  rule/path/line SHA-256 exception, which fails closed after any line change.
+- Safe-staging keeps its local staged-file default and also accepts explicit
+  changed-path, all-tracked, and stdin scopes. CI checks the pull-request merge
+  base or push `before` commit, falling back to every tracked path for a missing
+  or all-zero push base rather than performing an empty clean-checkout scan.
 - The Windows registry-root parent index was fixed.
 - Sandbox tests launch real child processes. Allowed writes succeed and
   outside writes fail where an OS sandbox exists. Native Windows has no
@@ -124,6 +140,15 @@ production-path tests.
   metric, and confidence/uncertainty. Regexes are guardrails only. Tests cover
   bounded support, universal overclaim, insufficient evidence, contradiction,
   and Chinese terms `所有`, `任何环境`, `始终`, and `百分之百`.
+
+### Repository hygiene cleanup
+
+- The baseline `skills/obsidian-daily/SKILL.md` contained committed Git merge
+  markers around its frontmatter metadata. The integration cleanup removed
+  only those markers and retained `author: github.com/bastos` and version
+  `2.0`.
+- This is repository hygiene cleanup, not an Obsidian behavior or feature
+  change.
 
 ## Live-provider evidence
 
@@ -159,6 +184,12 @@ Exit `0`: **154 passed, 0 failed, 2 skipped**, 14 warnings, 127.05s. The skips
 were J18 serial-TMUX authorization and native-Windows S01 OS sandbox
 enforcement.
 
+The final-correction rerun used the same file list with a new unique
+basetemp/cache. It exited `0`: **159 passed, 0 failed, 2 skipped**, 14 warnings,
+102.39s. The count increased by five because the secret-scanner and
+safe-staging files now contain the added negative/integration tests; the two
+skip reasons are unchanged.
+
 Other executed suites:
 
 | Scope | Exit | Result |
@@ -173,6 +204,9 @@ Other executed suites:
 | J15/J18 rerun | 0 | 1 passed, 1 skipped |
 | J01 post-fix rerun | 0 | 1 passed |
 | Interpreter-selection regression | 0 | 2 passed |
+| Final-correction focused safety/advanced/dispatcher set | 0 | 121 passed, 1 skipped |
+| Direct graph dispatch, lease, TaskGraph state, and operator runtime | 0 | 143 passed |
+| Real advanced TaskGraph dispatcher through operatord command backend | 0 | 2 passed |
 
 One pre-fix non-live journey batch had J01 fail because WindowsApps `python3`
 output polluted the configured runtime. This was a real product portability
@@ -197,7 +231,7 @@ Additional exact executable checks:
 Results: installer 38/38 passed; TVS doctor exited 0 with an explicit skip
 because no sandbox TVS checkout exists; hygiene positive and negative controls
 passed; CI YAML parsed; safe staging passed; Windows filenames passed; secret
-scan passed over 4,445 tracked/staged/untracked candidates with no secret.
+scan passed over 4,447 tracked/staged/untracked candidates with no secret.
 
 ## Legacy and L2 disposition
 

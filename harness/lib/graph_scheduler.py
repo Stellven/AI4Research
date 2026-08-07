@@ -3504,6 +3504,10 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
         lease_result = {"acquired": True, "reason": "lease_disabled"}
         if pane.startswith("operator-pool:"):
             lease_result = {"acquired": True, "reason": "operator_pool_virtual_pane"}
+        elif pane.startswith("operator:"):
+            # Direct physical operators are not tmux panes.  Their process-safe
+            # lease is acquired by operator_runtime.submit at the inbox seam.
+            lease_result = {"acquired": True, "reason": "physical_operator_virtual_pane"}
         elif acquire is not None and not dry_run:
             lease_result = acquire(pane, sid, dispatch_id, ttl)
             if not lease_result.get("acquired"):

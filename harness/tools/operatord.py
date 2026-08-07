@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import fcntl
 import json
 import os
 import shlex
@@ -57,6 +56,8 @@ if sys.path and sys.path[0] != str(_LIB_DIR):
     while str(_LIB_DIR) in sys.path:
         sys.path.remove(str(_LIB_DIR))
     sys.path.insert(0, str(_LIB_DIR))
+
+import file_lock_compat as fcntl  # noqa: E402
 
 from operator_persona import (  # noqa: E402  (import after path setup)
     EVALUATOR_PROTOCOL_FILENAME,
@@ -971,10 +972,32 @@ def cmd_daemon(args: argparse.Namespace) -> int:
 
                 with open(log_path, "w", encoding="utf-8") as log_f:
                     assert proc.stdout is not None
-                    selector = selectors.DefaultSelector()
-                    selector.register(proc.stdout, selectors.EVENT_READ)
                     proc_started_at = time.monotonic()
                     last_runtime_heartbeat_at = proc_started_at
+
+                    line_queue = None
+                    reader_thread = None
+                    selector = None
+                    if os.name == "nt":
+                        # Windows selectors only accept sockets, not subprocess
+                        # pipe handles.  A bounded reader thread keeps the same
+                        # streaming/heartbeat behavior without WSAStartup errors.
+                        import queue
+                        import threading
+
+                        line_queue = queue.Queue()
+
+                        def _read_output() -> None:
+                            assert proc.stdout is not None
+                            for output_line in proc.stdout:
+                                line_queue.put(output_line)
+                            line_queue.put(None)
+
+                        reader_thread = threading.Thread(target=_read_output, daemon=True)
+                        reader_thread.start()
+                    else:
+                        selector = selectors.DefaultSelector()
+                        selector.register(proc.stdout, selectors.EVENT_READ)
 
                     while True:
                         now_monotonic = time.monotonic()
@@ -1002,14 +1025,26 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                                 proc.wait(timeout=5)
                             break
 
-                        events = selector.select(timeout=0.5)
-                        if not events:
-                            if proc.poll() is not None:
+                        if line_queue is not None:
+                            try:
+                                line = line_queue.get(timeout=0.5)
+                            except queue.Empty:
+                                if proc.poll() is not None and reader_thread is not None and not reader_thread.is_alive():
+                                    break
+                                continue
+                            if line is None:
                                 break
-                            continue
+                            lines = [line]
+                        else:
+                            assert selector is not None
+                            events = selector.select(timeout=0.5)
+                            if not events:
+                                if proc.poll() is not None:
+                                    break
+                                continue
+                            lines = [key.fileobj.readline() for key, _mask in events]
 
-                        for key, _mask in events:
-                            line = key.fileobj.readline()
+                        for line in lines:
                             if not line:
                                 continue
                             from operator_runtime import scrub_secrets  # noqa: E402

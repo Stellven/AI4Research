@@ -9,6 +9,7 @@ Tests verify:
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import re
 import subprocess
@@ -27,6 +28,7 @@ _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
 sys.modules["check_secret_scan"] = _mod  # register before exec so dataclass can resolve __module__
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 scan_file = _mod.scan_file
+scan_text = _mod.scan_text
 run_scan = _mod.run_scan
 ScanHit = _mod.ScanHit
 _RULES = _mod._RULES
@@ -153,11 +155,9 @@ class TestAllowlisting:
     def test_transport_allowlisted(self) -> None:
         assert _is_allowlisted("harness/lib/research_orchestration/transport.py")
 
-    def test_env_template_allowlisted(self) -> None:
-        assert _is_allowlisted(".env.template")
-
-    def test_env_example_allowlisted(self) -> None:
-        assert _is_allowlisted(".env.example")
+    @pytest.mark.parametrize("path", [".env.example", ".env.template", ".env.sample"])
+    def test_env_examples_are_scanned(self, path: str) -> None:
+        assert not _is_allowlisted(path)
 
     def test_arbitrary_source_not_allowlisted(self) -> None:
         assert not _is_allowlisted("harness/lib/research/fallback_policy.py")
@@ -167,6 +167,23 @@ class TestAllowlisting:
         line = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8").splitlines()[185]
         assert _known_placeholder("openai-api-key", path, line)
         assert not _known_placeholder("openai-api-key", path, line + "x")
+
+    def test_env_template_exact_placeholder_allowlist_fails_closed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        path = ".env.template"
+        line = 'OPENAI_API_KEY="example-not-a-real-key"'
+        digest = hashlib.sha256(line.encode("utf-8")).hexdigest()
+        allowlist = tmp_path / "allowlist"
+        allowlist.write_text(
+            f"generic-api-key-assignment {digest} {path}\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(_mod, "_PLACEHOLDER_ALLOWLIST", allowlist)
+
+        assert scan_text(path, line + "\n") == []
+        changed = scan_text(path, line.replace("key", "kez") + "\n")
+        assert any(hit.rule_name == "generic-api-key-assignment" for hit in changed)
 
 
 class TestCleanFiles:
@@ -196,6 +213,26 @@ class TestCleanFiles:
 
 
 class TestGitCandidateCoverage:
+    def test_env_example_fake_real_format_key_is_scanned_from_staged_blob(
+        self, tmp_path: Path
+    ) -> None:
+        _init_repo(tmp_path)
+        (tmp_path / "README.md").write_text("fixture\n", encoding="utf-8")
+        subprocess.run(["git", "add", "README.md"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-qm", "baseline"], cwd=tmp_path, check=True)
+
+        canary = "sk-" + "F" * 40
+        target = tmp_path / ".env.example"
+        target.write_text(f"OPENAI_API_KEY={canary}\n", encoding="utf-8")
+        subprocess.run(["git", "add", ".env.example"], cwd=tmp_path, check=True)
+        target.write_text("OPENAI_API_KEY=YOUR_API_KEY_HERE\n", encoding="utf-8")
+
+        result = _run_scanner(tmp_path)
+        output = result.stdout + result.stderr
+        assert result.returncode == 1
+        assert "[openai-api-key] .env.example:1" in output
+        assert canary not in output
+
     def test_exact_staged_blob_is_scanned_even_after_worktree_changes(self, tmp_path: Path) -> None:
         _init_repo(tmp_path)
         target = tmp_path / "config.txt"

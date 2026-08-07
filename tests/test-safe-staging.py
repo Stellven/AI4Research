@@ -13,6 +13,7 @@ Tests verify that:
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -27,6 +28,7 @@ _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 classify_path = _mod.classify_path
 run_check = _mod.run_check
 Violation = _mod.Violation
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "check-safe-staging.py"
 
 import pytest
 
@@ -167,3 +169,57 @@ class TestStagedSecretFixture:
         ]
         violations = run_check(staged)
         assert violations == []
+
+
+class TestGitCliIntegration:
+    def test_real_staged_env_is_rejected_without_value_exposure(self, tmp_path: Path):
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.name", "Safety Fixture"], cwd=tmp_path, check=True)
+        (tmp_path / "README.md").write_text("fixture\n", encoding="utf-8")
+        subprocess.run(["git", "add", "README.md"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-qm", "baseline"], cwd=tmp_path, check=True)
+
+        canary = "sk-" + "N" * 40
+        (tmp_path / ".env").write_text(f"OPENAI_API_KEY={canary}\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-f", ".env"], cwd=tmp_path, check=True)
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT)],
+            cwd=tmp_path,
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+
+        output = result.stdout + result.stderr
+        assert result.returncode == 1
+        assert "[LOCAL_ENV_CONFIG] .env" in output
+        assert canary not in output
+
+    def test_diff_base_mode_checks_committed_changed_paths(self, tmp_path: Path):
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.name", "Safety Fixture"], cwd=tmp_path, check=True)
+        (tmp_path / "README.md").write_text("fixture\n", encoding="utf-8")
+        subprocess.run(["git", "add", "README.md"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-qm", "baseline"], cwd=tmp_path, check=True)
+        base = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True, capture_output=True, check=True
+        ).stdout.strip()
+        artifact = tmp_path / "outputs" / "live-provider" / "response.json"
+        artifact.parent.mkdir(parents=True)
+        artifact.write_text("{}\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-f", artifact.relative_to(tmp_path)], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-qm", "provider artifact"], cwd=tmp_path, check=True)
+
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--diff-base", base],
+            cwd=tmp_path,
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+        assert result.returncode == 1
+        assert "[LIVE_PROVIDER_ARTIFACT] outputs/live-provider/response.json" in result.stderr

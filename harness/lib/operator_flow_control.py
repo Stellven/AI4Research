@@ -7,7 +7,7 @@ import json
 import os
 import re
 import sys
-import fcntl
+import file_lock_compat as fcntl
 import subprocess
 import time
 from pathlib import Path

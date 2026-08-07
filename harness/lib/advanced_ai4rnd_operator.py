@@ -48,6 +48,7 @@ except Exception:  # pragma: no cover
 
 SUPPORTED_OPTIMIZERS = frozenset({"bayesian_optimization"})
 SUPPORTED_TRAINERS = frozenset({"sft_linear_adapter"})
+PHYSICAL_OPERATOR_ID = "autosci-advanced-ai4rnd-worker"
 
 OPTIONAL_ADAPTERS = {
     "gepa": "Use harness/integrations/gepa_optimizer for GEPA artifact optimization.",
@@ -657,7 +658,7 @@ def _record_task_graph_state(
             envelope.node_id,
             str(result.get("task_graph_status") or "failed"),
             note=note,
-            assigned_to="advanced-ai4rnd-operator",
+            assigned_to=PHYSICAL_OPERATOR_ID,
             dispatch_id=envelope.task_id,
         )
         node_result = state["node_results"][envelope.node_id]
@@ -675,7 +676,7 @@ def _record_task_graph_state(
         task_state.record_event(
             state,
             "advanced_ai4rnd_operator_completed",
-            "advanced_ai4rnd_operator",
+            PHYSICAL_OPERATOR_ID,
             f"{envelope.algorithm}:{result.get('status')}",
         )
         task_state.save_state(envelope.sprint_id, state, sprints_dir)
@@ -694,7 +695,7 @@ def _record_evidence(
     try:
         ledger = EvidenceLedger(ledger_dir=evidence_dir) if evidence_dir else EvidenceLedger()
         decision = build_scheduler_decision(
-            selected_actor="advanced-ai4rnd-operator",
+            selected_actor=PHYSICAL_OPERATOR_ID,
             logical_operator=f"{envelope.operator_kind}:{envelope.algorithm}",
             score_factors={
                 "supported": 1.0 if result.get("status") == "passed" else 0.0,
@@ -707,7 +708,7 @@ def _record_evidence(
             task_id=envelope.task_id,
             sprint_id=envelope.sprint_id,
             node_id=envelope.node_id,
-            actor_id="advanced-ai4rnd-operator",
+            actor_id=PHYSICAL_OPERATOR_ID,
             logical_operator=f"{envelope.operator_kind}:{envelope.algorithm}",
             scheduler_decision=decision,
             dag_ref=f"{envelope.sprint_id}.task_graph.json",
