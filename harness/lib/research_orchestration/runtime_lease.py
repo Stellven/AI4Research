@@ -107,7 +107,7 @@ class ResearchLeaseAdapter:
         recover_stale: bool = False,
     ) -> dict[str, Any]:
         self._validate_identity(run_id, node_id, operator_id)
-        self.lease_dir.mkdir(parents=True, exist_ok=True)
+        _mkdir(self.lease_dir)
 
         with self._exclusive(run_id, node_id, operator_id) as claims_acquired:
             if not claims_acquired:
@@ -434,10 +434,10 @@ class ResearchLeaseAdapter:
 
     @staticmethod
     def _read_json(path: Path) -> dict[str, Any] | None:
-        if not path.exists():
+        if not _exists(path):
             return None
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
+            data = json.loads(_read_text(path))
             return data if isinstance(data, dict) else None
         except Exception:
             return {"operator_id": path.stem, "state": "stale", "corrupt": True}
@@ -498,15 +498,13 @@ class ResearchLeaseAdapter:
     ) -> dict[str, Any] | None:
         if self.operator_runtime is not None:
             return None
-        if not self.operator_registry_path.exists():
+        if not _exists(self.operator_registry_path):
             return self._blocked(
                 "operator_registry_missing",
                 {"run_id": run_id, "node_id": node_id, "operator_id": operator_id},
             )
         try:
-            registry = json.loads(
-                self.operator_registry_path.read_text(encoding="utf-8")
-            )
+            registry = json.loads(_read_text(self.operator_registry_path))
             operators = registry["operators"]
             if not isinstance(operators, Mapping):
                 raise ValueError("operators must be an object")
@@ -640,7 +638,7 @@ class ResearchLeaseAdapter:
                 yield acquired
             return
 
-        claim_path.parent.mkdir(parents=True, exist_ok=True)
+        _mkdir(claim_path.parent)
         token = str(uuid.uuid4())
         deadline = time.monotonic() + self.claim_timeout_seconds
         while True:
@@ -686,10 +684,32 @@ def _load_matching_operator_runtime(harness_root: Path) -> Any | None:
     return module if configured == harness_root else None
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(Path(path).resolve(strict=False))
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
+def _mkdir(path: Path) -> None:
+    os.makedirs(_fs_path(path), exist_ok=True)
+
+
+def _exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
+def _read_text(path: Path) -> str:
+    with open(_fs_path(path), "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
 def _atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    _mkdir(path.parent)
     fd, raw_tmp = tempfile.mkstemp(
-        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
+        prefix=f".{path.name}.", suffix=".tmp", dir=_fs_path(path.parent)
     )
     tmp = Path(raw_tmp)
     try:
@@ -697,12 +717,9 @@ def _atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
             json.dump(payload, handle, indent=2, sort_keys=True)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(tmp, path)
+        os.replace(_fs_path(tmp), _fs_path(path))
     finally:
-        try:
-            tmp.unlink()
-        except FileNotFoundError:
-            pass
+        _unlink_if_exists(tmp)
 
 
 @contextmanager
@@ -717,8 +734,8 @@ def _windows_file_claim(
     import msvcrt
 
     deadline = time.monotonic() + timeout_seconds
-    legacy_claim_path.parent.mkdir(parents=True, exist_ok=True)
-    while legacy_claim_path.exists():
+    _mkdir(legacy_claim_path.parent)
+    while _exists(legacy_claim_path):
         if _remove_abandoned_claim(legacy_claim_path, abandoned_claim_seconds):
             continue
         if time.monotonic() >= deadline:
@@ -727,7 +744,7 @@ def _windows_file_claim(
         time.sleep(0.01)
 
     lock_path = legacy_claim_path.with_name(f"{legacy_claim_path.name}.lock")
-    handle = open(lock_path, "a+b", buffering=0)
+    handle = open(_fs_path(lock_path), "a+b", buffering=0)
     acquired = False
     try:
         handle.seek(0, os.SEEK_END)
@@ -757,7 +774,7 @@ def _windows_file_claim(
 
 def _read_claim_owner(path: Path) -> dict[str, Any] | None:
     try:
-        owner = json.loads((path / "owner.json").read_text(encoding="utf-8"))
+        owner = json.loads(_read_text(path / "owner.json"))
     except Exception:
         return None
     return owner if isinstance(owner, dict) else None
@@ -784,11 +801,11 @@ def _remove_abandoned_claim(path: Path, stale_seconds: float) -> bool:
     owner = _read_claim_owner(path)
     if owner is None:
         try:
-            if time.time() - path.stat().st_mtime < stale_seconds:
+            if time.time() - os.stat(_fs_path(path)).st_mtime < stale_seconds:
                 return False
             # Ownerless compatibility claims are removed only when empty.  If
             # an owner appears concurrently, rmdir fails instead of stealing.
-            path.rmdir()
+            os.rmdir(_fs_path(path))
             return True
         except (FileNotFoundError, OSError):
             return False
@@ -800,19 +817,19 @@ def _remove_abandoned_claim(path: Path, stale_seconds: float) -> bool:
 
     quarantine = path.with_name(f"{path.name}.reap-{uuid.uuid4().hex}")
     try:
-        os.replace(path, quarantine)
+        os.replace(_fs_path(path), _fs_path(quarantine))
     except (FileNotFoundError, OSError):
         return False
     moved_owner = _read_claim_owner(quarantine)
     if moved_owner is None or str(moved_owner.get("token") or "") != token:
         try:
-            if not path.exists():
-                os.replace(quarantine, path)
+            if not _exists(path):
+                os.replace(_fs_path(quarantine), _fs_path(path))
         except OSError:
             pass
         return False
     try:
-        shutil.rmtree(quarantine)
+        shutil.rmtree(_fs_path(quarantine))
         return True
     except (FileNotFoundError, OSError):
         return False
@@ -874,15 +891,15 @@ def _remove_claim_owned(path: Path, token: str) -> bool:
 
     for _attempt in range(20):
         try:
-            owner = json.loads((path / "owner.json").read_text(encoding="utf-8"))
+            owner = json.loads(_read_text(path / "owner.json"))
         except FileNotFoundError:
-            return not path.exists()
+            return not _exists(path)
         except Exception:
             return False
         if not isinstance(owner, Mapping) or owner.get("token") != token:
             return False
         try:
-            shutil.rmtree(path)
+            shutil.rmtree(_fs_path(path))
             return True
         except FileNotFoundError:
             return True
@@ -1088,7 +1105,7 @@ def _identity_filename(value: str) -> str:
 
 def _unlink_if_exists(path: Path) -> bool:
     try:
-        path.unlink()
+        os.unlink(_fs_path(path))
         return True
     except FileNotFoundError:
         return False

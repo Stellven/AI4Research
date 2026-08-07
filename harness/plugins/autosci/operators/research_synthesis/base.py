@@ -155,6 +155,10 @@ def _is_file(path: Path) -> bool:
     return os.path.isfile(_fs_path(path))
 
 
+def _exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
 def _resolve(path_text: str | Path, workspace_root: Path) -> Path:
     path = Path(str(path_text))
     if path.is_absolute():
@@ -205,7 +209,7 @@ def validate_scoped_path(
 
     if not any(scope_allows(target, raw_scope, scope_path) for raw_scope, scope_path in scope_entries):
         raise ResearchOperatorError(f"Path escapes declared scope: {path_text}", error_type="scope_violation")
-    if must_exist and not target.exists():
+    if must_exist and not _exists(target):
         raise ResearchOperatorError(f"Scoped path does not exist: {path_text}", error_type="missing_input")
     return target
 

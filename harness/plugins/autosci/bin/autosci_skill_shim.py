@@ -2007,11 +2007,17 @@ def cmd_run_skill(args: argparse.Namespace) -> int:
             skill_run["workspace"]["runtime_proof_artifact"] = projection_proofs[0]
         write_json(out_path, payload)
 
+    result_path = ""
+    for action in skill_run.get("actions", []):
+        if isinstance(action, dict) and action.get("result_path"):
+            result_path = action.get("result_path")
+
     summary = {
         "ok": payload["status"] != "failed",
         "schema": SCHEMA,
         "status": payload["status"],
         "evidence_path": as_artifact_path(out_path),
+        "result_path": result_path or "",
         "skill": skill_run["selected_skill"],
         "autosci_command": skill_run["autosci_command"],
         "execution_status": skill_run["execution_status"],

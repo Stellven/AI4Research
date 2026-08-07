@@ -56,6 +56,46 @@ EXPERIMENT_STATUS_PATH = (
 )
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(Path(path).resolve(strict=False))
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
+def _read_bytes(path: Path) -> bytes:
+    with open(_fs_path(path), "rb") as handle:
+        return handle.read()
+
+
+def _read_text(path: Path) -> str:
+    with open(_fs_path(path), "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _write_text(path: Path, value: str) -> None:
+    os.makedirs(_fs_path(path.parent), exist_ok=True)
+    with open(_fs_path(path), "w", encoding="utf-8") as handle:
+        handle.write(value)
+
+
+def _is_file(path: Path) -> bool:
+    return os.path.isfile(_fs_path(path))
+
+
+def _exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
+def _copy2_longpath(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> str:
+    dst_path = Path(dst)
+    os.makedirs(_fs_path(dst_path.parent), exist_ok=True)
+    shutil.copy2(_fs_path(Path(src)), _fs_path(dst_path))
+    return str(dst_path)
+
+
 FULL_STAGE_NODES = [
     "evidence_import",
     "literature_discover",
@@ -94,11 +134,11 @@ PROMPT = (
 
 
 def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashlib.sha256(_read_bytes(path)).hexdigest()
 
 
 def _json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(_read_text(path))
 
 
 def _load_phase5_workflow(_decision: Any) -> dict[str, Any]:
@@ -141,7 +181,7 @@ def _write_operator_registry(artifact_root: Path) -> None:
     }
     path = artifact_root / "config" / "physical-operators.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"version": 1, "operators": operators}, indent=2, sort_keys=True), encoding="utf-8")
+    _write_text(path, json.dumps({"version": 1, "operators": operators}, indent=2, sort_keys=True))
 
 
 def _services(artifact_root: Path) -> dict[str, Any]:
@@ -280,7 +320,8 @@ class Phase5ProbeResolver:
         self.requests.append(deepcopy(request))
         if self.interrupt_node == node_id:
             marker = self.artifact_root / "interrupt-marker.json"
-            marker.write_text(
+            _write_text(
+                marker,
                 json.dumps(
                     {
                         "run_id": request["run_id"],
@@ -294,7 +335,6 @@ class Phase5ProbeResolver:
                     sort_keys=True,
                 )
                 + "\n",
-                encoding="utf-8",
             )
             os._exit(77)
         try:
@@ -328,7 +368,7 @@ class Phase5ProbeResolver:
         if node_id == "evidence_import":
             imported = self.artifact_root / "inputs" / "phase5-imported-evidence.json"
             imported.parent.mkdir(parents=True, exist_ok=True)
-            if not imported.exists():
+            if not _exists(imported):
                 shutil.copyfile(IMPORTED_EVIDENCE, imported)
             payload.setdefault("task_contract", {})["supplied_evidence"] = [
                 {
@@ -352,7 +392,8 @@ def _prepare_artifact_root(artifact_root: Path) -> None:
     artifact_root.mkdir(parents=True, exist_ok=True)
     dispatch_envelope = artifact_root / "dispatch" / "envelope.json"
     dispatch_envelope.parent.mkdir(parents=True, exist_ok=True)
-    dispatch_envelope.write_text(
+    _write_text(
+        dispatch_envelope,
         json.dumps(
             {
                 "schema": "phase5.dispatch_envelope.v1",
@@ -364,7 +405,6 @@ def _prepare_artifact_root(artifact_root: Path) -> None:
             sort_keys=True,
         )
         + "\n",
-        encoding="utf-8",
     )
 
 
@@ -502,8 +542,8 @@ def _assert_snapshot_unchanged(artifact_root: Path, snapshot: dict[str, dict[str
 
 def _assert_no_secret_persisted(artifact_root: Path) -> None:
     for path in artifact_root.rglob("*"):
-        if path.is_file() and path.suffix.lower() in {".json", ".jsonl", ".md", ".txt"}:
-            assert SECRET_CANARY not in path.read_text(encoding="utf-8", errors="ignore"), path
+        if _is_file(path) and path.suffix.lower() in {".json", ".jsonl", ".md", ".txt"}:
+            assert SECRET_CANARY not in _read_text(path), path
 
 
 def _assert_production_lifecycle_contract(artifact_root: Path) -> None:
@@ -519,7 +559,7 @@ def _assert_production_lifecycle_contract(artifact_root: Path) -> None:
 
 
 def _copy_run_tree(source_root: Path, target_root: Path) -> None:
-    shutil.copytree(source_root, target_root)
+    shutil.copytree(_fs_path(source_root), _fs_path(target_root), copy_function=_copy2_longpath)
     state_path = target_root / "state" / f"{RUN_ID}.research_run_state.json"
     state = _json(state_path)
     source_text = str(source_root.resolve())
@@ -528,7 +568,7 @@ def _copy_run_tree(source_root: Path, target_root: Path) -> None:
         ref = str(node_state.get("result_ref") or "")
         if ref:
             node_state["result_ref"] = ref.replace(source_text, target_text)
-    state_path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_text(state_path, json.dumps(state, indent=2, sort_keys=True) + "\n")
 
 
 def test_phase5_complete_scientific_lifecycle_runs_with_real_experiment_and_final_evaluation(tmp_path: Path) -> None:
@@ -574,7 +614,7 @@ def test_phase5_complete_scientific_lifecycle_runs_with_real_experiment_and_fina
     assert experiment_result["sandbox_enforced"] is True
     assert any(item["name"] == "unsupported_claim_reduction_percent" and item["value"] >= 50 for item in experiment_result["metrics"])
     raw_observations = artifact_root / "experiment-runtime" / "raw_observations.json"
-    assert raw_observations.is_file()
+    assert _is_file(raw_observations)
     assert _json(raw_observations)["supports_minimum_reduction"] is True
 
     verdict = _json(
@@ -583,10 +623,11 @@ def test_phase5_complete_scientific_lifecycle_runs_with_real_experiment_and_fina
     )
     assert any("local-experiment:raw_observations:" in " ".join(item["evidence_ids"]) for item in verdict["outputs"]["verdicts"])
 
-    report = (
+    report_path = (
         artifact_root
         / "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/final-report.md"
-    ).read_text(encoding="utf-8")
+    )
+    report = _read_text(report_path)
     assert "## Methods" in report
     assert "reduces unsupported claim counts by at least 50 percent" in report
     assert "local-experiment:raw_observations:" in report
@@ -622,7 +663,7 @@ def test_phase5_no_approval_does_not_execute_experiment(tmp_path: Path) -> None:
     assert plan["sandbox"]["mode"] == "isolated"
     assert plan["sandbox"]["network"] is False
     assert plan["sandbox"]["write_scope"] == [EXPERIMENT_RESULT_PATH]
-    assert not (artifact_root / "experiment-runtime" / "raw_observations.json").exists()
+    assert not _exists(artifact_root / "experiment-runtime" / "raw_observations.json")
 
 
 def test_phase5_interruption_resume_preserves_artifacts_and_continues_only_unfinished(tmp_path: Path) -> None:
@@ -647,7 +688,7 @@ def test_phase5_interruption_resume_preserves_artifacts_and_continues_only_unfin
     assert marker["node_id"] == "experiment_run"
     assert interrupted_state["final_status"] != "completed"
     assert interrupted_state["node_states"]["experiment_run"]["status"] == "running"
-    assert (artifact_root / "run" / "operator-status" / "experiment_run_worker.json").is_file()
+    assert _is_file(artifact_root / "run" / "operator-status" / "experiment_run_worker.json")
     completed_before = {
         node_id
         for node_id, node_state in interrupted_state["node_states"].items()
@@ -691,7 +732,7 @@ def test_phase5_tampered_resume_state_or_foreign_evidence_is_rejected(tmp_path: 
         tampered_root
         / "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/scientific_report.v1.json"
     )
-    report_path.write_text(report_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    _write_text(report_path, _read_text(report_path) + "\n")
     tampered = _orchestrator(tampered_root, Phase5ProbeResolver(tampered_root)).resume()
     assert tampered["final_status"] == "blocked"
     assert "sha256" in tampered["current_blockers"][0]["reason"]
@@ -708,9 +749,9 @@ def test_phase5_tampered_resume_state_or_foreign_evidence_is_rejected(tmp_path: 
         evaluation=original["evaluation"],
     )
     state["node_states"]["paper_analyze"]["result_ref"] = foreign_ref
-    (foreign_root / "state" / f"{RUN_ID}.research_run_state.json").write_text(
+    _write_text(
+        foreign_root / "state" / f"{RUN_ID}.research_run_state.json",
         json.dumps(state, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
     )
     foreign = _orchestrator(foreign_root, Phase5ProbeResolver(foreign_root)).resume()
     assert foreign["final_status"] == "blocked"

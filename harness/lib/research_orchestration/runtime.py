@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -600,22 +601,32 @@ def _git_checkout_provenance(repo_root: Path) -> dict[str, Any]:
     """Capture only bounded, non-secret implementation identity from Git."""
 
     captured_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    if not (Path(repo_root).resolve() / ".git").exists():
+    root = Path(repo_root).resolve()
+    if not (root / ".git").exists():
         return {
             "repo_head": "unavailable",
             "worktree_status": "unavailable",
             "captured_at": captured_at,
         }
     try:
+        top_level = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout.strip()
+        if os.path.normcase(str(Path(top_level).resolve())) != os.path.normcase(str(root)):
+            raise subprocess.CalledProcessError(128, "git rev-parse --show-toplevel")
         head = subprocess.run(
-            ["git", "-C", str(Path(repo_root).resolve()), "rev-parse", "HEAD"],
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
             check=True,
             capture_output=True,
             text=True,
             timeout=5,
         ).stdout.strip()
         status = subprocess.run(
-            ["git", "-C", str(Path(repo_root).resolve()), "status", "--porcelain=v1", "--untracked-files=normal"],
+            ["git", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=normal"],
             check=True,
             capture_output=True,
             text=True,

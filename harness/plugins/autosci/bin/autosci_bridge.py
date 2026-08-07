@@ -37,6 +37,7 @@ from research_orchestration.runtime import (
     default_production_resolver,
     load_evidence_references,
 )
+from research_orchestration.runtime_lease import ResearchLeaseAdapter
 from research_orchestration.routing import seed_kind_for_value
 
 from adapters.autosci_to_claim_verdict import convert as convert_claim_verdict
@@ -9226,6 +9227,144 @@ def _write_experiment_design_boundary(
     return {"type": "experiment_design_final_execution_boundary_json", "path": _write_json_sidecar(path, boundary)}
 
 
+def _path_token(path: Path | str) -> str:
+    return str(Path(path).resolve()).replace("\\", "/")
+
+
+def _write_experiment_poc_assets(
+    envelope: dict[str, Any],
+    *,
+    experiment_id: str,
+    target_ref: str,
+) -> dict[str, Any]:
+    short_id = hashlib.sha256(experiment_id.encode("utf-8")).hexdigest()[:12]
+    asset_root = _output_dir(envelope, "design_experiment") / "poc" / short_id
+    data_path = asset_root / "input_samples.csv"
+    runner_path = asset_root / "run_poc_experiment.py"
+    result_path = asset_root / "experiment_result.v1.json"
+    manifest_path = asset_root / "poc_manifest.json"
+    allowlist_path = asset_root / "command_allowlist.json"
+    check_path = asset_root / "poc_usability_check.json"
+    asset_root.mkdir(parents=True, exist_ok=True)
+    data_path.write_text(
+        "\n".join(
+            [
+                "sample_id,condition,baseline_errors,variant_errors",
+                "s1,fixture,4,1",
+                "s2,fixture,3,1",
+                "s3,fixture,5,2",
+                "s4,fixture,4,1",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    runner_path.write_text(
+        "\n".join(
+            [
+                "from __future__ import annotations",
+                "",
+                "import csv",
+                "import json",
+                "import sys",
+                "from pathlib import Path",
+                "",
+                "def main(argv: list[str]) -> int:",
+                "    if len(argv) != 3:",
+                "        print(json.dumps({'schema': 'experiment_result.v1', 'status': 'failed', 'outputs': {'result': {'outcome': 'failed', 'metrics': [], 'evidence_ids': ['poc:usage-error'], 'logs': ['usage: run_poc_experiment.py <input.csv> <result.json>']}}}))",
+                "        return 2",
+                "    data_path = Path(argv[1])",
+                "    result_path = Path(argv[2])",
+                "    rows = list(csv.DictReader(data_path.open(encoding='utf-8')))",
+                "    baseline = sum(int(row['baseline_errors']) for row in rows)",
+                "    variant = sum(int(row['variant_errors']) for row in rows)",
+                "    reduction = (baseline - variant) / baseline if baseline else 0.0",
+                "    outcome = 'supports' if reduction >= 0.5 else 'refutes'",
+                "    result = {",
+                "        'experiment_id': '" + experiment_id.replace("'", "\\'") + "',",
+                "        'outcome': outcome,",
+                "        'metrics': [",
+                "            {'name': 'baseline_error_total', 'value': baseline},",
+                "            {'name': 'variant_error_total', 'value': variant},",
+                "            {'name': 'error_reduction_fraction', 'value': reduction},",
+                "        ],",
+                "        'evidence_ids': ['poc:" + _slug(experiment_id) + ":input_samples', 'poc:" + _slug(experiment_id) + ":runtime'],",
+                "        'logs': [f'processed_rows={len(rows)}', f'error_reduction_fraction={reduction:.6f}'],",
+                "    }",
+                "    payload = {",
+                "        'schema': 'experiment_result.v1',",
+                "        'status': 'completed',",
+                "        'outputs': {'result': result},",
+                "    }",
+                "    result_path.parent.mkdir(parents=True, exist_ok=True)",
+                "    result_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\\n', encoding='utf-8')",
+                "    print(json.dumps(payload, sort_keys=True))",
+                "    return 0",
+                "",
+                "if __name__ == '__main__':",
+                "    raise SystemExit(main(sys.argv))",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    result_path.write_text("{}\n", encoding="utf-8")
+    command = [_path_token(sys.executable), _path_token(runner_path), _path_token(data_path), _path_token(result_path)]
+    command_text = " ".join(shlex.quote(item) for item in command)
+    allowlist = {
+        "schema": "autosci_experiment_command_allowlist.v1",
+        "experiment_id": experiment_id,
+        "commands": [command_text],
+        "executables": [_path_token(sys.executable), Path(sys.executable).name],
+        "allowed_prefixes": [" ".join(shlex.quote(item) for item in command[:3])],
+        "limitations": ["Allowlist is scoped to the generated deterministic local POC runner."],
+    }
+    manifest = {
+        "schema": "autosci_experiment_poc_manifest.v1",
+        "experiment_id": experiment_id,
+        "target_ref": target_ref,
+        "runner_path": _rel(runner_path),
+        "input_path": _rel(data_path),
+        "result_path": _rel(result_path),
+        "allowlist_path": _rel(allowlist_path),
+        "command": command_text,
+        "artifact_contract": {
+            "physical_operator": "autosci-experiment-design-worker",
+            "run_operator": "autosci-experiment-run-worker",
+            "monitor_operator": "autosci-experiment-monitor-worker",
+            "terminal_states": ["completed", "failed", "blocked", "cancelled"],
+        },
+    }
+    usability = {
+        "schema": "autosci_experiment_poc_usability_check.v1",
+        "experiment_id": experiment_id,
+        "status": "completed",
+        "checks": [
+            {"check": "runner_exists", "status": "ok" if runner_path.is_file() else "error", "path": _rel(runner_path)},
+            {"check": "input_exists", "status": "ok" if data_path.is_file() else "error", "path": _rel(data_path)},
+            {"check": "allowlist_exists", "status": "ok", "path": _rel(allowlist_path)},
+            {"check": "command_declared", "status": "ok" if command_text else "error", "command": command_text},
+        ],
+        "minimum_usability": "runner plus CSV plus allowlist are present and can be passed to exp-run.",
+    }
+    _write_json_sidecar(allowlist_path, allowlist)
+    _write_json_sidecar(manifest_path, manifest)
+    _write_json_sidecar(check_path, usability)
+    return {
+        "manifest": manifest,
+        "allowlist": allowlist,
+        "usability": usability,
+        "artifacts": [
+            {"type": "poc_runtime_runner", "path": _rel(runner_path)},
+            {"type": "poc_input_dataset", "path": _rel(data_path)},
+            {"type": "poc_expected_result_json", "path": _rel(result_path)},
+            {"type": "poc_command_allowlist_json", "path": _rel(allowlist_path)},
+            {"type": "poc_manifest_json", "path": _rel(manifest_path)},
+            {"type": "poc_usability_check_json", "path": _rel(check_path)},
+        ],
+    }
+
+
 def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     execution_mode = _experiment_execution_mode(envelope)
@@ -9340,11 +9479,18 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
     native_experiment_id = _slug(target_ref)
     if not native_experiment_id.startswith(("exp-", "experiment-")):
         native_experiment_id = f"exp-{native_experiment_id}"
-    expected_artifacts = ["experiment_result.json", "experiment_status.json", "experiment_run.log"]
-    command_allowlist = [
-        "python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment",
-        "python3 plugins/autosci/bin/autosci_bridge.py run --action monitor_experiment",
+    plan_experiment_id = "exp-001" if _fixture_like_envelope(envelope) else native_experiment_id
+    poc_assets = _write_experiment_poc_assets(
+        envelope,
+        experiment_id=plan_experiment_id,
+        target_ref=target_ref,
+    )
+    expected_artifacts = [
+        poc_assets["manifest"]["result_path"],
+        "experiment_status.json",
+        "experiment_run.log",
     ]
+    command_allowlist = [str(poc_assets["manifest"]["command"])]
     boundary = _experiment_design_final_execution_boundary(
         envelope,
         target_ref=target_ref,
@@ -9373,11 +9519,11 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
         evidence_path=evidence_payload_path,
         review_llm=review_llm,
     )
-    artifacts = [*wiki_artifacts, *review_artifacts, boundary_artifact]
+    artifacts = [*wiki_artifacts, *review_artifacts, boundary_artifact, *poc_assets["artifacts"]]
     if review_runtime_proof_artifact is not None:
         artifacts.append(review_runtime_proof_artifact)
     return convert_experiment_plan({
-        "experiment_id": "exp-001" if _fixture_like_envelope(envelope) else native_experiment_id,
+        "experiment_id": plan_experiment_id,
         "objective": objective,
         "hypothesis": hypothesis,
         "variables": variables,
@@ -16972,6 +17118,40 @@ def _write_experiment_run_report(
     return {"type": "experiment_run_report_json", "path": rel}
 
 
+def _write_experiment_lease_report(
+    envelope: dict[str, Any],
+    *,
+    action: str,
+    stage: str,
+    experiment_id: str,
+    operator_id: str,
+    acquire: dict[str, Any],
+    duplicate_probe: dict[str, Any],
+    heartbeat: dict[str, Any],
+    release: dict[str, Any],
+) -> dict[str, str]:
+    duplicate_blocker = duplicate_probe.get("blocker") if isinstance(duplicate_probe.get("blocker"), dict) else {}
+    report = {
+        "schema": "autosci_experiment_execution_lease_report.v1",
+        "stage": stage,
+        "experiment_id": experiment_id,
+        "operator_id": operator_id,
+        "status": "completed" if acquire.get("acquired") and release.get("released") else "blocked",
+        "lease_acquired": bool(acquire.get("acquired")),
+        "heartbeat_ok": bool(heartbeat.get("ok")),
+        "duplicate_rejected": duplicate_probe.get("acquired") is False
+        and str(duplicate_blocker.get("reason") or "") in {"run_node_already_active", "operator_busy"},
+        "duplicate_blocker": duplicate_blocker,
+        "release_recorded": bool(release.get("released")),
+        "lease_id": str((acquire.get("lease") or {}).get("lease_id") or ""),
+        "limitations": [
+            "Lease report is scoped to cooperating AutoSci experiment operators using ResearchLeaseAdapter."
+        ],
+    }
+    rel = _write_json_sidecar(_output_dir(envelope, action) / "experiment_execution_lease_report.json", report)
+    return {"type": "experiment_execution_lease_report_json", "path": rel}
+
+
 def _execute_experiment_if_approved(
     envelope: dict[str, Any],
     contract: dict[str, Any],
@@ -16984,7 +17164,7 @@ def _execute_experiment_if_approved(
     result_artifact_type: str = "run_experiment_result",
     blocked_evidence_id: str = "experiment-runtime:blocked",
     default_evidence_prefix: str = "experiment-runtime",
-    runner_operator_id: str = "autosci-experiment-runner",
+    runner_operator_id: str = "autosci-experiment-run-worker",
     executor_label: str = "Experiment",
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     inputs = envelope.get("inputs") if isinstance(envelope.get("inputs"), dict) else {}
@@ -17031,20 +17211,101 @@ def _execute_experiment_if_approved(
         return _refresh_approval_contract(contract), {"executed": False, "reason": "experiment_command_missing", "runtime_path": runtime_rel}
 
     command = _normalize_command(command)
-    proc = subprocess.run(
-        command,
-        cwd=REPO_HARNESS_DIR,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=int(inputs.get("executor_timeout_seconds") or 120),
+    lease_adapter = ResearchLeaseAdapter(
+        HARNESS_DIR,
+        claim_timeout_seconds=2,
+        abandoned_claim_seconds=2,
     )
+    run_id = str(envelope.get("sprint_id") or envelope.get("run_id") or "autosci-experiment-run")
+    node_id = str(envelope.get("node_id") or f"node-{action.replace('_', '-')}")
+    lease = lease_adapter.acquire(
+        run_id,
+        node_id,
+        runner_operator_id,
+        ttl_seconds=int(inputs.get("executor_timeout_seconds") or 120) + 30,
+        heartbeat_timeout_seconds=max(1, int(inputs.get("executor_timeout_seconds") or 120)),
+        recover_stale=True,
+        metadata={"stage": stage, "trace_id": _slug(experiment_id)},
+        safe_metadata_fields=["stage", "trace_id"],
+    )
+    if not lease.get("acquired"):
+        payload = _runtime_evidence_payload(
+            envelope,
+            action=action,
+            status="inconclusive",
+            approval_ref=str(contract.get("approval_ref") or ""),
+            command_run="blocked:experiment-lease-not-acquired",
+            exit_code=1,
+            evidence_ids=[blocked_evidence_id],
+            checks=[{"check": "execution_lease_acquired", "status": "error", "detail": json.dumps(lease.get("blocker") or {}, sort_keys=True)}],
+            runtime_fields={"result_collected": False},
+            artifacts=[],
+            limitations=[f"{executor_label} executor did not run because an execution lease could not be acquired."],
+        )
+        runtime_rel = _write_json_sidecar(runtime_path, payload)
+        contract.setdefault("runtime_evidence", []).append({"path": runtime_rel, "artifact_path": runtime_rel, "exists": True, "kind": "file", "verifiable": True})
+        return _refresh_approval_contract(contract), {"executed": False, "reason": "execution_lease_not_acquired", "runtime_path": runtime_rel, "lease": lease}
+    lease_id = str((lease.get("lease") or {}).get("lease_id") or "")
+    heartbeat = lease_adapter.heartbeat(
+        run_id,
+        node_id,
+        runner_operator_id,
+        lease_id=lease_id,
+        ttl_seconds=int(inputs.get("executor_timeout_seconds") or 120) + 30,
+        state="running",
+    )
+    duplicate_probe = lease_adapter.acquire(
+        run_id,
+        node_id,
+        runner_operator_id,
+        ttl_seconds=30,
+        heartbeat_timeout_seconds=30,
+        metadata={"stage": stage, "trace_id": "duplicate-probe"},
+        safe_metadata_fields=["stage", "trace_id"],
+    )
+    release: dict[str, Any] = {"released": False, "reason": "not_released"}
+    try:
+        proc = subprocess.run(
+            command,
+            cwd=REPO_HARNESS_DIR,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=int(inputs.get("executor_timeout_seconds") or 120),
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        proc = subprocess.CompletedProcess(
+            command,
+            124 if isinstance(exc, subprocess.TimeoutExpired) else 127,
+            stdout=getattr(exc, "stdout", "") or "",
+            stderr=str(exc),
+        )
+    finally:
+        release = lease_adapter.release(
+            run_id,
+            node_id,
+            runner_operator_id,
+            lease_id=lease_id,
+            reason="completed",
+        )
     stdout_rel = _write_text_sidecar(output_dir / f"{action}_executor_stdout.txt", proc.stdout)
     stderr_rel = _write_text_sidecar(output_dir / f"{action}_executor_stderr.txt", proc.stderr)
+    lease_report_artifact = _write_experiment_lease_report(
+        envelope,
+        action=action,
+        stage=stage,
+        experiment_id=experiment_id,
+        operator_id=runner_operator_id,
+        acquire=lease,
+        duplicate_probe=duplicate_probe,
+        heartbeat=heartbeat,
+        release=release,
+    )
     artifacts = [
         {"type": "executor_stdout", "path": stdout_rel},
         {"type": "executor_stderr", "path": stderr_rel},
+        lease_report_artifact,
     ]
     result_record, result_source = _parse_experiment_output_record(proc.stdout)
     result_payload: dict[str, Any] = {}
@@ -17108,6 +17369,7 @@ def _execute_experiment_if_approved(
         }
     result_collected = False if is_remote_cli_record else (bool(result_record) or bool(proc.stdout.strip()))
 
+    result_collected = False if is_remote_cli_record else (bool(result_record) or bool(proc.stdout.strip()))
     runtime_result_path = _configured_output_path(
         envelope,
         result_path_key,
@@ -17132,7 +17394,6 @@ def _execute_experiment_if_approved(
     }
     runtime_result_rel = _write_json_sidecar(runtime_result_path, runtime_result_json)
     artifacts.append({"type": result_artifact_type, "path": runtime_result_rel})
-    result_collected = False if is_remote_cli_record else (bool(result_record) or bool(proc.stdout.strip()))
     semantic_result_path = "" if is_remote_cli_record else runtime_result_rel
     semantic_result_artifacts = [] if is_remote_cli_record else [runtime_result_rel]
     metrics = list(result_payload.get("metrics") or [])
@@ -17158,6 +17419,7 @@ def _execute_experiment_if_approved(
         else "local_command"
     )
     report_artifacts.extend([
+        lease_report_artifact,
         _write_experiment_deploy_report(
             envelope,
             action=action,

@@ -10,6 +10,9 @@ from typing import Any, Callable
 from ...research_synthesis.base import (
     OperatorContext,
     ResearchOperatorError,
+    _is_file,
+    _read_bytes,
+    _write_bytes,
     build_node_result,
     display_path,
     evidence_ref,
@@ -84,7 +87,7 @@ def load_evidence_inputs(
             workspace_root=context.workspace_root,
             must_exist=True,
         )
-        body = path.read_bytes()
+        body = _read_bytes(path)
         actual_hash = sha256_bytes(body)
         expected_hash = str(ref.get("sha256") or "")
         if expected_hash and expected_hash.lower() != actual_hash:
@@ -128,7 +131,7 @@ def input_fingerprint(context: OperatorContext, spec: OperatorSpec) -> str:
             path = validate_scoped_path(
                 item["path"], context.read_scope, workspace_root=context.workspace_root, must_exist=True
             )
-            item["sha256"] = sha256_bytes(path.read_bytes())
+            item["sha256"] = sha256_bytes(_read_bytes(path))
         refs.append(item)
     direct_paths: list[dict[str, str]] = []
     for key in ("source", "paper_path", "material_path", "repo_path", "code_path", "wiki_root"):
@@ -136,12 +139,12 @@ def input_fingerprint(context: OperatorContext, spec: OperatorSpec) -> str:
         if not isinstance(raw, str) or not raw.strip() or raw.lower().startswith(("http://", "https://")):
             continue
         path = validate_scoped_path(raw, context.read_scope, workspace_root=context.workspace_root, must_exist=True)
-        if path.is_file():
-            direct_paths.append({"field": key, "path": display_path(path, context.workspace_root), "sha256": sha256_bytes(path.read_bytes())})
+        if _is_file(path):
+            direct_paths.append({"field": key, "path": display_path(path, context.workspace_root), "sha256": sha256_bytes(_read_bytes(path))})
         else:
             members = []
-            for member in sorted(item for item in path.rglob("*") if item.is_file())[:1000]:
-                members.append({"path": display_path(member, context.workspace_root), "sha256": sha256_bytes(member.read_bytes())})
+            for member in sorted(item for item in path.rglob("*") if _is_file(item))[:1000]:
+                members.append({"path": display_path(member, context.workspace_root), "sha256": sha256_bytes(_read_bytes(member))})
             direct_paths.append({"field": key, "path": display_path(path, context.workspace_root), "sha256": stable_json_sha256(members)})
     material = {
         "operator_id": spec.operator_id,
@@ -204,10 +207,10 @@ def enrich_evidence(
 
 
 def _existing_success(target: Path, spec: OperatorSpec, input_hash: str) -> dict[str, Any] | None:
-    if not target.is_file():
+    if not _is_file(target):
         return None
     try:
-        existing = json.loads(target.read_text(encoding="utf-8"))
+        existing = json.loads(_read_bytes(target).decode("utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
     provenance = existing.get("provenance") if isinstance(existing, dict) else None
@@ -224,10 +227,9 @@ def _existing_success(target: Path, spec: OperatorSpec, input_hash: str) -> dict
 
 
 def write_evidence(context: OperatorContext, target: Path, payload: dict[str, Any]) -> tuple[dict[str, str], str]:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    body = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    target.write_text(body, encoding="utf-8")
-    digest = sha256_bytes(target.read_bytes())
+    body = (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    _write_bytes(target, body)
+    digest = sha256_bytes(_read_bytes(target))
     return (
         {
             "artifact_id": f"evidence.{context.node_request['node_id']}",
