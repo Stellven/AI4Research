@@ -8,6 +8,8 @@ Branch: `codex/legacy-fix-integration-repair`
 
 Worktree: `C:\Users\j50058254\Desktop\Github repo\.legacy-fix-worktrees\legacy-fix-integration`
 
+Final-correction rework baseline: `e85f3bb069bb2861cf7442e2aa2d3747c010c34e`
+
 No Phase 22 workbook, brief report, legacy issue ledger, or GitHub Issue was
 changed.
 
@@ -150,6 +152,40 @@ production-path tests.
 - This is repository hygiene cleanup, not an Obsidian behavior or feature
   change.
 
+### Native Windows final correction
+
+The rework baseline reproduced `harness/tests/test_operatord_daemon.py` as
+**21 passed, 7 failed**. The seven failures were classified and repaired
+without skips or weaker assertions:
+
+| Failing test | Classification | Final repair |
+|---|---|---|
+| `test_end_to_end` | Product portability | The local backend no longer requires `sh`; it runs the deterministic stub with the selected Python interpreter. |
+| `test_output_log_written` | Product portability | The same native local backend now starts successfully and writes `output.log`. |
+| `test_recovers_expired_lease_and_processes_task` | Product portability | Expired-lease recovery uses the same native command path and reaches `completed`. |
+| `test_command_backend_uses_materialized_dispatch_file` | Fixture portability plus command transport | The fixture no longer hard-codes `python3`; command indirection accepts JSON argv and executes without POSIX shell quoting. |
+| `test_pm_dispatch_result_path_and_complete_hook` | Fixture portability | The command fixture uses the repository interpreter as argv, and its completion output is ASCII-safe on a Windows cp1252 console. |
+| `test_pm_result_file_exists_when_restricted_operator_starts` | Fixture portability | The checker uses exact argv rather than POSIX `shlex` text, preserving the pre-created result-file contract. |
+| `test_signal_during_pm_task_records_terminal_failure` | Product and fixture portability | Native Windows uses a cooperative shutdown request instead of uncatchable `SIGTERM`; POSIX retains SIGTERM. Windows PID probing uses `OpenProcess`/`GetExitCodeProcess`, never `os.kill(pid, 0)`, and active workers terminate through the exact `Popen` handle. |
+
+The Windows `file_lock_compat` implementation now accepts either an open file
+object or an integer file descriptor. It prepares and positions the dedicated
+one-byte lock through fd-level operations, preserves `LOCK_EX`, `LOCK_NB`, and
+`LOCK_UN`, converts only recognized non-blocking contention to
+`BlockingIOError`, and no longer swallows unlock failures. Five tests cover
+file objects, integer descriptors, two-process contention, post-unlock
+reacquisition, and the existing `operator_flow_control` fileno call. Failure
+flow-control results no longer contain `'int' object has no attribute 'seek'`.
+
+The all-tracked safety gate initially failed on the committed Excel lock file
+`docs/testing/xlsx/~$qa_inventory_test_mapping_and_pass_fail_merged.xlsx`.
+Only that 165-byte temporary lock file was removed from Git tracking; the
+formal workbook was not changed. The existing `.gitignore` rule `~$*` already
+covers the filename, so no duplicate rule was added. Safe-staging failure text
+now names the actual staged, changed, tracked, or supplied scope, and a real
+Git integration test proves `--all-tracked` rejects a forbidden file already
+committed in repository history.
+
 ## Live-provider evidence
 
 The authorized provider environment was inherited only by the test processes;
@@ -190,6 +226,12 @@ basetemp/cache. It exited `0`: **159 passed, 0 failed, 2 skipped**, 14 warnings,
 safe-staging files now contain the added negative/integration tests; the two
 skip reasons are unchanged.
 
+The native-Windows final-correction rework reran that same fixed file list
+with `PYTHONPATH=harness` and a new unique basetemp/cache. It exited `0`:
+**160 passed, 0 failed, 2 skipped**, 14 warnings, 104.46s. The additional pass
+is the new committed-history `--all-tracked` integration test; the two skip
+reasons remain unchanged.
+
 Other executed suites:
 
 | Scope | Exit | Result |
@@ -207,6 +249,24 @@ Other executed suites:
 | Final-correction focused safety/advanced/dispatcher set | 0 | 121 passed, 1 skipped |
 | Direct graph dispatch, lease, TaskGraph state, and operator runtime | 0 | 143 passed |
 | Real advanced TaskGraph dispatcher through operatord command backend | 0 | 2 passed |
+| Final-correction required eight files | 0 | 123 passed |
+| Windows file-lock compatibility contract | 0 | 5 passed |
+| Native Windows operatord final file | 0 | 29 passed |
+
+The final-correction file-by-file commands all used the repository `.venv` and
+separate directories below `C:\tmp\legacy-final-correction-20260807-1710-*`:
+
+| Command scope | Exit | Result |
+|---|---:|---|
+| `tests/test-secret-scan.py` | 0 | 26 passed |
+| `tests/test-safe-staging.py` | 0 | 34 passed |
+| `harness/tests/test_advanced_ai4rnd_operator.py` | 0 | 3 passed |
+| `harness/tests/test_advanced_ai4rnd_product_entrypoint.py` | 0 | 4 passed |
+| `harness/tests/graph/test_advanced_ai4rnd_dispatcher_integration.py` | 0 | 2 passed |
+| `harness/tests/runtime/test_operator_runtime.py` | 0 | 24 passed |
+| `harness/tests/graph/test_runtime_status.py` | 0 | 1 passed |
+| `harness/tests/test_operatord_daemon.py` | 0 | 29 passed |
+| `harness/tests/test_file_lock_compat.py` | 0 | 5 passed |
 
 One pre-fix non-live journey batch had J01 fail because WindowsApps `python3`
 output polluted the configured runtime. This was a real product portability
@@ -232,6 +292,12 @@ Results: installer 38/38 passed; TVS doctor exited 0 with an explicit skip
 because no sandbox TVS checkout exists; hygiene positive and negative controls
 passed; CI YAML parsed; safe staging passed; Windows filenames passed; secret
 scan passed over 4,447 tracked/staged/untracked candidates with no secret.
+
+The final-correction safety rerun also exited `0` for every required command:
+`check-safe-staging.py --all-tracked` reported no forbidden tracked paths;
+secret scan checked 4,447 candidates; Windows filename scan checked 4,447
+paths; `bash tests/test-repo-hygiene.sh` passed its negative controls; and
+`git diff --check` passed.
 
 ## Legacy and L2 disposition
 
@@ -269,7 +335,13 @@ integration agent's evidence disposition for final-checker review:
 - `git diff --check`: passed before staging.
 - Merge-marker scan: no unresolved markers.
 - Safe-staging, Windows filename, hygiene, and secret scans: passed.
+- The tracked Excel `~$` lock file was removed; no formal workbook changed.
 - No credential, `.env` content, workbook lock file, output evidence,
   `.pytest-*`, or `.codex-tmp` artifact is committed.
 - The branch is not pushed. Clean post-commit status and the final commit are
   recorded in `.codex-tmp/legacy-fix-integration-repair/result.json`.
+
+The correction commit's authoritative full SHA is written to the ignored
+post-commit result JSON. A Git commit cannot embed its own final SHA in its
+tracked contents without changing that SHA; this record instead binds the
+correction to the rework baseline, branch, exact commands, and results.

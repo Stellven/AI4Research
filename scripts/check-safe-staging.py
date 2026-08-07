@@ -174,7 +174,7 @@ def main() -> int:
         print(f"check-safe-staging passed: no forbidden {scope} paths")
         return 0
 
-    print("check-safe-staging FAILED: forbidden staged files detected:", file=sys.stderr)
+    print(f"check-safe-staging FAILED: forbidden {scope} paths detected:", file=sys.stderr)
     for v in sorted(violations, key=lambda x: (x.category, x.path)):
         # Report category and path ONLY — never print file content or values
         print(f"  [{v.category}] {v.path}", file=sys.stderr)

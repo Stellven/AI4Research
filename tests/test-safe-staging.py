@@ -194,6 +194,7 @@ class TestGitCliIntegration:
 
         output = result.stdout + result.stderr
         assert result.returncode == 1
+        assert "forbidden staged paths detected" in output
         assert "[LOCAL_ENV_CONFIG] .env" in output
         assert canary not in output
 
@@ -222,4 +223,28 @@ class TestGitCliIntegration:
             check=False,
         )
         assert result.returncode == 1
+        assert "forbidden changed paths detected" in result.stderr
         assert "[LIVE_PROVIDER_ARTIFACT] outputs/live-provider/response.json" in result.stderr
+
+    def test_all_tracked_mode_checks_forbidden_file_in_committed_history(self, tmp_path: Path):
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "config", "user.name", "Safety Fixture"], cwd=tmp_path, check=True)
+        lock_file = tmp_path / "docs" / "testing" / "xlsx" / "~$committed-report.xlsx"
+        lock_file.parent.mkdir(parents=True)
+        lock_file.write_text("committed fixture\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-f", lock_file.relative_to(tmp_path)], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-qm", "historical forbidden path"], cwd=tmp_path, check=True)
+
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--all-tracked"],
+            cwd=tmp_path,
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+
+        assert result.returncode == 1
+        assert "forbidden tracked paths detected" in result.stderr
+        assert "[EXCEL_LOCK_FILE] docs/testing/xlsx/~$committed-report.xlsx" in result.stderr

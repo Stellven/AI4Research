@@ -12,6 +12,7 @@ import json
 import os
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -77,6 +78,31 @@ _TASK_ENVELOPE = {
 }
 
 
+def _command_text(args: list[str]) -> str:
+    return json.dumps(args)
+
+
+def _signal_capable_python() -> str:
+    if os.name == "nt":
+        return str(getattr(sys, "_base_executable", sys.executable))
+    return sys.executable
+
+
+def _worker_python() -> str:
+    if os.name == "nt":
+        return str(getattr(sys, "_base_executable", sys.executable))
+    return sys.executable
+
+
+def _request_daemon_shutdown(proc: subprocess.Popen, env: dict) -> None:
+    if os.name == "nt":
+        shutdown_path = Path(env["SOLAR_OPERATORD_SHUTDOWN_FILE"])
+        shutdown_path.parent.mkdir(parents=True, exist_ok=True)
+        shutdown_path.write_text("shutdown\n", encoding="utf-8")
+    else:
+        proc.send_signal(signal.SIGTERM)
+
+
 def _setup_harness(tmp_path: Path) -> dict:
     """Create a minimal harness directory and return the env dict."""
     (tmp_path / "config").mkdir(parents=True)
@@ -103,6 +129,7 @@ def _setup_harness(tmp_path: Path) -> dict:
         # have separate real-path coverage; leaving that enabled here races a
         # second daemon against the one the test intentionally starts.
         "SOLAR_OPERATORD_AUTO_KICK": "0",
+        "SOLAR_OPERATORD_SHUTDOWN_FILE": str(tmp_path / "run" / "operatord-shutdown.request"),
     }
     return env
 
@@ -157,7 +184,7 @@ if len(sys.argv) >= 4 and sys.argv[1] == "complete" and sys.argv[2] == "--task-i
     log = Path(__file__).resolve().parent.parent / "run" / "pm-complete.json"
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text(json.dumps({"task_id": task_id}, ensure_ascii=False), encoding="utf-8")
-    print(f"✅ 任务 {task_id} 已标记为 completed")
+    print(f"task {task_id} marked completed")
     raise SystemExit(0)
 if len(sys.argv) >= 4 and sys.argv[1] == "fail" and sys.argv[2] == "--task-id":
     task_id = sys.argv[3]
@@ -178,8 +205,9 @@ raise SystemExit(2)
         # Keep the command-backend fixtures on the same explicit daemon
         # lifecycle as the local-backend fixtures above.
         "SOLAR_OPERATORD_AUTO_KICK": "0",
+        "SOLAR_OPERATORD_SHUTDOWN_FILE": str(tmp_path / "run" / "operatord-shutdown.request"),
     }
-    env["COMMAND_AGENT"] = f"python3 {writer}"
+    env["COMMAND_AGENT"] = _command_text([_worker_python(), str(writer)])
     return env
 
 
@@ -413,7 +441,7 @@ class TestDaemonOnce:
     def _run_daemon_once(self, env: dict) -> subprocess.CompletedProcess:
         return subprocess.run(
             [
-                sys.executable,
+                _signal_capable_python(),
                 str(TOOLS_DIR / "operatord.py"),
                 "daemon",
                 "--operator",
@@ -719,7 +747,7 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
             encoding="utf-8",
         )
         checker.chmod(0o755)
-        env["COMMAND_AGENT"] = f"{shlex.quote(sys.executable)} {shlex.quote(str(checker))}"
+        env["COMMAND_AGENT"] = _command_text([_worker_python(), str(checker)])
 
         dispatch_dir = tmp_path / "run" / "pm-dispatch-files"
         dispatch_dir.mkdir(parents=True, exist_ok=True)
@@ -776,14 +804,12 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
 
     def test_signal_leaves_final_status(self, tmp_path):
         """SIGTERM while idle should leave a final idle status file."""
-        import signal as _signal
-
         env = _setup_harness(tmp_path)
 
         # Start daemon with no task submitted (will poll and wait)
         proc = subprocess.Popen(
             [
-                sys.executable,
+                _signal_capable_python(),
                 str(TOOLS_DIR / "operatord.py"),
                 "daemon",
                 "--operator",
@@ -811,7 +837,7 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
         assert hb_file.exists(), "Heartbeat should be written within 5s of daemon start"
 
         # Send SIGTERM
-        proc.send_signal(_signal.SIGTERM)
+        _request_daemon_shutdown(proc, env)
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
@@ -826,12 +852,10 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
 
     def test_signal_during_pm_task_records_terminal_failure(self, tmp_path):
         """An interrupted PM task must close as failed, never as draining."""
-        import signal as _signal
-
         env = _setup_command_harness(tmp_path)
         slow_agent = tmp_path / "tools" / "slow_command.py"
         slow_agent.write_text("import time\ntime.sleep(30)\n", encoding="utf-8")
-        env["COMMAND_AGENT"] = f"{shlex.quote(sys.executable)} {shlex.quote(str(slow_agent))}"
+        env["COMMAND_AGENT"] = _command_text([_worker_python(), str(slow_agent)])
 
         dispatch_dir = tmp_path / "run" / "pm-dispatch-files"
         dispatch_dir.mkdir(parents=True, exist_ok=True)
@@ -855,7 +879,7 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
 
         proc = subprocess.Popen(
             [
-                sys.executable,
+                _signal_capable_python(),
                 str(TOOLS_DIR / "operatord.py"),
                 "daemon",
                 "--operator",
@@ -889,7 +913,7 @@ result.write_text("# PM Task Result\\n\\npre-created exact output was writable\\
             time.sleep(0.05)
         assert running, "PM task should enter running before SIGTERM"
 
-        proc.send_signal(_signal.SIGTERM)
+        _request_daemon_shutdown(proc, env)
         proc.wait(timeout=10)
 
         result = json.loads(result_path.read_text(encoding="utf-8"))
@@ -996,7 +1020,7 @@ class TestFailureFlowControl:
     def _run_command_daemon_once(self, env: dict) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
-                sys.executable,
+                _signal_capable_python(),
                 str(TOOLS_DIR / "operatord.py"),
                 "daemon",
                 "--operator",
@@ -1017,7 +1041,9 @@ class TestFailureFlowControl:
             tmp_path,
             env,
             task_id="T-cooldown-001",
-            command='python3 -c "print(\\"You\'ve hit your limit · resets 1:40pm\\", flush=True); raise SystemExit(1)"',
+            command=_command_text(
+                [_worker_python(), "-c", "print(\"You've hit your limit; resets soon\", flush=True); raise SystemExit(1)"]
+            ),
         )
         daemon_proc = self._run_command_daemon_once(env)
         assert daemon_proc.returncode == 0, daemon_proc.stderr
@@ -1025,6 +1051,10 @@ class TestFailureFlowControl:
         status_path = tmp_path / "run" / "operator-status" / "test-command-builder.json"
         status = json.loads(status_path.read_text(encoding="utf-8"))
         assert status["runtime_state"] == "cooldown"
+        result_path = tmp_path / "run" / "operator-results" / "test-command-builder" / "T-cooldown-001" / "result.json"
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        assert result["status"] == "failed"
+        assert "'int' object has no attribute 'seek'" not in result["log_tail"]
 
     def test_failed_auth_task_sets_auth_expired(self, tmp_path):
         env = _setup_command_harness(tmp_path)
@@ -1032,7 +1062,9 @@ class TestFailureFlowControl:
             tmp_path,
             env,
             task_id="T-auth-001",
-            command='python3 -c "print(\\"You are not logged in\\", flush=True); raise SystemExit(1)"',
+            command=_command_text(
+                [_worker_python(), "-c", "print('You are not logged in', flush=True); raise SystemExit(1)"]
+            ),
         )
         daemon_proc = self._run_command_daemon_once(env)
         assert daemon_proc.returncode == 0, daemon_proc.stderr
@@ -1040,3 +1072,24 @@ class TestFailureFlowControl:
         status_path = tmp_path / "run" / "operator-status" / "test-command-builder.json"
         status = json.loads(status_path.read_text(encoding="utf-8"))
         assert status["runtime_state"] == "auth_expired"
+        result_path = tmp_path / "run" / "operator-results" / "test-command-builder" / "T-auth-001" / "result.json"
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        assert result["status"] == "failed"
+        assert "'int' object has no attribute 'seek'" not in result["log_tail"]
+
+    def test_timeout_records_terminal_result(self, tmp_path):
+        env = _setup_command_harness(tmp_path)
+        env["SOLAR_OPERATORD_TASK_TIMEOUT_SECONDS"] = "1"
+        self._submit_command_task(
+            tmp_path,
+            env,
+            task_id="T-timeout-001",
+            command=_command_text([_worker_python(), "-c", "import time; time.sleep(30)"]),
+        )
+
+        daemon_proc = self._run_command_daemon_once(env)
+        assert daemon_proc.returncode == 0, daemon_proc.stderr
+        result_path = tmp_path / "run" / "operator-results" / "test-command-builder" / "T-timeout-001" / "result.json"
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        assert result["status"] == "failed_timeout"
+        assert result["exit_code"] == 124

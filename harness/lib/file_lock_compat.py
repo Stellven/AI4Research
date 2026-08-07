@@ -16,28 +16,40 @@ if _fcntl is not None:
         _fcntl.flock(file_object, operation)
 
 else:  # Windows: lock one byte in the dedicated lock file.
+    import errno
     import msvcrt
+    import os
 
     LOCK_EX = 1
     LOCK_NB = 2
     LOCK_UN = 8
 
-    def flock(file_object, operation: int) -> None:
-        file_object.seek(0, 2)
-        if file_object.tell() == 0:
-            file_object.write("\0")
-            file_object.flush()
-        file_object.seek(0)
+    def _descriptor(file_or_fd) -> int:
+        if isinstance(file_or_fd, int):
+            return file_or_fd
+        return int(file_or_fd.fileno())
+
+    def _prepare_lock_byte(fd: int) -> None:
+        """Ensure byte zero exists and position the descriptor on that byte."""
+        if os.fstat(fd).st_size == 0:
+            os.lseek(fd, 0, os.SEEK_SET)
+            if os.write(fd, b"\0") != 1:
+                raise OSError("unable to prepare Windows lock byte")
+            os.fsync(fd)
+        os.lseek(fd, 0, os.SEEK_SET)
+
+    def flock(file_or_fd, operation: int) -> None:
+        fd = _descriptor(file_or_fd)
+        _prepare_lock_byte(fd)
         if operation & LOCK_UN:
-            try:
-                msvcrt.locking(file_object.fileno(), msvcrt.LK_UNLCK, 1)
-            except OSError:
-                pass
+            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
             return
         mode = msvcrt.LK_NBLCK if operation & LOCK_NB else msvcrt.LK_LOCK
         try:
-            msvcrt.locking(file_object.fileno(), mode, 1)
+            msvcrt.locking(fd, mode, 1)
         except OSError as exc:
-            if operation & LOCK_NB:
-                raise BlockingIOError(str(exc)) from exc
+            contention = exc.errno in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}
+            contention = contention or getattr(exc, "winerror", None) == 33
+            if operation & LOCK_NB and contention:
+                raise BlockingIOError(errno.EAGAIN, "lock is already held") from exc
             raise

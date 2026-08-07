@@ -456,10 +456,22 @@ def _build_command(config: dict, envelope: dict) -> list[str]:
             command_text = os.environ.get(variable, "").strip()
             if not command_text:
                 return [
-                    "bash",
+                    sys.executable,
                     "-c",
-                    f"echo 'operator command environment variable {variable} is not set' >&2; exit 127",
+                    (
+                        "import sys; "
+                        f"print('operator command environment variable {variable} is not set', file=sys.stderr); "
+                        "raise SystemExit(127)"
+                    ),
                 ]
+        try:
+            command_argv = json.loads(command_text)
+        except json.JSONDecodeError:
+            command_argv = None
+        if isinstance(command_argv, list) and command_argv and all(
+            isinstance(part, str) and part for part in command_argv
+        ):
+            return command_argv
         # An explicit envelope command executes in the environment materialized
         # by Solar.  A login shell may source user startup files that replace or
         # unset those variables (including a bounded command indirection such
@@ -486,13 +498,14 @@ def _build_command(config: dict, envelope: dict) -> list[str]:
 
     if backend in ("local", "dummy", "echo"):
         return [
-            "sh",
+            sys.executable,
             "-c",
             (
-                f"echo 'operatord: task={task_id}'; "
-                f"echo 'objective={objective}'; "
-                "sleep 0.05; "
-                "echo 'operatord: completed'"
+                "import time; "
+                f"print({f'operatord: task={task_id}'!r}, flush=True); "
+                f"print({f'objective={objective}'!r}, flush=True); "
+                "time.sleep(0.05); "
+                "print('operatord: completed', flush=True)"
             ),
         ]
 
@@ -625,6 +638,8 @@ def cmd_daemon(args: argparse.Namespace) -> int:
     task_timeout_seconds: float = float(
         os.environ.get("SOLAR_OPERATORD_TASK_TIMEOUT_SECONDS", "3600")
     )
+    shutdown_request_value = os.environ.get("SOLAR_OPERATORD_SHUTDOWN_FILE", "").strip()
+    shutdown_request_path = Path(shutdown_request_value) if shutdown_request_value else None
     config = _get_operator(operator_id)
 
     if not config.get("enabled", False) and not args.force:
@@ -643,11 +658,23 @@ def cmd_daemon(args: argparse.Namespace) -> int:
         "current_state": "idle",
         "current_proc": None,
         "current_task_id": None,
+        "drain_signal": None,
     }
 
     def _pid_exists(pid: int | None) -> bool:
         if not pid or pid <= 0:
             return False
+        if os.name == "nt":
+            import _winapi
+
+            try:
+                handle = _winapi.OpenProcess(0x1000, False, int(pid))
+            except OSError:
+                return False
+            try:
+                return _winapi.GetExitCodeProcess(handle) == 259
+            finally:
+                _winapi.CloseHandle(handle)
         try:
             os.kill(pid, 0)
         except OSError:
@@ -657,6 +684,29 @@ def cmd_daemon(args: argparse.Namespace) -> int:
     def _terminate_worker(pid: int | None, *, reason: str) -> bool:
         if not _pid_exists(pid):
             return False
+        if os.name == "nt":
+            import _winapi
+
+            current_proc = _state.get("current_proc")
+            if current_proc is not None and int(current_proc.pid) == int(pid):
+                try:
+                    current_proc.terminate()
+                except OSError as exc:
+                    _info(f"Unable to terminate Windows worker pid={pid} ({reason}): {exc}")
+                    return False
+                _info(f"Terminated Windows worker pid={pid} ({reason})")
+                return True
+            try:
+                handle = _winapi.OpenProcess(0x0001, False, int(pid))
+            except OSError as exc:
+                _info(f"Unable to open Windows worker pid={pid} ({reason}): {exc}")
+                return False
+            try:
+                _winapi.TerminateProcess(handle, 1)
+            finally:
+                _winapi.CloseHandle(handle)
+            _info(f"Terminated stale Windows worker pid={pid} ({reason})")
+            return True
         try:
             os.killpg(pid, signal.SIGTERM)
             _info(f"Sent SIGTERM to worker process group pid={pid} ({reason})")
@@ -673,6 +723,8 @@ def cmd_daemon(args: argparse.Namespace) -> int:
     def _kill_worker_force(pid: int | None, *, reason: str) -> bool:
         if not _pid_exists(pid):
             return False
+        if os.name == "nt":
+            return _terminate_worker(pid, reason=reason)
         try:
             os.killpg(pid, signal.SIGKILL)
             _info(f"Sent SIGKILL to worker process group pid={pid} ({reason})")
@@ -689,6 +741,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
     def _handle_signal(signum: int, frame: Any) -> None:
         _info(f"Signal {signum} received — transitioning to draining")
         _state["drain"] = True
+        _state["drain_signal"] = int(signum)
         _state["current_state"] = "draining"
         proc = _state.get("current_proc")
         if proc is not None:
@@ -707,6 +760,18 @@ def cmd_daemon(args: argparse.Namespace) -> int:
 
     signal.signal(signal.SIGTERM, _handle_signal)
     signal.signal(signal.SIGINT, _handle_signal)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, _handle_signal)
+
+    def _consume_shutdown_request() -> bool:
+        if shutdown_request_path is None or not shutdown_request_path.is_file():
+            return False
+        try:
+            shutdown_request_path.unlink()
+        except FileNotFoundError:
+            return False
+        _handle_signal(signal.SIGTERM, None)
+        return True
 
     _info(
         f"Daemon starting — operator_id={operator_id} "
@@ -730,6 +795,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
 
     try:
         while True:
+            _consume_shutdown_request()
             # ── Drain check ───────────────────────────────────────────────────────
             if _state["drain"]:
                 _info("Drain flag set — exiting daemon loop")
@@ -951,7 +1017,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     text=True,
                     bufsize=1,
                     env=exec_env,
-                    start_new_session=True,
+                    start_new_session=os.name != "nt",
                 )
                 _state["current_proc"] = proc
                 _state["current_task_id"] = task_id
@@ -1000,6 +1066,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                         selector.register(proc.stdout, selectors.EVENT_READ)
 
                     while True:
+                        _consume_shutdown_request()
                         now_monotonic = time.monotonic()
                         if now_monotonic - last_runtime_heartbeat_at >= 15:
                             write_heartbeat(
@@ -1079,7 +1146,10 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 result_status = "failed_interrupted"
                 if exit_code == 0:
                     exit_code = 130
-                log_lines.append("[ERROR] operator task interrupted while daemon was draining")
+                log_lines.append(
+                    f"[ERROR] operator task interrupted while daemon was draining "
+                    f"(signal={_state.get('drain_signal')})"
+                )
                 _state["current_state"] = "draining"
 
             finished_at: str = _now_utc()
