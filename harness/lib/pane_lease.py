@@ -62,15 +62,20 @@ def _unlink_lock(lock_path: Path) -> bool:
 def _remove_lock_if_unlocked(lock_path: Path) -> bool:
     try:
         lock_path.parent.mkdir(parents=True, exist_ok=True)
+        acquired = False
         with open(lock_path, "a") as lf:
             try:
                 fcntl.flock(lf, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 return False
             try:
-                return _unlink_lock(lock_path)
+                acquired = True
             finally:
                 fcntl.flock(lf, fcntl.LOCK_UN)
+        # The handle must be closed before unlinking on Windows.  The lock is
+        # a disposable coordination file; if another process acquired it in
+        # this tiny window, Windows/POSIX will reject the unlink and we keep it.
+        return _unlink_lock(lock_path) if acquired else False
     except Exception:
         return False
 
@@ -122,9 +127,11 @@ def _remove_lease(pane: str) -> None:
         try:
             if lp.exists():
                 lp.unlink()
-            _unlink_lock(lock)
         finally:
             fcntl.flock(lf, fcntl.LOCK_UN)
+    # Windows cannot unlink an open lock file.  Re-open after releasing so a
+    # completed lifecycle does not leave a stale *.lock ownership marker.
+    _remove_lock_if_unlocked(lock)
 
 
 # ── 3-state classification ─────────────────────────────────────────────────────
@@ -198,6 +205,7 @@ def release(pane: str, dispatch_id: str, reason: str = "explicit") -> dict:
         _remove_lock_if_unlocked(lock)
         return {"released": True, "note": "lease_already_gone"}
 
+    released: dict | None = None
     with open(lock, "a") as lf:
         fcntl.flock(lf, fcntl.LOCK_EX)
         try:
@@ -209,13 +217,13 @@ def release(pane: str, dispatch_id: str, reason: str = "explicit") -> dict:
                     "held_by": existing.get("dispatch_id"),
                 }
             lp.unlink()
-            _unlink_lock(lock)
-            return {"released": True, "release_reason": reason}
+            released = {"released": True, "release_reason": reason}
         except FileNotFoundError:
-            _unlink_lock(lock)
-            return {"released": True, "note": "already_gone"}
+            released = {"released": True, "note": "already_gone"}
         finally:
             fcntl.flock(lf, fcntl.LOCK_UN)
+    _remove_lock_if_unlocked(lock)
+    return released or {"released": False, "reason": "release_failed"}
 
 
 # ── reap expired leases ───────────────────────────────────────────────────────

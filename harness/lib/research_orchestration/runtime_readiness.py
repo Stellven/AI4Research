@@ -112,6 +112,22 @@ def check_research_runtime(
     bwrap_found = bool(which("bwrap"))
     _add_check(checks, "bwrap", bwrap_found or not bwrap_required, available=bwrap_found, required=bwrap_required)
     fallback_available = bool(stdin_transport_supported or readonly_transport_fallback_available)
+    sandbox_mode = "bubblewrap" if bwrap_found and bwrap_required else "restricted_fallback"
+    permission_matrix = {
+        "mode": sandbox_mode,
+        "write_scope": "sandbox_root_only" if sandbox_root is not None else "no_writes",
+        "home_access": False,
+        "network_access": False,
+        "secret_access": False,
+        "stdin_only": bool(stdin_transport_supported),
+        "readonly_transport": bool(readonly_transport_fallback_available),
+    }
+    _add_check(
+        checks,
+        "sandbox_permissions",
+        bool(bwrap_found or not bwrap_required or fallback_available),
+        **permission_matrix,
+    )
     if bwrap_required and not bwrap_found:
         if require_sandbox and not fallback_available:
             blockers.append({"check": "bwrap", "reason": "missing_bwrap_for_required_sandbox"})
@@ -187,6 +203,7 @@ def check_research_runtime(
         "limitations": sorted(set(limitations)),
         "blockers": blockers,
         "provider_environment": provider_presence,
+        "sandbox_permissions": permission_matrix,
     }
 
 

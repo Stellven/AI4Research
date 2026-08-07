@@ -155,7 +155,10 @@ class LeaseBroker:
 
         try:
             current = self._read(path)
-            if current and current.state not in {READY, STALE, CRASHED}:
+            # A crashed worker commonly leaves RUNNING/FINALIZING behind.
+            # Do not make the next lifecycle depend on a manual JSON cleanup:
+            # an expired active lease is stale, regardless of its last state.
+            if current and current.state not in {READY, STALE, CRASHED} and not self._is_expired(current):
                 return None
 
             now = _now()
@@ -220,13 +223,20 @@ class LeaseBroker:
         """Check if lease has expired (stale)."""
         path = self._lease_path(actor_id)
         lease = self._read(path)
-        if not lease or lease.state != LEASED:
+        if not lease or lease.state not in {LEASED, RUNNING, FINALIZING, DRAINING}:
             return False
+        return self._is_expired(lease)
+
+    @staticmethod
+    def _is_expired(lease: LeaseState) -> bool:
         if not lease.expires_at:
             return False
-        now = datetime.datetime.now(datetime.timezone.utc)
-        exp = datetime.datetime.fromisoformat(lease.expires_at.replace("Z", "+00:00"))
-        return now > exp
+        try:
+            expires = datetime.datetime.fromisoformat(lease.expires_at.replace("Z", "+00:00"))
+        except ValueError:
+            # A malformed expiry cannot safely hold an execution slot forever.
+            return True
+        return datetime.datetime.now(datetime.timezone.utc) > expires
 
     def get(self, actor_id: str) -> Optional[LeaseState]:
         return self._read(self._lease_path(actor_id))

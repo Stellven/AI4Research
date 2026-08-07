@@ -34,6 +34,7 @@ import html
 import hashlib
 import hmac
 import secrets
+import signal
 import math
 import importlib.util
 import shutil
@@ -165,7 +166,9 @@ def _default_bind_host() -> str:
 
 
 BIND_HOST = os.environ.get("SOLAR_BIND_HOST") or _default_bind_host()
-PORT_RANGE = range(8765, 8776)
+_port_start = int(os.environ.get("SOLAR_STATUS_PORT_START", "8765"))
+_port_end = int(os.environ.get("SOLAR_STATUS_PORT_END", str(_port_start + 10)))
+PORT_RANGE = range(_port_start, _port_end + 1)
 
 # Loopback auth token (security M1). The only case we bind beyond loopback is WSL NAT mode
 # (0.0.0.0, behind the Windows firewall) — there we REQUIRE this token on API requests so a
@@ -200,6 +203,7 @@ _RUNTIME_INTERFACES_CACHE_TTL_SECONDS = 20.0
 _RUNTIME_INTERFACES_TIMEOUT_SECONDS = 1.0
 _STATUS_PAYLOAD_CACHE = {}
 _STATUS_PAYLOAD_CACHE_TTL_SECONDS = 2.0
+_STATUS_WARMUP_ACTIVE = False
 _EVENTS_CACHE = {}
 _EVENTS_CACHE_TTL_SECONDS = 3.0
 _ACTIVE_SPRINT_STATUSES = {
@@ -9997,8 +10001,16 @@ def _thunderomlx_status(*, refresh: bool = False) -> dict:
     host, port = _thunderomlx_endpoint_parts()
     pids = _thunderomlx_listening_pids(port)
     tmux_alive = _thunderomlx_tmux_alive()
-    health_code, health_body = _http_json(f"{THUNDEROMLX_BASE_URL}/health", timeout=0.8, api_key=THUNDEROMLX_AUTH_TOKEN)
-    models_code, models_body = _http_json(f"{THUNDEROMLX_BASE_URL}/v1/models", timeout=0.8, api_key=THUNDEROMLX_AUTH_TOKEN)
+    # On hosts without lsof/tmux (notably Windows), probing a known-stopped
+    # optional local service twice consumes most of the /status readiness
+    # budget. A listener or managed tmux session is the admission signal for
+    # the network probes; otherwise the deterministic answer is stopped.
+    if pids or tmux_alive:
+        health_code, health_body = _http_json(f"{THUNDEROMLX_BASE_URL}/health", timeout=0.8, api_key=THUNDEROMLX_AUTH_TOKEN)
+        models_code, models_body = _http_json(f"{THUNDEROMLX_BASE_URL}/v1/models", timeout=0.8, api_key=THUNDEROMLX_AUTH_TOKEN)
+    else:
+        health_code, health_body = "not_probed", {}
+        models_code, models_body = "not_probed", {}
 
     status = "stopped"
     ok = False
@@ -10140,7 +10152,11 @@ def _collector_task_definitions() -> dict:
 
 
 def _launchctl_domain() -> str:
-    return f"gui/{os.getuid()}"
+    # launchctl is macOS-only.  Native Windows does not expose os.getuid(),
+    # and a status projection must never turn that platform distinction into a
+    # failing /status endpoint.
+    getuid = getattr(os, "getuid", None)
+    return f"gui/{getuid()}" if callable(getuid) else "gui/unsupported"
 
 
 def _launchctl_service(label: str) -> str:
@@ -10177,6 +10193,16 @@ def _write_plist_atomic(path: Path, data: dict) -> None:
 
 
 def _launchctl_status(label: str) -> dict:
+    if sys.platform != "darwin":
+        return {
+            "loaded": False,
+            "state": "unsupported",
+            "running": False,
+            "pid": None,
+            "last_exit_code": None,
+            "runs": None,
+            "error": "launchctl is only available on macOS",
+        }
     res = _run_launchctl(["print", _launchctl_service(label)], timeout=3.0)
     out = "\n".join([res.get("stdout") or "", res.get("stderr") or ""])
     loaded = bool(res.get("ok"))
@@ -10375,6 +10401,22 @@ def _status_payload_signature(sprint_id: str) -> tuple[int, ...]:
 
 
 def _status_payload(limit: int = 50, sprint_id: str = "") -> dict:
+    # A newly started Windows process can take several seconds to inspect a
+    # large local operator registry. During the one-time background warm-up,
+    # return a truthful, usable projection instead of making a lifecycle probe
+    # race that work and mistake a live server for an unavailable endpoint.
+    if _STATUS_WARMUP_ACTIVE and threading.current_thread().name != "solar-status-warmup":
+        return {
+            "ok": True,
+            "status": "warming",
+            "current_sprint": {},
+            "panes": [],
+            "recent_events": [],
+            "recent_events_scope": "global",
+            "kpi": _kpi(),
+            "physical_operators": {"ok": True, "status": "warming", "items": [], "alerts": []},
+            "status_cache": "warming",
+        }
     requested_sid = str(sprint_id or "").strip()
     if requested_sid and not _valid_sprint_id(requested_sid):
         requested_sid = ""  # unsafe id -> unscoped (global); never build a traversed path
@@ -14383,7 +14425,11 @@ def main():
     # Write port to pidfile directory so clients can discover it
     pid_dir = HARNESS_DIR / "run"
     pid_dir.mkdir(parents=True, exist_ok=True)
-    (pid_dir / "status-server.port").write_text(str(port))
+    # Publish only after bind succeeds.  The launcher treats these files as
+    # ownership records, so write the actual Python PID rather than the shell
+    # wrapper PID (which differs on Git Bash/Windows).
+    (pid_dir / "status-server.pid").write_text(f"{os.getpid()}\n", encoding="utf-8")
+    (pid_dir / "status-server.port").write_text(f"{port}\n", encoding="utf-8")
     # Loopback auth token next to the port file so a same-host client (e.g. the desktop's app://
     # fallback) can read it. 0600 — this user only. Enforced only when bound beyond loopback.
     token_file = pid_dir / "status-server.token"
@@ -14399,11 +14445,42 @@ def main():
         f"Solar Harness status server listening on http://{connect_host}:{port}/{bind_note}",
         flush=True,
     )
+    # Populate the expensive dashboard projection before clients ask for it.
+    # Lifecycle callers can therefore use /status as a real readiness surface
+    # without a cold first request timing out on a constrained Windows host.
+    global _STATUS_WARMUP_ACTIVE
+    _STATUS_WARMUP_ACTIVE = True
+
+    def _warm_status_payload() -> None:
+        global _STATUS_WARMUP_ACTIVE
+        try:
+            _status_payload(limit=50)
+        except Exception:
+            # /status retains its existing fail-closed response if a local
+            # optional integration is broken; warming must never stop serving.
+            pass
+        finally:
+            _STATUS_WARMUP_ACTIVE = False
+
+    threading.Thread(target=_warm_status_payload, name="solar-status-warmup", daemon=True).start()
+
+    def _request_shutdown(_signum, _frame):
+        # HTTPServer.shutdown() must run from a different thread than
+        # serve_forever(); SIGTERM otherwise leaves Windows/Git Bash launchers
+        # waiting on an orphan listener.
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    for _signal in (signal.SIGINT, signal.SIGTERM):
+        try:
+            signal.signal(_signal, _request_shutdown)
+        except (ValueError, OSError):
+            pass
+
     try:
         server.serve_forever()
-    except KeyboardInterrupt:
-        pass
     finally:
+        server.server_close()
+        (pid_dir / "status-server.pid").unlink(missing_ok=True)
         (pid_dir / "status-server.port").unlink(missing_ok=True)
         (pid_dir / "status-server.token").unlink(missing_ok=True)
 

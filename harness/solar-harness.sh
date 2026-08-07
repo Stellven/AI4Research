@@ -3819,6 +3819,8 @@ print(json.dumps({
     _SS_PID="$HARNESS_DIR/run/status-server.pid"
     _SS_LOG="$HARNESS_DIR/run/status-server.log"
     _SS_PORT_FILE="$HARNESS_DIR/run/status-server.port"
+    _SS_PORT_START="${SOLAR_STATUS_PORT_START:-8765}"
+    _SS_PORT_END="${SOLAR_STATUS_PORT_END:-$((_SS_PORT_START + 10))}"
     # G3 run-2 fix (p5-g3-live-rung-20260709T190808Z): the session name was a
     # fixed global, so with parallel harnesses on one machine any harness's
     # start saw another's session as "already running" and any stop killed
@@ -3827,8 +3829,11 @@ print(json.dumps({
     _SS_TMUX_LEGACY_SESSION="solar-harness-status-server"
     _SS_TMUX_SESSION="solar-harness-status-server-$(printf '%s' "$HARNESS_DIR" | cksum | awk '{print $1}')"
     mkdir -p "$HARNESS_DIR/run"
+    _ss_is_windows() {
+      [ "${OS_KIND:-}" = "windows" ] || [[ "$(uname -s)" =~ MINGW|MSYS|CYGWIN|Windows_NT ]]
+    }
     _status_server_live_pids() {
-      if [ "${OS_KIND:-}" = "windows" ] || [[ "$(uname -s)" =~ MINGW|MSYS|CYGWIN|Windows_NT ]]; then
+      if _ss_is_windows; then
         return 0
       fi
       ps ax -o pid= -o args= 2>/dev/null | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
@@ -3841,8 +3846,13 @@ print(json.dumps({
       # port sweep killed every /healthz listener on the machine).
       local _pid="$1"
       [[ "$_pid" =~ ^[0-9]+$ ]] || return 1
-      if [ "${OS_KIND:-}" = "windows" ] || [[ "$(uname -s)" =~ MINGW|MSYS|CYGWIN|Windows_NT ]]; then
-        return 0
+      if _ss_is_windows; then
+        # Git Bash PIDs are not reliable Windows process identities.  Only
+        # taskkill a process whose command line names this exact harness.
+        powershell.exe -NoProfile -NonInteractive -Command \
+          "\$p = Get-CimInstance Win32_Process -Filter 'ProcessId=$_pid' -ErrorAction SilentlyContinue; if (\$null -ne \$p -and \$p.CommandLine -like '*$HARNESS_DIR*status-server.py*') { exit 0 }; exit 1" \
+          >/dev/null 2>&1
+        return $?
       fi
       ps -o args= -p "$_pid" 2>/dev/null | grep -qF -- "$HARNESS_DIR"
     }
@@ -3854,7 +3864,7 @@ print(json.dumps({
     }
     _status_server_live_ports() {
       local _p
-      for _p in $(seq 8765 8775); do
+      for _p in $(seq "$_SS_PORT_START" "$_SS_PORT_END"); do
         # Bound the probe: on some hosts (e.g. WSL2) a closed localhost port drops
         # the SYN instead of refusing, so without --connect-timeout curl falls back
         # to its ~300s default and `status-server start/stop` wedges (F1 hang).
@@ -3866,6 +3876,15 @@ print(json.dumps({
     _status_server_terminate_pids() {
       local _pids="$1" _pid
       [[ -n "$_pids" ]] || return 0
+      if _ss_is_windows; then
+        for _pid in $_pids; do
+          _ss_pid_owned "$_pid" || continue
+          # /T is required: status handlers can have child helper processes,
+          # and a parent-only kill leaves the listener alive on Windows.
+          MSYS_NO_PATHCONV=1 taskkill.exe /PID "$_pid" /T /F >/dev/null 2>&1 || true
+        done
+        return 0
+      fi
       kill $_pids 2>/dev/null || true
       sleep 0.3
       for _pid in $_pids; do
@@ -3881,7 +3900,7 @@ print(json.dumps({
           ok "Status server 已在运行 (tmux: $_SS_TMUX_SESSION, port: $(cat "$_SS_PORT_FILE" 2>/dev/null || echo '?'))"
         elif tmux_has_exact_session "$_SS_TMUX_LEGACY_SESSION" && _ss_tmux_session_owned "$_SS_TMUX_LEGACY_SESSION"; then
           ok "Status server 已在运行 (tmux: $_SS_TMUX_LEGACY_SESSION, port: $(cat "$_SS_PORT_FILE" 2>/dev/null || echo '?'))"
-        elif [[ -f "$_SS_PID" ]] && kill -0 "$(cat "$_SS_PID")" 2>/dev/null; then
+        elif [[ -f "$_SS_PID" ]] && [[ "$(cat "$_SS_PID" 2>/dev/null)" =~ ^[0-9]+$ ]] && _ss_pid_owned "$(cat "$_SS_PID")"; then
           ok "Status server 已在运行 (PID: $(cat "$_SS_PID"), port: $(cat "$_SS_PORT_FILE" 2>/dev/null || echo '?'))"
         elif [[ -n "$_live_pids" ]]; then
           # Heal only from path-scoped evidence: a foreign /healthz listener
@@ -3898,15 +3917,29 @@ print(json.dumps({
           if command -v tmux >/dev/null 2>&1; then
             tmux new-session -d -s "$_SS_TMUX_SESSION" \
               "cd '$HARNESS_DIR' && exec '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
-            echo "tmux:${_SS_TMUX_SESSION}" > "$_SS_PID"
           else
             nohup "$_ss_py" "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
-            echo $! > "$_SS_PID"
           fi
-          for _i in {1..30}; do
-            [[ -s "$_SS_PORT_FILE" ]] && break
-            sleep 0.1
+          _ready=0
+          for _i in {1..40}; do
+            if [[ -s "$_SS_PORT_FILE" ]]; then
+              _port=$(cat "$_SS_PORT_FILE" 2>/dev/null || true)
+              if [[ "$_port" =~ ^[0-9]+$ ]] \
+                && curl -fsS --connect-timeout 1 --max-time 2 "http://127.0.0.1:${_port}/healthz" >/dev/null 2>&1 \
+                && curl -fsS --connect-timeout 1 --max-time 2 "http://127.0.0.1:${_port}/runtime-info" | grep -q '"pid"'; then
+                _ready=1
+                break
+              fi
+            fi
+            sleep 0.2
           done
+          if [[ "$_ready" != "1" ]]; then
+            _pid_val=$(cat "$_SS_PID" 2>/dev/null || true)
+            _status_server_terminate_pids "$_pid_val"
+            rm -f "$_SS_PID" "$_SS_PORT_FILE"
+            err "Status server did not become ready (/healthz and /runtime-info)"
+            exit 1
+          fi
           _port=$(cat "$_SS_PORT_FILE" 2>/dev/null || echo "8765")
           ok "Status server 启动 (port: $_port)"
           log "Dashboard: http://127.0.0.1:$_port/"
@@ -3929,10 +3962,10 @@ print(json.dumps({
           _stopped=1
         elif [[ -f "$_SS_PID" ]]; then
           _pid_val=$(cat "$_SS_PID" 2>/dev/null || true)
-          if [[ "$_pid_val" =~ ^[0-9]+$ ]]; then
-            kill "$_pid_val" 2>/dev/null || true
+          if [[ "$_pid_val" =~ ^[0-9]+$ ]] && _ss_pid_owned "$_pid_val"; then
+            _status_server_terminate_pids "$_pid_val"
+            _stopped=1
           fi
-          _stopped=1
         fi
         if [[ -n "$_live_pids" ]]; then
           _status_server_terminate_pids "$_live_pids"
@@ -3958,6 +3991,21 @@ print(json.dumps({
               fi
             done
           done <<< "$_live_ports"
+        fi
+        # Do not report success until the exact owned listener releases its
+        # recorded port. This makes repeated start/stop deterministic instead
+        # of hiding a lingering process behind removed pid files.
+        if [[ "$_recorded_port" =~ ^[0-9]+$ ]]; then
+          for _i in {1..25}; do
+            if ! curl -fsS --connect-timeout 1 --max-time 1 "http://127.0.0.1:${_recorded_port}/healthz" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.2
+          done
+          if curl -fsS --connect-timeout 1 --max-time 1 "http://127.0.0.1:${_recorded_port}/healthz" >/dev/null 2>&1; then
+            err "Status server listener did not release port $_recorded_port"
+            exit 1
+          fi
         fi
         rm -f "$_SS_PID" "$_SS_PORT_FILE"
         if [[ "$_stopped" == "1" ]]; then
