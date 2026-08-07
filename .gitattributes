@@ -16,3 +16,6 @@ harness/hooks/* text eol=lf
 *.ico binary
 *.png binary
 *.pdf binary
+
+# Keep the repository's complete attribute policy when synchronizing mirrors.
+.gitattributes merge=ours
