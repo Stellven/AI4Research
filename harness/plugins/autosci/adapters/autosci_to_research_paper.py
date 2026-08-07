@@ -56,10 +56,19 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
         paper["analysis"] = dict(raw["analysis"])
     if isinstance(raw.get("preparation"), dict):
         paper["preparation"] = dict(raw["preparation"])
+    if isinstance(raw.get("source_contract"), dict):
+        paper["source_contract"] = dict(raw["source_contract"])
+    if isinstance(raw.get("provenance"), dict):
+        paper["provenance"] = dict(raw["provenance"])
+    outputs = {"paper": paper}
+    if isinstance(raw.get("final_source_registration_boundary"), dict):
+        boundary = dict(raw["final_source_registration_boundary"])
+        paper["final_source_registration_boundary"] = boundary
+        outputs["final_source_registration_boundary"] = boundary
     return evidence_base(
         "research_paper.v1",
         envelope,
-        {"paper": paper},
+        outputs,
         artifacts=list(raw.get("artifacts") or []),
         status=str(raw.get("status") or "completed"),
         limitations=list(raw.get("limitations") or ["fixture-mode adapter output; not a production AutoSci run"]),

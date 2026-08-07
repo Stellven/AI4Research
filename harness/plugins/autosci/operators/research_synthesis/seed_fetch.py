@@ -67,6 +67,7 @@ def _snapshot_url(seed: dict[str, Any], context: OperatorContext) -> dict[str, A
         "limitations": list(fetched.get("limitations") or []),
     }
     snapshot["fetch_metadata_sha256"] = str(fetched.get("metadata_sha256") or "")
+    snapshot["source_contract"] = _source_contract(snapshot)
     return snapshot
 
 
@@ -109,16 +110,20 @@ def _snapshot_local(seed: dict[str, Any], context: OperatorContext) -> dict[str,
             text = data.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise ResearchOperatorError("Markdown seed is not valid UTF-8", error_type="invalid_input") from exc
-    return {
+    snapshot = {
         "seed_id": str(seed.get("seed_id") or f"seed-{path.stem}"),
         "seed_kind": kind,
         "source": str(seed.get("value") or ""),
         "fetched_at": utc_now(),
         "sha256": sha256_bytes(data),
+        "content_sha256": sha256_bytes(str(text).encode("utf-8")),
         "content_type": "application/pdf" if kind == "pdf" else "text/markdown",
         "content": text,
+        "canonical_path": str(path.resolve()),
         "limitations": limitations,
     }
+    snapshot["source_contract"] = _source_contract(snapshot)
+    return snapshot
 
 
 def _snapshot_external_evidence(seed: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
@@ -158,7 +163,7 @@ def _snapshot_external_evidence(seed: dict[str, Any], context: OperatorContext) 
         content = json.loads(data.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ResearchOperatorError("external_evidence artifact must be a UTF-8 JSON document.", error_type="invalid_input") from exc
-    return {
+    snapshot = {
         "seed_id": str(seed.get("seed_id") or "seed-external-evidence"),
         "seed_kind": "external_evidence",
         "source": str(declared_ref.get("path") or ""),
@@ -169,20 +174,59 @@ def _snapshot_external_evidence(seed: dict[str, Any], context: OperatorContext) 
         "provenance": provenance,
         "limitations": ["External evidence was imported from a scoped, provenance-bearing artifact; its claims remain subject to validation."],
     }
+    snapshot["source_contract"] = _source_contract(snapshot)
+    return snapshot
 
 
 def _snapshot_inline(seed: dict[str, Any]) -> dict[str, Any]:
     value = str(seed.get("value") or "")
     kind = str(seed.get("seed_kind") or "topic")
-    return {
+    snapshot = {
         "seed_id": str(seed.get("seed_id") or f"seed-{kind}"),
         "seed_kind": kind,
         "source": kind,
         "fetched_at": utc_now(),
         "sha256": sha256_bytes(value.encode("utf-8")),
+        "content_sha256": sha256_bytes(value.encode("utf-8")),
         "content_type": "text/plain",
         "content": value,
         "limitations": [],
+    }
+    snapshot["source_contract"] = _source_contract(snapshot)
+    return snapshot
+
+
+def _source_contract(snapshot: dict[str, Any]) -> dict[str, Any]:
+    seed_id = str(snapshot.get("seed_id") or "seed")
+    content = snapshot.get("content")
+    content_text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, sort_keys=True)
+    content_hash = str(snapshot.get("content_sha256") or sha256_bytes(content_text.encode("utf-8")))
+    source = str(snapshot.get("source") or snapshot.get("final_url") or snapshot.get("canonical_path") or seed_id)
+    provenance = snapshot.get("provenance") if isinstance(snapshot.get("provenance"), dict) else {}
+    return {
+        "schema": "autosci_seed_source_contract.v1",
+        "source_id": seed_id,
+        "seed_kind": str(snapshot.get("seed_kind") or "unknown"),
+        "source_kind": str(snapshot.get("seed_kind") or "unknown"),
+        "source_ref": source,
+        "canonical_path": str(snapshot.get("canonical_path") or snapshot.get("final_url") or source),
+        "content_sha256": content_hash,
+        "raw_file_sha256": str(snapshot.get("sha256") or snapshot.get("raw_sha256") or ""),
+        "title": str(snapshot.get("title") or seed_id),
+        "content_proof": {
+            "content_type": str(snapshot.get("content_type") or ""),
+            "content_chars": len(content_text),
+            "non_empty": bool(content_text.strip()),
+        },
+        "provenance": {
+            "provider": str(snapshot.get("provider") or provenance.get("provider") or "supplied"),
+            "fetched_at": str(snapshot.get("fetched_at") or ""),
+            "service_id": str(snapshot.get("service_id") or ""),
+            "request_sha256": str(snapshot.get("request_sha256") or ""),
+            **provenance,
+        },
+        "limitations": [str(item) for item in snapshot.get("limitations") or [] if str(item).strip()],
+        "evidence_ids": list(dict.fromkeys([seed_id, source, content_hash])),
     }
 
 

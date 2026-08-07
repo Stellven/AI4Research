@@ -334,6 +334,16 @@ def review_artifact(node_request: dict[str, Any], context: OperatorContext) -> d
         "review_scope": "local_structural_only",
         "independent_peer_review": False,
         "task_contract_sha256": stable_json_sha256(task_contract),
+        "reviewed_artifact_hashes": {
+            "scientific_report": stable_json_sha256(report),
+            "task_contract": stable_json_sha256(task_contract),
+        },
+        "writer_self_assessment_trusted": False,
+        "independent_invocation_context": {
+            "inputs_reloaded_from_scoped_artifacts": True,
+            "checks_recomputed_from_markdown_and_evidence_ids": True,
+            "writer_verdict_consumed": False,
+        },
     }
     return completed_result(
         context,
@@ -375,6 +385,9 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
     if publication_type not in {"paper", "poster", "rebuttal", "slides", "supplement", "mixed"}:
         raise ResearchOperatorError("Unsupported publication type", error_type="invalid_input")
     markdown = require_text(report.get("markdown"), "report markdown")
+    non_heading_markdown = re.sub(r"(?m)^\s*#+\s+.*$", "", markdown).strip()
+    if len(non_heading_markdown) < 80:
+        raise ResearchOperatorError("Compiled deliverable body is too small to inspect as a real deliverable", error_type="quality_gate_failed")
     extra_artifacts: list[dict[str, Any]] = []
     extra_hashes: list[dict[str, str]] = []
     first_scope = context.write_scope[0] if context.write_scope else ""
@@ -410,6 +423,13 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
         "source_report_id": require_text(report.get("report_id"), "source_report_id"),
         "evidence_ids": [str(item) for item in report.get("evidence_ids") or []],
         "compiled_markdown": markdown,
+        "deliverable_inspection": {
+            "status": "inspected",
+            "format": "markdown",
+            "body_characters": len(non_heading_markdown),
+            "evidence_linked": bool(report.get("evidence_ids")),
+            "not_schema_only": True,
+        },
         "review_score": review.get("score"),
     }
     return completed_result(

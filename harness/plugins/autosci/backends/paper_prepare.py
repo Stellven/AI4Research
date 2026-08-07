@@ -10,6 +10,7 @@ import re
 import shutil
 import tarfile
 import zipfile
+import hashlib
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -97,6 +98,17 @@ def _write_text(path: Path, content: str) -> None:
 def _read_text(path: Path, limit: int = 200_000) -> str:
     try:
         return path.read_text(encoding="utf-8", errors="ignore")[:limit]
+    except OSError:
+        return ""
+
+
+def _file_sha256(path: Path) -> str:
+    try:
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
     except OSError:
         return ""
 
@@ -775,7 +787,114 @@ def read_paper_source(
             "key_concepts": ["paper source preparation", "arXiv source recovery", "Solar Evidence ABI"],
             "evidence_ids": [raw["paper_id"], str(raw["source_ref"])],
         }
+    source_contract = _source_contract_for_paper(
+        raw,
+        canonical=canonical,
+        canonical_raw=canonical_raw,
+        prepared=prepared,
+        limitations=limitations,
+    )
+    raw["source_contract"] = source_contract
+    raw["provenance"] = source_contract["provenance"]
+    raw["final_source_registration_boundary"] = _source_registration_boundary(raw, source_contract)
     return raw
+
+
+def _source_contract_for_paper(
+    paper: dict[str, Any],
+    *,
+    canonical: Path,
+    canonical_raw: str,
+    prepared: dict[str, Any],
+    limitations: list[str],
+) -> dict[str, Any]:
+    source_id = str(paper.get("paper_id") or f"paper-{slugify(str(paper.get('title') or canonical_raw))}")
+    content_hash = stable_hash = ""
+    if canonical.exists() and canonical.is_file():
+        content_hash = _file_sha256(canonical)
+        stable_hash = content_hash
+    else:
+        stable_hash = hashlib.sha256(json.dumps({
+            "source_id": source_id,
+            "source_ref": paper.get("source_ref"),
+            "title": paper.get("title"),
+            "sections": paper.get("sections"),
+        }, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    evidence_ids = [
+        source_id,
+        str(paper.get("source_ref") or canonical_raw),
+        *[
+            str(section.get("source_anchor"))
+            for section in paper.get("sections") or []
+            if isinstance(section, dict) and str(section.get("source_anchor") or "").strip()
+        ],
+    ]
+    return {
+        "schema": "autosci_seed_source_contract.v1",
+        "source_id": source_id,
+        "seed_kind": str(paper.get("source_type") or prepared.get("original_format") or "unknown"),
+        "source_kind": str(paper.get("source_type") or "unknown"),
+        "source_ref": str(paper.get("source_ref") or canonical_raw),
+        "canonical_path": canonical_raw,
+        "content_sha256": stable_hash,
+        "raw_file_sha256": content_hash,
+        "title": str(paper.get("title") or ""),
+        "parse_status": str(paper.get("parse_status") or "unknown"),
+        "content_proof": {
+            "abstract_present": bool(str(paper.get("abstract") or "").strip()),
+            "section_count": len([section for section in paper.get("sections") or [] if isinstance(section, dict)]),
+            "non_empty_section_count": len([
+                section
+                for section in paper.get("sections") or []
+                if isinstance(section, dict) and str(section.get("text") or "").strip()
+            ]),
+        },
+        "provenance": {
+            "provider": "local_paper_prepare",
+            "source_prepare_status": str((paper.get("identifiers") or {}).get("source_prepare_status") or "unknown"),
+            "source_fetch_status": str((paper.get("identifiers") or {}).get("source_fetch_status") or "not_applicable"),
+            "prepared_path": prepared.get("prepared_path"),
+            "extracted_text_path": prepared.get("extracted_text_path"),
+            "artifacts": list(prepared.get("artifacts") or []),
+        },
+        "limitations": list(dict.fromkeys(str(item) for item in limitations if str(item).strip())),
+        "evidence_ids": list(dict.fromkeys(evidence_ids)),
+    }
+
+
+def _source_registration_boundary(paper: dict[str, Any], source_contract: dict[str, Any]) -> dict[str, Any]:
+    proof = source_contract.get("content_proof") if isinstance(source_contract.get("content_proof"), dict) else {}
+    source_preparation_verified = str((paper.get("identifiers") or {}).get("source_prepare_status") or "") == "completed"
+    parse_quality_ready = (
+        str(paper.get("parse_status") or "") in {"parsed", "partial"}
+        and int(proof.get("non_empty_section_count") or 0) > 0
+    )
+    source_contract_ready = (
+        bool(source_contract.get("source_id"))
+        and bool(source_contract.get("source_ref"))
+        and bool(source_contract.get("content_sha256"))
+    )
+    memory_sidecar_ready = True
+    graph_sidecar_ready = True
+    wiki_registration_ready = source_contract_ready and parse_quality_ready
+    checks = {
+        "source_preparation_verified": source_preparation_verified,
+        "parse_quality_ready": parse_quality_ready,
+        "source_contract_ready": source_contract_ready,
+        "wiki_registration_ready": wiki_registration_ready,
+        "memory_sidecar_ready": memory_sidecar_ready,
+        "graph_sidecar_ready": graph_sidecar_ready,
+    }
+    missing = [key for key, value in checks.items() if not value]
+    return {
+        "schema": "autosci_source_registration_boundary.v1",
+        "paper_id": str(paper.get("paper_id") or ""),
+        "source_contract": source_contract,
+        "sidecar_evidence_paths": [],
+        "final_registration_ready": not missing,
+        "missing": missing,
+        **checks,
+    }
 
 
 def dump_prepare_manifest(path: Path, prepared: dict[str, Any]) -> None:

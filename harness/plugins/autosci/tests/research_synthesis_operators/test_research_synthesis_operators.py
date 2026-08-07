@@ -323,7 +323,7 @@ def test_full_seven_node_chain_with_injected_services(tmp_path: Path, monkeypatc
             produced_by_declared_path[declared_path] = actual_ref
     final_node = next(node for node in WORKFLOW["nodes"] if node["node_id"] == "final_acceptance")
     assert refs_used["final_acceptance"] == [produced_by_declared_path[path] for path in final_node["input_artifacts"]]
-    assert len(refs_used["final_acceptance"]) == 4
+    assert len(refs_used["final_acceptance"]) == len(final_node["input_artifacts"])
     for result in results.values():
         assert result["status"] == "completed"
         _validate_result(result)
@@ -381,7 +381,58 @@ def test_seed_fetch_supports_topic_and_local_markdown_roundtrip(tmp_path: Path, 
     artifact = _read_artifact(tmp_path, result)
     assert result["status"] == "completed"
     assert artifact["seed_count"] == 2
+    assert all(seed["source_contract"]["schema"] == "autosci_seed_source_contract.v1" for seed in artifact["seeds"])
     assert "中文 content" in artifact["seeds"][1]["content"]
+
+def test_seed_fetch_uses_unified_contract_for_chinese_url_english_topic_and_local_pdf(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    fitz = pytest.importorskip("fitz")
+    monkeypatch.chdir(tmp_path)
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    pdf_path = inputs / "local-source.pdf"
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), "Local PDF Source\nAbstract\nThis PDF contains provenance text.", fontsize=11)
+    doc.save(pdf_path)
+    doc.close()
+
+    def fetch_url(url: str, *, seed: dict) -> dict:
+        return {
+            "requested_url": url,
+            "final_url": url,
+            "fetched_at": "2026-08-06T00:00:00Z",
+            "content_type": "text/html; charset=utf-8",
+            "content": "Chinese-language source content for provenance.",
+            "title": "Chinese technical source",
+            "provider": "bounded_http_fixture",
+            "content_sha256": "c" * 64,
+            "response_sha256": "d" * 64,
+            "request_sha256": "e" * 64,
+            "metadata_sha256": "f" * 64,
+            "response_bytes": 64,
+        }
+
+    payload = {
+        "seed_inputs": [
+            {"seed_id": "url-zh", "seed_kind": "url", "value": "https://example.test/中文/报告"},
+            {"seed_id": "topic-en", "seed_kind": "topic", "value": "retrieval augmented generation reliability"},
+            {"seed_id": "pdf-local", "seed_kind": "pdf", "value": "inputs/local-source.pdf"},
+        ]
+    }
+    result = execute_operator(_request(tmp_path, "seed_fetch", payload=payload), services={"fetch_url": fetch_url})
+    artifact = _read_artifact(tmp_path, result)
+
+    assert result["status"] == "completed"
+    contracts = {seed["seed_id"]: seed["source_contract"] for seed in artifact["seeds"]}
+    assert set(contracts) == {"url-zh", "topic-en", "pdf-local"}
+    assert contracts["url-zh"]["seed_kind"] == "url"
+    assert contracts["topic-en"]["seed_kind"] == "topic"
+    assert contracts["pdf-local"]["seed_kind"] == "pdf"
+    assert "provenance text" in next(seed for seed in artifact["seeds"] if seed["seed_id"] == "pdf-local")["content"]
+    assert all(contract["content_sha256"] for contract in contracts.values())
 
 
 def test_seed_path_traversal_is_rejected(tmp_path: Path, monkeypatch) -> None:
@@ -417,6 +468,36 @@ def test_source_validation_deduplicates_and_records_rejection_reasons(tmp_path: 
     assert artifact["rejected_count"] == 2
     assert any("duplicate_of:a" in reason for row in artifact["rejected"] for reason in row["reasons"])
     assert any("missing source title" in reason for row in artifact["rejected"] for reason in row["reasons"])
+    assert artifact["source_policy_summary"]["duplicate_rejections"] == 1
+
+def test_source_validation_keeps_good_sources_when_one_candidate_failed(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    candidates = [
+        {
+            "source_id": "good",
+            "title": "Grounded Source",
+            "url": "https://example.test/good",
+            "provider": "semantic_scholar",
+            "canonical_id": "doi:10.0000/good",
+            "summary": "A substantive relevant source summary for validation.",
+        },
+        {
+            "source_id": "failed",
+            "title": "Failed Source",
+            "url": "https://example.test/failed",
+            "provider": "semantic_scholar",
+            "status": "failed",
+            "error": "provider timeout",
+        },
+    ]
+    result = execute_operator(_request(tmp_path, "source_validation", payload={"candidates": candidates}), services={})
+    artifact = _read_artifact(tmp_path, result)
+
+    assert result["status"] == "completed"
+    assert artifact["accepted_count"] == 1
+    assert artifact["rejected_count"] == 1
+    assert artifact["source_policy_summary"]["source_failure_rejections"] == 2
+    assert any(reason.startswith("source_failure:") for reason in artifact["rejected"][0]["reasons"])
 
 
 def test_missing_discovery_provider_returns_awaiting_external(tmp_path: Path, monkeypatch) -> None:

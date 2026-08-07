@@ -420,12 +420,12 @@ def _native_prepare_paper_source(
 
 def _rel(path: Path) -> str:
     try:
-        return str(path.resolve().relative_to(HARNESS_DIR.resolve()))
+        return path.resolve().relative_to(HARNESS_DIR.resolve()).as_posix()
     except ValueError:
         try:
-            return str(path.resolve().relative_to(REPO_HARNESS_DIR.resolve()))
+            return path.resolve().relative_to(REPO_HARNESS_DIR.resolve()).as_posix()
         except ValueError:
-            return str(path)
+            return Path(path).as_posix()
 
 
 def _output_dir(envelope: dict[str, Any], action: str) -> Path:
@@ -8122,7 +8122,7 @@ def _action_review_artifact(envelope: dict[str, Any]) -> dict[str, Any]:
         report_path.write_text(report_markdown, encoding="utf-8")
         artifacts.append({"type": "artifact_review_markdown", "path": _rel(report_path)})
     final_boundary = _review_final_acceptance_boundary(inputs, raw)
-    final_boundary_path = output_dir / "review_final_acceptance_boundary.json"
+    final_boundary_path = output_dir / "review_acceptance.json"
     final_boundary_artifact_path = _write_json_sidecar(final_boundary_path, final_boundary)
     artifacts.append({
         "type": "review_final_acceptance_boundary_json",
@@ -8131,7 +8131,7 @@ def _action_review_artifact(envelope: dict[str, Any]) -> dict[str, Any]:
     evidence_payload_path = _configured_output_path(
         envelope,
         "evidence_payload_path",
-        output_dir / "review_artifact.evidence.json",
+        output_dir / "review.evidence.json",
         legacy_key="evidence_path",
         legacy_suffix=".json",
     )
@@ -10666,6 +10666,7 @@ def _claim_review_llm_context(
                     "focus": str(review.get("focus") or "N/A"),
                     "evidence_ids": evidence_ids,
                     "finding_count": len(findings),
+                    "findings": findings,
                     "review_llm": review_llm or {"status": "completed"},
                     "checked_paths": checked_paths,
                 },
@@ -10874,7 +10875,7 @@ def _attach_experiment_evaluation_final_verdict_boundary(
         verdicts[0]["final_verdict_ready"] = boundary.get("final_verdict_ready") is True
     outputs["final_verdict_boundary"] = boundary
     boundary_path = _write_json_sidecar(
-        _output_dir(envelope, "verify_claim") / "experiment_evaluation_final_verdict_boundary.json",
+        _output_dir(envelope, "verify_claim") / "verdict_boundary.json",
         boundary,
     )
     verdict_evidence.setdefault("artifacts", []).append(
@@ -10882,6 +10883,30 @@ def _attach_experiment_evaluation_final_verdict_boundary(
     )
     verdict_evidence.setdefault("limitations", []).extend(str(item) for item in boundary.get("limitations") or [])
     return verdict_evidence
+
+
+def _claim_review_blocks_support(review_llm: dict[str, Any]) -> tuple[bool, list[str]]:
+    if str(review_llm.get("status") or "") != "completed":
+        return False, []
+    recommendation = str(review_llm.get("recommendation") or "").strip().lower()
+    blocking_recommendations = {"revise", "revise_required", "reject", "rejected", "fail", "failed", "not_supported"}
+    reasons: list[str] = []
+    if recommendation in blocking_recommendations:
+        reasons.append(f"review recommendation `{recommendation}` blocks supported verdict")
+    for finding in review_llm.get("findings") or []:
+        if not isinstance(finding, dict):
+            continue
+        severity = str(finding.get("severity") or "").strip().lower()
+        category = str(finding.get("category") or "").strip().lower()
+        text = " ".join(
+            str(finding.get(key) or "")
+            for key in ("finding_id", "category", "evidence", "suggestion")
+        ).lower()
+        if severity == "high" or category in {"external_validity", "reasoning"} or any(
+            token in text for token in ("overgeneral", "unsupported", "worldwide", "future dataset")
+        ):
+            reasons.append(str(finding.get("finding_id") or category or "review finding blocks supported verdict"))
+    return bool(reasons), _unique_strings(reasons)
 
 
 def _action_verify_claim(envelope: dict[str, Any]) -> dict[str, Any]:
@@ -10911,6 +10936,11 @@ def _action_verify_claim(envelope: dict[str, Any]) -> dict[str, Any]:
     limitations = [
         "Fixture verdict is derived only from supplied local evidence; it is not external scientific validation."
     ]
+    review_blocks_support, review_block_reasons = _claim_review_blocks_support(review_llm)
+    if verdict == "supported" and review_blocks_support:
+        verdict = "inconclusive"
+        basis = f"{basis} Review LLM blocked supported verdict: {'; '.join(review_block_reasons)}."
+        limitations.append("Supported experiment evidence was not promoted because independent review found overreach or unsupported assumptions.")
     if verdict == "inconclusive":
         limitations.append("Supplied experiment evidence is missing, failed, or inconclusive; the claim was not upgraded.")
     if review_llm.get("status") == "completed":
@@ -12185,7 +12215,7 @@ def _write_review_runtime_proof_manifest(
         ],
     }
     output_dir = _output_dir(envelope, "review_artifact")
-    artifact_path = _write_json_sidecar(output_dir / "review_llm_runtime_proof.json", manifest)
+    artifact_path = _write_json_sidecar(output_dir / "review_model_proof.json", manifest)
     return {"type": "review_model_runtime_proof_manifest_json", "path": artifact_path}
 
 
@@ -12227,7 +12257,7 @@ def _write_review_target_runtime_proof_manifest(
         ],
     }
     artifact = _write_json_sidecar(
-        _output_dir(envelope, "review_artifact") / "review_artifact_source_provider_runtime_proof.json",
+        _output_dir(envelope, "review_artifact") / "review_source_proof.json",
         manifest,
     )
     return {"type": "provider_source_runtime_proof_manifest_json", "path": artifact}
@@ -12283,10 +12313,8 @@ def _write_model_runtime_proof_manifest(
             }
         ],
     }
-    artifact_path = _write_json_sidecar(
-        _output_dir(envelope, action) / f"{action}_model_runtime_proof.json",
-        manifest,
-    )
+    proof_name = f"{_slug(action)[:16]}_model_proof.json"
+    artifact_path = _write_json_sidecar(_output_dir(envelope, action) / proof_name, manifest)
     return {"type": "model_runtime_proof_manifest_json", "path": artifact_path}
 
 
@@ -12769,10 +12797,7 @@ def _write_review_context_runtime_proof_manifest(
             }
         ],
     }
-    artifact_path = _write_json_sidecar(
-        _output_dir(envelope, action) / f"{action}_review_llm_runtime_proof.json",
-        manifest,
-    )
+    artifact_path = _write_json_sidecar(_output_dir(envelope, action) / "review_proof.json", manifest)
     return {"type": "review_model_runtime_proof_manifest_json", "path": artifact_path}
 
 
@@ -21954,7 +21979,7 @@ def _wiki_health_raw(envelope: dict[str, Any]) -> dict[str, Any]:
     if not runtime_errors and not model_completed:
         runtime_errors.append({"id": "wiki-health-review", "description": "Structural checks passed; content quality still requires model/reviewer evidence."})
     final_boundary = _check_final_quality_boundary(findings, model_output)
-    final_boundary_path = paths["recommended_changes"].parent / "check_final_quality_boundary.json"
+    final_boundary_path = paths["recommended_changes"].parent / "quality_boundary.json"
     final_boundary_artifact = _write_json_sidecar(final_boundary_path, final_boundary)
     quality_reasons = [item["description"] for item in runtime_errors]
     if not quality_reasons:

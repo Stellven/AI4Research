@@ -29,16 +29,31 @@ def _idea_rows(response: dict[str, Any]) -> list[dict[str, Any]]:
             raise ResearchOperatorError("Every idea must be an object", error_type="provider_contract_failure")
         evidence_ids = [str(item) for item in require_list(raw.get("origin_evidence_ids"), "origin_evidence_ids") if str(item).strip()]
         risks = [str(item) for item in require_list(raw.get("risks"), "risks") if str(item).strip()]
+        falsifiability = require_text(raw.get("falsifiability"), "falsifiability")
+        validation_method = require_text(raw.get("validation_method"), "validation_method")
+        minimum_experiment = require_text(raw.get("minimum_experiment"), "minimum_experiment")
+        source_proof = raw.get("source_proof") if isinstance(raw.get("source_proof"), dict) else {}
+        source_proof = {
+            "status": str(source_proof.get("status") or ("source_backed" if evidence_ids else "missing_source_proof")),
+            "evidence_ids": [str(item) for item in source_proof.get("evidence_ids") or evidence_ids if str(item).strip()],
+            "proof": str(source_proof.get("proof") or "Origin evidence ids were supplied by the idea generator."),
+            "limitations": [str(item) for item in source_proof.get("limitations") or [] if str(item).strip()],
+        }
+        promotion_decision = "ready_for_evaluation" if (
+            source_proof["evidence_ids"] and risks and falsifiability and validation_method and minimum_experiment
+        ) else "revise_before_evaluation"
         idea = {
             "idea_id": require_text(raw.get("idea_id") or f"idea-{index + 1:03d}", "idea_id"),
             "title": require_text(raw.get("title"), "title"),
             "hypothesis": require_text(raw.get("hypothesis"), "hypothesis"),
             "approach": require_text(raw.get("approach"), "approach"),
             "origin_evidence_ids": evidence_ids,
+            "source_proof": source_proof,
             "risks": risks,
-            "falsifiability": require_text(raw.get("falsifiability"), "falsifiability"),
-            "validation_method": require_text(raw.get("validation_method"), "validation_method"),
-            "minimum_experiment": require_text(raw.get("minimum_experiment"), "minimum_experiment"),
+            "falsifiability": falsifiability,
+            "validation_method": validation_method,
+            "minimum_experiment": minimum_experiment,
+            "promotion_decision": str(raw.get("promotion_decision") or promotion_decision),
             "novelty_hypothesis": str(raw.get("novelty_hypothesis") or ""),
         }
         ideas.append(idea)
@@ -96,13 +111,16 @@ def evaluate_ideas(node_request: dict[str, Any], context: OperatorContext) -> di
         origin = [str(item) for item in idea.get("origin_evidence_ids") or [] if str(item).strip()]
         feasibility = max(0.0, min(1.0, 0.8 - 0.1 * max(0, len(risks) - 1)))
         recommendation = "advance" if complete and origin else "revise"
+        promotion_decision = "promote_to_experiment_design" if recommendation == "advance" else "hold_for_revision"
         evaluations.append({
             "idea_id": require_text(idea.get("idea_id"), "idea_id"),
             "novelty": float(idea.get("novelty_score", 0.5)),
             "feasibility": feasibility,
             "recommendation": recommendation,
+            "promotion_decision": promotion_decision,
             "risks": risks or ["Risk analysis was not supplied."],
             "evidence_ids": origin,
+            "source_proof_status": str((idea.get("source_proof") or {}).get("status") or "unknown"),
             "falsifiability_ready": complete,
             "minimum_experiment_ready": bool(str(idea.get("minimum_experiment") or "").strip()),
         })

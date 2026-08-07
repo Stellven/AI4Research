@@ -66,7 +66,11 @@ def paper_copilot_url(venue: str, year: int) -> str:
 
 def load_json(url: str, timeout: int) -> Any:
     if url.startswith("file://"):
-        path = Path(urllib.parse.urlparse(url).path)
+        parsed = urllib.parse.urlparse(url)
+        path_text = urllib.request.url2pathname(parsed.path)
+        if parsed.netloc:
+            path_text = f"//{parsed.netloc}{path_text}"
+        path = Path(path_text)
         return json.loads(path.read_text(encoding="utf-8"))
     with urllib.request.urlopen(url, timeout=timeout) as response:  # noqa: S310
         return json.loads(response.read().decode("utf-8", errors="replace"))

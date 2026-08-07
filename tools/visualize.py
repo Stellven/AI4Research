@@ -831,6 +831,26 @@ def _compat_pop_value(argv: list[str], flag: str, default: str = "") -> tuple[li
     return out, value
 
 
+def _compat_reject_unknown(args: list[str], command: str) -> None:
+    if not args:
+        return
+    print(
+        json.dumps(
+            {
+                "ok": False,
+                "status": "error",
+                "error_type": "unsupported_cli_flag",
+                "command": command,
+                "unsupported_args": args,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
 def _compat_canvas_payload(data: dict) -> dict:
     nodes = []
     for index, node in enumerate(data.get("nodes") or []):
@@ -934,7 +954,8 @@ def _run_opensolar_json_compat(argv: list[str]) -> bool:
         args, focus = _compat_pop_value(args, "--focus")
         args, depth_text = _compat_pop_value(args, "--depth", "2")
         args, types = _compat_pop_value(args, "--types")
-        _args, edge_types = _compat_pop_value(args, "--edge-types")
+        args, edge_types = _compat_pop_value(args, "--edge-types")
+        _compat_reject_unknown(args, command)
         try:
             depth = int(depth_text)
         except ValueError:
@@ -954,7 +975,8 @@ def _run_opensolar_json_compat(argv: list[str]) -> bool:
     args, focus = _compat_pop_value(args, "--focus")
     args, depth_text = _compat_pop_value(args, "--depth", "2")
     args, types = _compat_pop_value(args, "--types")
-    _args, edge_types = _compat_pop_value(args, "--edge-types")
+    args, edge_types = _compat_pop_value(args, "--edge-types")
+    _compat_reject_unknown(args, command)
     try:
         depth = int(depth_text)
     except ValueError:

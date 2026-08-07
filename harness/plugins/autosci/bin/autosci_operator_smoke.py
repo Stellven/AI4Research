@@ -579,6 +579,8 @@ def run_gate(schema: str, evidence_path: Path) -> dict[str, Any]:
 
 
 def run_bridge_action(action: str, envelope: dict[str, Any], envelope_path: Path) -> dict[str, Any]:
+    if len(str(envelope_path.resolve())) >= 240:
+        envelope_path = envelope_path.parent.parent / "_e.json"
     write_json(envelope_path, envelope)
     env = dict(os.environ)
     env["HARNESS_DIR"] = str(OUTPUT_HARNESS)

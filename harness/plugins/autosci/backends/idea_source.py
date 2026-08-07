@@ -283,6 +283,50 @@ def _apply_max_ideas_selection(ideas: list[dict[str, Any]], max_ideas: int) -> N
         idea["selection_rank"] = selected
 
 
+def _apply_verification_contracts(ideas: list[dict[str, Any]]) -> None:
+    for idea in ideas:
+        origin_ids = _unique_strings([str(item) for item in idea.get("origin_evidence_ids") or []])
+        source_ready = bool(origin_ids) and str(idea.get("source_mode") or "") != "missing"
+        evidence_label = ", ".join(origin_ids[:3]) if origin_ids else "source evidence"
+        title = str(idea.get("title") or "this idea")
+        hypothesis = str(idea.get("hypothesis") or "the stated hypothesis")
+        approach = str(idea.get("approach") or "the proposed approach")
+        idea.setdefault(
+            "source_proof",
+            {
+                "schema": "autosci_idea_source_proof.v1",
+                "status": "source_backed" if source_ready else "missing_source",
+                "evidence_ids": origin_ids,
+                "proof": str(idea.get("grounding_summary") or f"Grounded in {evidence_label}."),
+                "limitations": [
+                    "Source proof records local provenance; external novelty and reviewer validation may still be required."
+                ],
+            },
+        )
+        idea.setdefault(
+            "falsifiability",
+            f"Reject or revise `{title}` if a bounded pilot cannot measure whether {hypothesis[:160]} against the cited baseline evidence.",
+        )
+        idea.setdefault(
+            "risk",
+            "The main risk is that the cited evidence reflects a narrow or stale context; failed retrieval, duplicate sources, and missing external novelty must remain visible.",
+        )
+        idea.setdefault(
+            "validation",
+            f"Measure the proposed change on artifacts tied to {evidence_label}; compare outcomes with the baseline implied by the source limitations.",
+        )
+        idea.setdefault(
+            "minimum_experiment",
+            f"Run the smallest pilot that implements one measurable step of this approach: {approach[:180]}",
+        )
+        idea.setdefault(
+            "promotion_decision",
+            "promote_to_experiment_design"
+            if source_ready and str(idea.get("duplicate_status") or "") == "new" and str(idea.get("status") or "") == "candidate"
+            else "hold_for_revision",
+        )
+
+
 def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, repository_root: Path) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     topic = str(inputs.get("topic") or inputs.get("query") or inputs.get("target") or "research workflow").strip()
@@ -297,22 +341,24 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
     active_ideas = list(source_bundle["active_ideas"])
     sources = list(source_bundle["sources"])
     if not sources:
+        ideas = [
+            {
+                "idea_id": "idea-source-missing",
+                "title": "Insufficient sourced context for ideation",
+                "hypothesis": "A research idea should not be generated without wiki, discovery, or paper evidence.",
+                "approach": "Run discovery or ingest papers, then rerun ideate with wiki/discovery evidence available.",
+                "origin_evidence_ids": ["missing:wiki-or-discovery-evidence"],
+                "novelty_hypothesis": "No novelty claim is made because no source evidence was available.",
+                "source_mode": "missing",
+                "duplicate_status": "insufficient_source",
+                "status": "blocked",
+                "generation_path": "source-required",
+            }
+        ]
+        _apply_verification_contracts(ideas)
         return {
             "status": "inconclusive",
-            "ideas": [
-                {
-                    "idea_id": "idea-source-missing",
-                    "title": "Insufficient sourced context for ideation",
-                    "hypothesis": "A research idea should not be generated without wiki, discovery, or paper evidence.",
-                    "approach": "Run discovery or ingest papers, then rerun ideate with wiki/discovery evidence available.",
-                    "origin_evidence_ids": ["missing:wiki-or-discovery-evidence"],
-                    "novelty_hypothesis": "No novelty claim is made because no source evidence was available.",
-                    "source_mode": "missing",
-                    "duplicate_status": "insufficient_source",
-                    "status": "blocked",
-                    "generation_path": "source-required",
-                }
-            ],
+            "ideas": ideas,
             "limitations": ["No wiki or discovery evidence was available; ideation is inconclusive."],
             "source_summary": {
                 "wiki_source_count": 0,
@@ -452,6 +498,7 @@ def build_idea_candidates(envelope: dict[str, Any], *, workspace_root: Path, rep
                 "status": status,
             }
         )
+    _apply_verification_contracts(ideas)
     _apply_max_ideas_selection(ideas, max_ideas)
     return {
         "status": "completed",

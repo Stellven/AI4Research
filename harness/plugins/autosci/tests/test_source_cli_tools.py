@@ -8,6 +8,7 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[4]
+BRIDGE = REPO / "harness" / "plugins" / "autosci" / "bin" / "autosci_bridge.py"
 
 
 def run_tool(tool: str, *args: str, extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -239,3 +240,79 @@ def test_paper_copilot_file_provider_does_not_default_to_external_runtime(tmp_pa
     assert result["runtime_proof_manifest_status"] == "written"
     manifest = json.loads(proof.read_text(encoding="utf-8"))
     assert manifest["proofs"][0]["categories"] == ["provider_source_evidence"]
+
+
+def test_visualize_graph_data_reads_real_wiki_graph_and_rejects_unknown_flags(tmp_path: Path) -> None:
+    wiki = tmp_path / "wiki"
+    (wiki / "papers").mkdir(parents=True)
+    (wiki / "ideas").mkdir()
+    (wiki / "graph").mkdir()
+    (wiki / "papers/source.md").write_text("# Source Paper\n\nGrounded source text.\n", encoding="utf-8")
+    (wiki / "ideas/idea.md").write_text("# Idea\n\nGrounded idea text.\n", encoding="utf-8")
+    (wiki / "graph/edges.jsonl").write_text(
+        json.dumps({"source": "papers/source", "target": "ideas/idea", "relation": "inspires"}) + "\n",
+        encoding="utf-8",
+    )
+    graph_out = tmp_path / "graph.json"
+
+    result = payload(run_tool("visualize.py", "graph-data", "--wiki-root", str(wiki), "--out", str(graph_out)))
+    assert result["ok"] is True
+    assert graph_out.exists()
+    assert {node["id"] for node in result["nodes"]} >= {"papers/source.md", "ideas/idea.md", "papers/source", "ideas/idea"}
+    assert result["edges"][0]["relation"] == "inspires"
+
+    rejected = run_tool("visualize.py", "graph-data", "--wiki-root", str(wiki), "--unknown-flag")
+    assert rejected.returncode == 2
+    error = json.loads(rejected.stderr)
+    assert error["error_type"] == "unsupported_cli_flag"
+    assert error["unsupported_args"] == ["--unknown-flag"]
+
+
+def test_ask_wiki_retrieval_paths_are_cross_platform_canonical(tmp_path: Path) -> None:
+    wiki = tmp_path / "wiki"
+    (wiki / "papers").mkdir(parents=True)
+    (wiki / "graph").mkdir()
+    (wiki / "papers/skillgen.md").write_text(
+        "# SkillGen\n\nSkillGen evidence links generated skills to verifier traces.\n",
+        encoding="utf-8",
+    )
+    (wiki / "graph/context_brief.md").write_text("# Context\n\nSkillGen evidence context.\n", encoding="utf-8")
+    (wiki / "graph/open_questions.md").write_text("# Open Questions\n\nHow robust is SkillGen evidence?\n", encoding="utf-8")
+    (wiki / "index.md").write_text("# Index\n\nSkillGen evidence index.\n", encoding="utf-8")
+    envelope = tmp_path / "ask-envelope.json"
+    envelope.write_text(
+        json.dumps(
+            {
+                "task_id": "task-ask-paths",
+                "sprint_id": "run-ask-paths",
+                "node_id": "node-ask-paths",
+                "output_dir": "artifacts/autosci/ask-paths",
+                "inputs": {"wiki_root": str(wiki), "query": "SkillGen evidence", "limit": 3},
+                "outputs": {"evidence_payload_path": "artifacts/autosci/ask-paths/ask.evidence.json"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    env = dict(os.environ)
+    env["HARNESS_DIR"] = str(tmp_path)
+    proc = subprocess.run(
+        [sys.executable, str(BRIDGE), "run", "--action", "ask_wiki", "--envelope", str(envelope)],
+        cwd=REPO / "harness",
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    summary = json.loads(proc.stdout)
+    evidence = json.loads((tmp_path / summary["evidence_path"]).read_text(encoding="utf-8"))
+    retrieval_path = next(item["path"] for item in evidence["artifacts"] if item["type"] == "ask_retrieval_json")
+    retrieval = json.loads((tmp_path / retrieval_path).read_text(encoding="utf-8"))
+    paths = [
+        *(str(hit["path"]) for hit in retrieval["hits"]),
+        *(str(source["path"]) for source in retrieval["wiki_context"]["sources"].values()),
+    ]
+    assert paths
+    assert all("\\" not in path for path in paths)
+    assert "wiki/papers/skillgen.md" in paths

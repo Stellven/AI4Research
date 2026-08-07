@@ -353,11 +353,15 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
     results.append(idea)
     idea_payload = _artifact(tmp_path, idea)
     generated = idea_payload["outputs"]["ideas"][0]
-    assert {"risks", "falsifiability", "validation_method", "minimum_experiment"} <= set(generated)
+    assert {"risks", "falsifiability", "validation_method", "minimum_experiment", "source_proof", "promotion_decision"} <= set(generated)
+    assert generated["source_proof"]["status"] == "source_backed"
+    assert generated["promotion_decision"] == "ready_for_evaluation"
 
     evaluated = _execute_twice(tmp_path, _request("idea_evaluate", refs=idea["output_artifacts"]), services={})
     results.append(evaluated)
-    assert _artifact(tmp_path, evaluated)["outputs"]["evaluations"][0]["recommendation"] == "advance"
+    idea_evaluation = _artifact(tmp_path, evaluated)["outputs"]["evaluations"][0]
+    assert idea_evaluation["recommendation"] == "advance"
+    assert idea_evaluation["promotion_decision"] == "promote_to_experiment_design"
 
     designed = _execute_twice(
         tmp_path,
@@ -455,7 +459,10 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
 
     reviewed = _execute_twice(tmp_path, _request("artifact_review", refs=drafted["output_artifacts"]), services={})
     results.append(reviewed)
-    assert _artifact(tmp_path, reviewed)["outputs"]["review"]["recommendation"] == "pass_with_review_required"
+    review_payload = _artifact(tmp_path, reviewed)["outputs"]["review"]
+    assert review_payload["recommendation"] == "pass_with_review_required"
+    assert review_payload["writer_self_assessment_trusted"] is False
+    assert review_payload["independent_invocation_context"]["inputs_reloaded_from_scoped_artifacts"] is True
 
     published = _execute_twice(
         tmp_path,
@@ -465,6 +472,8 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
     results.append(published)
     publication = _artifact(tmp_path, published, "publication_bundle")["outputs"]["bundle"]
     assert publication["compiled_markdown"].strip()
+    assert publication["deliverable_inspection"]["status"] == "inspected"
+    assert publication["deliverable_inspection"]["not_schema_only"] is True
     assert (tmp_path / "out/publication_produce/publication.md").is_file()
 
     evaluated_final = _execute_twice(

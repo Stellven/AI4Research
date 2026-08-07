@@ -35,10 +35,10 @@ def evidence_ref(path: Path) -> str:
             continue
         root = Path(raw_root).resolve()
         try:
-            return str(resolved.relative_to(root))
+            return resolved.relative_to(root).as_posix()
         except ValueError:
             continue
-    return str(resolved)
+    return resolved.as_posix()
 
 
 def write_json(path_text: str, payload: dict[str, Any]) -> Path:
