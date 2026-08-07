@@ -1,0 +1,117 @@
+capability_capsule_id: cap.advanced-optimization-reference-worker
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Advanced Optimization Reference Worker
+  description: CPU-only reference execution for MIPROv2, TextGrad, AFlow, MCTS, ADAS, and CEGIS known-issue repair tests.
+applicability:
+  task_types:
+    - optimizer_reference
+    - known_issue_repair
+    - evaluation
+  positive_signals:
+    - miprov2
+    - textgrad
+    - aflow
+    - mcts
+    - adas
+    - cegis
+  negative_signals:
+    - live_provider
+    - large_model_download
+contract:
+  inputs:
+    required:
+      - name: dataset
+        type: json
+      - name: initial_candidate
+        type: json
+    optional:
+      - name: seed
+        type: int
+      - name: checkpoint
+        type: json
+  outputs:
+    required:
+      - name: optimizer_graph
+        type: json
+      - name: dataset
+        type: json
+      - name: trace
+        type: json
+      - name: policy
+        type: json
+      - name: evaluation
+        type: json
+      - name: checkpoint
+        type: json
+  preconditions:
+    - check: offline_reference_path
+      values:
+        - true
+    - check: cpu_fixture_only
+      values:
+        - true
+  postconditions:
+    - check: objective_delta_recorded
+    - check: no_success_without_improvement
+    - check: checkpoint_resume_supported
+  invariants:
+    - Reference execution must not download large models.
+    - Missing optional third-party packages must produce explicit dependency gates.
+    - Production status remains reference_only until a real production adapter is implemented.
+composition:
+  consumes:
+    - type: artifact.optimizer_dataset
+    - type: artifact.optimizer_checkpoint
+  produces:
+    - type: artifact.optimizer_graph
+    - type: artifact.optimizer_trace
+    - type: artifact.optimizer_policy
+    - type: artifact.optimizer_evaluation
+  compatible_with:
+    - guard.secret-leak-guard
+  incompatible_with:
+    - cap.live-provider-required
+effects:
+  read:
+    - repo.read
+    - fixture.read
+  write:
+    - artifacts.optimization_reference
+    - checkpoints.optimization_reference
+  execute:
+    - python.stdlib
+  network: []
+  cost: []
+  risk:
+    - reference_production_confusion
+bindings:
+  skills:
+    required: []
+    optional: []
+  mcp_capabilities: {}
+  data_refs:
+    - data.advanced_optimization_fixture
+  secret_refs: []
+  required_guard_capsules:
+    - guard.secret-leak-guard
+  required_resource_capsules: []
+verification:
+  self_check:
+    - check.trace_has_candidate_update
+    - check.resume_matches_uninterrupted_seeded_run
+    - check.negative_invalid_input_fails
+  external_verifier:
+    required: true
+    preferred_capsules: []
+  pass_conditions:
+    - tests/repairs/advanced_optimization passes offline
+    - every algorithm records positive, negative, and resume evidence
+operator_compatibility:
+  preferred:
+    - autosci-advanced-optimization-repair-worker
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-07T00:00:00Z"
