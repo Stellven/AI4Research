@@ -35,9 +35,11 @@ __all__ = ["OperatorSpec", "OperatorRouter", "OperatorRoutingError"]
 # Default physical-operators.json path. Resolved at call time (not import
 # time) so unit tests can ``monkeypatch`` ``HOME`` without re-importing.
 def _default_config_path() -> Path:
-    return Path(
-        os.path.expanduser("~/.solar/harness/config/physical-operators.json")
-    )
+    user_config = Path(os.path.expanduser("~/.solar/harness/config/physical-operators.json"))
+    if user_config.exists():
+        return user_config
+    repo_config = Path(__file__).resolve().parents[2] / "config" / "physical-operators.json"
+    return repo_config
 
 
 # Cost tier ordering, low-to-high. Operators with unknown tiers are

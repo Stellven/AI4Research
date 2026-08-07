@@ -28,7 +28,7 @@ def test_promotion_target_rejects_non_tmp_path():
 
 def test_promotion_target_accepts_tmp_path():
     pt = PromotionTarget("/tmp/gepa_test_pt.txt")
-    assert str(pt.resolved).startswith("/private/tmp") or str(pt.resolved).startswith("/tmp")
+    assert pt.resolved == Path("/tmp/gepa_test_pt.txt").resolve()
 
 
 def _make_run_with_candidate(tmp_root: Path, candidate_id: str, body: bytes) -> Path:

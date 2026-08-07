@@ -45,11 +45,15 @@ import logging
 import os
 import platform
 import re
-import resource
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Collection, Sequence
+
+try:
+    import resource
+except ModuleNotFoundError:  # pragma: no cover - Windows has no resource module.
+    resource = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _IS_DARWIN: bool = platform.system() == "Darwin"
+_HAS_POSIX_RLIMITS: bool = resource is not None and os.name != "nt"
 
 # ---------------------------------------------------------------------------
 # Secret-scrubbing patterns applied to stderr before forwarding to callers
@@ -212,6 +217,9 @@ def _try_setrlimit(limit_id: int, value: int, name: str) -> bool:
     ``DEBUG`` message on failure so the caller's ``preexec_fn`` does not
     crash the child process.
     """
+    if resource is None:
+        logger.debug("Skipping %s: resource module unavailable", name)
+        return False
     try:
         soft, hard = resource.getrlimit(limit_id)
         capped = value if hard == resource.RLIM_INFINITY else min(value, hard)
@@ -237,6 +245,8 @@ def _apply_rlimits(memory_limit_mb: int | None, cpu_limit_s: int | None) -> None
     process before it runs a single line of user code.  ``RLIMIT_DATA``
     (heap) is used instead and is reliably enforced on macOS.
     """
+    if resource is None:
+        return
     if cpu_limit_s is not None:
         _try_setrlimit(resource.RLIMIT_CPU, cpu_limit_s, "RLIMIT_CPU")
 
@@ -405,7 +415,7 @@ class SubprocessEvaluator:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 env=child_env,
-                preexec_fn=_preexec,
+                preexec_fn=_preexec if _HAS_POSIX_RLIMITS else None,
             )
         except OSError as exc:
             return EvaluatorResult.failure(

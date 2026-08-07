@@ -49,7 +49,7 @@ def _is_safe_promotion_target(path: str) -> bool:
     resolved = str(Path(path).resolve())
     tmp_resolved = str(Path("/tmp").resolve())
     # Accept /tmp itself or any path beneath it.
-    if resolved == tmp_resolved or resolved.startswith(tmp_resolved + "/"):
+    if resolved == tmp_resolved or resolved.startswith(tmp_resolved + os.sep):
         return True
     return False
 
