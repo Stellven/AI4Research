@@ -1,31 +1,71 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ENTRYPOINT = ROOT / "lib" / "advanced_ai4rnd_operator.py"
+REPO = ROOT.parent
+SOLAR_CLI = REPO / "bin" / "solar"
 PHYSICAL_OPERATORS = ROOT / "config" / "physical-operators.json"
+
+
+def _bash_executable() -> str:
+    git_bash = Path(r"C:\Program Files\Git\bin\bash.exe")
+    if git_bash.exists():
+        return str(git_bash)
+    executable = shutil.which("bash")
+    assert executable and "WindowsApps" not in executable, "Git Bash or bash is required"
+    return executable
+
+
+def _bash_path(path: Path) -> str:
+    value = path.resolve().as_posix()
+    if len(value) >= 3 and value[1:3] == ":/":
+        return f"/{value[0].lower()}{value[2:]}"
+    return value
+
+
+def _quote(value: str | Path) -> str:
+    text = _bash_path(value) if isinstance(value, Path) else value
+    return "'" + text.replace("'", "'\"'\"'") + "'"
 
 
 def _run_product_entrypoint(tmp_path: Path, envelope: dict) -> tuple[subprocess.CompletedProcess[str], dict]:
     envelope_path = tmp_path / f"{envelope['run_id']}.envelope.json"
     envelope_path.write_text(json.dumps(envelope), encoding="utf-8")
-    proc = subprocess.run(
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir(exist_ok=True)
+    python_shim = fake_bin / "python3"
+    python_shim.write_text(
+        f'#!/usr/bin/env bash\nexec "{_bash_path(Path(sys.executable))}" "$@"\n',
+        encoding="utf-8",
+    )
+    os.chmod(python_shim, 0o755)
+    command = " ".join(
         [
-            sys.executable,
-            str(ENTRYPOINT),
+            f"PATH={_quote(fake_bin)}:$PATH",
+            f"HOME={_quote(tmp_path / 'home')}",
+            f"SOLAR_HOME={_quote(tmp_path / 'home' / '.solar')}",
+            "bash",
+            _quote(SOLAR_CLI),
+            "advanced",
             "--envelope",
-            str(envelope_path),
+            _quote(envelope_path),
             "--sprints-dir",
-            str(tmp_path / "sprints"),
+            _quote(tmp_path / "sprints"),
             "--evidence-dir",
-            str(tmp_path / "evidence"),
-        ],
-        cwd=ROOT.parent,
+            _quote(tmp_path / "evidence"),
+        ]
+    )
+    proc = subprocess.run(
+        [_bash_executable(), "-lc", command],
+        cwd=REPO,
+        env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
         text=True,
         encoding="utf-8",
         capture_output=True,

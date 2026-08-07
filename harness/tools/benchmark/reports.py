@@ -76,6 +76,8 @@ def _render_report_md(result: BenchmarkRunResult) -> str:
     lines.append(f"| Model | `{result.model}` |")
     lines.append(f"| Env | `{result.env}` |")
     lines.append(f"| Verdict | `{result.verdict}` |")
+    lines.append(f"| Benchmark Execution | `{result.benchmark_execution_verdict}` |")
+    lines.append(f"| Target Quality | `{result.target_quality_verdict}` |")
     lines.append(f"| Score | {result.score if result.score is not None else 'N/A'} |")
     lines.append(f"| Pass/Fail/Pending | {result.pass_count}/{result.fail_count}/{result.pending_count} |")
     lines.append(f"| Exit Code | {result.exit_code if result.exit_code is not None else 'N/A'} |")

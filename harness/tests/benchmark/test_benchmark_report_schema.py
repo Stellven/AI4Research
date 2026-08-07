@@ -201,3 +201,12 @@ def test_run_json_separates_benchmark_execution_from_target_quality(isolated_rep
     assert data["benchmark_execution_verdict"] == "PASS"
     assert data["target_quality_verdict"] == "FAIL"
     assert data["verdict"] == "error"
+
+
+def test_installed_tool_mirror_keeps_benchmark_verdict_contract_in_sync():
+    """The source and installable benchmark packages are both production paths."""
+    harness_root = Path(__file__).resolve().parents[2]
+    for relative in ("schemas.py", "terminal_bench.py", "reports.py", "runner.py"):
+        library_text = (harness_root / "lib" / "benchmark" / relative).read_text(encoding="utf-8")
+        tool_text = (harness_root / "tools" / "benchmark" / relative).read_text(encoding="utf-8")
+        assert tool_text == library_text, f"benchmark production mirror drifted: {relative}"

@@ -8,201 +8,234 @@ Branch: `codex/legacy-fix-integration-repair`
 
 Worktree: `C:\Users\j50058254\Desktop\Github repo\.legacy-fix-worktrees\legacy-fix-integration`
 
+No Phase 22 workbook, brief report, legacy issue ledger, or GitHub Issue was
+changed.
+
 ## Inputs and integration order
 
-The requested commits were cherry-picked in order, without an `ours` or
-`theirs` whole-file resolution:
+The inputs were cherry-picked in the requested order. No whole-file
+`ours`/`theirs` resolution was used.
 
-1. R1 `8b8acb7397496e62b48e5b781e933339445774b0`
-2. R2 `3bc9f20e2b675f9285b7720fd24cdaf3aafb5997`
-3. R3 `c88680e49257cfd02fd520c4324cdd72a4f59fdd`
-4. R4 `182df830eb50e88e4e84f48fdda3822ce1b1afb1`
-5. R5 committed portion `96a9097bd23c247011ed8d042fc153a77923143d`
-6. R5 supplemental `dead34b7e1f88bdc42fed68f3d80568cccfdd1e7`
-7. R6 `9a5e1390f2291bcaf5c1cbcf5a9f1bf85aed92e8`
-8. R7 `34f5cb017c68690bd6930eaaa1f3d895005ad091`
-9. R8 `2a7aeb9af6bd83db7c149be95a303100fe9dd307`
+| Order | Input | Input commit | Integration commit |
+|---:|---|---|---|
+| 1 | R1 | `8b8acb7397496e62b48e5b781e933339445774b0` | `c2a897eab` |
+| 2 | R2 | `3bc9f20e2b675f9285b7720fd24cdaf3aafb5997` | `359255a33` |
+| 3 | R3 | `c88680e49257cfd02fd520c4324cdd72a4f59fdd` | `32b4fc8d1` |
+| 4 | R4 | `182df830eb50e88e4e84f48fdda3822ce1b1afb1` | `d1a99171f` |
+| 5 | R5 committed | `96a9097bd23c247011ed8d042fc153a77923143d` | `d16300009` |
+| 6 | R5 supplemental | `dead34b7e1f88bdc42fed68f3d80568cccfdd1e7` | `3acd97eff` |
+| 7 | R6 | `9a5e1390f2291bcaf5c1cbcf5a9f1bf85aed92e8` | `2f129af5c` |
+| 8 | R7 | `34f5cb017c68690bd6930eaaa1f3d895005ad091` | `5b55a8db8` |
+| 9 | R8 | `2a7aeb9af6bd83db7c149be95a303100fe9dd307` | `44c5c4c34` |
 
-R5's 17 tracked dirty files were reviewed before commit. They were all within
-the assigned Windows/WSL installer, sandbox-home, J01, and status scope.
-Untracked `outputs/` was not included. The R5 tracked worktree was clean after
-the supplemental commit.
+Before the R5 supplemental commit, its 17 modified tracked files were reviewed
+with `git status --short`, `git diff --stat`, and the full `git diff`. All 17
+belonged to Windows/WSL installer portability, sandboxed install/doctor,
+J01/status lifecycle, or status fail-closed handling. The untracked `outputs/`
+evidence was retained and not committed. R5 has no uncommitted tracked code.
 
-## Conflicts resolved
+## Conflict resolutions
 
 Two textual conflicts were resolved paragraph by paragraph:
 
 - `harness/lib/research_orchestration/runtime.py`: retained R1 prompt,
-  requirements, readiness, and JSON contract behavior; retained R3 lifecycle,
-  resume, exact-checkout, and Windows-safe evidence behavior. Non-checkout
-  roots fail closed rather than inheriting a parent repository identity.
+  requirements, readiness, and persisted contract semantics together with R3
+  experiment lifecycle, resume/import, exact-checkout provenance, and
+  Windows-safe evidence behavior.
 - `tests/journeys/phase22/code/journey_runner.py`: retained R2 Windows
-  sidecar/path behavior and R4 cache/copytree portability. Cache directories
-  are always ignored; plugin tests are ignored only in the plugin-directory
-  fallback copy.
+  sidecar/path handling, R4 cache/copytree portability, and the R5 installer
+  journey interpreter/sandbox behavior.
 
-No conflict occurred in `autosci_bridge.py` or `bin/solar`; their R2/R3/R4 and
-R5/R6 semantics composed cleanly and were then covered by combined tests.
+`autosci_bridge.py` and `bin/solar` did not have textual conflicts. Their
+R2/R3/R4 and R5/R6 behavior composed cleanly and was verified through combined
+production-path tests.
 
-## Correctness repairs after integration
+## Correctness repairs
 
-### Benchmark result semantics
+### R4 benchmark semantics
 
-- Preserved public mock compatibility by accepting the optional agent at the
-  doctor boundary while running per-agent readiness from `run()`.
-- Kept process completion separate from target quality:
-  `benchmark_execution_verdict=PASS`, low target quality
-  `target_quality_verdict=FAIL`, and no real run
-  `target_quality_verdict=NOT_TESTED`.
-- Updated library/tool schemas, JSON, Markdown, and plain CLI output together.
+- Benchmark process completion and target quality are separate:
+  `benchmark_execution_verdict=PASS` means the scoring process completed;
+  insufficient target quality is `target_quality_verdict=FAIL`; a dry run with
+  no target execution is `target_quality_verdict=NOT_TESTED`.
+- Legacy dry-run fields, new schema fields, JSON, Markdown, and CLI output use
+  the same meaning.
+- Both production package copies, `harness/lib/benchmark` and the installable
+  `harness/tools/benchmark` mirror, were repaired. A regression test now fails
+  if those copies drift.
 
-### Status, platform, and privacy lifecycle
+### R5 status and Windows entrypoints
 
-- `/status` exceptions return `ok=false`, `status=degraded`, and stable code
-  `status_payload_unavailable`; exception text, paths, and secrets are not
-  returned and the server remains alive.
-- Added a production-route regression test.
-- Repaired Windows `solar backup`/`restore` so a `C:\...` path is converted for
-  Git Bash `tar`; restored compatible top-level `status` and `ok` fields.
-- J24 changed from a real backup failure to a passing privacy lifecycle.
+- `/status` payload exceptions return `ok=false`, `status=degraded`, and stable
+  code `status_payload_unavailable`. Exception strings, paths, tokens, and
+  provider details are not exposed; the server remains alive.
+- Both installed `harness-config.sh` copies honor `SOLAR_PYTHON`. This prevents
+  Git Bash from invoking the WindowsApps `python3` alias and contaminating
+  `SOLAR_PANE_RUNTIME` with installer output.
+- The production J01 install, doctor, CLI status, and HTTP status-server path
+  passes in a sandbox home after this repair.
 
-### Token channels
+### R6 token and identity safety
 
-- Session, logout, profile, privacy export, and privacy delete read the token
-  from stdin by default; `--token-stdin` is explicit and `--token` remains only
-  as a documented deprecated compatibility path.
-- Tests assert the raw token is absent from subprocess argv, stdout/stderr,
-  identity stores, and exported artifacts. Tokens are not placed in an
-  environment artifact. Authentication errors remain non-enumerating.
+- Session/profile/privacy/logout read tokens from stdin by default;
+  `--token-stdin` is explicit. `--token` remains only as deprecated
+  compatibility and is warned against in the CLI documentation.
+- Tests assert raw tokens are absent from subprocess argv, stdout/stderr,
+  stores, exports, and environment artifacts. Authentication failures do not
+  disclose whether a username exists.
 
-### Advanced optimizer product binding
+### R7 production binding
 
-- Registered `autosci-advanced-ai4rnd-worker` in the physical operator
-  registry and exposed `solar advanced --envelope FILE|-`.
-- Product-entrypoint subprocess tests execute the Bayesian reference optimizer
-  and CPU-safe SFT adapter without importing `execute_operator` as the proof.
-- TaskGraph/evidence/model/artifact identifiers remain in the output. Other
-  algorithms continue to return explicit `unsupported`.
+- `autosci-advanced-ai4rnd-worker` is bound in the physical operator registry
+  and is dispatchable by TaskGraph.
+- Bayesian optimization and the CPU-safe SFT adapter are executed through the
+  production `bin/solar advanced` CLI, not by directly importing
+  `execute_operator` as the only evidence.
+- TaskGraph state, evidence ledger, model lineage, artifacts, and output hashes
+  are traceable. All non-reference algorithms remain explicit `unsupported`;
+  results are not copied across algorithm names.
 
-### Repository governance and sandbox truthfulness
+### R8 enforced governance
 
-- Removed pre-existing unresolved merge markers from
-  `skills/obsidian-daily/SKILL.md` while retaining its upstream metadata.
-- Wired safe staging, secret scan, filename validation, and their unit tests
-  into `.github/workflows/solar-ci.yml`.
-- Secret scanning reads tracked files, exact staged index blobs, and untracked
-  commit candidates. Output contains rule/path/line only.
-- Forty-four pre-existing fixture/example lines are reviewed through
-  `.secret-scan-allowlist`, pinned by rule, path, and SHA-256 of the exact line.
-  Any content change fails closed and is scanned again; there is no directory
-  exemption.
-- Fixed the Windows registry-root parent index. The sandbox test launches a
-  real subprocess and verifies allowed-write success and outside-write denial
-  where an OS sandbox is available. Native Windows remains an explicit S01
-  skip; transport metadata is not treated as OS enforcement.
+- `.github/workflows/solar-ci.yml` executes safe-staging, secret-scan, Windows
+  filename, hygiene, and sandbox fixture tests. The job now sets up Python 3.12
+  and installs pytest on a fresh runner.
+- Secret scanning covers tracked files, exact staged index blobs, and untracked
+  commit candidates. Output is restricted to rule, path, and line; matched
+  values are never printed.
+- The Windows registry-root parent index was fixed.
+- Sandbox tests launch real child processes. Allowed writes succeed and
+  outside writes fail where an OS sandbox exists. Native Windows has no
+  configured OS-level enforcement here, so S01 remains explicitly unresolved
+  and skipped; transport metadata is not treated as a sandbox.
 
-### Upstream parity and scientific claim scope
+### R1 parity, R2 live paths, R3 lifecycle, and R4 claim scope
 
-- Preserved the captured parity fixture and added configurable
-  `harness/tools/autosci_upstream_parity.py`. It passes the same prompt to the
-  Solar production bridge and a configured upstream JSON-argv command, then
-  compares intent, workflow stages, input type, language, deliverable type,
-  and required evidence. Missing/unavailable upstream returns `PARTIAL` with
-  exit 2, never PASS.
-- No executable repository upstream AutoSci entrypoint was available in this
-  environment, so A09/T06 remain `PARTIAL`.
-- Claim verification now compares structured population, environment, time
-  range, input domain, metric, and confidence/uncertainty scope. English and
-  Chinese broad-language regexes are guardrails only. Tests cover bounded
-  support, universal overclaim, insufficient evidence, contradiction, and
-  Chinese terms including `所有`, `任何环境`, `始终`, and `百分之百`.
+- Captured upstream parity fixtures remain as offline regression. The
+  configurable `harness/tools/autosci_upstream_parity.py` sends the same prompt
+  to Solar and a configured real upstream command, comparing intent, workflow
+  stages, input type, language, deliverable type, and required evidence.
+- No executable same-prompt upstream AutoSci entrypoint was found in this
+  repository or the read-only sibling AutoSci checkout. A09/T06 therefore
+  remain `PARTIAL`.
+- R3 deterministic lifecycle, J07/J21, resume, external evidence import, crash
+  recovery, and lease/concurrency all pass after combining the R1 contract.
+- Claim scope compares population, environment, time range, input domain,
+  metric, and confidence/uncertainty. Regexes are guardrails only. Tests cover
+  bounded support, universal overclaim, insufficient evidence, contradiction,
+  and Chinese terms `所有`, `任何环境`, `始终`, and `百分之百`.
 
-### Live journey evidence
+## Live-provider evidence
 
-- J05 final product status: `ENVIRONMENT_BLOCKED`. Both provider-backed
-  discovery calls timed out after 60 seconds and produced an incomplete
-  provider boundary; this is not recorded as product FAIL. Evidence:
+The authorized provider environment was inherited only by the test processes;
+names/values were not printed, copied into artifacts, or committed.
+
+- J05: `ENVIRONMENT_BLOCKED`. The topic attempt timed out at the bounded
+  60-second provider boundary; the anchored attempt completed locally but did
+  not establish a complete provider boundary. No 429 was observed. Evidence:
   `outputs/phase22-real-journeys/p22j05-20260807T050859Z-5500/journey-result.json`.
-- J20 final product status: `ENVIRONMENT_BLOCKED`. Discover used three bounded
-  attempts with delays 0/2/5 seconds and ended `provider_incomplete`; survey
-  and research each ran once and ended `provider_inconclusive`. Evidence:
+- J20: `ENVIRONMENT_BLOCKED`. Discovery used three bounded attempts with
+  delays 0/2/5 seconds; each ended `provider_incomplete`. Survey and research
+  each ran once and ended `provider_inconclusive`. No 429 was observed.
+  Evidence:
   `outputs/phase22-real-journeys/p22-j20-20260807T051219Z/journey-result.json`.
-- Provider environment variables were inherited/injected only into test
-  processes and were never printed, copied to evidence, or committed.
-- Writer/reviewer independence remains limited: reloaded artifact hashes and a
-  distinct invocation context are proven, but no separate live reviewer
-  provider completed in this run. Metadata alone is not claimed as proof.
+- Writer/reviewer independence remains limited. Distinct invocation contexts
+  and reloaded artifact hashes are proven, but no separate live reviewer
+  provider completed. Metadata alone is not claimed as independent review.
 
 ## Test execution
 
-Every pytest command used the repository `.venv`, an isolated basetemp, and an
-isolated cache. Logs were not redirected into basetemp.
+All pytest runs used the repository `.venv`, a unique `--basetemp`, and a
+unique cache outside basetemp. Logs were not redirected into basetemp.
 
-| Scope | Exact selector summary | Exit | Outcome |
-|---|---|---:|---|
-| R1 | `pytest test_research_control_plane_contract.py test_research_intent.py test_research_workflow_selection.py test_research_production_routing.py test_research_production_runtime.py test_autosci_intake_contract.py` | 0 | 65 passed |
-| R3 core | `pytest test_phase5_lifecycle_recovery.py test_research_runtime_lease.py test_j21_experiment_build_handoff.py` | 0 | 30 passed |
-| R2 operators | `pytest test_research_synthesis_operators.py test_action_delivery_operators.py test_paper_prepare.py test_source_cli_tools.py` | 0 | 102 passed |
-| R4 runtime/benchmark | `pytest test_task_graph_runtime_planes.py test_graph_scheduler_external_deps.py test_claim_verdict_gate.py test_benchmark_report_schema.py test_terminal_bench_adapter.py test_platform_workflow_benchmark.py` | 0 | 38 passed, 15 warnings |
-| R4 journeys | `pytest test_j03_platform_benchmark.py test_j08_claim_verification.py test_j09_report_delivery.py test_j22_evidence_review_followup.py` | 0 | 4 passed |
-| R5/R6/R7 direct | `pytest` status-route group, local identity privacy/security, advanced operator unit and product entrypoint | 0 | 24 passed |
-| R7 regression | `pytest` GEPA integration, TaskGraph state, model registry aliases, logical router | 0 | 170 passed, 24 warnings |
-| R8 | `pytest test-safe-staging.py test-secret-scan.py test-windows-filenames.py test_sandbox_fallback_matrix.py test_research_transport_coverage.py` | 0 | 127 passed, 1 skipped |
-| R2/R3/R5/R6 journeys | J04, J06, J07, J01, J15, J18, J24 | 1 | 5 passed, 1 skipped, J24 failed before repair |
-| J24 repair rerun | `pytest test_j24_privacy_lifecycle.py` | 0 | 1 passed |
-| R3 combined | J07, J21, state store, result validation, orchestrator, production runtime | 0 | 121 passed |
-| Status final | four status-server files | 0 | 14 passed |
-| J05/J20 live diagnostics | two combined runs before evidence/path repairs | 1 | 2 failed each; causes repaired |
-| J05/J20 live classification | combined final classification run | 1 | J05 skipped as `ENVIRONMENT_BLOCKED`; J20 classification defect remained |
-| J20 final | `pytest test_j20_research_synthesis.py -m live_provider` | 0 | 1 passed; product status `ENVIRONMENT_BLOCKED` |
+The final combined acceptance command was:
 
-Final successful pytest-command totals are non-deduplicated because the
-combined regression intentionally repeats high-risk selectors: 697 passed,
-0 failed, 1 skipped. Separately, J05 has one accepted environment-blocked skip
-and J18 has one explicit serial-TMUX authorization skip.
+```powershell
+$env:PYTHONPATH=(Join-Path (Get-Location) 'harness')
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' -m pytest -q harness/tests/benchmark/test_benchmark_report_schema.py harness/tests/benchmark/test_terminal_bench_adapter.py harness/tests/test_status_server_status_route.py harness/tests/test_advanced_ai4rnd_operator.py harness/tests/test_advanced_ai4rnd_product_entrypoint.py harness/tests/test_harness_config_python_selection.py harness/tests/evaluators/scientific/test_claim_verdict_gate.py tests/vertical/account_management/test_local_identity_privacy_channel_security.py tests/vertical/account_management/test_phase22_privacy_uninstall_atomic.py tests/test-safe-staging.py tests/test-secret-scan.py tests/test-windows-filenames.py harness/tests/research_orchestration/test_sandbox_fallback_matrix.py tests/journeys/phase22/code/test_j01_install_status.py tests/journeys/phase22/code/test_j15_cross_platform_install_matrix.py tests/journeys/phase22/code/test_j18_tmux_cli_status_config.py tests/journeys/phase22/code/test_j24_privacy_lifecycle.py --basetemp C:\tmp\oslf-final-combo-bt-20260807 -o cache_dir=C:\tmp\oslf-final-combo-cache-20260807
+```
 
-Additional executable checks:
+Exit `0`: **154 passed, 0 failed, 2 skipped**, 14 warnings, 127.05s. The skips
+were J18 serial-TMUX authorization and native-Windows S01 OS sandbox
+enforcement.
 
-- `bash harness/tests/installer/test-s1-installer.sh`: exit 0, 38/38 checks.
-- `bash harness/tests/installer/test-tvs-doctor.sh`: exit 0, test skipped because
-  `/home/james/TVS` is absent.
-- `bash tests/test-repo-hygiene.sh`: exit 0.
-- PyYAML parse of `.github/workflows/solar-ci.yml`: exit 0.
-- `scripts/check-windows-filenames.py`: exit 0; final staged-tree rerun scanned
-  4,444 files.
-- `scripts/check-safe-staging.py`: exit 0.
-- `scripts/check-secret-scan.py`: exit 0, 4,444 tracked/staged/untracked
-  candidates scanned, no secrets found.
+Other executed suites:
 
-## Open items and source gaps
+| Scope | Exit | Result |
+|---|---:|---|
+| R1 control plane, intent, workflow selection, routing/runtime, intake | 0 | 65 passed |
+| R2 synthesis/action operators, paper/source CLI, non-live journeys | 0 | 102 operator tests plus accepted journey passes |
+| R3 lifecycle recovery, lease, J07/J21, resume/import/crash | 0 | 121 passed |
+| R4 TaskGraph/scheduler/claim/benchmark/J03/J08/J09/J22 | 0 | 42 passed |
+| R7 GEPA, TaskGraph state, model registry, logical router | 0 | 170 passed |
+| R8 governance and real sandbox subprocess matrix | 0 | 127 passed, 1 skipped |
+| Status-server final route group | 0 | 14 passed |
+| J15/J18 rerun | 0 | 1 passed, 1 skipped |
+| J01 post-fix rerun | 0 | 1 passed |
+| Interpreter-selection regression | 0 | 2 passed |
 
-The requested canonical ledger
-`docs/integrations/autosci/legacy-issue-closure-ledger.md` and issue map
-`.codex-tmp/legacy-issue-audit-20260806/github-issue-map.json` do not exist in
-the baseline, current worktrees, or reachable Git history. This repair does not
-invent mappings and does not modify the workbook, brief report, ledger, or
-GitHub Issues.
+One pre-fix non-live journey batch had J01 fail because WindowsApps `python3`
+output polluted the configured runtime. This was a real product portability
+failure, not relabeled. The interpreter-selection fix was added and both J01
+and the final combined command then passed. An earlier broad pytest command
+without `PYTHONPATH=harness` failed during collection; it was a runner
+configuration error and was rerun successfully with the production package
+path.
 
-- Legacy IDs fully fixed with explicit local evidence: G01, G04, G05, G06,
-  S02, S05.
-- Legacy IDs still partial/open: A09 and T06 (`PARTIAL`, real upstream not
-  executable here); S01 (native Windows OS-level sandbox enforcement not
-  available).
-- Other Legacy ID closure cannot be asserted without the missing canonical
-  ledger/map.
-- L2 fully fixed: not asserted without the missing canonical closure mapping.
-- L2 partial/open/not available: `Workflow :: Search Strategy Formation`,
-  `Workflow :: Technical Signal Extraction`, and `Workflow :: Trend & Gap
-  Analysis` remain provider-environment-blocked in J05/J20. Separate live
-  reviewer-provider independence remains unproven. Non-reference R7 algorithms
-  remain explicitly unsupported.
+Additional exact executable checks:
+
+```powershell
+& 'C:\Program Files\Git\bin\bash.exe' harness/tests/installer/test-s1-installer.sh
+& 'C:\Program Files\Git\bin\bash.exe' harness/tests/installer/test-tvs-doctor.sh
+& 'C:\Program Files\Git\bin\bash.exe' scripts/check-repo-hygiene.sh
+& 'C:\Program Files\Git\bin\bash.exe' tests/test-repo-hygiene.sh
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' scripts/check-safe-staging.py
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' scripts/check-secret-scan.py
+& 'C:\Users\j50058254\Desktop\Github repo\OpenSolar-Canonical\.venv\Scripts\python.exe' scripts/check-windows-filenames.py
+```
+
+Results: installer 38/38 passed; TVS doctor exited 0 with an explicit skip
+because no sandbox TVS checkout exists; hygiene positive and negative controls
+passed; CI YAML parsed; safe staging passed; Windows filenames passed; secret
+scan passed over 4,445 tracked/staged/untracked candidates with no secret.
+
+## Legacy and L2 disposition
+
+The canonical pre-repair ledger and issue map were found and read, without
+modification, in the Phase 5 integration worktree:
+
+- `C:\Users\j50058254\Desktop\Github repo\.phase5-worktrees\integration\docs\integrations\autosci\legacy-issue-closure-ledger.md`
+- `C:\Users\j50058254\Desktop\Github repo\.phase5-worktrees\integration\.codex-tmp\legacy-issue-audit-20260806\github-issue-map.json`
+
+This code repair does not update those sources. The following is the
+integration agent's evidence disposition for final-checker review:
+
+- Legacy IDs fully fixed: `E06`, `E07`, `E12`, `G01`, `G04`, `G05`, `G06`,
+  `N05`, `P01`, `P02`, `P04`, `P05`, `P06`, `P08`, `S02`, `S04`, `S05`.
+- Legacy IDs still partial/open: `A02`, `A08`, `A09`, `E02`, `E03`, `E04`,
+  `E05`, `N09`, `P03`, `P07`, `P09`, `S01`, `S03`, `T02`, `T06`.
+- L2 fully fixed by new direct evidence: `Claim & Acceptance-Criteria
+  Comparison`, `Evidence, Factuality & Scientific Validity Evaluator`,
+  `Verdict, Blocker & Residual-Risk Classification`, `Execution Admission,
+  Lease & Concurrency Control`, `Experimental Asset Construction`, and
+  `Runtime Control Loop & Run Lifecycle Management`.
+- L2 still partial/open: upstream parity and request-taxonomy variants;
+  provider-backed `Search Strategy Formation`, `Technical Signal Extraction`,
+  and `Trend & Gap Analysis`; live reviewer independence; native Windows OS
+  sandbox enforcement; packaged Windows/macOS apps, remote/multi-session TMUX,
+  GUI/TUI; hosted account registration/provider revocation; live WeChat and
+  Discord routing; full dataset/policy/model graph services.
+- L2 not available: MIPROv2, TextGrad, bandit routing, cost-aware RL, AFlow,
+  MCTS, ADAS, LoRA, DPO, GRPO, agent RL, judge calibration, reward modeling,
+  CEGIS, memory/retrieval learning, Self-RAG, and reranker training. Only the
+  Bayesian and CPU-safe SFT reference paths are implemented.
 
 ## Final quality gates
 
-- `git diff --check`: passed before commit.
-- Merge-marker scan: required after report creation and before commit.
-- Secret scan: passed with no secret value output.
-- Shared Phase 22 workbook, brief report, progress ledger, closure ledger, and
-  GitHub Issues were not modified.
-- The integration branch is not pushed. Final commit and clean post-commit
-  status are recorded in the ignored result JSON and final delivery response.
+- `git diff --check`: passed before staging.
+- Merge-marker scan: no unresolved markers.
+- Safe-staging, Windows filename, hygiene, and secret scans: passed.
+- No credential, `.env` content, workbook lock file, output evidence,
+  `.pytest-*`, or `.codex-tmp` artifact is committed.
+- The branch is not pushed. Clean post-commit status and the final commit are
+  recorded in `.codex-tmp/legacy-fix-integration-repair/result.json`.

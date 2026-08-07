@@ -13,9 +13,10 @@ SOLAR_HARNESS_CONFIG_SH_LOADED=1
 HARNESS_DIR="${HARNESS_DIR:-$HOME/.solar/harness}"
 SOLAR_USER_CONFIG="${SOLAR_USER_CONFIG:-$HARNESS_DIR/config/solar-user-config.json}"
 SOLAR_MODEL_REGISTRY="${SOLAR_MODEL_REGISTRY:-$HARNESS_DIR/config/model-registry.json}"
+SOLAR_CONFIG_PYTHON="${SOLAR_PYTHON:-python3}"
 
 solar_model_registry() {
-  python3 "$HARNESS_DIR/lib/model_registry.py" --registry "$SOLAR_MODEL_REGISTRY" "$@"
+  "$SOLAR_CONFIG_PYTHON" "$HARNESS_DIR/lib/model_registry.py" --registry "$SOLAR_MODEL_REGISTRY" "$@"
 }
 
 SOLAR_DEFAULT_MAIN_MODEL="$(solar_model_registry default main_model 2>/dev/null || printf 'opus')"
@@ -24,7 +25,7 @@ SOLAR_DEFAULT_LAB_BUILDER_MATRIX="$(solar_model_registry validate-lab-matrix "$(
 solar_config_json_get() {
   local dotted_key="$1"
   local default_value="${2:-}"
-  python3 - "$SOLAR_USER_CONFIG" "$dotted_key" "$default_value" <<'PY'
+  "$SOLAR_CONFIG_PYTHON" - "$SOLAR_USER_CONFIG" "$dotted_key" "$default_value" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -58,7 +59,7 @@ PY
 solar_config_json_set() {
   local dotted_key="$1"
   local value="$2"
-  python3 - "$SOLAR_USER_CONFIG" "$dotted_key" "$value" <<'PY'
+  "$SOLAR_CONFIG_PYTHON" - "$SOLAR_USER_CONFIG" "$dotted_key" "$value" <<'PY'
 import json
 import os
 import sys

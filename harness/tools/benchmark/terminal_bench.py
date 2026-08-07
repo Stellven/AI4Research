@@ -96,9 +96,14 @@ class TerminalBench20Adapter:
             notes=notes,
         )
 
-    def doctor(self) -> BenchmarkDoctor:
-        """Check global prerequisites without requiring API-key-only auth."""
-        return self._doctor_for_agent()
+    def doctor(self, agent: str | None = None) -> BenchmarkDoctor:
+        """Check prerequisites, optionally scoped to the requested agent.
+
+        The optional argument preserves the public ``doctor()`` compatibility
+        surface while allowing ``run()`` to avoid requiring credentials for
+        every registered agent.
+        """
+        return self._doctor_for_agent(agent)
 
     def list_tasks(self) -> list[BenchmarkTask]:
         """Return known benchmark tasks from Harbor registry, with safe smoke tasks first."""
@@ -191,7 +196,7 @@ class TerminalBench20Adapter:
                 )
 
         # DOCTOR: check prerequisites
-        doc = self._doctor_for_agent(req.agent)
+        doc = self.doctor(req.agent)
         if doc.missing_prereqs:
             return self._pending_result(
                 base_result,
@@ -264,6 +269,10 @@ class TerminalBench20Adapter:
                 verdict="ok",
                 failure_modes=(),
                 limitations=("dry_run: no actual execution",),
+                process_status="completed",
+                benchmark_execution_verdict="PASS",
+                target_quality_status="not_run",
+                target_quality_verdict="NOT_TESTED",
             )
 
         # EXEC: delegate to Harbor and capture raw artifacts. Harbor owns scoring.
@@ -295,6 +304,8 @@ class TerminalBench20Adapter:
         harbor_score, completed_count, error_count, harbor_result_path = (
             self._parse_harbor_job_summary(run_dir / "harbor-jobs")
         )
+        process_completed = return_code == 0 or harbor_score is not None or completed_count is not None
+        target_quality_ok = return_code == 0 and not error_count
         completed_tasks = req.tasks if verdict == "ok" else ()
         if harbor_score is not None and completed_count is not None:
             pass_count = round(harbor_score * completed_count)
@@ -343,6 +354,10 @@ class TerminalBench20Adapter:
             verdict=verdict,
             failure_modes=failure_modes,
             limitations=limitations,
+            process_status="completed" if process_completed else "failed",
+            benchmark_execution_verdict="PASS" if process_completed else "FAIL",
+            target_quality_status="passed" if target_quality_ok else "failed",
+            target_quality_verdict="PASS" if target_quality_ok else "FAIL",
         )
 
     def _parse_harbor_job_summary(
@@ -415,6 +430,10 @@ class TerminalBench20Adapter:
                     verdict=data.get("verdict", "error"),
                     failure_modes=tuple(data.get("failure_modes", ())),
                     limitations=tuple(data.get("limitations", ())),
+                    process_status=data.get("process_status", "completed"),
+                    benchmark_execution_verdict=data.get("benchmark_execution_verdict", "PASS" if data.get("verdict") != "error" else "FAIL"),
+                    target_quality_status=data.get("target_quality_status", "not_run"),
+                    target_quality_verdict=data.get("target_quality_verdict", "NOT_TESTED"),
                 )
             except (json.JSONDecodeError, OSError):
                 pass
@@ -455,6 +474,10 @@ class TerminalBench20Adapter:
             verdict="error",
             failure_modes=("no_run_json",),
             limitations=("Reconstructed from exit_code.txt only",),
+            process_status="failed",
+            benchmark_execution_verdict="FAIL",
+            target_quality_status="not_run",
+            target_quality_verdict="NOT_TESTED",
         )
 
     def _base_result(
@@ -485,6 +508,10 @@ class TerminalBench20Adapter:
             stdout_path=None,
             stderr_path=None,
             artifacts=(),
+            process_status="pending",
+            benchmark_execution_verdict="NOT_TESTED",
+            target_quality_status="not_run",
+            target_quality_verdict="NOT_TESTED",
         )
 
     def _error_result(
@@ -496,6 +523,10 @@ class TerminalBench20Adapter:
             failure_modes=failure_modes,
             completed_at=now,
             limitations=(notes,),
+            process_status="failed",
+            benchmark_execution_verdict="FAIL",
+            target_quality_status="not_run",
+            target_quality_verdict="NOT_TESTED",
         )
         return BenchmarkRunResult(**base)
 
@@ -509,6 +540,10 @@ class TerminalBench20Adapter:
             completed_at=now,
             pending_count=len(base.get("tasks_requested", ())),
             limitations=(notes,),
+            process_status="pending",
+            benchmark_execution_verdict="NOT_TESTED",
+            target_quality_status="not_run",
+            target_quality_verdict="NOT_TESTED",
         )
         return BenchmarkRunResult(**base)
 

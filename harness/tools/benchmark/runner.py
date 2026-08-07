@@ -269,10 +269,12 @@ def _cmd_run(args: argparse.Namespace) -> int:
     run_dir = reports_base / result.run_id
     write_run_artifacts(run_dir, result)
 
-    event_name = "benchmark.run.completed" if result.verdict == "ok" else "benchmark.run.pending"
+    event_name = "benchmark.run.completed" if result.benchmark_execution_verdict == "PASS" else "benchmark.run.pending"
     _emit_event(event_name, {
         "run_id": result.run_id,
         "verdict": result.verdict,
+        "benchmark_execution_verdict": result.benchmark_execution_verdict,
+        "target_quality_verdict": result.target_quality_verdict,
         "score": result.score,
         "pass_count": result.pass_count,
         "fail_count": result.fail_count,
@@ -284,6 +286,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
     else:
         print(f"Run ID: {result.run_id}")
         print(f"Verdict: {result.verdict}")
+        print(f"Benchmark execution: {result.benchmark_execution_verdict}")
+        print(f"Target quality: {result.target_quality_verdict}")
         if result.failure_modes:
             print(f"Failure modes: {', '.join(result.failure_modes)}")
         if result.limitations:
