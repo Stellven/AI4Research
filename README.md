@@ -1,4 +1,4 @@
-# OpenJiuwen Solar
+# OpenJiuwen Solar / AI4Research
 
 OpenJiuwen Solar is a Python/bash harness for running a local multi-agent
 software cockpit with Codex or Claude Code as the selected pane runtime. It
@@ -9,6 +9,35 @@ agents, and keeps human approval gates in the loop.
 Solar is not a finished autonomous cloud service and not a TypeScript
 orchestrator product. The working product today is the local harness plus the
 installer/lifecycle tooling around it.
+
+## AI4Research: Governed Research and Delivery
+
+AI4Research is the research-facing product line of Solar. It turns a natural
+language goal into a governed local execution path rather than directly
+handing it to an agent: intake produces a request envelope, planning compiles
+contracts and a task graph, compatible operators execute within declared
+read/write scopes, and gates retain the evidence required for closure.
+
+The same architecture supports product delivery and AutoSci/DeepResearch:
+
+```text
+goal -> intake -> requirement/contract compilation -> TaskGraph
+     -> capability-aware operator routing -> evidence + review gates
+     -> deliverables and auditable local runtime state
+```
+
+The dashboard and desktop shell expose the local status-server projection,
+settings, human gates, and deliverables. They do not turn the workstation
+harness into a hosted multi-tenant control plane. Model and provider routing
+is selected locally; live provider access still depends on authentication,
+approval, network access, quota, and the selected runtime.
+
+AutoSci commands are available through `solar harness autosci` and the
+documented skill surface below. They create structured research artifacts for
+discovery, ingestion, claims, experiments, review, and reports, but any
+provider-backed or side-effecting operation remains approval- and
+configuration-gated. The current release line is `1.0.0-rc.9`; the installation
+commands in the next section are the supported commands for this tree.
 
 ## Quick Start
 

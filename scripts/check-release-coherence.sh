@@ -90,7 +90,7 @@ if [ -n "$PUBLIC_STALE_TAGS" ]; then
 else
     ok "no stale tags in public version-bearing surfaces"
 fi
-DESKTOP_VERSIONS="$(python3 - <<'PY'
+DESKTOP_VERSIONS="$(python3 - <<'PY' | tr -d '\r'
 import json
 from pathlib import Path
 
