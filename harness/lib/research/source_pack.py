@@ -110,6 +110,8 @@ def write_source_pack(
                 "content_sha256": digest,
                 "extract_path": str(extract_path.relative_to(root)),
                 "provider": provider_name,
+                "query": str(document.query or ""),
+                "response_status": document.response_status,
             }
         )
         ev_id = evidence_id(source_id, 0, len(document.raw_text), digest)
@@ -143,4 +145,17 @@ def write_source_pack(
         "sources_path": str(sources_path),
         "evidence_path": str(evidence_path),
         "extracts_dir": str(extracts_dir),
+        "provider_evidence": [
+            {
+                "source_id": row["source_id"],
+                "title": row["title"],
+                "source_url": row["url"],
+                "provider": row["provider"],
+                "query": row["query"],
+                "retrieved_at": row["retrieved_at"],
+                "response_status": row["response_status"],
+                "content_sha256": row["content_sha256"],
+            }
+            for row in source_rows
+        ],
     }

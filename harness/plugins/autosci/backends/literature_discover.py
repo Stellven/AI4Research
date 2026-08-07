@@ -259,7 +259,7 @@ def _s2_retry_warnings() -> list[str]:
 
 def _s2_retry_message(event: dict[str, Any]) -> str:
     return (
-        "Semantic Scholar rate-limited "
+        "Semantic Scholar transient provider failure "
         f"{event['method']} {event['endpoint']} with HTTP {event['status_code']}; "
         f"waiting {event['delay_seconds']:g}s before retry "
         f"{event['retry_number']}/{event['max_retries']}."
@@ -308,16 +308,32 @@ def _s2_request(method: str, url: str, *, params: dict[str, Any] | None = None, 
     retry_delay = _s2_retry_delay_seconds()
     attempt = 0
     while True:
-        response = requests.request(
-            method,
-            url,
-            params=params or {},
-            json=json_body,
-            headers=_s2_headers(),
-            timeout=30,
-        )
+        try:
+            response = requests.request(
+                method,
+                url,
+                params=params or {},
+                json=json_body,
+                headers=_s2_headers(),
+                timeout=30,
+            )
+        except Exception as exc:
+            if attempt >= max_retries:
+                raise RuntimeError(f"Semantic Scholar request failed after {attempt + 1} attempt(s): {type(exc).__name__}") from exc
+            delay = retry_delay * (attempt + 1)
+            _record_s2_retry_event(method=method, url=url, status_code=0, retry_number=attempt + 1, max_retries=max_retries, delay_seconds=delay)
+            if delay > 0:
+                time.sleep(delay)
+            attempt += 1
+            continue
         status_code = int(getattr(response, "status_code", 0) or 0)
-        if status_code == 429 and attempt < max_retries:
+        if status_code == 429 or 500 <= status_code <= 599:
+            if attempt >= max_retries:
+                try:
+                    response.raise_for_status()
+                except Exception as exc:
+                    raise RuntimeError(f"Semantic Scholar API failed with HTTP {status_code} after {attempt + 1} attempt(s)") from exc
+                raise RuntimeError(f"Semantic Scholar API failed with HTTP {status_code} after {attempt + 1} attempt(s)")
             headers = getattr(response, "headers", {}) or {}
             retry_after = _retry_after_seconds(headers.get("Retry-After"))
             delay = retry_after if retry_after is not None else retry_delay * (attempt + 1)
@@ -333,12 +349,6 @@ def _s2_request(method: str, url: str, *, params: dict[str, Any] | None = None, 
                 time.sleep(delay)
             attempt += 1
             continue
-        if status_code == 429:
-            try:
-                response.raise_for_status()
-            except Exception as exc:
-                raise RuntimeError(f"Semantic Scholar API rate limited after {attempt + 1} attempt(s)") from exc
-            raise RuntimeError(f"Semantic Scholar API rate limited after {attempt + 1} attempt(s)")
         response.raise_for_status()
         return response.json()
 

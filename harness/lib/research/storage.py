@@ -16,6 +16,8 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -161,6 +163,50 @@ def validate_jsonl(path: str) -> List[str]:
             except json.JSONDecodeError as exc:
                 errors.append(f"line {line_num}: {exc}")
     return errors
+
+
+class ResearchRunStateStore:
+    """Canonical, single-writer state transaction for provider-backed runs.
+
+    The state document and append-only journal are written by this class only.
+    Callers must not maintain a wiki sidecar or legacy status file in parallel.
+    """
+
+    def __init__(self, run_dir: str | Path) -> None:
+        self.root = Path(run_dir)
+        self.state_path = self.root / "research-run-state.json"
+        self.journal_path = self.root / "research-run-state.jsonl"
+
+    def load(self) -> Dict[str, Any]:
+        if not self.state_path.exists():
+            return {"revision": 0, "completed_nodes": [], "state": "init", "resume_token": ""}
+        return json.loads(self.state_path.read_text(encoding="utf-8"))
+
+    def commit(
+        self,
+        *,
+        state: str,
+        completed_nodes: List[str],
+        resume_token: str = "",
+        evidence_refs: List[Dict[str, Any]] | None = None,
+    ) -> Dict[str, Any]:
+        current = self.load()
+        payload = {
+            "schema": "opensolar.research_run_state.v1",
+            "revision": int(current.get("revision") or 0) + 1,
+            "state": state,
+            "completed_nodes": list(dict.fromkeys(str(node) for node in completed_nodes)),
+            "resume_token": resume_token,
+            "evidence_refs": list(evidence_refs or []),
+            "updated_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        }
+        self.root.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=self.root, delete=False) as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+            tmp = Path(handle.name)
+        os.replace(tmp, self.state_path)
+        append_jsonl(str(self.journal_path), payload)
+        return payload
 
 
 # ---------------------------------------------------------------------------

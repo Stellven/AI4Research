@@ -25,10 +25,14 @@ class DataPlaneState(Enum):
     RENDERING = "rendering"
     FINALIZED = "finalized"
     FAILED = "failed"
+    EXECUTING = "executing"
+    EVIDENCE_PRODUCED = "evidence_produced"
+    EVIDENCE_EVALUATED = "evidence_evaluated"
+    RESUMABLE = "resumable"
 
 
 _VALID_TRANSITIONS: dict[DataPlaneState, set[DataPlaneState]] = {
-    DataPlaneState.INIT: {DataPlaneState.SEARCHING, DataPlaneState.SEARCH_SKIP},
+    DataPlaneState.INIT: {DataPlaneState.SEARCHING, DataPlaneState.SEARCH_SKIP, DataPlaneState.EXECUTING},
     DataPlaneState.SEARCHING: {DataPlaneState.DRAFTING, DataPlaneState.SEARCH_SKIP, DataPlaneState.FAILED},
     DataPlaneState.SEARCH_SKIP: {DataPlaneState.RENDERING, DataPlaneState.FAILED},
     DataPlaneState.DRAFTING: {DataPlaneState.METERING, DataPlaneState.FAILED},
@@ -36,6 +40,12 @@ _VALID_TRANSITIONS: dict[DataPlaneState, set[DataPlaneState]] = {
     DataPlaneState.RENDERING: {DataPlaneState.FINALIZED, DataPlaneState.FAILED},
     DataPlaneState.FINALIZED: set(),
     DataPlaneState.FAILED: set(),
+    # A provider result cannot advance the workflow until its evidence has
+    # been persisted and evaluated. RESUMABLE retains the completed prefix.
+    DataPlaneState.EXECUTING: {DataPlaneState.EVIDENCE_PRODUCED, DataPlaneState.RESUMABLE, DataPlaneState.FAILED},
+    DataPlaneState.EVIDENCE_PRODUCED: {DataPlaneState.EVIDENCE_EVALUATED, DataPlaneState.RESUMABLE, DataPlaneState.FAILED},
+    DataPlaneState.EVIDENCE_EVALUATED: {DataPlaneState.EXECUTING, DataPlaneState.FINALIZED, DataPlaneState.RESUMABLE, DataPlaneState.FAILED},
+    DataPlaneState.RESUMABLE: {DataPlaneState.EXECUTING, DataPlaneState.FAILED},
 }
 
 

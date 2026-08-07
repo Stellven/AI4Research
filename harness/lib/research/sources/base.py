@@ -35,6 +35,10 @@ class FetchResult:
     source_url: Optional[str] = None
     fetch_status: str = "fetched"
     fetch_error: Optional[str] = None
+    provider: Optional[str] = None
+    query: Optional[str] = None
+    retrieved_at: Optional[str] = None
+    response_status: Optional[int] = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
