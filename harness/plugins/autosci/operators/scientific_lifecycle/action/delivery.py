@@ -32,6 +32,33 @@ def _outputs(document: dict[str, Any]) -> dict[str, Any]:
     return document.get("outputs") if isinstance(document.get("outputs"), dict) else document
 
 
+_BROAD_CLAIM_PATTERN = re.compile(
+    r"\b(all|any|always|every|future|global|universal|worldwide)\b|100%",
+    flags=re.IGNORECASE,
+)
+_BOUNDED_CLAIM_PATTERN = re.compile(
+    r"\b(evaluated|local|sample|bounded|fixture|observed|tested)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _claim_scope_risks(claim: dict[str, Any]) -> list[str]:
+    text = " ".join(
+        str(value or "")
+        for value in (
+            claim.get("text"),
+            claim.get("claim_text"),
+            claim.get("title"),
+            claim.get("summary"),
+        )
+    )
+    if not _BROAD_CLAIM_PATTERN.search(text):
+        return []
+    if _BOUNDED_CLAIM_PATTERN.search(text):
+        return []
+    return ["Claim scope is broader than the supplied bounded/local evidence."]
+
+
 def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     documents = load_documents(
         context,
@@ -65,14 +92,18 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
         criteria = [str(item) for item in claim.get("acceptance_criteria") or [] if str(item).strip()]
         matched = bool(criteria) and all(criteria_results.get(item) is True for item in criteria)
         rejected = any(criteria_results.get(item) is False for item in criteria)
+        scope_risks = _claim_scope_risks(claim)
         if outcome == "refutes" or rejected:
             verdict, support_class, confidence = "not_supported", "unsupported", 0.9
             basis = "Experiment evidence refutes the claim or fails an explicit acceptance criterion."
+        elif scope_risks:
+            verdict, support_class, confidence = "insufficient", "insufficient_evidence", 0.35
+            basis = "Claim scope exceeds the available evidence; local support cannot establish the broader assertion."
         elif outcome == "supports" and experiment_evidence and matched:
             verdict, support_class, confidence = "supported", "supported", 0.9
             basis = "Experiment evidence supports every explicit claim acceptance criterion."
         else:
-            verdict, support_class, confidence = "inconclusive", "insufficient_evidence", 0.3
+            verdict, support_class, confidence = "insufficient", "insufficient_evidence", 0.3
             basis = "Evidence does not establish every explicit acceptance criterion."
         evidence_ids = sorted(set([*experiment_evidence, *[str(item) for item in claim.get("evidence_ids") or [] if str(item).strip()]]))
         if not evidence_ids:
@@ -85,8 +116,10 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
             "confidence": confidence,
             "basis": basis,
             "evidence_ids": evidence_ids,
-            "limitations": [] if support_class != "insufficient_evidence" else ["Missing or incomplete acceptance-criteria evidence."],
+            "limitations": [] if support_class != "insufficient_evidence" else [*(scope_risks or ["Missing or incomplete acceptance-criteria evidence."])],
             "acceptance_criteria_checked": criteria,
+            "evidence_outcome": "insufficient_evidence" if support_class == "insufficient_evidence" else outcome,
+            "overclaim_risks": scope_risks,
         })
     return completed_result(
         context,
@@ -619,6 +652,11 @@ def evaluate_final_publication(node_request: dict[str, Any], context: OperatorCo
     evaluation = {
         "decision": "accepted_with_limitations" if len(evaluation_limitations) > 1 else "accepted",
         "accepted": True,
+        "blockers": [],
+        "residual_risks": evaluation_limitations,
+        "follow_up": [
+            "Run independent peer review before representing the deliverable as externally validated."
+        ] if review_limitations else [],
         "checks": checks,
         "criterion_results": criterion_results,
         "requirement_results": requirement_results,

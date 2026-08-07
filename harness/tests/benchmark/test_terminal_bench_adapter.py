@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -191,6 +193,47 @@ def test_empty_missing_prereqs_allows_dry_run_ok():
         result = TerminalBench20Adapter().run(req)
     assert result.verdict == "ok"
     assert result.command and result.command[0] in ("harbor", "uvx")
+
+
+def test_low_quality_harbor_result_keeps_benchmark_process_pass(monkeypatch, tmp_path):
+    req = _make_req(dry_run=False)
+    monkeypatch.setenv("SOLAR_BENCH_REPORTS_DIR", str(tmp_path / "reports"))
+    fake_doctor = BenchmarkDoctor(
+        adapter_id="terminal-bench@2.0",
+        harbor_available=True,
+        harbor_kind="binary",
+        docker_available=True,
+        dataset_known=True,
+        agents_known=AGENT_ALLOWLIST,
+        missing_prereqs=(),
+        notes="all-ok-fixture",
+    )
+
+    def fake_run(cmd, cwd=None, text=True, capture_output=True, timeout=None):
+        result_path = Path(cwd) / "harbor-jobs" / "job-1" / "result.json"
+        result_path.parent.mkdir(parents=True, exist_ok=True)
+        result_path.write_text(
+            json.dumps({
+                "stats": {
+                    "n_completed_trials": 1,
+                    "n_errored_trials": 0,
+                    "evals": {"default": {"metrics": [{"mean": 0.25}]}},
+                }
+            }),
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=1, stdout="scored", stderr="")
+
+    with patch.object(TerminalBench20Adapter, "_doctor_for_agent", return_value=fake_doctor), \
+         patch("harness.lib.benchmark.harbor_adapter.detect", return_value=(True, "binary")), \
+         patch("harness.lib.benchmark.harbor_adapter.list_dataset_tasks", return_value=["hello-world-cli"]), \
+         patch("subprocess.run", side_effect=fake_run):
+        result = TerminalBench20Adapter().run(req)
+
+    assert result.verdict == "error"
+    assert result.score == 0.25
+    assert result.benchmark_execution_verdict == "PASS"
+    assert result.target_quality_verdict == "FAIL"
 
 
 # ---------------------------------------------------------------------------

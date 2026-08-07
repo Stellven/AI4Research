@@ -10725,6 +10725,33 @@ def _claim_under_verification(envelope: dict[str, Any]) -> dict[str, Any]:
     return {"claim_id": claim_id, "text": "Claim text unavailable in supplied evidence.", "evidence_ids": [claim_id]}
 
 
+_BROAD_CLAIM_PATTERN = re.compile(
+    r"\b(all|any|always|every|future|global|universal|worldwide)\b|100%",
+    flags=re.IGNORECASE,
+)
+_BOUNDED_CLAIM_PATTERN = re.compile(
+    r"\b(evaluated|local|sample|bounded|fixture|observed|tested)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _claim_scope_risks(claim: dict[str, Any]) -> list[str]:
+    text = " ".join(
+        str(value or "")
+        for value in (
+            claim.get("text"),
+            claim.get("claim_text"),
+            claim.get("title"),
+            claim.get("summary"),
+        )
+    )
+    if not _BROAD_CLAIM_PATTERN.search(text):
+        return []
+    if _BOUNDED_CLAIM_PATTERN.search(text):
+        return []
+    return ["Claim scope is broader than the supplied bounded/local evidence."]
+
+
 def _claim_verdict_code_evidence_ids(envelope: dict[str, Any], claim_id: str) -> list[str]:
     inputs = dict(envelope.get("inputs") or {})
     ids: list[str] = []
@@ -10868,6 +10895,8 @@ def _verdict_confidence(verdict: str, outcome: str) -> float:
         return 0.58
     if verdict == "not_supported":
         return 0.66
+    if verdict == "insufficient":
+        return 0.35
     if outcome == "failed":
         return 0.24
     return 0.32
@@ -10945,7 +10974,8 @@ def _experiment_evaluation_final_verdict_boundary(
     code_evidence_ids = [str(item) for item in verdict.get("code_evidence_ids") or [] if str(item).strip()]
     review_llm = verdict.get("review_llm") if isinstance(verdict.get("review_llm"), dict) else {}
     writeback = _claim_verdict_writeback_status(envelope, writeback_path)
-    non_inconclusive_verdict = str(verdict.get("verdict") or "inconclusive") != "inconclusive"
+    verdict_label = str(verdict.get("verdict") or "inconclusive")
+    non_inconclusive_verdict = verdict_label not in {"inconclusive", "insufficient"}
     experiment_result_ready = (
         experiment_schema == "experiment_result.v1"
         and experiment_status == "completed"
@@ -10985,7 +11015,7 @@ def _experiment_evaluation_final_verdict_boundary(
         "status": "final_verdict_ready" if final_ready else "final_verdict_incomplete",
         "final_verdict_ready": final_ready,
         "claim_id": claim_id,
-        "verdict": str(verdict.get("verdict") or "inconclusive"),
+        "verdict": verdict_label,
         "experiment_result_ready": experiment_result_ready,
         "experiment_schema": experiment_schema,
         "experiment_status": experiment_status,
@@ -11068,11 +11098,25 @@ def _action_verify_claim(envelope: dict[str, Any]) -> dict[str, Any]:
         "inconclusive": "inconclusive",
         "failed": "inconclusive",
     }.get(outcome, "inconclusive")
+    support_classification = {
+        "supported": "supported",
+        "partially_supported": "supported",
+        "not_supported": "unsupported",
+        "insufficient": "insufficient_evidence",
+        "inconclusive": "insufficient_evidence",
+    }.get(verdict, "insufficient_evidence")
+    scope_risks = _claim_scope_risks(claim)
     claim_evidence_ids = [claim_id, *[str(item) for item in (claim.get("evidence_ids") or []) if str(item).strip()]]
     code_evidence_ids = _claim_verdict_code_evidence_ids(envelope, claim_id)
     evidence_ids = [*claim_evidence_ids, *experiment_ids, *code_evidence_ids, *review_evidence_ids]
     if not experiment_ids:
         verdict = "inconclusive"
+        support_classification = "insufficient_evidence"
+    elif scope_risks and verdict == "supported":
+        verdict = "insufficient"
+        outcome = "insufficient_evidence"
+        support_classification = "insufficient_evidence"
+        basis = f"{basis} Claim scope exceeds the available evidence; local support cannot establish the broader assertion."
     seen: set[str] = set()
     unique_evidence_ids: list[str] = []
     for item in evidence_ids:
@@ -11089,6 +11133,8 @@ def _action_verify_claim(envelope: dict[str, Any]) -> dict[str, Any]:
         limitations.append("Supported experiment evidence was not promoted because independent review found overreach or unsupported assumptions.")
     if verdict == "inconclusive":
         limitations.append("Supplied experiment evidence is missing, failed, or inconclusive; the claim was not upgraded.")
+    if scope_risks:
+        limitations.extend(scope_risks)
     if review_llm.get("status") == "completed":
         basis = (
             f"{basis} Review LLM evidence `{review_llm.get('source_path')}` was attached "
@@ -11107,6 +11153,9 @@ def _action_verify_claim(envelope: dict[str, Any]) -> dict[str, Any]:
         "experiment_evidence_ids": experiment_ids,
         "code_evidence_ids": code_evidence_ids,
         "evidence_outcome": outcome,
+        "support_classification": support_classification,
+        "overclaim_risks": scope_risks,
+        "classification_reason": "scope_overclaim" if scope_risks else "experiment_outcome",
         "experiment_id": experiment_id,
         "review_llm": review_llm,
         "artifacts": review_artifacts,

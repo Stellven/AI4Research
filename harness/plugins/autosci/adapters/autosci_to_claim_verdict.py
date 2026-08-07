@@ -11,6 +11,8 @@ OUTCOME_TO_VERDICT = {
     "supports": "supported",
     "partially_supports": "partially_supported",
     "refutes": "not_supported",
+    "insufficient": "insufficient",
+    "insufficient_evidence": "insufficient",
     "inconclusive": "inconclusive",
     "failed": "inconclusive",
 }
@@ -23,7 +25,7 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
     verdict = {
         "claim_id": str(raw.get("claim_id") or "claim-001"),
         "verdict": verdict_label,
-        "confidence": float(raw.get("confidence", 0.5 if verdict_label == "inconclusive" else 0.8)),
+        "confidence": float(raw.get("confidence", 0.35 if verdict_label == "insufficient" else (0.5 if verdict_label == "inconclusive" else 0.8))),
         "basis": str(raw.get("basis") or "Fixture experiment result is linked for adapter smoke validation."),
         "evidence_ids": list(raw.get("evidence_ids") or ["evidence:autosci-fixture"]),
         "limitations": limitations,
@@ -32,7 +34,7 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
         "experiment_evidence_ids": list(raw.get("experiment_evidence_ids") or []),
         "code_evidence_ids": list(raw.get("code_evidence_ids") or []),
     }
-    for key in ("experiment_id", "review_llm", "metrics"):
+    for key in ("experiment_id", "review_llm", "metrics", "support_classification", "overclaim_risks", "classification_reason"):
         if raw.get(key) is not None:
             verdict[key] = raw[key]
     return evidence_base(

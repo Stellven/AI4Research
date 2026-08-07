@@ -107,3 +107,48 @@ def test_ready_nodes_still_raises_structural_validation_errors():
 
     with pytest.raises(ValueError, match="S2 depends on missing node S1"):
         graph_scheduler.ready_nodes(graph)
+
+
+def test_enqueue_ready_rechecks_admission_before_queueing_stale_assignment(monkeypatch, tmp_path):
+    graph = {
+        "sprint_id": "runtime-admission",
+        "nodes": [
+            {
+                "id": "S1",
+                "status": "pending",
+                "depends_on": [],
+                "write_scope": ["sprints/S1.md"],
+                "acceptance": ["S1 done"],
+                "required_capabilities": ["implementation"],
+            },
+            {
+                "id": "S2",
+                "status": "pending",
+                "depends_on": ["S1"],
+                "write_scope": ["sprints/S2.md"],
+                "acceptance": ["S2 done"],
+                "required_capabilities": ["implementation"],
+            },
+        ],
+    }
+    graph_path = tmp_path / "runtime-admission.task_graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    monkeypatch.setattr(graph_scheduler, "SPRINTS_DIR", tmp_path)
+    monkeypatch.setattr(
+        graph_scheduler,
+        "assign_ready",
+        lambda *args, **kwargs: {
+            "assigned": [{"node": "S2", "pane": "pane-1"}],
+            "queued": [],
+            "batch": ["S2"],
+            "blocked_prerequisites": [],
+            "capability_enrichment": {},
+        },
+    )
+
+    result = graph_scheduler.enqueue_ready(graph, str(graph_path), [{"pane": "pane-1"}], dry_run=True)
+
+    assert result["enqueued"] == []
+    assert result["queued"][0]["reason"] == "admission_rejected"
+    assert result["queued"][0]["details"]["reason"] == "dependencies_unmet"
+    assert result["queued"][0]["details"]["unmet_dependencies"] == ["S1"]

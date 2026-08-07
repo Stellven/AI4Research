@@ -102,6 +102,10 @@ class BenchmarkRunResult:
     verdict: str
     failure_modes: tuple[str, ...] = ()
     limitations: tuple[str, ...] = ()
+    process_status: str = "completed"
+    benchmark_execution_verdict: str = "PASS"
+    target_quality_status: str = "not_run"
+    target_quality_verdict: str = "NOT_TESTED"
 
 
 @runtime_checkable

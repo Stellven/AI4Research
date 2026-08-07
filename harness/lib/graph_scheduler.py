@@ -51,6 +51,20 @@ HUMAN_REVIEW_STATUS = "needs_human_review"
 HUMAN_REVIEW_SCHEMA_VERSION = "solar.human_review.v1"
 HUMAN_REVIEW_HISTORY_LIMIT = 20
 SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR", HARNESS_DIR / "sprints"))
+RUNTIME_NODE_SPEC_FIELDS = {
+    "assigned_to",
+    "blocking_reason",
+    "closeout_receipt",
+    "dispatch_id",
+    "eval_json",
+    "gate_status",
+    "human_review",
+    "queued_pane",
+    "result",
+    "status",
+    "updated_at",
+    "worker_match_details",
+}
 REPAIR_ACTIVE_STATUSES = {
     "failed_review",
     "reviewing",
@@ -377,6 +391,11 @@ def _graph_spec_payload(graph: dict[str, Any]) -> dict[str, Any]:
     spec.pop("_solar_runtime", None)
     spec.pop("node_results", None)
     spec.pop("gate_results", None)
+    for node in spec.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        for key in RUNTIME_NODE_SPEC_FIELDS:
+            node.pop(key, None)
     return spec
 
 
@@ -1795,6 +1814,81 @@ def blocked_external_prerequisites(graph: dict[str, Any]) -> list[dict[str, Any]
                 blocked.append(detail)
                 seen.add(key)
     return blocked
+
+
+def node_admission_status(graph: dict[str, Any], node_id: str) -> dict[str, Any]:
+    """Return the final scheduler admission decision for a single node."""
+    validation = validate_graph(graph)
+    runtime_errors = [
+        str(error)
+        for error in validation.get("errors", [])
+        if not str(error).startswith("parallelism_quality:")
+    ]
+    if runtime_errors:
+        return {
+            "admitted": False,
+            "reason": "graph_validation_failed",
+            "errors": runtime_errors,
+        }
+
+    ids = _node_map(graph)
+    if node_id not in ids:
+        return {"admitted": False, "reason": "unknown_node", "node": node_id}
+
+    node = ids[node_id]
+    status = node_status(graph, node_id)
+    if status in TERMINAL_STATUSES:
+        return {"admitted": False, "reason": "terminal_status", "node": node_id, "status": status}
+    if status in ACTIVE_STATUSES:
+        return {"admitted": False, "reason": "active_status", "node": node_id, "status": status}
+    if status not in READY_STATUSES:
+        return {"admitted": False, "reason": "not_ready_status", "node": node_id, "status": status}
+
+    blocked_external = [
+        item
+        for item in blocked_external_prerequisites(graph)
+        if not item.get("node_id") or str(item.get("node_id")) == node_id
+    ]
+    if blocked_external:
+        return {
+            "admitted": False,
+            "reason": "external_prerequisite_blocked",
+            "node": node_id,
+            "status": status,
+            "blocked_prerequisites": blocked_external,
+        }
+
+    unmet: list[str] = []
+    nonblocking_human_review: list[str] = []
+    for dep in _internal_depends_on(node):
+        if _is_passed(graph, dep):
+            continue
+        if (
+            dep in ids
+            and node_status(graph, dep) == HUMAN_REVIEW_STATUS
+            and not _human_review_blocks_dependents(graph, ids.get(dep))
+        ):
+            nonblocking_human_review.append(dep)
+            continue
+        unmet.append(dep)
+    if unmet:
+        return {
+            "admitted": False,
+            "reason": "dependencies_unmet",
+            "node": node_id,
+            "status": status,
+            "unmet_dependencies": unmet,
+            "dependencies": _internal_depends_on(node),
+        }
+
+    return {
+        "admitted": True,
+        "reason": "ready",
+        "node": node_id,
+        "status": status,
+        "dependencies": _internal_depends_on(node),
+        "nonblocking_human_review_dependencies": nonblocking_human_review,
+    }
 
 
 def ready_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
@@ -3301,17 +3395,15 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
     run, while the existing queue/coordinator still performs the actual wake.
     """
     sys.path.insert(0, str(HARNESS_DIR / "lib"))
-    from task_queue import enqueue  # noqa: WPS433
+    if dry_run:
+        enqueue = None
+    else:
+        from task_queue import enqueue  # noqa: WPS433
 
     if lease:
         from pane_lease import acquire  # noqa: WPS433
     else:
         acquire = None
-    from apo_plan_compiler import (  # noqa: WPS433
-        compile_execution_plan_for_node,
-        materialize_execution_plan_artifacts,
-    )
-
     graph = auto_enrich_graph(graph, graph_path=graph_path)
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     assignment = assign_ready(graph, workers, max_parallel=max_parallel, graph_path=graph_path)
@@ -3322,9 +3414,23 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
     for item in assignment.get("assigned", []):
         node_id = item["node"]
         pane = item["pane"]
-        dispatch_id = f"graph-{sid}-{node_id}-{datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}"
         node = nodes_by_id[node_id]
+        admission = node_admission_status(graph, node_id)
+        if not admission.get("admitted"):
+            queued.append({
+                "node": node_id,
+                "pane": pane,
+                "reason": "admission_rejected",
+                "details": admission,
+            })
+            continue
+        dispatch_id = f"graph-{sid}-{node_id}-{datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}"
         try:
+            from apo_plan_compiler import (  # noqa: WPS433
+                compile_execution_plan_for_node,
+                materialize_execution_plan_artifacts,
+            )
+
             compiled_plan = compile_execution_plan_for_node(
                 node,
                 request_type=str(graph.get("request_type") or node.get("type") or ""),
@@ -3421,6 +3527,7 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
             "sprint_id": sid,
             "node": node,
             "assignment": item,
+            "admission": admission,
             "dispatch_id": dispatch_id,
             "lease": lease_result,
             "logical_plan_node": dict(compiled_plan.get("logical_plan_node") or {}),
@@ -3431,6 +3538,7 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
         if dry_run:
             q = {"ok": True, "result": "dry_run", "id": ""}
         else:
+            assert enqueue is not None
             q = enqueue(sid, f"graph_node|node_id={node_id}|pane={pane}|dispatch_id={dispatch_id}", 80, payload)
             # Queueing is not dispatch. The graph node becomes "dispatched"
             # only after graph_node_dispatcher writes the instruction file and

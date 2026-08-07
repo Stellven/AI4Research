@@ -21,8 +21,8 @@ from evaluators.scientific.common import (
 )
 
 SCHEMA = "claim_verdict.v1"
-ALLOWED_VERDICTS = {"supported", "partially_supported", "not_supported", "inconclusive"}
-NON_SUPPORTING_EVIDENCE_OUTCOMES = {"inconclusive", "failed"}
+ALLOWED_VERDICTS = {"supported", "partially_supported", "not_supported", "insufficient", "inconclusive"}
+NON_SUPPORTING_EVIDENCE_OUTCOMES = {"inconclusive", "failed", "insufficient", "insufficient_evidence"}
 
 
 def evaluate(payload: dict[str, Any], path: str | Path | None = None):
@@ -46,9 +46,15 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
             reasons.append(f"verdicts[{index}].evidence_ids must include experiment, static, or code evidence in addition to the claim id")
         if not verdict.get("limitations") and not top_limitations:
             reasons.append(f"verdicts[{index}] requires limitations")
+        verdict_label = str(verdict.get("verdict") or "").strip()
         evidence_outcome = str(verdict.get("evidence_outcome") or "").strip()
-        if evidence_outcome in NON_SUPPORTING_EVIDENCE_OUTCOMES and verdict.get("verdict") != "inconclusive":
+        if evidence_outcome in NON_SUPPORTING_EVIDENCE_OUTCOMES and verdict_label not in {"inconclusive", "insufficient"}:
             reasons.append(f"verdicts[{index}] cannot upgrade {evidence_outcome} evidence to {verdict.get('verdict')}")
+        support_classification = str(verdict.get("support_classification") or "").strip()
+        if support_classification == "insufficient_evidence" and verdict_label not in {"inconclusive", "insufficient"}:
+            reasons.append(f"verdicts[{index}] cannot classify insufficient evidence as {verdict_label}")
+        if verdict.get("overclaim_risks") and verdict_label == "supported":
+            reasons.append(f"verdicts[{index}] cannot support an over-broad claim without resolving overclaim_risks")
         confidence = verdict.get("confidence")
         if isinstance(confidence, (int, float)) and confidence < 0.8:
             if not verdict.get("limitations") and not top_limitations:

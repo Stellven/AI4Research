@@ -47,3 +47,31 @@ def test_claim_verdict_gate_rejects_upgraded_inconclusive_evidence():
     assert result.ok is False
     joined = " ".join(result.reasons)
     assert "cannot upgrade inconclusive evidence" in joined
+
+
+def test_claim_verdict_gate_accepts_explicit_insufficient_verdict():
+    path = FIXTURES / "pass/claim_verdict.json"
+    payload = load_json(path)
+    verdict = payload["outputs"]["verdicts"][0]
+    verdict["verdict"] = "insufficient"
+    verdict["support_classification"] = "insufficient_evidence"
+    verdict["evidence_outcome"] = "insufficient_evidence"
+    verdict["confidence"] = 0.35
+    verdict["limitations"] = ["Evidence is bounded and cannot establish the claim scope."]
+
+    result = claim_verdict_gate.evaluate(payload, path)
+
+    assert result.ok is True
+
+
+def test_claim_verdict_gate_rejects_supported_overclaim_risk():
+    path = FIXTURES / "pass/claim_verdict.json"
+    payload = load_json(path)
+    verdict = payload["outputs"]["verdicts"][0]
+    verdict["verdict"] = "supported"
+    verdict["overclaim_risks"] = ["Claim says all future datasets but evidence is local."]
+
+    result = claim_verdict_gate.evaluate(payload, path)
+
+    assert result.ok is False
+    assert "overclaim_risks" in " ".join(result.reasons)

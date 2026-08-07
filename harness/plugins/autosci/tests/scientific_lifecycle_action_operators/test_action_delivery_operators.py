@@ -490,6 +490,9 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
     results.append(evaluated_final)
     final_decision = _artifact(tmp_path, evaluated_final)["outputs"]["evaluation"]
     assert final_decision["decision"] == "accepted_with_limitations"
+    assert final_decision["blockers"] == []
+    assert final_decision["residual_risks"]
+    assert final_decision["follow_up"]
     assert all(final_decision["checks"].values())
     assert final_decision["does_not_modify_graph_or_run_state"] is True
 
@@ -772,7 +775,38 @@ def test_claim_verification_never_promotes_incomplete_evidence(
         }
     })
     verified = execute_operator(_request("claim_verify", refs=[claim, result]), services={})
-    assert _artifact(tmp_path, verified)["outputs"]["verdicts"][0]["support_classification"] == expected
+    verdict = _artifact(tmp_path, verified)["outputs"]["verdicts"][0]
+    assert verdict["support_classification"] == expected
+    if expected == "insufficient_evidence":
+        assert verdict["verdict"] == "insufficient"
+
+
+def test_overbroad_supported_claim_is_classified_as_insufficient(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    claim = _external_ref(tmp_path, "claims", "research_claims.v1", {
+        "claims": [{
+            "claim_id": "claim",
+            "text": "The method reaches 100% accuracy on all inputs and every future environment.",
+            "acceptance_criteria": ["criterion"],
+            "evidence_ids": ["source"],
+        }]
+    })
+    result = _external_ref(tmp_path, "result", "experiment_result.v1", {
+        "result": {
+            "experiment_id": "exp",
+            "outcome": "supports",
+            "metrics": [{"name": "m", "value": 1}],
+            "evidence_ids": ["runtime"],
+            "criteria_results": {"criterion": True},
+        }
+    })
+
+    verified = execute_operator(_request("claim_verify", refs=[claim, result]), services={})
+    verdict = _artifact(tmp_path, verified)["outputs"]["verdicts"][0]
+
+    assert verdict["verdict"] == "insufficient"
+    assert verdict["support_classification"] == "insufficient_evidence"
+    assert verdict["overclaim_risks"]
 
 
 def test_report_planning_fails_when_claim_has_no_core_source_evidence(tmp_path: Path, monkeypatch) -> None:

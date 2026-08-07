@@ -133,7 +133,10 @@ def copy_or_link(src: Path, dst: Path) -> None:
         dst.symlink_to(src, target_is_directory=src.is_dir())
     except OSError:
         if src.is_dir():
-            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", "tests"))
+            ignored = ["__pycache__", "*.pyc", ".pytest_cache"]
+            if src.name == "plugins":
+                ignored.append("tests")
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns(*ignored))
         else:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)

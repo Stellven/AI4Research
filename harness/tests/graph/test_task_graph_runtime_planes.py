@@ -82,6 +82,52 @@ def test_load_graph_prefers_state_plane_and_save_graph_projects_closure(tmp_path
     assert saved_closure["status"] == "pending"
 
 
+def test_save_graph_keeps_node_runtime_fields_out_of_spec_plane(tmp_path, monkeypatch):
+    gs = _load_local_graph_scheduler()
+
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
+
+    sid = "sprint-runtime-spec-clean"
+    graph_path = sprints / f"{sid}.task_graph.json"
+    graph = {
+        "sprint_id": sid,
+        "nodes": [
+            {
+                "id": "N1",
+                "goal": "Implement",
+                "depends_on": [],
+                "status": "assigned",
+                "assigned_to": "pane-1",
+                "dispatch_id": "dispatch-1",
+                "updated_at": "2026-05-31T12:00:00Z",
+            },
+        ],
+        "node_results": {
+            "N1": {
+                "status": "assigned",
+                "assigned_to": "pane-1",
+                "dispatch_id": "dispatch-1",
+                "updated_at": "2026-05-31T12:00:00Z",
+            }
+        },
+    }
+
+    gs.save_graph(graph_path, graph)
+
+    saved_graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    saved_state = json.loads((sprints / f"{sid}.task_dag.state.json").read_text(encoding="utf-8"))
+
+    node = saved_graph["nodes"][0]
+    assert "status" not in node
+    assert "assigned_to" not in node
+    assert "dispatch_id" not in node
+    assert saved_state["node_results"]["N1"]["status"] == "assigned"
+    assert saved_state["dispatch_ids"]["N1"] == "dispatch-1"
+    assert gs.node_status(gs.load_graph(graph_path), "N1") == "assigned"
+
+
 def test_save_graph_marks_closure_closed_when_parent_ready(tmp_path, monkeypatch):
     gs = _load_local_graph_scheduler()
 

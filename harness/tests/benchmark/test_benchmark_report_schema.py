@@ -49,6 +49,10 @@ _REQUIRED_FIELDS = frozenset({
     "verdict",
     "failure_modes",
     "limitations",
+    "process_status",
+    "benchmark_execution_verdict",
+    "target_quality_status",
+    "target_quality_verdict",
 })
 
 _VALID_VERDICTS = frozenset({"ok", "pending", "error"})
@@ -176,3 +180,24 @@ def test_asdict_round_trip_satisfies_schema():
     data = asdict_run_result(result)
     missing = _REQUIRED_FIELDS - data.keys()
     assert not missing, missing
+
+
+def test_run_json_separates_benchmark_execution_from_target_quality(isolated_reports_dir, tmp_path):
+    result = _make_result(
+        verdict="error",
+        score=0.25,
+        pass_count=0,
+        fail_count=1,
+        failure_modes=("target_below_threshold",),
+        process_status="completed",
+        benchmark_execution_verdict="PASS",
+        target_quality_status="failed",
+        target_quality_verdict="FAIL",
+    )
+    run_dir = tmp_path / "runs" / result.run_id
+    write_run_artifacts(run_dir, result)
+    data = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+
+    assert data["benchmark_execution_verdict"] == "PASS"
+    assert data["target_quality_verdict"] == "FAIL"
+    assert data["verdict"] == "error"

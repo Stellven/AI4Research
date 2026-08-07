@@ -130,7 +130,7 @@ def test_p22_j08_claim_verification(repo_root: Path, tmp_path: Path, phase22_pyt
     if ev_b:
         verdict_b = json.loads(ev_b.read_text(encoding="utf-8"))
         verdict_b_value = verdict_b.get("outputs", {}).get("verdicts", [{}])[0].get("verdict")
-        rec.add_assertion("overbroad_claim_not_supported", verdict_b_value in {"not_supported", "inconclusive", "partially_supported"}, verdict_b_value)
+        rec.add_assertion("overbroad_claim_not_supported", verdict_b_value in {"not_supported", "insufficient", "inconclusive", "partially_supported"}, verdict_b_value)
         rec.add_assertion("supported_and_overbroad_verdicts_differ", verdict_a != verdict_b_value, {"supported": verdict_a, "overbroad": verdict_b_value})
     rec.add_l2("Workflow", "Claim & Acceptance-Criteria Comparison", "schema-valid supported and overbroad claims were checked through exp-eval", ev_a or rec.run_dir, "partial")
     limitations = []

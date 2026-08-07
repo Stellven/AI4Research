@@ -244,8 +244,13 @@ def benchmark(threshold: int, evidence_dir: Path) -> dict[str, Any]:
     average = round(sum(s["score"] for s in scenarios) / max(len(scenarios), 1), 2)
     minimum = min((s["score"] for s in scenarios), default=0)
     passed = sum(1 for s in scenarios if s["passed"])
+    target_quality_ok = passed == len(scenarios) and minimum >= threshold
     data = {
-        "ok": passed == len(scenarios) and minimum >= threshold,
+        "ok": target_quality_ok,
+        "process_status": "completed",
+        "benchmark_execution_verdict": "PASS",
+        "target_quality_status": "passed" if target_quality_ok else "failed",
+        "target_quality_verdict": "PASS" if target_quality_ok else "FAIL",
         "benchmark": "solar_platform_workflows",
         "generated_at": now(),
         "threshold": threshold,
@@ -266,7 +271,8 @@ def write_markdown(path: Path, data: dict[str, Any]) -> None:
     text = "\n".join([
         f"# Solar Platform Workflow Benchmark — {data['generated_at']}",
         "",
-        f"- Result: {'PASS' if data['ok'] else 'FAIL'}",
+        f"- Benchmark execution: {data['benchmark_execution_verdict']}",
+        f"- Target quality: {data['target_quality_verdict']}",
         f"- Threshold: {data['threshold']}",
         f"- Average score: {data['score']['average']}/{data['score']['max']}",
         f"- Minimum score: {data['score']['minimum']}/{data['score']['max']}",
@@ -301,13 +307,14 @@ def main() -> int:
     if args.json:
         print(json.dumps(data, ensure_ascii=False, indent=2))
     else:
-        print(f"Solar Platform Workflow Benchmark: {'PASS' if data['ok'] else 'FAIL'}")
+        print(f"Solar Platform Workflow Benchmark Execution: {data['benchmark_execution_verdict']}")
+        print(f"  target quality: {data['target_quality_verdict']}")
         print(f"  average: {data['score']['average']}/{data['score']['max']}")
         print(f"  minimum: {data['score']['minimum']}/{data['score']['max']}")
         print(f"  report:  {args.out_md}")
         for item in data["scenarios"]:
             print(f"  {item['score']:3d}/{item['max_score']}  {'PASS' if item['passed'] else 'FAIL'}  #{item['row']} {item['name']}")
-    return 0 if data["ok"] else 1
+    return 0 if data.get("benchmark_execution_verdict") == "PASS" else 1
 
 
 if __name__ == "__main__":

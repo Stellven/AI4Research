@@ -19,11 +19,14 @@
       "properties": {
         "evaluation": {
           "type": "object",
-          "required": ["decision", "accepted", "checks", "criterion_results", "requirement_results", "method_evaluation", "review_assessment", "source_report_id", "publication_bundle_id", "evidence_ids", "run_provenance", "does_not_modify_graph_or_run_state"],
+          "required": ["decision", "accepted", "blockers", "residual_risks", "follow_up", "checks", "criterion_results", "requirement_results", "method_evaluation", "review_assessment", "source_report_id", "publication_bundle_id", "evidence_ids", "run_provenance", "does_not_modify_graph_or_run_state"],
           "additionalProperties": false,
           "properties": {
             "decision": {"enum": ["accepted", "accepted_with_limitations"]},
             "accepted": {"const": true},
+            "blockers": {"type": "array", "maxItems": 0},
+            "residual_risks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "follow_up": {"type": "array", "items": {"type": "string", "minLength": 1}},
             "checks": {
               "type": "object",
               "required": ["publication_bundle_present", "non_empty_report", "evidence_linked", "usable_file_manifest", "artifact_review_passed", "user_intent_relevance", "core_result_claims_present", "method_evidence_honestly_rendered"],
