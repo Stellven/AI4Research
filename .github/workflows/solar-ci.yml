@@ -37,6 +37,20 @@ jobs:
       - name: Verify hygiene gate negative controls
         run: bash tests/test-repo-hygiene.sh
 
+      - name: Enforce safe staging, secret, and Windows filename gates
+        run: |
+          python scripts/check-safe-staging.py
+          python scripts/check-secret-scan.py
+          python scripts/check-windows-filenames.py
+
+      - name: Verify repository safety fixtures
+        run: |
+          python -m pytest -q \
+            tests/test-safe-staging.py \
+            tests/test-secret-scan.py \
+            tests/test-windows-filenames.py \
+            harness/tests/research_orchestration/test_sandbox_fallback_matrix.py
+
   python-smoke:
     name: Python smoke
     runs-on: ubuntu-latest

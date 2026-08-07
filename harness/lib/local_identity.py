@@ -113,6 +113,22 @@ def _read_password_from_stdin() -> str:
     return password
 
 
+def _read_session_token(args: argparse.Namespace) -> str:
+    """Resolve a session token without requiring it in process argv.
+
+    ``--token`` remains a deprecated compatibility mode. When it is absent,
+    stdin is the default secure transport; ``--token-stdin`` makes that choice
+    explicit for scripts and documentation.
+    """
+    legacy_token = str(getattr(args, "token", None) or "")
+    if legacy_token:
+        return legacy_token
+    token = sys.stdin.read().rstrip("\r\n")
+    if not token:
+        raise IdentityError("missing_token", "session token is required on stdin", 2)
+    return token
+
+
 def _hash_password(password: str) -> dict[str, Any]:
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, HASH_ITERATIONS)
@@ -419,32 +435,44 @@ def build_parser() -> argparse.ArgumentParser:
     login.add_argument("--session-ttl", type=int, default=DEFAULT_SESSION_TTL_SECONDS)
     login.set_defaults(func=_login)
 
+    def add_session_token_input(command: argparse.ArgumentParser) -> None:
+        command.add_argument(
+            "--token",
+            default=None,
+            help="DEPRECATED: session token in argv; omit this option and pipe the token on stdin",
+        )
+        command.add_argument(
+            "--token-stdin",
+            action="store_true",
+            help="read the session token from stdin (the default when --token is absent)",
+        )
+
     session = identity_sub.add_parser("session")
-    session.add_argument("--token", required=True)
+    add_session_token_input(session)
     session.set_defaults(func=_session)
 
     logout = identity_sub.add_parser("logout")
-    logout.add_argument("--token", required=True)
+    add_session_token_input(logout)
     logout.set_defaults(func=_logout)
 
     profile = identity_sub.add_parser("profile")
     profile_sub = profile.add_subparsers(dest="profile_verb", required=True)
     profile_get = profile_sub.add_parser("get")
-    profile_get.add_argument("--token", required=True)
+    add_session_token_input(profile_get)
     profile_get.set_defaults(func=_profile_get)
     profile_set = profile_sub.add_parser("set")
-    profile_set.add_argument("--token", required=True)
+    add_session_token_input(profile_set)
     profile_set.add_argument("--data-json", required=True)
     profile_set.set_defaults(func=_profile_set)
 
     privacy = sub.add_parser("privacy")
     privacy_sub = privacy.add_subparsers(dest="verb", required=True)
     export = privacy_sub.add_parser("export")
-    export.add_argument("--token", required=True)
+    add_session_token_input(export)
     export.add_argument("--out", required=True)
     export.set_defaults(func=_privacy_export)
     delete = privacy_sub.add_parser("delete")
-    delete.add_argument("--token", required=True)
+    add_session_token_input(delete)
     delete.add_argument("--yes", action="store_true")
     delete.set_defaults(func=_privacy_delete)
     redact = privacy_sub.add_parser("redact")
@@ -458,6 +486,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
+        if hasattr(args, "token"):
+            args.token = _read_session_token(args)
         payload = args.func(args)
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0

@@ -809,6 +809,114 @@ def test_overbroad_supported_claim_is_classified_as_insufficient(tmp_path: Path,
     assert verdict["overclaim_risks"]
 
 
+@pytest.mark.parametrize(
+    ("case_id", "claim_text", "claim_scope", "evidence_scope", "outcome", "expected_verdict", "expected_scope"),
+    [
+        (
+            "bounded-supported",
+            "Accuracy improves for the evaluated validation cohort.",
+            {
+                "population": "validation cohort",
+                "environment": "local cpu",
+                "time_range": "2026-08",
+                "input_domain": "fixture prompts",
+                "metric": "accuracy",
+                "confidence_uncertainty": "95% interval",
+            },
+            {
+                "population": "validation cohort",
+                "environment": "local cpu",
+                "time_range": "2026-08",
+                "input_domain": "fixture prompts",
+                "metric": "accuracy",
+                "confidence_uncertainty": "95% interval",
+            },
+            "supports",
+            "supported",
+            "aligned",
+        ),
+        (
+            "universal-overclaim",
+            "The method works for all populations in any environment.",
+            {"population": "all", "environment": "any"},
+            {"population": "validation cohort", "environment": "local cpu"},
+            "supports",
+            "insufficient",
+            "mismatch",
+        ),
+        (
+            "insufficient-evidence",
+            "The method improves the production metric.",
+            {"population": "production users", "metric": "conversion"},
+            {},
+            "supports",
+            "insufficient",
+            "insufficient",
+        ),
+        (
+            "contradicted",
+            "Accuracy improves for the evaluated validation cohort.",
+            {"population": "validation cohort", "metric": "accuracy"},
+            {"population": "validation cohort", "metric": "accuracy"},
+            "refutes",
+            "not_supported",
+            "aligned",
+        ),
+        (
+            "chinese-guardrail",
+            "该方法在所有输入、任何环境中始终达到百分之百准确率。",
+            {},
+            {"population": "本地样本", "environment": "本地 CPU"},
+            "supports",
+            "insufficient",
+            "insufficient",
+        ),
+    ],
+)
+def test_structured_claim_scope_comparison_controls_verdict(
+    tmp_path: Path,
+    monkeypatch,
+    case_id: str,
+    claim_text: str,
+    claim_scope: dict,
+    evidence_scope: dict,
+    outcome: str,
+    expected_verdict: str,
+    expected_scope: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    claim = _external_ref(tmp_path, f"claims-{case_id}", "research_claims.v1", {
+        "claims": [{
+            "claim_id": "claim",
+            "text": claim_text,
+            "scope": claim_scope,
+            "acceptance_criteria": ["criterion"],
+            "evidence_ids": ["source"],
+        }]
+    })
+    result = _external_ref(tmp_path, f"result-{case_id}", "experiment_result.v1", {
+        "result": {
+            "experiment_id": "exp",
+            "outcome": outcome,
+            "scope": evidence_scope,
+            "metrics": [{"name": "m", "value": 1}],
+            "evidence_ids": ["runtime"],
+            "criteria_results": {"criterion": outcome == "supports"},
+        }
+    })
+
+    verified = execute_operator(_request("claim_verify", refs=[claim, result]), services={})
+    verdict = _artifact(tmp_path, verified)["outputs"]["verdicts"][0]
+
+    assert verdict["verdict"] == expected_verdict
+    assert verdict["scope_comparison"]["status"] == expected_scope
+    assert set(verdict["scope_comparison"]["dimensions"]) == {
+        "population", "environment", "time_range", "input_domain", "metric", "confidence_uncertainty"
+    }
+    if case_id == "chinese-guardrail":
+        assert verdict["scope_comparison"]["lexical_guardrail"]["broad_language_detected"] is True
+
+
 def test_report_planning_fails_when_claim_has_no_core_source_evidence(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     claim = _external_ref(tmp_path, "claims", "research_claims.v1", {

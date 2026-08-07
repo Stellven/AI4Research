@@ -102,6 +102,10 @@ class BenchmarkRunResult:
     verdict: str
     failure_modes: tuple[str, ...] = ()
     limitations: tuple[str, ...] = ()
+    process_status: str = "completed"
+    benchmark_execution_verdict: str = "PASS"
+    target_quality_status: str = "not_run"
+    target_quality_verdict: str = "NOT_TESTED"
 
 
 @runtime_checkable
@@ -109,7 +113,7 @@ class BenchmarkAdapter(Protocol):
     id: str
     version: str
 
-    def doctor(self) -> BenchmarkDoctor: ...
+    def doctor(self, agent: str | None = None) -> BenchmarkDoctor: ...
     def list_tasks(self) -> list[BenchmarkTask]: ...
     def plan(self, request: BenchmarkRunRequest) -> BenchmarkRunPlan: ...
     def run(self, request: BenchmarkRunRequest) -> BenchmarkRunResult: ...

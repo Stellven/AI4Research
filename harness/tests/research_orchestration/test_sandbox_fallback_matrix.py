@@ -13,6 +13,10 @@ Tests verify:
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
+import sys
 import sys
 from pathlib import Path
 
@@ -233,7 +237,7 @@ class TestTransportCoverage:
         """Verify all expected synthesis nodes are defined in the production registry."""
         try:
             registry_path = (
-                Path(__file__).resolve().parents[2]
+                Path(__file__).resolve().parents[3]
                 / "harness" / "plugins" / "autosci"
                 / "operators" / "scientific_lifecycle" / "registry.py"
             )
@@ -274,3 +278,47 @@ class TestTransportCoverage:
         )
         assert report["status"] == BLOCKED
         assert any(b["reason"] == "no_supported_transport" for b in report["blockers"])
+
+
+def test_os_sandbox_subprocess_enforces_write_boundary(tmp_path: Path) -> None:
+    """Exercise OS enforcement; transport metadata alone is not evidence."""
+    bwrap = shutil.which("bwrap")
+    if os.name == "nt":
+        pytest.skip("S01 unresolved: native Windows has no configured OS-level write sandbox")
+    if bwrap is None:
+        pytest.skip("S01 unresolved: bwrap is unavailable for OS-level enforcement")
+
+    allowed = (tmp_path / "allowed").resolve()
+    outside = (tmp_path / "outside").resolve()
+    allowed.mkdir()
+    outside.mkdir()
+
+    def run_write(target: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                bwrap,
+                "--die-with-parent",
+                "--unshare-all",
+                "--new-session",
+                "--ro-bind",
+                "/",
+                "/",
+                "--bind",
+                str(allowed),
+                str(allowed),
+                sys.executable,
+                "-c",
+                "from pathlib import Path; import sys; Path(sys.argv[1]).write_text('probe')",
+                str(target),
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    allowed_result = run_write(allowed / "inside.txt")
+    outside_result = run_write(outside / "escape.txt")
+    assert allowed_result.returncode == 0
+    assert (allowed / "inside.txt").read_text(encoding="utf-8") == "probe"
+    assert outside_result.returncode != 0
+    assert not (outside / "escape.txt").exists()

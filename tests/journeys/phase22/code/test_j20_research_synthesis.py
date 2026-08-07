@@ -28,7 +28,7 @@ RUNNER_COMMAND = (
 
 WORKFLOW_TECH = "Workflow :: Technical Signal Extraction"
 WORKFLOW_TREND = "Workflow :: Trend & Gap Analysis"
-RETRY_DELAYS_SECONDS = [0, 60, 120, 300]
+RETRY_DELAYS_SECONDS = [0, 2, 5]
 TRANSIENT_ERROR_HINTS = (
     "429",
     "too many requests",
@@ -526,7 +526,10 @@ def _run_skill_with_retry(
         if delay:
             time.sleep(delay)
         attempt_no = attempt_idx + 1
-        attempt_run_id = f"{run_id}-{step}-attempt-{attempt_no}"
+        # Keep the production artifact path below the legacy Windows MAX_PATH
+        # boundary. The recorder retains the full journey run ID and attempt
+        # metadata, so shortening only this leaf does not weaken provenance.
+        attempt_run_id = f"j20-{step}-a{attempt_no}"
         run_args = [*args, "--run-id", attempt_run_id]
         summary, _ = run_autosci(recorder, sandbox, step, run_args, timeout=timeout, allow_live=True, extra_env=env)
         command_record = recorder.commands[-1]
@@ -536,13 +539,22 @@ def _run_skill_with_retry(
         stderr_text = _safe_read_text(stderr_path)
         exit_code = int(command_record.get("exit_code")) if command_record.get("exit_code") is not None else None
 
-        evidence_path = _resolve_evidence_path(summary, recorder.run_dir)
+        evidence_summary = summary
+        if summary.get("_error"):
+            try:
+                parsed_error = json.loads(str(summary["_error"]))
+            except (TypeError, ValueError):
+                parsed_error = {}
+            if isinstance(parsed_error, dict):
+                evidence_summary = parsed_error
+        evidence_path = _resolve_evidence_path(evidence_summary, recorder.run_dir)
         payload = _safe_json(evidence_path) if evidence_path else _safe_json(Path(_normalize(summary.get("evidence_path")))) if summary.get("evidence_path") else {}
         if not payload and summary:
             output_root = Path(os.environ.get("AUTOSCI_ARTIFACT_ROOT", recorder.run_dir / "artifacts" / "autosci"))
             evidence_path = _resolve_evidence_path(summary, output_root)
             payload = _safe_json(evidence_path)
-        transient, reason = _transient_error(summary, stdout_text, stderr_text)
+        transient_payload = payload.get("evidence") if isinstance(payload.get("evidence"), dict) else payload
+        transient, reason = _transient_error(transient_payload or summary, stdout_text, stderr_text)
         if reason:
             provider_blocked = True
             provider_block_reason = reason

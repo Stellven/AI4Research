@@ -76,7 +76,13 @@ The intake package path also exposed a Windows long-path failure in PM contract 
 
 ## Remaining Variants
 
-- Live upstream `/research` was not executed. The regression uses a captured upstream semantic contract fixture because live provider/runtime authorization was not available.
+- Live upstream `/research` was not executed. The captured semantic fixture
+  remains the offline regression. A configurable same-prompt runner now exists
+  at `harness/tools/autosci_upstream_parity.py`; configure a real upstream JSON
+  argv through `SOLAR_AUTOSCI_UPSTREAM_COMMAND_JSON`. It compares intent,
+  workflow stages, input type, language, deliverable type, and required
+  evidence. Without a configured/executable upstream it returns `PARTIAL`, not
+  a parity pass.
 - J16 live TMUX journey remains skipped unless `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS=1` and live journey authorization are explicitly provided.
 - External evidence resume is covered through import-evidence contract and entry-stage parity, not a full live provider resume.
 

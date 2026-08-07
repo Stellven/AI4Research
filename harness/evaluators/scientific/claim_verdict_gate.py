@@ -55,6 +55,13 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
             reasons.append(f"verdicts[{index}] cannot classify insufficient evidence as {verdict_label}")
         if verdict.get("overclaim_risks") and verdict_label == "supported":
             reasons.append(f"verdicts[{index}] cannot support an over-broad claim without resolving overclaim_risks")
+        scope_comparison = verdict.get("scope_comparison")
+        if isinstance(scope_comparison, dict):
+            scope_status = str(scope_comparison.get("status") or "")
+            if verdict_label == "supported" and scope_status in {"mismatch", "insufficient"}:
+                reasons.append(
+                    f"verdicts[{index}] cannot support claim with structured scope status {scope_status}"
+                )
         confidence = verdict.get("confidence")
         if isinstance(confidence, (int, float)) and confidence < 0.8:
             if not verdict.get("limitations") and not top_limitations:

@@ -96,9 +96,14 @@ class TerminalBench20Adapter:
             notes=notes,
         )
 
-    def doctor(self) -> BenchmarkDoctor:
-        """Check global prerequisites without requiring API-key-only auth."""
-        return self._doctor_for_agent()
+    def doctor(self, agent: str | None = None) -> BenchmarkDoctor:
+        """Check prerequisites, optionally scoped to the requested agent.
+
+        The optional argument preserves the public ``doctor()`` compatibility
+        surface while allowing ``run()`` to avoid requiring credentials for
+        every registered agent.
+        """
+        return self._doctor_for_agent(agent)
 
     def list_tasks(self) -> list[BenchmarkTask]:
         """Return known benchmark tasks from Harbor registry, with safe smoke tasks first."""
@@ -191,7 +196,7 @@ class TerminalBench20Adapter:
                 )
 
         # DOCTOR: check prerequisites
-        doc = self._doctor_for_agent(req.agent)
+        doc = self.doctor(req.agent)
         if doc.missing_prereqs:
             return self._pending_result(
                 base_result,

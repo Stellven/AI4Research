@@ -91,6 +91,11 @@ class BenchmarkAdapter(Protocol):
 
 `BenchmarkRunResult` carries the PRD §7 minimum field set: run identity (`run_id`, `benchmark`, `benchmark_version`, `dataset`, `adapter`), execution context (`agent`, `model`, `env`), scope (`tasks_requested`, `tasks_completed`), scoring (`score`, `pass_count`, `fail_count`, `pending_count`), timing (`started_at`, `completed_at`, `duration_sec`), exec details (`command`, `exit_code`, `stdout_path`, `stderr_path`), artifacts list, and a triage triple (`verdict`, `failure_modes`, `limitations`). The run-id format is `bench-<YYYYMMDDHHMMSS>-<8hex>` (CBD8).
 
+The legacy `verdict` remains for compatibility, while two explicit verdicts
+separate the benchmark process from the evaluated target: a completed scoring
+process has `benchmark_execution_verdict=PASS`; target quality is `PASS` or
+`FAIL` only after a real run, and `NOT_TESTED` for dry-run or blocked execution.
+
 ---
 
 ## 6. Harbor command shape

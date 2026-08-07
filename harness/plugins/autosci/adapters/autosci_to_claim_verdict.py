@@ -34,7 +34,7 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
         "experiment_evidence_ids": list(raw.get("experiment_evidence_ids") or []),
         "code_evidence_ids": list(raw.get("code_evidence_ids") or []),
     }
-    for key in ("experiment_id", "review_llm", "metrics", "support_classification", "overclaim_risks", "classification_reason"):
+    for key in ("experiment_id", "review_llm", "metrics", "support_classification", "overclaim_risks", "scope_comparison", "classification_reason"):
         if raw.get(key) is not None:
             verdict[key] = raw[key]
     return evidence_base(

@@ -57,6 +57,7 @@ from adapters.autosci_to_workflow_evolution import convert as convert_workflow_e
 from adapters.autosci_to_publication_bundle import convert as convert_publication_bundle
 from adapters.autosci_to_scientific_report import convert as convert_scientific_report
 from adapters.solar_envelope_to_autosci import load_envelope, normalize_envelope
+from claim_scope import compare_claim_evidence_scope
 from backends.artifact_review import review_artifact
 from backends.idea_source import build_idea_candidates
 from backends.literature_discover import discover_literature
@@ -10725,33 +10726,6 @@ def _claim_under_verification(envelope: dict[str, Any]) -> dict[str, Any]:
     return {"claim_id": claim_id, "text": "Claim text unavailable in supplied evidence.", "evidence_ids": [claim_id]}
 
 
-_BROAD_CLAIM_PATTERN = re.compile(
-    r"\b(all|any|always|every|future|global|universal|worldwide)\b|100%",
-    flags=re.IGNORECASE,
-)
-_BOUNDED_CLAIM_PATTERN = re.compile(
-    r"\b(evaluated|local|sample|bounded|fixture|observed|tested)\b",
-    flags=re.IGNORECASE,
-)
-
-
-def _claim_scope_risks(claim: dict[str, Any]) -> list[str]:
-    text = " ".join(
-        str(value or "")
-        for value in (
-            claim.get("text"),
-            claim.get("claim_text"),
-            claim.get("title"),
-            claim.get("summary"),
-        )
-    )
-    if not _BROAD_CLAIM_PATTERN.search(text):
-        return []
-    if _BOUNDED_CLAIM_PATTERN.search(text):
-        return []
-    return ["Claim scope is broader than the supplied bounded/local evidence."]
-
-
 def _claim_verdict_code_evidence_ids(envelope: dict[str, Any], claim_id: str) -> list[str]:
     inputs = dict(envelope.get("inputs") or {})
     ids: list[str] = []
@@ -11105,7 +11079,14 @@ def _action_verify_claim(envelope: dict[str, Any]) -> dict[str, Any]:
         "insufficient": "insufficient_evidence",
         "inconclusive": "insufficient_evidence",
     }.get(verdict, "insufficient_evidence")
-    scope_risks = _claim_scope_risks(claim)
+    experiment_payload = _experiment_result_payload(envelope) or {}
+    experiment_scope_source = (
+        ((experiment_payload.get("outputs") or {}).get("result") or {})
+        if experiment_payload.get("schema") == "experiment_result.v1"
+        else experiment_payload
+    )
+    scope_comparison = compare_claim_evidence_scope(claim, experiment_scope_source)
+    scope_risks = list(scope_comparison["risks"])
     claim_evidence_ids = [claim_id, *[str(item) for item in (claim.get("evidence_ids") or []) if str(item).strip()]]
     code_evidence_ids = _claim_verdict_code_evidence_ids(envelope, claim_id)
     evidence_ids = [*claim_evidence_ids, *experiment_ids, *code_evidence_ids, *review_evidence_ids]
@@ -11155,6 +11136,7 @@ def _action_verify_claim(envelope: dict[str, Any]) -> dict[str, Any]:
         "evidence_outcome": outcome,
         "support_classification": support_classification,
         "overclaim_risks": scope_risks,
+        "scope_comparison": scope_comparison,
         "classification_reason": "scope_overclaim" if scope_risks else "experiment_outcome",
         "experiment_id": experiment_id,
         "review_llm": review_llm,

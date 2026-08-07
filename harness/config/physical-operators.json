@@ -4682,6 +4682,37 @@
       },
       "deprecated": false
     },
+    "autosci-advanced-ai4rnd-worker": {
+      "display_name": "AutoSci advanced AI4RnD optimizer and trainer worker",
+      "owner_host": "stub_docker_sandbox",
+      "role": "lab-builder",
+      "persona": "lab-builder",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/lib/advanced_ai4rnd_operator.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "roles": [
+        "lab-builder"
+      ],
+      "task_classes": [
+        "advanced-optimization",
+        "bayesian-optimization",
+        "cpu-safe-sft",
+        "model-training"
+      ],
+      "strengths": [
+        "bayesian_optimization",
+        "sft_linear_adapter",
+        "artifact-lineage",
+        "taskgraph-evidence"
+      ],
+      "max_concurrency": 1,
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
     "mini-codex-gpt55-medium-evaluator-2": {
       "display_name": "Mac mini Codex GPT 5.5 medium evaluator slot 2",
       "plane": "headless",

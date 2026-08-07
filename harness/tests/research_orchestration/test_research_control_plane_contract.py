@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -9,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BRIDGE = ROOT / "plugins" / "autosci" / "bin" / "autosci_bridge.py"
 PARITY_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "upstream_research_parity_contracts.json"
+UPSTREAM_RUNNER = ROOT / "tools" / "autosci_upstream_parity.py"
 
 
 def _run_research_cli(tmp_path: Path, *args: str) -> tuple[int, dict]:
@@ -140,3 +142,68 @@ def test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity(tmp_p
                 contract,
                 ensure_ascii=False,
             )
+
+
+def test_configurable_upstream_parity_runner_executes_same_prompt(tmp_path: Path) -> None:
+    prompt = (
+        "Analyze https://example.org/parity and produce an English Markdown report with at least 2 "
+        "traceable sources. Separate claims and evidence."
+    )
+    fake_upstream = tmp_path / "fake_upstream.py"
+    fake_upstream.write_text(
+        """import argparse, json
+p=argparse.ArgumentParser(); p.add_argument('--prompt', required=True); a=p.parse_args()
+print(json.dumps({
+  'intent': a.prompt,
+  'workflow_stages': ['web_fetch', 'research_synthesis'],
+  'input_type': 'url',
+  'language': 'en',
+  'deliverable_type': 'markdown',
+  'required_evidence': ['claim_evidence_separation', 'minimum_traceable_sources:2', 'source_provenance'],
+}))
+""",
+        encoding="utf-8",
+    )
+    upstream_command = json.dumps([sys.executable, str(fake_upstream), "--prompt", "{prompt}"])
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(UPSTREAM_RUNNER),
+            "--prompt",
+            prompt,
+            "--artifact-root",
+            str(tmp_path / "parity"),
+            "--upstream-command-json",
+            upstream_command,
+        ],
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+    )
+    payload = json.loads(proc.stdout)
+    assert proc.returncode == 0, proc.stderr
+    assert payload["status"] == "PASS"
+    assert all(item["match"] for item in payload["comparisons"].values())
+
+
+def test_upstream_parity_runner_without_real_upstream_stays_partial(tmp_path: Path) -> None:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(UPSTREAM_RUNNER),
+            "--prompt",
+            "Research local agent memory and produce an English Markdown report with 2 sources.",
+            "--artifact-root",
+            str(tmp_path / "partial"),
+        ],
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+        env={key: value for key, value in os.environ.items() if key != "SOLAR_AUTOSCI_UPSTREAM_COMMAND_JSON"},
+    )
+    payload = json.loads(proc.stdout)
+    assert proc.returncode == 2
+    assert payload["status"] == "PARTIAL"
+    assert payload["reason"] == "upstream_command_not_configured"

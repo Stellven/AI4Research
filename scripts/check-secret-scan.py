@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """check-secret-scan.py — Reproducible secret scan for R8 Governance (G06, S05).
 
-Scans tracked (and optionally staged) files for credential patterns.
+Scans tracked files, exact staged index blobs, and untracked files that would
+be candidates for the next commit (respecting .gitignore).
 Reports ONLY: file path, line number, rule name matched.
 NEVER prints or logs the matched secret value.
 
@@ -21,6 +22,7 @@ Exit codes:
 from __future__ import annotations
 
 import re
+import hashlib
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -130,6 +132,28 @@ _ALLOWLISTED_PATHS: list[re.Pattern[str]] = [
     re.compile(r"\.env\.sample$"),
 ]
 
+_PLACEHOLDER_ALLOWLIST = Path(__file__).resolve().parents[1] / ".secret-scan-allowlist"
+
+
+def _known_placeholder(rule_name: str, path: str, line: str) -> bool:
+    """Allow only reviewed fixture lines, pinned by rule, path, and SHA-256.
+
+    The digest makes the exception fail closed: changing even one character in
+    a reviewed placeholder causes the scanner to report it again. The file
+    contains no secret values and is safe to review in CI output.
+    """
+    try:
+        entries = {
+            item.strip()
+            for item in _PLACEHOLDER_ALLOWLIST.read_text(encoding="utf-8").splitlines()
+            if item.strip() and not item.lstrip().startswith("#")
+        }
+    except OSError:
+        return False
+    normalized = path.replace("\\", "/")
+    digest = hashlib.sha256(line.encode("utf-8")).hexdigest()
+    return f"{rule_name} {digest} {normalized}" in entries
+
 # ── Binary / large file extensions to skip ────────────────────────────────────
 _SKIP_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg",
@@ -173,6 +197,43 @@ def _list_tracked_files() -> list[str]:
     ]
 
 
+def _list_staged_files() -> list[str]:
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRT", "-z"],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return []
+    return [
+        p for p in result.stdout.decode("utf-8", errors="replace").split("\x00") if p
+    ]
+
+
+def _list_untracked_candidates() -> list[str]:
+    result = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "-z"],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return []
+    return [
+        p for p in result.stdout.decode("utf-8", errors="replace").split("\x00") if p
+    ]
+
+
+def _read_staged_text(path: str) -> str | None:
+    result = subprocess.run(
+        ["git", "show", f":{path}"],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.decode("utf-8", errors="replace")
+
+
 @dataclass
 class ScanHit:
     rule_name: str
@@ -181,19 +242,14 @@ class ScanHit:
     # NOTE: the actual matched value is deliberately NOT stored here
 
 
-def scan_file(path: str) -> list[ScanHit]:
-    """Scan a single file and return hits with path, line, rule — no values."""
+def scan_text(path: str, content: str) -> list[ScanHit]:
+    """Scan supplied text and return path/line/rule hits without values."""
     hits: list[ScanHit] = []
     if _is_allowlisted(path) or _should_skip(path):
         return hits
-    try:
-        content = Path(path).read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return hits
-
     for line_num, line in enumerate(content.splitlines(), start=1):
         for rule in _RULES:
-            if rule.pattern.search(line):
+            if rule.pattern.search(line) and not _known_placeholder(rule.name, path, line):
                 hits.append(ScanHit(
                     rule_name=rule.name,
                     path=path,
@@ -203,6 +259,15 @@ def scan_file(path: str) -> list[ScanHit]:
     return hits
 
 
+def scan_file(path: str) -> list[ScanHit]:
+    """Scan a working-tree file and return path/line/rule hits without values."""
+    try:
+        content = Path(path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    return scan_text(path, content)
+
+
 def run_scan(files: list[str]) -> list[ScanHit]:
     all_hits: list[ScanHit] = []
     for path in files:
@@ -210,15 +275,37 @@ def run_scan(files: list[str]) -> list[ScanHit]:
     return all_hits
 
 
+def scan_repository_candidates() -> tuple[list[ScanHit], int]:
+    """Scan commit-relevant content, preferring exact staged blobs.
+
+    A staged file is read from the index even if its working-tree version has
+    changed afterward. Tracked and untracked candidates are otherwise read from
+    disk. Each path is reported at most once.
+    """
+    tracked = set(_list_tracked_files())
+    staged = set(_list_staged_files())
+    untracked = set(_list_untracked_candidates())
+    paths = sorted(tracked | staged | untracked)
+    hits: list[ScanHit] = []
+    for path in paths:
+        if path in staged:
+            content = _read_staged_text(path)
+            if content is not None:
+                hits.extend(scan_text(path, content))
+                continue
+        hits.extend(scan_file(path))
+    return hits, len(paths)
+
+
 def main() -> int:
-    files = _list_tracked_files()
-    if not files:
+    tracked = _list_tracked_files()
+    if not tracked:
         print("check-secret-scan: no tracked files found (not a git repo?)", file=sys.stderr)
         return 2
 
-    hits = run_scan(files)
+    hits, scanned_count = scan_repository_candidates()
     if not hits:
-        print(f"check-secret-scan passed: {len(files)} files scanned, no secrets found")
+        print(f"check-secret-scan passed: {scanned_count} tracked/staged/untracked candidate files scanned, no secrets found")
         return 0
 
     print(

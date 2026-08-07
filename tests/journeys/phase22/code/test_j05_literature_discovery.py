@@ -104,7 +104,18 @@ def _run_discovery(
         *(item for neg in negative_ids for item in ("--negative", neg)),
     ]
     summary, _ = run_autosci(rec, sandbox, "discover", args, timeout=240, allow_live=True)
-    discovery_path = action_evidence(summary, "discover_literature") if not summary.get("_error") else None
+    # Failed provider-backed actions still print a structured skill-run summary.
+    # Recover it from the runner's error wrapper so the referenced action
+    # evidence can classify provider/network outages truthfully.
+    evidence_summary = summary
+    if summary.get("_error"):
+        try:
+            parsed_error = json.loads(str(summary["_error"]))
+        except (TypeError, ValueError):
+            parsed_error = {}
+        if isinstance(parsed_error, dict):
+            evidence_summary = parsed_error
+    discovery_path = action_evidence(evidence_summary, "discover_literature")
     payload = _read_payload(discovery_path) if discovery_path else {}
     outputs = payload.get("outputs", {}) if isinstance(payload, dict) else {}
     if not isinstance(outputs, dict):

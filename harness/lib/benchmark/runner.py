@@ -286,6 +286,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
     else:
         print(f"Run ID: {result.run_id}")
         print(f"Verdict: {result.verdict}")
+        print(f"Benchmark execution: {result.benchmark_execution_verdict}")
+        print(f"Target quality: {result.target_quality_verdict}")
         if result.failure_modes:
             print(f"Failure modes: {', '.join(result.failure_modes)}")
         if result.limitations:

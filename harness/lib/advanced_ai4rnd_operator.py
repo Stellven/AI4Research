@@ -23,6 +23,7 @@ import json
 import math
 import os
 import re
+import sys
 import uuid
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -724,12 +725,16 @@ def _record_evidence(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run an advanced AI4RnD optimizer/trainer envelope")
-    parser.add_argument("--envelope", required=True, help="Path to envelope JSON")
+    parser.add_argument("--envelope", required=True, help="Path to envelope JSON, or - for stdin")
     parser.add_argument("--sprints-dir", help="Optional TaskGraph state directory")
     parser.add_argument("--evidence-dir", help="Optional evidence ledger directory")
     parser.add_argument("--registry", help="Optional model registry path")
     args = parser.parse_args(argv)
-    payload = json.loads(Path(args.envelope).read_text(encoding="utf-8"))
+    payload = (
+        json.load(sys.stdin)
+        if args.envelope == "-"
+        else json.loads(Path(args.envelope).read_text(encoding="utf-8"))
+    )
     result = execute_operator(
         payload,
         sprints_dir=Path(args.sprints_dir) if args.sprints_dir else None,

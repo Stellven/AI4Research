@@ -22,6 +22,10 @@ This repair implements a local-only identity/privacy control surface for Solar-o
 
 - Passwords are never stored in plaintext. The local store uses PBKDF2-HMAC-SHA256 with random salts and at least 260,000 iterations.
 - Session tokens are returned once to the caller and stored only as SHA-256 hashes.
+- Session/profile/privacy/logout commands read tokens from stdin by default;
+  use `--token-stdin` for an explicit secure invocation. The legacy `--token`
+  argv form is deprecated because process listings and shell history can expose
+  it. Do not use `--token` in automation.
 - Sessions carry an expiry timestamp; expired or logged-out tokens are rejected.
 - Profile writes are scoped to the authenticated local account owner.
 - Privacy export emits redacted data and omits password/session material.

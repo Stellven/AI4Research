@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import subprocess
 import sys
 from io import StringIO
 from pathlib import Path
@@ -30,6 +31,25 @@ run_scan = _mod.run_scan
 ScanHit = _mod.ScanHit
 _RULES = _mod._RULES
 _is_allowlisted = _mod._is_allowlisted
+_known_placeholder = _mod._known_placeholder
+SCANNER = Path(__file__).resolve().parents[1] / "scripts" / "check-secret-scan.py"
+
+
+def _init_repo(path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.name", "Safety Fixture"], cwd=path, check=True)
+
+
+def _run_scanner(path: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(SCANNER)],
+        cwd=path,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+    )
 
 
 class TestPatternDetection:
@@ -142,6 +162,12 @@ class TestAllowlisting:
     def test_arbitrary_source_not_allowlisted(self) -> None:
         assert not _is_allowlisted("harness/lib/research/fallback_policy.py")
 
+    def test_placeholder_allowlist_fails_closed_on_content_change(self) -> None:
+        path = "harness/docs/benchmark/terminal-bench-2.md"
+        line = (Path(__file__).resolve().parents[1] / path).read_text(encoding="utf-8").splitlines()[185]
+        assert _known_placeholder("openai-api-key", path, line)
+        assert not _known_placeholder("openai-api-key", path, line + "x")
+
 
 class TestCleanFiles:
     """Legitimate source files should produce no hits."""
@@ -167,3 +193,48 @@ class TestCleanFiles:
         # Either 0 hits or hits that are false positives — verify no real key format
         for hit in hits:
             assert "your_api_key_here" not in hit.path
+
+
+class TestGitCandidateCoverage:
+    def test_exact_staged_blob_is_scanned_even_after_worktree_changes(self, tmp_path: Path) -> None:
+        _init_repo(tmp_path)
+        target = tmp_path / "config.txt"
+        target.write_text("clean=true\n", encoding="utf-8")
+        subprocess.run(["git", "add", "config.txt"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-qm", "baseline"], cwd=tmp_path, check=True)
+
+        canary = "sk-" + "S" * 40
+        target.write_text(f"provider_key={canary}\n", encoding="utf-8")
+        subprocess.run(["git", "add", "config.txt"], cwd=tmp_path, check=True)
+        target.write_text("clean-again=true\n", encoding="utf-8")
+
+        result = _run_scanner(tmp_path)
+        output = result.stdout + result.stderr
+        assert result.returncode == 1
+        assert "[openai-api-key] config.txt:1" in output
+        assert canary not in output
+
+    def test_untracked_commit_candidate_is_scanned(self, tmp_path: Path) -> None:
+        _init_repo(tmp_path)
+        tracked = tmp_path / "README.md"
+        tracked.write_text("fixture\n", encoding="utf-8")
+        subprocess.run(["git", "add", "README.md"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-qm", "baseline"], cwd=tmp_path, check=True)
+
+        canary = "ghp_" + "Q" * 36
+        (tmp_path / "candidate.txt").write_text(canary + "\n", encoding="utf-8")
+        result = _run_scanner(tmp_path)
+        output = result.stdout + result.stderr
+        assert result.returncode == 1
+        assert "[github-pat] candidate.txt:1" in output
+        assert canary not in output
+
+    def test_ignored_untracked_file_is_not_a_commit_candidate(self, tmp_path: Path) -> None:
+        _init_repo(tmp_path)
+        (tmp_path / ".gitignore").write_text("ignored.env\n", encoding="utf-8")
+        subprocess.run(["git", "add", ".gitignore"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "commit", "-qm", "baseline"], cwd=tmp_path, check=True)
+        (tmp_path / "ignored.env").write_text("sk-" + "I" * 40, encoding="utf-8")
+
+        result = _run_scanner(tmp_path)
+        assert result.returncode == 0, result.stdout + result.stderr

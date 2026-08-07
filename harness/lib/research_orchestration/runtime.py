@@ -472,7 +472,14 @@ def compile_research_requirements(
         "minimum_traceable_sources": minimum_sources,
         "minimum_trends": minimum_trends,
         "online_retrieval_required": bool(detected_urls or re.search(r"\b(?:current|online|web|internet|live)\b|当前|互联网|公开网页|在线", prompt_lower)),
-        "claim_evidence_separation_required": bool(re.search(r"claim.*evidence.*inference|事实.*证据.*推断|证据.*推断", prompt_text, re.IGNORECASE)),
+        "claim_evidence_separation_required": bool(
+            re.search(
+                r"claim.*evidence.*inference|separat(?:e|ing).*claims?.*evidence|"
+                r"claims?.*evidence.*separat(?:e|ion)|事实.*证据.*推断|区分.*主张.*证据|证据.*推断",
+                prompt_text,
+                re.IGNORECASE,
+            )
+        ),
         "repository_input_count": len(repository_inputs or []),
         "supplied_evidence_count": len(supplied_evidence or []),
     }

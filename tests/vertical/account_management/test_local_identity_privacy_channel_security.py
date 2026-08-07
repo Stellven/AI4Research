@@ -149,13 +149,22 @@ def test_local_identity_register_login_logout_and_expiry_use_secure_store(tmp_pa
     assert password not in store_text
     assert token not in store_text
 
-    active = _json_stdout(_run_solar(tmp_path, home, "identity", "session", "--token", token))
+    active_proc = _run_solar(tmp_path, home, "identity", "session", stdin=token)
+    assert token not in str(active_proc.args)
+    assert token not in active_proc.stdout
+    assert token not in active_proc.stderr
+    active = _json_stdout(active_proc)
     assert active["session"]["active"] is True
     assert active["session"]["username"] == "r6-user"
+    for artifact in home.rglob("*"):
+        if artifact.is_file():
+            assert token not in artifact.read_text(encoding="utf-8", errors="replace")
 
-    logged_out = _json_stdout(_run_solar(tmp_path, home, "identity", "logout", "--token", token))
+    logged_out = _json_stdout(
+        _run_solar(tmp_path, home, "identity", "logout", "--token-stdin", stdin=token)
+    )
     assert logged_out["state"] == "logged_out"
-    invalid_after_logout = _run_solar(tmp_path, home, "identity", "session", "--token", token)
+    invalid_after_logout = _run_solar(tmp_path, home, "identity", "session", stdin=token)
     assert invalid_after_logout.returncode == 3
     assert _json_stderr(invalid_after_logout)["error"] == "invalid_session"
 
@@ -175,7 +184,7 @@ def test_local_identity_register_login_logout_and_expiry_use_secure_store(tmp_pa
     )
     short_token = login["session"]["token"]
     time.sleep(1.2)
-    expired = _run_solar(tmp_path, home, "identity", "session", "--token", short_token)
+    expired = _run_solar(tmp_path, home, "identity", "session", "--token-stdin", stdin=short_token)
     assert expired.returncode == 3
     assert _json_stderr(expired)["error"] == "invalid_session"
 
@@ -209,10 +218,10 @@ def test_privacy_export_redaction_delete_removes_sensitive_profile_access(tmp_pa
             "identity",
             "profile",
             "set",
-            "--token",
-            token,
+            "--token-stdin",
             "--data-json",
             json.dumps(profile),
+            stdin=token,
         )
     )
     assert profile_set["profile_updated"] is True
@@ -221,7 +230,16 @@ def test_privacy_export_redaction_delete_removes_sensitive_profile_access(tmp_pa
 
     export_path = home / "export" / "privacy-export.json"
     exported = _json_stdout(
-        _run_solar(tmp_path, home, "privacy", "export", "--token", token, "--out", str(export_path))
+        _run_solar(
+            tmp_path,
+            home,
+            "privacy",
+            "export",
+            "--token-stdin",
+            "--out",
+            str(export_path),
+            stdin=token,
+        )
     )
     assert exported["redacted"] is True
     export_text = export_path.read_text(encoding="utf-8")
@@ -245,9 +263,11 @@ def test_privacy_export_redaction_delete_removes_sensitive_profile_access(tmp_pa
     assert phone not in redacted_text
     assert secret not in redacted_text
 
-    deleted = _json_stdout(_run_solar(tmp_path, home, "privacy", "delete", "--token", token, "--yes"))
+    deleted = _json_stdout(
+        _run_solar(tmp_path, home, "privacy", "delete", "--token-stdin", "--yes", stdin=token)
+    )
     assert deleted["state"] == "deleted"
-    denied = _run_solar(tmp_path, home, "identity", "profile", "get", "--token", token)
+    denied = _run_solar(tmp_path, home, "identity", "profile", "get", stdin=token)
     assert denied.returncode == 3
     assert _json_stderr(denied)["error"] == "invalid_session"
 

@@ -103,11 +103,13 @@ Usage:
   solar restore <archive>
   solar identity register --local-only --username USER --password-stdin [--session-ttl SECONDS]
   solar identity login --username USER --password-stdin [--session-ttl SECONDS]
-  solar identity session --token TOKEN
-  solar identity logout --token TOKEN
-  solar identity profile get|set ...
-  solar privacy export|redact|delete ...
+  solar identity session [--token-stdin]              # token via stdin by default
+  solar identity logout [--token-stdin]               # token via stdin by default
+  solar identity profile get|set [--token-stdin] ...  # token via stdin by default
+  solar privacy export|delete [--token-stdin] ...      # token via stdin by default
+  solar privacy redact ...
   solar channel status|route ...
+  solar advanced --envelope FILE|- [--sprints-dir DIR] [--evidence-dir DIR]
   solar ui [--once] [--watch N] [--no-color]
   solar harness [verb] [args...]
   solar uninstall [--yes] [--keep-data] [--dry-run]
@@ -191,7 +193,12 @@ do_backup() {
         mkdir -p "$SOLAR_HOME/backups"
         out="$SOLAR_HOME/backups/solar-backup-$(date -u +%Y%m%d%H%M%S).tar.gz"
     fi
-    tar czf "$out" -C "$SOLAR_HOME" "$@"
+    tar_out="$out"
+    if command -v cygpath >/dev/null 2>&1; then
+        tar_out="$(cygpath -u "$out" 2>/dev/null || printf '%s' "$out")"
+    fi
+    mkdir -p "$(dirname "$tar_out")"
+    tar czf "$tar_out" -C "$SOLAR_HOME" "$@"
     echo "backup written: $out"
 }
 
@@ -396,6 +403,8 @@ daemon.update(daemon_health(Path("/tmp/solar.sock")) if daemon_installed else {
 })
 
 status = {
+    "ok": install_verdict == "ok",
+    "status": "installed" if install_verdict == "ok" else "degraded",
     "install": {
         "verdict": install_verdict,
         "version": receipt.get("version") or "unknown",
@@ -467,9 +476,13 @@ PY
 do_restore() {
     archive="${1:-}"
     [ -n "$archive" ] || { echo "usage: solar restore <archive>" >&2; exit 2; }
-    [ -f "$archive" ] || { echo "archive not found: $archive" >&2; exit 1; }
+    tar_archive="$archive"
+    if command -v cygpath >/dev/null 2>&1; then
+        tar_archive="$(cygpath -u "$archive" 2>/dev/null || printf '%s' "$archive")"
+    fi
+    [ -f "$tar_archive" ] || { echo "archive not found: $archive" >&2; exit 1; }
     mkdir -p "$SOLAR_HOME"
-    tar xzf "$archive" -C "$SOLAR_HOME"
+    tar xzf "$tar_archive" -C "$SOLAR_HOME"
     echo "restored from $archive into $SOLAR_HOME"
 }
 
@@ -1489,6 +1502,10 @@ do_channel() {
     run_harness_lib_helper message_channel_adapters.py "$@"
 }
 
+do_advanced() {
+    run_harness_lib_helper advanced_ai4rnd_operator.py "$@"
+}
+
 cmd="${1:-}"
 case "$cmd" in
     version) shift; do_version "$@" ;;
@@ -1502,6 +1519,7 @@ case "$cmd" in
     identity) shift; do_identity "$@" ;;
     privacy) shift; do_privacy "$@" ;;
     channel) shift; do_channel "$@" ;;
+    advanced) shift; do_advanced "$@" ;;
     ui) shift; do_ui "$@" ;;
     harness) shift; do_harness "$@" ;;
     uninstall) shift; uninstall "$@" ;;

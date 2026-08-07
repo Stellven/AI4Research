@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ....claim_scope import compare_claim_evidence_scope
+
 from .common import (
     OperatorContext,
     ResearchOperatorError,
@@ -30,33 +32,6 @@ FINAL_EVALUATOR_ID = "autosci-final-publication-evaluation-physical"
 
 def _outputs(document: dict[str, Any]) -> dict[str, Any]:
     return document.get("outputs") if isinstance(document.get("outputs"), dict) else document
-
-
-_BROAD_CLAIM_PATTERN = re.compile(
-    r"\b(all|any|always|every|future|global|universal|worldwide)\b|100%",
-    flags=re.IGNORECASE,
-)
-_BOUNDED_CLAIM_PATTERN = re.compile(
-    r"\b(evaluated|local|sample|bounded|fixture|observed|tested)\b",
-    flags=re.IGNORECASE,
-)
-
-
-def _claim_scope_risks(claim: dict[str, Any]) -> list[str]:
-    text = " ".join(
-        str(value or "")
-        for value in (
-            claim.get("text"),
-            claim.get("claim_text"),
-            claim.get("title"),
-            claim.get("summary"),
-        )
-    )
-    if not _BROAD_CLAIM_PATTERN.search(text):
-        return []
-    if _BOUNDED_CLAIM_PATTERN.search(text):
-        return []
-    return ["Claim scope is broader than the supplied bounded/local evidence."]
 
 
 def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
@@ -92,7 +67,8 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
         criteria = [str(item) for item in claim.get("acceptance_criteria") or [] if str(item).strip()]
         matched = bool(criteria) and all(criteria_results.get(item) is True for item in criteria)
         rejected = any(criteria_results.get(item) is False for item in criteria)
-        scope_risks = _claim_scope_risks(claim)
+        scope_comparison = compare_claim_evidence_scope(claim, experiment)
+        scope_risks = list(scope_comparison["risks"])
         if outcome == "refutes" or rejected:
             verdict, support_class, confidence = "not_supported", "unsupported", 0.9
             basis = "Experiment evidence refutes the claim or fails an explicit acceptance criterion."
@@ -120,6 +96,7 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
             "acceptance_criteria_checked": criteria,
             "evidence_outcome": "insufficient_evidence" if support_class == "insufficient_evidence" else outcome,
             "overclaim_risks": scope_risks,
+            "scope_comparison": scope_comparison,
         })
     return completed_result(
         context,
