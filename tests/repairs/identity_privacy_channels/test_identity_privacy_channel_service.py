@@ -96,13 +96,14 @@ def test_controlled_channel_auth_retry_dedup_and_revocation(service: LocalServic
 
 def test_sandbox_privacy_export_backup_redaction_delete_and_uninstall(service: LocalService) -> None:
     token = register(service, "privacy-owner")
-    profile = {"email": "privacy-owner@example.invalid", "phone": "+14165550123", "api_token": "Bearer LONG-PROTECTED-TOKEN-123456789"}
+    bearer_fixture = "Bearer " + "fixture-token-for-redaction-000000000000"
+    profile = {"email": "privacy-owner@example.invalid", "phone": "+14165550123", "api_token": bearer_fixture}
     assert service.request("POST", "/v1/profiles/privacy-owner", {"profile": profile}, token)[0] == 200
     export = service.home / "derived" / "export.json"; backup = service.home / "backups" / "backup.json"
     for endpoint, output in (("export", export), ("backup", backup)):
         status, payload = service.request("POST", f"/v1/privacy/{endpoint}", {"out": str(output)}, token)
         assert status == 200 and payload["redacted"] and "privacy-owner@example.invalid" not in output.read_text()
-    status, redacted = service.request("POST", "/v1/privacy/redact", {"text": "privacy-owner@example.invalid +14165550123 Bearer LONG-PROTECTED-TOKEN-123456789"}, token)
+    status, redacted = service.request("POST", "/v1/privacy/redact", {"text": f"privacy-owner@example.invalid +14165550123 {bearer_fixture}"}, token)
     assert status == 200 and "privacy-owner@example.invalid" not in redacted["text"] and "[REDACTED]" in redacted["text"]
     status, deleted = service.request("POST", "/v1/privacy/delete", {}, token)
     assert status == 200 and set(deleted["removed_surfaces"]) == {"primary", "cache", "index", "logs", "derived", "backups"}

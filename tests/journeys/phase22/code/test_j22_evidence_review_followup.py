@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -63,6 +64,26 @@ def _artifact_entry(path: Path, *, kind: str, source_path: Path | None = None) -
         "exists": path.exists(),
         "bytes": path.stat().st_size if path.exists() and path.is_file() else None,
     }
+
+
+def _write_review_proof(path: Path, artifact: Path, case_id: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    source = path.with_suffix(".source.txt")
+    claim = f"The {case_id} review packet is persisted for deterministic local evidence checks."
+    source.write_text(claim + "\n", encoding="utf-8")
+    return _write_json(path, {
+        "schema": "scientific_review_proof.v1",
+        "writer": {"provider": "local_fixture", "model": "phase22-journey"},
+        "artifact": {"path": str(artifact), "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()},
+        "claims": [{
+            "claim_id": f"claim.j22.{case_id}",
+            "claim": claim,
+            "source": {"source_id": f"j22-{case_id}-source", "path": str(source), "sha256": hashlib.sha256(source.read_bytes()).hexdigest()},
+            "evidence_span": {"start": 0, "end": len(claim), "text": claim},
+            "acceptance_criterion": "The reviewer must reload the persisted artifact, source, hashes, and exact span.",
+            "residual_risk": "The local fixture does not establish external scientific validity.",
+        }],
+    })
 
 
 def _assertion(
@@ -135,6 +156,10 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
         "wiki_root": fixture_root / "incomplete_wiki_case" / "wiki",
     }
 
+    sandbox = tmp_path / "p22-j22"
+    complete["proof"] = _write_review_proof(sandbox / "proofs" / "complete.json", complete["review_target"], "complete")
+    overreach["proof"] = _write_review_proof(sandbox / "proofs" / "overreach.json", overreach["review_target"], "overreach")
+
     input_artifacts: list[dict[str, Any]] = []
     for mapping in (complete, overreach, incomplete):
         for key, path in mapping.items():
@@ -143,7 +168,6 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
                 assert path.stat().st_size > 0, f"empty fixture: {path}"
             input_artifacts.append(_artifact_entry(path, kind=f"fixture_{key}"))
 
-    sandbox = tmp_path / "p22-j22"
     entrypoint_runs: list[dict[str, Any]] = []
 
     def run_skill(skill: str, args: list[str], *, action: str, label: str, timeout: float = 90) -> tuple[dict[str, Any], dict[str, Any], Path]:
@@ -252,6 +276,8 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
             str(complete["review_target"]),
             "--review-llm-evidence",
             str(complete["review_evidence"]),
+            "--proof-bundle",
+            str(complete["proof"]),
             "--focus",
             "evidence",
             "--run-id",
@@ -266,6 +292,8 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
             str(overreach["review_target"]),
             "--review-llm-evidence",
             str(overreach["review_evidence"]),
+            "--proof-bundle",
+            str(overreach["proof"]),
             "--focus",
             "evidence",
             "--run-id",
@@ -304,6 +332,8 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
             str(overreach["code"]),
             "--review-llm-evidence",
             str(overreach["review_evidence"]),
+            "--proof-bundle",
+            str(overreach["proof"]),
             "--run-id",
             f"{run_id}-exp-overreach",
         ],

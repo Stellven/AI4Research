@@ -288,6 +288,7 @@ def native_options(args: argparse.Namespace) -> dict[str, Any]:
         "after_artifacts": list(args.after_artifact or []),
         "execute_approved": bool(args.execute_approved),
         "review_llm_evidence": list(args.review_llm_evidence or []),
+        "proof_bundle_path": str(args.proof_bundle or ""),
         "review_llm_command": str(args.review_llm_command or ""),
         "review_llm_provider": str(args.review_llm_provider or ""),
         "review_llm_model": str(args.review_llm_model or ""),
@@ -528,6 +529,8 @@ def run_research_scheduler_lifecycle(args: argparse.Namespace, *, run_id: str, w
     if args.review_llm_evidence:
         for path in args.review_llm_evidence:
             command.extend(["--review-llm-evidence", str(path)])
+    if args.proof_bundle:
+        command.extend(["--proof-bundle", str(args.proof_bundle)])
     if args.compile_target:
         command.extend(["--compile-target", str(args.compile_target)])
     if args.compile_approval_ref:
@@ -705,6 +708,8 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
         inputs["pilot_runtime_evidence"] = list(args.pilot_runtime_evidence)
     if args.review_llm_evidence:
         inputs["review_llm_evidence"] = list(args.review_llm_evidence)
+    if args.proof_bundle:
+        inputs["proof_bundle_path"] = str(args.proof_bundle)
     if args.review_llm_command:
         inputs["review_llm_command"] = str(args.review_llm_command)
     if args.review_llm_provider:
@@ -2161,6 +2166,7 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--review", action="store_true", help="Request native Review LLM review where supported")
     skill.add_argument("--require-review-llm", action="store_true", help="Require Review LLM evidence for final review acceptance")
     skill.add_argument("--review-llm-evidence", action="append", help="Existing Review LLM evidence JSON for /review")
+    skill.add_argument("--proof-bundle", help="Persisted scientific_review_proof.v1 bundle reloaded by the reviewer")
     skill.add_argument("--review-llm-command", help="Command bridge that returns artifact_review.v1 Review LLM JSON on stdout")
     skill.add_argument("--review-llm-provider", choices=["openai", "openrouter", "openai_compatible"], help="OpenAI-compatible Review LLM provider")
     skill.add_argument("--review-llm-model", help="Review LLM model name, defaulting to gpt-5.5 when provider mode is used")

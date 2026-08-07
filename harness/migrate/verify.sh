@@ -38,13 +38,21 @@ if [[ -z "$BUNDLE" ]]; then
   exit 1
 fi
 
+if command -v cygpath >/dev/null 2>&1; then
+  BUNDLE="$(cygpath -u "$BUNDLE" 2>/dev/null || printf '%s' "$BUNDLE")"
+fi
+
 if [[ ! -f "$BUNDLE" ]]; then
   err "Bundle 文件不存在: $BUNDLE"
   exit 1
 fi
 
 sha256_file() {
-  shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1 || sha256sum "$1" | cut -d' ' -f1
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" 2>/dev/null
+  else
+    sha256sum "$1"
+  fi | sed -E 's/.*([[:xdigit:]]{64}).*/\1/'
 }
 
 PASS_COUNT=0
@@ -100,12 +108,13 @@ else
 fi
 
 # 读取元数据
-SRC_HOME=$(python3 -c "import json; print(json.load(open('$META')).get('source_home',''))" 2>/dev/null)
-SRC_HOSTNAME=$(python3 -c "import json; print(json.load(open('$META')).get('source_hostname',''))" 2>/dev/null)
-BUNDLE_ID=$(python3 -c "import json; print(json.load(open('$META')).get('bundle_id',''))" 2>/dev/null)
-HAS_SECRETS=$(python3 -c "import json; print(json.load(open('$META')).get('has_secrets',False))" 2>/dev/null)
-SECRETS_ENCRYPTED=$(python3 -c "import json; print(json.load(open('$META')).get('secrets_encrypted',False))" 2>/dev/null)
-SRC_ARCH=$(python3 -c "import json; print(json.load(open('$META')).get('source_arch','unknown'))" 2>/dev/null)
+export META
+SRC_HOME=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('source_home',''))" 2>/dev/null)
+SRC_HOSTNAME=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('source_hostname',''))" 2>/dev/null)
+BUNDLE_ID=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('bundle_id',''))" 2>/dev/null)
+HAS_SECRETS=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('has_secrets',False))" 2>/dev/null)
+SECRETS_ENCRYPTED=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('secrets_encrypted',False))" 2>/dev/null)
+SRC_ARCH=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('source_arch','unknown'))" 2>/dev/null)
 
 ok "源机: ${SRC_HOSTNAME} (${SRC_HOME})"
 ok "Bundle ID: ${BUNDLE_ID}"

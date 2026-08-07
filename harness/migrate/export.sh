@@ -55,6 +55,9 @@ done
 if [[ -z "$OUT_DIR" ]]; then
   OUT_DIR="$HOME/solar-bundles"
 fi
+if command -v cygpath >/dev/null 2>&1; then
+  OUT_DIR="$(cygpath -u "$OUT_DIR" 2>/dev/null || printf '%s' "$OUT_DIR")"
+fi
 mkdir -p "$OUT_DIR"
 
 HOSTNAME_VAL=$(hostname -s 2>/dev/null || hostname)
@@ -347,7 +350,7 @@ SW_VERS=$(sw_vers -productVersion 2>/dev/null || echo "unknown")
 ARCH=$(arch 2>/dev/null || uname -m)
 BUNDLE_ID=$(python3 -c "import uuid; print(uuid.uuid4())")
 
-export INCLUDE_SECRETS SECRETS_ENC
+export INCLUDE_SECRETS SECRETS_ENC WORK_DIR BUNDLE_DIR
 python3 << PYEOF
 import json, os
 meta = {
@@ -364,14 +367,14 @@ meta = {
 }
 
 # Load files_hash
-fh_path = os.path.join("$WORK_DIR", "files_hash.json")
+fh_path = os.path.join(os.environ["WORK_DIR"], "files_hash.json")
 if os.path.exists(fh_path):
     with open(fh_path) as f:
         meta["files_hash"] = json.load(f)
 else:
     meta["files_hash"] = {}
 
-with open(os.path.join("$BUNDLE_DIR", "bundle-meta.json"), 'w') as f:
+with open(os.path.join(os.environ["BUNDLE_DIR"], "bundle-meta.json"), 'w') as f:
     json.dump(meta, f, indent=2, ensure_ascii=False)
 print("  bundle-meta.json 生成完成")
 PYEOF

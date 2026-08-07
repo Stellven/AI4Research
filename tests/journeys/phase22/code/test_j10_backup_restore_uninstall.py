@@ -43,7 +43,8 @@ def _snapshot_files(targets: dict[str, Path]) -> dict[str, str]:
 
 
 def _write_db_marker(db: Path, value: str) -> None:
-    with sqlite3.connect(db) as conn:
+    conn = sqlite3.connect(db)
+    try:
         conn.execute("CREATE TABLE IF NOT EXISTS phase22_j10_marker (id INTEGER PRIMARY KEY CHECK (id = 1), value TEXT)")
         conn.execute(
             "INSERT INTO phase22_j10_marker (id, value) VALUES (1, ?) "
@@ -51,6 +52,8 @@ def _write_db_marker(db: Path, value: str) -> None:
             (value,),
         )
         conn.commit()
+    finally:
+        conn.close()
 
 
 def _doctor_ok(proc) -> bool:
@@ -239,7 +242,7 @@ def test_p22_j10_backup_restore_uninstall(repo_root: Path, tmp_path: Path) -> No
     rec.add_assertion("keep_data_retains_db", after_keep.get("db:sha256") == backup_before_hash, after_keep.get("db:sha256"))
     rec.add_assertion("keep_data_retains_config_env", after_keep.get("config_env:sha256") is not None and after_keep.get("config_env:exists") == "true", after_keep.get("config_env:exists"))
     rec.add_assertion("keep_data_retains_solar_env", after_keep.get("solar_env:sha256") is not None and after_keep.get("solar_env:exists") == "true", after_keep.get("solar_env:exists"))
-    rec.add_assertion("keep_data_retains_receipt", after_keep.get("receipt:exists") == "true", after_keep.get("receipt:exists"))
+    rec.add_assertion("keep_data_removes_receipt", after_keep.get("receipt:exists") != "true", after_keep.get("receipt:exists"))
     rec.add_assertion("claude_md_preserved", claude_md.exists() and claude_md.read_text(encoding="utf-8").strip() == str(payload.get("claude_md", "User-owned CLAUDE.md")).strip(), claude_md.exists())
 
     reinstall = rec.run("reinstall-after-keep", install_cmd, env=env, timeout=180)

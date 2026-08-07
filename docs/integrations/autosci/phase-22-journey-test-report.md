@@ -1,10 +1,49 @@
 ﻿# Phase 22 Journey Test Report
 
-Generated: 2026-07-30
-Run ID: `phase22-j23-pass-sync-20260730`
-Repo head: `bce2b978008a14d337ff6040a2fabc71ce3e7ae5`
+Generated: 2026-08-07
+Run ID: `known-issues-final-integration-20260807`
+Repo head before final integration commit: `13348759d4659fc7484ba482134c0811175f206c`
+
+## Final Integration Addendum
+
+This addendum supersedes the 2026-07-30 stakeholder roll-up below. The final
+integration pass cherry-picked the nine repair commits onto fixed baseline
+`4b5af751956f8ef1d2eb6bbce8baf9088e694d00`, ran the current targeted and
+journey suites, and downgraded positive inference-only rows unless production
+journey evidence was present.
+
+Final L2 status counts:
+
+| Status | L2 count |
+|---|---:|
+| PASS | 26 |
+| PASS_WITH_KNOWN_LIMITATIONS | 68 |
+| FAIL | 14 |
+| ENVIRONMENT_BLOCKED | 2 |
+| NOT_AVAILABLE | 22 |
+| NOT_TESTED | 10 |
+| Total | 142 |
+
+Accepted final validation highlights:
+
+| Scope | Result |
+|---|---|
+| Changed targeted regression set | 89 passed, 3 skipped |
+| Pytest collection | 7029 collected, 0 collection errors |
+| J01-J24 final journey suite | 15 passed, 11 skipped |
+| Broad root shards | 2101 passed, 179 failed, 6 errors, 1 skipped, 3 xfailed, non-deduplicated |
+| Broad harness sub-shard A | incomplete; no terminal pytest summary |
+| Workbook formula scan | 0 formula-error matches in full and brief reports |
+
+The final journey suite is not treated as an all-product PASS: skipped journeys
+remain environment or platform blocks, and the broad suite still contains real
+failures/errors. Live providers were not rerun in this final pass without fresh
+explicit authorization and configured credentials.
 
 ## Executive Result
+
+Historical 2026-07-30 result retained for traceability; use the Final
+Integration Addendum above for the current verdict.
 
 Phase 22 L2 ledger completion reached 100% for the 142 brief-report Level 2 rows:
 every row has an explicit final status, issue statement, and traceable evidence

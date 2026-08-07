@@ -118,11 +118,11 @@ def test_unsupported_algorithms_do_not_fake_pass_and_record_failure_state(tmp_pa
     result = execute_operator(
         {
             "operator_kind": "trainer",
-            "algorithm": "lora",
+            "algorithm": "future_trainer",
             "run_id": "unsupported-run",
-            "sprint_id": "sprint-lora",
-            "node_id": "N-lora",
-            "task_id": "task-lora",
+            "sprint_id": "sprint-unsupported",
+            "node_id": "N-unsupported",
+            "task_id": "task-unsupported",
             "artifact_root": str(tmp_path / "artifacts"),
             "inputs": {},
             "parameters": {},
@@ -137,11 +137,76 @@ def test_unsupported_algorithms_do_not_fake_pass_and_record_failure_state(tmp_pa
     assert result["output_hash"] is None
     assert not (tmp_path / "artifacts" / "unsupported-run").exists()
 
-    state = _load_json(tmp_path / "sprints" / "sprint-lora.task_dag.state.json")
-    node = state["node_results"]["N-lora"]
+    state = _load_json(tmp_path / "sprints" / "sprint-unsupported.task_dag.state.json")
+    node = state["node_results"]["N-unsupported"]
     assert node["status"] == "failed"
     assert node["advanced_ai4rnd"]["status"] == "unsupported"
 
-    ledger_lines = (tmp_path / "evidence" / "sprint-lora.jsonl").read_text(encoding="utf-8").splitlines()
+    ledger_lines = (tmp_path / "evidence" / "sprint-unsupported.jsonl").read_text(encoding="utf-8").splitlines()
     evidence = json.loads(ledger_lines[-1])
     assert evidence["verification_results"]["status"] == "unsupported"
+
+
+def test_reference_optimizer_uses_the_canonical_operator_evidence_path(tmp_path):
+    result = execute_operator(
+        {
+            "operator_kind": "optimizer",
+            "algorithm": "mcts",
+            "run_id": "mcts-product-route",
+            "sprint_id": "sprint-mcts",
+            "node_id": "N-mcts",
+            "artifact_root": str(tmp_path / "artifacts"),
+            "inputs": {
+                "dataset": [
+                    {"text": "safe tested approval", "label": "accept"},
+                    {"text": "reliable verified answer", "label": "accept"},
+                    {"text": "unsafe secret leak", "label": "reject"},
+                    {"text": "brittle untested hack", "label": "reject"},
+                ],
+                "max_steps": 4,
+            },
+            "parameters": {"seed": 7},
+        },
+        sprints_dir=tmp_path / "sprints",
+        evidence_dir=tmp_path / "evidence",
+    )
+
+    assert result["status"] == "passed"
+    assert result["capability_scope"] == "cpu_reference"
+    assert result["metrics"]["objective_delta"] > 0
+    assert result["output_hash"]
+    state = _load_json(tmp_path / "sprints" / "sprint-mcts.task_dag.state.json")
+    assert state["node_results"]["N-mcts"]["advanced_ai4rnd"]["status"] == "passed"
+
+
+def test_reference_trainer_uses_the_canonical_operator_evidence_path(tmp_path):
+    result = execute_operator(
+        {
+            "operator_kind": "trainer",
+            "algorithm": "lora",
+            "run_id": "lora-product-route",
+            "sprint_id": "sprint-lora",
+            "node_id": "N-lora",
+            "artifact_root": str(tmp_path / "artifacts"),
+            "inputs": {
+                "dataset": [
+                    {"features": [1.0, 0.0], "target": [1.0]},
+                    {"features": [0.0, 1.0], "target": [-1.0]},
+                ],
+                "initial_weights": {
+                    "base": [[0.0, 0.0]],
+                    "lora_a": [[0.2], [-0.2]],
+                    "lora_b": [[0.1]],
+                },
+                "config": {"epochs": 4, "learning_rate": 0.2, "rank": 1},
+            },
+        },
+        sprints_dir=tmp_path / "sprints",
+        evidence_dir=tmp_path / "evidence",
+    )
+
+    assert result["status"] == "passed"
+    assert result["capability_scope"] == "cpu_reference"
+    assert result["metrics"]["updated_low_rank_parameters"] is True
+    assert result["promotion"]["passed"] is True
+    assert result["output_hash"]

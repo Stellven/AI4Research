@@ -7,7 +7,10 @@ The module intentionally keeps the shipped surface small:
   search grid using a tiny Gaussian-process surrogate and expected improvement.
 * ``sft_linear_adapter`` is a CPU-safe supervised adapter run that trains a
   bag-of-words softmax policy and writes a versioned artifact.
-* Other named advanced algorithms return explicit ``unsupported`` records.
+* CPU reference optimization and training methods are adapted through this
+  same TaskGraph operator instead of being exposed as a second control plane.
+* Named routing, retrieval, and evaluator primitives without a product task
+  envelope continue to return explicit ``unsupported`` records.
 
 All successful and failed executions can write TaskGraph runtime state and an
 append-only evidence ledger without mutating the TaskGraph spec.
@@ -45,27 +48,29 @@ except Exception:  # pragma: no cover
     EvidenceLedger = None  # type: ignore[assignment]
     build_scheduler_decision = None  # type: ignore[assignment]
 
+try:
+    from advanced_ai4rnd.optimization import (
+        ALGORITHMS as REFERENCE_OPTIMIZER_NAMES,
+        run_reference_optimizer,
+    )
+    from advanced_ai4rnd.training import TrainingJob, run_training_job
+except Exception:  # pragma: no cover - fail closed when the optional package is absent
+    REFERENCE_OPTIMIZER_NAMES = ()
+    run_reference_optimizer = None  # type: ignore[assignment]
+    TrainingJob = None  # type: ignore[assignment,misc]
+    run_training_job = None  # type: ignore[assignment]
 
-SUPPORTED_OPTIMIZERS = frozenset({"bayesian_optimization"})
-SUPPORTED_TRAINERS = frozenset({"sft_linear_adapter"})
+REFERENCE_TRAINER_NAMES = frozenset({"sft", "lora", "dpo", "grpo", "agent_rl"})
+SUPPORTED_OPTIMIZERS = frozenset({"bayesian_optimization", *REFERENCE_OPTIMIZER_NAMES})
+SUPPORTED_TRAINERS = frozenset({"sft_linear_adapter", *REFERENCE_TRAINER_NAMES})
 PHYSICAL_OPERATOR_ID = "autosci-advanced-ai4rnd-worker"
 
 OPTIONAL_ADAPTERS = {
     "gepa": "Use harness/integrations/gepa_optimizer for GEPA artifact optimization.",
-    "miprov2": "MIPROv2 is not shipped in this reference operator.",
-    "textgrad": "TextGrad is not shipped in this reference operator.",
     "bandit_routing": "Bandit routing is not shipped in this reference operator.",
     "cost_aware_rl": "Cost-aware RL is not shipped in this reference operator.",
-    "aflow": "AFlow graph optimization is not shipped in this reference operator.",
-    "mcts": "MCTS graph optimization is not shipped in this reference operator.",
-    "adas": "ADAS graph optimization is not shipped in this reference operator.",
-    "lora": "LoRA training is not shipped in this CPU-safe reference operator.",
-    "dpo": "DPO training is not shipped in this CPU-safe reference operator.",
-    "grpo": "GRPO training is not shipped in this CPU-safe reference operator.",
-    "agent_rl": "Agent RL training is not shipped in this CPU-safe reference operator.",
     "reward_modeling": "Reward-model training is not shipped in this reference operator.",
     "judge_calibration": "Judge calibration is not shipped in this reference operator.",
-    "cegis": "CEGIS synthesis is not shipped in this reference operator.",
     "self_rag": "Self-RAG training is not shipped in this reference operator.",
     "reranker_training": "Reranker training is not shipped in this reference operator.",
 }
@@ -150,7 +155,9 @@ def execute_operator(
 def _execute_optimizer(envelope: OperatorEnvelope) -> dict[str, Any]:
     if envelope.algorithm not in SUPPORTED_OPTIMIZERS:
         return _unsupported_result(envelope)
-    return _run_bayesian_optimization(envelope)
+    if envelope.algorithm == "bayesian_optimization":
+        return _run_bayesian_optimization(envelope)
+    return _run_reference_optimizer(envelope)
 
 
 def _execute_trainer(
@@ -160,7 +167,99 @@ def _execute_trainer(
 ) -> dict[str, Any]:
     if envelope.algorithm not in SUPPORTED_TRAINERS:
         return _unsupported_result(envelope)
-    return _run_sft_linear_adapter(envelope, registry_path=registry_path)
+    if envelope.algorithm == "sft_linear_adapter":
+        return _run_sft_linear_adapter(envelope, registry_path=registry_path)
+    return _run_reference_trainer(envelope)
+
+
+def _run_reference_optimizer(envelope: OperatorEnvelope) -> dict[str, Any]:
+    if run_reference_optimizer is None:
+        raise AdvancedOperatorError("reference optimizer package is unavailable")
+    resume_from = envelope.parameters.get("resume_from") or envelope.inputs.get("resume_from")
+    raw = run_reference_optimizer(
+        envelope.algorithm,
+        envelope.inputs.get("problem") or envelope.inputs,
+        run_dir=envelope.artifact_root / envelope.run_id,
+        seed=int(envelope.parameters.get("seed", 0)),
+        run_id=envelope.run_id,
+        max_steps=envelope.parameters.get("max_steps"),
+        resume_from=resume_from,
+        interrupt_after_steps=envelope.parameters.get("interrupt_after_steps"),
+        fail_once_steps=envelope.parameters.get("fail_once_steps"),
+    )
+    passed = raw.get("status") == "passed"
+    result_path = Path(str((raw.get("artifacts") or {}).get("result") or ""))
+    output_hash = _hash_file(result_path) if result_path.is_file() else None
+    metric_names = (
+        "baseline_accuracy", "best_accuracy", "baseline_objective",
+        "best_objective", "objective_delta", "steps_completed",
+    )
+    return {
+        "schema_version": "solar.advanced_ai4rnd.operator_result.v1",
+        "status": "passed" if passed else str(raw.get("status") or "failed"),
+        "task_graph_status": "passed" if passed else "failed",
+        "result_state": "FULLY_IMPLEMENTED" if passed else "FAIL",
+        "capability_scope": "cpu_reference",
+        "operator_kind": envelope.operator_kind,
+        "algorithm": envelope.algorithm,
+        "run_id": envelope.run_id,
+        "sprint_id": envelope.sprint_id,
+        "node_id": envelope.node_id,
+        "metrics": {name: raw[name] for name in metric_names if name in raw},
+        "artifacts": dict(raw.get("artifacts") or {}),
+        "output_hash": output_hash,
+        "reference_result": raw,
+    }
+
+
+def _run_reference_trainer(envelope: OperatorEnvelope) -> dict[str, Any]:
+    if TrainingJob is None or run_training_job is None:
+        raise AdvancedOperatorError("reference training package is unavailable")
+    dataset = envelope.inputs.get("dataset")
+    config = envelope.inputs.get("config") or envelope.parameters.get("config") or envelope.parameters
+    initial_weights = envelope.inputs.get("initial_weights")
+    if not isinstance(dataset, list):
+        raise AdvancedOperatorError("inputs.dataset must be a list")
+    if not isinstance(config, Mapping):
+        raise AdvancedOperatorError("inputs.config or parameters must be an object")
+    if not isinstance(initial_weights, Mapping):
+        raise AdvancedOperatorError("inputs.initial_weights must be an object")
+    resume_value = envelope.inputs.get("resume_from") or envelope.parameters.get("resume_from")
+    promotion_gate = envelope.inputs.get("promotion_gate") or envelope.parameters.get("promotion_gate")
+    code_refs = envelope.inputs.get("code_refs") or []
+    if not isinstance(code_refs, list):
+        raise AdvancedOperatorError("inputs.code_refs must be a list")
+    job = TrainingJob(
+        job_id=envelope.run_id,
+        method=envelope.algorithm,
+        dataset=dataset,
+        config=dict(config),
+        initial_weights=dict(initial_weights),
+        output_dir=envelope.artifact_root / envelope.run_id,
+        code_refs=[str(item) for item in code_refs],
+        resume_from=Path(str(resume_value)) if resume_value else None,
+        promotion_gate=dict(promotion_gate or {"metric": "eval_score", "min": 0.0}),
+    )
+    raw = run_training_job(job).to_dict()
+    artifacts = dict(raw.get("artifacts") or {})
+    return {
+        "schema_version": "solar.advanced_ai4rnd.operator_result.v1",
+        "status": "passed",
+        "task_graph_status": "passed",
+        "result_state": "FULLY_IMPLEMENTED",
+        "capability_scope": "cpu_reference",
+        "operator_kind": envelope.operator_kind,
+        "algorithm": envelope.algorithm,
+        "run_id": envelope.run_id,
+        "sprint_id": envelope.sprint_id,
+        "node_id": envelope.node_id,
+        "metrics": dict(raw.get("metrics") or {}),
+        "artifacts": artifacts,
+        "output_hash": (raw.get("provenance") or {}).get("result_weights_hash"),
+        "training_evidence": dict(raw.get("evidence") or {}),
+        "promotion": dict(raw.get("promotion") or {}),
+        "provenance": dict(raw.get("provenance") or {}),
+    }
 
 
 def _unsupported_result(envelope: OperatorEnvelope) -> dict[str, Any]:

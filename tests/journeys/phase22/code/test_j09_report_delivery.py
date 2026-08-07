@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -31,6 +32,28 @@ def _ensure_fixture_source(target: Path, source: Path) -> Path:
         target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
         return target
     return write_demo_paper(target)
+
+
+def _write_review_proof(path: Path, artifact: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    source = path.with_suffix(".source.txt")
+    claim = "The local report packet is persisted for deterministic evidence review."
+    source.write_text(claim + "\n", encoding="utf-8")
+    payload = {
+        "schema": "scientific_review_proof.v1",
+        "writer": {"provider": "local_fixture", "model": "phase22-journey"},
+        "artifact": {"path": str(artifact), "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()},
+        "claims": [{
+            "claim_id": "claim.j09.persisted-report",
+            "claim": claim,
+            "source": {"source_id": "j09-local-report-source", "path": str(source), "sha256": hashlib.sha256(source.read_bytes()).hexdigest()},
+            "evidence_span": {"start": 0, "end": len(claim), "text": claim},
+            "acceptance_criterion": "The reviewer must reload the persisted report, source, hashes, and exact span.",
+            "residual_risk": "This is local journey evidence and does not establish external scientific validity.",
+        }],
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return path
 
 
 def _walk_strings(value: object) -> list[str]:
@@ -259,7 +282,8 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     draft, harness_dir = run_autosci(rec, sandbox, "paper-draft", [*common_args, "--run-id", "p22-j09-draft"], timeout=90)
     draft_ev = action_evidence(draft, "write_report")
     review_target = draft_ev or paper
-    review, _ = run_autosci(rec, sandbox, "review", [str(review_target), "--focus", "method", "--run-id", "p22-j09-review"], timeout=90)
+    review_proof = _write_review_proof(sandbox / "review-proof.json", Path(review_target))
+    review, _ = run_autosci(rec, sandbox, "review", [str(review_target), "--proof-bundle", str(review_proof), "--focus", "method", "--run-id", "p22-j09-review"], timeout=90)
     compile_result, _ = run_autosci(rec, sandbox, "paper-compile", [str(review_target), "--checklist", "--run-id", "p22-j09-compile"], timeout=90)
 
     plan_ev = action_evidence(plan, "plan_report")

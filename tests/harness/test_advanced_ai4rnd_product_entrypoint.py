@@ -147,7 +147,12 @@ def test_cpu_sft_runs_through_production_entrypoint_with_lineage(tmp_path: Path)
 
 
 def test_unsupported_algorithm_remains_explicit_through_product_entrypoint(tmp_path: Path) -> None:
-    envelope = _base_envelope(tmp_path, kind="trainer", algorithm="lora", run_id="lora-cli")
+    envelope = _base_envelope(
+        tmp_path,
+        kind="trainer",
+        algorithm="future_trainer",
+        run_id="future-trainer-cli",
+    )
 
     proc, result = _run_product_entrypoint(tmp_path, envelope)
 

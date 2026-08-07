@@ -24,6 +24,8 @@ def _prepare_harness(tmp_path: Path) -> tuple[Path, dict[str, str]]:
     sandbox = tmp_path / "harness"
     for name in ("config", "lib", "personas", "run", "sprints"):
         (sandbox / name).mkdir(parents=True, exist_ok=True)
+    (sandbox / "run" / "operator-inbox" / OPERATOR_ID).mkdir(parents=True, exist_ok=True)
+    (sandbox / "run" / "operator-results" / OPERATOR_ID).mkdir(parents=True, exist_ok=True)
     shutil.copy2(HARNESS / "config" / "physical-operators.json", sandbox / "config")
     shutil.copy2(HARNESS / "personas" / "lab-builder.md", sandbox / "personas")
     for name in (
@@ -33,6 +35,7 @@ def _prepare_harness(tmp_path: Path) -> tuple[Path, dict[str, str]]:
         "task_graph_state_io.py",
     ):
         shutil.copy2(HARNESS / "lib" / name, sandbox / "lib" / name)
+    shutil.copytree(HARNESS / "lib" / "advanced_ai4rnd", sandbox / "lib" / "advanced_ai4rnd")
 
     bash_dir = _git_bash_dir()
     env = {
@@ -182,7 +185,7 @@ def test_unsupported_algorithm_stays_explicit_through_real_dispatcher(tmp_path: 
         sandbox,
         sid=sid,
         kind="trainer",
-        algorithm="lora",
+        algorithm="future_trainer",
         inputs={},
         parameters={},
     )

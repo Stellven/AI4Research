@@ -238,7 +238,7 @@ test_export() {
     cat > "$SPRINTS_DIR/${test_sid}.contract.md" <<'EOF'
 # Test Sprint Contract
 Goal: Test export functionality.
-api_key: sk-test-SUPERSECRET1234567890abcdef
+api_key: REDACTED_TEST_API_KEY
 EOF
   fi
 

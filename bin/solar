@@ -482,7 +482,11 @@ do_restore() {
     fi
     [ -f "$tar_archive" ] || { echo "archive not found: $archive" >&2; exit 1; }
     mkdir -p "$SOLAR_HOME"
-    tar xzf "$tar_archive" -C "$SOLAR_HOME"
+    tar_home="$SOLAR_HOME"
+    if command -v cygpath >/dev/null 2>&1; then
+        tar_home="$(cygpath -u "$SOLAR_HOME" 2>/dev/null || printf '%s' "$SOLAR_HOME")"
+    fi
+    tar xzf "$tar_archive" -C "$tar_home"
     echo "restored from $archive into $SOLAR_HOME"
 }
 
@@ -1125,6 +1129,18 @@ guard_path() {
     return 0
 }
 
+remove_tree_with_retry() {
+    target="$1"
+    attempt=0
+    while [ "$attempt" -lt 4 ]; do
+        rm -rf "$target" 2>/dev/null || true
+        [ ! -e "$target" ] && return 0
+        attempt=$((attempt + 1))
+        sleep 0.25
+    done
+    rm -rf "$target"
+}
+
 # Strip Solar-owned hook entries from settings.json, keyed by the
 # "/solar/hooks/" command path segment. User-owned entries and other keys
 # are preserved; if nothing else remains the file is removed (residue-free).
@@ -1375,7 +1391,7 @@ uninstall() {
                 -exec rm -rf {} +
         fi
     elif guard_path "$SOLAR_HOME"; then
-        rm -rf "$SOLAR_HOME"
+        remove_tree_with_retry "$SOLAR_HOME"
     fi
     echo "OpenSolar uninstalled"
 }

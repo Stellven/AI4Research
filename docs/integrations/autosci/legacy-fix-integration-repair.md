@@ -345,3 +345,35 @@ The correction commit's authoritative full SHA is written to the ignored
 post-commit result JSON. A Git commit cannot embed its own final SHA in its
 tracked contents without changing that SHA; this record instead binds the
 correction to the rework baseline, branch, exact commands, and results.
+
+## Known Issues Final Integration Disposition
+
+Logged: 2026-08-07 EDT
+
+This table supersedes worker-claimed closure for the 15 Legacy issues requested
+in the final integration task. A worker claim alone is not accepted as closure;
+the status below reflects current production entrypoint evidence, final journey
+results, and remaining environment or variant limits.
+
+| Legacy issue | Final status | Current evidence | Remaining limit |
+|---|---|---|---|
+| A02 | PARTIAL | Canonical Solar control-plane routing and parity contracts are integrated. | Live upstream parity and all historical AutoSci variants were not re-executed. |
+| A08 | PARTIAL | Request taxonomy and canonical routing use the shared control plane. | Long-tail intake/provider variants remain untested. |
+| A09 | PARTIAL | Offline/local research control paths pass targeted regressions. | Live upstream/provider parity remains limited. |
+| E02 | PARTIAL | Live-provider adapter and state-closure repairs are integrated. | Provider-backed J05/J20 variants remain blocked or not directly tested in final integration. |
+| E03 | PARTIAL | Provider state/result normalization is integrated. | External provider volatility and full live matrix were not rerun. |
+| E04 | PARTIAL | Provider evidence schemas and result closure are present. | Real provider-backed extraction/analysis remains not tested. |
+| E05 | PARTIAL | Provider boundary handling is covered by local/offline and adapter tests. | Full live provider closure remains limited. |
+| N09 | PARTIAL | Scientific review/reviewer independence repairs are integrated. | Same-provider reviewer independence remains a documented limitation. |
+| P03 | PARTIAL | Reviewer paths now pass supported and overreach-style production tests. | Independent provider/model diversity was not proven. |
+| P07 | PARTIAL | J09 report delivery now passes through production commands with a consistent proof bundle. | Live review, final approval, and compile/HITL variants remain limited. |
+| P09 | PARTIAL | Local visualization/report artifact paths remain usable. | Broader UI/report export variants were not fully exercised. |
+| S01 | PARTIAL | Runtime isolation and cleanup paths improved. | Native OS sandboxing/security isolation is still limited on Windows. |
+| S03 | FIXED | Lease/pane/session recovery and cleanup regressions are integrated and covered by targeted tests. | No current acceptance blocker found for the scoped S03 behavior. |
+| T02 | PARTIAL | TMUX/entrypoint repairs are integrated and WSL/Linux evidence exists. | Remote, multi-session, and live-provider TMUX variants remain limited. |
+| T06 | PARTIAL | Shared Solar control-plane entrypoints are integrated across repaired capabilities. | Some advanced, provider, and platform paths have only local diagnostic evidence. |
+
+The final integration does not claim that all Legacy or L2 issues are resolved.
+Broad pytest remains non-green, live provider execution was not rerun without
+fresh authorization, and macOS/external-channel/provider-revocation paths remain
+blocked, unavailable, or untested.

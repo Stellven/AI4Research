@@ -101,6 +101,10 @@ if [[ -z "$BUNDLE" ]]; then
   exit 1
 fi
 
+if command -v cygpath >/dev/null 2>&1; then
+  BUNDLE="$(cygpath -u "$BUNDLE" 2>/dev/null || printf '%s' "$BUNDLE")"
+fi
+
 if [[ ! -f "$BUNDLE" ]]; then
   err "Bundle 文件不存在: $BUNDLE"
   exit 1
@@ -108,7 +112,22 @@ fi
 
 # ── 工具函数 ──
 sha256_file() {
-  shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1 || sha256sum "$1" | cut -d' ' -f1
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" 2>/dev/null
+  else
+    sha256sum "$1"
+  fi | sed -E 's/.*([[:xdigit:]]{64}).*/\1/'
+}
+
+copy_tree() {
+  src="$1"
+  dst="$2"
+  mkdir -p "$dst"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a "$src/" "$dst/" 2>/dev/null
+  else
+    cp -a "$src/." "$dst/"
+  fi
 }
 
 TEXT_EXTENSIONS="md sh json py ts yml yaml conf plist zshrc bashrc txt rc cfg toml xml csv"
@@ -179,12 +198,13 @@ if [[ ! -f "$META" ]]; then
   exit 1
 fi
 
-SRC_HOME=$(python3 -c "import json; print(json.load(open('$META'))['source_home'])" 2>/dev/null)
-SRC_HOSTNAME=$(python3 -c "import json; print(json.load(open('$META'))['source_hostname'])" 2>/dev/null)
-BUNDLE_ID=$(python3 -c "import json; print(json.load(open('$META'))['bundle_id'])" 2>/dev/null)
-HAS_SECRETS=$(python3 -c "import json; print(json.load(open('$META')).get('has_secrets',False))" 2>/dev/null)
-SECRETS_ENCRYPTED=$(python3 -c "import json; print(json.load(open('$META')).get('secrets_encrypted',False))" 2>/dev/null)
-SRC_ARCH=$(python3 -c "import json; print(json.load(open('$META')).get('source_arch','unknown'))" 2>/dev/null)
+export META
+SRC_HOME=$(python3 -c "import json,os; print(json.load(open(os.environ['META']))['source_home'])" 2>/dev/null)
+SRC_HOSTNAME=$(python3 -c "import json,os; print(json.load(open(os.environ['META']))['source_hostname'])" 2>/dev/null)
+BUNDLE_ID=$(python3 -c "import json,os; print(json.load(open(os.environ['META']))['bundle_id'])" 2>/dev/null)
+HAS_SECRETS=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('has_secrets',False))" 2>/dev/null)
+SECRETS_ENCRYPTED=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('secrets_encrypted',False))" 2>/dev/null)
+SRC_ARCH=$(python3 -c "import json,os; print(json.load(open(os.environ['META'])).get('source_arch','unknown'))" 2>/dev/null)
 
 ok "源机: ${SRC_HOSTNAME} (${SRC_HOME})"
 ok "Bundle ID: ${BUNDLE_ID}"
@@ -377,7 +397,7 @@ SOLAR_DIR="$BUNDLE_DIR/solar"
 if [[ -d "$SOLAR_DIR" ]]; then
   if [[ "$DRY_RUN" == "false" ]]; then
     mkdir -p "$TARGET_ROOT/.solar"
-    rsync -a "$SOLAR_DIR/" "$TARGET_ROOT/.solar/" 2>/dev/null
+    copy_tree "$SOLAR_DIR" "$TARGET_ROOT/.solar"
     if [[ "$PATH_REPLACE" == "true" ]]; then
       while IFS= read -r -d '' f; do
         if is_text_file "$(basename "$f")"; then
@@ -388,7 +408,7 @@ if [[ -d "$SOLAR_DIR" ]]; then
     ok "Solar 本体已展开"
   else
     mkdir -p "$TARGET_ROOT/.solar"
-    rsync -a "$SOLAR_DIR/" "$TARGET_ROOT/.solar/" 2>/dev/null
+    copy_tree "$SOLAR_DIR" "$TARGET_ROOT/.solar"
     ok "Solar 本体 (dry-run)"
   fi
 
@@ -406,7 +426,7 @@ CLAUDE_DIR="$BUNDLE_DIR/claude"
 if [[ -d "$CLAUDE_DIR" ]]; then
   if [[ "$DRY_RUN" == "false" ]]; then
     mkdir -p "$TARGET_ROOT/.claude"
-    rsync -a "$CLAUDE_DIR/" "$TARGET_ROOT/.claude/" 2>/dev/null
+    copy_tree "$CLAUDE_DIR" "$TARGET_ROOT/.claude"
     if [[ "$PATH_REPLACE" == "true" ]]; then
       while IFS= read -r -d '' f; do
         if is_text_file "$(basename "$f")"; then
@@ -417,7 +437,7 @@ if [[ -d "$CLAUDE_DIR" ]]; then
     ok "Claude 配置已展开"
   else
     mkdir -p "$TARGET_ROOT/.claude"
-    rsync -a "$CLAUDE_DIR/" "$TARGET_ROOT/.claude/" 2>/dev/null
+    copy_tree "$CLAUDE_DIR" "$TARGET_ROOT/.claude"
     ok "Claude 配置 (dry-run)"
   fi
 fi

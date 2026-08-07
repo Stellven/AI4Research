@@ -6,6 +6,44 @@ workbook named `AI4RnD Feature List.xlsx`. Historical test results are retained
 only as mapping evidence and must not be presented as results from the current
 repository.
 
+## Known Issues Final Integration
+
+Logged: 2026-08-07 EDT
+
+Integration branch: `codex/known-issues-final-integration`.
+Fixed baseline: `4b5af751956f8ef1d2eb6bbce8baf9088e694d00`.
+Pre-final-integration HEAD after repair cherry-picks:
+`13348759d4659fc7484ba482134c0811175f206c`.
+
+The nine repair worker commits were verified for commit, `result.json`, and a
+dedicated repair log before integration. They were cherry-picked in dependency
+order: control plane, live provider, reviewer, runtime, entrypoints, identity,
+optimizer, routing, and training. No cherry-pick conflict required whole-file
+ours/theirs resolution.
+
+Final L2 roll-up is conservative and supersedes the 2026-07-30 inference-heavy
+roll-up: `PASS=26`, `PASS_WITH_KNOWN_LIMITATIONS=68`, `FAIL=14`,
+`ENVIRONMENT_BLOCKED=2`, `NOT_AVAILABLE=22`, and `NOT_TESTED=10`, for 142 total
+L2 rows. Positive inference-only rows were downgraded unless a production
+journey or production entrypoint test supported the verdict.
+
+Validation summary:
+
+| Scope | Result |
+|---|---|
+| Changed targeted regression set | 89 passed, 3 skipped |
+| Pytest collection | 7029 collected, 0 collection errors |
+| J01-J24 final journey suite | 15 passed, 11 skipped |
+| Broad root shards | 2101 passed, 179 failed, 6 errors, 1 skipped, 3 xfailed, non-deduplicated |
+| Broad harness sub-shard A | incomplete; no terminal pytest summary |
+| Workbook formula scan | 0 formula-error matches |
+
+Open validation limits: broad pytest remains non-green; the incomplete harness
+sub-shard is recorded as incomplete, not passed; macOS could not be rerun on
+the Windows/WSL host; live providers were not rerun without fresh explicit
+authorization and configured credentials; external Discord/Wechat and hosted
+account/provider revocation paths remain unavailable or untested.
+
 ## Test Report Planning And Feature Mapping
 
 Logged: 2026-07-20 EDT

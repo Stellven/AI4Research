@@ -430,6 +430,33 @@
 - Foundation â€” `Runtime Deliverable Construction`
 - Foundation â€” `Security, Privacy, Compliance & IP Evaluator`
 
+## P22-J11 through P22-J24 canonical mapping
+
+The following journeys are intentionally kept in `tests/journeys/phase22/code/`.
+Each row names the production-facing task, the executable selector, the minimum
+observable success boundary, and the L2 scope that the journey may prove.
+
+| Journey | Real task and production boundary | Exact test file | Minimum success and L2 mapping |
+|---|---|---|---|
+| P22-J11 | Resolve and invoke a capability capsule/operator through Solar. | `test_j11_capsule_operator.py` | A selected capsule and physical operator produce governed runtime evidence. Maps capsule definition/selection/invocation, operator binding, and model registry. |
+| P22-J12 | Recover an interrupted run and retain execution records. | `test_j12_failure_recovery_records.py` | Resume preserves prior state and produces a terminal auditable record. Maps admission/lease, queue, supervision, and resumability. |
+| P22-J13 | Open the local interaction interface through the shipped entrypoint. | `test_j13_local_interaction_interface.py` | The interface renders usable state without a platform crash. Maps CLI/GUI/TUI only for the exercised interface. |
+| P22-J14 | Receive a WeChat-origin identity event through a product channel boundary. | `test_j14_wechat_identity.py` | A real configured channel/account is required; fixtures alone cannot pass WeChat or identity L2s. |
+| P22-J15 | Execute the install/runtime matrix on the named OS. | `test_j15_cross_platform_install_matrix.py` | Each OS verdict requires evidence from that OS; one platform never proves another. Maps Windows/macOS/Linux app and CLI variants individually. |
+| P22-J16 | Clarify requirements, compile a bounded repair, and verify it in TMUX. | `test_j16_tmux_requirements_builder.py` | Clarifications affect the contract; a real diff fixes a failing test through Solar. Maps requirement compilation, build preparation, integration, and defect repair. |
+| P22-J17 | Select capsule/operator/model, persist TaskGraph state, interrupt, and recover in TMUX. | `test_j17_tmux_capsule_operator_core.py` | Dispatch, execution, evaluation, persistence, and recovery evidence all belong to the same sprint. Maps capsule/operator/model/graph/queue/resume L2s. |
+| P22-J18 | Run Linux CLI/status/TMUX lifecycle and inspect settings and traces. | `test_j18_real_linux_status_lifecycle.py`; `test_j18_tmux_cli_status_config.py` | Real Linux/WSL commands start, report, stop, and release resources. Maps Linux CLI, status/web, TMUX, settings, TUI, and trace inspection only when directly observed. |
+| P22-J19 | Use the real dashboard and inspect local account/channel surfaces. | `test_j19_real_gui_dashboard.py`; `test_j19_tmux_ui_account_channels.py` | Browser UI must render real backend state; account/channel claims require a real product entrypoint and configured platform. |
+| P22-J20 | Produce a source-backed research synthesis through `autosci_bridge.py research`. | `test_j20_research_synthesis.py` | Provider sources, synthesis, citations, report, and terminal Solar state must all be usable. Maps technical-signal/trend analysis only when directly present. |
+| P22-J21 | Build and execute an experiment, then hand off a usable package. | `test_j21_experiment_build_handoff.py` | Product-built assets execute, satisfy the contract, and are accepted by the downstream checker. Maps POC integration, conformance, admission, experimental/runtime construction. |
+| P22-J22 | Review supported and overbroad claims and record follow-up. | `test_j22_evidence_review_followup.py` | Supported evidence passes and overreach fails closed through the production review path. Maps evaluation scope, completeness, validity, verdict, and follow-up. |
+| P22-J23 | Route a real model request and retain usage audit evidence. | `test_j23_model_routing_audit.py` | Requested and observed provider/model match with no hidden fallback and durable request/response/cost evidence. Maps model routing and usage auditing. |
+| P22-J24 | Export, redact, back up, delete, and uninstall only sandbox-owned personal data. | `test_j24_privacy_lifecycle.py` | All privacy actions run in an isolated home, preserve required data, remove owned residue, and expose no secrets. Maps privacy controls and lifecycle closure. |
+
+Live provider journeys require explicit authorization and configured credentials.
+Default collection does not execute them. Every group uses a unique basetemp,
+cache directory, sandbox home, and dynamically reserved or group-owned port.
+
 ## å®žçŽ°é¡ºåº
 
 å»ºè®®å…ˆå®Œæˆæ— éœ€ provider çš„ P22-J01ã€J03ã€J04ã€J07ã€J08ã€J10ï¼Œå†å®Œæˆéœ€è¦ç½‘ç»œæˆ–æ¨¡åž‹çš„ J05ã€J06ã€J09ï¼Œæœ€åŽåœ¨å·²æŽˆæƒçš„ live runtime ä¸Šè¿è¡Œ P22-J02ã€‚è¿™æ ·èƒ½å¤Ÿå…ˆè¯æ˜Ž runnerã€sandbox å’Œè¯æ®æ ¼å¼å¯é ï¼Œå†æ‰¿æ‹… provider æˆæœ¬ä¸Žä¸ç¡®å®šæ€§ã€‚
