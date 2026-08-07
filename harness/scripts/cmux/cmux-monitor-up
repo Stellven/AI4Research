@@ -131,6 +131,18 @@ def main():
                 print(f"    pane[{p['title']}]: {p['command']}")
         return
 
+    # The current cmux CLI integration has a single-layout API.  Previously it
+    # silently launched only tabs[0] while reporting every configured tab as
+    # launched, which makes a multi-session monitor look healthy while hiding
+    # sessions.  Fail closed until the adapter can create and retain all tabs.
+    if len(plan["tabs"]) != 1:
+        print(
+            "ERROR: multi-tab cmux workspaces are not supported by this adapter; "
+            "use one config per tab or run with --dry-run to inspect the plan.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     cmux_bin = find_cmux()
     if not cmux_bin:
         print("ERROR: cmux binary not found. Check CMUX_BIN_CANDIDATES in script.", file=sys.stderr)

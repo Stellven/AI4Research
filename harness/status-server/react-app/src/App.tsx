@@ -585,9 +585,12 @@ function Shell() {
   }, [refreshSprints]);
 
   const onCreated = useCallback(
-    async (sprintId: string) => {
+    async (sprintId: string, requestId = "") => {
       await refreshSprints();
-      navigate(`/sessions/${encodeURIComponent(sprintId)}`);
+      const trace = requestId
+        ? `?request_id=${encodeURIComponent(requestId)}`
+        : "";
+      navigate(`/sessions/${encodeURIComponent(sprintId)}${trace}`);
     },
     [navigate, refreshSprints],
   );
@@ -654,7 +657,7 @@ function Sidebar({
   selectedSprintId: string;
   state: LoadState;
   error: string;
-  onCreated: (sprintId: string) => Promise<void>;
+  onCreated: (sprintId: string, requestId?: string) => Promise<void>;
 }) {
   return (
     <aside className="sidebar">
@@ -749,7 +752,7 @@ function NewTaskDialog({
   buttonClassName,
   compact = false,
 }: {
-  onCreated: (sprintId: string) => Promise<void>;
+  onCreated: (sprintId: string, requestId?: string) => Promise<void>;
   buttonClassName?: string;
   compact?: boolean;
 }) {
@@ -771,7 +774,7 @@ function NewTaskDialog({
       }
       setTask("");
       setOpen(false);
-      await onCreated(response.sprint_id);
+      await onCreated(response.sprint_id, response.request_id || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to create sprint");
     } finally {
@@ -841,7 +844,7 @@ function SessionRoute({
   onSprintChanged,
 }: {
   sprints: SprintSummary[];
-  onCreated: (sprintId: string) => Promise<void>;
+  onCreated: (sprintId: string, requestId?: string) => Promise<void>;
   onSprintChanged: () => Promise<void>;
 }) {
   const { sprintId = "" } = useParams();
@@ -876,6 +879,8 @@ function SessionRouteView({
   onSprintChanged: () => Promise<void>;
 }) {
   const session = useSessionData(sprintId, onSprintChanged);
+  const location = useLocation();
+  const requestId = new URLSearchParams(location.search).get("request_id") || "";
   const sprint = sprints.find((item) => item.sprint_id === sprintId);
   return (
     <SessionView
@@ -883,6 +888,7 @@ function SessionRouteView({
       sprintId={sprintId}
       session={session}
       onCreated={onCreated}
+      requestId={requestId}
     />
   );
 }
@@ -1247,12 +1253,14 @@ function RunOverview({
   stall,
   deliverables,
   onOpenResult,
+  requestId = "",
 }: {
   projection?: ProjectionResponse;
   isBlocked: boolean;
   stall?: StallSummary;
   deliverables: Deliverable[];
   onOpenResult: (path: string) => void;
+  requestId?: string;
 }) {
   const data = projection?.data;
   const phase = asString(data?.phase || data?.sprint?.phase || data?.status);
@@ -1380,6 +1388,10 @@ function RunOverview({
           </li>
         ))}
       </ol>
+      <div className="run-trace" data-testid="run-control-plane-trace">
+        <span>Session: {asString(data?.sprint_id || data?.sprint?.sprint_id)}</span>
+        {requestId && <span>Request: {requestId}</span>}
+      </div>
       {progress.total > 0 && (
         <div className="run-progress" aria-label="Step progress">
           <div className="run-progress-track">
@@ -1402,11 +1414,13 @@ function SessionView({
   sprintId,
   session,
   onCreated,
+  requestId = "",
 }: {
   sprint?: SprintSummary;
   sprintId: string;
   session: SessionData;
   onCreated: (sprintId: string) => Promise<void>;
+  requestId?: string;
 }) {
   const projection = projectionForSprint(session.projection, sprintId);
   const projectionData = projection?.data;
@@ -1487,6 +1501,7 @@ function SessionView({
               stall={stall}
               deliverables={session.deliverables}
               onOpenResult={rail.openArtifact}
+              requestId={requestId}
             />
             <RunHealth projection={projection} />
             <PlanFlow projection={projection} isBlocked={isBlocked} />

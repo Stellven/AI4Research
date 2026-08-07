@@ -4,6 +4,7 @@
 import sys
 import json
 import argparse
+import shlex
 from pathlib import Path
 
 try:
@@ -74,14 +75,19 @@ def build_pane_command(pane: dict, ssh_profiles: dict, scripts_dir: str) -> str:
     interval = pane.get("interval_sec", 1)
 
     if mode == "capture":
-        view_cmd = f"tmux-pane-view {target} {lines} {interval}"
+        view_cmd = " ".join(
+            ["tmux-pane-view", shlex.quote(str(target)), shlex.quote(str(lines)), shlex.quote(str(interval))]
+        )
         if src == "remote":
             profile = pane["ssh_profile"]
             prof_cfg = ssh_profiles.get(profile, {})
             host = prof_cfg.get("host", profile)
             user = prof_cfg.get("user", "")
             dest = f"{user}@{host}" if user else host
-            return f"ssh {dest} '~/bin/tmux-pane-view {target} {lines} {interval}'"
+            remote_cmd = " ".join(
+                ["~/bin/tmux-pane-view", shlex.quote(str(target)), shlex.quote(str(lines)), shlex.quote(str(interval))]
+            )
+            return f"ssh {shlex.quote(dest)} {shlex.quote(remote_cmd)}"
         return view_cmd
 
     if mode == "tail":
@@ -92,8 +98,9 @@ def build_pane_command(pane: dict, ssh_profiles: dict, scripts_dir: str) -> str:
             host = prof_cfg.get("host", profile)
             user = prof_cfg.get("user", "")
             dest = f"{user}@{host}" if user else host
-            return f"ssh {dest} 'tail -F {log_path}'"
-        return f"tail -F {log_path}"
+            remote_cmd = f"tail -F {shlex.quote(str(log_path))}"
+            return f"ssh {shlex.quote(dest)} {shlex.quote(remote_cmd)}"
+        return f"tail -F {shlex.quote(str(log_path))}"
 
     err(f"Unknown mode: {mode}")
 
