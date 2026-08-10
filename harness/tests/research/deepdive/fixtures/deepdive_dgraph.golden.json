@@ -1,0 +1,173 @@
+{
+  "dag_variant": "deepdive_research",
+  "evidence_policy": {
+    "claim_citation_required": true,
+    "counter_evidence_required": true,
+    "ledger_required": true,
+    "normal_requirement_pipeline_import_allowed": false,
+    "unsupported_claim_guard": true
+  },
+  "nodes": [
+    {
+      "acceptance": [
+        "DeepDive scope contract is explicit and bounded."
+      ],
+      "depends_on": [],
+      "gate": "DD_SCOPE",
+      "goal": "Freeze the DeepDive scope, questions, boundaries, and output contract.",
+      "id": "D1",
+      "logical_operator": "DeepDiveBriefCapture",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    },
+    {
+      "acceptance": [
+        "Source matrix covers every research question."
+      ],
+      "depends_on": [
+        "D1"
+      ],
+      "gate": "DD_SOURCE",
+      "goal": "Plan source acquisition across primary, secondary, code, benchmark, and dissenting evidence.",
+      "id": "D2",
+      "logical_operator": "DeepDiveSourcePlanner",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    },
+    {
+      "acceptance": [
+        "Source manifest and fetch status are recorded."
+      ],
+      "depends_on": [
+        "D2"
+      ],
+      "gate": "DD_SOURCE",
+      "goal": "Collect sources and write an auditable source manifest.",
+      "id": "D3",
+      "logical_operator": "DeepDiveSourceCollector",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    },
+    {
+      "acceptance": [
+        "Claim ledger binds claims to source evidence."
+      ],
+      "depends_on": [
+        "D3"
+      ],
+      "gate": "DD_EVIDENCE",
+      "goal": "Compile claims, evidence atoms, methods, limitations, and confidence.",
+      "id": "D4",
+      "logical_operator": "DeepDiveClaimCompiler",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    },
+    {
+      "acceptance": [
+        "Contradiction and evidence-gap matrix is produced."
+      ],
+      "depends_on": [
+        "D4"
+      ],
+      "gate": "DD_EVIDENCE",
+      "goal": "Find contradictions, weak evidence, missing sources, and overclaim risks.",
+      "id": "D5",
+      "logical_operator": "DeepDiveContradictionScanner",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    },
+    {
+      "acceptance": [
+        "Each chapter maps to questions and evidence requirements."
+      ],
+      "depends_on": [
+        "D4",
+        "D5"
+      ],
+      "gate": "DD_SYNTHESIS",
+      "goal": "Compile chapter jobs and per-chapter evidence requirements.",
+      "id": "D6",
+      "logical_operator": "DeepDiveChapterPlanner",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    },
+    {
+      "acceptance": [
+        "Final report draft answers each research question with evidence."
+      ],
+      "depends_on": [
+        "D6"
+      ],
+      "gate": "DD_SYNTHESIS",
+      "goal": "Synthesize the final DeepDive report from verified chapter outputs.",
+      "id": "D7",
+      "logical_operator": "DeepDiveChiefEditor",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    },
+    {
+      "acceptance": [
+        "Verifier decision and repair requirements are recorded."
+      ],
+      "depends_on": [
+        "D7"
+      ],
+      "gate": "DD_REVIEW",
+      "goal": "Verify claim grounding, contradiction handling, and publication readiness.",
+      "id": "D8",
+      "logical_operator": "DeepDiveClaimVerifier",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    },
+    {
+      "acceptance": [
+        "DeepDive artifact package is complete."
+      ],
+      "depends_on": [
+        "D8"
+      ],
+      "gate": "DD_PUBLISH",
+      "goal": "Publish final report, evidence map, traceability report, and closeout decision.",
+      "id": "D9",
+      "logical_operator": "DeepDiveArtifactPublisher",
+      "question_ids": [
+        "DQ-001",
+        "DQ-002",
+        "DQ-003"
+      ]
+    }
+  ],
+  "required_gates": [
+    "DD_SCOPE",
+    "DD_SOURCE",
+    "DD_EVIDENCE",
+    "DD_SYNTHESIS",
+    "DD_REVIEW",
+    "DD_PUBLISH"
+  ],
+  "runtime_owner": "DeepDive"
+}

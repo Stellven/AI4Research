@@ -1,0 +1,35 @@
+{
+  "id": "F-CLASS-23",
+  "class": 23,
+  "title": "The ledger projection stays truthful when node status is edited directly",
+  "retires": "F-CLASS-23 (dashboard/projection untruth); R4 projection",
+  "release_proof_level": "P1.5",
+  "mode": "gate_replay",
+  "driver": "drivers/f_class_23_projection_truth.py",
+  "daemon_cap_sec": 60,
+  "env": {
+    "SOLAR_GATE_LEDGER": "1"
+  },
+  "expect": [
+    {
+      "fact": "driver_rc",
+      "op": "eq",
+      "value": 0
+    },
+    {
+      "fact": "truth_holds",
+      "op": "truthy"
+    },
+    {
+      "fact": "reported_status",
+      "op": "eq",
+      "value": "failed"
+    }
+  ],
+  "fault": {
+    "env": {
+      "SOLAR_GATE_LEDGER": "0"
+    }
+  },
+  "notes": "GREEN: consumers on the contracted path read the projection; the recorded terminal failed absorbs the un-recorded direct edit to passed. RED: the only truth source is the lying node dict. (Lane 5 owns the dashboard endpoint that reads this projection.) gate_replay mode: the driver exercises the REAL scheduler/dispatcher/ledger seams inside the sandbox HARNESS_DIR. GREEN env sets SOLAR_GATE_LEDGER=1 (the Lane 3 fix); RED injects SOLAR_GATE_LEDGER=0 (the pre-contract world) and the same expect must fail — proving the scenario discriminates the class, not the plumbing."
+}

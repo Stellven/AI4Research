@@ -1,0 +1,30 @@
+{
+  "id": "F-CLASS-06",
+  "class": 6,
+  "title": "Patch proof with an odd filename is discoverable via the manifest sidecar map",
+  "retires": "F-CLASS-06 (missing/undiscoverable patch proof); R6/AC-R6.2",
+  "release_proof_level": "P1.5",
+  "mode": "gate_replay",
+  "driver": "drivers/f_class_06_patch_proof_via_manifest.py",
+  "daemon_cap_sec": 60,
+  "env": {
+    "SOLAR_GATE_LEDGER": "1"
+  },
+  "expect": [
+    {
+      "fact": "driver_rc",
+      "op": "eq",
+      "value": 0
+    },
+    {
+      "fact": "patch_discoverable",
+      "op": "truthy"
+    }
+  ],
+  "fault": {
+    "env": {
+      "SOLAR_GATE_LEDGER": "0"
+    }
+  },
+  "notes": "GREEN: _proof_artifact_presence consults the manifest's kind-keyed sidecars -> the ff35c302-shaped odd filename is present. RED: legacy filename scan misses it. gate_replay mode: the driver exercises the REAL scheduler/dispatcher/ledger seams inside the sandbox HARNESS_DIR. GREEN env sets SOLAR_GATE_LEDGER=1 (the Lane 3 fix); RED injects SOLAR_GATE_LEDGER=0 (the pre-contract world) and the same expect must fail — proving the scenario discriminates the class, not the plumbing."
+}
