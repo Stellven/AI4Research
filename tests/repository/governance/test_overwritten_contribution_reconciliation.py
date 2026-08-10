@@ -26,6 +26,17 @@ def git(*args: str) -> bytes:
     return subprocess.check_output(["git", *args], cwd=ROOT)
 
 
+def tree(revision: str) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for row in git("ls-tree", "-r", "-z", revision).split(b"\0"):
+        if not row:
+            continue
+        left, raw_path = row.split(b"\t", 1)
+        _mode, _kind, blob = left.split()
+        result[raw_path.decode("utf-8", "surrogateescape")] = blob.decode()
+    return result
+
+
 def test_reconciliation_is_complete_and_resolved() -> None:
     ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
     expected_commits = git("rev-list", "--reverse", f"{BASE}..{SOURCE}").decode().splitlines()
@@ -44,6 +55,8 @@ def test_reconciliation_actions_have_current_evidence() -> None:
     ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
     tracked = set(git("ls-files", "-z").decode("utf-8", "surrogateescape").split("\0"))
     tracked.discard("")
+    source_tree = tree(SOURCE)
+    current_tree = tree("HEAD")
     for item in ledger["paths"]:
         classification = item["classification"]
         targets = item["current_corresponding_paths"]
@@ -54,11 +67,13 @@ def test_reconciliation_actions_have_current_evidence() -> None:
             if source_blob is None:
                 assert path not in tracked
                 assert not targets
+                assert path not in source_tree
+                assert path not in current_tree
             else:
                 assert targets == [path]
                 assert path in tracked
-                assert git("rev-parse", f"{SOURCE}:{path}").decode().strip() == source_blob
-                assert git("rev-parse", f"HEAD:{path}").decode().strip() == source_blob
+                assert source_tree[path] == source_blob
+                assert current_tree[path] == source_blob
         if classification == "PRESERVED_MOVED":
             assert targets and all(target in tracked for target in targets)
         if classification == "PRESERVED_SEMANTICALLY":
