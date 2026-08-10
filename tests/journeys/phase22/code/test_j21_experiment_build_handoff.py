@@ -217,7 +217,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             "--env",
             "local",
             "--gate-mode",
-            "parity_demo",
+            "strict_hitl",
             "--allowlist-evidence",
             str(allowlist_path),
             "--before-artifact",
@@ -373,6 +373,16 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     blocked_status = str(blocked_payload.get("status") or "")
     blocked_side_effect_status = ((blocked_payload.get("outputs") or {}).get("side_effect_access_status"))
     lease_payload = _read_json(run_lease_report) if run_lease_report and run_lease_report.exists() else {}
+    run_boundary = (
+        ((run_payload.get("outputs") or {}).get("final_runtime_audit_boundary") or {})
+        if isinstance(run_payload.get("outputs"), dict)
+        else {}
+    )
+    run_runtime = (
+        ((run_payload.get("outputs") or {}).get("result") or {})
+        if isinstance(run_payload.get("outputs"), dict)
+        else {}
+    )
 
     rec.add_artifact(fixture_dir / "experiment_input.json", "journey_input")
     rec.add_artifact(fixture_dir / "claims_input.json", "claims_input")
@@ -418,9 +428,17 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_assertion("sandbox_harness_isolated", harness_root.exists() and str(harness_root).startswith(str(sandbox)), str(harness_root))
     rec.add_assertion("blocked_run_rejected_without_approval", blocked_status == "inconclusive" and any("approval" in str(item).lower() for item in blocked_limitations), {"status": blocked_status, "limitations": blocked_limitations})
     rec.add_assertion("authorized_run_completed", run_status == "completed", run_status)
-    rec.add_assertion("authorized_run_executed_real_command", any("Approved experiment executor ran a real command locally" in str(item) for item in (run_payload.get("limitations") or [])), run_payload.get("limitations"))
+    rec.add_assertion(
+        "authorized_run_executed_real_command",
+        bool(run_runtime.get("command_run")) and run_runtime.get("exit_code") == 0,
+        {"command_run": run_runtime.get("command_run"), "exit_code": run_runtime.get("exit_code")},
+    )
     rec.add_assertion("runtime_output_nonempty", runtime_output.exists() and runtime_output.stat().st_size > 2, runtime_output.stat().st_size if runtime_output.exists() else None)
-    rec.add_assertion("runtime_semantic_verified", bool(((run_payload.get("outputs") or {}).get("runtime_audit_boundary") or {}).get("approval_contract_verified")), ((run_payload.get("outputs") or {}).get("runtime_audit_boundary") or {}))
+    rec.add_assertion(
+        "runtime_semantic_verified",
+        bool(run_boundary.get("approval_contract_verified")) and bool(run_boundary.get("runtime_semantic_verified")),
+        run_boundary,
+    )
     rec.add_assertion("product_poc_asset_built", product_runner_path.exists() and product_input_csv.exists() and product_manifest_path.exists() and bool(runtime_command), {"runner": str(product_runner_path), "input": str(product_input_csv), "manifest": product_manifest})
     rec.add_assertion("status_completed_from_runtime_evidence", str(status_payload.get("status") or "") == "completed", status_payload.get("status"))
     rec.add_assertion("status_records_lifecycle_detail", str(status_report.get("state") or "") == "completed" or any("approval_state=" in str(item) for item in ((status_payload.get("outputs") or {}).get("status_report", {}).get("observations") or [])), status_report)
@@ -428,7 +446,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_assertion("downstream_handoff_checker_accepts_product_package", handoff_check_proc.returncode == 0 and bool(handoff_check_payload.get("ok")), handoff_check_payload)
     rec.add_assertion("downstream_handoff_checker_rejects_invalid_package", negative_check_proc.returncode != 0 and not bool(negative_check_payload.get("ok")), negative_check_payload)
     rec.add_assertion("supported_claim_supported", supported_verdict == "supported", supported_verdict)
-    rec.add_assertion("unsupported_claim_not_supported", unsupported_verdict in {"not_supported", "inconclusive", "partially_supported"}, unsupported_verdict)
+    rec.add_assertion("unsupported_claim_not_supported", unsupported_verdict in {"not_supported", "inconclusive", "partially_supported", "insufficient"}, unsupported_verdict)
     rec.add_assertion("human_or_parity_requirement_recorded", any("Review LLM" in str(item) for item in (design_payload.get("limitations") or [])) or blocked_side_effect_status is not None, {"design_limitations": design_payload.get("limitations"), "blocked_side_effect_status": blocked_side_effect_status})
     rec.add_assertion("duplicate_or_lease_release_proven", bool(lease_payload.get("lease_acquired") and lease_payload.get("duplicate_rejected") and lease_payload.get("release_recorded")), lease_payload)
     rec.add_assertion("experimental_asset_built_by_product", product_runner_path.exists() and "artifacts" in str(product_runner_path), str(product_runner_path))

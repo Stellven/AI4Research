@@ -2597,3 +2597,22 @@ Validation:
 Scope note: this fixes the local J07 terminal-state path. Claims tied to the
 paired J02 live/tmux workflow remain environment-blocked on this Windows host
 until rerun with live authorization and tmux available.
+
+Accepted J21 parity/handoff recorder refresh for `P22-REPAIR-071`: the J21
+journey selector now uses a strict HITL gate for the negative "missing
+approval" run and reads the current structured runtime evidence emitted by
+`exp-run` (`outputs.final_runtime_audit_boundary` and
+`outputs.result.command_run`/`exit_code`) instead of older limitation strings.
+The unsupported overbroad claim assertion also treats the current
+`insufficient` verdict as a non-supported result.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff --basetemp .codex-tmp/pytest/root-j21-p1-recorder-fix-basetemp -o cache_dir=.codex-tmp/pytest/root-j21-p1-recorder-fix-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22-j21-20260810T202810Z-30352/journey-result.json`
+  records no failed assertions. It remains `PASS_WITH_KNOWN_LIMITATIONS`
+  because the local parity-demo path still does not provide attributable human
+  approval and the handoff artifact is not a benchmark-native consolidated
+  bundle.
