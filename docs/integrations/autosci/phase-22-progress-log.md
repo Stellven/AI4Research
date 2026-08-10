@@ -2613,6 +2613,64 @@ Validation:
 - Accepted journey evidence:
   `outputs/phase22-real-journeys/p22-j21-20260810T202810Z-30352/journey-result.json`
   records no failed assertions. It remains `PASS_WITH_KNOWN_LIMITATIONS`
-  because the local parity-demo path still does not provide attributable human
-  approval and the handoff artifact is not a benchmark-native consolidated
-  bundle.
+because the local parity-demo path still does not provide attributable human
+approval and the handoff artifact is not a benchmark-native consolidated
+bundle.
+
+Accepted P1 trace-query repair for `P22-REPAIR-089`: `harness/lib/symphony/status-server.py`
+now applies local `/events` query filters for `project`, `actor`, and `since`
+in addition to the existing `sprint_id` and `limit` handling. The NT DAG trace
+selector was extended to require those filters to pass and to smoke-import the
+runtime v2 trace modules on Windows, proving that the old `fcntl` import
+blocker is no longer present in the current selector environment.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m py_compile harness/lib/symphony/status-server.py tests/journeys/phase22/code/test_p22_nt_dag_trace.py`
+  -> passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_p22_nt_dag_trace.py::test_p22_nt_dag_trace --basetemp .codex-tmp/pytest/root-nt-trace-089-verify-basetemp -o cache_dir=.codex-tmp/pytest/root-nt-trace-089-verify-cache`
+  -> 1 passed.
+- Accepted evidence:
+  `.codex-tmp/phase22-worker-results/NT-dag-trace/result.json` and
+  `outputs/phase22-not-tested/NT-dag-trace/run-20260810T203607Z`.
+
+Remaining limitations: trace graph management is still
+`PASS_WITH_KNOWN_LIMITATIONS` because the selector proves import portability
+but not concurrent append recovery under contention, and because there is still
+no single unified query endpoint that returns both legacy event records and
+graph-state/closure records together. The core daemon `/orchestrator/events`
+surface remains outside this repair and was not changed.
+
+Accepted J06 P1 integration review for `P22-REPAIR-021`, `P22-REPAIR-023`,
+`P22-REPAIR-024`, `P22-REPAIR-025`, `P22-REPAIR-029`, `P22-REPAIR-030`, and
+`P22-REPAIR-031`: the current J06 selector passes all local idea-generation,
+source-grounding, evaluation, selection-rationale, and verification-ready-card
+assertions. No product code change was accepted for this batch because the
+remaining limitations are live literature discovery, provider-backed novelty,
+and Review LLM final acceptance boundaries, which require explicit provider or
+live authorization rather than local repair.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j06_idea_generation.py::test_p22_j06_idea_generation --basetemp .codex-tmp/pytest/root-j06-p1-recheck-basetemp -o cache_dir=.codex-tmp/pytest/root-j06-p1-recheck-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j06-20260810T203652Z-32368/journey-result.json`
+  remains `PASS_WITH_KNOWN_LIMITATIONS` with all assertions passing.
+
+Accepted J09 P1 integration review for `P22-REPAIR-051`, `P22-REPAIR-052`,
+`P22-REPAIR-053`, and `P22-REPAIR-054`: the current J09 selector passes all
+local report-plan, report-draft, review-output, compile-checklist, readable
+Markdown, and exact evidence-id reference assertions. No product code change
+was accepted for this batch because the remaining limitations are intentional
+provider/HITL/external-distribution boundaries: Review LLM was not executed,
+compile/publish remains policy gated, and final acceptance cannot be completed
+from local surrogate evidence alone.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j09_report_delivery.py::test_p22_j09_report_delivery --basetemp .codex-tmp/pytest/p1-j09-local-recheck-basetemp -o cache_dir=.codex-tmp/pytest/p1-j09-local-recheck-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j09-20260810T203147Z-3496/journey-result.json`
+  remains `PASS_WITH_KNOWN_LIMITATIONS` with all assertions passing.

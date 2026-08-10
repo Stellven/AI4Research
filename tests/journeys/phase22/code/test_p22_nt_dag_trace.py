@@ -349,6 +349,22 @@ def test_p22_nt_dag_trace() -> None:
         and all((state_after.get("node_results") or {}).get(node_id, {}).get("status") == "passed" for node_id in topo_order)
         and closure_after.get("all_nodes_passed") is True
     )
+    runtime_v2_import = _run_cmd(
+        "runtime-v2-import-smoke",
+        [
+            python,
+            "-c",
+            "import runtime_status, session_log, graph_node_dispatcher; print('runtime-v2-import-ok')",
+        ],
+        cwd=repo_root,
+        env=env,
+        evidence_dir=evidence_dir,
+    )
+    commands.append(runtime_v2_import)
+    assertions["runtime_v2_modules_import_on_windows"] = (
+        runtime_v2_import["exit_code"] == 0
+        and "runtime-v2-import-ok" in Path(runtime_v2_import["stdout_path"]).read_text(encoding="utf-8")
+    )
 
     time.sleep(1.1)
     intake_records = []
@@ -475,6 +491,7 @@ def test_p22_nt_dag_trace() -> None:
         and assertions["trace_has_time_actor_run_status"]
         and assertions["trace_run_identity_does_not_cross_files"]
         and assertions["trace_state_and_closure_recover_results"]
+        and assertions["runtime_v2_modules_import_on_windows"]
     )
 
     l2_results = [
@@ -496,7 +513,7 @@ def test_p22_nt_dag_trace() -> None:
             "evidence_paths": artifact_paths,
             "limitations": [
                 "AFlow/MCTS/ADAS named production implementation was not found under harness/lib, harness/tools, or core.",
-                "graph_node_dispatcher.py is the advanced dispatcher, but imports Unix-only fcntl at module import and is not runnable in this Windows worker environment.",
+                "graph_node_dispatcher.py is the advanced dispatcher; this selector proves import portability but does not execute the full pane-dispatch lifecycle.",
             ],
             "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS" if named_algorithm_present else "NOT_AVAILABLE",
             "named_algorithm_hits": algorithm_hits,
@@ -513,11 +530,12 @@ def test_p22_nt_dag_trace() -> None:
                 "trace_has_time_actor_run_status",
                 "trace_run_identity_does_not_cross_files",
                 "trace_state_and_closure_recover_results",
+                "runtime_v2_modules_import_on_windows",
             ]},
             "evidence_paths": artifact_paths,
             "limitations": [
-                "Windows cannot import runtime_status/session_log v2 because they import fcntl, so v2 append-only session-log recovery was not accepted as Windows evidence.",
-                "Legacy event files prove real creation and run isolation; graph state/closure prove recoverable node results, but there is no single unified trace graph query API covering both stores.",
+                "runtime_status/session_log v2 and graph_node_dispatcher import on Windows through file_lock_compat, but this selector does not exercise concurrent append recovery under contention.",
+                "Legacy event files prove real creation and run isolation; graph state/closure prove recoverable node results, but there is not yet a single query endpoint that returns both event and graph-state records together.",
             ],
             "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS" if trace_management_pass else "FAIL",
         },
@@ -539,7 +557,7 @@ def test_p22_nt_dag_trace() -> None:
             ]},
             "evidence_paths": artifact_paths,
             "limitations": [
-                "/events accepts sprint_id and limit only; project, actor, and since/time-range query parameters were ignored in this run.",
+                "/events now enforces sprint_id, project, actor, since/time-range, and limit filters for the local status-server event source.",
                 "core daemon /orchestrator/events source inspection shows taskId/type/since filters only, not the requested project/run/actor/time-range surface.",
             ],
             "recommended_status": "PASS" if search_filters_pass else "FAIL",
@@ -561,10 +579,11 @@ def test_p22_nt_dag_trace() -> None:
     assert assertions["scheduler_validate_ok"]
     assert assertions["topological_order_respects_dependencies"]
     assert assertions["ready_sequence_progressed_in_topological_order"]
+    assert assertions["runtime_v2_modules_import_on_windows"]
     assert trace_management_pass
     assert assertions["query_run_filter_returns_only_requested_run"]
     assert assertions["query_missing_run_leaks_no_data"]
     assert assertions["query_order_is_chronological_for_returned_events"]
-    assert not assertions["project_filter_is_enforced"]
-    assert not assertions["actor_filter_is_enforced"]
-    assert not assertions["time_range_filter_is_enforced"]
+    assert assertions["project_filter_is_enforced"]
+    assert assertions["actor_filter_is_enforced"]
+    assert assertions["time_range_filter_is_enforced"]

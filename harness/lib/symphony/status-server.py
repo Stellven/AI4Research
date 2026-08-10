@@ -318,6 +318,68 @@ def _events_for_request(sprint_id: str, limit: int = 50) -> list:
     return normalized
 
 
+def _parse_event_time(value: object) -> datetime.datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+
+def _event_field_values(event: dict, *keys: str) -> set[str]:
+    values: set[str] = set()
+    for key in keys:
+        raw = event.get(key)
+        if raw is None:
+            continue
+        if isinstance(raw, (list, tuple, set)):
+            candidates = raw
+        else:
+            candidates = [raw]
+        for item in candidates:
+            text = str(item or "").strip()
+            if text:
+                values.add(text)
+    return values
+
+
+def _filter_events_for_request(
+    events: list,
+    *,
+    project: str = "",
+    actor: str = "",
+    since: str = "",
+) -> list:
+    project = str(project or "").strip()
+    actor = str(actor or "").strip()
+    since_dt = _parse_event_time(since)
+    filtered: list = []
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if project:
+            project_values = _event_field_values(event, "project", "project_id", "repo", "workspace", "workspace_id")
+            if project not in project_values:
+                continue
+        if actor:
+            actor_values = _event_field_values(event, "actor", "actor_id", "source")
+            if actor not in actor_values:
+                continue
+        if since_dt is not None:
+            event_dt = _parse_event_time(event.get("ts") or event.get("timestamp") or event.get("created_at"))
+            if event_dt is None or event_dt < since_dt:
+                continue
+        filtered.append(event)
+    return filtered
+
+
 def _safe_rel(path: Path, root: Path) -> str:
     try:
         return str(path.resolve().relative_to(root.resolve()))
@@ -14180,6 +14242,9 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif path == "/events":
             sprint_id = params.get("sprint_id", [""])[0]
+            project = params.get("project", [""])[0]
+            actor = params.get("actor", [""])[0]
+            since = params.get("since", [""])[0]
             try:
                 limit = int(params.get("limit", ["50"])[0])
                 limit = max(1, min(limit, 500))
@@ -14192,7 +14257,14 @@ class StatusHandler(BaseHTTPRequestHandler):
             if wants_sse:
                 self._send_sse_events(sprint_id, limit)
             else:
-                self._send_json(_events_for_request(sprint_id, limit=limit))
+                self._send_json(
+                    _filter_events_for_request(
+                        _events_for_request(sprint_id, limit=limit),
+                        project=project,
+                        actor=actor,
+                        since=since,
+                    )
+                )
 
         elif path == "/integrations":
             refresh = params.get("refresh", ["0"])[0].lower() in ("1", "true", "yes")
