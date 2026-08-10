@@ -2467,3 +2467,18 @@ The accepted evidence run
 is `PASS` and records Claim & Acceptance-Criteria Comparison as exercised
 through `exp-eval`. No product edit was accepted for `P22-REPAIR-070`; the
 packet remains stale/mis-mapped against current journey evidence.
+
+P0 wave closure summary for the baseline packet set:
+
+- Repaired or superseded by accepted current evidence: `P22-REPAIR-018`,
+  `P22-REPAIR-020`, `P22-REPAIR-033`, `P22-REPAIR-034`, `P22-REPAIR-037`,
+  `P22-REPAIR-039`, `P22-REPAIR-055`, `P22-REPAIR-066`, `P22-REPAIR-095`,
+  `P22-REPAIR-110`, and `P22-REPAIR-119`.
+- Stale/mis-mapped or evidence-refresh only: `P22-REPAIR-070` and
+  `P22-REPAIR-113`.
+- Environment blocked on this Windows host: `P22-REPAIR-115` and
+  `P22-REPAIR-116` because the exact tmux journey requires a tmux-capable
+  runtime.
+
+Shared report/workbook regeneration is still deferred until the remaining
+non-P0 packet triage is complete and can be synchronized in one reviewed pass.
