@@ -38,8 +38,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install repository-safety test dependency
-        run: python -m pip install pytest
+      - name: Install repository-safety test dependencies
+        run: python -m pip install pytest jsonschema
 
       - name: Reject tracked local and generated state
         continue-on-error: ${{ github.event_name == 'pull_request' }}
