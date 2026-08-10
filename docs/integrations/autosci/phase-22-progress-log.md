@@ -2282,3 +2282,75 @@ test now supplies an isolated runtime-state lookup for its two fixture-owned
 operators while leaving the production selector, scoring rules, and success
 assertions unchanged. This is a test-isolation repair, not a product-status
 override.
+
+### Repair issue packets regenerated with freshness gates
+
+Logged: 2026-08-10
+
+Generated a current-baseline repair handoff for every Phase 22 L2 recorded as
+`FAIL`, `ENVIRONMENT_BLOCKED`, or `PASS_WITH_KNOWN_LIMITATIONS`. Per user
+instruction, GitHub CI findings and the 25 `NOT_AVAILABLE` rows are excluded.
+The output contains 91 stable issue packets: 15 recorded blockers, 72
+limitations requiring severity/reproduction triage, 2 mild failures, and 2
+macOS evidence-reconciliation items. Every packet contains the L2 contract,
+recorded observation, production entrypoints, exact selector(s), evidence
+paths, repair success evidence, and a mandatory current-baseline verification
+decision before product edits.
+
+Freshness review explicitly flags six J21-based `FAIL` rows as likely stale
+because the current J21 source recommends pass or limited-pass outcomes, the
+J08 validity-evaluator row as an inferred mapping, the trace-search diagnostic
+as encoding the known failed-filter behavior, and both macOS rows as evidence
+reconciliation rather than confirmed product failures. No L2 report status was
+changed by this packaging step. Artifacts:
+
+- `docs/integrations/autosci/phase-22-repair-issue-packets.json`
+- `docs/integrations/autosci/phase-22-repair-issue-packets.md`
+
+### P0 severity repair wave 1 accepted fixes
+
+Logged: 2026-08-10
+
+Started the severity-driven P0 repair wave from
+`docs/integrations/autosci/phase-22-repair-issue-packets.json` at baseline
+`c331eec8b905007b785fa494041af1efc2139a89`. Per user instruction, GitHub CI
+findings were excluded because CI is being handled separately.
+
+Accepted and integrated two reviewed worker commits into
+`codex/fix-autosci-plan-governance`:
+
+- `51a0b0072` (`P22-REPAIR-055`): `harness/lib/capability_capsules.py` now
+  rejects duplicate capability capsule registry identities by
+  `(capsule_kind, capability_capsule_id, version)`. Worker baseline evidence
+  reproduced the exact selector failure; post-repair validation passed
+  `tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py`
+  plus `tests/harness/test_capability_capsules.py` with 14 passing tests.
+- `ab8d5aee7` (`P22-REPAIR-037`, `039`, `066`, `095`, `110`, `119` evidence
+  freshness): `harness/plugins/autosci/bin/autosci_workspace_projector.py` now
+  writes projected AutoSci workspace pages through a Windows long-path-safe
+  helper. The current J21 journey selector passed after integration, confirming
+  the POC build and handoff path works in this Windows worktree when the
+  projector can write long sandbox artifact paths.
+
+Current classification decisions from the accepted worker results:
+
+- `P22-REPAIR-055`: `CONFIRMED_REPRODUCIBLE`, repaired, post-repair `PASS`.
+- `P22-REPAIR-113`: stale as a recorded `FAIL`; current J09 rerun is
+  `PASS_WITH_KNOWN_LIMITATIONS`, so no product edit was accepted for this row.
+- `P22-REPAIR-115` and `P22-REPAIR-116`: `ENVIRONMENT_BLOCKED` on this Windows
+  machine because the exact J16 tmux journey requires a tmux-capable runtime.
+- J21-backed P0 rows remain evidence-update candidates rather than confirmed
+  hard failures after the integrated J21 selector passed; report status changes
+  are deferred until the integration owner regenerates and validates the shared
+  reports.
+
+Integration validation run in the main worktree:
+
+- `.venv\Scripts\python.exe -m pytest tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py tests/harness/test_capability_capsules.py -q --basetemp .codex-tmp/pytest/root-integrated-capsules-basetemp -o cache_dir=.codex-tmp/pytest/root-integrated-capsules-cache`
+  -> 14 passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff --basetemp .codex-tmp/pytest/root-integrated-j21-basetemp -o cache_dir=.codex-tmp/pytest/root-integrated-j21-cache`
+  -> 1 passed.
+
+Remaining P0 work after this entry: complete the research/scientific reliability
+group (`P22-REPAIR-018`, `020`, `033`, `034`, `070`) and finish report
+regeneration/validation after all accepted P0 fixes are integrated.
