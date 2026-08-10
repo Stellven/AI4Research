@@ -2695,3 +2695,69 @@ Validation:
   `journey-result.json`.
 - Tracked worktree check after stopping the live/provider run showed no
   product or test edits from the J05 worker.
+
+Accepted J03 P1 benchmark review for `P22-REPAIR-040`, `P22-REPAIR-041`,
+`P22-REPAIR-043`, `P22-REPAIR-044`, `P22-REPAIR-068`, `P22-REPAIR-111`, and
+`P22-REPAIR-117`: the current J03 selector passes and the old benchmark
+framing, protocol, metrics, comparative packaging, performance/cost evaluator,
+benchmark asset, and build-evidence limitations are stale against current
+journey evidence. No product or test code change was accepted for J03.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j03_platform_benchmark.py::test_p22_j03_platform_benchmark --basetemp .codex-tmp/pytest/root-j03-current-basetemp -o cache_dir=.codex-tmp/pytest/root-j03-current-cache`
+  -> 1 passed.
+- Accepted worker result:
+  `.codex-tmp/phase22-worker-results/p1-j03-benchmark-fast/result.json`.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j03-20260810T212622Z-2280/journey-result.json`
+  records `PASS` with no limitations.
+
+Accepted J04 P1 memory/graph review for `P22-REPAIR-083`,
+`P22-REPAIR-084`, and `P22-REPAIR-090`: the current J04 selector passes and
+records source registration, wiki registration, persistent memory sidecar, and
+concept/memory graph sidecar readiness. The old "PDF imported but wiki
+registration not completed" limitations are stale against current evidence.
+No additional product code change was required in this batch.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j04_paper_ingestion.py::test_p22_j04_paper_ingestion --basetemp .codex-tmp/pytest/root-j04-fast-basetemp -o cache_dir=.codex-tmp/pytest/root-j04-fast-cache`
+  -> 1 passed.
+- Accepted worker result:
+  `.codex-tmp/phase22-worker-results/p1-j04-j05-research-fast/result.json`.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j04-20260810T211713Z-27592/journey-result.json`
+  records `PASS` with source registration, wiki, memory, and graph assertions
+  passing.
+
+Accepted J05 live-provider timeout classification repair for `P22-REPAIR-022`:
+after live provider authorization, the J05 selector contacted the provider
+path but the topic discovery command timed out. The journey harness previously
+recorded empty stderr for a timeout whose `TimeoutExpired.stderr` was an empty
+string, so the J05 provider blocker could not classify the timeout and the
+journey was mislabeled as product `FAIL`. `JourneyRecorder.run()` now records
+`timed out after <N>s` when timeout stderr is empty, and the J05 selector
+recognizes return code `124` / `timed out` as an environment/provider boundary.
+The selector also accepts `PHASE22_J05_DISCOVERY_TIMEOUT_SECONDS` so timeout
+classification can be verified without waiting for the full live-provider
+budget.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m py_compile tests/journeys/phase22/code/evidence.py tests/journeys/phase22/code/test_j05_literature_discovery.py`
+  -> passed.
+- Full authorized live attempt before the repair:
+  `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j05_literature_discovery.py::test_p22_j05_literature_discovery --basetemp .codex-tmp/pytest/root-j05-live-fast-basetemp -o cache_dir=.codex-tmp/pytest/root-j05-live-fast-cache`
+  -> failed after the provider-backed topic discovery timed out; non-accepted
+  evidence:
+  `outputs/phase22-real-journeys/p22j05-20260810T211737Z-29084/journey-result.json`.
+- Timeout classification verification:
+  `$env:PHASE22_J05_DISCOVERY_TIMEOUT_SECONDS='5'; .venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j05_literature_discovery.py::test_p22_j05_literature_discovery --basetemp .codex-tmp/pytest/root-j05-timeout-classification2-basetemp -o cache_dir=.codex-tmp/pytest/root-j05-timeout-classification2-cache`
+  -> 1 skipped with journey status `ENVIRONMENT_BLOCKED`; accepted evidence:
+  `outputs/phase22-real-journeys/p22j05-20260810T212431Z-28412/journey-result.json`.
+
+Remaining J05 limitation: a full `PASS` still requires the live provider to
+return topic and anchor discovery results within the configured timeout and to
+produce completed source-provider boundary evidence. The accepted repair only
+prevents provider timeouts from being mislabeled as product failures.

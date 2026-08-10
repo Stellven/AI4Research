@@ -295,11 +295,13 @@ class JourneyRecorder:
             )
         except subprocess.TimeoutExpired as exc:
             timed_out = True
+            stdout = exc.stdout if isinstance(exc.stdout, str) else ""
+            stderr = exc.stderr if isinstance(exc.stderr, str) else ""
             proc = subprocess.CompletedProcess(
                 argv,
                 124,
-                stdout=exc.stdout if isinstance(exc.stdout, str) else "",
-                stderr=exc.stderr if isinstance(exc.stderr, str) else f"timed out after {timeout}s",
+                stdout=stdout,
+                stderr=stderr or f"timed out after {timeout}s",
             )
         duration = time.monotonic() - started
         stdout_path.write_text(redact(proc.stdout), encoding="utf-8", errors="replace")

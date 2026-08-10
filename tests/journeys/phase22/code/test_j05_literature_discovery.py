@@ -103,7 +103,8 @@ def _run_discovery(
         *(item for anchor in anchors for item in ("--anchor", anchor)),
         *(item for neg in negative_ids for item in ("--negative", neg)),
     ]
-    summary, _ = run_autosci(rec, sandbox, "discover", args, timeout=240, allow_live=True)
+    timeout_seconds = max(1, int(os.environ.get("PHASE22_J05_DISCOVERY_TIMEOUT_SECONDS", "240")))
+    summary, _ = run_autosci(rec, sandbox, "discover", args, timeout=timeout_seconds, allow_live=True)
     # Failed provider-backed actions still print a structured skill-run summary.
     # Recover it from the runner's error wrapper so the referenced action
     # evidence can classify provider/network outages truthfully.
@@ -148,7 +149,9 @@ def _provider_blocker(summary: dict[str, Any], payload: dict[str, Any]) -> str:
     lower = " ".join([message.lower(), provider_status, final_status, *invalid_reasons])
     provider_unproven = provider_status in {"incomplete", "pending"} and not provider_channels
     provider_missing_reason = any("provider" in reason and "channel" in reason for reason in invalid_reasons)
-    if any(token in lower for token in ("provider", "network", "connection", "timeout", "dns", "unreachable", "requests", "429", "503", "blocked", "unavailable")):
+    if summary.get("_returncode") == 124:
+        return message or "Provider-backed discovery command timed out."
+    if any(token in lower for token in ("provider", "network", "connection", "timeout", "timed out", "dns", "unreachable", "requests", "429", "503", "blocked", "unavailable")):
         return message or f"Provider boundary was not available: {provider_status}"
     if provider_unproven and provider_missing_reason:
         return (
