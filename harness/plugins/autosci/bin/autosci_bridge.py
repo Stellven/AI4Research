@@ -9259,7 +9259,8 @@ def _write_experiment_poc_assets(
     allowlist_path = asset_root / "command_allowlist.json"
     check_path = asset_root / "poc_usability_check.json"
     asset_root.mkdir(parents=True, exist_ok=True)
-    data_path.write_text(
+    _write_text_sidecar(
+        data_path,
         "\n".join(
             [
                 "sample_id,condition,baseline_errors,variant_errors",
@@ -9270,17 +9271,31 @@ def _write_experiment_poc_assets(
             ]
         )
         + "\n",
-        encoding="utf-8",
     )
-    runner_path.write_text(
+    _write_text_sidecar(
+        runner_path,
         "\n".join(
             [
                 "from __future__ import annotations",
                 "",
                 "import csv",
                 "import json",
+                "import os",
                 "import sys",
                 "from pathlib import Path",
+                "",
+                "def _windows_long_path(path: Path) -> str:",
+                "    resolved = str(path.resolve())",
+                "    if os.name != 'nt' or resolved.startswith('\\\\\\\\?\\\\'):",
+                "        return resolved",
+                "    if resolved.startswith('\\\\\\\\'):",
+                "        return '\\\\\\\\?\\\\UNC\\\\' + resolved[2:]",
+                "    return '\\\\\\\\?\\\\' + resolved",
+                "",
+                "def _write_text(path: Path, body: str) -> None:",
+                "    path.parent.mkdir(parents=True, exist_ok=True)",
+                "    with open(_windows_long_path(path), 'w', encoding='utf-8') as fh:",
+                "        fh.write(body)",
                 "",
                 "def main(argv: list[str]) -> int:",
                 "    if len(argv) != 3:",
@@ -9309,8 +9324,7 @@ def _write_experiment_poc_assets(
                 "        'status': 'completed',",
                 "        'outputs': {'result': result},",
                 "    }",
-                "    result_path.parent.mkdir(parents=True, exist_ok=True)",
-                "    result_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\\n', encoding='utf-8')",
+                "    _write_text(result_path, json.dumps(payload, indent=2, sort_keys=True) + '\\n')",
                 "    print(json.dumps(payload, sort_keys=True))",
                 "    return 0",
                 "",
@@ -9319,9 +9333,8 @@ def _write_experiment_poc_assets(
             ]
         )
         + "\n",
-        encoding="utf-8",
     )
-    result_path.write_text("{}\n", encoding="utf-8")
+    _write_text_sidecar(result_path, "{}\n")
     command = [_path_token(sys.executable), _path_token(runner_path), _path_token(data_path), _path_token(result_path)]
     command_text = " ".join(shlex.quote(item) for item in command)
     allowlist = {
@@ -12315,15 +12328,26 @@ def _render_latex_paper(report: dict[str, Any], limitations_list: list[str]) -> 
     return "\n".join(lines)
 
 
+def _windows_long_path(path: Path) -> str:
+    resolved = str(path.resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved[2:]
+    return "\\\\?\\" + resolved
+
+
 def _write_text_sidecar(path: Path, body: str) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(body, encoding="utf-8")
+    with open(_windows_long_path(path), "w", encoding="utf-8") as fh:
+        fh.write(body)
     return _rel(path)
 
 
 def _write_json_sidecar(path: Path, payload: dict[str, Any]) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with open(_windows_long_path(path), "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     return _rel(path)
 
 
