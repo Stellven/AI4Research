@@ -2613,9 +2613,9 @@ Validation:
 - Accepted journey evidence:
   `outputs/phase22-real-journeys/p22-j21-20260810T202810Z-30352/journey-result.json`
   records no failed assertions. It remains `PASS_WITH_KNOWN_LIMITATIONS`
-because the local parity-demo path still does not provide attributable human
-approval and the handoff artifact is not a benchmark-native consolidated
-bundle.
+  because the local parity-demo path still does not provide attributable human
+  approval and the handoff artifact is not a benchmark-native consolidated
+  bundle.
 
 Accepted P1 trace-query repair for `P22-REPAIR-089`: `harness/lib/symphony/status-server.py`
 now applies local `/events` query filters for `project`, `actor`, and `since`
@@ -2674,3 +2674,24 @@ Validation:
 - Accepted journey evidence:
   `outputs/phase22-real-journeys/p22j09-20260810T203147Z-3496/journey-result.json`
   remains `PASS_WITH_KNOWN_LIMITATIONS` with all assertions passing.
+
+Accepted J05 P1 boundary review for `P22-REPAIR-022`: the current J05
+literature-discovery selector is marked `live_provider` and enters
+`discover --online` / Semantic Scholar anchor discovery. In this repair batch
+there was no explicit authorization for live/provider execution, so the
+attempted online selector run was stopped and was not accepted as journey
+evidence. No product or test code change was accepted; the remaining Search
+Coverage Review limitation is classified as a live/provider boundary until an
+authorized provider-backed run is requested.
+
+Validation:
+
+- Worker result:
+  `.codex-tmp/phase22-worker-results/p1-j05-literature-repair/result.json`
+  classifies `P22-REPAIR-022` as `ENVIRONMENT_OR_LIVE_PROVIDER_BOUNDARY`.
+- Partial non-accepted run evidence:
+  `outputs/phase22-real-journeys/p22j05-20260810T205022Z-24520` contains only
+  stdout/stderr from the aborted online attempt and no accepted
+  `journey-result.json`.
+- Tracked worktree check after stopping the live/provider run showed no
+  product or test edits from the J05 worker.
