@@ -2268,3 +2268,17 @@ Final validation confirmed identical 142-L2 counts across all three reports,
 all ten reviewed evidence bindings, no `NOT_TESTED` rows, no formula-error
 markers, and unchanged atomic diagnostic values/formulas. Validation output:
 `outputs/phase22-not-tested-report-sync-20260810/final-validator.json`.
+
+### Post-baseline routing audit isolation repair
+
+Logged: 2026-08-10
+
+After rebasing the accepted Phase 22 evidence onto `origin/openJiuwen-Solar`,
+the optimization/routing journey initially failed because its synthetic
+operator registry was not mirrored at the newer runtime-state seam. The
+sandbox's empty production registry therefore classified both fixture-owned
+operators as disabled and returned `operator_selector_no_match`. The journey
+test now supplies an isolated runtime-state lookup for its two fixture-owned
+operators while leaving the production selector, scoring rules, and success
+assertions unchanged. This is a test-isolation repair, not a product-status
+override.

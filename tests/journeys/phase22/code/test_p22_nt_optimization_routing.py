@@ -296,11 +296,18 @@ def test_phase22_not_tested_optimization_and_routing_validation() -> None:
         from pathlib import Path
         sys.path.insert(0, {str(repo_root / 'harness' / 'lib')!r})
         import multi_task_runner as mtr
+        import operator_runtime
         from operator_score import TaskEvidence, rank_actors
 
         fixture = json.loads(Path({str(routing_fixture_path)!r}).read_text(encoding='utf-8'))
         registry = {{'version': 1, 'operators': fixture['operators']}}
         mtr.load_physical_operators = lambda: registry
+        # The fixture owns this isolated registry. Keep the runtime-state seam on
+        # the same registry so synthetic operators are not mistaken for disabled
+        # entries in the sandbox's intentionally empty production registry.
+        operator_runtime.get_operator_runtime_state = lambda operator_id: (
+            'idle' if operator_id in fixture['operators'] else 'disabled'
+        )
         selected, error = mtr.select_operator(fixture['node'], fixture['base_profile'])
         operator_scores = []
         for operator_id, operator in fixture['operators'].items():
