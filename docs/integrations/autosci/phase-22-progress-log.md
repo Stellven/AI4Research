@@ -2761,3 +2761,65 @@ Remaining J05 limitation: a full `PASS` still requires the live provider to
 return topic and anchor discovery results within the configured timeout and to
 produce completed source-provider boundary evidence. The accepted repair only
 prevents provider timeouts from being mislabeled as product failures.
+
+Accepted Spark worker evidence review: five external Spark worker result files
+were reviewed under `.codex-tmp/phase22-worker-results/`. The root review did
+not accept every Spark classification as-is; it replaced non-durable or
+environment-incomplete evidence where needed and recorded unaccepted gaps.
+
+Validation:
+
+- Root review result:
+  `.codex-tmp/phase22-worker-results/root-spark-review/result.json`.
+- Reviewed Spark files:
+  `.codex-tmp/phase22-worker-results/spark-j02-j07-lifecycle/result.json`,
+  `.codex-tmp/phase22-worker-results/spark-j08-j22-claim-review/result.json`,
+  `.codex-tmp/phase22-worker-results/spark-j18-platform-status/result.json`,
+  `.codex-tmp/phase22-worker-results/spark-j19-gui-status/result.json`, and
+  `.codex-tmp/phase22-worker-results/spark-j16-j17-tmux-codegraph/result.json`.
+
+Accepted from Spark plus root replacement evidence:
+
+- J08/J22 `P22-REPAIR-048` and `P22-REPAIR-049`: accepted as
+  `STALE_ALREADY_FIXED`, but not from the Spark artifact paths because several
+  `.codex-tmp/pytest/...` paths referenced by the worker were not durable at
+  review time. Root reran:
+  `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j08_claim_verification.py::test_p22_j08_claim_verification --basetemp .codex-tmp/pytest/root-verify-spark-j08-basetemp -o cache_dir=.codex-tmp/pytest/root-verify-spark-j08-cache`
+  -> 1 passed, with accepted evidence
+  `outputs/phase22-real-journeys/p22j08-20260810T214416Z-27532/journey-result.json`.
+  Root also reran:
+  `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j22_evidence_review_followup.py::test_p22_j22_real_evidence_review_and_followup --basetemp .codex-tmp/pytest/root-verify-spark-j22-basetemp -o cache_dir=.codex-tmp/pytest/root-verify-spark-j22-cache`
+  -> 1 passed, with accepted evidence
+  `outputs/phase22-real-journeys/p22-j22-1786398256/journey-result.json`.
+- J18 `P22-REPAIR-120`, `P22-REPAIR-127`, `P22-REPAIR-129`,
+  `P22-REPAIR-138`, and `P22-REPAIR-139`: accepted from
+  `.codex-tmp/phase22-worker-results/spark-j18-platform-status/result.json`.
+  Windows-verifiable CLI and LLM Config evidence passed; Linux remains
+  `ENVIRONMENT_BLOCKED`; TMUX remains `PASS_WITH_KNOWN_LIMITATIONS` because
+  tmux is absent on this Windows host.
+- J16/J17 `P22-REPAIR-086` and `P22-REPAIR-100`: accepted as
+  `ENVIRONMENT_BLOCKED` from journey evidence
+  `outputs/phase22-real-journeys/p22-j16-20260810T214127Z-23068/journey-result.json`
+  and
+  `outputs/phase22-real-journeys/p22-j17-20260810T214133Z-27672/journey-result.json`;
+  both selectors skipped before real tmux execution because tmux is not visible
+  on PATH.
+- J19 GUI `P22-REPAIR-128`: Spark originally classified the GUI path as
+  environment-blocked because `PHASE22_NODE_BIN` was unset. Root supplied the
+  bundled Node runtime, bundled node modules, and installed Chrome:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j19_real_gui_dashboard.py::test_p22_j19_real_gui_dashboard --basetemp .codex-tmp/pytest/root-verify-spark-j19-gui4-basetemp -o cache_dir=.codex-tmp/pytest/root-verify-spark-j19-gui4-cache`
+  -> 1 passed, with accepted evidence
+  `outputs/phase22-real-journeys/p22-j19-real-gui-dashboard-20260810T214538Z-25436/journey-result.json`.
+
+Not accepted from Spark:
+
+- J02-dependent classifications for `P22-REPAIR-067`, `P22-REPAIR-091`,
+  `P22-REPAIR-094`, `P22-REPAIR-096`, `P22-REPAIR-102`, `P22-REPAIR-103`,
+  `P22-REPAIR-104`, `P22-REPAIR-105`, `P22-REPAIR-108`, and
+  `P22-REPAIR-112` were not accepted because the Spark J02 selector skipped
+  after not setting live-authorization variables, despite current user
+  authorization. J07 evidence from the same worker is useful as partial
+  support, but it does not prove the J02-only P1 issues.
+- J19 TMUX UI `P22-REPAIR-130` was not accepted because the Spark selector
+  skipped before tmux execution with `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS`
+  unset. It still needs a gated rerun plus a tmux availability decision.
