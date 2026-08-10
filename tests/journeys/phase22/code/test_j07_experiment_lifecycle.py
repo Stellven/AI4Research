@@ -43,6 +43,7 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
         ["--target", "normalization improves exact-match accuracy", "--run-id", "p22-j07-exp-design"],
         timeout=90,
     )
+    plan_ev = action_evidence(plan, "design_experiment")
     experiment_proc = rec.run(
         "local-python-experiment",
         [phase22_python, str(assets["runner"]), str(assets["data"]), str(assets["result"])],
@@ -145,6 +146,10 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
     terminal_state = status_report.get("state")
     eval_payload = load_json(exp_eval_ev) if exp_eval_ev else {}
     eval_verdict = eval_payload.get("outputs", {}).get("verdicts", [{}])[0].get("verdict")
+    plan_payload = load_json(plan_ev) if plan_ev else {}
+    plan_outputs = plan_payload.get("outputs", {}) if isinstance(plan_payload.get("outputs"), dict) else {}
+    experiment_plan = plan_outputs.get("experiment_plan", {}) if isinstance(plan_outputs.get("experiment_plan"), dict) else {}
+    poc_design_ready = bool(experiment_plan.get("command_allowlist")) and bool(experiment_plan.get("expected_artifacts")) and bool(experiment_plan.get("success_criteria"))
     rec.add_assertion("exp_design_completed", not plan.get("_error"), plan.get("_error"))
     rec.add_assertion("local_subprocess_exit_zero", experiment_proc.returncode == 0, experiment_proc.returncode)
     rec.add_assertion(
@@ -164,7 +169,13 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
     )
     rec.add_assertion("autosci_exp_eval_completed", exp_eval_ev is not None, eval_summary.get("_error"))
     rec.add_assertion("exp_eval_verdict_matches_declared_threshold", eval_verdict == "supported", eval_verdict)
-    rec.add_l2("Workflow", "Verification-Ready POC Design", "AutoSci exp-design generated plan evidence", Path(plan.get("evidence_path", rec.run_dir)), "partial")
+    rec.add_l2(
+        "Workflow",
+        "Verification-Ready POC Design",
+        "AutoSci exp-design generated command allowlist, expected artifacts, and success criteria for the local POC path",
+        Path(plan_ev or plan.get("evidence_path", rec.run_dir)),
+        "partial" if poc_design_ready else False,
+    )
     rec.add_l2("Foundation", "Runtime Control Loop & Run Lifecycle Management", "real local Python subprocess produced runtime evidence consumed by exp-run", runtime_path, True)
     rec.add_l2("Workflow", "Experiment Status & Evaluation", "exp-status and exp-eval were invoked against the local experiment evidence", exp_status_ev or rec.run_dir, "partial")
     core_assertions = {

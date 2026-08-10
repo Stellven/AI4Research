@@ -2423,3 +2423,38 @@ Validation:
   gaps, and `research_run_status=completed`.
 - Both affected Level 2 rows now recommend `PASS_WITH_KNOWN_LIMITATIONS` with
   zero failed assertions in the accepted run.
+
+Superseding repair entry for `P22-REPAIR-033` and `P22-REPAIR-034`: current
+main-worktree J06/J07 evidence no longer supports the earlier hard-fail
+classification. J06 generated source-backed idea cards with complete
+risk/falsifiability/validation/minimum-experiment fields, and J07 generated a
+local POC design with command allowlist, expected artifacts, and success
+criteria. The journey recorder code was stale: it continued to hard-code the
+affected Level 2 observations as `false`/generic `partial` even when the
+assertions and product evidence showed verification-card and POC-design
+coverage.
+
+Recorder updates:
+
+- `tests/journeys/phase22/code/test_j06_idea_generation.py` now derives
+  Falsifiability Screening & Hypothesis Contracting and Verification-Ready POC
+  Design observations from the actual verification-ready card assertion.
+- `tests/journeys/phase22/code/test_j07_experiment_lifecycle.py` now records
+  Verification-Ready POC Design support from the produced `experiment_plan.v1`
+  command allowlist, expected artifacts, and success criteria.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j06_idea_generation.py::test_p22_j06_idea_generation --basetemp .codex-tmp/pytest/root-j06-recorder-fix-basetemp -o cache_dir=.codex-tmp/pytest/root-j06-recorder-fix-cache`
+  -> 1 passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j07_experiment_lifecycle.py::test_p22_j07_experiment_lifecycle --basetemp .codex-tmp/pytest/root-j07-recorder-fix2-basetemp -o cache_dir=.codex-tmp/pytest/root-j07-recorder-fix2-cache`
+  -> 1 passed.
+- Accepted evidence runs:
+  `outputs/phase22-real-journeys/p22j06-20260810T195057Z-22316/journey-result.json`
+  and
+  `outputs/phase22-real-journeys/p22j07-20260810T195140Z-33668/journey-result.json`.
+  J06 remains `PASS_WITH_KNOWN_LIMITATIONS` because live literature discovery
+  and provider-backed novelty were not in this offline journey; J07 remains
+  `PASS_WITH_KNOWN_LIMITATIONS` because final status/audit terminal checks are
+  still incomplete. Both affected L2 observations are now recorded as
+  `partial`, not `false`.
