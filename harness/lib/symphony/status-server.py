@@ -1167,10 +1167,17 @@ def _settings_payload() -> dict:
 
     # Authoritative overlay: solar-user-config.json .models.* is what panes
     # actually use (and what POST /settings writes), so it wins over config.env.
+    # Keep the user-facing alias separately: dashboard/API callers need to see
+    # whether they chose "opus", "sonnet", or "anthropic-sonnet", while panes
+    # still launch from the unambiguous canonical route alias in .models.*.
+    user_model_aliases = _read_user_config_model_aliases()
     for role, alias in _read_user_config_models().items():
         if role in ("pm", "planner", "builder", "evaluator") and alias:
+            user_alias = str(user_model_aliases.get(role) or alias)
             role_models[role] = {
                 "model": _alias_to_model_id(str(alias)),
+                "configured_alias": str(alias),
+                "user_alias": user_alias,
                 "source": "solar-user-config.json",
             }
 
@@ -1471,6 +1478,12 @@ def _read_user_config_models() -> dict:
     return models if isinstance(models, dict) else {}
 
 
+def _read_user_config_model_aliases() -> dict:
+    cfg = _read_user_config()
+    aliases = cfg.get("model_aliases")
+    return aliases if isinstance(aliases, dict) else {}
+
+
 def _read_user_config_runtime() -> tuple[str, str]:
     cfg = _read_user_config()
     runtime = str(cfg.get("runtime") or "").strip().lower()
@@ -1486,17 +1499,28 @@ def _write_user_config_models(role_models: dict) -> dict:
     """Write models.{pm,planner,builder,evaluator} into solar-user-config.json."""
     cfg = _read_user_config()
     models = cfg.get("models") if isinstance(cfg.get("models"), dict) else {}
+    model_aliases = cfg.get("model_aliases") if isinstance(cfg.get("model_aliases"), dict) else {}
     applied = {}
     for role in ("pm", "planner", "builder", "evaluator"):
         rid = role_models.get(role)
         if not rid:
             continue
+        requested_alias = str(rid or "").strip().lower()
         alias = _model_id_to_alias(rid)
         if alias not in _VALID_MODEL_ALIASES:
             continue
         models[role] = alias
-        applied[role] = alias
+        if requested_alias in _VALID_MODEL_ALIASES:
+            model_aliases[role] = requested_alias
+            applied[role] = requested_alias
+        else:
+            model_aliases.pop(role, None)
+            applied[role] = alias
     cfg["models"] = models
+    if model_aliases:
+        cfg["model_aliases"] = model_aliases
+    else:
+        cfg.pop("model_aliases", None)
     _write_user_config(cfg)
     return applied
 
@@ -1592,6 +1616,11 @@ def _settings_write_payload(data: dict) -> tuple[dict, int]:
     return {
         "ok": True,
         "applied_models": applied_models,
+        "applied_canonical_models": {
+            role: _model_id_to_alias(model)
+            for role, model in role_models.items()
+            if role in applied_models
+        },
         "applied_runtime": applied_runtime,
         "applied_codex": applied_codex,
         "written_keys": written_keys,

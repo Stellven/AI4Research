@@ -2508,3 +2508,36 @@ Validation:
   The journey now recommends `PASS_WITH_KNOWN_LIMITATIONS`; remaining
   limitations are local-only privacy lifecycle coverage and no cloud-account
   policy revocation or consent-dashboard variant.
+
+Accepted J18 LLM Config repair for `P22-REPAIR-139`: the status-server settings
+write path now preserves the user-facing model aliases selected through
+`POST /settings` while keeping the underlying pane route aliases canonical.
+Specifically, `harness/lib/symphony/status-server.py` records a separate
+`model_aliases` map for user-visible aliases such as `opus`, `sonnet`, and
+`anthropic-sonnet`, continues to write unambiguous `models.*` route aliases
+such as `claude-opus` and `claude-sonnet`, and returns both the user-facing
+`applied_models` and diagnostic `applied_canonical_models`.
+
+Validation:
+
+- `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS=1 .venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j18_tmux_cli_status_config.py::test_p22_j18_tmux_cli_status_config --basetemp .codex-tmp/pytest/root-j18-llm-alias-basetemp -o cache_dir=.codex-tmp/pytest/root-j18-llm-alias-cache`
+  -> 1 passed, with two Windows cp1252 subprocess-reader warnings.
+- Accepted isolated evidence:
+  `.codex-tmp/phase22-worker-results/T3-tmux-prep-001/artifacts/j18-llm-config.json`
+  now records `llm_model_roundtrip_ok=true`,
+  `missing_expected_aliases=[]`, `status=ok`, no secrets in the output, and
+  `applied_models` preserving `claude-opus`, `sonnet`, `opus`, and
+  `anthropic-sonnet`.
+- J18 prep summary:
+  `.codex-tmp/phase22-worker-results/T3-tmux-prep-001/artifacts/j18-overall-prep-summary.json`
+  now records `LLM Config=PASS` and `User Settings=PASS`. Linux CLI remains
+  `ENVIRONMENT_BLOCKED` on this Windows host, and TMUX/Web Status Service
+  remain `PASS_WITH_KNOWN_LIMITATIONS` under prep-mode evidence.
+
+Additional non-acceptance check: `tests/harness/status_server/test_settings_concurrency.py`
+was run as a script and reported 8/9 checks passing, with the remaining failure
+being a Windows `PermissionError` direct-file-read race during concurrent
+`os.replace` writes. That issue is tracked as a separate settings-concurrency
+portability limitation and was not used to reject the J18 alias repair because
+the J18 acceptance selector passed and the new alias layer does not change the
+atomic write primitive.
