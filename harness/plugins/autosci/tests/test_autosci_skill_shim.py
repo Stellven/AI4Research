@@ -943,6 +943,28 @@ def test_autosci_skill_shim_runs_research_pipeline(tmp_path: Path) -> None:
     assert_gate_inconclusive_without_reasons(gate)
 
 
+def test_research_preserves_full_natural_language_prompt_and_run_id(tmp_path: Path) -> None:
+    proc = run_shim(
+        tmp_path,
+        "$research",
+        "梳理网页",
+        "https://example.org/seed",
+        "并生成中文报告",
+        "--run-id",
+        "real-data-run-001",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    expected = "梳理网页 https://example.org/seed 并生成中文报告"
+    assert payload["inputs"]["target"] == expected
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert evidence["sprint_id"] == "real-data-run-001"
+    assert evidence["inputs"]["prompt"] == expected
+    assert evidence["inputs"]["run_id"] == "real-data-run-001"
+
+
 def test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts(tmp_path: Path) -> None:
     proc = run_shim(
         tmp_path,

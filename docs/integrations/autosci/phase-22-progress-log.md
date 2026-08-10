@@ -2205,3 +2205,66 @@ not independent proof of 2049 forecasts; the WebAssembly survey is bounded and
 five of eight validated sources are broader compiler/CPU/HPC context; and live
 provider candidates still require human review. No core acceptance blocker
 remains for the four exercised tasks.
+
+## NOT_TESTED production-path validation and review
+
+Logged: 2026-08-10
+
+Five isolated workers added and executed production-path validation for the ten
+L2 rows recorded as `NOT_TESTED` by the later known-issues final integration.
+The integration review read each worker result and evidence set, inspected the
+new journey tests, and independently reran all five exact test files with
+separate `--basetemp` and cache directories. The review run completed with
+`5 passed`, zero pytest failures, and zero collection errors. A passing pytest
+result here means the executable audit reached and truthfully classified the
+product behavior; it does not mean every audited L2 passed its product success
+criteria.
+
+Accepted L2 decisions:
+
+- `PASS_WITH_KNOWN_LIMITATIONS`: `Memory, Retrieval, and Evidence (Memory
+  Learning / Self-RAG / Reranker Training)`; `Runtime and Resource Routing
+  (Bayesian Optimization / Bandits / Cost-Aware RL)`; `Trace Graph
+  Management`; `Data, Benchmarks, Curriculum, and Observability (Active
+  Learning / Hard-Case Mining / Credit Assignment)`.
+- `FAIL`: `Technical Signal Extraction`; `Trend & Gap Analysis`; `Execution
+  Trace Search & Inspection`.
+- `NOT_AVAILABLE`: `Text-Based Artifacts (GEPA / MIPROv2 / TextGrad)`; `DAG
+  and Agent Organization (AFlow / MCTS / ADAS)`; `Model Policies and Weights
+  (SFT / LoRA / DPO / GRPO / Agent RL)`.
+
+The literature production path obtained five real public sources and completed
+provider-backed discovery, but it did not emit source-traceable structured
+technical signals or a cross-source trend. The richer research route failed at
+the planner with Windows `PermissionError: [WinError 5] Access is denied`, so
+both literature-analysis L2 rows are product `FAIL`, not test PASS.
+
+The execution-trace production endpoint correctly filtered by run and returned
+chronological results, but ignored project, actor, and time-range filters. Trace
+graph persistence itself worked with Windows limitations. The named AFlow,
+MCTS, ADAS, SFT, LoRA, DPO, GRPO, Agent RL, MIPROv2, and TextGrad product
+bindings were not found; these rows are now classified as unavailable rather
+than left untested. Generic metric routing, persistent retrieval, and the
+harness-native hard-case/scorecard loop worked only for their supported subset
+and therefore remain limited passes.
+
+Accepted worker evidence:
+
+- `.codex-tmp/phase22-worker-results/NT-literature/result.json`
+- `.codex-tmp/phase22-worker-results/NT-optimization-routing/result.json`
+- `.codex-tmp/phase22-worker-results/NT-memory-retrieval/result.json`
+- `.codex-tmp/phase22-worker-results/NT-model-training/result.json`
+- `.codex-tmp/phase22-worker-results/NT-dag-trace/result.json`
+
+The resulting counts are `PASS=26`, `PASS_WITH_KNOWN_LIMITATIONS=72`,
+`FAIL=17`, `ENVIRONMENT_BLOCKED=2`, `NOT_AVAILABLE=25`, and `NOT_TESTED=0`,
+totaling 142. The full, brief, and ultra-brief reports were synchronized. The
+full report retains the latest upstream atomic diagnostic values and formulas
+while its L2 journey fields, evidence, and status colors agree with the brief
+reports. The L2 issue register was regenerated from the synchronized full
+report.
+
+Final validation confirmed identical 142-L2 counts across all three reports,
+all ten reviewed evidence bindings, no `NOT_TESTED` rows, no formula-error
+markers, and unchanged atomic diagnostic values/formulas. Validation output:
+`outputs/phase22-not-tested-report-sync-20260810/final-validator.json`.

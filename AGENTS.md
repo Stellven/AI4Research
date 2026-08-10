@@ -174,6 +174,13 @@ result belongs under `.codex-tmp/phase22-worker-results/<batch-id>/result.json`.
 Before editing, inspect `git status` and current ownership. Do not copy, rename,
 or overwrite shared workbooks from a worker batch.
 
+Every accepted Phase 22 test, status change, report synchronization, product or
+test repair, superseded decision, and remaining blocker must be appended to
+`docs/integrations/autosci/phase-22-progress-log.md`. Worker agents record their
+isolated evidence in `result.json`; the integration owner records the accepted
+decision in the shared progress log after review. Do not claim a report is
+synchronized until the progress-log entry and report validation both exist.
+
 ## Worker Quality Gate
 
 Before handoff, verify:
