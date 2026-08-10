@@ -2458,3 +2458,12 @@ Validation:
   `PASS_WITH_KNOWN_LIMITATIONS` because final status/audit terminal checks are
   still incomplete. Both affected L2 observations are now recorded as
   `partial`, not `false`.
+
+Current `P22-REPAIR-070` check: reran
+`tests/journeys/phase22/code/test_j08_claim_verification.py::test_p22_j08_claim_verification`
+with `.codex-tmp/pytest/root-j08-final-check-basetemp`; the selector passed.
+The accepted evidence run
+`outputs/phase22-real-journeys/p22j08-20260810T195252Z-15324/journey-result.json`
+is `PASS` and records Claim & Acceptance-Criteria Comparison as exercised
+through `exp-eval`. No product edit was accepted for `P22-REPAIR-070`; the
+packet remains stale/mis-mapped against current journey evidence.
