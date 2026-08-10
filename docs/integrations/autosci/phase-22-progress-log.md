@@ -2370,3 +2370,22 @@ After the full B-worker chain was integrated, the main worktree reran
 `tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff`
 with `.codex-tmp/pytest/root-integrated-j21-after-bfull-basetemp` and the
 selector passed. `git diff --check` also passed.
+
+Research P0 follow-up triage was also run in the `p0-research` worktree before
+being interrupted for lack of final handoff. The accepted read-only
+classifications from current-baseline journey evidence are:
+
+- `P22-REPAIR-018` and `P22-REPAIR-020` remain confirmed product failures.
+  Latest NT-literature evidence found five real public sources and one gap, but
+  still recorded no structured signal types, no cross-source trend, and no
+  completed real-data research run. The latest journey-result continued to
+  recommend `FAIL` for both Technical Signal Extraction and Trend & Gap
+  Analysis.
+- `P22-REPAIR-033` and `P22-REPAIR-034` remain confirmed incomplete. Latest
+  J06 passed overall only as `PASS_WITH_KNOWN_LIMITATIONS`; its L2 observations
+  still marked falsifiability contracts and verification-ready POC design as
+  false. Latest J07 remained `FAIL` with only partial verification-ready POC
+  design evidence.
+- `P22-REPAIR-070` appears stale or mis-mapped as a recorded P0: latest J08
+  passed and produced claim/acceptance comparison evidence. No product edit was
+  accepted for this inferred validity-evaluator packet during this wave.
