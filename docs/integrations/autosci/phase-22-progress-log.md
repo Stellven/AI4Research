@@ -2482,3 +2482,29 @@ P0 wave closure summary for the baseline packet set:
 
 Shared report/workbook regeneration is still deferred until the remaining
 non-P0 packet triage is complete and can be synchronized in one reviewed pass.
+
+P1 triage wave started after P0 closure. Three read-only subagents classified
+the `P1_LIMITATION_REQUIRES_SEVERITY_TRIAGE` packets by category and wrote
+isolated results under `.codex-tmp/phase22-p1-triage/` without editing shared
+reports or matrices. The highest-confidence cross-category actionable cluster
+was J24 privacy lifecycle: `P22-REPAIR-135` and the privacy/security portion of
+`P22-REPAIR-069`.
+
+Accepted J24 repair: `lib/installer/copy-engine.sh` no longer uses a bare
+`cp -R` before cleanup when `rsync` is unavailable. The fallback now uses a
+`tar` stream with the same runtime-state exclusions applied before copying, so
+live harness state such as `run/codex-state` and dangling symlinks are not
+copied into sandbox installs. This keeps the installer contract as "copy code
+and packaged assets, not machine state" and fixes the Windows/Git Bash failure
+where `cp` exited before lifecycle execution.
+
+Validation:
+
+- `bash -n lib/installer/copy-engine.sh` -> passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j24_privacy_lifecycle.py::test_p22_j24_real_privacy_lifecycle --basetemp .codex-tmp/pytest/root-j24-copy-fix-basetemp -o cache_dir=.codex-tmp/pytest/root-j24-copy-fix-cache`
+  -> 1 passed.
+- Evidence run:
+  `outputs/phase22-real-journeys/p22-j24-20260810T200556Z/journey-result.json`.
+  The journey now recommends `PASS_WITH_KNOWN_LIMITATIONS`; remaining
+  limitations are local-only privacy lifecycle coverage and no cloud-account
+  policy revocation or consent-dashboard variant.
