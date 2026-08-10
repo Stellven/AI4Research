@@ -2354,3 +2354,19 @@ Integration validation run in the main worktree:
 Remaining P0 work after this entry: complete the research/scientific reliability
 group (`P22-REPAIR-018`, `020`, `033`, `034`, `070`) and finish report
 regeneration/validation after all accepted P0 fixes are integrated.
+
+Follow-up correction: review of the `p0-experiment` worker result showed that
+the accepted J21 repair consisted of three commits, not only the final projector
+commit. The integration owner subsequently cherry-picked and validated the full
+B-worker chain:
+
+- `d67082239`: update the J21 artifact resolver to read POC artifacts from the
+  current action evidence payload as well as legacy top-level artifact lists.
+- `03798df61`: make generated experiment POC assets and the generated POC runner
+  write result files through Windows long-path-safe helpers.
+- `ab8d5aee7`: make AutoSci workspace projector page writes long-path-safe.
+
+After the full B-worker chain was integrated, the main worktree reran
+`tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff`
+with `.codex-tmp/pytest/root-integrated-j21-after-bfull-basetemp` and the
+selector passed. `git diff --check` also passed.
