@@ -2389,3 +2389,37 @@ classifications from current-baseline journey evidence are:
 - `P22-REPAIR-070` appears stale or mis-mapped as a recorded P0: latest J08
   passed and produced claim/acceptance comparison evidence. No product edit was
   accepted for this inferred validity-evaluator packet during this wave.
+
+Superseding repair entry for `P22-REPAIR-018` and `P22-REPAIR-020`: the main
+worktree repaired the NT-literature production evidence path so the accepted
+journey now emits source-backed method, technical-claim, and experiment/evidence
+signals, an explicit cross-source trend comparison, a source-backed gap and
+uncertainty section, and a bounded real-data research probe result without
+claiming the full protected research lifecycle executed. The repair keeps the
+survey limitations explicit: signals are title/source-level triage until
+paper-level extraction verifies exact methods and measured effects.
+
+Implementation changes in
+`harness/plugins/autosci/bin/autosci_bridge.py`:
+
+- `write_survey` now derives conservative signal, trend, and gap sections from
+  the supplied citation map, preserving source ids in each evidence list.
+- `discover_literature` now falls back to the existing provider-backed discovery
+  backend when the native `tools/discover.py from-anchors` subprocess times out
+  before producing a shortlist.
+- `run_research_lifecycle` now writes
+  `real-data-workspace/real-data-research-run.json` for explicitly online
+  requests as a bounded read-only probe, while leaving the main lifecycle status
+  gated/inconclusive unless full stage evidence is supplied.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_p22_nt_literature_analysis.py::test_phase22_not_tested_literature_signal_and_trend_validation --basetemp .codex-tmp/pytest/root-nt-literature-after-a2-basetemp -o cache_dir=.codex-tmp/pytest/root-nt-literature-after-a2-cache`
+  -> 1 passed.
+- Evidence run:
+  `outputs/phase22-not-tested/NT-literature/nt-literature-20260810T194729Z-26168/journey-result.json`.
+  Observed five real public sources, signal types
+  `experiment_or_evidence`, `method`, and `technical_claim`, one trend, two
+  gaps, and `research_run_status=completed`.
+- Both affected Level 2 rows now recommend `PASS_WITH_KNOWN_LIMITATIONS` with
+  zero failed assertions in the accepted run.
