@@ -20,7 +20,15 @@ def _provider(*, seed_snapshot, payload):
                 "title": f"{topic} evidence {index}",
                 "url": f"https://api.openalex.org/works/W{index}",
                 "provider": "openalex",
-                "content_summary": f"{topic} evaluation method and limitation {index}.",
+                "content_summary": (
+                    f"Methods: We evaluate {topic} against controlled baseline {index}. "
+                    + (
+                        f"Results: The evaluated system improves evidence coverage by {10 + index}%. "
+                        f"Limitation: The experiment is bounded to dataset {index}."
+                        if index < 3
+                        else "The abstract does not provide a comparable outcome or a dedicated failure-boundary statement."
+                    )
+                ),
                 "provenance": {"discovered_at": "2026-08-07T00:00:00Z"},
             }
             for index in range(1, 4)
@@ -39,6 +47,17 @@ def test_live_provider_run_persists_complete_boundary_and_relevant_report(tmp_pa
     report = (tmp_path / "research-report.md").read_text(encoding="utf-8")
     assert topic in report
     assert all(item["source_url"] in report for item in evidence)
+    synthesis = json.loads((tmp_path / "technical-synthesis.json").read_text(encoding="utf-8"))
+    assert synthesis["status"] == "completed"
+    assert {"method", "result", "limitation"}.issubset(synthesis["signal_types"])
+    assert synthesis["trends"]
+    assert all(len(item["source_ids"]) >= 2 for item in synthesis["trends"])
+    assert synthesis["evidence_gaps"]
+    assert all(item["uncertainty"] for item in synthesis["evidence_gaps"])
+    assert all(
+        item["content"] != next(source["title"] for source in synthesis["sources"] if source["source_id"] == item["source_id"])
+        for item in synthesis["technical_signals"]
+    )
     state = json.loads((tmp_path / "research-run-state.json").read_text(encoding="utf-8"))
     assert state["completed_nodes"] == ["discover", "survey", "research"]
     assert state["state"] == "completed"
