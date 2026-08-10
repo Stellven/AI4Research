@@ -92,7 +92,10 @@ def _action_evidence_path(harness_dir: Path, summary: dict[str, Any], action: st
 
 
 def _artifact_path(harness_dir: Path, payload: dict[str, Any], artifact_type: str) -> Path | None:
-    for artifact in payload.get("artifacts") or []:
+    artifacts = list(payload.get("artifacts") or [])
+    evidence = payload.get("evidence") if isinstance(payload.get("evidence"), dict) else {}
+    artifacts.extend(evidence.get("artifacts") or [])
+    for artifact in artifacts:
         if isinstance(artifact, dict) and artifact.get("type") == artifact_type:
             return _resolve_harness_path(harness_dir, artifact.get("path"))
     return None
