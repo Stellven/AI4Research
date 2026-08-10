@@ -8900,6 +8900,12 @@ def _experiment_result_payload(envelope: dict[str, Any]) -> dict[str, Any] | Non
     for key in ("experiment_result_evidence", "result_evidence", "experiment_result"):
         for payload in _load_optional_evidence_many(inputs.get(key)):
             return payload
+    # `exp-status --collect --after-artifact result.json` is a legitimate local
+    # monitoring path: the result file is already the collected after-artifact,
+    # even when it has not yet been wrapped as experiment_result.v1 evidence.
+    # Treat it only as a fallback so explicit evidence remains authoritative.
+    for payload in _load_optional_evidence_many(inputs.get("after_artifacts")):
+        return payload
     return None
 
 

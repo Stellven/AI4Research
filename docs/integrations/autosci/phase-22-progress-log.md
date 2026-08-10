@@ -2573,3 +2573,27 @@ fixtures were looked up relative to a temporary cwd, plus one pre-existing
 experiment-status expectation mismatch. The targeted ingest registration
 tests above passed and were used as the acceptance evidence for this J04
 repair.
+
+Accepted J07 terminal lifecycle repair for `P22-REPAIR-092` and the J07 portion
+of `P22-REPAIR-036`/`P22-REPAIR-038`: `harness/plugins/autosci/bin/autosci_bridge.py`
+now treats JSON files supplied through `exp-status --collect --after-artifact`
+as fallback local experiment result payloads when no explicit
+`experiment_result_evidence` is supplied. This preserves explicit evidence as
+authoritative, but lets the local monitor path report a terminal state for the
+same result file that the approved local experiment command just wrote.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m py_compile harness/plugins/autosci/bin/autosci_bridge.py`
+  -> passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j07_experiment_lifecycle.py::test_p22_j07_experiment_lifecycle --basetemp .codex-tmp/pytest/root-j07-terminal-after-basetemp -o cache_dir=.codex-tmp/pytest/root-j07-terminal-after-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j07-20260810T202057Z-26328/journey-result.json`
+  now records `status=PASS`, no limitations, and
+  `exp_status_reached_terminal_state=true` with status report state
+  `completed`.
+
+Scope note: this fixes the local J07 terminal-state path. Claims tied to the
+paired J02 live/tmux workflow remain environment-blocked on this Windows host
+until rerun with live authorization and tmux available.
