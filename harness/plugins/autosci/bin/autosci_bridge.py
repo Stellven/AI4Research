@@ -7217,6 +7217,149 @@ def _write_phase9_foundation_sidecars(envelope: dict[str, Any], paper_evidence: 
     ]
 
 
+def _register_ingest_paper_wiki(
+    envelope: dict[str, Any],
+    paper_evidence: dict[str, Any],
+    sidecar_paths: list[str],
+) -> list[dict[str, str]]:
+    outputs = paper_evidence.get("outputs") if isinstance(paper_evidence.get("outputs"), dict) else {}
+    paper = outputs.get("paper") if isinstance(outputs.get("paper"), dict) else {}
+    paper_id = str(paper.get("paper_id") or "").strip()
+    title = str(paper.get("title") or "").strip()
+    if not paper_id or not title:
+        return []
+    existing_state = _ingest_wiki_registration_state(envelope, paper)
+    if all(
+        bool(existing_state.get(key))
+        for key in ("paper_registered", "graph_registered", "index_rebuilt", "context_rebuilt")
+    ):
+        return []
+
+    wiki_root = _wiki_roots_for_write(envelope)[0]
+    page_path = wiki_root / "papers" / f"{_slug(paper_id)}.md"
+    evidence_path = _configured_output_path(
+        envelope,
+        "evidence_payload_path",
+        _output_dir(envelope, "ingest_paper") / "ingest_paper.evidence.json",
+        legacy_key="evidence_path",
+        legacy_suffix=".json",
+    )
+    evidence_refs = _unique_strings(
+        [
+            _rel(evidence_path),
+            *[str(path) for path in sidecar_paths],
+            str(paper.get("source_ref") or ""),
+        ]
+    )
+    abstract = str(paper.get("abstract") or "").strip()
+    sections = paper.get("sections") if isinstance(paper.get("sections"), list) else []
+    section_lines: list[str] = []
+    for section in sections[:6]:
+        if not isinstance(section, dict):
+            continue
+        section_title = str(section.get("title") or "Section").strip() or "Section"
+        section_text = str(section.get("text") or "").strip()
+        if section_text:
+            section_lines.extend([f"### {section_title}", "", section_text, ""])
+
+    page_body = "\n".join(
+        [
+            "---",
+            f"title: {_frontmatter_string(title)}",
+            f"paper_id: {_frontmatter_string(paper_id)}",
+            f"source_ref: {_frontmatter_string(paper.get('source_ref') or '')}",
+            f"source_type: {_frontmatter_string(paper.get('source_type') or '')}",
+            "autosci_source_action: \"ingest\"",
+            f"registered_at: {_frontmatter_string(datetime.now(UTC).replace(microsecond=0).isoformat().replace('+00:00', 'Z'))}",
+            "---",
+            "",
+            f"# {title}",
+            "",
+            f"Paper id: `{paper_id}`",
+            "",
+            "## Abstract",
+            "",
+            abstract or "N/A",
+            "",
+            "## Extracted Sections",
+            "",
+            *(section_lines or ["N/A", ""]),
+            "## Evidence",
+            "",
+            "Evidence:",
+            *[f"- `{ref}`" for ref in evidence_refs],
+            "",
+        ]
+    )
+    _write_text_if_changed_bridge(page_path, page_body)
+
+    edges_path = wiki_root / "graph" / "edges.jsonl"
+    edges_path.parent.mkdir(parents=True, exist_ok=True)
+    edge = {
+        "edge_type": "source_candidate_ingested",
+        "source_type": "ingest_paper",
+        "source_id": str(envelope.get("run_id") or envelope.get("task_id") or "ingest"),
+        "relation": "registered",
+        "target_type": "paper",
+        "target_id": paper_id,
+        "target_path": _rel(page_path),
+        "title": title,
+        "source_ref": str(paper.get("source_ref") or ""),
+        "evidence_refs": evidence_refs,
+        "timestamp": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    }
+    already_registered = False
+    if edges_path.exists():
+        for raw_line in edges_path.read_text(encoding="utf-8").splitlines():
+            try:
+                existing_edge = json.loads(raw_line)
+            except json.JSONDecodeError:
+                continue
+            if (
+                isinstance(existing_edge, dict)
+                and str(existing_edge.get("edge_type") or "") == "source_candidate_ingested"
+                and str(existing_edge.get("target_id") or "") == paper_id
+            ):
+                already_registered = True
+                break
+    if not already_registered:
+        line = json.dumps(edge, sort_keys=True)
+        edges_path.open("a", encoding="utf-8").write(line + "\n")
+
+    evidence_ids = _unique_strings([paper_id, str(paper.get("source_ref") or "")])
+    log_path = _write_generic_wiki_log(
+        wiki_root,
+        "Ingest Paper",
+        page_path,
+        evidence_ids,
+        f"Registered ingested paper `{paper_id}` ({title}) into the local AutoSci wiki.",
+    )
+    rebuilt_paths = _rebuild_generic_wiki_views(
+        wiki_root,
+        str(envelope.get("run_id") or envelope.get("sprint_id") or "autosci-ingest"),
+        page_path,
+        evidence_ids,
+    )
+    artifacts = paper_evidence.setdefault("artifacts", [])
+    wiki_artifacts = [
+        {"type": "wiki_paper", "path": _rel(page_path)},
+        {"type": "wiki_graph_edges", "path": _rel(edges_path)},
+        {"type": "wiki_log", "path": _rel(log_path)},
+        *[{"type": "wiki_rebuild", "path": _rel(path)} for path in rebuilt_paths],
+    ]
+    known = {
+        (str(item.get("type") or ""), str(item.get("path") or ""))
+        for item in artifacts
+        if isinstance(item, dict)
+    }
+    for artifact in wiki_artifacts:
+        key = (artifact["type"], artifact["path"])
+        if key not in known:
+            artifacts.append(artifact)
+            known.add(key)
+    return wiki_artifacts
+
+
 def _artifact_path_exists(raw_path: Any) -> bool:
     if not raw_path:
         return False
@@ -23146,6 +23289,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     if args.action in {"ingest_paper", "prepare_paper_source"}:
         sidecar_evidence_paths = _write_phase9_foundation_sidecars(envelope, evidence)
         extra["sidecar_evidence_paths"] = sidecar_evidence_paths
+        wiki_registration_artifacts = _register_ingest_paper_wiki(envelope, evidence, sidecar_evidence_paths)
+        if wiki_registration_artifacts:
+            extra["wiki_registration_artifacts"] = wiki_registration_artifacts
         evidence = _attach_ingest_final_source_registration_boundary(envelope, evidence, sidecar_evidence_paths)
     if args.action == "evaluate_ideas":
         sidecar_paths = [_write_phase11_idea_memory_sidecar(envelope, evidence)]

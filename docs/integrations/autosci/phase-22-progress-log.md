@@ -2541,3 +2541,35 @@ being a Windows `PermissionError` direct-file-read race during concurrent
 portability limitation and was not used to reject the J18 alias repair because
 the J18 acceptance selector passed and the new alias layer does not change the
 atomic write primitive.
+
+Accepted J04 ingest/wiki registration repair for `P22-REPAIR-083`,
+`P22-REPAIR-084`, and `P22-REPAIR-090`: `harness/plugins/autosci/bin/autosci_bridge.py`
+now performs local AutoSci wiki registration during `ingest_paper` after the
+research memory/graph sidecars are written and before the final source
+registration boundary is computed. The repair writes or refreshes the paper
+page, graph edge, log entry, index, and context brief under the isolated
+workspace wiki, while preserving the existing behavior where a pre-registered
+paper/page/graph/index/context does not require a log entry to be considered
+ready.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m py_compile harness/plugins/autosci/bin/autosci_bridge.py`
+  -> passed.
+- `.venv\Scripts\python.exe -m pytest tests/plugins/autosci/test_bridge_smoke.py::test_phase9_ingest_registration_boundary_does_not_require_log_entry harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ingest_final_source_registration_boundary_ready_with_wiki_state --basetemp .codex-tmp/pytest/root-j04-ingest-focused2-basetemp -o cache_dir=.codex-tmp/pytest/root-j04-ingest-focused2-cache`
+  -> 2 passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j04_paper_ingestion.py::test_p22_j04_paper_ingestion --basetemp .codex-tmp/pytest/root-j04-wiki-after2-basetemp -o cache_dir=.codex-tmp/pytest/root-j04-wiki-after2-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j04-20260810T201812Z-22340/journey-result.json`
+  now records `status=PASS`, no limitations, and a final source registration
+  boundary with `final_registration_ready=true`, `wiki_registration_ready=true`,
+  `paper_registered=true`, `graph_registered=true`, `index_rebuilt=true`, and
+  `context_rebuilt=true`.
+
+Non-acceptance note: a broad run of `tests/plugins/autosci/test_bridge_smoke.py`
+from the repository root collected unrelated legacy failures where subprocess
+fixtures were looked up relative to a temporary cwd, plus one pre-existing
+experiment-status expectation mismatch. The targeted ingest registration
+tests above passed and were used as the acceptance evidence for this J04
+repair.
