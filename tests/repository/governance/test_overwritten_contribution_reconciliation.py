@@ -42,13 +42,23 @@ def test_reconciliation_is_complete_and_resolved() -> None:
 
 def test_reconciliation_actions_have_current_evidence() -> None:
     ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
-    tracked = set(git("ls-files").decode("utf-8", "surrogateescape").splitlines())
+    tracked = set(git("ls-files", "-z").decode("utf-8", "surrogateescape").split("\0"))
+    tracked.discard("")
     for item in ledger["paths"]:
         classification = item["classification"]
         targets = item["current_corresponding_paths"]
         assert item["evidence"].strip()
-        if classification == "RESTORED":
-            assert item["original_path"] in tracked
+        if classification == "PRESERVED_EXACT":
+            source_blob = item["original_blob_hash"]
+            path = item["original_path"]
+            if source_blob is None:
+                assert path not in tracked
+                assert not targets
+            else:
+                assert targets == [path]
+                assert path in tracked
+                assert git("rev-parse", f"{SOURCE}:{path}").decode().strip() == source_blob
+                assert git("rev-parse", f"HEAD:{path}").decode().strip() == source_blob
         if classification == "PRESERVED_MOVED":
             assert targets and all(target in tracked for target in targets)
         if classification == "PRESERVED_SEMANTICALLY":
@@ -59,14 +69,8 @@ def test_reconciliation_actions_have_current_evidence() -> None:
             assert item["action"].strip() and item["evidence"].strip()
 
 
-def test_readme_restores_ai4research_without_stale_install_commands() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    assert "AI4Research" in readme
-    assert "governed local execution" in readme
-    assert "solar harness autosci" in readme
-    assert f"OpenSolar/v{version}/get-solar.sh" in readme
-    assert f"OpenSolar.git@v{version}#subdirectory=distribution/pipx" in readme
+def test_readme_is_the_verbatim_stellven_source_tip_blob() -> None:
+    assert git("rev-parse", f"HEAD:README.md") == git("rev-parse", f"{SOURCE}:README.md")
 
 
 def test_no_illegal_paths_or_prohibited_recovered_state() -> None:
@@ -76,12 +80,10 @@ def test_no_illegal_paths_or_prohibited_recovered_state() -> None:
     for item in ledger["paths"]:
         path = item["original_path"]
         paths_to_check = list(item["current_corresponding_paths"])
-        if item["classification"] == "RESTORED":
+        if item["classification"] == "PRESERVED_EXACT" and item["original_blob_hash"] is not None:
             paths_to_check.append(path)
         for checked_path in paths_to_check:
             for component in checked_path.split("/"):
                 assert not illegal.search(component)
                 assert not component.endswith((".", " "))
-        if item["classification"] == "RESTORED":
-            assert not prohibited.search(path)
     assert ledger["fixed_revisions"]["final_integration"] == FINAL

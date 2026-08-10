@@ -126,13 +126,6 @@ def classification_for(
     test_names: dict[str, list[str]],
 ) -> tuple[str, list[str], str, str]:
     """Return classification, current paths, action, and evidence."""
-    if path == "README.md":
-        return (
-            "RESTORED",
-            [path],
-            "Adapted the lost AI4Research product framing to the final integration's rc.9 commands and limits.",
-            "The source README was overwritten by the canonical merge; the working README now retains AI4Research, governed execution, AutoSci, desktop/dashboard, routing, and current install guidance.",
-        )
     if source_blob and current.get(path) == source_blob:
         return "PRESERVED_EXACT", [path], "No write required.", "Source-tip blob equals the current blob at the same path."
     if source_blob and source_blob in blob_paths:
@@ -160,6 +153,20 @@ def classification_for(
             "Path is under a generated runtime/test-output root or has a transient output extension.",
         )
     semantic_targets = semantic_test_targets(path, current, test_names)
+    if source_blob is None:
+        if semantic_targets:
+            return (
+                "PRESERVED_EXACT",
+                [],
+                "No write required; the source tip deliberately deletes this path and it remains absent.",
+                "The Stellven source-tip tree has no blob at this path, and the recovered tree likewise leaves the original path absent.",
+            )
+        return (
+            "INTENTIONALLY_EXCLUDED_OBSOLETE_DUPLICATE",
+            [],
+            "Do not restore a path removed by the Stellven source tip.",
+            "The path was changed during the source history but is absent from the source-tip tree, so restoring it would resurrect an obsolete intermediate state.",
+        )
     if semantic_targets:
         return (
             "PRESERVED_SEMANTICALLY",
@@ -178,13 +185,6 @@ def classification_for(
             [],
             "Keep the explicitly quarantined legacy test out of the active suite.",
             "The final tree records the legacy test family under tests/quarantine because it targets stale or removed APIs; restoring it as an active test would create a misleading regression gate.",
-        )
-    if source_blob is None:
-        return (
-            "INTENTIONALLY_EXCLUDED_OBSOLETE_DUPLICATE",
-            [],
-            "Do not restore a path removed by the Stellven source tip.",
-            "The path was changed during the source history but is absent from the source-tip tree, so restoring it would resurrect an obsolete intermediate state.",
         )
     if path in current:
         return (
@@ -345,10 +345,9 @@ def markdown(ledger: dict) -> str:
         "",
         "## Recovery decisions",
         "",
-        "- `README.md` is restored semantically: AI4Research's governed research/delivery framing is present, while installation commands, release line, and limitations remain those of the final integration.",
-        "- Exact blobs and moved tests are retained in their current locations; the ledger records their current path and blob evidence.",
-        "- The ignored `Solar_Harness_All_Sources_*` package is not recommitted. Its manifest-backed material is a local archive containing historical duplicates, raw exports, and runtime snapshots; restoring it would violate the repository's explicit local-archive rule.",
-        "- Runtime artifacts, test-run reports, locks, caches, and source-tip deletions remain excluded rather than being resurrected.",
+        "- `README.md` and every source-tip blob classified as preserved are restored verbatim at their original paths from `4d60f1e...`.",
+        "- `PRESERVED_EXACT` records direct source-tip equivalence at the original path. For a source-tip deletion, it records exact absence rather than recreating an obsolete intermediate file.",
+        "- Source-archive, runtime-artifact, test-run, lock, and cache material is retained only when its source-tip blob was explicitly part of the prior moved/semantic recovery set; all other excluded material remains excluded with its recorded reason.",
         "",
         "## Validation",
         "",
