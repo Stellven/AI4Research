@@ -158,6 +158,13 @@ def _codex_live_search_requested() -> bool:
     return "--search" in tokens
 
 
+def _codex_model() -> str:
+    """Resolve the model while honoring the harness-wide Codex policy."""
+    policy_model = os.environ.get("SOLAR_CODEX_MODEL", "").strip()
+    configured_model = os.environ.get("CODEX_MODEL", "").strip()
+    return policy_model or configured_model or "gpt-5.5"
+
+
 def _codex_exec_command(model: str, effort: str, cwd: str, output_file: Path) -> list[str]:
     cmd = ["codex"]
     if _codex_live_search_requested():
@@ -208,10 +215,6 @@ def _filesystem_isolated_command(
         if strict:
             raise RuntimeError("strict operator filesystem scope cannot disable Landlock")
         return command, {"mode": "disabled", "strict": False}
-    if sys.platform != "linux":
-        if strict:
-            raise RuntimeError("strict operator filesystem scope requires Linux Landlock")
-        return command, {"mode": "unsupported", "strict": False}
 
     harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
     state_root = Path(
@@ -241,6 +244,12 @@ def _filesystem_isolated_command(
     config.write_text('cli_auth_credentials_store = "file"\n', encoding="utf-8")
     config.chmod(0o600)
     env["CODEX_HOME"] = str(codex_home)
+
+    if sys.platform != "linux":
+        if strict:
+            raise RuntimeError("strict operator filesystem scope requires Linux Landlock")
+        return command, {"mode": "unsupported", "strict": False}
+
     codex_arg0_dir = codex_home / "tmp" / "arg0"
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
     codex_binary = Path(shutil.which("codex", path=env.get("PATH")) or "codex")
@@ -384,7 +393,7 @@ def main() -> int:
     task_dir = Path(os.environ.get("TASK_DIR") or ".").expanduser()
     task_dir.mkdir(parents=True, exist_ok=True)
     output_file = task_dir / "codex-last-message.md"
-    model = os.environ.get("CODEX_MODEL", "gpt-5.5").strip() or "gpt-5.5"
+    model = _codex_model()
     effort = os.environ.get("CODEX_REASONING_EFFORT", "medium").strip() or "medium"
     cwd = str(Path(os.environ.get("CODEX_WORKDIR") or os.environ.get("WORK_DIR") or os.getcwd()).expanduser())
     if not Path(cwd).is_dir():
