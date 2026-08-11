@@ -185,6 +185,8 @@ def _prepare_j17_isolated_harness(repo_root: Path, sandbox: Path) -> Path:
         src = source / name
         if src.exists():
             _copy_or_link_j17(src, harness_dir / name)
+    for src in source.glob("*.sh"):
+        _copy_or_link_j17(src, harness_dir / src.name)
     (harness_dir / "run").mkdir(exist_ok=True)
     (harness_dir / "artifacts").mkdir(exist_ok=True)
     return harness_dir
@@ -504,6 +506,35 @@ def _mark_all_l2(rec: J17Recorder, status: str, evidence_path: Path, reason: str
             assertion_name=f"j17_{_slug(feature).lower()}_{status.lower()}",
             known_limitations=[reason],
         )
+
+
+def _operator_provider_auth_blocker(harness_dir: Path, sprint_id: str) -> str:
+    auth_signals = (
+        "401 unauthorized",
+        "missing bearer",
+        "basic authentication",
+        "codex login",
+        "api key",
+        "not authenticated",
+    )
+    result_root = harness_dir / "run" / "operator-results"
+    if not result_root.exists():
+        return ""
+    for operator_dir in result_root.iterdir():
+        if not operator_dir.is_dir():
+            continue
+        for task_dir in sorted((path for path in operator_dir.iterdir() if path.is_dir()), key=lambda path: path.stat().st_mtime, reverse=True):
+            payload = _read_json(task_dir / "result.json")
+            envelope = _read_json(task_dir / "envelope.json")
+            if sprint_id and payload.get("sprint_id") != sprint_id and envelope.get("sprint_id") != sprint_id:
+                continue
+            text = "\n".join(
+                _read_text(task_dir / name)
+                for name in ("output.log", "codex-cli-output.log", "error.log", "result.json")
+            ).lower()
+            if any(signal in text for signal in auth_signals):
+                return "Codex provider authentication is unavailable in the sandboxed live journey runtime."
+    return ""
 
 
 def _prepare_project(tmp_path: Path) -> Path:
@@ -955,6 +986,12 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
             }
         }
         if not all(required_assertions.values()):
+            provider_auth_blocker = _operator_provider_auth_blocker(harness_dir, sprint_id)
+            if provider_auth_blocker:
+                rec.add_assertion("live_provider_auth_available", False, provider_auth_blocker)
+                _mark_all_l2(rec, "ENVIRONMENT_BLOCKED", preflight_path, provider_auth_blocker)
+                rec.finalize("ENVIRONMENT_BLOCKED", blockers=[provider_auth_blocker])
+                return
             rec.finalize("FAIL", blockers=["One or more required J17 assertions failed."])
             return
         if any(item["status"] == "FAIL" for item in rec.observed_l2):

@@ -2864,3 +2864,56 @@ Current blocker after configured rerun: this Windows host still has no `tmux`
 on PATH. To turn J02/J16/J17 from `ENVIRONMENT_BLOCKED` into executable
 journeys, rerun them from a Linux/WSL environment with tmux installed or expose
 a compatible tmux binary on PATH.
+
+WSL/TMUX/Codex configured rerun: root configured the `Ubuntu` WSL distro with
+an isolated `.codex-tmp/wsl-phase22-venv`, temporary `jq`, and Codex CLI
+`0.147.0` under `.codex-tmp/wsl-bin`, then reran J02/J16/J17. The temporary
+Codex install briefly added a PATH block to `/home/james/.bashrc`; root removed
+that exact installer block after inspection, leaving the runtime under
+`.codex-tmp` only. A stale test-created WSL tmux session whose cwd was the
+deleted J02 sandbox was also killed.
+
+Repairs accepted before rerun:
+
+- `harness/solar-harness.sh`: fixed `set -u` failures by defaulting unset
+  `SOLAR_HARNESS_SESSION` to the already computed `SESSION_NAME` when
+  constructing Codex pane runtime environment.
+- `harness/tools/codex_operator.py`: fixed Landlock execution of PATH symlinked
+  Codex binaries by executing the resolved binary target.
+- J16/J17 journey fixtures now copy top-level harness `*.sh` scripts into the
+  isolated harness, so `solar-harness.sh start` can find `coordinator.sh`,
+  `pane-launcher.sh`, `session.sh`, and related shell entrypoints.
+- J02/J16/J17 now classify explicit Codex/OpenAI provider-auth failures as
+  `ENVIRONMENT_BLOCKED` instead of product `FAIL`.
+
+Validation:
+
+- Root WSL rerun result:
+  `.codex-tmp/phase22-worker-results/root-wsl-tmux-codex-rerun/result.json`.
+- Syntax/static checks:
+  `.venv\Scripts\python.exe -m py_compile harness/tools/codex_operator.py tests/journeys/phase22/code/test_j02_live_coding_task.py tests/journeys/phase22/code/test_j16_tmux_requirements_builder.py tests/journeys/phase22/code/test_j17_tmux_capsule_operator_core.py`
+  -> passed.
+  `wsl.exe -d Ubuntu --cd <repo> -- bash -n harness/solar-harness.sh`
+  -> passed.
+  `git diff --check -- <changed tracked files>`
+  -> passed.
+- J02 WSL live/tmux selector:
+  `wsl.exe -d Ubuntu --cd <repo> -- bash -lc '.codex-tmp/run-wsl-j02.sh'`
+  -> 1 skipped with accepted status `ENVIRONMENT_BLOCKED`; evidence:
+  `outputs/phase22-real-journeys/p22j02-20260811T144203Z-69477/journey-result.json`.
+- J16 WSL live/tmux selector:
+  `wsl.exe -d Ubuntu --cd <repo> -- bash -lc '.codex-tmp/run-wsl-j16-j17.sh'`
+  -> J16 1 skipped with accepted status `ENVIRONMENT_BLOCKED`; evidence:
+  `outputs/phase22-real-journeys/p22-j16-20260811T150043Z-122212/journey-result.json`.
+  The same combined script hit a J17 pytest basetemp cleanup error after J16;
+  J17 was rerun separately with a fresh basetemp.
+- J17 WSL live/tmux selector:
+  `wsl.exe -d Ubuntu --cd <repo> -- bash -lc '.codex-tmp/run-wsl-j17-final.sh'`
+  -> 1 skipped with accepted status `ENVIRONMENT_BLOCKED`; evidence:
+  `outputs/phase22-real-journeys/p22-j17-20260811T150530Z-143258/journey-result.json`.
+
+Remaining blocker after WSL/TMUX/Codex setup: tmux and the native Linux Codex
+CLI are now available, but the sandboxed Codex runtime has no usable provider
+authentication. The final accepted blocker for J02/J16/J17 is:
+`Codex provider authentication is unavailable in the sandboxed live journey
+runtime.`

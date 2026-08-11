@@ -183,6 +183,8 @@ def _prepare_j16_isolated_harness(repo_root: Path, sandbox: Path) -> Path:
         src = source / name
         if src.exists():
             _copy_or_link_j16(src, harness_dir / name)
+    for src in source.glob("*.sh"):
+        _copy_or_link_j16(src, harness_dir / src.name)
     (harness_dir / "run").mkdir(exist_ok=True)
     (harness_dir / "artifacts").mkdir(exist_ok=True)
     return harness_dir
@@ -512,6 +514,29 @@ def _operator_task_dirs(harness_dir: Path) -> list[Path]:
         if operator_dir.is_dir():
             task_dirs.extend(path for path in operator_dir.iterdir() if path.is_dir())
     return sorted(task_dirs, key=lambda path: path.stat().st_mtime, reverse=True)
+
+
+def _operator_provider_auth_blocker(harness_dir: Path, sprint_id: str) -> str:
+    auth_signals = (
+        "401 unauthorized",
+        "missing bearer",
+        "basic authentication",
+        "codex login",
+        "api key",
+        "not authenticated",
+    )
+    for task_dir in _operator_task_dirs(harness_dir):
+        payload = _read_json(task_dir / "result.json")
+        envelope = _read_json(task_dir / "envelope.json")
+        if sprint_id and payload.get("sprint_id") != sprint_id and envelope.get("sprint_id") != sprint_id:
+            continue
+        text = "\n".join(
+            _read_text(task_dir / name)
+            for name in ("output.log", "codex-cli-output.log", "error.log", "result.json")
+        ).lower()
+        if any(signal in text for signal in auth_signals):
+            return "Codex provider authentication is unavailable in the sandboxed live journey runtime."
+    return ""
 
 
 def _task_dir_key(path: Path) -> str:
@@ -1100,6 +1125,12 @@ def test_p22_j16_tmux_requirements_builder_real_user_defect_repair(repo_root: Pa
             }
         }
         if not all(required_assertions.values()):
+            provider_auth_blocker = _operator_provider_auth_blocker(harness_dir, sprint_id)
+            if provider_auth_blocker:
+                rec.add_assertion("live_provider_auth_available", False, provider_auth_blocker)
+                _mark_l2_unavailable(rec, "ENVIRONMENT_BLOCKED", preflight_path, provider_auth_blocker)
+                rec.finalize("ENVIRONMENT_BLOCKED", blockers=[provider_auth_blocker])
+                return
             rec.finalize("FAIL", blockers=["One or more required J16 assertions failed."])
             return
 

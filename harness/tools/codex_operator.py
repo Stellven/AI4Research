@@ -245,6 +245,8 @@ def _filesystem_isolated_command(
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
     codex_binary = Path(shutil.which("codex", path=env.get("PATH")) or "codex")
     resolved_binary = codex_binary.resolve(strict=False)
+    if command and Path(command[0]).name == codex_binary.name:
+        command = [str(resolved_binary), *command[1:]]
     # WSL resolves /etc/resolv.conf into /mnt/wsl. Landlock authorizes the
     # resolved inode, so /etc by itself is insufficient for DNS/token refresh.
     resolved_system_network_files = [
