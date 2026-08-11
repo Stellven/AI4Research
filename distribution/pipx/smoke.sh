@@ -16,13 +16,14 @@ smoke_root="${OPENJIUWEN_SOLAR_SMOKE_ROOT:-${OPENSOLAR_SMOKE_ROOT:-$(mktemp -d "
 mkdir -p "$smoke_root"
 evidence_path="$smoke_root/smoke-evidence.json"
 evidence_tmp="$smoke_root/.smoke-evidence.tmp.$$"
-ledger="$smoke_root/.command-ledger.jsonl"
-rm -f "$evidence_path" "$evidence_tmp" "$ledger"
+rm -f "$evidence_path" "$evidence_tmp"
 run_id="$(python3 - <<'PY'
 import uuid
 print(uuid.uuid4())
 PY
 )"
+run_root="$smoke_root/.runs/$run_id"
+ledger="$run_root/command-ledger.jsonl"
 result_status="failed"
 failure_step="initialization"
 pipx_status="NOT_TESTED"
@@ -31,19 +32,20 @@ opensolar_cmd=""
 
 record_command() {
     label="$1"; rc="$2"; stdout_path="$3"; stderr_path="$4"; shift 4
-    python3 - "$ledger" "$label" "$rc" "$stdout_path" "$stderr_path" "$@" <<'PY'
+    python3 - "$ledger" "$run_id" "$label" "$rc" "$stdout_path" "$stderr_path" "$@" <<'PY'
 import hashlib
 import json
 import sys
 from pathlib import Path
 
-ledger, label, rc, stdout_path, stderr_path, *argv = sys.argv[1:]
+ledger, run_id, label, rc, stdout_path, stderr_path, *argv = sys.argv[1:]
 def digest(path):
     payload = Path(path).read_bytes()
     return hashlib.sha256(payload).hexdigest(), len(payload)
 stdout_sha, stdout_bytes = digest(stdout_path)
 stderr_sha, stderr_bytes = digest(stderr_path)
 row = {
+    "run_id": run_id,
     "label": label,
     "argv": argv,
     "exit_code": int(rc),
@@ -59,14 +61,15 @@ PY
 
 record_not_tested() {
     label="$1"; reason="$2"
-    python3 - "$ledger" "$label" "$reason" <<'PY'
+    python3 - "$ledger" "$run_id" "$label" "$reason" <<'PY'
 import json
 import sys
 with open(sys.argv[1], "a", encoding="utf-8") as stream:
     stream.write(json.dumps({
-        "label": sys.argv[2],
+        "run_id": sys.argv[2],
+        "label": sys.argv[3],
         "status": "NOT_TESTED",
-        "reason": sys.argv[3],
+        "reason": sys.argv[4],
         "exit_code": None,
     }, sort_keys=True) + "\n")
 PY
@@ -75,8 +78,8 @@ PY
 run_step() {
     label="$1"; shift
     failure_step="$label"
-    stdout_path="$smoke_root/logs/$label.stdout"
-    stderr_path="$smoke_root/logs/$label.stderr"
+    stdout_path="$run_root/logs/$label.stdout"
+    stderr_path="$run_root/logs/$label.stderr"
     set +e
     "$@" > >(tee "$stdout_path") 2> >(tee "$stderr_path" >&2)
     rc=$?
@@ -93,7 +96,8 @@ finalize_evidence() {
     fi
     RESULT_STATUS="$result_status" FAILURE_STEP="$failure_step" RUN_ID="$run_id" \
     PIPX_STATUS="$pipx_status" PIPX_REASON="$pipx_reason" \
-    python3 - "$ledger" "$evidence_tmp" "$evidence_path" "$smoke_root" <<'PY'
+    OPENSOLAR_CMD="$opensolar_cmd" \
+    python3 - "$ledger" "$evidence_tmp" "$evidence_path" "$smoke_root" "$run_root" <<'PY'
 import hashlib
 import json
 import os
@@ -101,32 +105,39 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ledger, temp_path, evidence_path, smoke_root = map(Path, sys.argv[1:])
+ledger, temp_path, evidence_path, smoke_root, run_root = map(Path, sys.argv[1:])
+run_id = os.environ["RUN_ID"]
 commands = []
 if ledger.is_file():
     for line in ledger.read_text(encoding="utf-8").splitlines():
         if line.strip():
-            commands.append(json.loads(line))
+            row = json.loads(line)
+            if row.get("run_id") == run_id:
+                commands.append(row)
 
-doctor_path = smoke_root / "logs" / "doctor.stdout"
+def successful(label):
+    return any(row.get("label") == label and row.get("exit_code") == 0 for row in commands)
+
+doctor_path = run_root / "logs" / "doctor.stdout"
 doctor = {}
-if doctor_path.is_file():
+if successful("doctor") and doctor_path.is_file():
     try:
         doctor = json.loads(doctor_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         doctor = {}
-health_path = smoke_root / "health-response.json"
+health_path = run_root / "health-response.json"
 health = {}
-if health_path.is_file():
+if successful("health") and health_path.is_file():
     try:
         health = json.loads(health_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         health = {}
 
 status = os.environ["RESULT_STATUS"]
+opensolar_cmd = Path(os.environ["OPENSOLAR_CMD"]) if os.environ.get("OPENSOLAR_CMD") else None
 payload = {
     "schema_version": "opensolar.runtime-deliverable-smoke/v2",
-    "run_id": os.environ["RUN_ID"],
+    "run_id": run_id,
     "finished_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     "status": status,
     "failure_step": os.environ["FAILURE_STEP"] if status != "passed" else "",
@@ -138,13 +149,18 @@ payload = {
         }
     },
     "observations": {
-        "clean_sandbox_install": status == "passed",
+        "clean_sandbox_install": successful("runtime-install"),
         "doctor_verdict": doctor.get("verdict", "unavailable"),
         "health_http_status": health.get("http_status"),
         "health_body_sha256": health.get("body_sha256", ""),
-        "runtime_uninstalled": status == "passed",
-        "wrapper_uninstalled": status == "passed",
-        "source_retained_for_rollback": (smoke_root / "src" / "OpenSolar").is_dir(),
+        "runtime_uninstalled": successful("runtime-uninstall")
+        and not (smoke_root / "home" / ".solar").exists()
+        and not (smoke_root / "home" / ".claude" / "solar").exists(),
+        "wrapper_uninstalled": successful("package-uninstall")
+        and opensolar_cmd is not None
+        and not opensolar_cmd.exists()
+        and not opensolar_cmd.is_symlink(),
+        "source_retained_for_rollback": successful("runtime-uninstall") and (smoke_root / "src" / "OpenSolar").is_dir(),
     },
 }
 temp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -158,7 +174,7 @@ if [ -n "$(find "$smoke_root" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)"
     failure_step="sandbox-admission"
     die "smoke root must be new or empty: $smoke_root"
 fi
-mkdir -p "$smoke_root/logs" "$smoke_root/home" "$smoke_root/bin" "$smoke_root/src"
+mkdir -p "$run_root/logs" "$smoke_root/home" "$smoke_root/bin" "$smoke_root/src"
 
 failure_step="input-validation"
 [ -n "$install_target" ] || die "install target is required when no repository checkout is available"
@@ -232,7 +248,7 @@ for _ in range(40):
         time.sleep(0.25)
 raise SystemExit(last_error)
 PY
-run_step health "${SOLAR_PYTHON:-python3}" "$health_script" "$status_port" "$status_token_file" "$smoke_root/health-response.json"
+run_step health "${SOLAR_PYTHON:-python3}" "$health_script" "$status_port" "$status_token_file" "$run_root/health-response.json"
 run_step status-server-stop "$opensolar_cmd" harness status-server stop
 
 if [ "${OPENJIUWEN_SOLAR_SKIP_UPDATE:-0}" = "1" ]; then

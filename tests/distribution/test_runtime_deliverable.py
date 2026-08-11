@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import shutil
+import stat
 import zipfile
 from pathlib import Path
 
@@ -23,13 +25,29 @@ def _refresh_assets(bundle: Path, payload: dict[str, object]) -> None:
         for item in payload["assets"]  # type: ignore[index,union-attr]
     }
     payload["assets"] = [
-        runtime_deliverable._asset_entry(path, bundle, kind_by_path.get(relative, "fixture"))
+        runtime_deliverable._asset_entry(
+            path,
+            bundle,
+            kind_by_path.get(
+                relative,
+                "runtime-source-zip" if relative == "artifacts/source.zip" else "fixture",
+            ),
+        )
         for relative, path in sorted(runtime_deliverable._iter_regular_files(bundle))
         if relative != runtime_deliverable.MANIFEST_NAME
     ]
     (bundle / runtime_deliverable.MANIFEST_NAME).write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+
+
+def _refresh_source_tree(bundle: Path, payload: dict[str, object]) -> None:
+    source = payload["source"]  # type: ignore[index]
+    source_path = bundle / str(source["archive_path"])  # type: ignore[index]
+    _, tree_sha256, _ = runtime_deliverable._scan_zip_bytes(
+        source_path.read_bytes(), str(source["archive_path"])
+    )
+    source["tree_sha256"] = tree_sha256  # type: ignore[index]
 
 
 def _bundle(tmp_path: Path) -> tuple[Path, dict[str, object]]:
@@ -49,6 +67,7 @@ def _bundle(tmp_path: Path) -> tuple[Path, dict[str, object]]:
         archive.writestr("example/__init__.py", "VALUE = 1\n")
     source = artifacts / "source.zip"
     with zipfile.ZipFile(source, "w") as archive:
+        archive.comment = ("a" * 40).encode("ascii")
         archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
     for relative, content in {
         "replay.sh": "#!/usr/bin/env bash\nexit 0\n",
@@ -77,6 +96,7 @@ def _bundle(tmp_path: Path) -> tuple[Path, dict[str, object]]:
             "git_commit": "a" * 40,
             "archive_path": "artifacts/source.zip",
             "archive_format": "git-archive-zip",
+            "tree_sha256": "0" * 64,
             "included_paths": ["install.sh"],
         },
         "assets": [],
@@ -102,6 +122,7 @@ def _bundle(tmp_path: Path) -> tuple[Path, dict[str, object]]:
         },
         "limitations": ["fixture"],
     }
+    _refresh_source_tree(bundle, payload)
     _refresh_assets(bundle, payload)
     return bundle, payload
 
@@ -143,6 +164,80 @@ def test_verify_bundle_rejects_secret_hidden_inside_wheel(tmp_path: Path) -> Non
         archive.writestr("example/config.py", "TOKEN = 'sk-not-a-real-value-123456789'\n")
     _refresh_assets(bundle, payload)
     with pytest.raises(runtime_deliverable.DeliverableError, match="example.whl!example/config.py"):
+        runtime_deliverable.verify_bundle(bundle)
+
+
+def test_verify_bundle_rejects_secret_hidden_in_nested_source_archive(tmp_path: Path) -> None:
+    bundle, payload = _bundle(tmp_path)
+    nested_bytes = io.BytesIO()
+    with zipfile.ZipFile(nested_bytes, "w", compression=zipfile.ZIP_DEFLATED) as nested:
+        nested.writestr("config/settings.json", '{"api_key":"sk-compressed-secret-123456"}')
+    source = bundle / "artifacts" / "source.zip"
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.comment = ("a" * 40).encode("ascii")
+        archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
+        archive.writestr("vendor/nested.zip", nested_bytes.getvalue())
+    _refresh_source_tree(bundle, payload)
+    _refresh_assets(bundle, payload)
+    with pytest.raises(runtime_deliverable.DeliverableError, match="source.zip!vendor/nested.zip!config/settings.json"):
+        runtime_deliverable.verify_bundle(bundle)
+
+
+@pytest.mark.parametrize("unsafe_kind", ["zip-slip", "symlink"])
+def test_verify_bundle_rejects_unsafe_source_archive_member(
+    tmp_path: Path, unsafe_kind: str
+) -> None:
+    bundle, payload = _bundle(tmp_path)
+    source = bundle / "artifacts" / "source.zip"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.comment = ("a" * 40).encode("ascii")
+        archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
+        if unsafe_kind == "zip-slip":
+            archive.writestr("../escape.txt", "escape")
+        else:
+            link = zipfile.ZipInfo("linked-secret")
+            link.create_system = 3
+            link.external_attr = (stat.S_IFLNK | 0o777) << 16
+            archive.writestr(link, "../outside")
+    _refresh_source_tree(bundle, payload)
+    _refresh_assets(bundle, payload)
+    with pytest.raises(runtime_deliverable.DeliverableError, match="unsafe archive member|symlink archive member"):
+        runtime_deliverable.verify_bundle(bundle)
+
+
+def test_verify_bundle_rejects_archive_compression_bomb(tmp_path: Path) -> None:
+    bundle, payload = _bundle(tmp_path)
+    source = bundle / "artifacts" / "source.zip"
+    with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.comment = ("a" * 40).encode("ascii")
+        archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
+        archive.writestr("compressed.bin", b"0" * (2 * 1024 * 1024))
+    _refresh_source_tree(bundle, payload)
+    _refresh_assets(bundle, payload)
+    with pytest.raises(runtime_deliverable.DeliverableError, match="compression-ratio limit"):
+        runtime_deliverable.verify_bundle(bundle)
+
+
+def test_verify_bundle_rejects_replaced_source_after_asset_hash_refresh(tmp_path: Path) -> None:
+    bundle, payload = _bundle(tmp_path)
+    source = bundle / "artifacts" / "source.zip"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.comment = ("a" * 40).encode("ascii")
+        archive.writestr("install.sh", "#!/usr/bin/env bash\necho replaced\n")
+    _refresh_assets(bundle, payload)
+    with pytest.raises(runtime_deliverable.DeliverableError, match="tree identity"):
+        runtime_deliverable.verify_bundle(bundle)
+
+
+def test_verify_bundle_rejects_source_comment_not_matching_commit(tmp_path: Path) -> None:
+    bundle, payload = _bundle(tmp_path)
+    source = bundle / "artifacts" / "source.zip"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.comment = ("b" * 40).encode("ascii")
+        archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
+    _refresh_source_tree(bundle, payload)
+    _refresh_assets(bundle, payload)
+    with pytest.raises(runtime_deliverable.DeliverableError, match="comment does not match"):
         runtime_deliverable.verify_bundle(bundle)
 
 

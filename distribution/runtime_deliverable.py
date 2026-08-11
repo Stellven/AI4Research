@@ -7,6 +7,7 @@ import argparse
 import base64
 import gzip
 import hashlib
+import io
 import json
 import os
 import re
@@ -17,7 +18,7 @@ import sys
 import tarfile
 import tomllib
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
 from jsonschema import Draft202012Validator
@@ -62,6 +63,12 @@ FORBIDDEN_VALUE_KEYS = {
     "private_key",
     "credential",
 }
+ZIP_ARCHIVE_SUFFIXES = {".zip", ".whl"}
+MAX_ARCHIVE_DEPTH = 4
+MAX_ARCHIVE_MEMBERS = 20_000
+MAX_ARCHIVE_MEMBER_BYTES = 128 * 1024 * 1024
+MAX_ARCHIVE_TOTAL_BYTES = 512 * 1024 * 1024
+MAX_ARCHIVE_COMPRESSION_RATIO = 500
 
 
 class DeliverableError(RuntimeError):
@@ -259,23 +266,111 @@ def _archive_member_is_symlink(info: zipfile.ZipInfo) -> bool:
     return mode == stat.S_IFLNK
 
 
-def _scan_wheel(path: Path, relative: str) -> list[str]:
+def _safe_archive_member_name(raw: str, label: str) -> str:
+    if not raw or "\x00" in raw or "\\" in raw:
+        raise DeliverableError(f"unsafe archive member path: {label}!{raw}")
+    path = PurePosixPath(raw)
+    if path.is_absolute() or ".." in path.parts or re.match(r"^[A-Za-z]:", raw):
+        raise DeliverableError(f"unsafe archive member path: {label}!{raw}")
+    return path.as_posix()
+
+
+def _scan_zip_bytes(
+    data: bytes,
+    label: str,
+    *,
+    depth: int = 0,
+    budget: dict[str, int] | None = None,
+) -> tuple[list[str], str, bytes]:
+    """Safely inspect a ZIP-compatible archive without extracting it to disk."""
+
     failures: list[str] = []
+    tree_records: list[dict[str, Any]] = []
+    archive_comment = b""
+    budget = budget if budget is not None else {"members": 0, "bytes": 0}
+    if depth > MAX_ARCHIVE_DEPTH:
+        return [f"archive nesting limit exceeded: {label}"], "", b""
     try:
-        with zipfile.ZipFile(path) as archive:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            archive_comment = archive.comment
+            seen: set[str] = set()
+            failures.extend(_scan_text(archive_comment, f"{label}!<comment>"))
             for info in archive.infolist():
-                member = Path(info.filename)
-                if member.is_absolute() or ".." in member.parts:
-                    failures.append(f"unsafe wheel member path: {relative}!{info.filename}")
+                try:
+                    member = _safe_archive_member_name(info.filename, label)
+                except DeliverableError as exc:
+                    failures.append(str(exc))
                     continue
+                if member in seen:
+                    failures.append(f"duplicate archive member: {label}!{member}")
+                    continue
+                seen.add(member)
                 if _archive_member_is_symlink(info):
-                    failures.append(f"symlink wheel member is forbidden: {relative}!{info.filename}")
+                    failures.append(f"symlink archive member is forbidden: {label}!{member}")
                     continue
-                if not info.is_dir():
-                    failures.extend(_scan_text(archive.read(info), f"{relative}!{info.filename}"))
-    except (OSError, zipfile.BadZipFile) as exc:
-        failures.append(f"unreadable wheel archive {relative}: {exc}")
-    return failures
+                if info.flag_bits & 0x1:
+                    failures.append(f"encrypted archive member is forbidden: {label}!{member}")
+                    continue
+                budget["members"] += 1
+                budget["bytes"] += info.file_size
+                if budget["members"] > MAX_ARCHIVE_MEMBERS:
+                    failures.append(f"archive member-count limit exceeded: {label}")
+                    break
+                if info.file_size > MAX_ARCHIVE_MEMBER_BYTES:
+                    failures.append(f"archive member size limit exceeded: {label}!{member}")
+                    continue
+                if budget["bytes"] > MAX_ARCHIVE_TOTAL_BYTES:
+                    failures.append(f"archive total size limit exceeded: {label}")
+                    break
+                if (
+                    info.file_size > 1024 * 1024
+                    and info.file_size > max(info.compress_size, 1) * MAX_ARCHIVE_COMPRESSION_RATIO
+                ):
+                    failures.append(f"archive compression-ratio limit exceeded: {label}!{member}")
+                    continue
+                if info.is_dir():
+                    tree_records.append({"path": member, "type": "directory", "mode": info.external_attr >> 16})
+                    continue
+                with archive.open(info) as stream:
+                    member_data = stream.read(MAX_ARCHIVE_MEMBER_BYTES + 1)
+                if len(member_data) != info.file_size:
+                    failures.append(f"archive member size mismatch: {label}!{member}")
+                    continue
+                member_label = f"{label}!{member}"
+                failures.extend(_scan_text(member_data, member_label))
+                tree_records.append(
+                    {
+                        "path": member,
+                        "type": "file",
+                        "mode": info.external_attr >> 16,
+                        "bytes": len(member_data),
+                        "sha256": hashlib.sha256(member_data).hexdigest(),
+                    }
+                )
+                nested_suffix = PurePosixPath(member).suffix.lower()
+                if nested_suffix in ZIP_ARCHIVE_SUFFIXES or zipfile.is_zipfile(io.BytesIO(member_data)):
+                    nested_failures, _, _ = _scan_zip_bytes(
+                        member_data,
+                        member_label,
+                        depth=depth + 1,
+                        budget=budget,
+                    )
+                    failures.extend(nested_failures)
+    except (OSError, zipfile.BadZipFile, RuntimeError, NotImplementedError, ValueError) as exc:
+        failures.append(f"unreadable ZIP archive {label}: {exc}")
+    encoded_tree = json.dumps(
+        sorted(tree_records, key=lambda row: (row["path"], row["type"])),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return failures, hashlib.sha256(encoded_tree).hexdigest(), archive_comment
+
+
+def _zip_identity(path: Path, label: str) -> tuple[str, bytes]:
+    failures, tree_sha256, comment = _scan_zip_bytes(path.read_bytes(), label)
+    if failures:
+        raise DeliverableError("; ".join(sorted(set(failures))))
+    return tree_sha256, comment
 
 
 def _asset_entry(path: Path, bundle_root: Path, kind: str) -> dict[str, Any]:
@@ -336,10 +431,41 @@ def verify_bundle(bundle_root: Path) -> dict[str, Any]:
         raise DeliverableError(f"asset inventory mismatch: unlisted={missing}, nonexistent={extra}")
 
     secret_failures = _walk_values(payload)
+    archive_inspections: dict[str, tuple[str, bytes]] = {}
+    archive_budget = {"members": 0, "bytes": 0}
     for relative, path in files.items():
-        secret_failures.extend(_scan_text(path.read_bytes(), relative))
-        if path.suffix.lower() == ".whl":
-            secret_failures.extend(_scan_wheel(path, relative))
+        data = path.read_bytes()
+        if path.suffix.lower() in ZIP_ARCHIVE_SUFFIXES or zipfile.is_zipfile(io.BytesIO(data)):
+            archive_failures, tree_sha256, comment = _scan_zip_bytes(
+                data, relative, budget=archive_budget
+            )
+            secret_failures.extend(archive_failures)
+            archive_inspections[relative] = (tree_sha256, comment)
+        else:
+            secret_failures.extend(_scan_text(data, relative))
+
+    source = payload["source"]
+    source_path = source["archive_path"]
+    source_assets = [
+        asset
+        for asset in assets
+        if asset["path"] == source_path and asset["kind"] == "runtime-source-zip"
+    ]
+    if len(source_assets) != 1:
+        secret_failures.append("source archive must be exactly one runtime-source-zip asset")
+    source_inspection = archive_inspections.get(source_path)
+    if source_inspection is None:
+        secret_failures.append("source archive is not a readable ZIP archive")
+    else:
+        source_tree_sha256, source_comment = source_inspection
+        try:
+            comment_commit = source_comment.decode("ascii")
+        except UnicodeDecodeError:
+            comment_commit = ""
+        if comment_commit != source["git_commit"]:
+            secret_failures.append("source Git archive comment does not match manifest source.git_commit")
+        if source_tree_sha256 != source["tree_sha256"]:
+            secret_failures.append("source Git archive tree identity does not match manifest source.tree_sha256")
     if secret_failures:
         raise DeliverableError("; ".join(sorted(set(secret_failures))))
     return payload
@@ -408,6 +534,9 @@ def build_bundle(
     _build_pure_python_wheel(package_dir, metadata, wheel)
     source_archive = artifacts_dir / f"opensolar-runtime-source-{commit}.zip"
     _git_source_archive(repo_root, commit, source_archive)
+    source_tree_sha256, source_comment = _zip_identity(source_archive, source_archive.name)
+    if source_comment.decode("ascii", errors="replace") != commit:
+        raise DeliverableError("Git source archive comment does not identify the requested commit")
 
     schema_target = output_dir / SCHEMA_NAME
     replay_target = output_dir / REPLAY_NAME
@@ -463,6 +592,7 @@ def build_bundle(
             "git_commit": commit,
             "archive_path": source_archive.relative_to(output_dir).as_posix(),
             "archive_format": "git-archive-zip",
+            "tree_sha256": source_tree_sha256,
             "included_paths": list(SOURCE_PATHS),
         },
         "assets": assets,

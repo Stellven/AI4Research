@@ -66,7 +66,11 @@ def test_smoke_failure_atomically_replaces_stale_healthy_evidence(repo_root: Pat
     seed_code = (
         "import json, pathlib, sys; "
         "p=pathlib.Path(sys.argv[1]); p.mkdir(parents=True, exist_ok=True); "
-        "(p/'smoke-evidence.json').write_text(json.dumps({'status':'passed','run_id':'stale'}))"
+        "(p/'smoke-evidence.json').write_text(json.dumps({'status':'passed','run_id':'stale'})); "
+        "r=p/'.runs'/'stale'; (r/'logs').mkdir(parents=True); "
+        "(r/'logs'/'doctor.stdout').write_text(json.dumps({'verdict':'ok'})); "
+        "(r/'health-response.json').write_text(json.dumps({'http_status':200,'body_sha256':'f'*64})); "
+        "(r/'command-ledger.jsonl').write_text(json.dumps({'run_id':'stale','label':'doctor','exit_code':0})+'\\n'+json.dumps({'run_id':'stale','label':'health','exit_code':0})+'\\n')"
     )
     if os.name == "nt":
         seed_argv = ["wsl.exe", "python3", "-c", seed_code, smoke_root]
@@ -107,6 +111,12 @@ def test_smoke_failure_atomically_replaces_stale_healthy_evidence(repo_root: Pat
     assert evidence["status"] == "failed", failed.stderr
     assert evidence["run_id"] != "stale"
     assert evidence["observations"]["clean_sandbox_install"] is False
+    assert evidence["observations"]["doctor_verdict"] == "unavailable"
+    assert evidence["observations"]["health_http_status"] is None
+    assert evidence["observations"]["health_body_sha256"] == ""
+    assert evidence["observations"]["runtime_uninstalled"] is False
+    assert evidence["observations"]["wrapper_uninstalled"] is False
+    assert evidence["commands"] == []
 
 
 def _git_head(repo_root: Path) -> str:
@@ -298,6 +308,7 @@ def test_p22_j25_runtime_deliverable_distribution(
         "real_commands_and_exit_codes_recorded",
         required_labels.issubset(executed_labels)
         and all(item.get("exit_code") == 0 for item in executed)
+        and all(item.get("run_id") == smoke_evidence.get("run_id") for item in commands)
         and all(re.fullmatch(r"[0-9a-f]{64}", str(item.get("stdout_sha256", ""))) for item in executed),
         {"required": sorted(required_labels), "observed": sorted(executed_labels)},
     )
