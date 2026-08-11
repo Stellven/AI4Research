@@ -16,6 +16,7 @@
     "components",
     "component_hashes",
     "replay",
+    "lease_recovery",
     "evidence_ids",
     "known_constraints"
   ],
@@ -132,9 +133,47 @@
         "network_access": {"const": "denied"}
       }
     },
+    "lease_recovery": {
+      "type": "object",
+      "required": ["claimed", "experiment_id", "stale_observed", "recovered", "audit_recorded"],
+      "additionalProperties": false,
+      "properties": {
+        "claimed": {"type": "boolean"},
+        "experiment_id": {"type": "string", "minLength": 1},
+        "stale_observed": {"type": "boolean"},
+        "recovered": {"type": "boolean"},
+        "audit_recorded": {"type": "boolean"}
+      }
+    },
     "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
     "known_constraints": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "lease_recovery": {
+            "properties": {"claimed": {"const": true}},
+            "required": ["claimed"]
+          }
+        },
+        "required": ["lease_recovery"]
+      },
+      "then": {
+        "properties": {
+          "components": {"required": ["lease_recovery_audit"]},
+          "component_hashes": {"required": ["lease_recovery_audit"]},
+          "lease_recovery": {
+            "properties": {
+              "stale_observed": {"const": true},
+              "recovered": {"const": true},
+              "audit_recorded": {"const": true}
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "componentHash": {
       "type": "object",

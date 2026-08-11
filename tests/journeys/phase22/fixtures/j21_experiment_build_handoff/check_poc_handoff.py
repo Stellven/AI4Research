@@ -83,6 +83,39 @@ def check_handoff_package(path):
     ]
     if replay.get("argv") != expected_replay_argv:
         return {"ok": False, "error": "replay argv is not bound to durable components", "payload": payload}
+    package_experiment_id = str(payload.get("experiment_id") or "")
+    json_components = {}
+    for name in ("experiment_plan", "expected_result", "result", "allowlist", "manifest", "lease_report"):
+        try:
+            json_components[name] = json.loads(Path(resolved[name]).read_text(encoding="utf-8"))
+        except (KeyError, OSError, json.JSONDecodeError) as exc:
+            return {"ok": False, "error": f"identity component unreadable: {name}: {exc}", "payload": payload}
+    lease_payload = json_components["lease_report"]
+    lease_identity = lease_payload.get("lease_identity") if isinstance(lease_payload.get("lease_identity"), dict) else {}
+    stale_recovery = lease_payload.get("stale_recovery") if isinstance(lease_payload.get("stale_recovery"), dict) else {}
+    identity_values = {
+        "experiment_plan": (((json_components["experiment_plan"].get("outputs") or {}).get("experiment_plan") or {}).get("experiment_id")),
+        "expected_result": (((json_components["expected_result"].get("outputs") or {}).get("result") or {}).get("experiment_id")),
+        "result": (((json_components["result"].get("outputs") or {}).get("result") or {}).get("experiment_id")),
+        "allowlist": json_components["allowlist"].get("experiment_id"),
+        "manifest": json_components["manifest"].get("experiment_id"),
+        "lease_report": lease_payload.get("experiment_id"),
+        "lease_identity.experiment_id": lease_identity.get("experiment_id"),
+        "lease_identity.run_id": lease_identity.get("run_id"),
+        "stale_recovery.run_id": stale_recovery.get("run_id"),
+    }
+    mismatches = {name: value for name, value in identity_values.items() if str(value or "") != package_experiment_id}
+    if mismatches:
+        return {"ok": False, "error": f"experiment identity mismatch: {mismatches}", "payload": payload}
+    recovery_claim = payload.get("lease_recovery") if isinstance(payload.get("lease_recovery"), dict) else {}
+    if recovery_claim.get("claimed") is True:
+        if components.get("lease_recovery_audit") is None or component_hashes.get("lease_recovery_audit") is None:
+            return {"ok": False, "error": "claimed stale recovery lacks hashed audit component", "payload": payload}
+        audit_payload = json.loads(Path(resolved["lease_recovery_audit"]).read_text(encoding="utf-8"))
+        if any(str(audit_payload.get(key) or "") != package_experiment_id for key in ("research_run_id", "run_id", "sprint_id")):
+            return {"ok": False, "error": "lease recovery audit identity mismatch", "payload": payload}
+        if audit_payload.get("state") != "stale" or audit_payload.get("recovery_reason") != "experiment_stale_recovery_probe":
+            return {"ok": False, "error": "lease recovery audit semantics invalid", "payload": payload}
 
     return {
         "ok": True,

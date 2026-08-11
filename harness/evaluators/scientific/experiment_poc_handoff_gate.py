@@ -45,6 +45,7 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
     components = payload.get("components") if isinstance(payload.get("components"), dict) else {}
     component_hashes = payload.get("component_hashes") if isinstance(payload.get("component_hashes"), dict) else {}
     resolved_components: dict[str, Path] = {}
+    component_payloads: dict[str, dict[str, Any]] = {}
     for name, raw in components.items():
         raw_path = str(raw or "").strip()
         if not raw_path:
@@ -70,6 +71,7 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
             except (OSError, json.JSONDecodeError) as exc:
                 reasons.append(f"components.{name} is not readable JSON: {exc}")
                 continue
+            component_payloads[name] = component_payload
             if component_payload.get("schema") != expected_schema:
                 reasons.append(
                     f"components.{name}.schema must be {expected_schema}, got {component_payload.get('schema')}"
@@ -78,6 +80,57 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
                 component_reasons, component_warnings = validate_schema(component_payload, expected_schema)
                 reasons.extend(f"components.{name}:{item}" for item in component_reasons)
                 warnings.extend(f"components.{name}:{item}" for item in component_warnings)
+
+    package_experiment_id = str(payload.get("experiment_id") or "")
+    identity_values: dict[str, str] = {}
+    plan_payload = component_payloads.get("experiment_plan", {})
+    identity_values["experiment_plan"] = str(((plan_payload.get("outputs") or {}).get("experiment_plan") or {}).get("experiment_id") or "")
+    for name in ("expected_result", "result"):
+        component_payload = component_payloads.get(name, {})
+        identity_values[name] = str(((component_payload.get("outputs") or {}).get("result") or {}).get("experiment_id") or "")
+    for name in ("allowlist", "manifest"):
+        identity_values[name] = str(component_payloads.get(name, {}).get("experiment_id") or "")
+
+    lease_payload = component_payloads.get("lease_report", {})
+    lease_identity = lease_payload.get("lease_identity") if isinstance(lease_payload.get("lease_identity"), dict) else {}
+    stale_recovery = lease_payload.get("stale_recovery") if isinstance(lease_payload.get("stale_recovery"), dict) else {}
+    identity_values.update(
+        {
+            "lease_report": str(lease_payload.get("experiment_id") or ""),
+            "lease_identity.experiment_id": str(lease_identity.get("experiment_id") or ""),
+            "lease_identity.run_id": str(lease_identity.get("run_id") or ""),
+            "stale_recovery.run_id": str(stale_recovery.get("run_id") or ""),
+        }
+    )
+    for name, observed in identity_values.items():
+        if observed != package_experiment_id:
+            reasons.append(
+                f"experiment identity mismatch: {name}={observed or '<missing>'} must equal package experiment_id={package_experiment_id}"
+            )
+
+    recovery_claim = payload.get("lease_recovery") if isinstance(payload.get("lease_recovery"), dict) else {}
+    if recovery_claim.get("claimed") is True:
+        if recovery_claim.get("experiment_id") != package_experiment_id:
+            reasons.append("lease_recovery.experiment_id must equal package experiment_id")
+        if not all(recovery_claim.get(key) is True for key in ("stale_observed", "recovered", "audit_recorded")):
+            reasons.append("claimed lease recovery must be observed, recovered, and audited")
+        audit_path = resolved_components.get("lease_recovery_audit")
+        audit_digest = component_hashes.get("lease_recovery_audit")
+        if audit_path is None or not isinstance(audit_digest, dict):
+            reasons.append("claimed lease recovery requires a hashed lease_recovery_audit component")
+        else:
+            try:
+                audit_payload = json.loads(audit_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                reasons.append(f"components.lease_recovery_audit is not readable JSON: {exc}")
+            else:
+                for key in ("research_run_id", "run_id", "sprint_id"):
+                    if str(audit_payload.get(key) or "") != package_experiment_id:
+                        reasons.append(f"components.lease_recovery_audit.{key} must equal package experiment_id")
+                if audit_payload.get("state") != "stale" or audit_payload.get("recovery_reason") != "experiment_stale_recovery_probe":
+                    reasons.append("lease recovery audit must record the stale state and canonical recovery reason")
+                if str(audit_payload.get("lease_id") or "") != str(stale_recovery.get("lease_id") or ""):
+                    reasons.append("lease recovery audit lease_id must match the lease report")
 
     provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
     plan_digest = component_hashes.get("experiment_plan") if isinstance(component_hashes.get("experiment_plan"), dict) else {}

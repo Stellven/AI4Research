@@ -17907,7 +17907,8 @@ def _write_experiment_poc_handoff_package(
     allowlist_raw = allowlist_inputs[0] if isinstance(allowlist_inputs, list) and allowlist_inputs else allowlist_inputs
     lease_source = _component_source(lease_path, "lease_report")
     lease_payload = json.loads(lease_source.read_text(encoding="utf-8"))
-    stale_audit = ((lease_payload.get("stale_recovery") or {}).get("audit") or {})
+    lease_stale_recovery = lease_payload.get("stale_recovery") if isinstance(lease_payload.get("stale_recovery"), dict) else {}
+    stale_audit = lease_stale_recovery.get("audit") if isinstance(lease_stale_recovery.get("audit"), dict) else {}
     source_components = {
         "experiment_plan": _component_source(inputs.get("experiment_plan_evidence"), "experiment_plan"),
         "runner": _component_source(runner.get("path"), "runner"),
@@ -18029,6 +18030,13 @@ def _write_experiment_poc_handoff_package(
             "expected_result_component": component_paths["expected_result"],
             "network_access": "denied",
         },
+        "lease_recovery": {
+            "claimed": bool(lease_stale_recovery.get("attempted")),
+            "experiment_id": experiment_id,
+            "stale_observed": bool(lease_stale_recovery.get("stale_observed")),
+            "recovered": bool(lease_stale_recovery.get("recovered")),
+            "audit_recorded": bool(lease_stale_recovery.get("audit_recorded")),
+        },
         "evidence_ids": _unique_strings([str(item) for item in result.get("evidence_ids") or []]),
         "known_constraints": [
             "This handoff covers one deterministic local Python POC; it is not evidence for arbitrary package, service, container, or workflow delivery.",
@@ -18067,7 +18075,7 @@ def _execute_experiment_if_approved(
     runtime_path = _configured_output_path(envelope, "runtime_evidence_path", output_dir / f"{action}_runtime_evidence.json")
     if not bool(inputs.get("execute_approved_side_effect")):
         return contract, {"executed": False, "reason": "execute_approved_side_effect=false"}
-    experiment_id = str(inputs.get("experiment_id") or inputs.get("target") or plan.get("experiment_id") or "experiment-unresolved")
+    experiment_id = str(plan.get("experiment_id") or inputs.get("experiment_id") or inputs.get("target") or "experiment-unresolved")
     if not contract.get("ready_for_execution"):
         payload = _runtime_evidence_payload(
             envelope,

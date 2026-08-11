@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
+import shutil
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -418,6 +420,35 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     )
     durable_handoff_package = durable_handoff_bundle / run_handoff_package.name
     assert durable_handoff_package.is_file()
+    negative_identity_bundle = sandbox / "negative" / "identity-mismatch-bundle"
+    negative_missing_audit_bundle = sandbox / "negative" / "missing-audit-bundle"
+    negative_missing_hash_bundle = sandbox / "negative" / "missing-audit-hash-bundle"
+    for target in (negative_identity_bundle, negative_missing_audit_bundle, negative_missing_hash_bundle):
+        shutil.copytree(durable_handoff_bundle, target)
+
+    identity_package_path = negative_identity_bundle / "poc_handoff_package.json"
+    identity_package = _read_json(identity_package_path)
+    identity_lease_path = negative_identity_bundle / str(identity_package["components"]["lease_report"])
+    identity_lease = _read_json(identity_lease_path)
+    identity_lease["experiment_id"] = "mismatched-experiment-id"
+    _write_json(identity_lease_path, identity_lease)
+    identity_package["component_hashes"]["lease_report"] = {
+        "path": identity_package["components"]["lease_report"],
+        "sha256": hashlib.sha256(identity_lease_path.read_bytes()).hexdigest(),
+        "bytes": identity_lease_path.stat().st_size,
+    }
+    _write_json(identity_package_path, identity_package)
+
+    missing_audit_package_path = negative_missing_audit_bundle / "poc_handoff_package.json"
+    missing_audit_package = _read_json(missing_audit_package_path)
+    missing_audit_package["components"].pop("lease_recovery_audit", None)
+    missing_audit_package["component_hashes"].pop("lease_recovery_audit", None)
+    _write_json(missing_audit_package_path, missing_audit_package)
+
+    missing_hash_package_path = negative_missing_hash_bundle / "poc_handoff_package.json"
+    missing_hash_package = _read_json(missing_hash_package_path)
+    missing_hash_package["component_hashes"].pop("lease_recovery_audit", None)
+    _write_json(missing_hash_package_path, missing_hash_package)
     gate_env = dict(os.environ)
     gate_env["HARNESS_DIR"] = str(harness_dir)
     poc_handoff_gate = repo_root / "harness" / "evaluators" / "scientific" / "experiment_poc_handoff_gate.py"
@@ -433,6 +464,27 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     negative_poc_gate_proc = rec.run(
         "evaluate-poc-handoff-negative",
         [phase22_python, str(poc_handoff_gate), str(negative_package_path)],
+        cwd=repo_root,
+        env=gate_env,
+        timeout=60,
+    )
+    identity_mismatch_gate_proc = rec.run(
+        "evaluate-poc-handoff-identity-mismatch",
+        [phase22_python, str(poc_handoff_gate), str(identity_package_path)],
+        cwd=repo_root,
+        env=gate_env,
+        timeout=60,
+    )
+    missing_audit_gate_proc = rec.run(
+        "evaluate-poc-handoff-missing-recovery-audit",
+        [phase22_python, str(poc_handoff_gate), str(missing_audit_package_path)],
+        cwd=repo_root,
+        env=gate_env,
+        timeout=60,
+    )
+    missing_hash_gate_proc = rec.run(
+        "evaluate-poc-handoff-missing-recovery-hash",
+        [phase22_python, str(poc_handoff_gate), str(missing_hash_package_path)],
         cwd=repo_root,
         env=gate_env,
         timeout=60,
@@ -473,6 +525,13 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         timeout=60,
     )
     negative_check_payload = json.loads(negative_check_proc.stdout) if negative_check_proc.stdout.strip() else {}
+    identity_check_proc = rec.run(
+        "check-poc-handoff-identity-mismatch",
+        [phase22_python, str(checker_path), str(identity_package_path)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    identity_check_payload = json.loads(identity_check_proc.stdout) if identity_check_proc.stdout.strip() else {}
     durable_package_payload = _read_json(durable_handoff_package)
     replay_contract = durable_package_payload.get("replay") if isinstance(durable_package_payload.get("replay"), dict) else {}
     replay_argv = [str(item) for item in replay_contract.get("argv") or []]
@@ -612,6 +671,10 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_assertion("downstream_handoff_checker_rejects_invalid_package", negative_check_proc.returncode != 0 and not bool(negative_check_payload.get("ok")), negative_check_payload)
     rec.add_assertion("product_handoff_schema_gate_accepts_valid_package", poc_gate_proc.returncode == 0, poc_gate_proc.stdout)
     rec.add_assertion("product_handoff_schema_gate_rejects_invalid_package", negative_poc_gate_proc.returncode != 0, negative_poc_gate_proc.stdout)
+    rec.add_assertion("product_handoff_gate_rejects_cross_component_identity_mismatch", identity_mismatch_gate_proc.returncode != 0, identity_mismatch_gate_proc.stdout)
+    rec.add_assertion("downstream_checker_rejects_cross_component_identity_mismatch", identity_check_proc.returncode != 0 and not bool(identity_check_payload.get("ok")), identity_check_payload)
+    rec.add_assertion("product_handoff_gate_rejects_missing_recovery_audit", missing_audit_gate_proc.returncode != 0, missing_audit_gate_proc.stdout)
+    rec.add_assertion("product_handoff_gate_rejects_missing_recovery_hash", missing_hash_gate_proc.returncode != 0, missing_hash_gate_proc.stdout)
     package_provenance = handoff_package_payload.get("provenance") if isinstance(handoff_package_payload.get("provenance"), dict) else {}
     package_schema_validation = package_provenance.get("schema_validation") if isinstance(package_provenance.get("schema_validation"), dict) else {}
     component_hashes = handoff_package_payload.get("component_hashes") if isinstance(handoff_package_payload.get("component_hashes"), dict) else {}
@@ -645,11 +708,29 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_assertion("duplicate_or_lease_release_proven", bool(lease_payload.get("lease_acquired") and lease_payload.get("duplicate_rejected") and lease_payload.get("release_recorded")), lease_payload)
     lease_identity = lease_payload.get("lease_identity") if isinstance(lease_payload.get("lease_identity"), dict) else {}
     stale_recovery = lease_payload.get("stale_recovery") if isinstance(lease_payload.get("stale_recovery"), dict) else {}
+    package_recovery = handoff_package_payload.get("lease_recovery") if isinstance(handoff_package_payload.get("lease_recovery"), dict) else {}
+    authoritative_experiment_id = str(handoff_package_payload.get("experiment_id") or "")
+    rec.add_assertion(
+        "authoritative_experiment_identity_matches_package_lease_and_recovery",
+        bool(authoritative_experiment_id)
+        and lease_payload.get("experiment_id") == authoritative_experiment_id
+        and lease_identity.get("experiment_id") == authoritative_experiment_id
+        and lease_identity.get("run_id") == authoritative_experiment_id
+        and stale_recovery.get("run_id") == authoritative_experiment_id
+        and package_recovery.get("experiment_id") == authoritative_experiment_id,
+        {
+            "package": authoritative_experiment_id,
+            "lease": lease_payload.get("experiment_id"),
+            "lease_identity": lease_identity,
+            "stale_recovery_run_id": stale_recovery.get("run_id"),
+            "package_recovery": package_recovery,
+        },
+    )
     rec.add_assertion(
         "lease_identity_and_stale_recovery_audited",
-        lease_identity.get("experiment_id") == experiment_input["experiment_id"]
-        and lease_identity.get("run_id") == experiment_input["experiment_id"]
-        and stale_recovery.get("run_id") == experiment_input["experiment_id"]
+        lease_identity.get("experiment_id") == authoritative_experiment_id
+        and lease_identity.get("run_id") == authoritative_experiment_id
+        and stale_recovery.get("run_id") == authoritative_experiment_id
         and stale_recovery.get("stale_observed") is True
         and stale_recovery.get("recovered") is True
         and stale_recovery.get("audit_recorded") is True,
@@ -737,6 +818,9 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["downstream_handoff_checker_rejects_invalid_package"],
                 assertion_details["product_handoff_schema_gate_accepts_valid_package"],
                 assertion_details["product_handoff_schema_gate_rejects_invalid_package"],
+                assertion_details["downstream_checker_rejects_cross_component_identity_mismatch"],
+                assertion_details["product_handoff_gate_rejects_missing_recovery_audit"],
+                assertion_details["product_handoff_gate_rejects_missing_recovery_hash"],
                 assertion_details["durable_handoff_has_formal_provenance_and_hashes"],
                 assertion_details["durable_handoff_replay_succeeds_from_copies"],
                 assertion_details["runtime_output_nonempty"],
@@ -764,6 +848,9 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["product_result_semantic_gate_accepts_completed_run"],
                 assertion_details["product_handoff_schema_gate_accepts_valid_package"],
                 assertion_details["product_handoff_schema_gate_rejects_invalid_package"],
+                assertion_details["product_handoff_gate_rejects_cross_component_identity_mismatch"],
+                assertion_details["product_handoff_gate_rejects_missing_recovery_audit"],
+                assertion_details["product_handoff_gate_rejects_missing_recovery_hash"],
                 assertion_details["durable_handoff_has_formal_provenance_and_hashes"],
                 assertion_details["product_supported_claim_gate_accepts_verdict"],
                 assertion_details["product_unsupported_claim_gate_accepts_non_support_verdict"],
@@ -811,8 +898,12 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["blocked_run_rejected_without_approval"],
                 assertion_details["authorized_run_completed"],
                 assertion_details["duplicate_or_lease_release_proven"],
+                assertion_details["authoritative_experiment_identity_matches_package_lease_and_recovery"],
                 assertion_details["lease_identity_and_stale_recovery_audited"],
                 assertion_details["durable_lease_recovery_audit_bundled"],
+                assertion_details["product_handoff_gate_rejects_cross_component_identity_mismatch"],
+                assertion_details["product_handoff_gate_rejects_missing_recovery_audit"],
+                assertion_details["product_handoff_gate_rejects_missing_recovery_hash"],
             ],
             "observed": "The product used the experiment ID as the lease run identity, recovered and audited a truly expired lease, admitted one approved local execution, rejected a duplicate probe for the same run/node, and released the lease with a durable report.",
             "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS",
