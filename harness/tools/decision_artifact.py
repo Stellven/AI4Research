@@ -62,17 +62,30 @@ def main(argv: list[str] | None = None) -> int:
     source_root = (args.source_root or input_path.parent).resolve()
     output_path = args.output.resolve()
     temp_path = output_path.with_name(f".{output_path.name}.{os.getpid()}.tmp")
-    alias_audit_passed = False
+    cleanup_output_allowed = False
     try:
-        request = json.loads(input_path.read_text(encoding="utf-8"))
-        protected_paths = [input_path, *_evidence_paths(request, source_root)]
-        for candidate_name, candidate in (("output", output_path), ("temporary output", temp_path)):
-            aliases = [path for path in protected_paths if _paths_alias(candidate, path)]
+        candidates = (("output", output_path), ("temporary output", temp_path))
+        for candidate_name, candidate in candidates:
+            if _paths_alias(candidate, input_path):
+                raise DecisionArtifactError(
+                    f"{candidate_name} aliases protected input/evidence path: {input_path}"
+                )
+        try:
+            request = json.loads(input_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            cleanup_output_allowed = True
+            raise
+        if not isinstance(request, dict):
+            cleanup_output_allowed = True
+            raise DecisionArtifactError("decision request must be an object")
+        evidence_paths = _evidence_paths(request, source_root)
+        for candidate_name, candidate in candidates:
+            aliases = [path for path in evidence_paths if _paths_alias(candidate, path)]
             if aliases:
                 raise DecisionArtifactError(
                     f"{candidate_name} aliases protected input/evidence path: {aliases[0]}"
                 )
-        alias_audit_passed = True
+        cleanup_output_allowed = True
         output_path.parent.mkdir(parents=True, exist_ok=True)
         temp_path.unlink(missing_ok=True)
         artifact = construct_decision_artifact(
@@ -91,13 +104,14 @@ def main(argv: list[str] | None = None) -> int:
         temp_path.replace(output_path)
     except (
         OSError,
+        UnicodeDecodeError,
         json.JSONDecodeError,
         jsonschema.SchemaError,
         jsonschema.ValidationError,
         DecisionArtifactError,
     ) as exc:
         cleanup_errors: list[str] = []
-        if alias_audit_passed:
+        if cleanup_output_allowed:
             for path in (temp_path, output_path):
                 try:
                     path.unlink(missing_ok=True)

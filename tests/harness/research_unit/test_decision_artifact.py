@@ -309,6 +309,60 @@ def test_output_aliases_are_rejected_before_input_or_evidence_unlink(tmp_path: P
     assert hardlink_output.exists()
 
 
+@pytest.mark.parametrize("raw_request", ["{not-json", "[1, 2, 3]"])
+def test_malformed_or_nonobject_request_removes_nonalias_stale_output(
+    tmp_path: Path, raw_request: str
+) -> None:
+    request_path = tmp_path / "request.json"
+    request_path.write_text(raw_request, encoding="utf-8")
+    output = tmp_path / "decision.json"
+    output.write_text("stale", encoding="utf-8")
+
+    proc = _run_cli(request_path, output, tmp_path)
+
+    assert proc.returncode == 2
+    assert not output.exists()
+    assert request_path.read_text(encoding="utf-8") == raw_request
+
+
+def test_non_utf8_request_removes_nonalias_stale_output(tmp_path: Path) -> None:
+    request_path = tmp_path / "request.json"
+    request_path.write_bytes(b"\xff\xfe\x00")
+    output = tmp_path / "decision.json"
+    output.write_text("stale", encoding="utf-8")
+
+    proc = _run_cli(request_path, output, tmp_path)
+
+    assert proc.returncode == 2
+    assert not output.exists()
+    assert request_path.read_bytes() == b"\xff\xfe\x00"
+
+
+def test_malformed_and_nonobject_aliases_preserve_protected_input(tmp_path: Path) -> None:
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text("{not-json", encoding="utf-8")
+    malformed_before = malformed.read_bytes()
+
+    direct_alias = _run_cli(malformed, malformed, tmp_path)
+
+    assert direct_alias.returncode == 2
+    assert "aliases protected input/evidence" in json.loads(direct_alias.stderr)["error"]
+    assert malformed.read_bytes() == malformed_before
+
+    nonobject = tmp_path / "nonobject.json"
+    nonobject.write_text("[1, 2, 3]", encoding="utf-8")
+    nonobject_before = nonobject.read_bytes()
+    hardlink_output = tmp_path / "nonobject-hardlink.json"
+    os.link(nonobject, hardlink_output)
+
+    hardlink_alias = _run_cli(nonobject, hardlink_output, tmp_path)
+
+    assert hardlink_alias.returncode == 2
+    assert "aliases protected input/evidence" in json.loads(hardlink_alias.stderr)["error"]
+    assert nonobject.read_bytes() == nonobject_before
+    assert hardlink_output.exists()
+
+
 def test_symlink_output_alias_is_rejected_without_deleting_evidence(tmp_path: Path) -> None:
     request, request_path = _request(tmp_path)
     evidence_path = Path(request["evidence"][0]["source_path"])
