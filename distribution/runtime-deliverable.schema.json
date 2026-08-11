@@ -5,32 +5,55 @@
   "type": "object",
   "required": [
     "schema_version",
+    "schema_path",
     "product",
     "target",
     "source",
     "assets",
     "configuration",
+    "replay",
     "lifecycle",
     "limitations"
   ],
   "properties": {
     "schema_version": {"const": "opensolar.runtime-deliverable/v1"},
+    "schema_path": {"const": "runtime-deliverable.schema.json"},
     "product": {
       "type": "object",
-      "required": ["name", "version", "entrypoint"]
+      "required": ["name", "version", "entrypoint"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "entrypoint": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
     },
     "target": {
       "type": "object",
-      "required": ["kind", "python_requires", "supported_platforms"],
-      "properties": {"kind": {"const": "python-wheel"}}
+      "required": ["kind", "operating_system", "architecture", "python", "python_requires"],
+      "properties": {
+        "kind": {"const": "python-wheel-runtime-bundle"},
+        "operating_system": {"const": "linux"},
+        "architecture": {"const": "x86_64"},
+        "python": {"const": "CPython 3.12"},
+        "python_requires": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
     },
     "source": {
       "type": "object",
-      "required": ["git_commit", "package_path"]
+      "required": ["git_commit", "archive_path", "archive_format", "included_paths"],
+      "properties": {
+        "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "archive_path": {"type": "string", "minLength": 1},
+        "archive_format": {"const": "git-archive-zip"},
+        "included_paths": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
     },
     "assets": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 8,
       "items": {
         "type": "object",
         "required": ["path", "kind", "bytes", "sha256"],
@@ -39,13 +62,47 @@
           "kind": {"type": "string", "minLength": 1},
           "bytes": {"type": "integer", "minimum": 1},
           "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-        }
+        },
+        "additionalProperties": false
       }
     },
     "configuration": {
       "type": "object",
-      "required": ["environment_references", "embedded_credentials"],
-      "properties": {"embedded_credentials": {"const": false}}
+      "required": [
+        "embedded_credentials",
+        "network_required_for_replay",
+        "external_checkout_required_for_replay",
+        "environment_injection_required_for_replay"
+      ],
+      "properties": {
+        "embedded_credentials": {"const": false},
+        "network_required_for_replay": {"const": false},
+        "external_checkout_required_for_replay": {"const": false},
+        "environment_injection_required_for_replay": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "replay": {
+      "type": "object",
+      "required": [
+        "script",
+        "command",
+        "required_host_tools",
+        "required_host_python",
+        "offline_dependency_directory",
+        "bundled_jq",
+        "smoke_evidence"
+      ],
+      "properties": {
+        "script": {"const": "replay.sh"},
+        "command": {"type": "string", "minLength": 1},
+        "required_host_tools": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "required_host_python": {"type": "string", "minLength": 1},
+        "offline_dependency_directory": {"type": "string", "minLength": 1},
+        "bundled_jq": {"type": "string", "minLength": 1},
+        "smoke_evidence": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
     },
     "lifecycle": {
       "type": "object",
@@ -54,9 +111,10 @@
         "clean_install": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
         "start_health": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
         "rollback": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
-      }
+      },
+      "additionalProperties": false
     },
-    "limitations": {"type": "array", "items": {"type": "string"}}
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
   },
   "additionalProperties": false
 }
