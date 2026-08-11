@@ -13,6 +13,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -33,6 +34,7 @@ if str(PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(PLUGIN_DIR))
 
 from evaluators.scientific.lifecycle_runtime_gate import evaluate as evaluate_lifecycle_runtime
+from evaluators.scientific.common import validate_schema
 from research_orchestration.runtime import (
     FileWorkflowCatalog,
     SolarResearchRuntime,
@@ -17037,6 +17039,47 @@ def _normalize_command(command: list[str]) -> list[str]:
     return resolved
 
 
+def _strict_execution_argv(
+    selected: list[str],
+    plan: dict[str, Any],
+    contract: dict[str, Any],
+) -> tuple[bool, str, list[str]]:
+    """Authorize only one normalized, token-for-token argv at the execution edge.
+
+    Normalization is deliberately limited to resolving the executable token on
+    both sides. Runner paths, argument order, prefixes, templates, and output
+    paths must remain byte-for-byte identical after that normalization.
+    """
+    normalized_selected = _normalize_command([str(item) for item in selected])
+    normalized_planned = _normalize_command(
+        [str(item) for item in plan.get("command_argv") or []]
+    )
+    if not normalized_planned:
+        return False, "experiment plan has no approved command_argv", normalized_selected
+    if normalized_selected != normalized_planned:
+        return (
+            False,
+            "selected argv differs from the normalized experiment-plan command_argv",
+            normalized_selected,
+        )
+
+    for payload in _allowlist_payloads(contract):
+        candidates = payload.get("command_argvs")
+        if not isinstance(candidates, list):
+            continue
+        for candidate in candidates:
+            if not isinstance(candidate, list):
+                continue
+            normalized_candidate = _normalize_command([str(item) for item in candidate])
+            if normalized_candidate == normalized_planned:
+                return True, "normalized token-for-token plan and command_argvs match", normalized_selected
+    return (
+        False,
+        "normalized experiment-plan argv has no token-for-token command_argvs authorization",
+        normalized_selected,
+    )
+
+
 def _pick_experiment_command(
     plan: dict[str, Any],
     contract: dict[str, Any],
@@ -17712,6 +17755,7 @@ def _write_experiment_lease_report(
     duplicate_probe: dict[str, Any],
     heartbeat: dict[str, Any],
     release: dict[str, Any],
+    stale_recovery: dict[str, Any],
 ) -> dict[str, str]:
     duplicate_blocker = duplicate_probe.get("blocker") if isinstance(duplicate_probe.get("blocker"), dict) else {}
     report = {
@@ -17719,7 +17763,11 @@ def _write_experiment_lease_report(
         "stage": stage,
         "experiment_id": experiment_id,
         "operator_id": operator_id,
-        "status": "completed" if acquire.get("acquired") and release.get("released") else "blocked",
+        "status": "completed"
+        if acquire.get("acquired")
+        and release.get("released")
+        and (not stale_recovery.get("attempted") or stale_recovery.get("audit_recorded"))
+        else "blocked",
         "lease_acquired": bool(acquire.get("acquired")),
         "heartbeat_ok": bool(heartbeat.get("ok")),
         "duplicate_rejected": duplicate_probe.get("acquired") is False
@@ -17727,12 +17775,103 @@ def _write_experiment_lease_report(
         "duplicate_blocker": duplicate_blocker,
         "release_recorded": bool(release.get("released")),
         "lease_id": str((acquire.get("lease") or {}).get("lease_id") or ""),
+        "lease_identity": {
+            "run_id": str((acquire.get("lease") or {}).get("research_run_id") or ""),
+            "node_id": str((acquire.get("lease") or {}).get("node_id") or ""),
+            "experiment_id": experiment_id,
+        },
+        "stale_recovery": stale_recovery,
         "limitations": [
             "Lease report is scoped to cooperating AutoSci experiment operators using ResearchLeaseAdapter."
         ],
     }
     rel = _write_json_sidecar(_output_dir(envelope, action) / "experiment_execution_lease_report.json", report)
     return {"type": "experiment_execution_lease_report_json", "path": rel}
+
+
+def _exercise_experiment_stale_lease_recovery(
+    lease_adapter: ResearchLeaseAdapter,
+    *,
+    experiment_id: str,
+    operator_id: str,
+    requested: bool,
+) -> dict[str, Any]:
+    if not requested:
+        return {"attempted": False, "stale_observed": False, "recovered": False, "audit_recorded": False}
+
+    probe_node_id = f"node-experiment-{_slug(experiment_id)}-stale-recovery-probe"
+    seed = lease_adapter.acquire(
+        experiment_id,
+        probe_node_id,
+        operator_id,
+        ttl_seconds=1,
+        heartbeat_timeout_seconds=1,
+        recover_stale=True,
+        metadata={"stage": "stale_recovery_probe", "trace_id": _slug(experiment_id)},
+        safe_metadata_fields=["stage", "trace_id"],
+    )
+    lease_id = str((seed.get("lease") or {}).get("lease_id") or "")
+    if not seed.get("acquired"):
+        return {
+            "attempted": True,
+            "seed_acquired": False,
+            "stale_observed": False,
+            "recovered": False,
+            "audit_recorded": False,
+            "blocker": seed.get("blocker") or {},
+        }
+
+    time.sleep(1.1)
+    stale_observed = lease_adapter.is_stale(experiment_id, probe_node_id)
+    recovery = lease_adapter.recover_stale(
+        experiment_id,
+        probe_node_id,
+        reason="experiment_stale_recovery_probe",
+    )
+    audit_record: dict[str, Any] = {}
+    archive_dir = lease_adapter.lease_dir / "archive"
+    for archive_path in sorted(archive_dir.glob("*.json")) if archive_dir.exists() else []:
+        try:
+            candidate = json.loads(archive_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(candidate, dict) and str(candidate.get("lease_id") or "") == lease_id:
+            audit_record = {
+                "path": _rel(archive_path),
+                "state": str(candidate.get("state") or ""),
+                "recovered_at": str(candidate.get("recovered_at") or ""),
+                "recovery_reason": str(candidate.get("recovery_reason") or ""),
+            }
+            break
+    audit_recorded = bool(
+        audit_record.get("state") == "stale"
+        and audit_record.get("recovered_at")
+        and audit_record.get("recovery_reason") == "experiment_stale_recovery_probe"
+    )
+    return {
+        "attempted": True,
+        "seed_acquired": True,
+        "lease_id": lease_id,
+        "run_id": experiment_id,
+        "node_id": probe_node_id,
+        "stale_observed": stale_observed,
+        "recovered": bool(recovery.get("recovered")),
+        "audit_recorded": audit_recorded,
+        "audit": audit_record,
+    }
+
+
+def _component_source(raw: Any, name: str) -> Path:
+    text = str(raw or "").strip()
+    candidate = _resolve_harness_path(text) if text else Path()
+    if not text or not candidate.is_file():
+        raise ValueError(f"POC handoff component is missing: {name}={text}")
+    return candidate.resolve()
+
+
+def _component_digest(path: Path, relative_path: str) -> dict[str, Any]:
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    return {"path": relative_path, "sha256": digest, "bytes": path.stat().st_size}
 
 
 def _write_experiment_poc_handoff_package(
@@ -17764,6 +17903,86 @@ def _write_experiment_poc_handoff_package(
         "",
     )
     expected_artifacts = [str(item) for item in plan.get("expected_artifacts") or [] if str(item).strip()]
+    allowlist_inputs = inputs.get("allowlist_evidence") or []
+    allowlist_raw = allowlist_inputs[0] if isinstance(allowlist_inputs, list) and allowlist_inputs else allowlist_inputs
+    lease_source = _component_source(lease_path, "lease_report")
+    lease_payload = json.loads(lease_source.read_text(encoding="utf-8"))
+    stale_audit = ((lease_payload.get("stale_recovery") or {}).get("audit") or {})
+    source_components = {
+        "experiment_plan": _component_source(inputs.get("experiment_plan_evidence"), "experiment_plan"),
+        "runner": _component_source(runner.get("path"), "runner"),
+        "dataset": _component_source(dataset.get("path"), "dataset"),
+        "allowlist": _component_source(allowlist_raw, "allowlist"),
+        "manifest": _component_source(Path(str(runner.get("path") or "")).parent / "poc_manifest.json", "manifest"),
+        "expected_result": _component_source(expected_artifacts[0] if expected_artifacts else "", "expected_result"),
+        "runtime_evidence": _component_source(executor_result.get("runtime_path"), "runtime_evidence"),
+        "result": _component_source(executor_result.get("result_path"), "result"),
+        "lease_report": lease_source,
+    }
+    if str(stale_audit.get("path") or "").strip():
+        source_components["lease_recovery_audit"] = _component_source(
+            stale_audit.get("path"),
+            "lease_recovery_audit",
+        )
+    bundle_root = _output_dir(envelope, "run_experiment") / "poc_handoff_bundle"
+    component_dir = bundle_root / "components"
+    replay_dir = bundle_root / "replay"
+    component_dir.mkdir(parents=True, exist_ok=True)
+    replay_dir.mkdir(parents=True, exist_ok=True)
+    component_names = {
+        "experiment_plan": "experiment_plan.json",
+        "runner": "runner.py",
+        "dataset": "dataset.csv",
+        "allowlist": "command_allowlist.json",
+        "manifest": "poc_manifest.json",
+        "expected_result": "expected_result.json",
+        "runtime_evidence": "runtime_evidence.json",
+        "result": "result.json",
+        "lease_report": "lease_report.json",
+        "lease_recovery_audit": "lease_recovery_audit.json",
+    }
+    component_paths: dict[str, str] = {}
+    for name, source in source_components.items():
+        relative_path = f"components/{component_names[name]}"
+        target = bundle_root / relative_path
+        shutil.copy2(source, target)
+        component_paths[name] = relative_path
+
+    approved_argv = _normalize_command([str(item) for item in plan.get("command_argv") or []])
+    executed_argv = [str(item) for item in executor_result.get("command") or []]
+    replay_argv = [
+        approved_argv[0],
+        component_paths["runner"],
+        component_paths["dataset"],
+        "replay/result.json",
+    ]
+    rewritten_manifest_path = bundle_root / component_paths["manifest"]
+    rewritten_manifest = json.loads(source_components["manifest"].read_text(encoding="utf-8"))
+    rewritten_manifest.update(
+        {
+            "runner_path": "runner.py",
+            "input_path": "dataset.csv",
+            "result_path": "../replay/result.json",
+            "allowlist_path": "command_allowlist.json",
+            "command": " ".join(shlex.quote(item) for item in replay_argv),
+            "replay_cwd": "..",
+            "source_manifest_sha256": hashlib.sha256(source_components["manifest"].read_bytes()).hexdigest(),
+        }
+    )
+    _write_json_sidecar(rewritten_manifest_path, rewritten_manifest)
+    bundled_lease_path = bundle_root / component_paths["lease_report"]
+    bundled_lease = json.loads(bundled_lease_path.read_text(encoding="utf-8"))
+    bundled_stale_recovery = bundled_lease.get("stale_recovery") if isinstance(bundled_lease.get("stale_recovery"), dict) else {}
+    bundled_audit = bundled_stale_recovery.get("audit") if isinstance(bundled_stale_recovery.get("audit"), dict) else {}
+    if "lease_recovery_audit" in component_paths:
+        bundled_audit["path"] = component_names["lease_recovery_audit"]
+        bundled_stale_recovery["audit"] = bundled_audit
+        bundled_lease["stale_recovery"] = bundled_stale_recovery
+        _write_json_sidecar(bundled_lease_path, bundled_lease)
+    component_hashes = {
+        name: _component_digest(bundle_root / relative_path, relative_path)
+        for name, relative_path in component_paths.items()
+    }
     package = {
         "schema": "autosci_experiment_poc_handoff.v1",
         "status": "completed",
@@ -17779,8 +17998,8 @@ def _write_experiment_poc_handoff_package(
         "integration": {
             "approved_command": str((plan.get("command_allowlist") or [""])[0] or ""),
             "executed_command": str(result.get("command_run") or ""),
-            "approved_argv": [str(item) for item in plan.get("command_argv") or []],
-            "executed_argv": [str(item) for item in executor_result.get("command") or []],
+            "approved_argv": approved_argv,
+            "executed_argv": executed_argv,
             "exit_code": executor_result.get("exit_code"),
             "result_collected": executor_result.get("result_collected") is True,
         },
@@ -17789,16 +18008,26 @@ def _write_experiment_poc_handoff_package(
             "runtime_semantic_verified": semantic.get("verified") is True,
             "runtime_semantic_status": str(semantic.get("status") or "missing"),
         },
-        "components": {
-            "experiment_plan": str(inputs.get("experiment_plan_evidence") or ""),
-            "runner": str(runner.get("path") or ""),
-            "dataset": str(dataset.get("path") or ""),
-            "allowlist": str((inputs.get("allowlist_evidence") or [""])[0] or ""),
-            "manifest": str(Path(str(runner.get("path") or "")).parent / "poc_manifest.json"),
-            "expected_result": expected_artifacts[0] if expected_artifacts else "",
-            "runtime_evidence": str(executor_result.get("runtime_path") or ""),
-            "result": _rel(executor_result.get("result_path")) if executor_result.get("result_path") else "",
-            "lease_report": lease_path,
+        "provenance": {
+            "producer": "autosci_bridge._write_experiment_poc_handoff_package",
+            "implementation_package": "plugins/autosci",
+            "action": "run_experiment",
+            "created_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            "source_experiment_plan_sha256": component_hashes["experiment_plan"]["sha256"],
+            "schema_validation": {
+                "schema": "autosci_experiment_poc_handoff.v1",
+                "validator": "jsonschema.Draft202012Validator",
+                "status": "passed",
+            },
+        },
+        "components": component_paths,
+        "component_hashes": component_hashes,
+        "replay": {
+            "cwd": ".",
+            "argv": replay_argv,
+            "expected_output": "replay/result.json",
+            "expected_result_component": component_paths["expected_result"],
+            "network_access": "denied",
         },
         "evidence_ids": _unique_strings([str(item) for item in result.get("evidence_ids") or []]),
         "known_constraints": [
@@ -17806,7 +18035,15 @@ def _write_experiment_poc_handoff_package(
             "Lease coordination is limited to cooperating AutoSci experiment operators.",
         ],
     }
-    rel = _write_json_sidecar(_output_dir(envelope, "run_experiment") / "poc_handoff_package.json", package)
+    schema_reasons, schema_warnings = validate_schema(package, "autosci_experiment_poc_handoff.v1")
+    formal_validation_warnings = [item for item in schema_warnings if "jsonschema unavailable" in item]
+    if schema_reasons or formal_validation_warnings:
+        raise ValueError(
+            "POC handoff package failed formal schema validation: "
+            + "; ".join([*schema_reasons, *formal_validation_warnings])
+        )
+    package_path = bundle_root / "poc_handoff_package.json"
+    rel = _write_json_sidecar(package_path, package)
     return {"type": "experiment_poc_handoff_package_json", "path": rel}
 
 
@@ -17868,14 +18105,46 @@ def _execute_experiment_if_approved(
         contract.setdefault("runtime_evidence", []).append({"path": runtime_rel, "artifact_path": runtime_rel, "exists": True, "kind": "file", "verifiable": True})
         return _refresh_approval_contract(contract), {"executed": False, "reason": "experiment_command_missing", "runtime_path": runtime_rel}
 
-    command = _normalize_command(command)
+    argv_authorized, argv_reason, command = _strict_execution_argv(command, plan, contract)
+    if not argv_authorized:
+        payload = _runtime_evidence_payload(
+            envelope,
+            action=action,
+            status="inconclusive",
+            approval_ref=str(contract.get("approval_ref") or ""),
+            command_run="blocked:strict-experiment-argv-mismatch",
+            exit_code=1,
+            evidence_ids=[blocked_evidence_id],
+            checks=[{"check": "strict_execution_argv", "status": "error", "detail": argv_reason}],
+            runtime_fields={
+                "result_collected": False,
+                "selected_argv": command,
+                "approved_argv": [str(item) for item in plan.get("command_argv") or []],
+            },
+            artifacts=[],
+            limitations=[f"{executor_label} executor did not run because strict argv authorization failed."],
+        )
+        runtime_rel = _write_json_sidecar(runtime_path, payload)
+        contract.setdefault("runtime_evidence", []).append({"path": runtime_rel, "artifact_path": runtime_rel, "exists": True, "kind": "file", "verifiable": True})
+        return _refresh_approval_contract(contract), {
+            "executed": False,
+            "reason": "strict_experiment_argv_mismatch",
+            "runtime_path": runtime_rel,
+            "command": command,
+        }
     lease_adapter = ResearchLeaseAdapter(
         HARNESS_DIR,
         claim_timeout_seconds=2,
         abandoned_claim_seconds=2,
     )
-    run_id = str(envelope.get("sprint_id") or envelope.get("run_id") or "autosci-experiment-run")
-    node_id = str(envelope.get("node_id") or f"node-{action.replace('_', '-')}")
+    run_id = experiment_id
+    node_id = f"node-experiment-{_slug(experiment_id)}-{stage}"
+    stale_recovery = _exercise_experiment_stale_lease_recovery(
+        lease_adapter,
+        experiment_id=experiment_id,
+        operator_id=runner_operator_id,
+        requested=bool(inputs.get("lease_recovery_probe")),
+    )
     lease = lease_adapter.acquire(
         run_id,
         node_id,
@@ -17959,6 +18228,7 @@ def _execute_experiment_if_approved(
         duplicate_probe=duplicate_probe,
         heartbeat=heartbeat,
         release=release,
+        stale_recovery=stale_recovery,
     )
     artifacts = [
         {"type": "executor_stdout", "path": stdout_rel},

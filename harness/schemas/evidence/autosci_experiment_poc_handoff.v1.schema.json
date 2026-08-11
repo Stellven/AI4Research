@@ -12,7 +12,10 @@
     "environment",
     "integration",
     "conformance",
+    "provenance",
     "components",
+    "component_hashes",
+    "replay",
     "evidence_ids",
     "known_constraints"
   ],
@@ -61,6 +64,28 @@
         "runtime_semantic_status": {"const": "verified"}
       }
     },
+    "provenance": {
+      "type": "object",
+      "required": ["producer", "implementation_package", "action", "created_at", "source_experiment_plan_sha256", "schema_validation"],
+      "additionalProperties": false,
+      "properties": {
+        "producer": {"const": "autosci_bridge._write_experiment_poc_handoff_package"},
+        "implementation_package": {"const": "plugins/autosci"},
+        "action": {"const": "run_experiment"},
+        "created_at": {"type": "string", "format": "date-time"},
+        "source_experiment_plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "schema_validation": {
+          "type": "object",
+          "required": ["schema", "validator", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "schema": {"const": "autosci_experiment_poc_handoff.v1"},
+            "validator": {"const": "jsonschema.Draft202012Validator"},
+            "status": {"const": "passed"}
+          }
+        }
+      }
+    },
     "components": {
       "type": "object",
       "required": ["experiment_plan", "runner", "dataset", "allowlist", "manifest", "expected_result", "runtime_evidence", "result", "lease_report"],
@@ -74,10 +99,52 @@
         "expected_result": {"type": "string", "minLength": 1},
         "runtime_evidence": {"type": "string", "minLength": 1},
         "result": {"type": "string", "minLength": 1},
-        "lease_report": {"type": "string", "minLength": 1}
+        "lease_report": {"type": "string", "minLength": 1},
+        "lease_recovery_audit": {"type": "string", "minLength": 1}
+      }
+    },
+    "component_hashes": {
+      "type": "object",
+      "required": ["experiment_plan", "runner", "dataset", "allowlist", "manifest", "expected_result", "runtime_evidence", "result", "lease_report"],
+      "additionalProperties": false,
+      "properties": {
+        "experiment_plan": {"$ref": "#/$defs/componentHash"},
+        "runner": {"$ref": "#/$defs/componentHash"},
+        "dataset": {"$ref": "#/$defs/componentHash"},
+        "allowlist": {"$ref": "#/$defs/componentHash"},
+        "manifest": {"$ref": "#/$defs/componentHash"},
+        "expected_result": {"$ref": "#/$defs/componentHash"},
+        "runtime_evidence": {"$ref": "#/$defs/componentHash"},
+        "result": {"$ref": "#/$defs/componentHash"},
+        "lease_report": {"$ref": "#/$defs/componentHash"},
+        "lease_recovery_audit": {"$ref": "#/$defs/componentHash"}
+      }
+    },
+    "replay": {
+      "type": "object",
+      "required": ["cwd", "argv", "expected_output", "expected_result_component", "network_access"],
+      "additionalProperties": false,
+      "properties": {
+        "cwd": {"const": "."},
+        "argv": {"type": "array", "minItems": 4, "items": {"type": "string", "minLength": 1}},
+        "expected_output": {"const": "replay/result.json"},
+        "expected_result_component": {"const": "components/expected_result.json"},
+        "network_access": {"const": "denied"}
       }
     },
     "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
     "known_constraints": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "componentHash": {
+      "type": "object",
+      "required": ["path", "sha256", "bytes"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string", "pattern": "^components/"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "bytes": {"type": "integer", "minimum": 1}
+      }
+    }
   }
 }

@@ -256,9 +256,13 @@ class JourneyRecorder:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(resolved, target)
             return target.resolve()
+        if resolved.is_dir():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(resolved, target)
+            return target.resolve()
         return resolved
 
-    def add_artifact(self, path: Path, artifact_type: str, description: str = "", *, required: bool = True) -> None:
+    def add_artifact(self, path: Path, artifact_type: str, description: str = "", *, required: bool = True) -> Path:
         path = path.resolve()
         stable_path = self._stable_artifact_path(path, artifact_type) if path.exists() else path
         exists = path.exists()
@@ -271,6 +275,8 @@ class JourneyRecorder:
             inside_run_dir = False
         if not exists:
             durability_status = "missing_required" if required else "not_applicable_optional_missing"
+        elif is_dir and inside_run_dir:
+            durability_status = "durable"
         elif is_dir:
             durability_status = "not_applicable_directory_reference"
         elif inside_run_dir:
@@ -291,6 +297,7 @@ class JourneyRecorder:
             entry["bytes"] = stable_path.stat().st_size
             entry["sha256"] = sha256(stable_path)
         self.artifacts.append(entry)
+        return stable_path
 
     def run(
         self,

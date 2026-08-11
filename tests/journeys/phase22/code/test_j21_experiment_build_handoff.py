@@ -178,6 +178,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         "experiment_poc_handoff_gate",
         "experiment_result_gate",
         "claim_verdict_gate",
+        "durable_poc_replay",
     ]
     plan_summary, harness_dir = run_autosci(
         rec,
@@ -244,6 +245,44 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     blocked_evidence_path = _action_evidence_path(harness_dir, blocked_summary, "run_experiment")
     blocked_payload = _read_json(blocked_evidence_path) if blocked_evidence_path and blocked_evidence_path.exists() else {}
 
+    tampered_plan = json.loads(json.dumps(design_payload))
+    tampered_plan_body = ((tampered_plan.get("outputs") or {}).get("experiment_plan") or {})
+    tampered_commands = list(tampered_plan_body.get("command_allowlist") or [])
+    assert tampered_commands
+    tampered_commands[0] = str(tampered_commands[0]) + " --unauthorized-suffix"
+    tampered_plan_body["command_allowlist"] = tampered_commands
+    tampered_plan_path = _write_json(sandbox / "negative" / "tampered-experiment-plan.json", tampered_plan)
+    tampered_summary, _ = run_autosci(
+        rec,
+        sandbox,
+        "exp-run",
+        [
+            str(experiment_input["experiment_id"]),
+            "--env",
+            "local",
+            "--experiment-plan-evidence",
+            str(tampered_plan_path),
+            "--gate-mode",
+            "parity_demo",
+            "--approval-ref",
+            "phase22-j21-approved",
+            "--allowlist-evidence",
+            str(allowlist_path),
+            "--before-artifact",
+            str(input_csv),
+            "--after-artifact",
+            str(expected_result_path),
+            "--execute-approved",
+            "--run-id",
+            "p22-j21-exp-run-tampered-argv",
+        ],
+        timeout=120,
+    )
+    tampered_evidence_path = _action_evidence_path(harness_dir, tampered_summary, "run_experiment")
+    tampered_payload = _read_json(tampered_evidence_path) if tampered_evidence_path and tampered_evidence_path.exists() else {}
+    tampered_runtime_path = _artifact_path(harness_dir, tampered_payload, "experiment_runtime_evidence_json")
+    tampered_runtime_payload = _read_json(tampered_runtime_path) if tampered_runtime_path and tampered_runtime_path.exists() else {}
+
     run_summary, _ = run_autosci(
         rec,
         sandbox,
@@ -265,6 +304,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             "--after-artifact",
             str(expected_result_path),
             "--execute-approved",
+            "--lease-recovery-probe",
             "--run-id",
             "p22-j21-exp-run",
         ],
@@ -371,6 +411,13 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     unsupported_eval_payload = _read_json(unsupported_eval_path) if unsupported_eval_path and unsupported_eval_path.exists() else {}
 
     assert run_handoff_package is not None
+    durable_handoff_bundle = rec.add_artifact(
+        run_handoff_package.parent,
+        "exp_run_poc_handoff_bundle",
+        "Self-contained product handoff bundle copied into durable journey evidence before validation and replay.",
+    )
+    durable_handoff_package = durable_handoff_bundle / run_handoff_package.name
+    assert durable_handoff_package.is_file()
     gate_env = dict(os.environ)
     gate_env["HARNESS_DIR"] = str(harness_dir)
     poc_handoff_gate = repo_root / "harness" / "evaluators" / "scientific" / "experiment_poc_handoff_gate.py"
@@ -378,7 +425,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     claim_verdict_gate = repo_root / "harness" / "evaluators" / "scientific" / "claim_verdict_gate.py"
     poc_gate_proc = rec.run(
         "evaluate-poc-handoff-positive",
-        [phase22_python, str(poc_handoff_gate), str(run_handoff_package)],
+        [phase22_python, str(poc_handoff_gate), str(durable_handoff_package)],
         cwd=repo_root,
         env=gate_env,
         timeout=60,
@@ -414,7 +461,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
 
     handoff_check_proc = rec.run(
         "check-poc-handoff",
-        [phase22_python, str(checker_path), str(run_handoff_package)],
+        [phase22_python, str(checker_path), str(durable_handoff_package)],
         cwd=repo_root,
         timeout=60,
     )
@@ -426,6 +473,17 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         timeout=60,
     )
     negative_check_payload = json.loads(negative_check_proc.stdout) if negative_check_proc.stdout.strip() else {}
+    durable_package_payload = _read_json(durable_handoff_package)
+    replay_contract = durable_package_payload.get("replay") if isinstance(durable_package_payload.get("replay"), dict) else {}
+    replay_argv = [str(item) for item in replay_contract.get("argv") or []]
+    replay_proc = rec.run(
+        "replay-durable-poc-handoff",
+        replay_argv,
+        cwd=durable_handoff_bundle,
+        timeout=60,
+    )
+    replay_output = durable_handoff_bundle / str(replay_contract.get("expected_output") or "")
+    replay_expected = durable_handoff_bundle / str(replay_contract.get("expected_result_component") or "")
 
     home_path = sandbox / "home"
     harness_root = sandbox / "harness"
@@ -438,7 +496,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     blocked_status = str(blocked_payload.get("status") or "")
     blocked_side_effect_status = ((blocked_payload.get("outputs") or {}).get("side_effect_access_status"))
     lease_payload = _read_json(run_lease_report) if run_lease_report and run_lease_report.exists() else {}
-    handoff_package_payload = _read_json(run_handoff_package) if run_handoff_package.exists() else {}
+    handoff_package_payload = durable_package_payload
     run_boundary = (
         ((run_payload.get("outputs") or {}).get("final_runtime_audit_boundary") or {})
         if isinstance(run_payload.get("outputs"), dict)
@@ -465,6 +523,10 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         rec.add_artifact(design_action_evidence, "exp_design_result_evidence")
     if blocked_evidence_path:
         rec.add_artifact(blocked_evidence_path, "blocked_exp_run_evidence")
+    if tampered_evidence_path:
+        rec.add_artifact(tampered_evidence_path, "tampered_argv_exp_run_evidence")
+    if tampered_runtime_path:
+        rec.add_artifact(tampered_runtime_path, "tampered_argv_runtime_evidence")
     if run_result_path:
         rec.add_artifact(run_result_path, "exp_run_result_package")
     if run_evidence_path:
@@ -475,7 +537,9 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         rec.add_artifact(run_runtime_evidence, "exp_run_runtime_evidence")
     if run_lease_report:
         rec.add_artifact(run_lease_report, "exp_run_lease_report")
-    rec.add_artifact(run_handoff_package, "exp_run_poc_handoff_package")
+    rec.add_artifact(durable_handoff_package, "exp_run_poc_handoff_package")
+    if replay_output.exists():
+        rec.add_artifact(replay_output, "exp_run_durable_replay_result")
     if status_evidence_path:
         rec.add_artifact(status_evidence_path, "exp_status_evidence")
     if supported_eval_path:
@@ -495,6 +559,13 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_assertion("sandbox_home_isolated", home_path.exists() and str(home_path).startswith(str(sandbox)), str(home_path))
     rec.add_assertion("sandbox_harness_isolated", harness_root.exists() and str(harness_root).startswith(str(sandbox)), str(harness_root))
     rec.add_assertion("blocked_run_rejected_without_approval", blocked_status == "inconclusive" and any("approval" in str(item).lower() for item in blocked_limitations), {"status": blocked_status, "limitations": blocked_limitations})
+    rec.add_assertion(
+        "strict_argv_tamper_rejected_before_execution",
+        tampered_runtime_payload.get("status") == "inconclusive"
+        and ((tampered_runtime_payload.get("outputs") or {}).get("runtime") or {}).get("command_run")
+        == "blocked:strict-experiment-argv-mismatch",
+        tampered_runtime_payload,
+    )
     rec.add_assertion("authorized_run_completed", run_status == "completed", run_status)
     rec.add_assertion(
         "authorized_run_executed_real_command",
@@ -541,6 +612,30 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_assertion("downstream_handoff_checker_rejects_invalid_package", negative_check_proc.returncode != 0 and not bool(negative_check_payload.get("ok")), negative_check_payload)
     rec.add_assertion("product_handoff_schema_gate_accepts_valid_package", poc_gate_proc.returncode == 0, poc_gate_proc.stdout)
     rec.add_assertion("product_handoff_schema_gate_rejects_invalid_package", negative_poc_gate_proc.returncode != 0, negative_poc_gate_proc.stdout)
+    package_provenance = handoff_package_payload.get("provenance") if isinstance(handoff_package_payload.get("provenance"), dict) else {}
+    package_schema_validation = package_provenance.get("schema_validation") if isinstance(package_provenance.get("schema_validation"), dict) else {}
+    component_hashes = handoff_package_payload.get("component_hashes") if isinstance(handoff_package_payload.get("component_hashes"), dict) else {}
+    package_components = handoff_package_payload.get("components") if isinstance(handoff_package_payload.get("components"), dict) else {}
+    rec.add_assertion(
+        "durable_handoff_has_formal_provenance_and_hashes",
+        package_schema_validation.get("status") == "passed"
+        and set(component_hashes) == set(package_components)
+        and all(str(item.get("sha256") or "") for item in component_hashes.values()),
+        {"provenance": package_provenance, "component_hashes": component_hashes},
+    )
+    rec.add_assertion(
+        "durable_handoff_replay_succeeds_from_copies",
+        replay_proc.returncode == 0
+        and replay_output.is_file()
+        and replay_expected.is_file()
+        and _read_json(replay_output) == _read_json(replay_expected),
+        {
+            "returncode": replay_proc.returncode,
+            "durable_bundle": str(durable_handoff_bundle),
+            "replay_output": str(replay_output),
+            "expected_result": str(replay_expected),
+        },
+    )
     rec.add_assertion("product_result_semantic_gate_accepts_completed_run", result_gate_proc.returncode == 0, result_gate_proc.stdout)
     rec.add_assertion("product_supported_claim_gate_accepts_verdict", supported_claim_gate_proc.returncode == 0, supported_claim_gate_proc.stdout)
     rec.add_assertion("product_unsupported_claim_gate_accepts_non_support_verdict", unsupported_claim_gate_proc.returncode == 0, unsupported_claim_gate_proc.stdout)
@@ -548,6 +643,24 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_assertion("unsupported_claim_not_supported", unsupported_verdict in {"not_supported", "inconclusive", "partially_supported", "insufficient"}, unsupported_verdict)
     rec.add_assertion("human_or_parity_requirement_recorded", any("Review LLM" in str(item) for item in (design_payload.get("limitations") or [])) or blocked_side_effect_status is not None, {"design_limitations": design_payload.get("limitations"), "blocked_side_effect_status": blocked_side_effect_status})
     rec.add_assertion("duplicate_or_lease_release_proven", bool(lease_payload.get("lease_acquired") and lease_payload.get("duplicate_rejected") and lease_payload.get("release_recorded")), lease_payload)
+    lease_identity = lease_payload.get("lease_identity") if isinstance(lease_payload.get("lease_identity"), dict) else {}
+    stale_recovery = lease_payload.get("stale_recovery") if isinstance(lease_payload.get("stale_recovery"), dict) else {}
+    rec.add_assertion(
+        "lease_identity_and_stale_recovery_audited",
+        lease_identity.get("experiment_id") == experiment_input["experiment_id"]
+        and lease_identity.get("run_id") == experiment_input["experiment_id"]
+        and stale_recovery.get("run_id") == experiment_input["experiment_id"]
+        and stale_recovery.get("stale_observed") is True
+        and stale_recovery.get("recovered") is True
+        and stale_recovery.get("audit_recorded") is True,
+        {"lease_identity": lease_identity, "stale_recovery": stale_recovery},
+    )
+    rec.add_assertion(
+        "durable_lease_recovery_audit_bundled",
+        package_components.get("lease_recovery_audit") == "components/lease_recovery_audit.json"
+        and (durable_handoff_bundle / "components" / "lease_recovery_audit.json").is_file(),
+        package_components.get("lease_recovery_audit"),
+    )
     supplied_runner_path = fixture_dir / "run_text_experiment.py"
     rec.add_assertion(
         "experimental_asset_built_by_product",
@@ -559,8 +672,8 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
 
     rec.add_l2("Workflow", "POC Implementation Environment Preparation", "Solar routes ran inside an isolated sandbox HOME/HARNESS_DIR and recorded local runtime/config evidence.", design_action_evidence or design_evidence_path or rec.run_dir, True)
     rec.add_l2("Workflow", "POC Component Integration & Configuration", "exp-run consumed production approval/allowlist/runtime contract inputs and exp-status consumed the resulting runtime evidence.", run_evidence_path or rec.run_dir, "partial")
-    rec.add_l2("Workflow", "Testable POC Artifact Consolidation & Benchmark Handoff", "exp-run emitted a consolidated product POC package accepted by a production schema gate and an independent downstream checker.", run_handoff_package, "partial")
-    rec.add_l2("Foundation", "Contract, Schema & Artifact Conformance Evaluator", "Production gates accepted valid experiment/package/claim evidence, rejected a malformed package, and retained an overbroad claim as non-supporting.", run_handoff_package, "partial")
+    rec.add_l2("Workflow", "Testable POC Artifact Consolidation & Benchmark Handoff", "exp-run emitted a durable self-contained product POC package accepted by a production schema gate, independently checked, and replayed from durable copies.", durable_handoff_package, "partial")
+    rec.add_l2("Foundation", "Contract, Schema & Artifact Conformance Evaluator", "Production gates formally validated the durable package and component hashes, accepted valid experiment/package/claim evidence, rejected a malformed package, and retained an overbroad claim as non-supporting.", durable_handoff_package, "partial")
     rec.add_l2("Foundation", "Lifecycle, Parity & Human Review Evaluator", "exp-status recorded a completed lifecycle state from approved runtime evidence while exp-design retained explicit Review LLM limitations.", status_evidence_path or rec.run_dir, "partial")
     rec.add_l2("Foundation", "Execution Admission, Lease & Concurrency Control", "The product blocked unapproved execution, admitted one approved run, rejected a duplicate lease probe, and released the execution lease; broader scheduler controls were not exercised.", run_lease_report or rec.run_dir, "partial")
     rec.add_l2("Foundation", "Experimental Asset Construction", "exp-design generated one runnable local POC runner, sample input, command allowlist, manifest, and usability check consumed by exp-run.", product_manifest_path, "partial")
@@ -599,6 +712,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["authorized_run_completed"],
                 assertion_details["authorized_run_executed_real_command"],
                 assertion_details["approved_product_command_executed_exactly"],
+                assertion_details["strict_argv_tamper_rejected_before_execution"],
                 assertion_details["status_completed_from_runtime_evidence"],
             ],
             "observed": "exp-design generated the runner/input/allowlist package; exp-run loaded the approval contract and command allowlist, executed the product-generated runtime, and exp-status consumed the resulting runtime evidence.",
@@ -623,15 +737,17 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["downstream_handoff_checker_rejects_invalid_package"],
                 assertion_details["product_handoff_schema_gate_accepts_valid_package"],
                 assertion_details["product_handoff_schema_gate_rejects_invalid_package"],
+                assertion_details["durable_handoff_has_formal_provenance_and_hashes"],
+                assertion_details["durable_handoff_replay_succeeds_from_copies"],
                 assertion_details["runtime_output_nonempty"],
             ],
-            "observed": "The production exp-run route emitted a consolidated POC handoff package with environment, approved/executed argv, components, runtime/result/lease evidence, constraints, and evidence IDs; both the production gate and independent downstream checker accepted it and rejected a malformed package.",
+            "observed": "The production exp-run route emitted a self-contained POC handoff bundle with provenance, component hashes, relative paths, replay contract, environment, approved/executed argv, runtime/result/lease evidence, constraints, and evidence IDs; the durable copy passed the production gate, independent checker, malformed negative, and replay.",
             "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS",
             "reason": "The package was product-generated, structurally validated, non-empty, and downstream-readable for this local POC path.",
             "limitations": [
                 "The consolidated package is benchmark-ready for the exercised deterministic local POC checker; no external benchmark framework adapter was exercised.",
             ],
-            "evidence_paths": [str(path) for path in [run_handoff_package, run_result_path, handoff_path] if path],
+            "evidence_paths": [str(path) for path in [durable_handoff_package, replay_output, run_result_path, handoff_path] if path],
         },
         {
             "name": "Foundation :: Contract, Schema & Artifact Conformance Evaluator",
@@ -643,10 +759,12 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             ],
             "assertions": [
                 assertion_details["blocked_run_rejected_without_approval"],
+                assertion_details["strict_argv_tamper_rejected_before_execution"],
                 assertion_details["runtime_semantic_verified"],
                 assertion_details["product_result_semantic_gate_accepts_completed_run"],
                 assertion_details["product_handoff_schema_gate_accepts_valid_package"],
                 assertion_details["product_handoff_schema_gate_rejects_invalid_package"],
+                assertion_details["durable_handoff_has_formal_provenance_and_hashes"],
                 assertion_details["product_supported_claim_gate_accepts_verdict"],
                 assertion_details["product_unsupported_claim_gate_accepts_non_support_verdict"],
                 assertion_details["unsupported_claim_not_supported"],
@@ -657,7 +775,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             "limitations": [
                 "The gates cover the exercised experiment result, POC handoff, and claim verdict schemas; they do not establish conformance for every Solar artifact schema.",
             ],
-            "evidence_paths": [str(path) for path in [blocked_evidence_path, run_handoff_package, run_action_evidence, supported_eval_path, unsupported_eval_path] if path],
+            "evidence_paths": [str(path) for path in [blocked_evidence_path, durable_handoff_package, run_action_evidence, supported_eval_path, unsupported_eval_path] if path],
         },
         {
             "name": "Foundation :: Lifecycle, Parity & Human Review Evaluator",
@@ -693,12 +811,14 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["blocked_run_rejected_without_approval"],
                 assertion_details["authorized_run_completed"],
                 assertion_details["duplicate_or_lease_release_proven"],
+                assertion_details["lease_identity_and_stale_recovery_audited"],
+                assertion_details["durable_lease_recovery_audit_bundled"],
             ],
-            "observed": "The product blocked the unapproved run, admitted one approved local execution under ResearchLeaseAdapter, rejected a duplicate probe for the same run/node, and released the lease with a durable report.",
+            "observed": "The product used the experiment ID as the lease run identity, recovered and audited a truly expired lease, admitted one approved local execution, rejected a duplicate probe for the same run/node, and released the lease with a durable report.",
             "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS",
             "reason": "Admission, duplicate rejection, and lease release were proven for one cooperating AutoSci operator path.",
             "limitations": [
-                "Lease evidence is limited to cooperating AutoSci operators; stale-lease recovery, quota, capacity, and exclusion enforcement were not exercised.",
+                "Lease evidence is limited to cooperating AutoSci operators; quota, capacity, and exclusion enforcement were not exercised.",
             ],
             "evidence_paths": [str(path) for path in [blocked_evidence_path, run_evidence_path, run_lease_report] if path],
         },
@@ -714,6 +834,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["experimental_asset_built_by_product"],
                 assertion_details["approved_product_command_executed_exactly"],
                 assertion_details["authorized_run_completed"],
+                assertion_details["durable_handoff_replay_succeeds_from_copies"],
             ],
             "observed": "exp-design generated a runnable Python experiment asset, sample data, command allowlist, manifest, and usability check under the product artifact tree; exp-run consumed that package.",
             "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS",
@@ -765,6 +886,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 "evaluate-experiment-result-positive",
                 "evaluate-supported-claim-positive",
                 "evaluate-unsupported-claim-negative",
+                "replay-durable-poc-handoff",
             ]
         ),
         "fixture_only_supplied_inputs": False,
@@ -803,6 +925,15 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         ],
     }
 
+    if not self_review["target_issue_rows_have_only_passing_assertions"]:
+        overall_status = "FAIL"
+    elif all(row["recommended_status"] == "PASS" for row in l2_rows):
+        overall_status = "PASS"
+    elif any(row["recommended_status"] in {"FAIL", "NOT_AVAILABLE"} for row in l2_rows):
+        overall_status = "FAIL"
+    else:
+        overall_status = "PASS_WITH_KNOWN_LIMITATIONS"
+
     worker_result = _build_worker_result(
         repo_root=repo_root,
         rec=rec,
@@ -817,14 +948,8 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         l2_rows=l2_rows,
         self_review=self_review,
     )
+    worker_result["final_status"] = overall_status
     _write_json(repo_root / RESULT_PATH, worker_result)
-
-    if all(row["recommended_status"] == "PASS" for row in l2_rows):
-        overall_status = "PASS"
-    elif any(row["recommended_status"] in {"FAIL", "NOT_AVAILABLE"} for row in l2_rows):
-        overall_status = "FAIL"
-    else:
-        overall_status = "PASS_WITH_KNOWN_LIMITATIONS"
 
     final_result_path = rec.finalize(overall_status, limitations=journey_limitations)
     final_result = _read_json(final_result_path)
@@ -833,7 +958,6 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         "codex_pm_router._standard_task_graph",
         "external benchmark framework adapter",
         "every solar artifact schema",
-        "stale-lease recovery",
         "cross-domain asset generation",
         "collection-ledger evidence",
         "package/service/container/workflow runtime deliverable construction is not_tested",

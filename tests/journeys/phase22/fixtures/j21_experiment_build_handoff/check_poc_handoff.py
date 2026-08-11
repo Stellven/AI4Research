@@ -1,4 +1,5 @@
 import json
+import hashlib
 import sys
 from pathlib import Path
 
@@ -13,7 +14,10 @@ def check_handoff_package(path):
         "environment",
         "integration",
         "conformance",
+        "provenance",
         "components",
+        "component_hashes",
+        "replay",
         "evidence_ids",
         "known_constraints",
     ]
@@ -44,13 +48,15 @@ def check_handoff_package(path):
         "result",
         "lease_report",
     }
-    if set(components) != required_components:
+    allowed_components = {*required_components, "lease_recovery_audit"}
+    if not required_components.issubset(components) or not set(components).issubset(allowed_components):
         return {
             "ok": False,
             "error": f"component set mismatch: expected {sorted(required_components)}, got {sorted(components)}",
             "payload": payload,
         }
     resolved = {}
+    component_hashes = payload.get("component_hashes") if isinstance(payload.get("component_hashes"), dict) else {}
     for name, raw in components.items():
         component = Path(str(raw))
         candidates = [component] if component.is_absolute() else [parent / component for parent in [package_path.parent, *package_path.parents]]
@@ -58,8 +64,25 @@ def check_handoff_package(path):
         if found is None:
             return {"ok": False, "error": f"component is missing: {name}={raw}", "payload": payload}
         resolved[name] = str(found)
+        digest = component_hashes.get(name) if isinstance(component_hashes.get(name), dict) else {}
+        if digest.get("path") != raw or digest.get("sha256") != hashlib.sha256(found.read_bytes()).hexdigest():
+            return {"ok": False, "error": f"component hash mismatch: {name}", "payload": payload}
+        if digest.get("bytes") != found.stat().st_size:
+            return {"ok": False, "error": f"component byte count mismatch: {name}", "payload": payload}
     if not payload.get("evidence_ids"):
         return {"ok": False, "error": "no embedded evidence ids", "payload": payload}
+    provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
+    if provenance.get("source_experiment_plan_sha256") != component_hashes.get("experiment_plan", {}).get("sha256"):
+        return {"ok": False, "error": "experiment plan provenance mismatch", "payload": payload}
+    replay = payload.get("replay") if isinstance(payload.get("replay"), dict) else {}
+    expected_replay_argv = [
+        integration.get("approved_argv", [""])[0],
+        components.get("runner"),
+        components.get("dataset"),
+        replay.get("expected_output"),
+    ]
+    if replay.get("argv") != expected_replay_argv:
+        return {"ok": False, "error": "replay argv is not bound to durable components", "payload": payload}
 
     return {
         "ok": True,
