@@ -484,9 +484,9 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_l2("Workflow", "Testable POC Artifact Consolidation & Benchmark Handoff", "exp-run emitted a product result package and handoff markdown that a downstream checker could read.", run_result_path or rec.run_dir, "partial")
     rec.add_l2("Foundation", "Contract, Schema & Artifact Conformance Evaluator", "The blocked preflight contract surfaced missing approval artifacts and the approved path reached a verified runtime boundary; exp-eval also differentiated supported vs overbroad claims.", run_evidence_path or rec.run_dir, "partial")
     rec.add_l2("Foundation", "Lifecycle, Parity & Human Review Evaluator", "exp-status recorded a completed lifecycle state from approved runtime evidence while exp-design retained explicit Review LLM limitations.", status_evidence_path or rec.run_dir, "partial")
-    rec.add_l2("Foundation", "Execution Admission, Lease & Concurrency Control", "The product blocked unapproved execution, admitted one approved run, rejected a duplicate lease probe, and released the execution lease.", run_lease_report or rec.run_dir, True)
-    rec.add_l2("Foundation", "Experimental Asset Construction", "exp-design generated the runnable POC runner, sample input, command allowlist, manifest, and usability check consumed by exp-run.", product_manifest_path, True)
-    rec.add_l2("Foundation", "Runtime Deliverable Construction", "exp-run produced a non-empty result package, runtime evidence, lease evidence, and a replayable command-backed result in the isolated sandbox.", run_result_path or rec.run_dir, True)
+    rec.add_l2("Foundation", "Execution Admission, Lease & Concurrency Control", "The product blocked unapproved execution, admitted one approved run, rejected a duplicate lease probe, and released the execution lease; broader scheduler controls were not exercised.", run_lease_report or rec.run_dir, "partial")
+    rec.add_l2("Foundation", "Experimental Asset Construction", "exp-design generated one runnable local POC runner, sample input, command allowlist, manifest, and usability check consumed by exp-run.", product_manifest_path, "partial")
+    rec.add_l2("Foundation", "Runtime Deliverable Construction", "The journey executed a Python experiment runner, not package/service/container/workflow deliverable construction.", run_result_path or rec.run_dir, False)
 
     assertion_details = _assertion_map(rec)
     l2_rows = [
@@ -523,9 +523,11 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["status_completed_from_runtime_evidence"],
             ],
             "observed": "exp-design generated the runner/input/allowlist package; exp-run loaded the approval contract and command allowlist, executed the product-generated runtime, and exp-status consumed the resulting runtime evidence.",
-            "recommended_status": "PASS",
-            "reason": "The main integration path executed end to end using a product-authored persisted experiment package.",
-            "limitations": [],
+            "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS",
+            "reason": "The AutoSci experiment path executed end to end using a product-authored persisted experiment package, but this does not prove the packet's generic graph integration entrypoints.",
+            "limitations": [
+                "P22-J21 does not directly exercise codex_pm_router._standard_task_graph, plan_validator, or graph_node_dispatcher integration.",
+            ],
             "evidence_paths": [str(path) for path in [run_evidence_path, status_evidence_path] if path],
         },
         {
@@ -566,7 +568,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS",
             "reason": "The product accurately distinguished conformant and non-conformant evidence paths, but the negative case was approval/overclaim-driven rather than a dedicated package-schema validator on the handoff bundle itself.",
             "limitations": [
-                "This journey did not find a dedicated benchmark-package schema validator route for the POC bundle.",
+                "P22-J21 exercises approval/runtime semantic and claim checks, but no dedicated schema/contract evaluator for the POC or benchmark package was exercised.",
             ],
             "evidence_paths": [str(path) for path in [blocked_evidence_path, run_evidence_path, unsupported_eval_path] if path],
         },
@@ -588,6 +590,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             "reason": "Lifecycle state and review/parity needs were explicit and interpretable, but no actual attributable human approval occurred in this local journey.",
             "limitations": [
                 "The journey recorded a Review LLM or review-needed boundary, not a completed human approval event.",
+                "Final lifecycle audit still requires approved monitor/collect execution with collection-ledger evidence.",
             ],
             "evidence_paths": [str(path) for path in [design_evidence_path, design_action_evidence, status_evidence_path] if path],
         },
@@ -605,9 +608,11 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["duplicate_or_lease_release_proven"],
             ],
             "observed": "The product blocked the unapproved run, admitted one approved local execution under ResearchLeaseAdapter, rejected a duplicate probe for the same run/node, and released the lease with a durable report.",
-            "recommended_status": "PASS",
-            "reason": "Admission, duplicate rejection, and lease release were all proven by accepted local execution evidence.",
-            "limitations": [],
+            "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS",
+            "reason": "Admission, duplicate rejection, and lease release were proven for one cooperating AutoSci operator path.",
+            "limitations": [
+                "Lease evidence is limited to cooperating AutoSci operators; stale-lease recovery, quota, capacity, and exclusion enforcement were not exercised.",
+            ],
             "evidence_paths": [str(path) for path in [blocked_evidence_path, run_evidence_path, run_lease_report] if path],
         },
         {
@@ -623,37 +628,52 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
                 assertion_details["authorized_run_completed"],
             ],
             "observed": "exp-design generated a runnable Python experiment asset, sample data, command allowlist, manifest, and usability check under the product artifact tree; exp-run consumed that package.",
-            "recommended_status": "PASS",
-            "reason": "The product built the experimental asset from the experiment request and the approved runner executed it.",
-            "limitations": [],
+            "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS",
+            "reason": "The product built one deterministic local Python experimental asset from the request and the approved runner executed it.",
+            "limitations": [
+                "Only one deterministic local Python experiment variant was generated; cross-domain asset generation, schema validation, and broader reproducibility variants were not exercised.",
+            ],
             "evidence_paths": [str(path) for path in [product_manifest_path, product_usability_path, runner_path, run_evidence_path] if path],
         },
         {
             "name": "Foundation :: Runtime Deliverable Construction",
             "description_contract": L2_DESCRIPTIONS["Foundation :: Runtime Deliverable Construction"],
             "criteria": [
-                "The product generates an executable or replayable runtime deliverable.",
-                "The deliverable has a clear execution command or entrypoint.",
-                "It runs in the isolated environment and produces a non-empty result.",
+                "The product generates a package, service, container, or workflow runtime deliverable.",
+                "The deliverable includes install/deploy configuration and a clear runtime entrypoint.",
+                "A clean-sandbox smoke or health check and rollback/uninstall evidence are retained.",
             ],
-            "assertions": [
-                assertion_details["authorized_run_completed"],
-                assertion_details["authorized_run_executed_real_command"],
-                assertion_details["runtime_output_nonempty"],
+            "assertions": [],
+            "observed": "P22-J21 executed a generated Python experiment runner and retained its result package; it did not build or smoke-test a package, service, container, or workflow runtime deliverable.",
+            "recommended_status": "NOT_TESTED",
+            "reason": "The Python experiment runner is evidence for experimental execution, not sufficient evidence for the broader Runtime Deliverable Construction contract.",
+            "limitations": [
+                "P22-J21 only exercises a Python experiment runner and result package; package/service/container/workflow runtime deliverable construction is NOT_TESTED and must not be inferred from this journey.",
             ],
-            "observed": "exp-run emitted a result package, runtime evidence, handoff markdown, and a non-empty runtime output after executing a real approved command in the sandbox.",
-            "recommended_status": "PASS",
-            "reason": "The runtime deliverable was replayable, non-empty, and backed by product-generated runner/input/allowlist artifacts.",
-            "limitations": [],
             "evidence_paths": [str(path) for path in [run_result_path, run_runtime_evidence, run_lease_report, runtime_output] if path],
         },
     ]
+
+    journey_limitations = list(
+        dict.fromkeys(
+            str(limitation)
+            for row in l2_rows
+            for limitation in (row.get("limitations") or [])
+            if str(limitation).strip()
+        )
+    )
 
     self_review = {
         "l2_names_exact_once": [row["name"] for row in l2_rows] == L2_NAMES,
         "independent_l2_rows": all(row.get("criteria") and row.get("observed") and row.get("evidence_paths") for row in l2_rows),
         "production_entrypoints_called": all(label in [record.label for record in rec.commands] for label in ["autosci-exp-design", "autosci-exp-run", "autosci-exp-status", "autosci-exp-eval"]),
         "fixture_only_supplied_inputs": False,
+        "journey_limitations_nonempty": bool(journey_limitations),
+        "runtime_deliverable_mapping_status": next(
+            row["recommended_status"]
+            for row in l2_rows
+            if row["name"] == "Foundation :: Runtime Deliverable Construction"
+        ),
         "selector_executed": True,
         "duration_seconds": round(time.monotonic() - started, 3),
         "expected_modified_files_only": [
@@ -683,12 +703,26 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     )
     _write_json(repo_root / RESULT_PATH, worker_result)
 
-    journey_limitations: list[str] = []
     if all(row["recommended_status"] == "PASS" for row in l2_rows):
         overall_status = "PASS"
-    elif all(row["recommended_status"] in {"PASS", "PASS_WITH_KNOWN_LIMITATIONS"} for row in l2_rows):
-        overall_status = "PASS_WITH_KNOWN_LIMITATIONS"
-    else:
+    elif any(row["recommended_status"] in {"FAIL", "NOT_AVAILABLE"} for row in l2_rows):
         overall_status = "FAIL"
+    else:
+        overall_status = "PASS_WITH_KNOWN_LIMITATIONS"
 
-    rec.finalize(overall_status, limitations=journey_limitations)
+    final_result_path = rec.finalize(overall_status, limitations=journey_limitations)
+    final_result = _read_json(final_result_path)
+    assert final_result.get("limitations") == journey_limitations
+    required_limitation_fragments = [
+        "codex_pm_router._standard_task_graph",
+        "native benchmark bundle",
+        "dedicated schema/contract evaluator",
+        "stale-lease recovery",
+        "cross-domain asset generation",
+        "collection-ledger evidence",
+        "package/service/container/workflow runtime deliverable construction is not_tested",
+    ]
+    assert all(
+        any(fragment in limitation.lower() for limitation in journey_limitations)
+        for fragment in required_limitation_fragments
+    )
