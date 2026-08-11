@@ -2823,3 +2823,44 @@ Not accepted from Spark:
 - J19 TMUX UI `P22-REPAIR-130` was not accepted because the Spark selector
   skipped before tmux execution with `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS`
   unset. It still needs a gated rerun plus a tmux availability decision.
+
+Configured rerun after explicit user authorization: root configured the local
+environment for live-provider, serial TMUX, bundled Node, bundled node modules,
+and installed Chrome, then reran the affected journey selectors. CI remained
+out of scope.
+
+Validation:
+
+- Root configured rerun result:
+  `.codex-tmp/phase22-worker-results/root-configured-rerun/result.json`.
+- J02 live/network selector:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j02_live_coding_task.py::test_p22_j02_live_coding_task --basetemp .codex-tmp/pytest/root-j02-live-configured-basetemp -o cache_dir=.codex-tmp/pytest/root-j02-live-configured-cache`
+  -> 1 skipped with journey status `ENVIRONMENT_BLOCKED`; accepted evidence:
+  `outputs/phase22-real-journeys/p22j02-20260811T134511Z-5288/journey-result.json`.
+  Live/network authorization variables were set, so the prior authorization
+  gap is superseded. The remaining blocker is `tmux is not available on PATH`.
+- J16 TMUX requirements-builder selector:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j16_tmux_requirements_builder.py::test_p22_j16_tmux_requirements_builder_real_user_defect_repair --basetemp .codex-tmp/pytest/root-j16-tmux-configured-basetemp -o cache_dir=.codex-tmp/pytest/root-j16-tmux-configured-cache`
+  -> 1 skipped with journey status `ENVIRONMENT_BLOCKED`; accepted evidence:
+  `outputs/phase22-real-journeys/p22-j16-20260811T134558Z-36492/journey-result.json`.
+  The remaining blocker is `tmux is not available on PATH`.
+- J17 TMUX capsule-operator selector:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j17_tmux_capsule_operator_core.py::test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint --basetemp .codex-tmp/pytest/root-j17-tmux-configured-basetemp -o cache_dir=.codex-tmp/pytest/root-j17-tmux-configured-cache`
+  -> 1 skipped with journey status `ENVIRONMENT_BLOCKED`; accepted evidence:
+  `outputs/phase22-real-journeys/p22-j17-20260811T134558Z-19800/journey-result.json`.
+  The remaining blocker is `tmux is not available on PATH`.
+- J19 TMUX UI/account/channel selector:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j19_tmux_ui_account_channels.py::test_p22_j19_tmux_ui_account_channels --basetemp .codex-tmp/pytest/root-j19-tmux-configured-basetemp -o cache_dir=.codex-tmp/pytest/root-j19-tmux-configured-cache`
+  -> 1 passed with accepted evidence:
+  `.codex-tmp/pytest/root-j19-tmux-configured-basetemp/test_p22_j19_tmux_ui_account_c0/p22-j19/j19-result.json`.
+  Because `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS` was set, the prior gate-unset
+  rejection for `P22-REPAIR-130` is superseded. The accepted per-Level-2
+  statuses are: User Profile Management `PASS`; Privacy & Personal Data
+  Controls `PASS_WITH_KNOWN_LIMITATIONS`; Wechat
+  `PASS_WITH_KNOWN_LIMITATIONS`; GUI `ENVIRONMENT_BLOCKED`; Windows App
+  `FAIL`.
+
+Current blocker after configured rerun: this Windows host still has no `tmux`
+on PATH. To turn J02/J16/J17 from `ENVIRONMENT_BLOCKED` into executable
+journeys, rerun them from a Linux/WSL environment with tmux installed or expose
+a compatible tmux binary on PATH.
