@@ -1,4 +1,5 @@
 from pathlib import Path
+from copy import deepcopy
 
 from evaluators.scientific import experiment_plan_gate
 from evaluators.scientific.common import load_json
@@ -22,3 +23,116 @@ def test_experiment_plan_gate_rejects_missing_plan_details():
     joined = " ".join(result.reasons)
     assert "metrics" in joined
     assert "procedure" in joined
+
+
+def test_experiment_plan_gate_accepts_complete_verification_ready_contract():
+    payload = deepcopy(load_json(FIXTURES / "pass/experiment_plan.json"))
+    plan = payload["outputs"]["experiment_plan"]
+    plan.update(
+        {
+            "verification_contract_version": "1",
+            "readiness_profile": "human_approved_local",
+            "workspace_root": "workspace",
+            "runner": {"path": "workspace/run.py"},
+            "dataset": {"path": "samples.csv", "format": "csv", "role": "evaluation"},
+            "variants": [
+                {"name": "baseline", "description": "case-sensitive classifier"},
+                {"name": "normalization", "description": "normalized classifier"},
+            ],
+            "thresholds": [{"metric": "accuracy_uplift", "operator": ">=", "value": 0.2}],
+            "random_seed": 7,
+            "stopping_conditions": ["all rows processed", "timeout at 60 seconds"],
+            "command_argv": ["python3", "run.py", "samples.csv", "result.json"],
+            "network_access": "denied",
+            "write_scope": ["workspace"],
+            "execution_mode": "human_approved",
+            "approval_required": True,
+            "approval_preflight": {
+                "status": "ready",
+                "approval_state": "approved_pending_runtime",
+                "command_authorized": True,
+                "before_state_ready": True,
+            },
+            "execution_ready": True,
+        }
+    )
+
+    result = experiment_plan_gate.evaluate(payload)
+
+    assert result.ok is True
+
+
+def test_experiment_plan_gate_rejects_false_ready_claim_without_complete_preflight():
+    payload = deepcopy(load_json(FIXTURES / "pass/experiment_plan.json"))
+    plan = payload["outputs"]["experiment_plan"]
+    plan.update(
+        {
+            "verification_contract_version": "1",
+            "readiness_profile": "human_approved_local",
+            "workspace_root": "workspace",
+            "runner": {"path": "workspace/run.py"},
+            "dataset": {"path": "samples.csv", "format": "csv", "role": "evaluation"},
+            "variants": [{"name": "baseline", "description": "only one variant"}],
+            "thresholds": [],
+            "random_seed": 7,
+            "stopping_conditions": [],
+            "command_argv": ["python3", "run.py"],
+            "network_access": "denied",
+            "write_scope": ["workspace"],
+            "execution_mode": "human_approved",
+            "approval_required": True,
+            "approval_preflight": {
+                "status": "incomplete",
+                "approval_state": "approved_missing_preflight",
+                "command_authorized": False,
+                "before_state_ready": False,
+            },
+            "execution_ready": True,
+        }
+    )
+
+    result = experiment_plan_gate.evaluate(payload)
+
+    assert result.ok is False
+    joined = " ".join(result.reasons)
+    assert "variants" in joined
+    assert "thresholds" in joined
+    assert "stopping_conditions" in joined
+    assert "execution_ready=true" in joined
+
+
+def test_experiment_plan_gate_keeps_legacy_plan_with_incidental_metadata_compatible():
+    payload = deepcopy(load_json(FIXTURES / "pass/experiment_plan.json"))
+    payload["outputs"]["experiment_plan"].update(
+        {
+            "dataset": {"path": "legacy-samples.csv", "format": "csv", "role": "diagnostic metadata"},
+            "random_seed": 11,
+            "source_context": {"legacy": True},
+        }
+    )
+
+    result = experiment_plan_gate.evaluate(payload)
+
+    assert result.ok is True
+
+
+def test_experiment_plan_gate_rejects_legacy_ready_claim_without_discriminator():
+    payload = deepcopy(load_json(FIXTURES / "pass/experiment_plan.json"))
+    payload["outputs"]["experiment_plan"].update(
+        {
+            "execution_ready": True,
+            "approval_preflight": {
+                "status": "not_required",
+                "approval_state": "not_required",
+                "command_authorized": True,
+                "before_state_ready": True,
+            },
+        }
+    )
+
+    result = experiment_plan_gate.evaluate(payload)
+
+    assert result.ok is False
+    joined = " ".join(result.reasons)
+    assert "verification_contract_version" in joined
+    assert "readiness_profile" in joined
