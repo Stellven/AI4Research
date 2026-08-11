@@ -36,12 +36,15 @@ def _recompute_metrics(payload: dict) -> dict:
 def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_python: str) -> None:
     rec = JourneyRecorder(repo_root, "P22-J07")
     sandbox = tmp_path / "p22-j07"
-    assets = write_experiment_assets(sandbox / "experiment", phase22_python)
+    durable_workspace = rec.run_dir / "verification-workspace"
+    durable_harness = rec.run_dir / "design-harness"
+    durable_harness.mkdir(parents=True, exist_ok=True)
+    assets = write_experiment_assets(durable_workspace, phase22_python)
     approval_ref = "phase22-local-approval"
     command_argv = [phase22_python, str(assets["runner"]), str(assets["data"]), str(assets["result"])]
-    write_json(assets["result"], {})
+    assert not assets["result"].exists()
     write_json(assets["allowlist"], {"command_argvs": [command_argv]})
-    experiment_contract = sandbox / "experiment-contract.json"
+    experiment_contract = rec.run_dir / "verification-contract.json"
     experiment_contract.write_text(
         json.dumps(
             {
@@ -106,6 +109,12 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
             "p22-j07-exp-design",
         ],
         timeout=90,
+        extra_env={
+            "HARNESS_DIR": str(durable_harness),
+            "SOLAR_AUTOSCI_OUTPUT_HARNESS": str(durable_harness),
+            "AUTOSCI_ARTIFACT_ROOT": str(durable_harness / "artifacts" / "autosci"),
+            "SCIENTIFIC_ARTIFACT_ROOT": str(durable_harness / "artifacts" / "scientific"),
+        },
     )
     plan_ev = action_evidence(plan, "design_experiment")
     plan_payload = load_json(plan_ev) if plan_ev else {}
@@ -280,10 +289,29 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
         experiment_plan.get("dataset", {}).get("path") == str(assets["data"])
         and experiment_plan.get("runner", {}).get("path") == str(assets["runner"])
         and str(assets["result"]) in (experiment_plan.get("expected_artifacts") or [])
+        and all(
+            Path(path).resolve().is_relative_to(rec.run_dir.resolve()) and Path(path).is_file()
+            for path in (assets["runner"], assets["data"], assets["result"], assets["allowlist"], experiment_contract)
+        )
         and replay_proc.returncode == 0
         and replay_payload.get("accuracy_uplift") == result_payload.get("accuracy_uplift")
         and len(replay_payload.get("details") or []) == len(result_payload.get("details") or []),
-        {"replay_exit": replay_proc.returncode, "dataset": experiment_plan.get("dataset"), "runner": experiment_plan.get("runner"), "expected": experiment_plan.get("expected_artifacts")},
+        {
+            "replay_exit": replay_proc.returncode,
+            "durable_run_dir": str(rec.run_dir),
+            "dataset": experiment_plan.get("dataset"),
+            "runner": experiment_plan.get("runner"),
+            "expected": experiment_plan.get("expected_artifacts"),
+        },
+    )
+    rec.add_assertion(
+        "expected_artifact_generated_after_execution",
+        assets["result"].is_file()
+        and assets["result"].stat().st_size > 2
+        and result_payload.get("schema") == "phase22.local_text_experiment.v1"
+        and isinstance(result_payload.get("details"), list)
+        and bool(result_payload.get("details")),
+        {"path": str(assets["result"]), "bytes": assets["result"].stat().st_size if assets["result"].exists() else 0},
     )
     rec.add_assertion("local_subprocess_exit_zero", experiment_proc.returncode == 0, experiment_proc.returncode)
     rec.add_assertion(
@@ -320,6 +348,7 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
         "executed_command_matches_plan_allowlist",
         "plan_semantics_match_declared_thresholds",
         "plan_artifact_references_are_replayable",
+        "expected_artifact_generated_after_execution",
         "local_subprocess_exit_zero",
         "raw_metrics_recomputed_from_samples",
         "accuracy_uplift_at_least_20pp",

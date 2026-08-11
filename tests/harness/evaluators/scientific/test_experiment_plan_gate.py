@@ -114,3 +114,25 @@ def test_experiment_plan_gate_keeps_legacy_plan_with_incidental_metadata_compati
     result = experiment_plan_gate.evaluate(payload)
 
     assert result.ok is True
+
+
+def test_experiment_plan_gate_rejects_legacy_ready_claim_without_discriminator():
+    payload = deepcopy(load_json(FIXTURES / "pass/experiment_plan.json"))
+    payload["outputs"]["experiment_plan"].update(
+        {
+            "execution_ready": True,
+            "approval_preflight": {
+                "status": "not_required",
+                "approval_state": "not_required",
+                "command_authorized": True,
+                "before_state_ready": True,
+            },
+        }
+    )
+
+    result = experiment_plan_gate.evaluate(payload)
+
+    assert result.ok is False
+    joined = " ".join(result.reasons)
+    assert "verification_contract_version" in joined
+    assert "readiness_profile" in joined

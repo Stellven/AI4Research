@@ -2277,7 +2277,7 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
     expected = workspace / "result.json"
     runner.write_text("print('bounded')\n", encoding="utf-8")
     before.write_text("value\n1\n", encoding="utf-8")
-    expected.write_text("{}\n", encoding="utf-8")
+    assert not expected.exists()
     command_argv = [sys.executable, str(runner), str(before), str(expected)]
     allowlist.write_text(
         json.dumps({"command_argvs": [command_argv]}),
@@ -2344,6 +2344,7 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
     assert boundary["verification_contract_complete"] is True
     assert boundary["approval_preflight"]["command_authorized"] is True
     assert plan["execution_ready"] is True
+    assert not expected.exists()
     assert plan["dataset"]["path"]
     assert len(plan["variants"]) == 2
     assert plan["thresholds"]
@@ -2430,6 +2431,10 @@ def test_autosci_skill_shim_exp_design_rejects_unrelated_command_allowlist(tmp_p
         ("unknown_mode", "approval exemption is limited to explicit deterministic fixture mode"),
         ("outside_workspace", "runner, dataset, and expected artifacts must remain inside workspace root"),
         ("dataset_before_mismatch", "before-state evidence must match the declared dataset exactly"),
+        (
+            "missing_output_parent",
+            "expected artifact targets must have an existing writable parent and must not be directories",
+        ),
     ],
 )
 def test_autosci_skill_shim_exp_design_readiness_fail_closed(
@@ -2444,7 +2449,6 @@ def test_autosci_skill_shim_exp_design_readiness_fail_closed(
     expected = workspace / "result.json"
     runner.write_text("print('safe fixture')\n", encoding="utf-8")
     dataset.write_text("value\n1\n", encoding="utf-8")
-    expected.write_text("{}\n", encoding="utf-8")
     before = dataset
     execution_mode = "fixture"
     command_argv = [sys.executable, str(runner), str(dataset), str(expected)]
@@ -2470,6 +2474,10 @@ def test_autosci_skill_shim_exp_design_readiness_fail_closed(
     elif case == "dataset_before_mismatch":
         before = workspace / "different.csv"
         before.write_text("value\n2\n", encoding="utf-8")
+    elif case == "missing_output_parent":
+        expected = workspace / "missing-output-dir" / "result.json"
+        command_argv = [sys.executable, str(runner), str(dataset), str(expected)]
+        allowlist_payload = {"command_argvs": [list(command_argv)]}
 
     allowlist = tmp_path / f"{case}-allowlist.json"
     allowlist.write_text(json.dumps(allowlist_payload), encoding="utf-8")

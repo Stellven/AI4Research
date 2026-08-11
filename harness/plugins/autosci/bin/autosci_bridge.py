@@ -9406,11 +9406,23 @@ def _verification_contract_safety(
         reasons.append("runner path is missing or does not exist")
     if not dataset or not dataset.is_file():
         reasons.append("dataset path is missing or does not exist")
-    if not expected or not all(path.is_file() for path in expected):
-        reasons.append("expected artifact paths must exist before admission")
+    expected_targets_writable = bool(expected) and all(
+        (path.is_file() and os.access(path, os.W_OK))
+        if path.exists()
+        else path.parent.is_dir() and os.access(path.parent, os.W_OK)
+        for path in expected
+    )
+    if not expected_targets_writable:
+        reasons.append("expected artifact targets must have an existing writable parent and must not be directories")
     if workspace and any(not _path_is_under(path, workspace) for path in asset_paths):
         reasons.append("runner, dataset, and expected artifacts must remain inside workspace root")
-    if not write_scope or (workspace and any(not _path_is_under(path, workspace) for path in write_scope)):
+    write_scope_restricted = bool(write_scope) and all(
+        path.is_dir()
+        and os.access(path, os.W_OK)
+        and (not workspace or _path_is_under(path, workspace))
+        for path in write_scope
+    )
+    if not write_scope_restricted:
         reasons.append("write scope is missing or escapes workspace root")
     if expected and write_scope and any(not any(_path_is_under(path, root) for root in write_scope) for path in expected):
         reasons.append("expected artifacts are outside the declared write scope")
@@ -9436,11 +9448,9 @@ def _verification_contract_safety(
         "workspace_allowed": workspace_allowed,
         "runner_exists": bool(runner and runner.is_file()),
         "dataset_exists": bool(dataset and dataset.is_file()),
-        "expected_artifacts_exist": bool(expected and all(path.is_file() for path in expected)),
+        "expected_artifact_targets_writable": expected_targets_writable,
         "network_denied": verification_contract.get("network_access") == "denied",
-        "write_scope_restricted": bool(write_scope) and not any(
-            workspace and not _path_is_under(path, workspace) for path in write_scope
-        ),
+        "write_scope_restricted": write_scope_restricted,
         "before_dataset_matches": before_dataset_matches,
         "command_binds_declared_assets": runner_matches and dataset_matches and expected_matches,
     }
@@ -9495,12 +9505,20 @@ def _experiment_design_final_execution_boundary(
     command_authorized, command_authorization_reason = _strict_experiment_command_allowlisted(command_argv, contract)
     fixture_exemption = execution_mode == "fixture" and readiness_profile == "deterministic_local_fixture"
     human_profile = execution_mode == "human_approved" and readiness_profile == "human_approved_local"
+    effective_approval_state = (
+        str(contract.get("approval_state") or "N/A")
+        if approval_required
+        else "not_required"
+        if fixture_exemption
+        else "approval_required"
+    )
+    approval_gate_satisfied = approval_ready if approval_required else fixture_exemption
     preflight_ready = safety_ready and command_authorized and (
         approval_ready if approval_required else fixture_exemption
     )
     approval_preflight = {
         "status": "ready" if approval_required and preflight_ready else "not_required" if fixture_exemption and preflight_ready else "incomplete",
-        "approval_state": str(contract.get("approval_state") or "N/A") if approval_required else "not_required" if fixture_exemption else "approval_required",
+        "approval_state": effective_approval_state,
         "approval_ref": str(contract.get("approval_ref") or ""),
         "allowlist_ready": bool(contract.get("allowlist_ready")),
         "before_state_ready": bool(contract.get("before_ready")),
@@ -9537,8 +9555,8 @@ def _experiment_design_final_execution_boundary(
         "target_ref": target_ref or "N/A",
         "execution_mode": execution_mode,
         "approval_required": approval_required,
-        "approval_state": str(contract.get("approval_state") or "N/A"),
-        "approval_ready_for_execution": approval_ready,
+        "approval_state": effective_approval_state,
+        "approval_ready_for_execution": approval_gate_satisfied,
         "review_llm_status": str(review_llm.get("status") or "missing"),
         "review_llm_completed": review_completed,
         "review_evidence_ids": _unique_strings([str(item) for item in review_llm.get("evidence_ids") or []]),
@@ -9658,7 +9676,6 @@ def _write_experiment_poc_assets(
         )
         + "\n",
     )
-    _write_text_sidecar(result_path, "{}\n")
     command = [_path_token(sys.executable), _path_token(runner_path), _path_token(data_path), _path_token(result_path)]
     command_text = " ".join(shlex.quote(item) for item in command)
     allowlist = {

@@ -45,7 +45,15 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
     require_non_empty_list(plan.get("success_criteria"), "outputs.experiment_plan.success_criteria", reasons)
     # Only an explicit version/profile discriminator opts into the complete
     # readiness contract. Incidental legacy metadata must remain compatible.
-    contract_declared = plan.get("verification_contract_version") is not None or plan.get("readiness_profile") is not None
+    preflight_claim = plan.get("approval_preflight")
+    readiness_asserted = plan.get("execution_ready") is True or (
+        isinstance(preflight_claim, dict) and preflight_claim.get("status") in {"ready", "not_required"}
+    )
+    contract_declared = (
+        plan.get("verification_contract_version") is not None
+        or plan.get("readiness_profile") is not None
+        or readiness_asserted
+    )
     if contract_declared:
         if plan.get("verification_contract_version") != "1":
             reasons.append("outputs.experiment_plan.verification_contract_version must be 1")
