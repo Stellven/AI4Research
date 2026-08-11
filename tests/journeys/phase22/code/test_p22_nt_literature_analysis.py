@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,8 +47,8 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
+def _read_json(path: Path | None) -> dict[str, Any]:
+    if path is None or not path.is_file():
         return {}
     try:
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -92,16 +94,52 @@ def _run_command(
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     started = time.monotonic()
     started_at = _utc_now()
-    proc = subprocess.run(
+    timed_out = False
+    popen_options: dict[str, Any] = {}
+    if os.name == "nt":
+        popen_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        popen_options["start_new_session"] = True
+    process = subprocess.Popen(
         argv,
         cwd=cwd,
         env=env,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        timeout=timeout,
-        check=False,
+        **popen_options,
     )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+        proc = subprocess.CompletedProcess(argv, int(process.returncode or 0), stdout, stderr)
+    except subprocess.TimeoutExpired as exc:
+        timed_out = True
+
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        stdout, stderr = process.communicate()
+
+        def timeout_text(value: str | bytes | None) -> str:
+            if isinstance(value, bytes):
+                return value.decode("utf-8", errors="replace")
+            return value or ""
+
+        proc = subprocess.CompletedProcess(
+            argv,
+            124,
+            timeout_text(stdout or exc.stdout),
+            f"{timeout_text(stderr or exc.stderr)}\nCommand timed out after {timeout} seconds.\n",
+        )
     stdout_path = stdout_dir / f"{label}.stdout.txt"
     stderr_path = stderr_dir / f"{label}.stderr.txt"
     stdout_path.write_text(_redact(proc.stdout), encoding="utf-8", errors="replace")
@@ -116,6 +154,7 @@ def _run_command(
         "duration_seconds": round(time.monotonic() - started, 3),
         "stdout_path": str(stdout_path),
         "stderr_path": str(stderr_path),
+        "timed_out": timed_out,
     }
 
 
@@ -158,23 +197,23 @@ def _run_with_rate_limit_retry(
     return final_proc, attempts
 
 
-def _action_evidence(summary: dict[str, Any], action: str) -> Path:
+def _action_evidence(summary: dict[str, Any], action: str) -> Path | None:
     evidence_path = str(summary.get("evidence_path") or "")
     if not evidence_path:
-        return Path()
+        return None
     payload = _read_json(Path(evidence_path))
     actions = payload.get("outputs", {}).get("skill_run", {}).get("actions", [])
     if not isinstance(actions, list):
-        return Path()
+        return None
     for item in actions:
         if isinstance(item, dict) and item.get("action") == action and item.get("evidence_path"):
             return Path(str(item["evidence_path"]))
-    return Path()
+    return None
 
 
-def _copy_evidence(path: Path, artifact_dir: Path, label: str) -> str:
-    if not path.exists():
-        return str(path) if str(path) else ""
+def _copy_evidence(path: Path | None, artifact_dir: Path, label: str) -> str:
+    if path is None or not path.is_file():
+        return str(path) if path is not None else ""
     target = artifact_dir / f"{label}-{path.name}"
     shutil.copy2(path, target)
     return str(target)
@@ -267,11 +306,14 @@ def _extract_product_trends_and_gaps(survey: dict[str, Any]) -> tuple[list[dict[
 
 
 @pytest.mark.live_provider
-def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Path) -> None:
+def test_phase22_not_tested_literature_signal_and_trend_validation(
+    repo_root: Path,
+    request: pytest.FixtureRequest,
+) -> None:
     fixture_root = repo_root / "tests" / "journeys" / "phase22" / "fixtures" / "not_tested" / "literature"
-    request = _read_json(fixture_root / "literature_analysis_request.json")
+    analysis_request = _read_json(fixture_root / "literature_analysis_request.json")
     expectation = _read_json(fixture_root / "literature_analysis_expectation.json")
-    run_id = f"{request.get('run_id_prefix', 'nt-literature')}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{os.getpid()}"
+    run_id = f"{analysis_request.get('run_id_prefix', 'nt-literature')}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{os.getpid()}"
     run_dir = repo_root / "outputs" / "phase22-not-tested" / BATCH_ID / run_id
     stdout_dir = run_dir / "stdout"
     stderr_dir = run_dir / "stderr"
@@ -279,7 +321,12 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
     for path in (stdout_dir, stderr_dir, artifact_dir):
         path.mkdir(parents=True, exist_ok=True)
 
-    sandbox = repo_root / ".codex-tmp" / "homes" / BATCH_ID / run_id
+    # Keep the isolated live-provider home short on Windows. The repository
+    # worktree plus the run/action identifiers can otherwise exceed MAX_PATH
+    # before the production entrypoint writes its first progress artifact.
+    sandbox_context = tempfile.TemporaryDirectory(prefix="p22-nt-literature-")
+    request.addfinalizer(sandbox_context.cleanup)
+    sandbox = Path(sandbox_context.name)
     env = bootstrap_live_environment(repo_root, os.environ.copy())
     env.update(
         {
@@ -302,9 +349,9 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
 
     py = python_executable(repo_root)
     shim = repo_root / "harness" / "plugins" / "autosci" / "bin" / "autosci_skill_shim.py"
-    topic = str(request["topic"])
-    limit = int(request["limit"])
-    anchor = str(request["anchor"])
+    topic = str(analysis_request["topic"])
+    limit = int(analysis_request["limit"])
+    anchor = str(analysis_request["anchor"])
 
     command_records: list[dict[str, Any]] = []
     discover_proc, discover_attempts = _run_with_rate_limit_retry(
@@ -336,10 +383,10 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
     discovery = _read_json(discovery_path)
     durable_discovery = _copy_evidence(discovery_path, artifact_dir, "discover")
 
-    survey_path = Path()
+    survey_path: Path | None = None
     survey: dict[str, Any] = {}
     durable_survey = ""
-    if discovery_path.exists():
+    if discovery_path is not None and discovery_path.is_file():
         survey_proc, survey_attempts = _run_with_rate_limit_retry(
             label="02-survey-from-discovery",
             argv=[
@@ -370,10 +417,10 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
         durable_survey = _copy_evidence(survey_path, artifact_dir, "survey")
 
     research_summary: dict[str, Any] = {}
-    research_path = Path()
+    research_path: Path | None = None
     durable_research = ""
-    if request.get("run_research_probe"):
-        seed_url = str(request.get("research_seed_url") or "").strip()
+    if analysis_request.get("run_research_probe"):
+        seed_url = str(analysis_request.get("research_seed_url") or "").strip()
         research_proc, research_attempts = _run_with_rate_limit_retry(
             label="03-research-real-data-probe",
             argv=[
@@ -413,7 +460,12 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
     signal_records = _extract_product_signal_records(discovery, survey)
     signal_types = sorted({str(item.get("type")) for item in signal_records if item.get("type")})
     trends, gaps = _extract_product_trends_and_gaps(survey)
-    research_run = _read_json(Path(str(research_path)).with_name("real-data-workspace") / "real-data-research-run.json")
+    research_run_path = (
+        research_path.with_name("real-data-workspace") / "real-data-research-run.json"
+        if research_path is not None
+        else None
+    )
+    research_run = _read_json(research_run_path)
 
     technical_conditions = [
         {
@@ -423,7 +475,7 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
         },
         {
             "name": "at_least_three_real_public_sources",
-            "passed": len(real_sources) >= int(request["min_real_sources"]),
+            "passed": len(real_sources) >= int(analysis_request["min_real_sources"]),
             "detail": {"source_count": len(real_sources), "candidate_ids": [_candidate_id(item) for item in real_sources]},
         },
         {
@@ -435,8 +487,8 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
         },
         {
             "name": "structured_method_claim_evidence_signals_present",
-            "passed": set(request["required_signal_types"]).issubset(set(signal_types)),
-            "detail": {"required": request["required_signal_types"], "observed": signal_types, "record_count": len(signal_records)},
+            "passed": set(analysis_request["required_signal_types"]).issubset(set(signal_types)),
+            "detail": {"required": analysis_request["required_signal_types"], "observed": signal_types, "record_count": len(signal_records)},
         },
         {
             "name": "important_signals_trace_to_sources",
@@ -457,16 +509,16 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
         {
             "name": "survey_production_entrypoint_completed",
             "passed": survey.get("status") == "completed",
-            "detail": {"status": survey.get("status"), "path": str(survey_path)},
+            "detail": {"status": survey.get("status"), "path": str(survey_path or "")},
         },
         {
             "name": "cross_source_trend_present",
-            "passed": len(trends) >= int(request["min_trends"]),
+            "passed": len(trends) >= int(analysis_request["min_trends"]),
             "detail": {"trend_count": len(trends), "trends": trends},
         },
         {
             "name": "gap_or_uncertainty_with_source_basis_present",
-            "passed": len(gaps) >= int(request["min_gaps"]),
+            "passed": len(gaps) >= int(analysis_request["min_gaps"]),
             "detail": {"gap_count": len(gaps), "gaps": gaps},
         },
         {
@@ -503,7 +555,7 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
             survey_path,
             research_path,
         )
-        if str(path)
+        if path and str(path)
     ]
     limitations = [
         "Only Semantic Scholar anchor/reference discovery was provider-verified in this run.",
@@ -572,7 +624,7 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
             "provider_channels": provider_channels,
             "rate_limit_retry_attempts": [item for item in command_records if item.get("rate_limit_retry")],
         },
-        "request": request,
+        "request": analysis_request,
         "observed": {
             "real_source_count": len(real_sources),
             "candidate_ids": [_candidate_id(item) for item in real_sources],
@@ -604,4 +656,4 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(repo_root: Pa
     )
 
     assert worker_result_path.exists()
-    assert len(real_sources) >= int(request["min_real_sources"])
+    assert len(real_sources) >= int(analysis_request["min_real_sources"])
