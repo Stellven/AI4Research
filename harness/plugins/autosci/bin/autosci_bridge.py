@@ -666,6 +666,22 @@ def _refresh_approval_contract(contract: dict[str, Any]) -> dict[str, Any]:
     runtime_entries = contract.get("runtime_evidence") if isinstance(contract.get("runtime_evidence"), list) else []
     before_entries = contract.get("before_artifacts") if isinstance(contract.get("before_artifacts"), list) else []
     after_entries = contract.get("after_artifacts") if isinstance(contract.get("after_artifacts"), list) else []
+    for entries in (allowlist_entries, runtime_entries, before_entries, after_entries):
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            raw_path = str(entry.get("artifact_path") or entry.get("path") or "").strip()
+            if not raw_path:
+                continue
+            candidate = _resolve_harness_path(raw_path)
+            exists = candidate.exists()
+            entry.update(
+                {
+                    "exists": exists,
+                    "kind": "directory" if exists and candidate.is_dir() else "file",
+                    "verifiable": exists,
+                }
+            )
     approved = bool(str(contract.get("approval_ref") or "").strip())
     allowlist_ready = _all_existing(allowlist_entries)
     before_ready = _all_existing(before_entries)
@@ -10253,6 +10269,17 @@ def _action_run_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
             semantic=semantic,
             result_collected=True,
         )
+        evidence.setdefault("artifacts", []).append(
+            _write_experiment_poc_handoff_package(
+                envelope,
+                experiment_id=experiment_id,
+                plan=plan,
+                evidence=evidence,
+                contract=contract,
+                semantic=semantic,
+                executor_result=executor_result,
+            )
+        )
         return _attach_policy_decision(evidence, policy_decision)
 
     raw["experiment_id"] = str(raw.get("experiment_id") or experiment_id)
@@ -17706,6 +17733,81 @@ def _write_experiment_lease_report(
     }
     rel = _write_json_sidecar(_output_dir(envelope, action) / "experiment_execution_lease_report.json", report)
     return {"type": "experiment_execution_lease_report_json", "path": rel}
+
+
+def _write_experiment_poc_handoff_package(
+    envelope: dict[str, Any],
+    *,
+    experiment_id: str,
+    plan: dict[str, Any],
+    evidence: dict[str, Any],
+    contract: dict[str, Any],
+    semantic: dict[str, Any],
+    executor_result: dict[str, Any],
+) -> dict[str, str]:
+    outputs = evidence.get("outputs") if isinstance(evidence.get("outputs"), dict) else {}
+    result = outputs.get("result") if isinstance(outputs.get("result"), dict) else {}
+    inputs = envelope.get("inputs") if isinstance(envelope.get("inputs"), dict) else {}
+    dataset = plan.get("dataset") if isinstance(plan.get("dataset"), dict) else {}
+    runner = plan.get("runner") if isinstance(plan.get("runner"), dict) else {}
+    report_artifacts = [
+        item
+        for item in executor_result.get("report_artifacts") or []
+        if isinstance(item, dict) and str(item.get("path") or "").strip()
+    ]
+    lease_path = next(
+        (
+            str(item.get("path") or "")
+            for item in report_artifacts
+            if item.get("type") == "experiment_execution_lease_report_json"
+        ),
+        "",
+    )
+    expected_artifacts = [str(item) for item in plan.get("expected_artifacts") or [] if str(item).strip()]
+    package = {
+        "schema": "autosci_experiment_poc_handoff.v1",
+        "status": "completed",
+        "experiment_id": experiment_id,
+        "summary": "Product-generated experiment assets were approved, executed, evaluated, and consolidated for downstream validation.",
+        "production_entrypoints": ["exp-design", "exp-run"],
+        "environment": {
+            "runtime": "python",
+            "python_version": sys.version.split()[0],
+            "network_access": str(plan.get("network_access") or "denied"),
+            "dependencies": ["Python standard library"],
+        },
+        "integration": {
+            "approved_command": str((plan.get("command_allowlist") or [""])[0] or ""),
+            "executed_command": str(result.get("command_run") or ""),
+            "approved_argv": [str(item) for item in plan.get("command_argv") or []],
+            "executed_argv": [str(item) for item in executor_result.get("command") or []],
+            "exit_code": executor_result.get("exit_code"),
+            "result_collected": executor_result.get("result_collected") is True,
+        },
+        "conformance": {
+            "approval_contract_verified": contract.get("execution_verified") is True,
+            "runtime_semantic_verified": semantic.get("verified") is True,
+            "runtime_semantic_status": str(semantic.get("status") or "missing"),
+        },
+        "components": {
+            "experiment_plan": str(inputs.get("experiment_plan_evidence") or ""),
+            "runner": str(runner.get("path") or ""),
+            "dataset": str(dataset.get("path") or ""),
+            "allowlist": str((inputs.get("allowlist_evidence") or [""])[0] or ""),
+            "manifest": str(Path(str(runner.get("path") or "")).parent / "poc_manifest.json"),
+            "expected_result": expected_artifacts[0] if expected_artifacts else "",
+            "runtime_evidence": str(executor_result.get("runtime_path") or ""),
+            "result": _rel(executor_result.get("result_path")) if executor_result.get("result_path") else "",
+            "lease_report": lease_path,
+        },
+        "evidence_ids": _unique_strings([str(item) for item in result.get("evidence_ids") or []]),
+        "known_constraints": [
+            "This handoff covers one deterministic local Python POC; it is not evidence for arbitrary package, service, container, or workflow delivery.",
+            "Lease coordination is limited to cooperating AutoSci experiment operators.",
+        ],
+    }
+    rel = _write_json_sidecar(_output_dir(envelope, "run_experiment") / "poc_handoff_package.json", package)
+    return {"type": "experiment_poc_handoff_package_json", "path": rel}
 
 
 def _execute_experiment_if_approved(

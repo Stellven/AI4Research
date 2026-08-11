@@ -140,7 +140,33 @@ def repo_head(repo_root: Path) -> str:
         stderr=subprocess.PIPE,
         check=False,
     )
-    return proc.stdout.strip() if proc.returncode == 0 else f"unavailable: {redact(proc.stderr.strip())}"
+    if proc.returncode == 0:
+        return proc.stdout.strip()
+
+    git_file = repo_root / ".git"
+    if os.name != "nt" and git_file.is_file():
+        pointer = git_file.read_text(encoding="utf-8", errors="replace").strip()
+        if pointer.lower().startswith("gitdir:"):
+            raw_git_dir = pointer.split(":", 1)[1].strip().replace("\\", "/")
+            drive_match = re.match(r"^([A-Za-z]):/(.*)$", raw_git_dir)
+            git_dir = (
+                Path(f"/mnt/{drive_match.group(1).lower()}/{drive_match.group(2)}")
+                if drive_match
+                else (repo_root / raw_git_dir).resolve()
+            )
+            fallback = subprocess.run(
+                ["git", f"--git-dir={git_dir}", f"--work-tree={repo_root}", "rev-parse", "HEAD"],
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            if fallback.returncode == 0:
+                return fallback.stdout.strip()
+            proc = fallback
+    return f"unavailable: {redact(proc.stderr.strip())}"
 
 
 def command_exists(name: str) -> bool:
