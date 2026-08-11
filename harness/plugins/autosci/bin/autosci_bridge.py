@@ -9361,6 +9361,7 @@ def _experiment_design_final_execution_boundary(
     approval_required: bool,
     command_allowlist: list[str],
     expected_artifacts: list[str],
+    verification_contract: dict[str, Any],
 ) -> dict[str, Any]:
     contract = _approval_contract(
         envelope,
@@ -9370,21 +9371,55 @@ def _experiment_design_final_execution_boundary(
     target_resolved = bool(str(target_ref or "").strip())
     review_completed = str(review_llm.get("status") or "") == "completed"
     approval_ready = bool(contract.get("ready_for_execution"))
+    safe_fixture_preflight_ready = bool(contract.get("allowlist_ready")) and bool(contract.get("before_ready"))
     command_handoff_declared = bool(command_allowlist)
     artifact_handoff_declared = bool(expected_artifacts)
+    dataset = verification_contract.get("dataset")
+    variants = verification_contract.get("variants")
+    thresholds = verification_contract.get("thresholds")
+    random_seed = verification_contract.get("random_seed")
+    stopping_conditions = verification_contract.get("stopping_conditions")
+    command_argv = [str(item) for item in verification_contract.get("command_argv") or [] if str(item).strip()]
+    verification_contract_complete = bool(
+        isinstance(dataset, dict)
+        and all(str(dataset.get(key) or "").strip() for key in ("path", "format", "role"))
+        and isinstance(variants, list)
+        and len(variants) >= 2
+        and isinstance(thresholds, list)
+        and bool(thresholds)
+        and isinstance(random_seed, int)
+        and isinstance(stopping_conditions, list)
+        and bool(stopping_conditions)
+        and command_argv
+    )
+    command_authorized, command_authorization_reason = _command_allowlisted(command_argv, contract)
+    preflight_ready = (approval_ready if approval_required else safe_fixture_preflight_ready) and command_authorized
+    approval_preflight = {
+        "status": "ready" if approval_required and preflight_ready else "not_required" if preflight_ready else "incomplete",
+        "approval_state": str(contract.get("approval_state") or "N/A") if approval_required else "not_required",
+        "approval_ref": str(contract.get("approval_ref") or ""),
+        "allowlist_ready": bool(contract.get("allowlist_ready")),
+        "before_state_ready": bool(contract.get("before_ready")),
+        "command_authorized": command_authorized,
+        "command_authorization_reason": command_authorization_reason,
+    }
     blocking_reasons: list[str] = []
     if not target_resolved:
         blocking_reasons.append("target idea/claim evidence was not resolved")
-    if not review_completed:
+    if approval_required and not review_completed:
         blocking_reasons.append("completed Review LLM design validation is missing")
-    if not approval_required:
-        blocking_reasons.append("experiment execution approval is not required by this plan")
-    if not approval_ready:
+    if approval_required and not approval_ready:
         blocking_reasons.append("approved runtime preflight contract is incomplete")
+    if not approval_required and not safe_fixture_preflight_ready:
+        blocking_reasons.append("bounded fixture command allowlist or before-state preflight is incomplete")
     if not command_handoff_declared:
         blocking_reasons.append("runtime command handoff is missing")
     if not artifact_handoff_declared:
         blocking_reasons.append("expected artifact handoff is missing")
+    if not verification_contract_complete:
+        blocking_reasons.append("dataset, variants, thresholds, seed, stopping conditions, or exact command are incomplete")
+    if command_argv and not command_authorized:
+        blocking_reasons.append("planned runtime command is not authorized by the supplied allowlist evidence")
     execution_ready = not blocking_reasons
     return {
         "schema": "autosci_experiment_design_final_execution_boundary.v1",
@@ -9403,6 +9438,8 @@ def _experiment_design_final_execution_boundary(
         "command_allowlist": command_allowlist,
         "artifact_handoff_declared": artifact_handoff_declared,
         "expected_artifacts": expected_artifacts,
+        "verification_contract_complete": verification_contract_complete,
+        "approval_preflight": approval_preflight,
         "blocking_reasons": blocking_reasons,
         "limitations": [] if execution_ready else [
             "Experiment design final execution readiness requires resolved target evidence, completed Review LLM validation, approval preflight, command handoff, and expected artifact handoff."
@@ -9488,6 +9525,7 @@ def _write_experiment_poc_assets(
                 "    outcome = 'supports' if reduction >= 0.5 else 'refutes'",
                 "    result = {",
                 "        'experiment_id': '" + experiment_id.replace("'", "\\'") + "',",
+                "        'random_seed': 0,",
                 "        'outcome': outcome,",
                 "        'metrics': [",
                 "            {'name': 'baseline_error_total', 'value': baseline},",
@@ -9558,6 +9596,20 @@ def _write_experiment_poc_assets(
         "manifest": manifest,
         "allowlist": allowlist,
         "usability": usability,
+        "verification_contract": {
+            "dataset": {"path": _rel(data_path), "format": "csv", "role": "bounded evaluation input"},
+            "variants": [
+                {"name": "baseline", "description": "Unmodified baseline error counts from each input row."},
+                {"name": "variant", "description": "Candidate variant error counts from each input row."},
+            ],
+            "thresholds": [{"metric": "error_reduction_fraction", "operator": ">=", "value": 0.5}],
+            "random_seed": 0,
+            "stopping_conditions": [
+                "Stop after every declared input row is processed.",
+                "Stop with failure if the bounded process exceeds the declared timeout.",
+            ],
+            "command_argv": command,
+        },
         "artifacts": [
             {"type": "poc_runtime_runner", "path": _rel(runner_path)},
             {"type": "poc_input_dataset", "path": _rel(data_path)},
@@ -9599,6 +9651,7 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
             approval_required=False,
             command_allowlist=[],
             expected_artifacts=[],
+            verification_contract={},
         )
         boundary_artifact = _write_experiment_design_boundary(envelope, boundary)
         return convert_experiment_plan({
@@ -9678,6 +9731,8 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
         limitations.append("Review LLM design validation evidence is attached; execution still requires explicit approval/runtime evidence.")
     elif _input_path_values(inputs, "review_llm_evidence", "review_evidence", "artifact_review_evidence"):
         limitations.append("Supplied Review LLM design validation evidence did not complete.")
+    elif fixture_plan:
+        limitations.append("Review LLM validation is not required for the deterministic local fixture design; non-fixture execution remains approval-gated.")
     else:
         limitations.append("Review LLM design validation was not supplied.")
     native_experiment_id = _slug(target_ref)
@@ -9695,6 +9750,19 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
         "experiment_run.log",
     ]
     command_allowlist = [str(poc_assets["manifest"]["command"])]
+    verification_contract = dict(poc_assets["verification_contract"])
+    supplied_contract = _load_optional_evidence(inputs.get("experiment_contract"))
+    if supplied_contract:
+        verification_contract = {
+            key: supplied_contract.get(key)
+            for key in ("dataset", "variants", "thresholds", "random_seed", "stopping_conditions", "command_argv")
+        }
+        supplied_allowlist = [str(item) for item in supplied_contract.get("command_allowlist") or [] if str(item).strip()]
+        if supplied_allowlist:
+            command_allowlist = supplied_allowlist
+        supplied_artifacts = [str(item) for item in supplied_contract.get("expected_artifacts") or [] if str(item).strip()]
+        if supplied_artifacts:
+            expected_artifacts = supplied_artifacts
     boundary = _experiment_design_final_execution_boundary(
         envelope,
         target_ref=target_ref,
@@ -9703,6 +9771,7 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
         approval_required=approval_required,
         command_allowlist=command_allowlist,
         expected_artifacts=expected_artifacts,
+        verification_contract=verification_contract,
     )
     boundary_artifact = _write_experiment_design_boundary(envelope, boundary)
     if boundary.get("execution_ready"):
@@ -9741,6 +9810,9 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
         "success_criteria": success_criteria,
         "command_allowlist": command_allowlist,
         "resource_limits": resource_limits,
+        **verification_contract,
+        "approval_preflight": boundary["approval_preflight"],
+        "execution_ready": bool(boundary.get("execution_ready")),
         "review_llm": review_llm,
         "source_context": {"final_execution_boundary": boundary},
         "evidence_ids": _unique_strings([target_ref, *review_evidence_ids]),

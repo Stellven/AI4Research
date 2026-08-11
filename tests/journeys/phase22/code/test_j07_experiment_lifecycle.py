@@ -11,6 +11,7 @@ from journey_runner import (
     runtime_evidence,
     write_code_evidence,
     write_experiment_assets,
+    write_json,
     write_research_claims,
 )
 
@@ -36,17 +37,65 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
     rec = JourneyRecorder(repo_root, "P22-J07")
     sandbox = tmp_path / "p22-j07"
     assets = write_experiment_assets(sandbox / "experiment", phase22_python)
+    approval_ref = "phase22-local-approval"
+    command_argv = [phase22_python, str(assets["runner"]), str(assets["data"]), str(assets["result"])]
+    write_json(assets["allowlist"], {"commands": [" ".join(command_argv)]})
+    experiment_contract = sandbox / "experiment-contract.json"
+    experiment_contract.write_text(
+        json.dumps(
+            {
+                "schema": "phase22.experiment_design_contract.v1",
+                "dataset": {"path": str(assets["data"]), "format": "csv", "role": "local text classification evaluation"},
+                "variants": [
+                    {"name": "baseline", "description": "Case-sensitive prefix classifier."},
+                    {"name": "normalization", "description": "Lowercase and punctuation-normalized classifier."},
+                ],
+                "thresholds": [
+                    {"metric": "accuracy_uplift", "operator": ">=", "value": 0.2},
+                    {"metric": "variant_median_latency_ms", "operator": "<", "value": 20},
+                ],
+                "random_seed": 20260811,
+                "stopping_conditions": [
+                    "Stop after both variants process every declared dataset row.",
+                    "Stop with failure if the local process exits non-zero or exceeds 60 seconds.",
+                ],
+                "command_argv": command_argv,
+                "command_allowlist": [" ".join(command_argv)],
+                "expected_artifacts": [str(assets["result"])],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     plan, _ = run_autosci(
         rec,
         sandbox,
         "exp-design",
-        ["--target", "normalization improves exact-match accuracy", "--run-id", "p22-j07-exp-design"],
+        [
+            "--target",
+            "normalization improves exact-match accuracy",
+            "--allowlist-evidence",
+            str(assets["allowlist"]),
+            "--before-artifact",
+            str(assets["data"]),
+            "--experiment-contract",
+            str(experiment_contract),
+            "--run-id",
+            "p22-j07-exp-design",
+        ],
         timeout=90,
     )
     plan_ev = action_evidence(plan, "design_experiment")
+    plan_payload = load_json(plan_ev) if plan_ev else {}
+    plan_outputs = plan_payload.get("outputs", {}) if isinstance(plan_payload.get("outputs"), dict) else {}
+    experiment_plan = plan_outputs.get("experiment_plan", {}) if isinstance(plan_outputs.get("experiment_plan"), dict) else {}
+    planned_command = [str(item) for item in experiment_plan.get("command_argv") or []]
+    runnable_command = planned_command or [phase22_python, "-c", "raise SystemExit(97)"]
     experiment_proc = rec.run(
         "local-python-experiment",
-        [phase22_python, str(assets["runner"]), str(assets["data"]), str(assets["result"])],
+        runnable_command,
         cwd=repo_root,
         timeout=60,
     )
@@ -62,7 +111,7 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
             "--env",
             "local",
             "--approval-ref",
-            "phase22-local-approval",
+            approval_ref,
             "--allowlist-evidence",
             str(assets["allowlist"]),
             "--runtime-evidence",
@@ -131,6 +180,8 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
     exp_eval_ev = action_evidence(eval_summary, "verify_claim")
     if exp_result_ev:
         rec.add_artifact(exp_result_ev, "autosci_experiment_result")
+    if plan_ev:
+        rec.add_artifact(plan_ev, "verification_ready_experiment_plan")
     if exp_status_ev:
         rec.add_artifact(exp_status_ev, "autosci_experiment_status")
     if exp_eval_ev:
@@ -146,11 +197,37 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
     terminal_state = status_report.get("state")
     eval_payload = load_json(exp_eval_ev) if exp_eval_ev else {}
     eval_verdict = eval_payload.get("outputs", {}).get("verdicts", [{}])[0].get("verdict")
-    plan_payload = load_json(plan_ev) if plan_ev else {}
-    plan_outputs = plan_payload.get("outputs", {}) if isinstance(plan_payload.get("outputs"), dict) else {}
-    experiment_plan = plan_outputs.get("experiment_plan", {}) if isinstance(plan_outputs.get("experiment_plan"), dict) else {}
-    poc_design_ready = bool(experiment_plan.get("command_allowlist")) and bool(experiment_plan.get("expected_artifacts")) and bool(experiment_plan.get("success_criteria"))
+    boundary = (experiment_plan.get("source_context") or {}).get("final_execution_boundary") or {}
+    preflight = experiment_plan.get("approval_preflight") or {}
+    poc_design_ready = bool(experiment_plan.get("execution_ready")) and boundary.get("execution_ready") is True
     rec.add_assertion("exp_design_completed", not plan.get("_error"), plan.get("_error"))
+    rec.add_assertion(
+        "exp_design_verification_contract_complete",
+        all(
+            [
+                isinstance(experiment_plan.get("dataset"), dict),
+                len(experiment_plan.get("variants") or []) >= 2,
+                bool(experiment_plan.get("thresholds")),
+                isinstance(experiment_plan.get("random_seed"), int),
+                bool(experiment_plan.get("stopping_conditions")),
+            ]
+        ),
+        experiment_plan,
+    )
+    rec.add_assertion("exp_design_execution_ready", poc_design_ready, boundary)
+    rec.add_assertion(
+        "exp_design_approval_preflight_ready",
+        preflight.get("status") == "not_required"
+        and preflight.get("approval_state") == "not_required"
+        and preflight.get("command_authorized") is True
+        and preflight.get("before_state_ready") is True,
+        preflight,
+    )
+    rec.add_assertion(
+        "executed_command_matches_plan_allowlist",
+        planned_command == command_argv and " ".join(planned_command) in (experiment_plan.get("command_allowlist") or []),
+        {"planned": planned_command, "executed": command_argv, "allowlist": experiment_plan.get("command_allowlist")},
+    )
     rec.add_assertion("local_subprocess_exit_zero", experiment_proc.returncode == 0, experiment_proc.returncode)
     rec.add_assertion(
         "raw_metrics_recomputed_from_samples",
@@ -174,12 +251,16 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
         "Verification-Ready POC Design",
         "AutoSci exp-design generated command allowlist, expected artifacts, and success criteria for the local POC path",
         Path(plan_ev or plan.get("evidence_path", rec.run_dir)),
-        "partial" if poc_design_ready else False,
+        True if poc_design_ready else False,
     )
     rec.add_l2("Foundation", "Runtime Control Loop & Run Lifecycle Management", "real local Python subprocess produced runtime evidence consumed by exp-run", runtime_path, True)
     rec.add_l2("Workflow", "Experiment Status & Evaluation", "exp-status and exp-eval were invoked against the local experiment evidence", exp_status_ev or rec.run_dir, "partial")
     core_assertions = {
         "exp_design_completed",
+        "exp_design_verification_contract_complete",
+        "exp_design_execution_ready",
+        "exp_design_approval_preflight_ready",
+        "executed_command_matches_plan_allowlist",
         "local_subprocess_exit_zero",
         "raw_metrics_recomputed_from_samples",
         "accuracy_uplift_at_least_20pp",

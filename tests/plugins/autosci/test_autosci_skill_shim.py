@@ -2225,7 +2225,7 @@ def test_autosci_skill_shim_exp_design_attaches_review_llm_validation(tmp_path: 
     boundary = plan["source_context"]["final_execution_boundary"]
     assert boundary["status"] == "execution_readiness_incomplete"
     assert boundary["review_llm_completed"] is True
-    assert "approved runtime preflight contract is incomplete" in boundary["blocking_reasons"]
+    assert "bounded fixture command allowlist or before-state preflight is incomplete" in boundary["blocking_reasons"]
     artifact_types = {artifact["type"] for artifact in evidence["artifacts"]}
     assert "experiment_design_review_llm_evidence_json" in artifact_types
     assert "experiment_design_final_execution_boundary_json" in artifact_types
@@ -2243,7 +2243,7 @@ def test_autosci_skill_shim_exp_design_attaches_review_llm_validation(tmp_path: 
     assert proof_entry["native_skill"] == "exp-design"
     assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
     assert proof_entry["collection_mode"] == "manual_review"
-    assert str(Path(action["evidence_path"]).relative_to(tmp_path)) in proof_entry["evidence_refs"]
+    assert Path(action["evidence_path"]).relative_to(tmp_path).as_posix() in proof_entry["evidence_refs"]
 
 
 def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_preflight(tmp_path: Path) -> None:
@@ -2271,7 +2271,10 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
     )
     allowlist = tmp_path / "exp-design-allowlist.json"
     before = tmp_path / "exp-design-before.json"
-    allowlist.write_text(json.dumps({"executables": ["python3"]}), encoding="utf-8")
+    allowlist.write_text(
+        json.dumps({"executables": [sys.executable, Path(sys.executable).name]}),
+        encoding="utf-8",
+    )
     before.write_text(json.dumps({"workspace": "prepared"}), encoding="utf-8")
 
     proc = run_shim(
@@ -2303,6 +2306,15 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
     assert boundary["execution_ready"] is True
     assert boundary["approval_ready_for_execution"] is True
     assert boundary["review_llm_completed"] is True
+    assert boundary["verification_contract_complete"] is True
+    assert boundary["approval_preflight"]["command_authorized"] is True
+    assert plan["execution_ready"] is True
+    assert plan["dataset"]["path"]
+    assert len(plan["variants"]) == 2
+    assert plan["thresholds"]
+    assert isinstance(plan["random_seed"], int)
+    assert plan["stopping_conditions"]
+    assert plan["command_argv"]
     assert "final_execution_boundary == execution_ready" in plan["success_criteria"]
     artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
     assert "experiment_design_final_execution_boundary_json" in artifacts
@@ -2317,6 +2329,60 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
     assert proof_entry["collection_mode"] == "manual_review"
     assert any("workspace/wiki/experiments/exp-idea-skillgen-ready.md" in ref for ref in proof_entry["evidence_refs"])
     assert any("workspace/wiki/outputs/experiment.md" in ref for ref in proof_entry["evidence_refs"])
+
+
+def test_autosci_skill_shim_exp_design_rejects_unrelated_command_allowlist(tmp_path: Path) -> None:
+    review = tmp_path / "exp-design-review-unrelated.json"
+    review.write_text(
+        json.dumps(
+            {
+                "schema": "artifact_review.v1",
+                "task_id": "review-exp-design-unrelated",
+                "status": "completed",
+                "outputs": {
+                    "review": {
+                        "artifact_id": "artifact:idea-unrelated",
+                        "target": "idea-unrelated",
+                        "review_mode": "review_llm",
+                        "review_available": True,
+                        "recommendation": "accept",
+                        "evidence_ids": ["review:unrelated"],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    allowlist = tmp_path / "unrelated-allowlist.json"
+    before = tmp_path / "before.json"
+    allowlist.write_text(json.dumps({"commands": ["echo unrelated"]}), encoding="utf-8")
+    before.write_text(json.dumps({"workspace": "prepared"}), encoding="utf-8")
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-design",
+        "idea-unrelated",
+        "--review",
+        "--review-llm-evidence",
+        str(review),
+        "--approval-ref",
+        "approval-unrelated",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--before-artifact",
+        str(before),
+        "--run-id",
+        "shim-exp-design-unrelated-allowlist",
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(Path(json.loads(proc.stdout)["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    plan = evidence["outputs"]["experiment_plan"]
+    boundary = plan["source_context"]["final_execution_boundary"]
+    assert plan["execution_ready"] is False
+    assert boundary["approval_preflight"]["command_authorized"] is False
+    assert "planned runtime command is not authorized by the supplied allowlist evidence" in boundary["blocking_reasons"]
 
 
 def test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki(tmp_path: Path) -> None:

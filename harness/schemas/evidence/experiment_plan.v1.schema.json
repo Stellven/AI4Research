@@ -58,7 +58,59 @@
         "metrics": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "procedure": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "approval_required": {"type": "boolean"},
-        "expected_artifacts": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        "expected_artifacts": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "dataset": {
+          "type": "object",
+          "required": ["path", "format", "role"],
+          "additionalProperties": true,
+          "properties": {
+            "path": {"type": "string", "minLength": 1},
+            "format": {"type": "string", "minLength": 1},
+            "role": {"type": "string", "minLength": 1}
+          }
+        },
+        "variants": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "additionalProperties": true,
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "description": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "thresholds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["metric", "operator", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "metric": {"type": "string", "minLength": 1},
+              "operator": {"type": "string", "enum": [">", ">=", "<", "<=", "==", "!="]},
+              "value": {"type": ["number", "integer", "boolean", "string"]}
+            }
+          }
+        },
+        "random_seed": {"type": "integer"},
+        "stopping_conditions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "command_argv": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "approval_preflight": {
+          "type": "object",
+          "required": ["status", "approval_state", "command_authorized", "before_state_ready"],
+          "additionalProperties": true,
+          "properties": {
+            "status": {"type": "string", "enum": ["ready", "incomplete", "not_required"]},
+            "approval_state": {"type": "string", "minLength": 1},
+            "command_authorized": {"type": "boolean"},
+            "before_state_ready": {"type": "boolean"}
+          }
+        },
+        "execution_ready": {"type": "boolean"}
       }
     }
   }

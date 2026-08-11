@@ -36,7 +36,19 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
         "command_allowlist": list(raw.get("command_allowlist") or ["python3 plugins/autosci/bin/autosci_bridge.py run --action run_experiment"]),
         "resource_limits": dict(raw.get("resource_limits") or {"network": "denied", "write_scope": "artifact_dir_only"}),
     }
-    for key in ("review_llm", "evidence_ids", "source_context"):
+    for key in (
+        "review_llm",
+        "evidence_ids",
+        "source_context",
+        "dataset",
+        "variants",
+        "thresholds",
+        "random_seed",
+        "stopping_conditions",
+        "command_argv",
+        "approval_preflight",
+        "execution_ready",
+    ):
         if raw.get(key) is not None:
             plan[key] = raw[key]
     return evidence_base(
