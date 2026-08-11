@@ -24,6 +24,15 @@ def _wsl_path(path: Path) -> str:
     return proc.stdout.strip()
 
 
+def _wsl_executable(path: Path) -> bool:
+    return subprocess.run(
+        ["wsl.exe", "test", "-x", _wsl_path(path)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    ).returncode == 0
+
+
 def test_p22_j25_runtime_deliverable_distribution(
     repo_root: Path, tmp_path: Path, phase22_python: str
 ) -> None:
@@ -87,7 +96,7 @@ def test_p22_j25_runtime_deliverable_distribution(
     canonical_checkout = common_git_path.parent
     runtime_python = canonical_checkout / ".codex-tmp" / "wsl-phase22-venv" / "bin" / "python"
     runtime_bin = canonical_checkout / ".codex-tmp" / "wsl-bin"
-    if not runtime_python.is_file() or not (runtime_bin / "jq").is_file():
+    if not _wsl_executable(runtime_python) or not _wsl_executable(runtime_bin / "jq"):
         rec.add_assertion(
             "configured_wsl_runtime_dependencies_available",
             False,
