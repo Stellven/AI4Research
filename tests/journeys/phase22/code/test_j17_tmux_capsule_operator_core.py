@@ -577,10 +577,27 @@ def _wait_for_reviewing(status_path: Path, timeout_seconds: int) -> tuple[bool, 
         status = str(payload.get("status") or "").lower()
         if status == "reviewing":
             return True, payload
-        if status in {"completed", "failed", "cancelled", "blocked"}:
+        if status in {
+            "completed",
+            "failed",
+            "failed_review",
+            "cancelled",
+            "blocked",
+            "needs_human_review",
+        }:
             return False, payload
         time.sleep(2)
     return False, payload
+
+
+def test_j17_review_wait_stops_at_human_review_boundary(tmp_path: Path) -> None:
+    status_path = tmp_path / "sprint.status.json"
+    _write_json(status_path, {"status": "needs_human_review", "phase": "needs_human"})
+
+    ready, payload = _wait_for_reviewing(status_path, 10)
+
+    assert ready is False
+    assert payload["status"] == "needs_human_review"
 
 
 def _collect_paths(harness_dir: Path, sprint_id: str) -> dict[str, Path]:
