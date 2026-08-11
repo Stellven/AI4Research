@@ -549,6 +549,7 @@ def _latest_operator_result_for_sprint(
     *,
     seen_task_dirs: set[str] | None = None,
     task_id_fragment: str = "",
+    operator_id_fragment: str = "",
 ) -> tuple[Path | None, dict[str, Any]]:
     seen_task_dirs = seen_task_dirs or set()
     for task_dir in _operator_task_dirs(harness_dir):
@@ -558,6 +559,9 @@ def _latest_operator_result_for_sprint(
         envelope = _read_json(task_dir / "envelope.json")
         task_ids = (str(payload.get("task_id") or ""), str(envelope.get("task_id") or ""))
         if task_id_fragment and not any(task_id_fragment in task_id for task_id in task_ids):
+            continue
+        operator_ids = (str(payload.get("operator_id") or ""), str(envelope.get("operator_id") or ""))
+        if operator_id_fragment and not any(operator_id_fragment in operator_id for operator_id in operator_ids):
             continue
         if payload.get("sprint_id") == sprint_id or envelope.get("sprint_id") == sprint_id:
             return task_dir, payload
@@ -571,6 +575,7 @@ def _wait_for_operator_result(
     *,
     seen_task_dirs: set[str] | None = None,
     task_id_fragment: str = "",
+    operator_id_fragment: str = "",
 ) -> tuple[Path | None, dict[str, Any]]:
     deadline = time.monotonic() + max(1, timeout_seconds)
     latest_dir: Path | None = None
@@ -581,6 +586,7 @@ def _wait_for_operator_result(
             sprint_id,
             seen_task_dirs=seen_task_dirs,
             task_id_fragment=task_id_fragment,
+            operator_id_fragment=operator_id_fragment,
         )
         if str(latest_payload.get("status") or "").lower() in {"completed", "failed", "timeout", "cancelled"}:
             return latest_dir, latest_payload
@@ -588,31 +594,41 @@ def _wait_for_operator_result(
     return latest_dir, latest_payload
 
 
-def test_j16_operator_result_lookup_targets_the_submitted_wake_task(tmp_path: Path) -> None:
+def test_j16_operator_result_lookup_targets_the_physical_builder(tmp_path: Path) -> None:
     harness_dir = tmp_path / "harness"
     result_root = harness_dir / "run" / "operator-results" / "operator"
     child_dir = result_root / "child"
-    wake_dir = result_root / "wake"
+    builder_dir = result_root / "builder"
     child_dir.mkdir(parents=True)
-    wake_dir.mkdir()
+    builder_dir.mkdir()
     sprint_id = "sprint-j16-regression"
     _write_json(
         child_dir / "result.json",
-        {"sprint_id": sprint_id, "task_id": f"pm-{sprint_id}-S1-child", "status": "completed"},
+        {
+            "sprint_id": sprint_id,
+            "task_id": f"pm-{sprint_id}-S1-child",
+            "operator_id": "mini-codex-planner-1",
+            "status": "completed",
+        },
     )
     _write_json(
-        wake_dir / "result.json",
-        {"sprint_id": sprint_id, "task_id": f"pm-{sprint_id}-wake-builder-final", "status": "completed"},
+        builder_dir / "result.json",
+        {
+            "sprint_id": sprint_id,
+            "task_id": f"pm-{sprint_id}-S4-final",
+            "operator_id": "mini-codex-builder-1",
+            "status": "completed",
+        },
     )
 
     task_dir, payload = _latest_operator_result_for_sprint(
         harness_dir,
         sprint_id,
-        task_id_fragment="-wake-builder-",
+        operator_id_fragment="builder",
     )
 
-    assert task_dir == wake_dir
-    assert payload["task_id"].endswith("-wake-builder-final")
+    assert task_dir == builder_dir
+    assert payload["operator_id"] == "mini-codex-builder-1"
 
 
 def _prepare_user_inputs(rec: J16Recorder, project: Path, run_id: str) -> dict[str, Path]:
@@ -1100,7 +1116,7 @@ def test_p22_j16_tmux_requirements_builder_real_user_defect_repair(repo_root: Pa
             sprint_id,
             operator_wait,
             seen_task_dirs=seen_operator_dirs,
-            task_id_fragment="-wake-builder-",
+            operator_id_fragment="builder",
         )
         if builder_dir is not None:
             seen_operator_dirs.add(_task_dir_key(builder_dir))
