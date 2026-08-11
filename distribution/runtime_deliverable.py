@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 import tomllib
 import zipfile
+import zlib
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
@@ -654,9 +655,12 @@ def _verify_git_object_proof(
             *(("tree", oid, data) for oid, data in tree_objects.items()),
             *(("blob", oid, data) for oid, data in blob_objects.values()),
         ]:
-            written = _git_in_temp_repo(["hash-object", "-t", kind, "-w", "--stdin"], git_dir, data=data)
-            if written.decode("ascii").strip() != oid:
-                raise DeliverableError(f"isolated Git repository wrote a different {kind} object id")
+            if _git_object_id(kind, data) != oid:
+                raise DeliverableError(f"refusing mismatched {kind} object preimage")
+            object_path = git_dir / "objects" / oid[:2] / oid[2:]
+            object_path.parent.mkdir(parents=True, exist_ok=True)
+            loose = f"{kind} {len(data)}\0".encode("ascii") + data
+            object_path.write_bytes(zlib.compress(loose))
         _git_in_temp_repo(["cat-file", "-e", f"{commit}^{{commit}}"], git_dir)
         listing = _git_in_temp_repo(
             ["ls-tree", "-r", "-z", commit, "--", *source["included_paths"]], git_dir
