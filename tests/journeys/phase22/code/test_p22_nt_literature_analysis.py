@@ -497,9 +497,16 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(
         },
         {
             "name": "real_data_research_analysis_completed",
-            "passed": research_run.get("status") == "completed",
+            "passed": research_run.get("status") == "completed"
+            and research_run.get("technical_synthesis_status") == "completed"
+            and {"method", "result", "limitation"}.issubset(
+                {str(item) for item in research_run.get("technical_signal_types", [])}
+            ),
             "detail": {
                 "status": research_run.get("status"),
+                "technical_synthesis_status": research_run.get("technical_synthesis_status"),
+                "technical_signal_count": research_run.get("technical_signal_count"),
+                "technical_signal_types": research_run.get("technical_signal_types", []),
                 "failed_node": research_run.get("failed_node"),
                 "assertions": research_run.get("assertions", []),
             },
@@ -529,10 +536,20 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(
         },
         {
             "name": "real_data_research_trend_report_completed",
-            "passed": research_run.get("status") == "completed" and int(research_run.get("source_count") or 0) >= 8,
+            "passed": research_run.get("status") == "completed"
+            and int(research_run.get("source_count") or 0) >= 8
+            and bool(research_run.get("cross_source_trends"))
+            and all(
+                len(item.get("source_ids", [])) >= 2
+                for item in research_run.get("cross_source_trends", [])
+                if isinstance(item, dict)
+            )
+            and bool(research_run.get("evidence_gaps")),
             "detail": {
                 "status": research_run.get("status"),
                 "source_count": research_run.get("source_count"),
+                "trend_count": len(research_run.get("cross_source_trends", [])),
+                "gap_count": len(research_run.get("evidence_gaps", [])),
                 "failed_node": research_run.get("failed_node"),
             },
         },

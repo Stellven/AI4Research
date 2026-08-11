@@ -206,3 +206,46 @@ def test_topic_discovery_exhausted_semantic_scholar_429_is_inconclusive(monkeypa
     assert sleeps == [0.5]
     assert any("Discovery source failed: Semantic Scholar API rate limited after 2 attempt(s)" in item for item in result["limitations"])
     assert any("Semantic Scholar rate-limit retry 1/1" in item for item in result["limitations"])
+
+
+def test_topic_discovery_call_can_cap_provider_retry_after(monkeypatch, tmp_path: Path) -> None:
+    responses = [
+        FakeS2Response(429, headers={"Retry-After": "120"}),
+        FakeS2Response(
+            200,
+            {
+                "data": [
+                    {
+                        "paperId": "bounded-retry",
+                        "title": "Bounded provider retry",
+                        "abstract": "Methods evaluate bounded provider retries and report a completed result.",
+                        "url": "https://example.test/bounded-retry",
+                    }
+                ]
+            },
+        ),
+    ]
+    sleeps: list[float] = []
+
+    monkeypatch.setattr(
+        literature_discover,
+        "requests",
+        SimpleNamespace(request=lambda *_args, **_kwargs: responses.pop(0)),
+    )
+    monkeypatch.setattr(literature_discover, "HAS_REQUESTS", True)
+    monkeypatch.setattr(literature_discover.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setenv("AUTOSCI_S2_RATE_LIMIT_DELAY_SECONDS", "0")
+
+    result = literature_discover.discover_literature(
+        mode="topic",
+        query="bounded retry",
+        limit=1,
+        wiki_root=tmp_path / "wiki",
+        workspace_root=tmp_path,
+        max_retries=1,
+        max_retry_wait_seconds=5,
+    )
+
+    assert result["status"] == "completed"
+    assert sleeps == [5.0]
+    assert any("waited 5s" in item for item in result["limitations"])

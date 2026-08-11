@@ -182,6 +182,8 @@ def test_literature_discovery_reuses_backend_and_hashes_multiple_sources(tmp_pat
     result = discovery(seed_snapshot=snapshot, payload={"task_contract": {"user_intent": "Survey WebAssembly optimizations"}})
 
     assert observed["allow_network_fetch"] is True
+    assert observed["max_retries"] == 1
+    assert observed["max_retry_wait_seconds"] == 5.0
     assert result["service_id"] == "autosci-production-literature-discovery"
     assert result["query"] == "WebAssembly runtime compiler optimization"
     assert len(result["candidates"]) == 3

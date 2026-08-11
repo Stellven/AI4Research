@@ -21450,18 +21450,41 @@ def _research_lifecycle_real_data_probe_artifact(
         run = run_live_research(topic=query, run_dir=scratch_workspace, discover=discover, retry_delays=(0.0, 1.0))
         source_pack = run.get("source_pack") if isinstance(run.get("source_pack"), dict) else {}
         source_count = int(source_pack.get("source_count") or 0)
+        synthesis = run.get("technical_synthesis") if isinstance(run.get("technical_synthesis"), dict) else {}
+        signal_types = [str(item) for item in synthesis.get("signal_types") or [] if str(item).strip()]
+        trends = [item for item in synthesis.get("trends") or [] if isinstance(item, dict)]
+        gaps = [item for item in synthesis.get("evidence_gaps") or [] if isinstance(item, dict)]
         payload = {
             "schema": "autosci_real_data_research_probe.v1",
             "status": "completed" if str(run.get("status") or "") == "PASS" else "environment_blocked",
             "topic": query,
             "run_dir": _rel(scratch_workspace),
             "source_count": source_count,
+            "technical_synthesis_status": str(synthesis.get("status") or "missing"),
+            "technical_synthesis_path": str(run.get("technical_synthesis_path") or ""),
+            "technical_signal_count": int(synthesis.get("signal_count") or 0),
+            "technical_signal_types": signal_types,
+            "cross_source_trends": trends,
+            "evidence_gaps": gaps,
             "completed_nodes": list(run.get("completed_nodes") or (run.get("state") or {}).get("completed_nodes") or []),
             "report_path": str(run.get("report_path") or ""),
             "provider_trace": str(((run.get("provider_result") or {}) if isinstance(run.get("provider_result"), dict) else {}).get("trace") or ""),
             "assertions": [
                 {"name": "provider_discovery_completed", "passed": str(run.get("status") or "") == "PASS"},
                 {"name": "content_bearing_source_count_at_least_eight", "passed": source_count >= 8, "detail": {"source_count": source_count}},
+                {
+                    "name": "content_level_method_result_limitation_signals_present",
+                    "passed": synthesis.get("status") == "completed"
+                    and {"method", "result", "limitation"}.issubset(set(signal_types)),
+                    "detail": {"signal_count": int(synthesis.get("signal_count") or 0), "signal_types": signal_types},
+                },
+                {
+                    "name": "cross_source_trend_and_evidence_gap_present",
+                    "passed": bool(trends)
+                    and all(len(item.get("source_ids") or []) >= 2 for item in trends)
+                    and bool(gaps),
+                    "detail": {"trend_count": len(trends), "gap_count": len(gaps)},
+                },
             ],
         }
     except Exception as exc:
