@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -108,6 +109,10 @@ def _is_stable_evidence_id(value: object) -> bool:
     return text.startswith(("claim-", "claim:", "code:", "exp-", "local:", "paper-", "phase22-", "runtime:", "task-", "wiki:"))
 
 
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "0" * 64
+
+
 def _decision_request(verdict_path: Path, experiment_path: Path) -> dict:
     return {
         "schema": "decision_request.v1",
@@ -133,16 +138,17 @@ def _decision_request(verdict_path: Path, experiment_path: Path) -> dict:
         "evidence": [
             {
                 "evidence_id": "j09-claim-verdict",
+                "evidence_type": "claim_verdict",
+                "claim_id": "claim-supported",
                 "source_path": str(verdict_path),
-                "support_pointer": "/outputs/verdicts/0/verdict",
-                "supported_values": ["supported"],
+                "expected_sha256": _file_sha256(verdict_path),
                 "summary": "The persisted claim verdict supports the bounded local claim.",
             },
             {
                 "evidence_id": "j09-experiment-result",
+                "evidence_type": "experiment_result",
                 "source_path": str(experiment_path),
-                "support_pointer": "/status",
-                "supported_values": ["completed"],
+                "expected_sha256": _file_sha256(experiment_path),
                 "summary": "The approved local experiment completed and produced persisted result evidence.",
             },
         ],
@@ -166,6 +172,13 @@ def _decision_request(verdict_path: Path, experiment_path: Path) -> dict:
                 "criterion_id": "measured-support",
                 "score": 0,
                 "rationale": "Neither evidence source supports generalization beyond the local dataset.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            },
+            {
+                "alternative_id": "generalized-rollout",
+                "criterion_id": "external-validity",
+                "score": 0,
+                "rationale": "The local result provides no independent external-validity evidence for a broad rollout.",
                 "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
             },
         ],
@@ -312,15 +325,20 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         jsonschema.Draft202012Validator(decision_schema).validate(decision_payload)
     except jsonschema.ValidationError as exc:
         decision_schema_error = exc.message
-    negative_request = _decision_request(
-        recorded_verdict,
-        recorded_experiment,
+    negative_verdict_payload = copy.deepcopy(verdict_payload)
+    negative_verdict_payload["outputs"]["verdicts"][0]["verdict"] = "not_supported"
+    negative_verdict_path = write_json(
+        rec.artifact_dir / "decision-negative-claim-verdict.json",
+        negative_verdict_payload,
     )
-    negative_request["evidence"][0]["supported_values"] = ["not_supported"]
+    negative_request = _decision_request(negative_verdict_path, recorded_experiment)
     negative_request_path = write_json(
         rec.artifact_dir / "decision-request-unsupported.json", negative_request
     )
     negative_output = rec.artifact_dir / "decision-artifact-unsupported.json"
+    negative_output.write_text(
+        '{"schema":"decision_artifact.v1","stale":true}\n', encoding="utf-8"
+    )
     negative_proc = rec.run(
         "decision-artifact-unsupported-evidence",
         [
@@ -493,6 +511,44 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         len(evidence_links) == 2
         and all(item.get("sha256") and Path(item.get("source_path", "")).is_file() for item in evidence_links),
         evidence_links,
+    )
+    request_payload = _load_json(decision_request_path)
+    expected_evidence = {
+        item["evidence_id"]: item
+        for item in request_payload.get("evidence", [])
+        if isinstance(item, dict) and item.get("evidence_id")
+    }
+    rec.add_assertion(
+        "decision_typed_evidence_matches_expected_hashes",
+        {item.get("evidence_type") for item in evidence_links}
+        == {"claim_verdict", "experiment_result"}
+        and all(
+            item.get("sha256")
+            == expected_evidence.get(item.get("evidence_id"), {}).get("expected_sha256")
+            == _file_sha256(Path(item.get("source_path", "")))
+            for item in evidence_links
+        ),
+        {"request": expected_evidence, "artifact": evidence_links},
+    )
+    expected_pairs = {
+        (alternative["alternative_id"], criterion["criterion_id"])
+        for alternative in decision_payload.get("alternatives", [])
+        for criterion in decision_payload.get("criteria", [])
+    }
+    actual_pairs = {
+        (assessment.get("alternative_id"), assessment.get("criterion_id"))
+        for assessment in decision_payload.get("assessments", [])
+    }
+    rec.add_assertion(
+        "decision_assessment_matrix_complete",
+        actual_pairs == expected_pairs,
+        {"expected": sorted(expected_pairs), "actual": sorted(actual_pairs)},
+    )
+    rec.add_assertion(
+        "decision_request_provenance_matches_persisted_bytes",
+        decision_payload.get("provenance", {}).get("request_sha256")
+        == _file_sha256(decision_request_path),
+        decision_payload.get("provenance"),
     )
     rec.add_assertion(
         "decision_review_and_approval_state_truthful",

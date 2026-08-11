@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -39,11 +40,15 @@ def _resolve_json_pointer(payload: Any, pointer: str) -> Any:
         raise DecisionArtifactError(f"JSON pointer must start with '/': {pointer}")
     current = payload
     for raw_token in pointer[1:].split("/"):
+        if re.search(r"~(?:[^01]|$)", raw_token):
+            raise DecisionArtifactError(f"JSON pointer contains an invalid escape: {pointer}")
         token = raw_token.replace("~1", "/").replace("~0", "~")
         if isinstance(current, list):
+            if not re.fullmatch(r"0|[1-9][0-9]*", token):
+                raise DecisionArtifactError(f"JSON pointer has a non-canonical array index: {pointer}")
             try:
                 current = current[int(token)]
-            except (ValueError, IndexError) as exc:
+            except IndexError as exc:
                 raise DecisionArtifactError(f"JSON pointer does not resolve: {pointer}") from exc
         elif isinstance(current, dict) and token in current:
             current = current[token]
@@ -76,24 +81,79 @@ def _load_evidence(
         if not source_path.is_file():
             raise DecisionArtifactError(f"evidence file is missing: {raw_path}")
         try:
-            payload = json.loads(source_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            raise DecisionArtifactError(f"evidence is not readable JSON: {raw_path}") from exc
-        pointer = _require_text(entry.get("support_pointer"), f"evidence[{evidence_id}].support_pointer")
-        supported_values = entry.get("supported_values")
-        if not isinstance(supported_values, list) or not supported_values:
-            raise DecisionArtifactError(f"evidence[{evidence_id}].supported_values must be non-empty")
-        observed = _resolve_json_pointer(payload, pointer)
-        if observed not in supported_values:
+            evidence_bytes = source_path.read_bytes()
+        except OSError as exc:
+            raise DecisionArtifactError(f"evidence is not readable: {raw_path}") from exc
+        expected_sha256 = _require_text(
+            entry.get("expected_sha256"), f"evidence[{evidence_id}].expected_sha256"
+        ).lower()
+        if not re.fullmatch(r"[a-f0-9]{64}", expected_sha256):
+            raise DecisionArtifactError(f"evidence[{evidence_id}].expected_sha256 is invalid")
+        actual_sha256 = hashlib.sha256(evidence_bytes).hexdigest()
+        if actual_sha256 != expected_sha256:
             raise DecisionArtifactError(
-                f"evidence {evidence_id} is not supportive: observed {observed!r} at {pointer}"
+                f"evidence {evidence_id} hash mismatch: expected {expected_sha256}, got {actual_sha256}"
+            )
+        try:
+            payload = json.loads(evidence_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise DecisionArtifactError(f"evidence is not readable JSON: {raw_path}") from exc
+        evidence_type = _require_text(
+            entry.get("evidence_type"), f"evidence[{evidence_id}].evidence_type"
+        )
+        if evidence_type not in {"claim_verdict", "experiment_result"}:
+            raise DecisionArtifactError(f"unknown evidence type for {evidence_id}: {evidence_type}")
+        allowed_fields = {
+            "evidence_id",
+            "evidence_type",
+            "source_path",
+            "expected_sha256",
+            "summary",
+        }
+        if evidence_type == "claim_verdict":
+            allowed_fields.add("claim_id")
+        unexpected_fields = sorted(set(entry) - allowed_fields)
+        if unexpected_fields:
+            raise DecisionArtifactError(
+                f"evidence[{evidence_id}] contains unsupported fields: {', '.join(unexpected_fields)}"
+            )
+        if evidence_type == "claim_verdict":
+            if payload.get("schema") != "claim_verdict.v1":
+                raise DecisionArtifactError(f"evidence {evidence_id} is not claim_verdict.v1")
+            claim_id = _require_text(entry.get("claim_id"), f"evidence[{evidence_id}].claim_id")
+            verdicts = payload.get("outputs", {}).get("verdicts", [])
+            matches = [
+                (index, verdict)
+                for index, verdict in enumerate(verdicts)
+                if isinstance(verdict, dict) and verdict.get("claim_id") == claim_id
+            ] if isinstance(verdicts, list) else []
+            if len(matches) != 1:
+                raise DecisionArtifactError(
+                    f"evidence {evidence_id} must contain exactly one verdict for claim {claim_id}"
+                )
+            verdict_index, _ = matches[0]
+            pointer = f"/outputs/verdicts/{verdict_index}/verdict"
+            observed = _resolve_json_pointer(payload, pointer)
+            expected = "supported"
+        elif evidence_type == "experiment_result":
+            if payload.get("schema") != "experiment_result.v1":
+                raise DecisionArtifactError(f"evidence {evidence_id} is not experiment_result.v1")
+            pointer = "/status"
+            observed = _resolve_json_pointer(payload, pointer)
+            expected = "completed"
+        else:  # pragma: no cover - guarded by the typed policy check above
+            raise DecisionArtifactError(f"unknown evidence type for {evidence_id}: {evidence_type}")
+        if observed != expected:
+            raise DecisionArtifactError(
+                f"evidence {evidence_id} is not supportive: expected {expected!r}, observed {observed!r} at {pointer}"
             )
         loaded.append(
             {
                 "evidence_id": evidence_id,
+                "evidence_type": evidence_type,
                 "source_path": str(source_path),
-                "sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
-                "support_pointer": pointer,
+                "sha256": actual_sha256,
+                "semantic_locator": pointer,
                 "observed_support": observed,
                 "summary": _require_text(entry.get("summary"), f"evidence[{evidence_id}].summary"),
             }
@@ -105,6 +165,8 @@ def _validate_refs(values: Any, allowed: set[str], field: str) -> list[str]:
     if not isinstance(values, list) or not values:
         raise DecisionArtifactError(f"{field} must contain at least one reference")
     refs = [_require_text(value, field) for value in values]
+    if len(refs) != len(set(refs)):
+        raise DecisionArtifactError(f"{field} contains duplicate references")
     missing = sorted(set(refs) - allowed)
     if missing:
         raise DecisionArtifactError(f"{field} contains unknown references: {', '.join(missing)}")
@@ -116,6 +178,15 @@ def construct_decision_artifact(
 ) -> dict[str, Any]:
     """Validate a request and return a canonical, review-required decision artifact."""
 
+    request_path = request_path.resolve()
+    try:
+        request_bytes = request_path.read_bytes()
+        request_on_disk = json.loads(request_bytes.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise DecisionArtifactError(f"request_path is not readable decision JSON: {request_path}") from exc
+    if not isinstance(request, dict) or request_on_disk != request:
+        raise DecisionArtifactError("request object does not match request_path content")
+    request_sha256 = hashlib.sha256(request_bytes).hexdigest()
     if request.get("schema") != "decision_request.v1":
         raise DecisionArtifactError("schema must be decision_request.v1")
     forbidden_state = sorted({"decision_status", "review", "approval"} & set(request))
@@ -201,12 +272,26 @@ def construct_decision_artifact(
             }
         )
 
+    expected_assessment_pairs = {
+        (alternative_id, criterion_id)
+        for alternative_id in alternative_ids
+        for criterion_id in criterion_ids
+    }
+    missing_matrix_pairs = sorted(expected_assessment_pairs - assessment_pairs)
+    if missing_matrix_pairs:
+        raise DecisionArtifactError(
+            "assessment matrix is incomplete: "
+            + ", ".join(f"{alternative_id}/{criterion_id}" for alternative_id, criterion_id in missing_matrix_pairs)
+        )
+
     recommended_id = _require_text(recommendation.get("alternative_id"), "recommendation.alternative_id")
     if recommended_id not in alternative_ids:
         raise DecisionArtifactError("recommendation references an unknown alternative")
     recommendation_criteria = _validate_refs(
         recommendation.get("criterion_ids"), criterion_ids, "recommendation.criterion_ids"
     )
+    if set(recommendation_criteria) != criterion_ids:
+        raise DecisionArtifactError("recommendation.criterion_ids must cover every decision criterion")
     recommendation_evidence = _validate_refs(
         recommendation.get("evidence_ids"), evidence_ids, "recommendation.evidence_ids"
     )
@@ -218,6 +303,21 @@ def construct_decision_artifact(
     if missing_assessments:
         raise DecisionArtifactError(
             "recommendation is missing criterion assessments: " + ", ".join(missing_assessments)
+        )
+    required_recommendation_evidence = {
+        evidence_id
+        for assessment in normalized_assessments
+        if assessment["alternative_id"] == recommended_id
+        and assessment["criterion_id"] in recommendation_criteria
+        for evidence_id in assessment["evidence_ids"]
+    }
+    missing_recommendation_evidence = sorted(
+        required_recommendation_evidence - set(recommendation_evidence)
+    )
+    if missing_recommendation_evidence:
+        raise DecisionArtifactError(
+            "recommendation.evidence_ids do not cover recommendation assessments: "
+            + ", ".join(missing_recommendation_evidence)
         )
 
     normalized_risks = []
@@ -238,7 +338,6 @@ def construct_decision_artifact(
         raise DecisionArtifactError("limitations must not be empty")
     if not isinstance(unresolved, list) or not unresolved:
         raise DecisionArtifactError("unresolved_review_items must not be empty before human review")
-    request_path = request_path.resolve()
     return {
         "schema": "decision_artifact.v1",
         "decision_id": _require_text(request.get("decision_id"), "decision_id"),
@@ -273,7 +372,7 @@ def construct_decision_artifact(
             "constructor": "harness.lib.research.decision_artifact.construct_decision_artifact",
             "constructed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "request_path": str(request_path),
-            "request_sha256": hashlib.sha256(request_path.read_bytes()).hexdigest(),
+            "request_sha256": request_sha256,
             "source_root": str(source_root),
         },
     }

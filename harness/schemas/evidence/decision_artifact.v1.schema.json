@@ -93,13 +93,14 @@
     },
     "evidenceLink": {
       "type": "object",
-      "required": ["evidence_id", "source_path", "sha256", "support_pointer", "observed_support", "summary"],
+      "required": ["evidence_id", "evidence_type", "source_path", "sha256", "semantic_locator", "observed_support", "summary"],
       "additionalProperties": false,
       "properties": {
         "evidence_id": {"type": "string", "minLength": 1},
+        "evidence_type": {"type": "string", "enum": ["claim_verdict", "experiment_result"]},
         "source_path": {"type": "string", "minLength": 1},
         "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-        "support_pointer": {"type": "string", "pattern": "^/"},
+        "semantic_locator": {"type": "string", "pattern": "^/"},
         "observed_support": {},
         "summary": {"type": "string", "minLength": 1}
       }
