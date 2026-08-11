@@ -54,6 +54,26 @@ SECRET_VALUE_PATTERNS = (
     re.compile(r"\bBasic\s+[A-Za-z0-9+/]{20,}={0,2}(?![A-Za-z0-9+/=])", re.IGNORECASE),
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
 )
+# Exact fingerprints of reviewed, deliberately fake credentials embedded in
+# tracked benchmark/test/gitleaks fixtures. This does not allowlist a path or
+# pattern: any changed or newly introduced secret-like value still fails.
+REVIEWED_PLACEHOLDER_SECRET_SHA256 = {
+    "04f4dc9c28ae9ff9bfd7d8484de03cc4e339a2bf9839c58fa27e73e39f5c4033",
+    "16a1d8b31fd8a907a6fa2c472c78201bda00c4231011331b99b73b1940305b77",
+    "28a11611b79776c46f682c989cc5888c70d1d177c762d9876d005ac8d0ddbdec",
+    "301e06ecb1a9e3be0ed91f1abda27efa7194b6941c64b6ee189f5dca48a1c56b",
+    "7cf4633c4c272c2663c20eb455e83fe3cc11d6895f9d53bad1dfd5b5ddea2f58",
+    "81407ef863d8ffa58139ac2ebe28b92554ecf848f3b820065de3d7c2c422f265",
+    "8f8fc50915a2b2b94a7812c9fd41e88c5680cfd6079b7523daf996f4462ff49a",
+    "913ead83f1dfa3d87d03a613627443b9106d50e324fe050c345d89445ddcf7fc",
+    "bee7da7ddaa2cf04d272f059b710f2ca1081fa2904defbac01db87a33f6d7532",
+    "ceff7b932509dac8bb91000d9891d51d6113ae682c5af411df1c3a6b7a39e3d6",
+    "e0573a0ab82867783d5d264518b7a594a5b7d5545e56e29eeae377aa006add25",
+    "e92a0768d8d452b79eef95d09cf4a9024d49a905ff7a0678842bf1e74855c185",
+    "ebdb4e031287a4be980e403e26a6ccbb03a83966133d150f630f37a31f6120e2",
+    "f5abcc69693d0a47e84a900d4df308ba51ba5b16a671526998a55bf5b3a569cf",
+    "fd5576621a2b971feb1640468a25884ad4e6fe277c63026ef7f928c4136860ca",
+}
 FORBIDDEN_VALUE_KEYS = {
     "api_key",
     "apikey",
@@ -73,6 +93,10 @@ MAX_ARCHIVE_COMPRESSION_RATIO = 500
 
 class DeliverableError(RuntimeError):
     """Raised when a runtime deliverable cannot be built or verified."""
+
+
+def _is_reviewed_placeholder(value: str) -> bool:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest() in REVIEWED_PLACEHOLDER_SECRET_SHA256
 
 
 def _sha256(path: Path) -> str:
@@ -240,7 +264,7 @@ def _walk_values(value: Any, path: str = "$") -> list[str]:
             failures.extend(_walk_values(item, f"{path}[{index}]"))
     elif isinstance(value, str):
         for pattern in SECRET_VALUE_PATTERNS:
-            if pattern.search(value):
+            if any(not _is_reviewed_placeholder(match.group(0)) for match in pattern.finditer(value)):
                 failures.append(f"secret-like value at {path}")
                 break
     return failures
@@ -250,7 +274,7 @@ def _scan_text(data: bytes, label: str) -> list[str]:
     text = data.decode("utf-8", errors="ignore")
     failures: list[str] = []
     for pattern in SECRET_VALUE_PATTERNS:
-        if pattern.search(text):
+        if any(not _is_reviewed_placeholder(match.group(0)) for match in pattern.finditer(text)):
             failures.append(f"secret-like content in {label}")
             break
     if label.lower().endswith(".json"):
