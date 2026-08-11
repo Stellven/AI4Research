@@ -69,6 +69,10 @@ def test_core_phase4_converters_emit_expected_schema_names() -> None:
 def test_experiment_plan_converter_preserves_verification_ready_contract() -> None:
     envelope = {"task_id": "t", "sprint_id": "s", "node_id": "n", "inputs": {}}
     contract = {
+        "verification_contract_version": "1",
+        "readiness_profile": "deterministic_local_fixture",
+        "workspace_root": "workspace",
+        "runner": {"path": "workspace/run.py"},
         "dataset": {"path": "samples.csv", "format": "csv", "role": "evaluation"},
         "variants": [
             {"name": "baseline", "description": "baseline"},
@@ -85,6 +89,8 @@ def test_experiment_plan_converter_preserves_verification_ready_contract() -> No
             "before_state_ready": True,
         },
         "execution_ready": True,
+        "network_access": "denied",
+        "write_scope": ["workspace"],
     }
 
     plan = convert_plan(contract, envelope)["outputs"]["experiment_plan"]

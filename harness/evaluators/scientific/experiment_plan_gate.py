@@ -43,20 +43,27 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
     if not plan.get("baseline") and not plan.get("baseline_absence_reason"):
         reasons.append("outputs.experiment_plan must include baseline or baseline_absence_reason")
     require_non_empty_list(plan.get("success_criteria"), "outputs.experiment_plan.success_criteria", reasons)
-    # A plan that advertises verification/execution readiness must carry the
-    # complete handoff contract. Older diagnostic fixtures without a readiness
-    # claim remain schema-compatible, but cannot be mistaken for ready plans.
-    readiness_fields = {
-        "dataset",
-        "variants",
-        "thresholds",
-        "random_seed",
-        "stopping_conditions",
-        "command_argv",
-        "approval_preflight",
-        "execution_ready",
-    }
-    if readiness_fields.intersection(plan):
+    # Only an explicit version/profile discriminator opts into the complete
+    # readiness contract. Incidental legacy metadata must remain compatible.
+    contract_declared = plan.get("verification_contract_version") is not None or plan.get("readiness_profile") is not None
+    if contract_declared:
+        if plan.get("verification_contract_version") != "1":
+            reasons.append("outputs.experiment_plan.verification_contract_version must be 1")
+        profile = str(plan.get("readiness_profile") or "")
+        if profile not in {"deterministic_local_fixture", "human_approved_local"}:
+            reasons.append("outputs.experiment_plan.readiness_profile is unsupported")
+        if profile == "deterministic_local_fixture" and (execution_mode != "fixture" or plan.get("approval_required") is not False):
+            reasons.append("deterministic_local_fixture requires execution_mode=fixture and approval_required=false")
+        if profile == "human_approved_local" and (execution_mode != "human_approved" or plan.get("approval_required") is not True):
+            reasons.append("human_approved_local requires execution_mode=human_approved and approval_required=true")
+        if not str(plan.get("workspace_root") or "").strip():
+            reasons.append("outputs.experiment_plan.workspace_root must be present")
+        runner = plan.get("runner")
+        if not isinstance(runner, dict) or not str(runner.get("path") or "").strip():
+            reasons.append("outputs.experiment_plan.runner.path must be present")
+        if plan.get("network_access") != "denied":
+            reasons.append("outputs.experiment_plan.network_access must be denied")
+        require_non_empty_list(plan.get("write_scope"), "outputs.experiment_plan.write_scope", reasons)
         dataset = plan.get("dataset")
         if not isinstance(dataset, dict) or not all(str(dataset.get(key) or "").strip() for key in ("path", "format", "role")):
             reasons.append("outputs.experiment_plan.dataset must identify path, format, and role")
@@ -80,7 +87,7 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
             reasons.append("outputs.experiment_plan.approval_preflight must be an object")
         if plan.get("execution_ready") is True and (
             not isinstance(preflight, dict)
-            or preflight.get("status") not in ({"ready"} if plan.get("approval_required") else {"ready", "not_required"})
+            or preflight.get("status") not in ({"ready"} if profile == "human_approved_local" else {"not_required"})
             or preflight.get("command_authorized") is not True
             or preflight.get("before_state_ready") is not True
         ):

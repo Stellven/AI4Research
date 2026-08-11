@@ -39,12 +39,18 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
     assets = write_experiment_assets(sandbox / "experiment", phase22_python)
     approval_ref = "phase22-local-approval"
     command_argv = [phase22_python, str(assets["runner"]), str(assets["data"]), str(assets["result"])]
-    write_json(assets["allowlist"], {"commands": [" ".join(command_argv)]})
+    write_json(assets["result"], {})
+    write_json(assets["allowlist"], {"command_argvs": [command_argv]})
     experiment_contract = sandbox / "experiment-contract.json"
     experiment_contract.write_text(
         json.dumps(
             {
                 "schema": "phase22.experiment_design_contract.v1",
+                "verification_contract_version": "1",
+                "readiness_profile": "deterministic_local_fixture",
+                "execution_mode": "fixture",
+                "workspace_root": str(assets["data"].parent),
+                "runner": {"path": str(assets["runner"])},
                 "dataset": {"path": str(assets["data"]), "format": "csv", "role": "local text classification evaluation"},
                 "variants": [
                     {"name": "baseline", "description": "Case-sensitive prefix classifier."},
@@ -62,6 +68,20 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
                 "command_argv": command_argv,
                 "command_allowlist": [" ".join(command_argv)],
                 "expected_artifacts": [str(assets["result"])],
+                "network_access": "denied",
+                "write_scope": [str(assets["data"].parent)],
+                "objective": "Compare a case-sensitive baseline with a normalization variant on the declared local CSV dataset.",
+                "hypothesis": "Normalization improves exact-match accuracy by at least 0.2 while median variant latency remains below 20 ms.",
+                "variables": ["classifier_variant"],
+                "metrics": ["accuracy_uplift", "variant_median_latency_ms"],
+                "procedure": [
+                    "Run the exact allowlisted command over the declared CSV dataset.",
+                    "Compute baseline and normalization-variant predictions for every row.",
+                    "Recompute accuracy uplift and variant median latency from raw sample observations.",
+                    "Compare both metrics with the declared thresholds before recording a verdict.",
+                ],
+                "baseline": "Case-sensitive positive-prefix classifier on the same declared CSV rows.",
+                "success_criteria": ["accuracy_uplift >= 0.2", "variant_median_latency_ms < 20"],
             },
             indent=2,
             sort_keys=True,
@@ -100,6 +120,13 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
         timeout=60,
     )
     result_payload = json.loads(assets["result"].read_text(encoding="utf-8")) if assets["result"].exists() else {}
+    replay_proc = rec.run(
+        "local-python-experiment-replay",
+        runnable_command,
+        cwd=repo_root,
+        timeout=60,
+    )
+    replay_payload = json.loads(assets["result"].read_text(encoding="utf-8")) if assets["result"].exists() else {}
     runtime_path = runtime_evidence(sandbox / "experiment" / "runtime-evidence.json", experiment_proc.args, assets["result"], result_payload)
     exp_run, _ = run_autosci(
         rec,
@@ -189,6 +216,10 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
     rec.add_artifact(claims, "schema_valid_research_claims")
     rec.add_artifact(code_ev, "code_evidence")
     rec.add_artifact(assets["result"], "raw_local_experiment_result")
+    rec.add_artifact(assets["data"], "verification_dataset")
+    rec.add_artifact(assets["runner"], "verification_runner")
+    rec.add_artifact(experiment_contract, "verification_contract")
+    rec.add_artifact(assets["allowlist"], "exact_argv_allowlist")
     rec.add_artifact(runtime_path, "runtime_evidence")
     recomputed = _recompute_metrics(result_payload)
     expected_uplift = recomputed.get("accuracy_uplift")
@@ -210,6 +241,10 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
                 bool(experiment_plan.get("thresholds")),
                 isinstance(experiment_plan.get("random_seed"), int),
                 bool(experiment_plan.get("stopping_conditions")),
+                experiment_plan.get("verification_contract_version") == "1",
+                experiment_plan.get("readiness_profile") == "deterministic_local_fixture",
+                experiment_plan.get("network_access") == "denied",
+                bool(experiment_plan.get("write_scope")),
             ]
         ),
         experiment_plan,
@@ -225,8 +260,30 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
     )
     rec.add_assertion(
         "executed_command_matches_plan_allowlist",
-        planned_command == command_argv and " ".join(planned_command) in (experiment_plan.get("command_allowlist") or []),
+        planned_command == command_argv and load_json(assets["allowlist"]).get("command_argvs") == [planned_command],
         {"planned": planned_command, "executed": command_argv, "allowlist": experiment_plan.get("command_allowlist")},
+    )
+    expected_thresholds = {
+        f"{item['metric']} {item['operator']} {item['value']}"
+        for item in experiment_plan.get("thresholds") or []
+        if isinstance(item, dict) and all(key in item for key in ("metric", "operator", "value"))
+    }
+    rec.add_assertion(
+        "plan_semantics_match_declared_thresholds",
+        set(experiment_plan.get("metrics") or []) == {"accuracy_uplift", "variant_median_latency_ms"}
+        and expected_thresholds.issubset(set(experiment_plan.get("success_criteria") or []))
+        and any("every row" in step for step in experiment_plan.get("procedure") or []),
+        {"metrics": experiment_plan.get("metrics"), "thresholds": experiment_plan.get("thresholds"), "success_criteria": experiment_plan.get("success_criteria")},
+    )
+    rec.add_assertion(
+        "plan_artifact_references_are_replayable",
+        experiment_plan.get("dataset", {}).get("path") == str(assets["data"])
+        and experiment_plan.get("runner", {}).get("path") == str(assets["runner"])
+        and str(assets["result"]) in (experiment_plan.get("expected_artifacts") or [])
+        and replay_proc.returncode == 0
+        and replay_payload.get("accuracy_uplift") == result_payload.get("accuracy_uplift")
+        and len(replay_payload.get("details") or []) == len(result_payload.get("details") or []),
+        {"replay_exit": replay_proc.returncode, "dataset": experiment_plan.get("dataset"), "runner": experiment_plan.get("runner"), "expected": experiment_plan.get("expected_artifacts")},
     )
     rec.add_assertion("local_subprocess_exit_zero", experiment_proc.returncode == 0, experiment_proc.returncode)
     rec.add_assertion(
@@ -261,6 +318,8 @@ def test_p22_j07_experiment_lifecycle(repo_root: Path, tmp_path: Path, phase22_p
         "exp_design_execution_ready",
         "exp_design_approval_preflight_ready",
         "executed_command_matches_plan_allowlist",
+        "plan_semantics_match_declared_thresholds",
+        "plan_artifact_references_are_replayable",
         "local_subprocess_exit_zero",
         "raw_metrics_recomputed_from_samples",
         "accuracy_uplift_at_least_20pp",

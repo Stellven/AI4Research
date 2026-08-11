@@ -9352,6 +9352,101 @@ def _session_status_raw(
     }
 
 
+def _strict_experiment_command_allowlisted(command: list[str], contract: dict[str, Any]) -> tuple[bool, str]:
+    """Match the complete argv only; broad executable/prefix/template rules are unsafe here."""
+    if not command:
+        return False, "empty command argv"
+    for payload in _allowlist_payloads(contract):
+        candidates = payload.get("command_argvs")
+        if not isinstance(candidates, list):
+            continue
+        for candidate in candidates:
+            if isinstance(candidate, list) and [str(item) for item in candidate] == command:
+                return True, "exact command_argvs token match"
+    return False, "no token-for-token exact argv entry matched"
+
+
+def _verification_contract_safety(
+    verification_contract: dict[str, Any],
+    contract: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    reasons: list[str] = []
+    version = str(verification_contract.get("verification_contract_version") or "")
+    profile = str(verification_contract.get("readiness_profile") or "")
+    workspace_raw = str(verification_contract.get("workspace_root") or "").strip()
+    runner_raw = str((verification_contract.get("runner") or {}).get("path") or "").strip()
+    dataset_raw = str((verification_contract.get("dataset") or {}).get("path") or "").strip()
+    expected_raw = [str(item) for item in verification_contract.get("expected_artifacts") or [] if str(item).strip()]
+    write_raw = [str(item) for item in verification_contract.get("write_scope") or [] if str(item).strip()]
+    command_argv = [str(item) for item in verification_contract.get("command_argv") or [] if str(item).strip()]
+
+    if version != "1":
+        reasons.append("verification contract version is missing or unsupported")
+    if profile not in {"deterministic_local_fixture", "human_approved_local"}:
+        reasons.append("readiness profile is missing or unsupported")
+    if verification_contract.get("network_access") != "denied":
+        reasons.append("network access is not denied")
+
+    workspace = _resolve_harness_path(workspace_raw).resolve() if workspace_raw else None
+    runner = _resolve_harness_path(runner_raw).resolve() if runner_raw else None
+    dataset = _resolve_harness_path(dataset_raw).resolve() if dataset_raw else None
+    expected = [_resolve_harness_path(item).resolve() for item in expected_raw]
+    write_scope = [_resolve_harness_path(item).resolve() for item in write_raw]
+    allowed_anchor = HARNESS_DIR.parent.resolve()
+    workspace_allowed = bool(
+        workspace
+        and workspace.is_dir()
+        and _path_is_under(workspace, allowed_anchor)
+    )
+    if not workspace_allowed:
+        reasons.append("workspace root is missing or outside the harness sandbox allow root")
+
+    asset_paths = [path for path in [runner, dataset, *expected] if path is not None]
+    if not runner or not runner.is_file():
+        reasons.append("runner path is missing or does not exist")
+    if not dataset or not dataset.is_file():
+        reasons.append("dataset path is missing or does not exist")
+    if not expected or not all(path.is_file() for path in expected):
+        reasons.append("expected artifact paths must exist before admission")
+    if workspace and any(not _path_is_under(path, workspace) for path in asset_paths):
+        reasons.append("runner, dataset, and expected artifacts must remain inside workspace root")
+    if not write_scope or (workspace and any(not _path_is_under(path, workspace) for path in write_scope)):
+        reasons.append("write scope is missing or escapes workspace root")
+    if expected and write_scope and any(not any(_path_is_under(path, root) for root in write_scope) for path in expected):
+        reasons.append("expected artifacts are outside the declared write scope")
+
+    before_paths = {
+        _resolve_harness_path(str(entry.get("path") or "")).resolve()
+        for entry in contract.get("before_artifacts") or []
+        if isinstance(entry, dict) and str(entry.get("path") or "").strip()
+    }
+    before_dataset_matches = bool(dataset and before_paths == {dataset})
+    if not before_dataset_matches:
+        reasons.append("before-state evidence must match the declared dataset exactly")
+
+    runner_matches = bool(len(command_argv) >= 2 and runner and Path(command_argv[1]).resolve() == runner)
+    dataset_matches = bool(len(command_argv) >= 3 and dataset and Path(command_argv[2]).resolve() == dataset)
+    expected_matches = bool(command_argv and expected and Path(command_argv[-1]).resolve() in expected)
+    if not runner_matches or not dataset_matches or not expected_matches:
+        reasons.append("command argv does not bind the declared runner, dataset, and expected artifact")
+
+    checks = {
+        "verification_contract_version": version,
+        "readiness_profile": profile,
+        "workspace_allowed": workspace_allowed,
+        "runner_exists": bool(runner and runner.is_file()),
+        "dataset_exists": bool(dataset and dataset.is_file()),
+        "expected_artifacts_exist": bool(expected and all(path.is_file() for path in expected)),
+        "network_denied": verification_contract.get("network_access") == "denied",
+        "write_scope_restricted": bool(write_scope) and not any(
+            workspace and not _path_is_under(path, workspace) for path in write_scope
+        ),
+        "before_dataset_matches": before_dataset_matches,
+        "command_binds_declared_assets": runner_matches and dataset_matches and expected_matches,
+    }
+    return checks, reasons
+
+
 def _experiment_design_final_execution_boundary(
     envelope: dict[str, Any],
     *,
@@ -9371,7 +9466,6 @@ def _experiment_design_final_execution_boundary(
     target_resolved = bool(str(target_ref or "").strip())
     review_completed = str(review_llm.get("status") or "") == "completed"
     approval_ready = bool(contract.get("ready_for_execution"))
-    safe_fixture_preflight_ready = bool(contract.get("allowlist_ready")) and bool(contract.get("before_ready"))
     command_handoff_declared = bool(command_allowlist)
     artifact_handoff_declared = bool(expected_artifacts)
     dataset = verification_contract.get("dataset")
@@ -9380,8 +9474,12 @@ def _experiment_design_final_execution_boundary(
     random_seed = verification_contract.get("random_seed")
     stopping_conditions = verification_contract.get("stopping_conditions")
     command_argv = [str(item) for item in verification_contract.get("command_argv") or [] if str(item).strip()]
+    verification_contract_version = str(verification_contract.get("verification_contract_version") or "")
+    readiness_profile = str(verification_contract.get("readiness_profile") or "")
     verification_contract_complete = bool(
-        isinstance(dataset, dict)
+        verification_contract_version == "1"
+        and readiness_profile in {"deterministic_local_fixture", "human_approved_local"}
+        and isinstance(dataset, dict)
         and all(str(dataset.get(key) or "").strip() for key in ("path", "format", "role"))
         and isinstance(variants, list)
         and len(variants) >= 2
@@ -9392,16 +9490,23 @@ def _experiment_design_final_execution_boundary(
         and bool(stopping_conditions)
         and command_argv
     )
-    command_authorized, command_authorization_reason = _command_allowlisted(command_argv, contract)
-    preflight_ready = (approval_ready if approval_required else safe_fixture_preflight_ready) and command_authorized
+    safety_checks, safety_reasons = _verification_contract_safety(verification_contract, contract)
+    safety_ready = not safety_reasons
+    command_authorized, command_authorization_reason = _strict_experiment_command_allowlisted(command_argv, contract)
+    fixture_exemption = execution_mode == "fixture" and readiness_profile == "deterministic_local_fixture"
+    human_profile = execution_mode == "human_approved" and readiness_profile == "human_approved_local"
+    preflight_ready = safety_ready and command_authorized and (
+        approval_ready if approval_required else fixture_exemption
+    )
     approval_preflight = {
-        "status": "ready" if approval_required and preflight_ready else "not_required" if preflight_ready else "incomplete",
-        "approval_state": str(contract.get("approval_state") or "N/A") if approval_required else "not_required",
+        "status": "ready" if approval_required and preflight_ready else "not_required" if fixture_exemption and preflight_ready else "incomplete",
+        "approval_state": str(contract.get("approval_state") or "N/A") if approval_required else "not_required" if fixture_exemption else "approval_required",
         "approval_ref": str(contract.get("approval_ref") or ""),
         "allowlist_ready": bool(contract.get("allowlist_ready")),
         "before_state_ready": bool(contract.get("before_ready")),
         "command_authorized": command_authorized,
         "command_authorization_reason": command_authorization_reason,
+        "safety_checks": safety_checks,
     }
     blocking_reasons: list[str] = []
     if not target_resolved:
@@ -9410,14 +9515,17 @@ def _experiment_design_final_execution_boundary(
         blocking_reasons.append("completed Review LLM design validation is missing")
     if approval_required and not approval_ready:
         blocking_reasons.append("approved runtime preflight contract is incomplete")
-    if not approval_required and not safe_fixture_preflight_ready:
-        blocking_reasons.append("bounded fixture command allowlist or before-state preflight is incomplete")
+    if approval_required and not human_profile:
+        blocking_reasons.append("human-approved execution requires the human_approved_local readiness profile")
+    if not approval_required and not fixture_exemption:
+        blocking_reasons.append("approval exemption is limited to explicit deterministic fixture mode")
     if not command_handoff_declared:
         blocking_reasons.append("runtime command handoff is missing")
     if not artifact_handoff_declared:
         blocking_reasons.append("expected artifact handoff is missing")
     if not verification_contract_complete:
         blocking_reasons.append("dataset, variants, thresholds, seed, stopping conditions, or exact command are incomplete")
+    blocking_reasons.extend(safety_reasons)
     if command_argv and not command_authorized:
         blocking_reasons.append("planned runtime command is not authorized by the supplied allowlist evidence")
     execution_ready = not blocking_reasons
@@ -9557,6 +9665,7 @@ def _write_experiment_poc_assets(
         "schema": "autosci_experiment_command_allowlist.v1",
         "experiment_id": experiment_id,
         "commands": [command_text],
+        "command_argvs": [command],
         "executables": [_path_token(sys.executable), Path(sys.executable).name],
         "allowed_prefixes": [" ".join(shlex.quote(item) for item in command[:3])],
         "limitations": ["Allowlist is scoped to the generated deterministic local POC runner."],
@@ -9597,7 +9706,11 @@ def _write_experiment_poc_assets(
         "allowlist": allowlist,
         "usability": usability,
         "verification_contract": {
-            "dataset": {"path": _rel(data_path), "format": "csv", "role": "bounded evaluation input"},
+            "verification_contract_version": "1",
+            "readiness_profile": "deterministic_local_fixture",
+            "workspace_root": _path_token(asset_root),
+            "runner": {"path": _path_token(runner_path)},
+            "dataset": {"path": _path_token(data_path), "format": "csv", "role": "bounded evaluation input"},
             "variants": [
                 {"name": "baseline", "description": "Unmodified baseline error counts from each input row."},
                 {"name": "variant", "description": "Candidate variant error counts from each input row."},
@@ -9609,6 +9722,9 @@ def _write_experiment_poc_assets(
                 "Stop with failure if the bounded process exceeds the declared timeout.",
             ],
             "command_argv": command,
+            "expected_artifacts": [_path_token(result_path)],
+            "network_access": "denied",
+            "write_scope": [_path_token(asset_root)],
         },
         "artifacts": [
             {"type": "poc_runtime_runner", "path": _rel(runner_path)},
@@ -9624,6 +9740,9 @@ def _write_experiment_poc_assets(
 def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     execution_mode = _experiment_execution_mode(envelope)
+    supplied_contract = _load_optional_evidence(inputs.get("experiment_contract"))
+    if supplied_contract and supplied_contract.get("execution_mode") is not None:
+        execution_mode = str(supplied_contract.get("execution_mode") or "")
     wiki_state, wiki_state_artifact = _wiki_state_resolver_artifact(envelope, "design_experiment")
     wiki_artifacts = [wiki_state_artifact] if wiki_state_artifact else []
     raw_target = str(inputs.get("claim_or_idea_ref") or inputs.get("target") or "").strip()
@@ -9751,11 +9870,26 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
     ]
     command_allowlist = [str(poc_assets["manifest"]["command"])]
     verification_contract = dict(poc_assets["verification_contract"])
-    supplied_contract = _load_optional_evidence(inputs.get("experiment_contract"))
+    if execution_mode == "human_approved":
+        verification_contract["readiness_profile"] = "human_approved_local"
     if supplied_contract:
         verification_contract = {
             key: supplied_contract.get(key)
-            for key in ("dataset", "variants", "thresholds", "random_seed", "stopping_conditions", "command_argv")
+            for key in (
+                "verification_contract_version",
+                "readiness_profile",
+                "workspace_root",
+                "runner",
+                "dataset",
+                "variants",
+                "thresholds",
+                "random_seed",
+                "stopping_conditions",
+                "command_argv",
+                "expected_artifacts",
+                "network_access",
+                "write_scope",
+            )
         }
         supplied_allowlist = [str(item) for item in supplied_contract.get("command_allowlist") or [] if str(item).strip()]
         if supplied_allowlist:
@@ -9763,6 +9897,14 @@ def _action_design_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
         supplied_artifacts = [str(item) for item in supplied_contract.get("expected_artifacts") or [] if str(item).strip()]
         if supplied_artifacts:
             expected_artifacts = supplied_artifacts
+        objective = str(supplied_contract.get("objective") or objective)
+        hypothesis = str(supplied_contract.get("hypothesis") or hypothesis)
+        variables = [str(item) for item in supplied_contract.get("variables") or variables]
+        metrics = [str(item) for item in supplied_contract.get("metrics") or metrics]
+        procedure = [str(item) for item in supplied_contract.get("procedure") or procedure]
+        baseline = str(supplied_contract.get("baseline") or baseline)
+        baseline_absence_reason = str(supplied_contract.get("baseline_absence_reason") or baseline_absence_reason)
+        success_criteria = [str(item) for item in supplied_contract.get("success_criteria") or success_criteria]
     boundary = _experiment_design_final_execution_boundary(
         envelope,
         target_ref=target_ref,

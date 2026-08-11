@@ -48,6 +48,12 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
         "command_argv",
         "approval_preflight",
         "execution_ready",
+        "verification_contract_version",
+        "readiness_profile",
+        "workspace_root",
+        "runner",
+        "network_access",
+        "write_scope",
     ):
         if raw.get(key) is not None:
             plan[key] = raw[key]

@@ -30,6 +30,10 @@ def test_experiment_plan_gate_accepts_complete_verification_ready_contract():
     plan = payload["outputs"]["experiment_plan"]
     plan.update(
         {
+            "verification_contract_version": "1",
+            "readiness_profile": "human_approved_local",
+            "workspace_root": "workspace",
+            "runner": {"path": "workspace/run.py"},
             "dataset": {"path": "samples.csv", "format": "csv", "role": "evaluation"},
             "variants": [
                 {"name": "baseline", "description": "case-sensitive classifier"},
@@ -39,6 +43,10 @@ def test_experiment_plan_gate_accepts_complete_verification_ready_contract():
             "random_seed": 7,
             "stopping_conditions": ["all rows processed", "timeout at 60 seconds"],
             "command_argv": ["python3", "run.py", "samples.csv", "result.json"],
+            "network_access": "denied",
+            "write_scope": ["workspace"],
+            "execution_mode": "human_approved",
+            "approval_required": True,
             "approval_preflight": {
                 "status": "ready",
                 "approval_state": "approved_pending_runtime",
@@ -59,12 +67,20 @@ def test_experiment_plan_gate_rejects_false_ready_claim_without_complete_preflig
     plan = payload["outputs"]["experiment_plan"]
     plan.update(
         {
+            "verification_contract_version": "1",
+            "readiness_profile": "human_approved_local",
+            "workspace_root": "workspace",
+            "runner": {"path": "workspace/run.py"},
             "dataset": {"path": "samples.csv", "format": "csv", "role": "evaluation"},
             "variants": [{"name": "baseline", "description": "only one variant"}],
             "thresholds": [],
             "random_seed": 7,
             "stopping_conditions": [],
             "command_argv": ["python3", "run.py"],
+            "network_access": "denied",
+            "write_scope": ["workspace"],
+            "execution_mode": "human_approved",
+            "approval_required": True,
             "approval_preflight": {
                 "status": "incomplete",
                 "approval_state": "approved_missing_preflight",
@@ -83,3 +99,18 @@ def test_experiment_plan_gate_rejects_false_ready_claim_without_complete_preflig
     assert "thresholds" in joined
     assert "stopping_conditions" in joined
     assert "execution_ready=true" in joined
+
+
+def test_experiment_plan_gate_keeps_legacy_plan_with_incidental_metadata_compatible():
+    payload = deepcopy(load_json(FIXTURES / "pass/experiment_plan.json"))
+    payload["outputs"]["experiment_plan"].update(
+        {
+            "dataset": {"path": "legacy-samples.csv", "format": "csv", "role": "diagnostic metadata"},
+            "random_seed": 11,
+            "source_context": {"legacy": True},
+        }
+    )
+
+    result = experiment_plan_gate.evaluate(payload)
+
+    assert result.ok is True
