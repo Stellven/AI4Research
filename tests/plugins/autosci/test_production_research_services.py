@@ -194,6 +194,52 @@ def test_literature_discovery_reuses_backend_and_hashes_multiple_sources(tmp_pat
     assert len(usage["request_sha256"]) == len(usage["response_sha256"]) == 64
 
 
+def test_literature_discovery_falls_back_after_semantic_retry_budget_is_exceeded(tmp_path: Path) -> None:
+    observed: dict = {}
+
+    def backend(**kwargs):
+        observed.update(kwargs)
+        return {
+            "status": "inconclusive",
+            "candidates": [],
+            "limitations": [
+                "Semantic Scholar provider Retry-After 120s exceeded the 5s retry budget; no early retry was attempted."
+            ],
+        }
+
+    discovery = LiteratureDiscoveryService(tmp_path, backend=backend)
+    discovery._openalex = lambda query: (
+        [
+            {
+                "source_id": f"openalex:{index}",
+                "canonical_id": f"https://openalex.org/W{index}",
+                "title": f"Fallback source {index}",
+                "url": f"https://openalex.org/W{index}",
+                "provider": "openalex",
+                "metadata": {},
+                "provenance": {"provider": "openalex", "query": query},
+                "content_summary": f"Methods and results from fallback source {index}.",
+            }
+            for index in range(1, 4)
+        ],
+        {"provider": "openalex", "request_url": "https://api.openalex.org/works", "response_sha256": "a" * 64},
+    )
+
+    result = discovery(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "bounded fallback research"}]},
+        payload={},
+    )
+
+    assert observed["max_retries"] == 1
+    assert observed["max_retry_wait_seconds"] == 5.0
+    assert len(result["candidates"]) == 3
+    assert {item["provider"] for item in result["candidates"]} == {"openalex"}
+    assert [item["provider"] for item in json.loads(
+        (tmp_path / result["provider_usage"][0]["archive_path"]).read_text(encoding="utf-8")
+    )["provider_traces"]] == ["semantic_scholar", "openalex"]
+    assert any("no early retry was attempted" in item for item in result["limitations"])
+
+
 def test_literature_discovery_archives_under_long_windows_workspace_path(tmp_path: Path) -> None:
     long_root = (
         tmp_path

@@ -232,32 +232,55 @@ def _record_s2_retry_event(
     retry_number: int,
     max_retries: int,
     delay_seconds: float,
+    retry_after_seconds: float | None = None,
+    max_retry_wait_seconds: float | None = None,
+    budget_exceeded: bool = False,
 ) -> None:
-    _S2_RETRY_EVENTS.append(
-        {
-            "method": method,
-            "endpoint": _s2_endpoint_label(url),
-            "status_code": status_code,
-            "retry_number": retry_number,
-            "max_retries": max_retries,
-            "delay_seconds": round(delay_seconds, 3),
-        }
-    )
+    event = {
+        "method": method,
+        "endpoint": _s2_endpoint_label(url),
+        "status_code": status_code,
+        "retry_number": retry_number,
+        "max_retries": max_retries,
+        "delay_seconds": round(delay_seconds, 3),
+        "actual_wait_seconds": 0.0 if budget_exceeded else round(delay_seconds, 3),
+        "budget_exceeded": budget_exceeded,
+    }
+    if retry_after_seconds is not None:
+        event["provider_retry_after_seconds"] = round(retry_after_seconds, 3)
+    if max_retry_wait_seconds is not None:
+        event["max_retry_wait_seconds"] = round(max_retry_wait_seconds, 3)
+    _S2_RETRY_EVENTS.append(event)
     _emit_s2_retry_progress(_S2_RETRY_EVENTS[-1])
 
 
 def _s2_retry_warnings() -> list[str]:
-    return [
-        (
-            "Semantic Scholar rate-limit retry "
-            f"{event['retry_number']}/{event['max_retries']} after HTTP {event['status_code']} "
-            f"on {event['method']} {event['endpoint']}; waited {event['delay_seconds']:g}s."
-        )
-        for event in _S2_RETRY_EVENTS
-    ]
+    warnings: list[str] = []
+    for event in _S2_RETRY_EVENTS:
+        if event.get("budget_exceeded"):
+            warnings.append(
+                "Semantic Scholar provider Retry-After "
+                f"{event.get('provider_retry_after_seconds', event['delay_seconds']):g}s exceeded "
+                f"the {event.get('max_retry_wait_seconds', 0):g}s retry budget after HTTP {event['status_code']} "
+                f"on {event['method']} {event['endpoint']}; no early retry was attempted."
+            )
+        else:
+            warnings.append(
+                "Semantic Scholar rate-limit retry "
+                f"{event['retry_number']}/{event['max_retries']} after HTTP {event['status_code']} "
+                f"on {event['method']} {event['endpoint']}; waited {event['actual_wait_seconds']:g}s."
+            )
+    return warnings
 
 
 def _s2_retry_message(event: dict[str, Any]) -> str:
+    if event.get("budget_exceeded"):
+        return (
+            "Semantic Scholar transient provider failure "
+            f"{event['method']} {event['endpoint']} with HTTP {event['status_code']}; "
+            f"provider Retry-After {event.get('provider_retry_after_seconds', event['delay_seconds']):g}s "
+            f"exceeds retry budget {event.get('max_retry_wait_seconds', 0):g}s, so no early retry will be attempted."
+        )
     return (
         "Semantic Scholar transient provider failure "
         f"{event['method']} {event['endpoint']} with HTTP {event['status_code']}; "
@@ -272,7 +295,7 @@ def _emit_s2_retry_progress(event: dict[str, Any]) -> None:
         return
     payload = {
         "schema": "autosci_s2_retry_progress.v1",
-        "status": "waiting_for_rate_limit",
+        "status": "retry_budget_exceeded" if event.get("budget_exceeded") else "waiting_for_rate_limit",
         "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "current_event": event,
         "events": list(_S2_RETRY_EVENTS),
@@ -331,7 +354,15 @@ def _s2_request(
             delay = retry_delay * (attempt + 1)
             if max_retry_wait_seconds is not None:
                 delay = min(delay, max(0.0, float(max_retry_wait_seconds)))
-            _record_s2_retry_event(method=method, url=url, status_code=0, retry_number=attempt + 1, max_retries=max_retries, delay_seconds=delay)
+            _record_s2_retry_event(
+                method=method,
+                url=url,
+                status_code=0,
+                retry_number=attempt + 1,
+                max_retries=max_retries,
+                delay_seconds=delay,
+                max_retry_wait_seconds=max_retry_wait_seconds,
+            )
             if delay > 0:
                 time.sleep(delay)
             attempt += 1
@@ -352,8 +383,25 @@ def _s2_request(
             headers = getattr(response, "headers", {}) or {}
             retry_after = _retry_after_seconds(headers.get("Retry-After"))
             delay = retry_after if retry_after is not None else retry_delay * (attempt + 1)
-            if max_retry_wait_seconds is not None:
-                delay = min(delay, max(0.0, float(max_retry_wait_seconds)))
+            retry_budget = max(0.0, float(max_retry_wait_seconds)) if max_retry_wait_seconds is not None else None
+            if retry_after is not None and retry_budget is not None and retry_after > retry_budget:
+                _record_s2_retry_event(
+                    method=method,
+                    url=url,
+                    status_code=status_code,
+                    retry_number=attempt + 1,
+                    max_retries=max_retries,
+                    delay_seconds=retry_after,
+                    retry_after_seconds=retry_after,
+                    max_retry_wait_seconds=retry_budget,
+                    budget_exceeded=True,
+                )
+                raise RuntimeError(
+                    "Semantic Scholar API rate limited; provider Retry-After "
+                    f"{retry_after:g}s exceeds retry budget {retry_budget:g}s"
+                )
+            if retry_budget is not None:
+                delay = min(delay, retry_budget)
             _record_s2_retry_event(
                 method=method,
                 url=url,
@@ -361,6 +409,8 @@ def _s2_request(
                 retry_number=attempt + 1,
                 max_retries=max_retries,
                 delay_seconds=delay,
+                retry_after_seconds=retry_after,
+                max_retry_wait_seconds=retry_budget,
             )
             if delay > 0:
                 time.sleep(delay)
