@@ -1197,6 +1197,14 @@ def test_p22_j16_tmux_requirements_builder_real_user_defect_repair(repo_root: Pa
 
         rec.finalize("PASS_WITH_KNOWN_LIMITATIONS" if limitations else "PASS", limitations=limitations)
     finally:
+        watchdog_script = harness_dir / "coordinator-watchdog.sh"
+        if watchdog_script.exists():
+            rec.run("watchdog-stop", [str(bash_argv(repo_root)[0]), str(watchdog_script), "stop"], env=env, timeout=30)
+        coordinator_pid_path = harness_dir / ".coordinator.pid"
+        if coordinator_pid_path.exists():
+            coordinator_pid = _read_text(coordinator_pid_path).strip()
+            if coordinator_pid.isdigit():
+                rec.run("coordinator-stop", ["kill", "-TERM", coordinator_pid], env=env, timeout=30)
         if tmux_started:
             rec.run(
                 "tmux-final-capture-user-session",
