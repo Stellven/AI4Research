@@ -205,7 +205,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     runtime_command = str(product_manifest.get("command") or "")
     runner_path = product_runner_path
     input_csv = product_input_csv
-    runtime_output = product_result_path
+    expected_result_path = product_result_path
     allowlist_path = product_allowlist_path
 
     blocked_summary, _ = run_autosci(
@@ -223,7 +223,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             "--before-artifact",
             str(input_csv),
             "--after-artifact",
-            str(runtime_output),
+            str(expected_result_path),
             "--execute-approved",
             "--run-id",
             "p22-j21-exp-run-blocked",
@@ -251,7 +251,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             "--before-artifact",
             str(input_csv),
             "--after-artifact",
-            str(runtime_output),
+            str(expected_result_path),
             "--execute-approved",
             "--run-id",
             "p22-j21-exp-run",
@@ -266,6 +266,14 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     run_runtime_evidence = _artifact_path(harness_dir, run_payload, "experiment_runtime_evidence_json")
     run_lease_report = _artifact_path(harness_dir, run_payload, "experiment_execution_lease_report_json")
     run_result_package = _read_json(run_result_path) if run_result_path and run_result_path.exists() else {}
+    run_runtime_payload = _read_json(run_runtime_evidence) if run_runtime_evidence and run_runtime_evidence.exists() else {}
+    runtime_result_ref = (
+        ((run_runtime_payload.get("outputs") or {}).get("runtime") or {}).get("result_path")
+        if isinstance(run_runtime_payload.get("outputs"), dict)
+        else None
+    )
+    runtime_output = _resolve_harness_path(harness_dir, runtime_result_ref)
+    runtime_output_payload = _read_json(runtime_output) if runtime_output and runtime_output.exists() else {}
 
     status_summary, _ = run_autosci(
         rec,
@@ -282,7 +290,7 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
             "--before-artifact",
             str(input_csv),
             "--after-artifact",
-            str(runtime_output),
+            str(expected_result_path),
             "--runtime-evidence",
             str(run_runtime_evidence) if run_runtime_evidence else "",
             "--run-id",
@@ -419,7 +427,8 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
     rec.add_artifact(code_evidence_supported, "supported_code_evidence")
     rec.add_artifact(code_evidence_unsupported, "unsupported_code_evidence")
     rec.add_artifact(checker_path, "downstream_handoff_checker")
-    rec.add_artifact(runtime_output, "runtime_output_file")
+    if runtime_output:
+        rec.add_artifact(runtime_output, "runtime_output_file")
     if handoff_path.exists():
         rec.add_artifact(handoff_path, "exp_run_handoff_markdown")
 
@@ -433,7 +442,26 @@ def test_p22_j21_real_experiment_build_and_handoff(repo_root: Path, tmp_path: Pa
         bool(run_runtime.get("command_run")) and run_runtime.get("exit_code") == 0,
         {"command_run": run_runtime.get("command_run"), "exit_code": run_runtime.get("exit_code")},
     )
-    rec.add_assertion("runtime_output_nonempty", runtime_output.exists() and runtime_output.stat().st_size > 2, runtime_output.stat().st_size if runtime_output.exists() else None)
+    runtime_output_result = (
+        ((runtime_output_payload.get("outputs") or {}).get("result") or {})
+        if isinstance(runtime_output_payload.get("outputs"), dict)
+        else {}
+    )
+    rec.add_assertion(
+        "runtime_output_nonempty",
+        bool(runtime_output)
+        and runtime_output.exists()
+        and runtime_output_payload.get("schema") == "experiment_result.v1"
+        and runtime_output_payload.get("status") == "completed"
+        and bool(runtime_output_result.get("metrics")),
+        {
+            "path": str(runtime_output) if runtime_output else None,
+            "size": runtime_output.stat().st_size if runtime_output and runtime_output.exists() else None,
+            "schema": runtime_output_payload.get("schema"),
+            "status": runtime_output_payload.get("status"),
+            "metric_count": len(runtime_output_result.get("metrics") or []),
+        },
+    )
     rec.add_assertion(
         "runtime_semantic_verified",
         bool(run_boundary.get("approval_contract_verified")) and bool(run_boundary.get("runtime_semantic_verified")),
