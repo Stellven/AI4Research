@@ -140,6 +140,7 @@ def _decision_request(verdict_path: Path, experiment_path: Path) -> dict:
                 "evidence_id": "j09-claim-verdict",
                 "evidence_type": "claim_verdict",
                 "claim_id": "claim-supported",
+                "supporting_experiment_evidence_id": "j09-experiment-result",
                 "source_path": str(verdict_path),
                 "expected_sha256": _file_sha256(verdict_path),
                 "summary": "The persisted claim verdict supports the bounded local claim.",
@@ -518,6 +519,11 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         for item in request_payload.get("evidence", [])
         if isinstance(item, dict) and item.get("evidence_id")
     }
+    evidence_links_by_id = {
+        item["evidence_id"]: item
+        for item in evidence_links
+        if isinstance(item, dict) and item.get("evidence_id")
+    }
     rec.add_assertion(
         "decision_typed_evidence_matches_expected_hashes",
         {item.get("evidence_type") for item in evidence_links}
@@ -527,7 +533,17 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
             == expected_evidence.get(item.get("evidence_id"), {}).get("expected_sha256")
             == _file_sha256(Path(item.get("source_path", "")))
             for item in evidence_links
-        ),
+        )
+        and evidence_links_by_id.get("j09-claim-verdict", {}).get("observed_support")
+        == "supported"
+        and evidence_links_by_id.get("j09-claim-verdict", {}).get(
+            "supporting_evidence_ids"
+        )
+        == ["j09-experiment-result"]
+        and evidence_links_by_id.get("j09-experiment-result", {}).get(
+            "observed_support"
+        )
+        == "supports",
         {"request": expected_evidence, "artifact": evidence_links},
     )
     expected_pairs = {

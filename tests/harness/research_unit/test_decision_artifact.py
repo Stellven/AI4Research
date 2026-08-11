@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -31,13 +32,72 @@ def _write_request(path: Path, request: dict) -> Path:
     return path
 
 
-def _request(tmp_path: Path, *, observed: str = "supported") -> tuple[dict, Path]:
+def _request(
+    tmp_path: Path,
+    *,
+    observed: str = "supported",
+    experiment_outcome: str = "supports",
+) -> tuple[dict, Path]:
+    experiment = tmp_path / "experiment-result.json"
+    experiment.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_result.v1",
+                "task_id": "task-exp-1",
+                "sprint_id": "sprint-1",
+                "node_id": "node-exp-1",
+                "status": "completed",
+                "inputs": {},
+                "outputs": {
+                    "result": {
+                        "experiment_id": "exp-1",
+                        "outcome": experiment_outcome,
+                        "metrics": [{"name": "accuracy", "value": 0.9}],
+                        "evidence_ids": ["exp-1", "runtime:exp-1"],
+                    }
+                },
+                "artifacts": [],
+                "provenance": {
+                    "operator_id": "unit-test",
+                    "implementation_package": "tests",
+                    "timestamp": "2026-08-11T00:00:00Z",
+                },
+                "limitations": [],
+            }
+        ),
+        encoding="utf-8",
+    )
     evidence = tmp_path / "claim-verdict.json"
     evidence.write_text(
         json.dumps(
             {
                 "schema": "claim_verdict.v1",
-                "outputs": {"verdicts": [{"claim_id": "claim-1", "verdict": observed}]},
+                "task_id": "task-claim-1",
+                "sprint_id": "sprint-1",
+                "node_id": "node-claim-1",
+                "status": "completed",
+                "inputs": {},
+                "outputs": {
+                    "verdicts": [
+                        {
+                            "claim_id": "claim-1",
+                            "verdict": observed,
+                            "confidence": 0.9,
+                            "basis": "The typed experiment result supports this bounded claim.",
+                            "evidence_ids": ["claim-1", "exp-1", "runtime:exp-1"],
+                            "experiment_id": "exp-1",
+                            "experiment_evidence_ids": ["exp-1", "runtime:exp-1"],
+                            "limitations": [],
+                        }
+                    ]
+                },
+                "artifacts": [],
+                "provenance": {
+                    "operator_id": "unit-test",
+                    "implementation_package": "tests",
+                    "timestamp": "2026-08-11T00:00:00Z",
+                },
+                "limitations": [],
             }
         ),
         encoding="utf-8",
@@ -60,10 +120,18 @@ def _request(tmp_path: Path, *, observed: str = "supported") -> tuple[dict, Path
                 "evidence_id": "claim-1-verdict",
                 "evidence_type": "claim_verdict",
                 "claim_id": "claim-1",
+                "supporting_experiment_evidence_id": "experiment-1-result",
                 "source_path": str(evidence),
                 "expected_sha256": _sha256(evidence),
                 "summary": "The local claim verifier marked the bounded claim supported.",
-            }
+            },
+            {
+                "evidence_id": "experiment-1-result",
+                "evidence_type": "experiment_result",
+                "source_path": str(experiment),
+                "expected_sha256": _sha256(experiment),
+                "summary": "The schema-valid completed experiment explicitly supports the bounded claim.",
+            },
         ],
         "assessments": [
             {
@@ -107,7 +175,7 @@ def _request(tmp_path: Path, *, observed: str = "supported") -> tuple[dict, Path
             "alternative_id": "bounded",
             "rationale": "The bounded route is the only option supported by current evidence.",
             "criterion_ids": ["evidence", "risk"],
-            "evidence_ids": ["claim-1-verdict"],
+            "evidence_ids": ["claim-1-verdict", "experiment-1-result"],
         },
         "limitations": ["One local dataset does not establish external validity."],
         "unresolved_review_items": ["Independent reviewer must assess external validity."],
@@ -146,9 +214,10 @@ def test_constructor_emits_schema_valid_review_required_artifact(tmp_path: Path)
 
     jsonschema.Draft202012Validator(json.loads(SCHEMA.read_text(encoding="utf-8"))).validate(artifact)
     assert artifact["recommendation"]["criterion_ids"] == ["evidence", "risk"]
-    assert artifact["recommendation"]["evidence_ids"] == ["claim-1-verdict"]
+    assert artifact["recommendation"]["evidence_ids"] == ["claim-1-verdict", "experiment-1-result"]
     assert artifact["evidence_links"][0]["observed_support"] == "supported"
     assert artifact["evidence_links"][0]["evidence_type"] == "claim_verdict"
+    assert artifact["evidence_links"][0]["supporting_evidence_ids"] == ["experiment-1-result"]
     assert artifact["review"]["status"] == "pending"
     assert artifact["approval"] == {
         "status": "not_requested",
@@ -184,6 +253,80 @@ def test_unsupported_evidence_fails_closed_and_removes_stale_output(tmp_path: Pa
     assert not list(tmp_path.glob(".decision.json.*.tmp"))
 
 
+def test_schema_valid_completed_refuting_experiment_fails_closed(tmp_path: Path) -> None:
+    _, request_path = _request(tmp_path, experiment_outcome="refutes")
+    output = tmp_path / "decision.json"
+    output.write_text("stale", encoding="utf-8")
+
+    proc = _run_cli(request_path, output, tmp_path)
+
+    assert proc.returncode == 2
+    assert not output.exists()
+    error = json.loads(proc.stderr)["error"]
+    assert "expected 'supports', observed 'refutes'" in error
+
+
+def test_typed_upstream_must_validate_against_repository_schemas(tmp_path: Path) -> None:
+    request, request_path = _request(tmp_path)
+    claim_path = Path(request["evidence"][0]["source_path"])
+    claim = json.loads(claim_path.read_text(encoding="utf-8"))
+    del claim["outputs"]["verdicts"][0]["confidence"]
+    claim_path.write_text(json.dumps(claim), encoding="utf-8")
+    request["evidence"][0]["expected_sha256"] = _sha256(claim_path)
+    with pytest.raises(DecisionArtifactError, match="fails claim_verdict.v1 schema"):
+        _construct(request, request_path, tmp_path)
+
+    request, request_path = _request(tmp_path)
+    experiment_path = Path(request["evidence"][1]["source_path"])
+    experiment = json.loads(experiment_path.read_text(encoding="utf-8"))
+    del experiment["outputs"]["result"]["evidence_ids"]
+    experiment_path.write_text(json.dumps(experiment), encoding="utf-8")
+    request["evidence"][1]["expected_sha256"] = _sha256(experiment_path)
+    with pytest.raises(DecisionArtifactError, match="fails experiment_result.v1 schema"):
+        _construct(request, request_path, tmp_path)
+
+
+def test_output_aliases_are_rejected_before_input_or_evidence_unlink(tmp_path: Path) -> None:
+    request, request_path = _request(tmp_path)
+    request_before = request_path.read_bytes()
+
+    input_alias = _run_cli(request_path, request_path, tmp_path)
+
+    assert input_alias.returncode == 2
+    assert "aliases protected input/evidence" in json.loads(input_alias.stderr)["error"]
+    assert request_path.read_bytes() == request_before
+
+    evidence_path = Path(request["evidence"][0]["source_path"])
+    evidence_before = evidence_path.read_bytes()
+    hardlink_output = tmp_path / "hardlink-output.json"
+    os.link(evidence_path, hardlink_output)
+
+    evidence_alias = _run_cli(request_path, hardlink_output, tmp_path)
+
+    assert evidence_alias.returncode == 2
+    assert "aliases protected input/evidence" in json.loads(evidence_alias.stderr)["error"]
+    assert evidence_path.read_bytes() == evidence_before
+    assert hardlink_output.exists()
+
+
+def test_symlink_output_alias_is_rejected_without_deleting_evidence(tmp_path: Path) -> None:
+    request, request_path = _request(tmp_path)
+    evidence_path = Path(request["evidence"][0]["source_path"])
+    evidence_before = evidence_path.read_bytes()
+    output = tmp_path / "symlink-output.json"
+    try:
+        output.symlink_to(evidence_path)
+    except OSError:
+        pytest.skip("symlink creation is unavailable in this Windows environment")
+
+    proc = _run_cli(request_path, output, tmp_path)
+
+    assert proc.returncode == 2
+    assert "aliases protected input/evidence" in json.loads(proc.stderr)["error"]
+    assert evidence_path.read_bytes() == evidence_before
+    assert output.is_symlink()
+
+
 def test_hash_mismatch_unknown_type_and_caller_semantics_are_rejected(tmp_path: Path) -> None:
     request, request_path = _request(tmp_path)
     request["evidence"][0]["expected_sha256"] = "0" * 64
@@ -217,6 +360,11 @@ def test_duplicate_and_unknown_references_are_rejected(tmp_path: Path) -> None:
         _construct(request, request_path, tmp_path)
 
     request, request_path = _request(tmp_path)
+    request["recommendation"]["evidence_ids"] = ["claim-1-verdict"]
+    with pytest.raises(DecisionArtifactError, match="omit typed supporting evidence"):
+        _construct(request, request_path, tmp_path)
+
+    request, request_path = _request(tmp_path)
     request["recommendation"]["evidence_ids"] = ["missing-evidence"]
     with pytest.raises(DecisionArtifactError, match="unknown references"):
         _construct(request, request_path, tmp_path)
@@ -234,27 +382,45 @@ def test_full_matrix_all_criteria_and_evidence_coverage_are_required(tmp_path: P
         _construct(request, request_path, tmp_path)
 
     request, request_path = _request(tmp_path)
-    second_evidence = tmp_path / "second-verdict.json"
+    second_evidence = tmp_path / "second-experiment.json"
     second_evidence.write_text(
         json.dumps(
             {
-                "schema": "claim_verdict.v1",
-                "outputs": {"verdicts": [{"claim_id": "claim-2", "verdict": "supported"}]},
+                "schema": "experiment_result.v1",
+                "task_id": "task-exp-2",
+                "sprint_id": "sprint-1",
+                "node_id": "node-exp-2",
+                "status": "completed",
+                "inputs": {},
+                "outputs": {
+                    "result": {
+                        "experiment_id": "exp-2",
+                        "outcome": "supports",
+                        "metrics": [],
+                        "evidence_ids": ["exp-2"],
+                    }
+                },
+                "artifacts": [],
+                "provenance": {
+                    "operator_id": "unit-test",
+                    "implementation_package": "tests",
+                    "timestamp": "2026-08-11T00:00:00Z",
+                },
+                "limitations": [],
             }
         ),
         encoding="utf-8",
     )
     request["evidence"].append(
         {
-            "evidence_id": "claim-2-verdict",
-            "evidence_type": "claim_verdict",
-            "claim_id": "claim-2",
+            "evidence_id": "experiment-2-result",
+            "evidence_type": "experiment_result",
             "source_path": str(second_evidence),
             "expected_sha256": _sha256(second_evidence),
-            "summary": "A second typed verdict supports the risk assessment.",
+            "summary": "A second typed experiment supports the risk assessment.",
         }
     )
-    request["assessments"][1]["evidence_ids"] = ["claim-2-verdict"]
+    request["assessments"][1]["evidence_ids"] = ["experiment-2-result"]
     with pytest.raises(DecisionArtifactError, match="do not cover recommendation assessments"):
         _construct(request, request_path, tmp_path)
 

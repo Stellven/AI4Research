@@ -30,17 +30,51 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _paths_alias(left: Path, right: Path) -> bool:
+    left_resolved = left.resolve()
+    right_resolved = right.resolve()
+    if left_resolved == right_resolved:
+        return True
+    try:
+        return left.exists() and right.exists() and os.path.samefile(left, right)
+    except OSError:
+        return False
+
+
+def _evidence_paths(request: object, source_root: Path) -> list[Path]:
+    if not isinstance(request, dict):
+        raise DecisionArtifactError("decision request must be an object")
+    entries = request.get("evidence")
+    if not isinstance(entries, list):
+        return []
+    paths: list[Path] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("source_path"), str):
+            continue
+        path = Path(entry["source_path"])
+        paths.append((path if path.is_absolute() else source_root / path).resolve())
+    return paths
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     input_path = args.input.resolve()
     source_root = (args.source_root or input_path.parent).resolve()
     output_path = args.output.resolve()
     temp_path = output_path.with_name(f".{output_path.name}.{os.getpid()}.tmp")
+    alias_audit_passed = False
     try:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.unlink(missing_ok=True)
-        temp_path.unlink(missing_ok=True)
         request = json.loads(input_path.read_text(encoding="utf-8"))
+        protected_paths = [input_path, *_evidence_paths(request, source_root)]
+        for candidate_name, candidate in (("output", output_path), ("temporary output", temp_path)):
+            aliases = [path for path in protected_paths if _paths_alias(candidate, path)]
+            if aliases:
+                raise DecisionArtifactError(
+                    f"{candidate_name} aliases protected input/evidence path: {aliases[0]}"
+                )
+        alias_audit_passed = True
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path.unlink(missing_ok=True)
         artifact = construct_decision_artifact(
             request,
             request_path=input_path,
@@ -62,9 +96,17 @@ def main(argv: list[str] | None = None) -> int:
         jsonschema.ValidationError,
         DecisionArtifactError,
     ) as exc:
-        temp_path.unlink(missing_ok=True)
-        output_path.unlink(missing_ok=True)
-        print(json.dumps({"status": "rejected", "error": str(exc)}), file=sys.stderr)
+        cleanup_errors: list[str] = []
+        if alias_audit_passed:
+            for path in (temp_path, output_path):
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError as cleanup_exc:
+                    cleanup_errors.append(f"{path}: {cleanup_exc}")
+        error = str(exc)
+        if cleanup_errors:
+            error += "; cleanup failed: " + "; ".join(cleanup_errors)
+        print(json.dumps({"status": "rejected", "error": error}), file=sys.stderr)
         return 2
     print(json.dumps({"status": "completed", "artifact": str(output_path)}))
     return 0

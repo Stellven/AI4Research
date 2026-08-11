@@ -6,12 +6,42 @@ import hashlib
 import json
 import re
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+import jsonschema
+
+
+EVIDENCE_SCHEMA_DIR = Path(__file__).resolve().parents[2] / "schemas" / "evidence"
 
 
 class DecisionArtifactError(ValueError):
     """Raised when a decision request cannot be supported by its evidence."""
+
+
+@lru_cache(maxsize=2)
+def _typed_evidence_validator(evidence_type: str) -> jsonschema.Draft202012Validator:
+    schema_path = EVIDENCE_SCHEMA_DIR / f"{evidence_type}.v1.schema.json"
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        jsonschema.Draft202012Validator.check_schema(schema)
+    except (OSError, json.JSONDecodeError, jsonschema.SchemaError) as exc:
+        raise DecisionArtifactError(f"typed evidence schema is unavailable: {schema_path}") from exc
+    return jsonschema.Draft202012Validator(
+        schema,
+        format_checker=jsonschema.FormatChecker(),
+    )
+
+
+def _validate_typed_evidence_schema(payload: Any, evidence_type: str, evidence_id: str) -> None:
+    try:
+        _typed_evidence_validator(evidence_type).validate(payload)
+    except jsonschema.ValidationError as exc:
+        location = "/" + "/".join(str(part) for part in exc.absolute_path)
+        raise DecisionArtifactError(
+            f"evidence {evidence_id} fails {evidence_type}.v1 schema at {location}: {exc.message}"
+        ) from exc
 
 
 def _require_text(value: Any, field: str) -> str:
@@ -70,6 +100,7 @@ def _load_evidence(
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     indexed = _require_unique(entries, "evidence_id", "evidence")
     loaded: list[dict[str, Any]] = []
+    semantics: dict[str, dict[str, Any]] = {}
     for evidence_id, entry in indexed.items():
         raw_path = _require_text(entry.get("source_path"), f"evidence[{evidence_id}].source_path")
         source_path = Path(raw_path)
@@ -112,14 +143,16 @@ def _load_evidence(
         }
         if evidence_type == "claim_verdict":
             allowed_fields.add("claim_id")
+            allowed_fields.add("supporting_experiment_evidence_id")
         unexpected_fields = sorted(set(entry) - allowed_fields)
         if unexpected_fields:
             raise DecisionArtifactError(
                 f"evidence[{evidence_id}] contains unsupported fields: {', '.join(unexpected_fields)}"
             )
+        _validate_typed_evidence_schema(payload, evidence_type, evidence_id)
         if evidence_type == "claim_verdict":
-            if payload.get("schema") != "claim_verdict.v1":
-                raise DecisionArtifactError(f"evidence {evidence_id} is not claim_verdict.v1")
+            if payload.get("status") != "completed":
+                raise DecisionArtifactError(f"evidence {evidence_id} claim verdict is not completed")
             claim_id = _require_text(entry.get("claim_id"), f"evidence[{evidence_id}].claim_id")
             verdicts = payload.get("outputs", {}).get("verdicts", [])
             matches = [
@@ -135,12 +168,48 @@ def _load_evidence(
             pointer = f"/outputs/verdicts/{verdict_index}/verdict"
             observed = _resolve_json_pointer(payload, pointer)
             expected = "supported"
+            verdict = matches[0][1]
+            supporting_experiment_evidence_id = _require_text(
+                entry.get("supporting_experiment_evidence_id"),
+                f"evidence[{evidence_id}].supporting_experiment_evidence_id",
+            )
+            experiment_evidence_ids_raw = verdict.get("experiment_evidence_ids")
+            if not isinstance(experiment_evidence_ids_raw, list) or not experiment_evidence_ids_raw:
+                raise DecisionArtifactError(
+                    f"evidence[{evidence_id}].verdict.experiment_evidence_ids must not be empty"
+                )
+            experiment_evidence_ids = {
+                _require_text(value, f"evidence[{evidence_id}].verdict.experiment_evidence_ids")
+                for value in experiment_evidence_ids_raw
+            }
+            verdict_evidence_ids = {
+                _require_text(value, f"evidence[{evidence_id}].verdict.evidence_ids")
+                for value in verdict.get("evidence_ids", [])
+            }
+            if not experiment_evidence_ids.issubset(verdict_evidence_ids):
+                raise DecisionArtifactError(
+                    f"evidence[{evidence_id}].verdict.experiment_evidence_ids are not in verdict evidence_ids"
+                )
+            semantics[evidence_id] = {
+                "type": evidence_type,
+                "experiment_evidence_id": supporting_experiment_evidence_id,
+                "experiment_id": _require_text(
+                    verdict.get("experiment_id"), f"evidence[{evidence_id}].verdict.experiment_id"
+                ),
+                "experiment_evidence_ids": experiment_evidence_ids,
+            }
         elif evidence_type == "experiment_result":
-            if payload.get("schema") != "experiment_result.v1":
-                raise DecisionArtifactError(f"evidence {evidence_id} is not experiment_result.v1")
-            pointer = "/status"
+            if payload.get("status") != "completed":
+                raise DecisionArtifactError(f"evidence {evidence_id} experiment is not completed")
+            pointer = "/outputs/result/outcome"
             observed = _resolve_json_pointer(payload, pointer)
-            expected = "completed"
+            expected = "supports"
+            result = payload["outputs"]["result"]
+            semantics[evidence_id] = {
+                "type": evidence_type,
+                "experiment_id": result["experiment_id"],
+                "evidence_ids": set(result["evidence_ids"]),
+            }
         else:  # pragma: no cover - guarded by the typed policy check above
             raise DecisionArtifactError(f"unknown evidence type for {evidence_id}: {evidence_type}")
         if observed != expected:
@@ -158,6 +227,25 @@ def _load_evidence(
                 "summary": _require_text(entry.get("summary"), f"evidence[{evidence_id}].summary"),
             }
         )
+    loaded_by_id = {item["evidence_id"]: item for item in loaded}
+    for evidence_id, semantic in semantics.items():
+        if semantic["type"] != "claim_verdict":
+            continue
+        experiment_evidence_id = semantic["experiment_evidence_id"]
+        experiment_semantic = semantics.get(experiment_evidence_id)
+        if not experiment_semantic or experiment_semantic["type"] != "experiment_result":
+            raise DecisionArtifactError(
+                f"evidence {evidence_id} references missing typed experiment evidence: {experiment_evidence_id}"
+            )
+        if semantic["experiment_id"] != experiment_semantic["experiment_id"]:
+            raise DecisionArtifactError(
+                f"evidence {evidence_id} experiment_id does not match {experiment_evidence_id}"
+            )
+        if not semantic["experiment_evidence_ids"] & experiment_semantic["evidence_ids"]:
+            raise DecisionArtifactError(
+                f"evidence {evidence_id} has no provenance overlap with {experiment_evidence_id}"
+            )
+        loaded_by_id[evidence_id]["supporting_evidence_ids"] = [experiment_evidence_id]
     return loaded, indexed
 
 
@@ -295,6 +383,18 @@ def construct_decision_artifact(
     recommendation_evidence = _validate_refs(
         recommendation.get("evidence_ids"), evidence_ids, "recommendation.evidence_ids"
     )
+    loaded_evidence_by_id = {item["evidence_id"]: item for item in loaded_evidence}
+    missing_linked_recommendation_evidence = sorted(
+        linked_id
+        for evidence_id in recommendation_evidence
+        for linked_id in loaded_evidence_by_id[evidence_id].get("supporting_evidence_ids", [])
+        if linked_id not in recommendation_evidence
+    )
+    if missing_linked_recommendation_evidence:
+        raise DecisionArtifactError(
+            "recommendation.evidence_ids omit typed supporting evidence: "
+            + ", ".join(missing_linked_recommendation_evidence)
+        )
     missing_assessments = sorted(
         criterion_id
         for criterion_id in recommendation_criteria

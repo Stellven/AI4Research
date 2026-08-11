@@ -102,7 +102,8 @@
         "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "semantic_locator": {"type": "string", "pattern": "^/"},
         "observed_support": {},
-        "summary": {"type": "string", "minLength": 1}
+        "summary": {"type": "string", "minLength": 1},
+        "supporting_evidence_ids": {"$ref": "#/$defs/ids"}
       }
     },
     "assessment": {
