@@ -330,7 +330,17 @@ def test_p22_j25_runtime_deliverable_distribution(
     )
 
     rec.add_artifact(manifest_path, "runtime_deliverable_manifest", "schema-valid complete asset inventory")
-    rec.add_artifact(replay_archive, "runtime_deliverable_replay_archive", "self-contained source, dependencies, tools, verifier, and replay entrypoint")
+    # JourneyRecorder prefixes the source basename with the artifact type. Keep
+    # the durable evidence filename short enough for Windows MAX_PATH while
+    # retaining the constructor's commit-addressed archive unchanged.
+    evidence_archive = tmp_path / "bundle.tar.gz"
+    if replay_archive.is_file():
+        os.link(replay_archive, evidence_archive)
+    rec.add_artifact(
+        evidence_archive if evidence_archive.is_file() else replay_archive,
+        "runtime_deliverable_replay_archive",
+        "self-contained source, dependencies, tools, verifier, and replay entrypoint",
+    )
     rec.add_artifact(wheel_path, "runtime_deliverable_wheel", "wrapper wheel installed by replay")
     rec.add_artifact(durable_smoke_evidence, "runtime_deliverable_smoke", "atomic command/exit/hash lifecycle evidence")
     success = all(item["passed"] for item in rec.assertions)
