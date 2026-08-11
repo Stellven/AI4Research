@@ -54,6 +54,7 @@ SEMANTIC_SCHOLAR_CHANNEL_OPERATIONS = {
     "search": "search",
 }
 PUBLIC_PROVIDER_CHANNEL_ALIASES = {
+    "arxiv": "arxiv",
     "crossref": "crossref",
     "crossref_api": "crossref",
     "crossref_search": "crossref",
@@ -65,6 +66,10 @@ PUBLIC_PROVIDER_CHANNEL_ALIASES = {
     "openalex": "openalex",
     "openalex_api": "openalex",
     "openalex_search": "openalex",
+    "paper_copilot": "paper_copilot",
+    "s2": "semantic_scholar",
+    "semantic_scholar": "semantic_scholar",
+    "semanticscholar": "semantic_scholar",
 }
 
 
@@ -699,6 +704,19 @@ def test_public_provider_boundary_accepts_production_channel_taxonomy() -> None:
     assert validation["rejected_channels"] == []
 
 
+def test_public_provider_boundary_accepts_production_emitters_and_tracks_mixed_nonpublic_channels() -> None:
+    boundary = {
+        "schema": PUBLIC_PROVIDER_BOUNDARY_SCHEMA,
+        "status": "completed",
+        "completed": True,
+        "provider_channels": ["paper_copilot", "arxiv", "semantic_scholar", "s2", "wiki", "fixture"],
+    }
+    validation = _validate_public_provider_boundary(boundary)
+    assert validation["valid"] is True
+    assert validation["normalized_public_channels"] == ["arxiv", "paper_copilot", "semantic_scholar"]
+    assert validation["rejected_channels"] == ["wiki", "fixture"]
+
+
 @pytest.mark.parametrize(
     ("boundary", "expected_rejected"),
     [
@@ -711,6 +729,15 @@ def test_public_provider_boundary_accepts_production_channel_taxonomy() -> None:
                 "provider_channels": ["fixture", "local", "synthetic", "wiki"],
             },
             ["fixture", "local", "synthetic", "wiki"],
+        ),
+        (
+            {
+                "schema": PUBLIC_PROVIDER_BOUNDARY_SCHEMA,
+                "status": "completed",
+                "completed": True,
+                "provider_channels": ["paper_copilot_fixture", "local_arxiv", "synthetic_semantic_scholar"],
+            },
+            ["paper_copilot_fixture", "local_arxiv", "synthetic_semantic_scholar"],
         ),
         (
             {
