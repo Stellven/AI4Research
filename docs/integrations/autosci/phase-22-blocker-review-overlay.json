@@ -1,0 +1,130 @@
+{
+  "schema_version": "phase22_blocker_review_overlay.v1",
+  "reviewed_at": "2026-08-11",
+  "local_branch": "openJiuwen-Solar",
+  "reviewed_code_head": "cfde62c9bb0bbfc645726ad335e9cd5b6f93937f",
+  "small_remote_baseline": "940f735fa7da44dff8d4b96f49de9012169191c8",
+  "pushed_to_small": false,
+  "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
+  "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
+  "classification_counts": {
+    "FIXED_VERIFIED": 3,
+    "STALE_ALREADY_FIXED": 3,
+    "INSUFFICIENT_EVIDENCE": 5,
+    "MAPPING_ERROR": 2,
+    "ENVIRONMENT_BLOCKED": 2
+  },
+  "accepted_evidence": {
+    "research": "outputs/phase22-not-tested/NT-literature/nt-literature-20260811T183344Z-35752/journey-result.json",
+    "idea_generation": "outputs/phase22-real-journeys/p22j06-20260811T183659Z-28060/journey-result.json",
+    "experiment_design": "outputs/phase22-real-journeys/p22j07-20260811T183659Z-13024/journey-result.json",
+    "poc_handoff": "outputs/phase22-real-journeys/p22-j21-20260811T183659Z-1228/journey-result.json"
+  },
+  "issues": [
+    {
+      "issue_id": "P22-REPAIR-018",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "The production research route now extracts content-bearing method, result, and limitation signals with exact-span and SHA-256 provenance. The final live run validated 15 signals from 9 sources with no failed assertions.",
+      "remaining_boundary": "Provider extracts are normally abstracts or visible text; unseen full text and exhaustive coverage are not claimed."
+    },
+    {
+      "issue_id": "P22-REPAIR-020",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "The final live run independently validated 3 cross-source trends and 2 source-linked evidence gaps.",
+      "remaining_boundary": "The trends are recurring cross-source themes, not longitudinal causal findings."
+    },
+    {
+      "issue_id": "P22-REPAIR-033",
+      "classification": "STALE_ALREADY_FIXED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "The reported missing falsifiability fields no longer reproduce in J06.",
+      "remaining_boundary": "External novelty and Review LLM variants remain outside the accepted run."
+    },
+    {
+      "issue_id": "P22-REPAIR-034",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS",
+      "decision": "J07 now uses a verification-ready, durable plan with exact argv admission, truthful approval preflight, bound assets, safe output creation, and replay of the planned command.",
+      "remaining_boundary": "The network-access restriction is a design/admission contract and is not proof of OS-level network sandboxing."
+    },
+    {
+      "issue_id": "P22-REPAIR-037",
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 executes the approved command and validates the real experiment result, but does not prove every integration/configuration variant in the broad L2 claim.",
+      "remaining_boundary": "A dedicated integration/configuration journey is still required for an unqualified L2 pass."
+    },
+    {
+      "issue_id": "P22-REPAIR-039",
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 produces a usable handoff package, but it does not establish a benchmark-native consolidated bundle contract.",
+      "remaining_boundary": "Benchmark-native consolidation remains untested."
+    },
+    {
+      "issue_id": "P22-REPAIR-055",
+      "classification": "STALE_ALREADY_FIXED",
+      "journey_status": "NOT_TESTED",
+      "decision": "The exact diagnostic selector and 14 capability-manifest tests pass, so the old atomic failure is stale.",
+      "remaining_boundary": "No accepted real-task journey currently maps to Capability Capsule Definition and Assembly."
+    },
+    {
+      "issue_id": "P22-REPAIR-066",
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 accepts a valid package and rejects invalid inputs, but does not cover a dedicated benchmark-package semantic and unsupported-claim schema evaluator.",
+      "remaining_boundary": "Dedicated package-schema and semantic-claim validation remain untested."
+    },
+    {
+      "issue_id": "P22-REPAIR-070",
+      "classification": "STALE_ALREADY_FIXED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "The old unsupported worldwide-claim acceptance does not reproduce; bounded claims pass and overbroad claims are rejected.",
+      "remaining_boundary": "Review LLM and final-verdict variants remain outside the accepted run."
+    },
+    {
+      "issue_id": "P22-REPAIR-095",
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 proves lease acquire, duplicate rejection, and release for the exercised experiment path.",
+      "remaining_boundary": "The evidence is not a complete cross-runtime execution-admission matrix."
+    },
+    {
+      "issue_id": "P22-REPAIR-110",
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 now uses product-generated runner, input, allowlist, and manifest assets.",
+      "remaining_boundary": "The exercised Python experiment asset does not cover all experimental asset types."
+    },
+    {
+      "issue_id": "P22-REPAIR-113",
+      "classification": "MAPPING_ERROR",
+      "journey_status": "NOT_TESTED",
+      "decision": "J09 constructs a scientific report, not a canonical decision artifact; it cannot establish this L2 result.",
+      "remaining_boundary": "A canonical decision schema/constructor and journey are still absent."
+    },
+    {
+      "issue_id": "P22-REPAIR-115",
+      "classification": "ENVIRONMENT_BLOCKED",
+      "journey_status": "ENVIRONMENT_BLOCKED",
+      "decision": "Local WSL/tmux execution reached the live Codex provider-auth boundary. Mac validation remains assigned against the small-repo baseline.",
+      "remaining_boundary": "A usable authenticated provider environment is required."
+    },
+    {
+      "issue_id": "P22-REPAIR-116",
+      "classification": "ENVIRONMENT_BLOCKED",
+      "journey_status": "ENVIRONMENT_BLOCKED",
+      "decision": "The defect-repair path shares the J16 live provider-auth blocker and awaits Mac validation.",
+      "remaining_boundary": "A usable authenticated provider environment is required."
+    },
+    {
+      "issue_id": "P22-REPAIR-119",
+      "classification": "MAPPING_ERROR",
+      "journey_status": "NOT_TESTED",
+      "decision": "J21 proves execution of a Python experiment result, not construction of a package, service, container, or workflow runtime deliverable.",
+      "remaining_boundary": "A dedicated Runtime Deliverable Construction journey is required."
+    }
+  ]
+}

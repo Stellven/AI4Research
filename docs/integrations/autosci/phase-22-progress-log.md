@@ -2917,3 +2917,83 @@ CLI are now available, but the sandboxed Codex runtime has no usable provider
 authentication. The final accepted blocker for J02/J16/J17 is:
 `Codex provider authentication is unavailable in the sandboxed live journey
 runtime.`
+
+## Severity-blocker repair integration — local `openJiuwen-Solar`
+
+Date: 2026-08-11
+
+Scope and baseline:
+
+- Reviewed the 15 P0 packets named in
+  `docs/integrations/autosci/phase-22-repair-issue-packets.json`.
+- Started from the small-repository baseline
+  `940f735fa7da44dff8d4b96f49de9012169191c8` and integrated accepted worker
+  repairs through code/test head
+  `cfde62c9bb0bbfc645726ad335e9cd5b6f93937f` on local branch
+  `openJiuwen-Solar`.
+- Did not push to small. The small remote remains at `940f735f` so the Mac
+  worker can finish P22-REPAIR-115 and P22-REPAIR-116 against its fixed
+  baseline.
+- The original issue-packet JSON remains an immutable severity snapshot for
+  baseline `c331eec8`; current classifications are recorded in
+  `docs/integrations/autosci/phase-22-blocker-review-overlay.json`.
+
+Accepted repairs:
+
+- Literature extraction and trend analysis now use content-bearing public
+  evidence with exact-span/hash provenance, cross-source trends, evidence
+  gaps, bounded provider retry behavior, direct artifact validation, and
+  production-provider channel normalization.
+- Experiment design now preserves the verification contract, fails closed on
+  readiness/approval/argv spoofing, binds durable assets, and executes the
+  exact planned command. The fixture exemption is restricted to a truthful
+  deterministic local-fixture profile.
+- J21 evidence now validates the actual runtime result rather than the old
+  four-byte placeholder and explicitly records the L2 boundaries that the
+  journey does not prove.
+- Windows journey portability now uses a short sandbox, represents missing
+  evidence as absent, and records/cleans controlled timeouts without reading
+  the repository root as evidence.
+
+Independent review outcomes:
+
+- The final P22-REPAIR-034 series was accepted after negative probes for
+  malicious/prefix/template argv, legacy readiness spoofing, unknown modes,
+  out-of-workspace assets, mismatched datasets, and unsafe output targets.
+- The final P22-REPAIR-018/020 series was accepted after provider Retry-After,
+  provenance-tamper, rationale-consistency, and production-channel taxonomy
+  review.
+- J21's initial unqualified-pass interpretation was rejected; the integrated
+  result preserves `PASS_WITH_KNOWN_LIMITATIONS`, `INSUFFICIENT_EVIDENCE`, and
+  `MAPPING_ERROR` boundaries instead.
+
+Final validation at `cfde62c9`:
+
+- Live literature selector: 1 passed in 27.50 seconds. Evidence:
+  `outputs/phase22-not-tested/NT-literature/nt-literature-20260811T183344Z-35752/journey-result.json`.
+  Both mapped L2 features are `PASS_WITH_KNOWN_LIMITATIONS`; there are no
+  failed assertions. Independent validation found 9 sources, 9 evidence
+  records, 15 method/result/limitation signals, 3 cross-source trends, and 2
+  source-linked gaps.
+- J06: 1 passed in 21.89 seconds. Evidence:
+  `outputs/phase22-real-journeys/p22j06-20260811T183659Z-28060/journey-result.json`.
+- J07: 1 passed in 23.60 seconds. Evidence:
+  `outputs/phase22-real-journeys/p22j07-20260811T183659Z-13024/journey-result.json`.
+- J21: 1 passed in 37.17 seconds. Evidence:
+  `outputs/phase22-real-journeys/p22-j21-20260811T183659Z-1228/journey-result.json`.
+
+Accepted classifications:
+
+- `FIXED_VERIFIED`: P22-REPAIR-018, 020, 034.
+- `STALE_ALREADY_FIXED`: P22-REPAIR-033, 055, 070. P22-REPAIR-055 remains
+  Level-2 `NOT_TESTED` because no accepted real-task journey maps to it.
+- `INSUFFICIENT_EVIDENCE`: P22-REPAIR-037, 039, 066, 095, 110. The exercised
+  J21 paths work, but its evidence does not prove the full breadth of those
+  L2 contracts.
+- `MAPPING_ERROR` / Level-2 `NOT_TESTED`: P22-REPAIR-113 and 119.
+- `ENVIRONMENT_BLOCKED`: P22-REPAIR-115 and 116 pending the authorized Mac
+  provider run.
+
+This entry and overlay record the accepted repair review only. The final
+journey report, full report, and brief report have not been synchronized in
+this wave; they must wait for the Mac result and a separate report validation.
