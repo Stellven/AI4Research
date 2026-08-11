@@ -548,6 +548,7 @@ def _latest_operator_result_for_sprint(
     sprint_id: str,
     *,
     seen_task_dirs: set[str] | None = None,
+    task_id_fragment: str = "",
 ) -> tuple[Path | None, dict[str, Any]]:
     seen_task_dirs = seen_task_dirs or set()
     for task_dir in _operator_task_dirs(harness_dir):
@@ -555,6 +556,9 @@ def _latest_operator_result_for_sprint(
             continue
         payload = _read_json(task_dir / "result.json")
         envelope = _read_json(task_dir / "envelope.json")
+        task_ids = (str(payload.get("task_id") or ""), str(envelope.get("task_id") or ""))
+        if task_id_fragment and not any(task_id_fragment in task_id for task_id in task_ids):
+            continue
         if payload.get("sprint_id") == sprint_id or envelope.get("sprint_id") == sprint_id:
             return task_dir, payload
     return None, {}
@@ -566,6 +570,7 @@ def _wait_for_operator_result(
     timeout_seconds: int,
     *,
     seen_task_dirs: set[str] | None = None,
+    task_id_fragment: str = "",
 ) -> tuple[Path | None, dict[str, Any]]:
     deadline = time.monotonic() + max(1, timeout_seconds)
     latest_dir: Path | None = None
@@ -575,11 +580,39 @@ def _wait_for_operator_result(
             harness_dir,
             sprint_id,
             seen_task_dirs=seen_task_dirs,
+            task_id_fragment=task_id_fragment,
         )
         if str(latest_payload.get("status") or "").lower() in {"completed", "failed", "timeout", "cancelled"}:
             return latest_dir, latest_payload
         time.sleep(2)
     return latest_dir, latest_payload
+
+
+def test_j16_operator_result_lookup_targets_the_submitted_wake_task(tmp_path: Path) -> None:
+    harness_dir = tmp_path / "harness"
+    result_root = harness_dir / "run" / "operator-results" / "operator"
+    child_dir = result_root / "child"
+    wake_dir = result_root / "wake"
+    child_dir.mkdir(parents=True)
+    wake_dir.mkdir()
+    sprint_id = "sprint-j16-regression"
+    _write_json(
+        child_dir / "result.json",
+        {"sprint_id": sprint_id, "task_id": f"pm-{sprint_id}-S1-child", "status": "completed"},
+    )
+    _write_json(
+        wake_dir / "result.json",
+        {"sprint_id": sprint_id, "task_id": f"pm-{sprint_id}-wake-builder-final", "status": "completed"},
+    )
+
+    task_dir, payload = _latest_operator_result_for_sprint(
+        harness_dir,
+        sprint_id,
+        task_id_fragment="-wake-builder-",
+    )
+
+    assert task_dir == wake_dir
+    assert payload["task_id"].endswith("-wake-builder-final")
 
 
 def _prepare_user_inputs(rec: J16Recorder, project: Path, run_id: str) -> dict[str, Path]:
@@ -1025,7 +1058,13 @@ def test_p22_j16_tmux_requirements_builder_real_user_defect_repair(repo_root: Pa
 
         planner_cmd = f"TERM=dumb bash {_shell_path(harness_script)} wake {shlex.quote(sprint_id)}"
         planner_record = rec.run_in_user_tmux(user_socket, user_session, "wake-planner", planner_cmd, env=env, timeout=wake_timeout)
-        planner_dir, planner_result = _wait_for_operator_result(harness_dir, sprint_id, operator_wait, seen_task_dirs=seen_operator_dirs)
+        planner_dir, planner_result = _wait_for_operator_result(
+            harness_dir,
+            sprint_id,
+            operator_wait,
+            seen_task_dirs=seen_operator_dirs,
+            task_id_fragment="-wake-planner-",
+        )
         if planner_dir is not None:
             seen_operator_dirs.add(_task_dir_key(planner_dir))
             rec.add_artifact(planner_dir / "result.json", "j16-planner-result", required=False)
@@ -1056,7 +1095,13 @@ def test_p22_j16_tmux_requirements_builder_real_user_defect_repair(repo_root: Pa
 
         builder_cmd = f"TERM=dumb bash {_shell_path(harness_script)} wake {shlex.quote(sprint_id)}"
         builder_record = rec.run_in_user_tmux(user_socket, user_session, "wake-builder", builder_cmd, env=env, timeout=wake_timeout)
-        builder_dir, builder_result = _wait_for_operator_result(harness_dir, sprint_id, operator_wait, seen_task_dirs=seen_operator_dirs)
+        builder_dir, builder_result = _wait_for_operator_result(
+            harness_dir,
+            sprint_id,
+            operator_wait,
+            seen_task_dirs=seen_operator_dirs,
+            task_id_fragment="-wake-builder-",
+        )
         if builder_dir is not None:
             seen_operator_dirs.add(_task_dir_key(builder_dir))
             rec.add_artifact(builder_dir / "result.json", "j16-builder-result", required=False)
