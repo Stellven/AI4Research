@@ -48,10 +48,10 @@ _SIGNAL_CUES = {
 }
 _TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9+_-]{2,}")
 _THEME_STOPWORDS = {
-    "about", "across", "after", "also", "among", "based", "been", "before", "between", "both",
+    "about", "across", "after", "also", "among", "and", "are", "based", "been", "before", "between", "both",
     "could", "each", "from", "have", "into", "more", "most", "other", "over", "paper", "results",
-    "show", "study", "such", "than", "that", "their", "these", "they", "this", "through", "using",
-    "were", "where", "which", "while", "with", "within", "without", "work", "approach", "method",
+    "show", "study", "such", "than", "that", "the", "their", "these", "they", "this", "through", "using",
+    "was", "were", "where", "which", "while", "with", "within", "without", "work", "approach", "method",
     "methods", "framework", "evaluation", "evaluating", "analysis", "survey", "review", "propose",
     "proposed", "introduce", "introduced", "demonstrate", "demonstrates", "however", "limitation",
     "limitations", "result", "findings", "technical", "evidence",
