@@ -192,26 +192,8 @@ def _repo_head(repo_root: Path) -> str:
 
 
 def _git_source_archive(repo_root: Path, commit: str, target: Path) -> None:
-    command = [
-        "git",
-        "archive",
-        "--format=zip",
-        f"--output={target}",
-        commit,
-        "--",
-        *SOURCE_PATHS,
-    ]
-    completed = subprocess.run(
-        command,
-        cwd=repo_root,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-    if completed.returncode != 0 or not target.is_file():
-        detail = (completed.stderr or completed.stdout)[-2000:]
-        raise DeliverableError(f"runtime source archive failed ({completed.returncode}): {detail}")
+    _, _, blobs = _collect_git_source_objects(repo_root, commit, SOURCE_PATHS)
+    _write_git_source_archive_from_objects(commit, blobs, target)
 
 
 def _git_object_id(kind: str, data: bytes) -> str:
@@ -233,6 +215,41 @@ def _git_cat_object(repo_root: Path, kind: str, oid: str) -> bytes:
     if _git_object_id(kind, data) != oid:
         raise DeliverableError(f"Git {kind} object hash mismatch: {oid}")
     return data
+
+
+def _git_cat_objects(repo_root: Path, oids: list[str]) -> dict[str, tuple[str, bytes]]:
+    completed = subprocess.run(
+        ["git", "cat-file", "--batch"],
+        cwd=repo_root,
+        input=("\n".join(oids) + "\n").encode("ascii"),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise DeliverableError("Git batch object read failed")
+    output = completed.stdout
+    offset = 0
+    objects: dict[str, tuple[str, bytes]] = {}
+    for requested in oids:
+        newline = output.find(b"\n", offset)
+        if newline < 0:
+            raise DeliverableError("Git batch object output is truncated")
+        header = output[offset:newline].decode("ascii", errors="strict").split(" ")
+        if len(header) != 3 or header[0] != requested:
+            raise DeliverableError(f"Git batch object header mismatch: {requested}")
+        oid, kind, raw_size = header
+        size = int(raw_size)
+        start = newline + 1
+        end = start + size
+        data = output[start:end]
+        if len(data) != size or end >= len(output) or output[end : end + 1] != b"\n":
+            raise DeliverableError(f"Git batch object payload is truncated: {oid}")
+        if _git_object_id(kind, data) != oid:
+            raise DeliverableError(f"Git batch {kind} object hash mismatch: {oid}")
+        objects[oid] = (kind, data)
+        offset = end + 1
+    return objects
 
 
 def _commit_tree_oid(commit_data: bytes) -> str:
@@ -275,28 +292,58 @@ def _collect_git_source_objects(
     repo_root: Path, commit: str, included_paths: tuple[str, ...] | list[str]
 ) -> tuple[bytes, dict[str, bytes], dict[str, tuple[str, str, bytes]]]:
     commit_data = _git_cat_object(repo_root, "commit", commit)
-    trees: dict[str, bytes] = {}
+    root_tree = _commit_tree_oid(commit_data)
+    listing = subprocess.run(
+        ["git", "ls-tree", "-r", "-t", "-z", commit, "--", *included_paths],
+        cwd=repo_root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if listing.returncode != 0:
+        raise DeliverableError("could not enumerate declared Git source tree")
+    rows: list[tuple[str, str, str, str]] = []
+    object_ids = {root_tree}
+    for record in listing.stdout.split(b"\0"):
+        if not record:
+            continue
+        try:
+            header, raw_path = record.split(b"\t", 1)
+            mode, kind, oid = header.decode("ascii").split(" ")
+            path = raw_path.decode("utf-8", errors="strict")
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise DeliverableError("Git source tree listing is malformed") from exc
+        rows.append((mode, kind, oid, path))
+        object_ids.add(oid)
+    objects = _git_cat_objects(repo_root, sorted(object_ids))
+    trees = {oid: data for oid, (kind, data) in objects.items() if kind == "tree"}
     blobs: dict[str, tuple[str, str, bytes]] = {}
-
-    def walk(tree_oid: str, prefix: str = "") -> None:
-        tree_data = _git_cat_object(repo_root, "tree", tree_oid)
-        trees[tree_oid] = tree_data
-        for mode, name, oid in _parse_git_tree(tree_data):
-            path = f"{prefix}/{name}" if prefix else name
-            if not _path_relevant(path, included_paths):
-                continue
-            if mode == "40000":
-                walk(oid, path)
-            elif _path_selected(path, included_paths):
-                if mode not in {"100644", "100755"}:
-                    raise DeliverableError(f"unsupported Git source mode {mode}: {path}")
-                blobs[path] = (mode, oid, _git_cat_object(repo_root, "blob", oid))
-
-    walk(_commit_tree_oid(commit_data))
+    for mode, kind, oid, path in rows:
+        if kind == "tree":
+            continue
+        if kind != "blob" or mode not in {"100644", "100755"}:
+            raise DeliverableError(f"unsupported Git source mode {mode}: {path}")
+        object_kind, data = objects[oid]
+        if object_kind != "blob":
+            raise DeliverableError(f"Git source object type mismatch: {path}")
+        blobs[path] = (mode, oid, data)
     for included in included_paths:
         if not any(path == included or path.startswith(f"{included}/") for path in blobs):
             raise DeliverableError(f"included source path is absent from commit: {included}")
     return commit_data, trees, blobs
+
+
+def _write_git_source_archive_from_objects(
+    commit: str,
+    blobs: dict[str, tuple[str, str, bytes]],
+    target: Path,
+) -> None:
+    with zipfile.ZipFile(target, "w") as archive:
+        archive.comment = commit.encode("ascii")
+        for path, (mode, _, data) in sorted(blobs.items()):
+            info = _wheel_info(path)
+            info.external_attr = int(mode, 8) << 16
+            archive.writestr(info, data)
 
 
 def _zip_file_payloads(data: bytes, label: str) -> dict[str, bytes]:
@@ -322,8 +369,9 @@ def _write_git_object_proof(
     commit: str,
     source_archive: Path,
     target: Path,
+    objects: tuple[bytes, dict[str, bytes], dict[str, tuple[str, str, bytes]]] | None = None,
 ) -> None:
-    commit_data, trees, blobs = _collect_git_source_objects(repo_root, commit, SOURCE_PATHS)
+    commit_data, trees, blobs = objects or _collect_git_source_objects(repo_root, commit, SOURCE_PATHS)
     source_files = _zip_file_payloads(source_archive.read_bytes(), source_archive.name)
     if set(source_files) != set(blobs):
         raise DeliverableError("Git source archive file set differs from the declared commit paths")
@@ -816,12 +864,13 @@ def build_bundle(
     wheel = artifacts_dir / f"{str(metadata['name']).replace('-', '_')}-{metadata['version']}-py3-none-any.whl"
     _build_pure_python_wheel(package_dir, metadata, wheel)
     source_archive = artifacts_dir / f"opensolar-runtime-source-{commit}.zip"
-    _git_source_archive(repo_root, commit, source_archive)
+    source_objects = _collect_git_source_objects(repo_root, commit, SOURCE_PATHS)
+    _write_git_source_archive_from_objects(commit, source_objects[2], source_archive)
     source_tree_sha256, source_comment = _zip_identity(source_archive, source_archive.name)
     if source_comment.decode("ascii", errors="replace") != commit:
         raise DeliverableError("Git source archive comment does not identify the requested commit")
     object_proof = artifacts_dir / f"opensolar-runtime-git-proof-{commit}.zip"
-    _write_git_object_proof(repo_root, commit, source_archive, object_proof)
+    _write_git_object_proof(repo_root, commit, source_archive, object_proof, source_objects)
 
     schema_target = output_dir / SCHEMA_NAME
     replay_target = output_dir / REPLAY_NAME
