@@ -111,6 +111,104 @@ def test_scientific_research_rejects_spark_without_research_capability(monkeypat
     assert operator["model"] == "gpt-5.5"
 
 
+def test_low_cost_ceiling_uses_spark_planner_spillover(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_MAX_COST_TIER", "low")
+    monkeypatch.setenv("SOLAR_PM_ALLOW_ROLE_SPILLOVER_IN_PROVIDER_MODE", "1")
+    monkeypatch.setattr(pm_dispatch, "DEFAULT_OPERATOR_PROVIDERS", frozenset({"openai"}))
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "medium-planner": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["planner"],
+                    "provider": "openai",
+                    "cost_tier": "medium",
+                    "launch_cmd_kind": "print_once",
+                    "task_classes": ["planning"],
+                },
+                "spark-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "role": "builder",
+                    "provider": "openai",
+                    "model": "gpt-5.3-codex-spark",
+                    "cost_tier": "low",
+                    "launch_cmd_kind": "print_once",
+                    "task_classes": ["implementation", "tests", "code-edit"],
+                    "strengths": ["code-edit"],
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda op: (True, ""))
+    policy_mod = types.SimpleNamespace(
+        load_policy=lambda: {},
+        builder_pool_enabled=lambda policy: False,
+        pool_member_ids=lambda registry: [],
+        infer_builder_group=lambda operator: "codex-gpt-5.3-spark",
+    )
+    monkeypatch.setattr(pm_dispatch, "_load_concurrency_policy_module", lambda: policy_mod)
+    monkeypatch.setattr(
+        pm_dispatch,
+        "_role_spillover_spec",
+        lambda policy_module, policy, role: {
+            "enabled": True,
+            "max_active": 1,
+            "allowed_source_roles": ["builder"],
+            "preferred_groups": [],
+            "reason": "low-cost planner fallback",
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "_active_role_spillover_count", lambda role: 0)
+
+    operator_id, operator, reason = pm_dispatch.select_operator_by_role(
+        role="planner",
+        task_type="planning",
+    )
+
+    assert reason == ""
+    assert operator_id == "spark-builder"
+    assert operator["model"] == "gpt-5.3-codex-spark"
+    assert operator["borrowed_for_role"] == "planner"
+
+
+def test_preferred_operator_cannot_bypass_cost_ceiling(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_MAX_COST_TIER", "low")
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "expensive-planner": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["planner"],
+                    "provider": "openai",
+                    "cost_tier": "high",
+                }
+            },
+        },
+    )
+
+    operator_id, operator, reason = pm_dispatch.select_operator_by_role(
+        role="planner",
+        task_type="planning",
+        prefer_operator="expensive-planner",
+    )
+
+    assert operator_id == ""
+    assert operator == {}
+    assert "preferred_operator_cost_tier_exceeds_ceiling" in reason
+
+
 def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_path):
     pm_dispatch = _load_pm_dispatch()
     sprints = tmp_path / "sprints"

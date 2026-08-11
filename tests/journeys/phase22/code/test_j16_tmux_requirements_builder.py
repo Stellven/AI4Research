@@ -582,6 +582,48 @@ def _wait_for_operator_result(
     return latest_dir, latest_payload
 
 
+def _wait_for_workflow_route(
+    harness_dir: Path,
+    sprint_id: str,
+    env: dict[str, str],
+    timeout_seconds: int,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Wait for the asynchronous coordinator projection before the next wake."""
+
+    deadline = time.monotonic() + max(1, timeout_seconds)
+    observations: list[dict[str, Any]] = []
+    route = ""
+    while time.monotonic() < deadline:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(harness_dir / "lib" / "workflow_guard.py"),
+                "route",
+                sprint_id,
+                "--field",
+                "route_role",
+            ],
+            cwd=harness_dir,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        route = proc.stdout.strip().lower()
+        observations.append(
+            {
+                "route": route,
+                "returncode": proc.returncode,
+                "stderr_tail": redact(proc.stderr[-400:]),
+            }
+        )
+        if proc.returncode == 0 and route in {"builder", "builder_main"}:
+            return route, observations
+        time.sleep(2)
+    return route, observations
+
+
 def _prepare_user_inputs(rec: J16Recorder, project: Path, run_id: str) -> dict[str, Path]:
     replacements = {
         "{project_path}": str(project.resolve()),
@@ -1047,12 +1089,61 @@ def test_p22_j16_tmux_requirements_builder_real_user_defect_repair(repo_root: Pa
             },
         )
 
+        route_timeout = int(os.environ.get("PHASE22_J16_ROUTE_WAIT_SECONDS", "240"))
+        compiled_route, compile_route_observations = _wait_for_workflow_route(
+            harness_dir,
+            sprint_id,
+            env,
+            route_timeout,
+        )
+        compile_route_evidence_path = _write_json(
+            rec.artifact_dir / "workflow-route-after-planner-closeout.json",
+            {
+                "final_route": compiled_route,
+                "observations": compile_route_observations,
+                "timeout_seconds": route_timeout,
+            },
+        )
+        rec.add_artifact(compile_route_evidence_path, "j16-workflow-route-after-planner-closeout", required=True)
+        rec.add_assertion(
+            "planner_compile_reached_builder_route",
+            compiled_route in {"builder", "builder_main"},
+            compile_route_evidence_path,
+        )
+        if compiled_route not in {"builder", "builder_main"}:
+            rec.finalize("FAIL", blockers=["Planner closeout did not reach a certified builder route."])
+            return
+
         approve_cmd = (
             f"TERM=dumb bash {_shell_path(harness_script)} plan-verdict {shlex.quote(sprint_id)} "
             "approve 'user confirmed scope constraints priority and acceptance'"
         )
         approve_record = rec.run_in_user_tmux(user_socket, user_session, "plan-verdict-approve", approve_cmd, env=env, timeout=120)
         rec.add_assertion("plan_verdict_approved_from_user_tmux", approve_record["inner_exit_code"] == 0, approve_record)
+
+        approved_route, approved_route_observations = _wait_for_workflow_route(
+            harness_dir,
+            sprint_id,
+            env,
+            min(route_timeout, 60),
+        )
+        approved_route_evidence_path = _write_json(
+            rec.artifact_dir / "workflow-route-after-plan-approval.json",
+            {
+                "final_route": approved_route,
+                "observations": approved_route_observations,
+                "timeout_seconds": min(route_timeout, 60),
+            },
+        )
+        rec.add_artifact(approved_route_evidence_path, "j16-workflow-route-after-plan-approval", required=True)
+        rec.add_assertion(
+            "plan_approval_preserved_builder_route",
+            approved_route in {"builder", "builder_main"},
+            approved_route_evidence_path,
+        )
+        if approved_route not in {"builder", "builder_main"}:
+            rec.finalize("FAIL", blockers=["Plan approval did not preserve the certified builder route."])
+            return
 
         builder_cmd = f"TERM=dumb bash {_shell_path(harness_script)} wake {shlex.quote(sprint_id)}"
         builder_record = rec.run_in_user_tmux(user_socket, user_session, "wake-builder", builder_cmd, env=env, timeout=wake_timeout)
@@ -1119,7 +1210,9 @@ def test_p22_j16_tmux_requirements_builder_real_user_defect_repair(repo_root: Pa
                 "harness_started_from_user_tmux",
                 "harness_intake_created_sprint",
                 "planner_artifacts_created_before_builder",
+                "planner_compile_reached_builder_route",
                 "plan_verdict_approved_from_user_tmux",
+                "plan_approval_preserved_builder_route",
                 "builder_wake_executed_from_user_tmux",
                 "scoped_defect_repair_verified_by_diff_and_tests",
             }

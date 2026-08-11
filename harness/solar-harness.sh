@@ -2438,6 +2438,17 @@ fallback_pane=${fallback_pane}
 dispatch_md=${SPRINTS_DIR}/${sid}.dispatch.md
 CTX
 )
+    local -a work_dir_args=()
+    if [[ "$role" == "builder" ]]; then
+      local project_dir=""
+      project_dir=$(grep -m1 '^Project:' "$SPRINTS_DIR/${sid}.contract.md" 2>/dev/null | sed 's/^Project:[[:space:]]*//' || true)
+      if [[ -n "$project_dir" && -d "$project_dir" ]]; then
+        work_dir_args=(--work-dir "$project_dir")
+      elif [[ -n "$project_dir" ]]; then
+        warn "builder project directory from compiled contract is unavailable: ${project_dir}"
+        return 1
+      fi
+    fi
     local submit_output="" attempt
     for attempt in 1 2; do
       if submit_output=$(SOLAR_PM_DISPATCH_ALLOW_DIRECT=1 python3 "$HARNESS_DIR/tools/pm_dispatch.py" submit \
@@ -2446,7 +2457,8 @@ CTX
         --sprint "$sid" \
         --node "wake-${role}" \
         --objective "$objective" \
-        --context "$context" 2>&1); then
+        --context "$context" \
+        "${work_dir_args[@]}" 2>&1); then
         bash "$HARNESS_DIR/session.sh" append "$sid" "{\"event\":\"waked\",\"by\":\"wake\",\"data\":{\"from_status\":\"${original_st}\",\"target_pane\":\"operator-pool:${role}\",\"fallback_pane\":\"${fallback_pane}\",\"attempt\":${attempt}}}" 2>/dev/null || true
         ok "Sprint ${sid} 已恢复 → operator-pool:${role} (从 ${original_st})"
         [[ -n "$submit_output" ]] && printf '%s\n' "$submit_output"
