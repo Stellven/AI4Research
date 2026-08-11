@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -30,7 +31,10 @@ def _refresh_assets(bundle: Path, payload: dict[str, object]) -> None:
             bundle,
             kind_by_path.get(
                 relative,
-                "runtime-source-zip" if relative == "artifacts/source.zip" else "fixture",
+                {
+                    "artifacts/source.zip": "runtime-source-zip",
+                    "artifacts/proof.zip": "git-object-proof",
+                }.get(relative, "fixture"),
             ),
         )
         for relative, path in sorted(runtime_deliverable._iter_regular_files(bundle))
@@ -50,6 +54,45 @@ def _refresh_source_tree(bundle: Path, payload: dict[str, object]) -> None:
     source["tree_sha256"] = tree_sha256  # type: ignore[index]
 
 
+def _source_commit(payload: dict[str, object]) -> bytes:
+    source = payload["source"]  # type: ignore[index]
+    return str(source["git_commit"]).encode("ascii")  # type: ignore[index]
+
+
+def _replace_zip_member(archive_path: Path, member_name: str, replacement: bytes) -> None:
+    with zipfile.ZipFile(archive_path) as source:
+        comment = source.comment
+        members = [(info, source.read(info) if not info.is_dir() else b"") for info in source.infolist()]
+    rewritten = archive_path.with_suffix(".rewritten.zip")
+    with zipfile.ZipFile(rewritten, "w") as target:
+        target.comment = comment
+        for info, data in members:
+            target.writestr(info, replacement if info.filename == member_name else data)
+    os.replace(rewritten, archive_path)
+
+
+def _fixture_git_source(tmp_path: Path, source: Path, proof: Path) -> str:
+    repo = tmp_path / "source-repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "--quiet"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "Fixture"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=repo, check=True)
+    for included in runtime_deliverable.SOURCE_PATHS:
+        path = repo / included
+        if included in {"VERSION", "install.sh"}:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("fixture\n", encoding="utf-8")
+        else:
+            path.mkdir(parents=True, exist_ok=True)
+            (path / "fixture.txt").write_text(f"fixture for {included}\n", encoding="utf-8")
+    subprocess.run(["git", "add", "--all"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "--quiet", "-m", "fixture"], cwd=repo, check=True)
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
+    runtime_deliverable._git_source_archive(repo, commit, source)
+    runtime_deliverable._write_git_object_proof(repo, commit, source, proof)
+    return commit
+
+
 def _bundle(tmp_path: Path) -> tuple[Path, dict[str, object]]:
     bundle = tmp_path / "bundle"
     artifacts = bundle / "artifacts"
@@ -66,9 +109,8 @@ def _bundle(tmp_path: Path) -> tuple[Path, dict[str, object]]:
     with zipfile.ZipFile(wheel, "w") as archive:
         archive.writestr("example/__init__.py", "VALUE = 1\n")
     source = artifacts / "source.zip"
-    with zipfile.ZipFile(source, "w") as archive:
-        archive.comment = ("a" * 40).encode("ascii")
-        archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
+    proof = artifacts / "proof.zip"
+    commit = _fixture_git_source(tmp_path, source, proof)
     for relative, content in {
         "replay.sh": "#!/usr/bin/env bash\nexit 0\n",
         "bundled-get-solar.sh": "#!/usr/bin/env bash\nexit 0\n",
@@ -93,11 +135,13 @@ def _bundle(tmp_path: Path) -> tuple[Path, dict[str, object]]:
             "python_requires": ">=3.11",
         },
         "source": {
-            "git_commit": "a" * 40,
+            "git_commit": commit,
             "archive_path": "artifacts/source.zip",
             "archive_format": "git-archive-zip",
             "tree_sha256": "0" * 64,
-            "included_paths": ["install.sh"],
+            "object_proof_path": "artifacts/proof.zip",
+            "object_proof_sha256": runtime_deliverable._sha256(proof),
+            "included_paths": list(runtime_deliverable.SOURCE_PATHS),
         },
         "assets": [],
         "configuration": {
@@ -157,6 +201,15 @@ def test_verify_bundle_rejects_secret_in_non_manifest_regular_file(tmp_path: Pat
         runtime_deliverable.verify_bundle(bundle)
 
 
+def test_reviewed_placeholder_fingerprint_is_bound_to_repo_path() -> None:
+    value = "sk-FAKE-DO-NOT-LEAK-XYZ-987654321"
+    source_label = "artifacts/source.zip!harness/docs/benchmark/terminal-bench-2.md"
+    proof_label = "artifacts/proof.zip!blobs/" + "a" * 40 + "/harness/docs/benchmark/terminal-bench-2.md"
+    assert runtime_deliverable._is_reviewed_placeholder(value, source_label)
+    assert runtime_deliverable._is_reviewed_placeholder(value, proof_label)
+    assert not runtime_deliverable._is_reviewed_placeholder(value, "artifacts/source.zip!install.sh")
+
+
 def test_verify_bundle_rejects_secret_hidden_inside_wheel(tmp_path: Path) -> None:
     bundle, payload = _bundle(tmp_path)
     wheel = bundle / "artifacts" / "example.whl"
@@ -174,7 +227,7 @@ def test_verify_bundle_rejects_secret_hidden_in_nested_source_archive(tmp_path: 
         nested.writestr("config/settings.json", '{"api_key":"sk-compressed-secret-123456"}')
     source = bundle / "artifacts" / "source.zip"
     with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.comment = ("a" * 40).encode("ascii")
+        archive.comment = _source_commit(payload)
         archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
         archive.writestr("vendor/nested.zip", nested_bytes.getvalue())
     _refresh_source_tree(bundle, payload)
@@ -190,7 +243,7 @@ def test_verify_bundle_rejects_unsafe_source_archive_member(
     bundle, payload = _bundle(tmp_path)
     source = bundle / "artifacts" / "source.zip"
     with zipfile.ZipFile(source, "w") as archive:
-        archive.comment = ("a" * 40).encode("ascii")
+        archive.comment = _source_commit(payload)
         archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
         if unsafe_kind == "zip-slip":
             archive.writestr("../escape.txt", "escape")
@@ -209,7 +262,7 @@ def test_verify_bundle_rejects_archive_compression_bomb(tmp_path: Path) -> None:
     bundle, payload = _bundle(tmp_path)
     source = bundle / "artifacts" / "source.zip"
     with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.comment = ("a" * 40).encode("ascii")
+        archive.comment = _source_commit(payload)
         archive.writestr("install.sh", "#!/usr/bin/env bash\nexit 0\n")
         archive.writestr("compressed.bin", b"0" * (2 * 1024 * 1024))
     _refresh_source_tree(bundle, payload)
@@ -222,10 +275,22 @@ def test_verify_bundle_rejects_replaced_source_after_asset_hash_refresh(tmp_path
     bundle, payload = _bundle(tmp_path)
     source = bundle / "artifacts" / "source.zip"
     with zipfile.ZipFile(source, "w") as archive:
-        archive.comment = ("a" * 40).encode("ascii")
+        archive.comment = _source_commit(payload)
         archive.writestr("install.sh", "#!/usr/bin/env bash\necho replaced\n")
     _refresh_assets(bundle, payload)
     with pytest.raises(runtime_deliverable.DeliverableError, match="tree identity"):
+        runtime_deliverable.verify_bundle(bundle)
+
+
+def test_verify_bundle_rejects_forged_source_with_all_mutable_hashes_refreshed(
+    tmp_path: Path,
+) -> None:
+    bundle, payload = _bundle(tmp_path)
+    source = bundle / "artifacts" / "source.zip"
+    _replace_zip_member(source, "install.sh", b"#!/usr/bin/env bash\necho forged\n")
+    _refresh_source_tree(bundle, payload)
+    _refresh_assets(bundle, payload)
+    with pytest.raises(runtime_deliverable.DeliverableError, match="not bound to declared commit"):
         runtime_deliverable.verify_bundle(bundle)
 
 

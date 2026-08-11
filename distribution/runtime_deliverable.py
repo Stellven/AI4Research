@@ -16,6 +16,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import tempfile
 import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -57,22 +58,32 @@ SECRET_VALUE_PATTERNS = (
 # Exact fingerprints of reviewed, deliberately fake credentials embedded in
 # tracked benchmark/test/gitleaks fixtures. This does not allowlist a path or
 # pattern: any changed or newly introduced secret-like value still fails.
-REVIEWED_PLACEHOLDER_SECRET_SHA256 = {
-    "04f4dc9c28ae9ff9bfd7d8484de03cc4e339a2bf9839c58fa27e73e39f5c4033",
-    "16a1d8b31fd8a907a6fa2c472c78201bda00c4231011331b99b73b1940305b77",
-    "28a11611b79776c46f682c989cc5888c70d1d177c762d9876d005ac8d0ddbdec",
-    "301e06ecb1a9e3be0ed91f1abda27efa7194b6941c64b6ee189f5dca48a1c56b",
-    "7cf4633c4c272c2663c20eb455e83fe3cc11d6895f9d53bad1dfd5b5ddea2f58",
-    "81407ef863d8ffa58139ac2ebe28b92554ecf848f3b820065de3d7c2c422f265",
-    "8f8fc50915a2b2b94a7812c9fd41e88c5680cfd6079b7523daf996f4462ff49a",
-    "913ead83f1dfa3d87d03a613627443b9106d50e324fe050c345d89445ddcf7fc",
-    "bee7da7ddaa2cf04d272f059b710f2ca1081fa2904defbac01db87a33f6d7532",
-    "ceff7b932509dac8bb91000d9891d51d6113ae682c5af411df1c3a6b7a39e3d6",
-    "e0573a0ab82867783d5d264518b7a594a5b7d5545e56e29eeae377aa006add25",
-    "e92a0768d8d452b79eef95d09cf4a9024d49a905ff7a0678842bf1e74855c185",
-    "ebdb4e031287a4be980e403e26a6ccbb03a83966133d150f630f37a31f6120e2",
-    "f5abcc69693d0a47e84a900d4df308ba51ba5b16a671526998a55bf5b3a569cf",
-    "fd5576621a2b971feb1640468a25884ad4e6fe277c63026ef7f928c4136860ca",
+REVIEWED_PLACEHOLDER_SECRET_SHA256_BY_PATH = {
+    "harness/docs/benchmark/terminal-bench-2.md": {"e92a0768d8d452b79eef95d09cf4a9024d49a905ff7a0678842bf1e74855c185"},
+    "harness/gitleaks.toml": {
+        "7cf4633c4c272c2663c20eb455e83fe3cc11d6895f9d53bad1dfd5b5ddea2f58",
+        "913ead83f1dfa3d87d03a613627443b9106d50e324fe050c345d89445ddcf7fc",
+        "ebdb4e031287a4be980e403e26a6ccbb03a83966133d150f630f37a31f6120e2",
+    },
+    "harness/installer/install.sh": {
+        "28a11611b79776c46f682c989cc5888c70d1d177c762d9876d005ac8d0ddbdec",
+        "bee7da7ddaa2cf04d272f059b710f2ca1081fa2904defbac01db87a33f6d7532",
+    },
+    "harness/lib/runtime_chaos_suite.py": {"ceff7b932509dac8bb91000d9891d51d6113ae682c5af411df1c3a6b7a39e3d6"},
+    "harness/plugins/autosci/tests/test_autosci_skill_shim.py": {
+        "81407ef863d8ffa58139ac2ebe28b92554ecf848f3b820065de3d7c2c422f265",
+        "8f8fc50915a2b2b94a7812c9fd41e88c5680cfd6079b7523daf996f4462ff49a",
+        "fd5576621a2b971feb1640468a25884ad4e6fe277c63026ef7f928c4136860ca",
+    },
+    "harness/scripts/thunderomlx_start_8002.sh": {"f5abcc69693d0a47e84a900d4df308ba51ba5b16a671526998a55bf5b3a569cf"},
+    "harness/scripts/thunderomlx_start_8003_vlm.sh": {"f5abcc69693d0a47e84a900d4df308ba51ba5b16a671526998a55bf5b3a569cf"},
+    "harness/tests/integrations/gepa_optimizer/test_gepa_optimizer_evaluator.py": {"301e06ecb1a9e3be0ed91f1abda27efa7194b6941c64b6ee189f5dca48a1c56b"},
+    "harness/tests/test_operatord_daemon.py": {
+        "04f4dc9c28ae9ff9bfd7d8484de03cc4e339a2bf9839c58fa27e73e39f5c4033",
+        "16a1d8b31fd8a907a6fa2c472c78201bda00c4231011331b99b73b1940305b77",
+        "e0573a0ab82867783d5d264518b7a594a5b7d5545e56e29eeae377aa006add25",
+    },
+    "harness/tools/runtime_chaos_suite.py": {"ceff7b932509dac8bb91000d9891d51d6113ae682c5af411df1c3a6b7a39e3d6"},
 }
 FORBIDDEN_VALUE_KEYS = {
     "api_key",
@@ -95,8 +106,19 @@ class DeliverableError(RuntimeError):
     """Raised when a runtime deliverable cannot be built or verified."""
 
 
-def _is_reviewed_placeholder(value: str) -> bool:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest() in REVIEWED_PLACEHOLDER_SECRET_SHA256
+def _repo_path_from_scan_label(label: str) -> str:
+    if "!blobs/" in label:
+        tail = label.split("!blobs/", 1)[1]
+        parts = tail.split("/", 1)
+        return parts[1] if len(parts) == 2 else ""
+    parts = label.split("!")
+    return parts[1] if len(parts) == 2 else ""
+
+
+def _is_reviewed_placeholder(value: str, label: str) -> bool:
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
+    repo_path = _repo_path_from_scan_label(label)
+    return digest in REVIEWED_PLACEHOLDER_SECRET_SHA256_BY_PATH.get(repo_path, set())
 
 
 def _sha256(path: Path) -> str:
@@ -192,6 +214,131 @@ def _git_source_archive(repo_root: Path, commit: str, target: Path) -> None:
         raise DeliverableError(f"runtime source archive failed ({completed.returncode}): {detail}")
 
 
+def _git_object_id(kind: str, data: bytes) -> str:
+    header = f"{kind} {len(data)}\0".encode("ascii")
+    return hashlib.sha1(header + data).hexdigest()  # noqa: S324 - Git object format is SHA-1.
+
+
+def _git_cat_object(repo_root: Path, kind: str, oid: str) -> bytes:
+    completed = subprocess.run(
+        ["git", "cat-file", kind, oid],
+        cwd=repo_root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise DeliverableError(f"Git {kind} object is unavailable: {oid}")
+    data = completed.stdout
+    if _git_object_id(kind, data) != oid:
+        raise DeliverableError(f"Git {kind} object hash mismatch: {oid}")
+    return data
+
+
+def _commit_tree_oid(commit_data: bytes) -> str:
+    first_line = commit_data.split(b"\n", 1)[0]
+    if not re.fullmatch(rb"tree [0-9a-f]{40}", first_line):
+        raise DeliverableError("Git commit object has no canonical tree header")
+    return first_line[5:].decode("ascii")
+
+
+def _parse_git_tree(data: bytes) -> list[tuple[str, str, str]]:
+    entries: list[tuple[str, str, str]] = []
+    offset = 0
+    while offset < len(data):
+        space = data.find(b" ", offset)
+        nul = data.find(b"\0", space + 1)
+        if space <= offset or nul < 0 or nul + 21 > len(data):
+            raise DeliverableError("malformed Git tree object")
+        mode = data[offset:space].decode("ascii")
+        name = data[space + 1 : nul].decode("utf-8", errors="strict")
+        if not name or "/" in name or name in {".", ".."}:
+            raise DeliverableError("unsafe path in Git tree object")
+        oid = data[nul + 1 : nul + 21].hex()
+        entries.append((mode, name, oid))
+        offset = nul + 21
+    return entries
+
+
+def _path_relevant(path: str, included_paths: tuple[str, ...] | list[str]) -> bool:
+    return any(
+        path == included or path.startswith(f"{included}/") or included.startswith(f"{path}/")
+        for included in included_paths
+    )
+
+
+def _path_selected(path: str, included_paths: tuple[str, ...] | list[str]) -> bool:
+    return any(path == included or path.startswith(f"{included}/") for included in included_paths)
+
+
+def _collect_git_source_objects(
+    repo_root: Path, commit: str, included_paths: tuple[str, ...] | list[str]
+) -> tuple[bytes, dict[str, bytes], dict[str, tuple[str, str, bytes]]]:
+    commit_data = _git_cat_object(repo_root, "commit", commit)
+    trees: dict[str, bytes] = {}
+    blobs: dict[str, tuple[str, str, bytes]] = {}
+
+    def walk(tree_oid: str, prefix: str = "") -> None:
+        tree_data = _git_cat_object(repo_root, "tree", tree_oid)
+        trees[tree_oid] = tree_data
+        for mode, name, oid in _parse_git_tree(tree_data):
+            path = f"{prefix}/{name}" if prefix else name
+            if not _path_relevant(path, included_paths):
+                continue
+            if mode == "40000":
+                walk(oid, path)
+            elif _path_selected(path, included_paths):
+                if mode not in {"100644", "100755"}:
+                    raise DeliverableError(f"unsupported Git source mode {mode}: {path}")
+                blobs[path] = (mode, oid, _git_cat_object(repo_root, "blob", oid))
+
+    walk(_commit_tree_oid(commit_data))
+    for included in included_paths:
+        if not any(path == included or path.startswith(f"{included}/") for path in blobs):
+            raise DeliverableError(f"included source path is absent from commit: {included}")
+    return commit_data, trees, blobs
+
+
+def _zip_file_payloads(data: bytes, label: str) -> dict[str, bytes]:
+    files: dict[str, bytes] = {}
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            for info in archive.infolist():
+                path = _safe_archive_member_name(info.filename, label)
+                if _archive_member_is_symlink(info):
+                    raise DeliverableError(f"symlink archive member is forbidden: {label}!{path}")
+                if info.is_dir():
+                    continue
+                if path in files:
+                    raise DeliverableError(f"duplicate archive member: {label}!{path}")
+                files[path] = archive.read(info)
+    except (OSError, zipfile.BadZipFile, RuntimeError, NotImplementedError, ValueError) as exc:
+        raise DeliverableError(f"unreadable ZIP archive {label}: {exc}") from exc
+    return files
+
+
+def _write_git_object_proof(
+    repo_root: Path,
+    commit: str,
+    source_archive: Path,
+    target: Path,
+) -> None:
+    commit_data, trees, blobs = _collect_git_source_objects(repo_root, commit, SOURCE_PATHS)
+    source_files = _zip_file_payloads(source_archive.read_bytes(), source_archive.name)
+    if set(source_files) != set(blobs):
+        raise DeliverableError("Git source archive file set differs from the declared commit paths")
+    for path, (_, _, blob_data) in blobs.items():
+        if source_files[path] != blob_data:
+            raise DeliverableError(f"Git source archive blob differs from commit: {path}")
+
+    members: dict[str, bytes] = {f"commit/{commit}": commit_data}
+    members.update({f"trees/{oid}": data for oid, data in trees.items()})
+    members.update({f"blobs/{oid}/{path}": data for path, (_, oid, data) in blobs.items()})
+    with zipfile.ZipFile(target, "w") as archive:
+        for name, data in sorted(members.items()):
+            archive.writestr(_wheel_info(name), data)
+
+
 def _safe_relative(raw: str) -> Path:
     path = Path(raw)
     if not raw or path.is_absolute() or ".." in path.parts:
@@ -264,7 +411,7 @@ def _walk_values(value: Any, path: str = "$") -> list[str]:
             failures.extend(_walk_values(item, f"{path}[{index}]"))
     elif isinstance(value, str):
         for pattern in SECRET_VALUE_PATTERNS:
-            if any(not _is_reviewed_placeholder(match.group(0)) for match in pattern.finditer(value)):
+            if any(not _is_reviewed_placeholder(match.group(0), path) for match in pattern.finditer(value)):
                 failures.append(f"secret-like value at {path}")
                 break
     return failures
@@ -274,7 +421,7 @@ def _scan_text(data: bytes, label: str) -> list[str]:
     text = data.decode("utf-8", errors="ignore")
     failures: list[str] = []
     for pattern in SECRET_VALUE_PATTERNS:
-        if any(not _is_reviewed_placeholder(match.group(0)) for match in pattern.finditer(text)):
+        if any(not _is_reviewed_placeholder(match.group(0), label) for match in pattern.finditer(text)):
             failures.append(f"secret-like content in {label}")
             break
     if label.lower().endswith(".json"):
@@ -397,6 +544,99 @@ def _zip_identity(path: Path, label: str) -> tuple[str, bytes]:
     return tree_sha256, comment
 
 
+def _git_in_temp_repo(arguments: list[str], git_dir: Path, *, data: bytes | None = None) -> bytes:
+    completed = subprocess.run(
+        ["git", f"--git-dir={git_dir}", *arguments],
+        input=data,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.decode("utf-8", errors="replace")[-1000:]
+        raise DeliverableError(f"isolated Git object verification failed: {detail}")
+    return completed.stdout
+
+
+def _verify_git_object_proof(
+    proof_path: Path,
+    source_archive: Path,
+    source: dict[str, Any],
+) -> None:
+    proof_files = _zip_file_payloads(proof_path.read_bytes(), proof_path.name)
+    commit = source["git_commit"]
+    commit_name = f"commit/{commit}"
+    commit_data = proof_files.pop(commit_name, None)
+    if commit_data is None or _git_object_id("commit", commit_data) != commit:
+        raise DeliverableError("Git object proof does not contain the declared commit preimage")
+
+    tree_objects: dict[str, bytes] = {}
+    blob_objects: dict[str, tuple[str, bytes]] = {}
+    for name, data in proof_files.items():
+        tree_match = re.fullmatch(r"trees/([0-9a-f]{40})", name)
+        blob_match = re.fullmatch(r"blobs/([0-9a-f]{40})/(.+)", name)
+        if tree_match:
+            oid = tree_match.group(1)
+            if _git_object_id("tree", data) != oid:
+                raise DeliverableError(f"Git tree object preimage mismatch: {oid}")
+            tree_objects[oid] = data
+        elif blob_match:
+            oid, path = blob_match.groups()
+            _safe_archive_member_name(path, proof_path.name)
+            if _git_object_id("blob", data) != oid:
+                raise DeliverableError(f"Git blob object preimage mismatch: {path}")
+            if path in blob_objects:
+                raise DeliverableError(f"duplicate Git proof blob path: {path}")
+            blob_objects[path] = (oid, data)
+        else:
+            raise DeliverableError(f"unexpected Git object proof entry: {name}")
+
+    with tempfile.TemporaryDirectory(prefix="opensolar-git-proof-") as temp_dir:
+        git_dir = Path(temp_dir) / "proof.git"
+        initialized = subprocess.run(
+            ["git", "init", "--bare", "--quiet", str(git_dir)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if initialized.returncode != 0:
+            raise DeliverableError("could not initialize isolated Git proof repository")
+        for kind, oid, data in [
+            ("commit", commit, commit_data),
+            *(("tree", oid, data) for oid, data in tree_objects.items()),
+            *(("blob", oid, data) for oid, data in blob_objects.values()),
+        ]:
+            written = _git_in_temp_repo(["hash-object", "-t", kind, "-w", "--stdin"], git_dir, data=data)
+            if written.decode("ascii").strip() != oid:
+                raise DeliverableError(f"isolated Git repository wrote a different {kind} object id")
+        _git_in_temp_repo(["cat-file", "-e", f"{commit}^{{commit}}"], git_dir)
+        listing = _git_in_temp_repo(
+            ["ls-tree", "-r", "-z", commit, "--", *source["included_paths"]], git_dir
+        )
+
+    committed: dict[str, tuple[str, str]] = {}
+    for record in listing.split(b"\0"):
+        if not record:
+            continue
+        try:
+            header, raw_path = record.split(b"\t", 1)
+            mode, kind, oid = header.decode("ascii").split(" ")
+            path = raw_path.decode("utf-8", errors="strict")
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise DeliverableError("isolated Git ls-tree returned malformed output") from exc
+        if kind != "blob" or mode not in {"100644", "100755"}:
+            raise DeliverableError(f"unsupported source object in declared commit: {path}")
+        committed[path] = (mode, oid)
+
+    source_files = _zip_file_payloads(source_archive.read_bytes(), source_archive.name)
+    if set(committed) != set(blob_objects) or set(committed) != set(source_files):
+        raise DeliverableError("source ZIP/proof path set differs from the declared commit tree")
+    for path, (_, committed_oid) in committed.items():
+        proof_oid, proof_data = blob_objects[path]
+        if committed_oid != proof_oid or source_files[path] != proof_data:
+            raise DeliverableError(f"source ZIP blob is not bound to declared commit: {path}")
+
+
 def _asset_entry(path: Path, bundle_root: Path, kind: str) -> dict[str, Any]:
     return {
         "path": path.relative_to(bundle_root).as_posix(),
@@ -470,6 +710,9 @@ def verify_bundle(bundle_root: Path) -> dict[str, Any]:
 
     source = payload["source"]
     source_path = source["archive_path"]
+    proof_path = source["object_proof_path"]
+    if source["included_paths"] != list(SOURCE_PATHS):
+        secret_failures.append("manifest source.included_paths differs from the canonical runtime source set")
     source_assets = [
         asset
         for asset in assets
@@ -477,6 +720,13 @@ def verify_bundle(bundle_root: Path) -> dict[str, Any]:
     ]
     if len(source_assets) != 1:
         secret_failures.append("source archive must be exactly one runtime-source-zip asset")
+    proof_assets = [
+        asset
+        for asset in assets
+        if asset["path"] == proof_path and asset["kind"] == "git-object-proof"
+    ]
+    if len(proof_assets) != 1:
+        secret_failures.append("source proof must be exactly one git-object-proof asset")
     source_inspection = archive_inspections.get(source_path)
     if source_inspection is None:
         secret_failures.append("source archive is not a readable ZIP archive")
@@ -490,6 +740,15 @@ def verify_bundle(bundle_root: Path) -> dict[str, Any]:
             secret_failures.append("source Git archive comment does not match manifest source.git_commit")
         if source_tree_sha256 != source["tree_sha256"]:
             secret_failures.append("source Git archive tree identity does not match manifest source.tree_sha256")
+    try:
+        source_archive_file = _contained_regular_file(bundle_root, source_path)
+        proof_file = _contained_regular_file(bundle_root, proof_path)
+        if _sha256(proof_file) != source["object_proof_sha256"]:
+            secret_failures.append("Git object proof hash does not match manifest source.object_proof_sha256")
+        else:
+            _verify_git_object_proof(proof_file, source_archive_file, source)
+    except DeliverableError as exc:
+        secret_failures.append(str(exc))
     if secret_failures:
         raise DeliverableError("; ".join(sorted(set(secret_failures))))
     return payload
@@ -561,6 +820,8 @@ def build_bundle(
     source_tree_sha256, source_comment = _zip_identity(source_archive, source_archive.name)
     if source_comment.decode("ascii", errors="replace") != commit:
         raise DeliverableError("Git source archive comment does not identify the requested commit")
+    object_proof = artifacts_dir / f"opensolar-runtime-git-proof-{commit}.zip"
+    _write_git_object_proof(repo_root, commit, source_archive, object_proof)
 
     schema_target = output_dir / SCHEMA_NAME
     replay_target = output_dir / REPLAY_NAME
@@ -582,6 +843,7 @@ def build_bundle(
     kind_by_path: dict[str, str] = {
         wheel.relative_to(output_dir).as_posix(): "python-wheel",
         source_archive.relative_to(output_dir).as_posix(): "runtime-source-zip",
+        object_proof.relative_to(output_dir).as_posix(): "git-object-proof",
         SCHEMA_NAME: "json-schema",
         REPLAY_NAME: "replay-entrypoint",
         BOOTSTRAP_NAME: "offline-installer-bootstrap",
@@ -617,6 +879,8 @@ def build_bundle(
             "archive_path": source_archive.relative_to(output_dir).as_posix(),
             "archive_format": "git-archive-zip",
             "tree_sha256": source_tree_sha256,
+            "object_proof_path": object_proof.relative_to(output_dir).as_posix(),
+            "object_proof_sha256": _sha256(object_proof),
             "included_paths": list(SOURCE_PATHS),
         },
         "assets": assets,
@@ -629,7 +893,7 @@ def build_bundle(
         "replay": {
             "script": REPLAY_NAME,
             "command": "bash replay.sh <new-empty-sandbox>",
-            "required_host_tools": ["bash", "python3", "tmux"],
+            "required_host_tools": ["bash", "git", "python3", "tmux"],
             "required_host_python": "CPython 3.12 with venv",
             "offline_dependency_directory": "wheelhouse",
             "bundled_jq": "tools/jq",
