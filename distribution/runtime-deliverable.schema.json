@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opensolar.local/schemas/runtime-deliverable-v1.json",
+  "title": "OpenSolar Runtime Deliverable",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "product",
+    "target",
+    "source",
+    "assets",
+    "configuration",
+    "lifecycle",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "opensolar.runtime-deliverable/v1"},
+    "product": {
+      "type": "object",
+      "required": ["name", "version", "entrypoint"]
+    },
+    "target": {
+      "type": "object",
+      "required": ["kind", "python_requires", "supported_platforms"],
+      "properties": {"kind": {"const": "python-wheel"}}
+    },
+    "source": {
+      "type": "object",
+      "required": ["git_commit", "package_path"]
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "kind", "bytes", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "kind": {"type": "string", "minLength": 1},
+          "bytes": {"type": "integer", "minimum": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "required": ["environment_references", "embedded_credentials"],
+      "properties": {"embedded_credentials": {"const": false}}
+    },
+    "lifecycle": {
+      "type": "object",
+      "required": ["clean_install", "start_health", "rollback"],
+      "properties": {
+        "clean_install": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "start_health": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "rollback": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

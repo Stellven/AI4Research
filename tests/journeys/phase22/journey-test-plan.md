@@ -452,6 +452,7 @@ observable success boundary, and the L2 scope that the journey may prove.
 | P22-J22 | Review supported and overbroad claims and record follow-up. | `test_j22_evidence_review_followup.py` | Supported evidence passes and overreach fails closed through the production review path. Maps evaluation scope, completeness, validity, verdict, and follow-up. |
 | P22-J23 | Route a real model request and retain usage audit evidence. | `test_j23_model_routing_audit.py` | Requested and observed provider/model match with no hidden fallback and durable request/response/cost evidence. Maps model routing and usage auditing. |
 | P22-J24 | Export, redact, back up, delete, and uninstall only sandbox-owned personal data. | `test_j24_privacy_lifecycle.py` | All privacy actions run in an isolated home, preserve required data, remove owned residue, and expose no secrets. Maps privacy controls and lifecycle closure. |
+| P22-J25 | Construct the supported Python runtime deliverable and execute its lifecycle in a clean sandbox. | `test_j25_runtime_deliverable_distribution.py` | A hash-bound wheel and credential-free manifest are independently verified; the wheel installs, starts a real status service, passes health checks, and rolls back both runtime and wrapper. Maps Runtime Deliverable Construction only for the exercised WSL/Linux Python-wheel target. |
 
 Live provider journeys require explicit authorization and configured credentials.
 Default collection does not execute them. Every group uses a unique basetemp,
