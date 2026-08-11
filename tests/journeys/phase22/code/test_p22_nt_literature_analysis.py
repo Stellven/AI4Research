@@ -42,6 +42,30 @@ SECRET_PATTERNS = (
     re.compile(r"(?i)sk-[A-Za-z0-9_-]{12,}"),
     re.compile(r"(?i)(Bearer\s+)[A-Za-z0-9._-]+"),
 )
+PUBLIC_PROVIDER_BOUNDARY_SCHEMA = "autosci_source_provider_boundary.v1"
+SEMANTIC_SCHOLAR_CHANNEL_OPERATIONS = {
+    "citation": "citations",
+    "citations": "citations",
+    "recommend": "recommend",
+    "recommendation": "recommend",
+    "recommendations": "recommend",
+    "reference": "references",
+    "references": "references",
+    "search": "search",
+}
+PUBLIC_PROVIDER_CHANNEL_ALIASES = {
+    "crossref": "crossref",
+    "crossref_api": "crossref",
+    "crossref_search": "crossref",
+    "deepxiv": "deepxiv",
+    "deepxiv_search": "deepxiv",
+    "open_alex": "openalex",
+    "open_alex_api": "openalex",
+    "open_alex_search": "openalex",
+    "openalex": "openalex",
+    "openalex_api": "openalex",
+    "openalex_search": "openalex",
+}
 
 
 def _utc_now() -> str:
@@ -81,6 +105,65 @@ def _read_jsonl(path: Path | None) -> list[dict[str, Any]]:
 
 def _normalized_span(value: str) -> str:
     return " ".join(str(value or "").split())
+
+
+def _normalize_public_provider_channel(value: Any) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
+    if not normalized:
+        return ""
+    direct = PUBLIC_PROVIDER_CHANNEL_ALIASES.get(normalized)
+    if direct:
+        return direct
+    operation = SEMANTIC_SCHOLAR_CHANNEL_OPERATIONS.get(normalized)
+    if operation:
+        return f"semantic_scholar:{operation}"
+    for prefix in ("s2_", "semantic_scholar_", "semanticscholar_"):
+        if normalized.startswith(prefix):
+            operation = SEMANTIC_SCHOLAR_CHANNEL_OPERATIONS.get(normalized[len(prefix) :])
+            return f"semantic_scholar:{operation}" if operation else ""
+    for suffix in ("_s2", "_semantic_scholar", "_semanticscholar"):
+        if normalized.endswith(suffix):
+            operation = SEMANTIC_SCHOLAR_CHANNEL_OPERATIONS.get(normalized[: -len(suffix)])
+            return f"semantic_scholar:{operation}" if operation else ""
+    return ""
+
+
+def _validate_public_provider_boundary(boundary: Any) -> dict[str, Any]:
+    if not isinstance(boundary, dict):
+        return {
+            "valid": False,
+            "schema": "",
+            "status": "",
+            "completed": False,
+            "provider_channels": [],
+            "normalized_public_channels": [],
+            "rejected_channels": [],
+        }
+    raw_channels = boundary.get("provider_channels")
+    provider_channels = [str(item).strip() for item in raw_channels] if isinstance(raw_channels, list) else []
+    normalized_public_channels = sorted(
+        {
+            normalized
+            for item in provider_channels
+            if (normalized := _normalize_public_provider_channel(item))
+        }
+    )
+    rejected_channels = [item for item in provider_channels if not _normalize_public_provider_channel(item)]
+    schema = str(boundary.get("schema") or "")
+    status = str(boundary.get("status") or "")
+    completed = boundary.get("completed") is True
+    return {
+        "valid": schema == PUBLIC_PROVIDER_BOUNDARY_SCHEMA
+        and status == "completed"
+        and completed
+        and bool(normalized_public_channels),
+        "schema": schema,
+        "status": status,
+        "completed": completed,
+        "provider_channels": provider_channels,
+        "normalized_public_channels": normalized_public_channels,
+        "rejected_channels": rejected_channels,
+    }
 
 
 def _decision_rationale(
@@ -588,6 +671,76 @@ def test_decision_rationale_tracks_actual_assertions() -> None:
     assert "Rich research status: failed" in failure
 
 
+def test_public_provider_boundary_accepts_production_channel_taxonomy() -> None:
+    boundary = {
+        "schema": PUBLIC_PROVIDER_BOUNDARY_SCHEMA,
+        "status": "completed",
+        "completed": True,
+        "provider_channels": [
+            "s2_reference",
+            "recommend",
+            "citations",
+            "search_s2",
+            "semantic-scholar/references",
+            "openalex_search",
+            "crossref",
+        ],
+    }
+    validation = _validate_public_provider_boundary(boundary)
+    assert validation["valid"] is True
+    assert validation["normalized_public_channels"] == [
+        "crossref",
+        "openalex",
+        "semantic_scholar:citations",
+        "semantic_scholar:recommend",
+        "semantic_scholar:references",
+        "semantic_scholar:search",
+    ]
+    assert validation["rejected_channels"] == []
+
+
+@pytest.mark.parametrize(
+    ("boundary", "expected_rejected"),
+    [
+        ({"schema": PUBLIC_PROVIDER_BOUNDARY_SCHEMA, "status": "completed", "completed": True, "provider_channels": []}, []),
+        (
+            {
+                "schema": PUBLIC_PROVIDER_BOUNDARY_SCHEMA,
+                "status": "completed",
+                "completed": True,
+                "provider_channels": ["fixture", "local", "synthetic", "wiki"],
+            },
+            ["fixture", "local", "synthetic", "wiki"],
+        ),
+        (
+            {
+                "schema": PUBLIC_PROVIDER_BOUNDARY_SCHEMA,
+                "status": "incomplete",
+                "completed": False,
+                "provider_channels": ["references"],
+            },
+            [],
+        ),
+        (
+            {
+                "schema": "fixture.provider_boundary.v1",
+                "status": "completed",
+                "completed": True,
+                "provider_channels": ["references"],
+            },
+            [],
+        ),
+    ],
+)
+def test_public_provider_boundary_rejects_non_public_or_incomplete_evidence(
+    boundary: dict[str, Any],
+    expected_rejected: list[str],
+) -> None:
+    validation = _validate_public_provider_boundary(boundary)
+    assert validation["valid"] is False
+    assert validation["rejected_channels"] == expected_rejected
+
+
 @pytest.mark.live_provider
 def test_phase22_not_tested_literature_signal_and_trend_validation(
     repo_root: Path,
@@ -732,7 +885,8 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(
     candidates = discovery.get("outputs", {}).get("candidates", []) if discovery else []
     candidates = [item for item in candidates if isinstance(item, dict)]
     provider_boundary = discovery.get("outputs", {}).get("source_provider_boundary", {}) if discovery else {}
-    provider_channels = provider_boundary.get("provider_channels", []) if isinstance(provider_boundary, dict) else []
+    provider_validation = _validate_public_provider_boundary(provider_boundary)
+    provider_channels = provider_validation["provider_channels"]
     real_sources = [
         item
         for item in candidates
@@ -785,10 +939,8 @@ def test_phase22_not_tested_literature_signal_and_trend_validation(
         },
         {
             "name": "provider_boundary_completed",
-            "passed": isinstance(provider_boundary, dict)
-            and provider_boundary.get("status") == "completed"
-            and expectation.get("provider_channel") in provider_channels,
-            "detail": {"status": provider_boundary.get("status") if isinstance(provider_boundary, dict) else "", "provider_channels": provider_channels},
+            "passed": provider_validation["valid"],
+            "detail": provider_validation,
         },
         {
             "name": "structured_method_claim_evidence_signals_present",
