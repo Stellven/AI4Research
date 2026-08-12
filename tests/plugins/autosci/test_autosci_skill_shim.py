@@ -2225,7 +2225,7 @@ def test_autosci_skill_shim_exp_design_attaches_review_llm_validation(tmp_path: 
     boundary = plan["source_context"]["final_execution_boundary"]
     assert boundary["status"] == "execution_readiness_incomplete"
     assert boundary["review_llm_completed"] is True
-    assert "approved runtime preflight contract is incomplete" in boundary["blocking_reasons"]
+    assert "before-state evidence must match the declared dataset exactly" in boundary["blocking_reasons"]
     artifact_types = {artifact["type"] for artifact in evidence["artifacts"]}
     assert "experiment_design_review_llm_evidence_json" in artifact_types
     assert "experiment_design_final_execution_boundary_json" in artifact_types
@@ -2243,7 +2243,7 @@ def test_autosci_skill_shim_exp_design_attaches_review_llm_validation(tmp_path: 
     assert proof_entry["native_skill"] == "exp-design"
     assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
     assert proof_entry["collection_mode"] == "manual_review"
-    assert str(Path(action["evidence_path"]).relative_to(tmp_path)) in proof_entry["evidence_refs"]
+    assert Path(action["evidence_path"]).relative_to(tmp_path).as_posix() in proof_entry["evidence_refs"]
 
 
 def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_preflight(tmp_path: Path) -> None:
@@ -2270,9 +2270,45 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
         encoding="utf-8",
     )
     allowlist = tmp_path / "exp-design-allowlist.json"
-    before = tmp_path / "exp-design-before.json"
-    allowlist.write_text(json.dumps({"executables": ["python3"]}), encoding="utf-8")
-    before.write_text(json.dumps({"workspace": "prepared"}), encoding="utf-8")
+    workspace = tmp_path / "approved-workspace"
+    workspace.mkdir()
+    runner = workspace / "run.py"
+    before = workspace / "samples.csv"
+    expected = workspace / "result.json"
+    runner.write_text("print('bounded')\n", encoding="utf-8")
+    before.write_text("value\n1\n", encoding="utf-8")
+    assert not expected.exists()
+    command_argv = [sys.executable, str(runner), str(before), str(expected)]
+    allowlist.write_text(
+        json.dumps({"command_argvs": [command_argv]}),
+        encoding="utf-8",
+    )
+    experiment_contract = tmp_path / "approved-contract.json"
+    experiment_contract.write_text(
+        json.dumps(
+            {
+                "verification_contract_version": "1",
+                "readiness_profile": "human_approved_local",
+                "execution_mode": "human_approved",
+                "workspace_root": str(workspace),
+                "runner": {"path": str(runner)},
+                "dataset": {"path": str(before), "format": "csv", "role": "evaluation"},
+                "variants": [
+                    {"name": "baseline", "description": "baseline"},
+                    {"name": "variant", "description": "candidate"},
+                ],
+                "thresholds": [{"metric": "score", "operator": ">=", "value": 0.5}],
+                "random_seed": 7,
+                "stopping_conditions": ["all rows processed"],
+                "command_argv": command_argv,
+                "command_allowlist": [" ".join(command_argv)],
+                "expected_artifacts": [str(expected)],
+                "network_access": "denied",
+                "write_scope": [str(workspace)],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     proc = run_shim(
         tmp_path,
@@ -2287,6 +2323,8 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
         str(allowlist),
         "--before-artifact",
         str(before),
+        "--experiment-contract",
+        str(experiment_contract),
         "--run-id",
         "shim-exp-design-execution-ready",
     )
@@ -2303,6 +2341,16 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
     assert boundary["execution_ready"] is True
     assert boundary["approval_ready_for_execution"] is True
     assert boundary["review_llm_completed"] is True
+    assert boundary["verification_contract_complete"] is True
+    assert boundary["approval_preflight"]["command_authorized"] is True
+    assert plan["execution_ready"] is True
+    assert not expected.exists()
+    assert plan["dataset"]["path"]
+    assert len(plan["variants"]) == 2
+    assert plan["thresholds"]
+    assert isinstance(plan["random_seed"], int)
+    assert plan["stopping_conditions"]
+    assert plan["command_argv"]
     assert "final_execution_boundary == execution_ready" in plan["success_criteria"]
     artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
     assert "experiment_design_final_execution_boundary_json" in artifacts
@@ -2317,6 +2365,173 @@ def test_autosci_skill_shim_exp_design_marks_execution_ready_with_approval_prefl
     assert proof_entry["collection_mode"] == "manual_review"
     assert any("workspace/wiki/experiments/exp-idea-skillgen-ready.md" in ref for ref in proof_entry["evidence_refs"])
     assert any("workspace/wiki/outputs/experiment.md" in ref for ref in proof_entry["evidence_refs"])
+
+
+def test_autosci_skill_shim_exp_design_rejects_unrelated_command_allowlist(tmp_path: Path) -> None:
+    review = tmp_path / "exp-design-review-unrelated.json"
+    review.write_text(
+        json.dumps(
+            {
+                "schema": "artifact_review.v1",
+                "task_id": "review-exp-design-unrelated",
+                "status": "completed",
+                "outputs": {
+                    "review": {
+                        "artifact_id": "artifact:idea-unrelated",
+                        "target": "idea-unrelated",
+                        "review_mode": "review_llm",
+                        "review_available": True,
+                        "recommendation": "accept",
+                        "evidence_ids": ["review:unrelated"],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    allowlist = tmp_path / "unrelated-allowlist.json"
+    before = tmp_path / "before.json"
+    allowlist.write_text(json.dumps({"commands": ["echo unrelated"]}), encoding="utf-8")
+    before.write_text(json.dumps({"workspace": "prepared"}), encoding="utf-8")
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-design",
+        "idea-unrelated",
+        "--review",
+        "--review-llm-evidence",
+        str(review),
+        "--approval-ref",
+        "approval-unrelated",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--before-artifact",
+        str(before),
+        "--run-id",
+        "shim-exp-design-unrelated-allowlist",
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(Path(json.loads(proc.stdout)["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    plan = evidence["outputs"]["experiment_plan"]
+    boundary = plan["source_context"]["final_execution_boundary"]
+    assert plan["execution_ready"] is False
+    assert boundary["approval_preflight"]["command_authorized"] is False
+    assert "planned runtime command is not authorized by the supplied allowlist evidence" in boundary["blocking_reasons"]
+
+
+@pytest.mark.parametrize(
+    ("case", "expected_reason"),
+    [
+        ("malicious_argv", "planned runtime command is not authorized by the supplied allowlist evidence"),
+        ("executable_only", "planned runtime command is not authorized by the supplied allowlist evidence"),
+        ("prefix_only", "planned runtime command is not authorized by the supplied allowlist evidence"),
+        ("placeholder_template", "planned runtime command is not authorized by the supplied allowlist evidence"),
+        ("unknown_mode", "approval exemption is limited to explicit deterministic fixture mode"),
+        ("outside_workspace", "runner, dataset, and expected artifacts must remain inside workspace root"),
+        ("dataset_before_mismatch", "before-state evidence must match the declared dataset exactly"),
+        (
+            "missing_output_parent",
+            "expected artifact targets must have an existing writable parent and must not be directories",
+        ),
+    ],
+)
+def test_autosci_skill_shim_exp_design_readiness_fail_closed(
+    tmp_path: Path,
+    case: str,
+    expected_reason: str,
+) -> None:
+    workspace = tmp_path / "fixture-workspace"
+    workspace.mkdir()
+    runner = workspace / "run.py"
+    dataset = workspace / "samples.csv"
+    expected = workspace / "result.json"
+    runner.write_text("print('safe fixture')\n", encoding="utf-8")
+    dataset.write_text("value\n1\n", encoding="utf-8")
+    before = dataset
+    execution_mode = "fixture"
+    command_argv = [sys.executable, str(runner), str(dataset), str(expected)]
+    allowlist_payload: dict[str, object] = {"command_argvs": [list(command_argv)]}
+
+    if case == "malicious_argv":
+        allowlist_payload = {"command_argvs": [[sys.executable, "malicious.py", "--delete-all"]]}
+    elif case == "executable_only":
+        allowlist_payload = {"executables": [sys.executable, Path(sys.executable).name]}
+    elif case == "prefix_only":
+        allowlist_payload = {"allowed_prefixes": [[sys.executable, str(runner)]]}
+    elif case == "placeholder_template":
+        allowlist_payload = {
+            "command_argvs": [[sys.executable, str(runner), "{dataset}", "{expected_artifact}"]]
+        }
+    elif case == "unknown_mode":
+        execution_mode = "unknown-mode"
+    elif case == "outside_workspace":
+        runner = tmp_path / "outside-runner.py"
+        runner.write_text("print('outside')\n", encoding="utf-8")
+        command_argv = [sys.executable, str(runner), str(dataset), str(expected)]
+        allowlist_payload = {"command_argvs": [list(command_argv)]}
+    elif case == "dataset_before_mismatch":
+        before = workspace / "different.csv"
+        before.write_text("value\n2\n", encoding="utf-8")
+    elif case == "missing_output_parent":
+        expected = workspace / "missing-output-dir" / "result.json"
+        command_argv = [sys.executable, str(runner), str(dataset), str(expected)]
+        allowlist_payload = {"command_argvs": [list(command_argv)]}
+
+    allowlist = tmp_path / f"{case}-allowlist.json"
+    allowlist.write_text(json.dumps(allowlist_payload), encoding="utf-8")
+    contract_path = tmp_path / f"{case}-contract.json"
+    contract_path.write_text(
+        json.dumps(
+            {
+                "verification_contract_version": "1",
+                "readiness_profile": "deterministic_local_fixture",
+                "execution_mode": execution_mode,
+                "workspace_root": str(workspace),
+                "runner": {"path": str(runner)},
+                "dataset": {"path": str(dataset), "format": "csv", "role": "evaluation"},
+                "variants": [
+                    {"name": "baseline", "description": "baseline"},
+                    {"name": "variant", "description": "candidate"},
+                ],
+                "thresholds": [{"metric": "score", "operator": ">=", "value": 0.5}],
+                "random_seed": 7,
+                "stopping_conditions": ["all rows processed"],
+                "command_argv": command_argv,
+                "command_allowlist": [" ".join(command_argv)],
+                "expected_artifacts": [str(expected)],
+                "network_access": "denied",
+                "write_scope": [str(workspace)],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$exp-design",
+        f"idea-{case}",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--before-artifact",
+        str(before),
+        "--experiment-contract",
+        str(contract_path),
+        "--run-id",
+        f"shim-exp-design-{case}",
+    )
+    expected_exit = 2 if case == "unknown_mode" else 0
+    assert proc.returncode == expected_exit, proc.stderr
+    payload = json.loads(Path(json.loads(proc.stdout)["evidence_path"]).read_text(encoding="utf-8"))
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    plan = evidence["outputs"]["experiment_plan"]
+    boundary = plan["source_context"]["final_execution_boundary"]
+
+    assert plan["execution_ready"] is False
+    assert boundary["approval_preflight"]["status"] == "incomplete"
+    assert expected_reason in boundary["blocking_reasons"]
 
 
 def test_autosci_skill_shim_exp_run_uses_verified_runtime_evidence_and_mutates_wiki(tmp_path: Path) -> None:

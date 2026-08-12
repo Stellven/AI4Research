@@ -66,6 +66,39 @@ def test_core_phase4_converters_emit_expected_schema_names() -> None:
     assert_evidence_shape(idea_eval, "idea_evaluation.v1")
 
 
+def test_experiment_plan_converter_preserves_verification_ready_contract() -> None:
+    envelope = {"task_id": "t", "sprint_id": "s", "node_id": "n", "inputs": {}}
+    contract = {
+        "verification_contract_version": "1",
+        "readiness_profile": "deterministic_local_fixture",
+        "workspace_root": "workspace",
+        "runner": {"path": "workspace/run.py"},
+        "dataset": {"path": "samples.csv", "format": "csv", "role": "evaluation"},
+        "variants": [
+            {"name": "baseline", "description": "baseline"},
+            {"name": "variant", "description": "candidate"},
+        ],
+        "thresholds": [{"metric": "accuracy_uplift", "operator": ">=", "value": 0.2}],
+        "random_seed": 7,
+        "stopping_conditions": ["all rows processed"],
+        "command_argv": ["python3", "run.py", "samples.csv", "result.json"],
+        "approval_preflight": {
+            "status": "ready",
+            "approval_state": "approved_pending_runtime",
+            "command_authorized": True,
+            "before_state_ready": True,
+        },
+        "execution_ready": True,
+        "network_access": "denied",
+        "write_scope": ["workspace"],
+    }
+
+    plan = convert_plan(contract, envelope)["outputs"]["experiment_plan"]
+
+    for key, expected in contract.items():
+        assert plan[key] == expected
+
+
 def test_research_paper_converter_does_not_fixture_fill_failed_parse() -> None:
     envelope = {"task_id": "t", "sprint_id": "s", "node_id": "n", "inputs": {}}
     payload = convert_paper(
