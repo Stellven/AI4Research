@@ -71,7 +71,10 @@ def test_p22_j24_personal_data_controls(repo_root: Path, tmp_path: Path) -> None
     check("external_controls_truthfully_excluded", "hosted_account_deletion" in inventory["payload"].get("unsupported_external_controls", []), inventory["payload"])
 
     export_path = home / "exports" / "personal-data.json"
-    exported = execute("export", "export", "--out", str(export_path), "--category", "settings", "--category", "supplied_data")
+    exported = execute(
+        "export", "export", "--out", str(export_path),
+        "--category", "settings", "--category", "supplied_data", "--category", "consent_records",
+    )
     export_text = export_path.read_text(encoding="utf-8") if export_path.exists() else ""
     check("export_is_usable_and_redacted", exported["exit_code"] == 0 and len(export_text) > 100 and "phase22+privacy@example.invalid" not in export_text and "J24-SECRET" not in export_text, exported)
 

@@ -21,8 +21,10 @@ from privacy.lifecycle import redact_text, under_root
 SCHEMA_VERSION = "solar.privacy-control.v1"
 SENSITIVE_KEYS = ("password", "secret", "token", "credential", "api_key", "apikey")
 DATA_SURFACES: dict[str, tuple[str, ...]] = {
-    "settings": ("config", "config.env"),
+    "settings": ("config", "config.env", ".env"),
+    "account_profile": ("identity", "primary/identity-store.json"),
     "supplied_data": ("primary/supplied", "db"),
+    "consent_records": ("primary/privacy-control.json",),
     "derived_data": ("cache", "index", "derived"),
     "activity_logs": ("logs",),
     "backups": ("backups",),
@@ -237,6 +239,11 @@ def delete_category(root: Path, category: str, confirmed: bool) -> dict[str, Any
         raise PrivacyControlError("confirmation_required", "selective deletion requires --yes")
     if category not in DATA_SURFACES:
         raise PrivacyControlError("invalid_category", f"unsupported personal-data category: {category}")
+    if category == "consent_records":
+        raise PrivacyControlError(
+            "consent_revoke_required",
+            "consent records must be changed through consent-revoke so linked derived data is handled",
+        )
     if category == "exports":
         # The current command may be invoked from an export location; paths are still bounded.
         pass
