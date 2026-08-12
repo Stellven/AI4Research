@@ -199,6 +199,7 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
     cleanup: dict[str, Any] = {}
     install_receipt_seen = False
     started_at = _utc_now()
+    distro = {}
 
     try:
         commands.append(
@@ -227,6 +228,21 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
                 timeout=180,
             )
         )
+        distro_record = _run(
+            run_dir,
+            "distro-release",
+            ["bash", "-lc", ". /etc/os-release; printf '%s\\n%s\\n' \"$ID\" \"$VERSION_ID\""],
+            cwd=repo_root,
+            env=env,
+            timeout=30,
+        )
+        commands.append(distro_record)
+        distro_lines = distro_record["stdout_tail"].strip().splitlines()
+        distro = {
+            "id": distro_lines[0] if distro_lines else "unknown",
+            "version_id": distro_lines[1] if len(distro_lines) > 1 else "unknown",
+            "wsl_distro_name": os.environ.get("WSL_DISTRO_NAME", ""),
+        }
         solar_bin = solar_home / "bin" / "solar"
         harness_script = solar_home / "harness" / "solar-harness.sh"
         install_receipt_seen = (solar_home / "install-receipt.json").exists()
@@ -330,8 +346,31 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
         }
 
     install_ok = commands[0]["exit_code"] == 0 and install_receipt_seen
-    doctor_ok = any(command["label"] == "doctor-json" and command["exit_code"] == 0 for command in commands)
-    status_ok = any(command["label"] == "status-json" and command["exit_code"] == 0 for command in commands)
+    doctor_record = next((command for command in commands if command["label"] == "doctor-json"), {})
+    status_record = next((command for command in commands if command["label"] == "status-json"), {})
+    try:
+        doctor_payload = json.loads((run_dir / doctor_record["stdout_path"]).read_text(encoding="utf-8"))
+    except (KeyError, OSError, json.JSONDecodeError):
+        doctor_payload = {}
+    try:
+        status_payload = json.loads((run_dir / status_record["stdout_path"]).read_text(encoding="utf-8"))
+    except (KeyError, OSError, json.JSONDecodeError):
+        status_payload = {}
+    # The test intentionally skips Python/LLM CLI dependencies. A diagnostic
+    # exit 1 is valid when the structured payload truthfully reports degraded
+    # readiness while confirming the installed paths and Python minimum.
+    doctor_ok = (
+        doctor_record.get("exit_code") in {0, 1}
+        and doctor_payload.get("paths", {}).get("solar_home") == "ok"
+        and doctor_payload.get("paths", {}).get("receipt") == "ok"
+        and doctor_payload.get("python", {}).get("min_ok") is True
+        and doctor_payload.get("verdict") in {"pass", "fail"}
+    )
+    status_ok = (
+        status_record.get("exit_code") in {0, 1}
+        and status_payload.get("status") in {"installed", "ok", "degraded"}
+        and status_payload.get("install", {}).get("paths", {}).get("receipt", {}).get("state") == "ok"
+    )
     health_ok = http_checks.get("healthz", {}).get("status") == 200 and http_checks.get("healthz", {}).get("body_prefix") == "ok"
     runtime_ok = http_checks.get("runtime_info", {}).get("body", {}).get("harness_dir") == str(solar_home / "harness")
     status_payload_ok = isinstance(http_checks.get("status", {}).get("body"), dict)
@@ -345,6 +384,20 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
         and tmux_checks.get("second_tmux_session_remained")
     )
     uninstall_ok = not cleanup["solar_home_exists_after_uninstall"] and not cleanup["second_solar_home_exists_after_uninstall"]
+    required = [
+        install_ok,
+        doctor_ok,
+        status_ok,
+        health_ok,
+        runtime_ok,
+        status_payload_ok,
+        settings_payload_ok,
+        root_ok,
+        tmux_ok,
+        concurrent_isolation_ok,
+        uninstall_ok,
+    ]
+    final_status = "PASS_WITH_KNOWN_LIMITATIONS" if all(required) else "FAIL"
 
     evidence = {
         "schema_version": "phase22.j18.real_linux_status_lifecycle.v2",
@@ -354,6 +407,7 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
         "started_at": started_at,
         "finished_at": _utc_now(),
         "platform": platform.platform(),
+        "distribution": distro,
         "repo_head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_root, text=True).strip(),
         "sandbox": {
             "primary": {"home": str(sandbox_home), "solar_home": str(solar_home), "claude_dir": str(claude_dir)},
@@ -381,17 +435,17 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
             {
                 "category": "Vertical",
                 "level_2_feature": "Linux Cli",
-                "status": "PASS_WITH_KNOWN_LIMITATIONS",
+                "status": final_status,
                 "assertion_name": "j18_linux_cli_install_doctor_status_uninstall",
                 "evidence_path": "journey-result.json",
                 "known_limitations": [
-                    "Validated on SolarUbuntu/WSL2 with kernel,harness only; did not cover every Linux distribution, package manager, update, rollback, or repair variant."
+                    f"Validated on {distro.get('id')} {distro.get('version_id')} WSL2 with kernel,harness only; did not cover every Linux distribution family, package manager, update, rollback, or repair variant."
                 ],
             },
             {
                 "category": "Vertical",
                 "level_2_feature": "Workflow & Platform Status Visibility",
-                "status": "PASS_WITH_KNOWN_LIMITATIONS",
+                "status": final_status,
                 "assertion_name": "j18_status_server_health_status_runtime_projection",
                 "evidence_path": "journey-result.json",
                 "known_limitations": [
@@ -401,32 +455,19 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
             {
                 "category": "Vertical",
                 "level_2_feature": "TMUX",
-                "status": "PASS_WITH_KNOWN_LIMITATIONS",
+                "status": final_status,
                 "assertion_name": "j18_status_server_tmux_session_lifecycle",
                 "evidence_path": "journey-result.json",
                 "known_limitations": [
-                    "Validated two concurrent local SolarUbuntu status-server TMUX sessions with cross-stop/uninstall isolation; did not cover remote hosts, other terminal implementations, or a broad interactive user-repair matrix."
+                    f"Validated two concurrent local {distro.get('id')} {distro.get('version_id')} status-server TMUX sessions with cross-stop/uninstall isolation; did not cover remote hosts, other terminal implementations, or a broad interactive user-repair matrix."
                 ],
             },
         ],
-        "status": "PASS_WITH_KNOWN_LIMITATIONS",
+        "status": final_status,
     }
     result_path = _write_json(run_dir / "journey-result.json", evidence)
     _write_json(artifact_dir / "commands.json", commands)
     _write_json(artifact_dir / "http-checks.json", http_checks)
     _write_json(artifact_dir / "tmux-checks.json", tmux_checks)
 
-    required = [
-        install_ok,
-        doctor_ok,
-        status_ok,
-        health_ok,
-        runtime_ok,
-        status_payload_ok,
-        settings_payload_ok,
-        root_ok,
-        tmux_ok,
-        concurrent_isolation_ok,
-        uninstall_ok,
-    ]
     assert all(required), f"P22-J18 lifecycle failed; evidence: {result_path}"
