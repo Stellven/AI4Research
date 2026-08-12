@@ -91,6 +91,60 @@ def _instant(value: Any) -> datetime | None:
         return None
 
 
+def _trusted_issuer(policy: dict[str, Any], record: dict[str, Any], evidence_kind: str) -> bool:
+    """Match evidence against an out-of-band trust anchor in the policy."""
+    issuers = policy.get("trusted_issuers")
+    if not isinstance(issuers, list):
+        return False
+    issuer_id = _string(record.get("issuer_id"))
+    identity_uri = _string(record.get("issuer_identity_uri"))
+    anchor = _sha(record.get("trust_anchor_sha256"))
+    if not issuer_id or not identity_uri or not anchor:
+        return False
+    parsed = urlparse(identity_uri)
+    if parsed.scheme.lower() != "https" or not parsed.netloc:
+        return False
+    for entry in issuers:
+        if not isinstance(entry, dict):
+            continue
+        if (
+            _string(entry.get("issuer_id")) == issuer_id
+            and _string(entry.get("identity_uri")) == identity_uri
+            and _sha(entry.get("trust_anchor_sha256")) == anchor
+            and evidence_kind in _strings(entry.get("allowed_evidence_kinds"))
+        ):
+            return True
+    return False
+
+
+def _pinned_source(policy: dict[str, Any], source_id: str, evidence_sha256: str, issuer_id: str) -> bool:
+    """Require an out-of-band exact evidence-byte pin, not an issuer name alone."""
+    pins = policy.get("trusted_sources")
+    if not isinstance(pins, list):
+        return False
+    return any(
+        isinstance(pin, dict)
+        and _string(pin.get("source_id")) == source_id
+        and _sha(pin.get("rights_evidence_sha256")) == evidence_sha256
+        and _string(pin.get("issuer_id")) == issuer_id
+        for pin in pins
+    )
+
+
+def _denial_result(reason: str, manifest_path: Path, policy_path: Path, *, manifest_hash: str = "", policy_hash: str = "") -> dict[str, Any]:
+    return {
+        "schema_version": "solar.legal_ip_risk_screen.v1",
+        "decision": "deny",
+        "admission_allowed": False,
+        "policy": {"version": "", "path": str(policy_path), "sha256": policy_hash},
+        "manifest": {"id": "", "path": str(manifest_path), "sha256": manifest_hash},
+        "findings": [{"rule_id":"solar.legal_ip.input.v1","check":"input","decision":"deny","reason":reason,"source":"cli","manifest_path":str(manifest_path),"manifest_sha256":manifest_hash,"evidence_path":"","evidence_sha256":""}],
+        "summary": {"allow": 0, "review_required": 0, "deny": 1},
+        "disclaimer": "Engineering risk screen only; not legal advice or legal approval. Review-required and deny decisions block automatic admission.",
+        "limitations": ["No jurisdiction-specific legal conclusion, external copyright ownership verification, or legal-counsel approval.", "No hosted-provider deletion, consent revocation propagation, or cross-channel enforcement."],
+    }
+
+
 def screen(
     manifest: dict[str, Any],
     policy: dict[str, Any],
@@ -188,13 +242,21 @@ def screen(
                     and _string(record.get("uri")) == uri
                     and _string(record.get("license")) == license_id
                     and _string(record.get("copyright_owner")) == owner
-                    and _string(record.get("issuer")) != ""
+                    and _string(record.get("record_id")) != ""
+                    and _string(record.get("rights_basis")) in {"public_license_registry_record", "signed_rights_declaration"}
+                    and urlparse(_string(record.get("license_document_uri"))).scheme.lower() == "https"
                     and _instant(record.get("issued_at")) is not None
                 )
-                error = "" if evidence_matches else "structured rights evidence does not match source fields or lacks issuer/issued_at"
-            add("source_provenance", "allow" if sid and uri_valid and evidence_matches else "deny", "source URI and structured evidence artifact are verified" if sid and uri_valid and evidence_matches else (error or "source_id or allowed URI scheme is missing"), where, source_path=path, source_hash=actual)
+                error = "" if evidence_matches else "structured rights evidence does not match source fields or lacks record/right basis/license document/issued_at"
+            issuer_trusted = bool(evidence_matches and record is not None and _trusted_issuer(policy, record, "rights_record"))
+            source_pinned = bool(issuer_trusted and record is not None and _pinned_source(policy, sid, actual, _string(record.get("issuer_id"))))
+            provenance_decision = "allow" if sid and uri_valid and evidence_matches and source_pinned else ("review_required" if sid and uri_valid and evidence_matches else "deny")
+            provenance_reason = "source URI syntax, evidence bytes, issuer anchor, and policy-pinned source/evidence SHA are verified" if provenance_decision == "allow" else ("evidence is internally valid but issuer/source SHA is not pinned by policy; human review required" if provenance_decision == "review_required" else (error or "source_id or allowed URI scheme is missing"))
+            add("source_provenance", provenance_decision, provenance_reason, where, source_path=path, source_hash=actual)
             if not evidence_matches:
                 add("source_rights", "deny", error or "rights evidence is unavailable", where, source_path=path, source_hash=actual)
+            elif not source_pinned:
+                add("source_rights", "review_required", "rights artifact lacks a matching out-of-band issuer and exact source/evidence SHA pin", where, source_path=path, source_hash=actual)
             elif not license_id or license_id.upper() in {"UNKNOWN", "NOASSERTION", "NONE"}:
                 add("source_rights", "deny", "license/right is missing or unknown", f"{where}.license", source_path=path, source_hash=actual)
             elif license_id in denied:
@@ -205,7 +267,8 @@ def screen(
                 add("source_rights", "deny", "license is unrecognized or rights exclude declared purpose", where, source_path=path, source_hash=actual)
             else:
                 add("source_rights", "allow", f"license {license_id!r} and purpose are policy-compatible", where, source_path=path, source_hash=actual)
-            add("copyright_attribution", "allow" if owner and evidence_matches else "deny", "rights holder is backed by hashed structured evidence" if owner and evidence_matches else "rights holder evidence is missing or invalid", f"{where}.copyright_owner", source_path=path, source_hash=actual)
+            copyright_decision = "allow" if owner and evidence_matches and source_pinned else ("review_required" if owner and evidence_matches else "deny")
+            add("copyright_attribution", copyright_decision, "rights holder is backed by an exact policy-pinned evidence SHA" if copyright_decision=="allow" else ("rights holder evidence is not pinned; human review required" if copyright_decision=="review_required" else "rights holder evidence is missing or invalid"), f"{where}.copyright_owner", source_path=path, source_hash=actual)
 
     if output_path is not None:
         output_resolved = output_path.resolve()
@@ -240,7 +303,7 @@ def main() -> int:
         manifest, manifest_hash = _load(manifest_path); policy, policy_hash = _load(policy_path)
         result=screen(manifest,policy,manifest_path=manifest_path,manifest_raw_sha256=manifest_hash,policy_path=policy_path,policy_raw_sha256=policy_hash,output_path=output_path)
     except Exception as exc:
-        result={"schema_version":"solar.legal_ip_risk_screen.v1","decision":"deny","admission_allowed":False,"findings":[{"rule_id":"solar.legal_ip.input.v1","check":"input","decision":"deny","reason":str(exc),"source":"cli","manifest_path":str(manifest_path),"manifest_sha256":"","evidence_path":"","evidence_sha256":""}],"disclaimer":"Engineering risk screen only; not legal advice or legal approval."}
+        result=_denial_result(str(exc),manifest_path,policy_path)
     protected={manifest_path,policy_path}
     if "manifest" in locals():
         for source in manifest.get("sources",[]) if isinstance(manifest.get("sources"),list) else []:
@@ -248,7 +311,6 @@ def main() -> int:
         consent=manifest.get("consent") if "manifest" in locals() else None
         if isinstance(consent,dict) and _string(consent.get("evidence_path")): protected.add(Path(consent["evidence_path"]).resolve())
     if not input_alias and output_path not in protected:
-        if output_path.exists(): output_path.unlink()
         _atomic_write(output_path,result)
     print(json.dumps(result,ensure_ascii=False)); return 0 if result.get("decision")=="allow" else 2
 
