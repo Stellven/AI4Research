@@ -91,7 +91,7 @@ JOURNEYS: dict[str, dict[str, Any]] = {
     "P22-J09": {
         "name": "Generate and review a deliverable research report",
         "selector": "p22_j09",
-        "live": False,
+        "live": True,
     },
     "P22-J10": {
         "name": "Backup, restore, and uninstall inside a sandbox",
