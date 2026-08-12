@@ -249,6 +249,48 @@ def _wait_for_operator_result(
     return latest_dir, latest_payload
 
 
+def _wait_for_workflow_route(
+    harness_dir: Path,
+    sprint_id: str,
+    env: dict[str, str],
+    timeout_seconds: int,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Wait for the coordinator's certified route before the next wake."""
+
+    deadline = time.monotonic() + max(1, timeout_seconds)
+    observations: list[dict[str, Any]] = []
+    route = ""
+    while time.monotonic() < deadline:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(harness_dir / "lib" / "workflow_guard.py"),
+                "route",
+                sprint_id,
+                "--field",
+                "route_role",
+            ],
+            cwd=harness_dir,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        route = proc.stdout.strip().lower()
+        observations.append(
+            {
+                "route": route,
+                "returncode": proc.returncode,
+                "stderr_tail": proc.stderr[-400:],
+            }
+        )
+        if proc.returncode == 0 and route in {"builder", "builder_main"}:
+            return route, observations
+        time.sleep(2)
+    return route, observations
+
+
 def _operator_provider_auth_blocker(task_dir: Path | None) -> str:
     if task_dir is None:
         return ""
@@ -529,6 +571,7 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
     requirement_ir_path = sprint_dir / f"{sprint_id}.requirement_ir.json"
     wake_timeout_seconds = int(os.environ.get("PHASE22_J02_WAKE_TIMEOUT_SECONDS", "900"))
     operator_wait_seconds = int(os.environ.get("PHASE22_J02_OPERATOR_WAIT_SECONDS", str(wake_timeout_seconds)))
+    route_wait_seconds = int(os.environ.get("PHASE22_J02_ROUTE_WAIT_SECONDS", "240"))
     limitations: list[str] = []
 
     # Run-level artifact that ties sprint id and run id together for explicit handoff review.
@@ -684,6 +727,42 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
         )
         return
 
+    compiled_route, compile_route_observations = _wait_for_workflow_route(
+        installed_harness,
+        sprint_id,
+        env,
+        route_wait_seconds,
+    )
+    compile_route_path = sandbox / f"{run_id}-workflow-route-after-planner.json"
+    compile_route_path.write_text(
+        json.dumps(
+            {
+                "final_route": compiled_route,
+                "observations": compile_route_observations,
+                "timeout_seconds": route_wait_seconds,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rec.add_artifact(compile_route_path, "j02-workflow-route-after-planner", required=True)
+    rec.add_assertion(
+        "planner_compile_reached_builder_route",
+        compiled_route in {"builder", "builder_main"},
+        compile_route_path,
+    )
+    if compiled_route not in {"builder", "builder_main"}:
+        _record_j02_l2(
+            rec,
+            "Planner artifacts completed, but the certified workflow route did not advance to Builder.",
+            False,
+        )
+        rec.finalize("FAIL", blockers=["Planner closeout did not reach a certified builder route."])
+        return
+
     plan = rec.run(
         "plan_verdict_approve",
         bash_argv(
@@ -702,6 +781,42 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
 
     sprint_status_after_plan = _read_json_payload(status_path)
     rec.add_assertion("plan_verdict_updates_status", _progress_status(sprint_status_after_plan.get("status")), sprint_status_after_plan.get("status"))
+
+    approved_route, approved_route_observations = _wait_for_workflow_route(
+        installed_harness,
+        sprint_id,
+        env,
+        min(route_wait_seconds, 60),
+    )
+    approved_route_path = sandbox / f"{run_id}-workflow-route-after-approval.json"
+    approved_route_path.write_text(
+        json.dumps(
+            {
+                "final_route": approved_route,
+                "observations": approved_route_observations,
+                "timeout_seconds": min(route_wait_seconds, 60),
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rec.add_artifact(approved_route_path, "j02-workflow-route-after-approval", required=True)
+    rec.add_assertion(
+        "plan_approval_preserved_builder_route",
+        approved_route in {"builder", "builder_main"},
+        approved_route_path,
+    )
+    if approved_route not in {"builder", "builder_main"}:
+        _record_j02_l2(
+            rec,
+            "Plan approval did not preserve the certified Builder route.",
+            False,
+        )
+        rec.finalize("FAIL", blockers=["Plan approval did not preserve the certified builder route."])
+        return
 
     wake = rec.run(
         "wake_builder_after_plan_approval",

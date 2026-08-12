@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import subprocess
 from pathlib import Path
 
 
@@ -130,3 +131,19 @@ def test_operator_result_lookup_selects_the_physical_builder(tmp_path: Path) -> 
 
     assert task_dir == builder
     assert payload["task_id"] == "mt-20260812-sprint-1-S1"
+
+
+def test_workflow_route_waits_for_certified_builder(monkeypatch, tmp_path: Path) -> None:
+    results = iter(
+        [
+            subprocess.CompletedProcess([], 0, stdout="planner\n", stderr=""),
+            subprocess.CompletedProcess([], 0, stdout="builder_main\n", stderr=""),
+        ]
+    )
+    monkeypatch.setattr(MODULE.subprocess, "run", lambda *args, **kwargs: next(results))
+    monkeypatch.setattr(MODULE.time, "sleep", lambda seconds: None)
+
+    route, observations = MODULE._wait_for_workflow_route(tmp_path, "sprint-1", {}, 5)
+
+    assert route == "builder_main"
+    assert [item["route"] for item in observations] == ["planner", "builder_main"]
