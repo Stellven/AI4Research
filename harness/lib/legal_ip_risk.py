@@ -91,6 +91,17 @@ def _instant(value: Any) -> datetime | None:
         return None
 
 
+def _safe_https_uri(value: Any) -> bool:
+    text = _string(value)
+    if not text:
+        return False
+    try:
+        parsed = urlparse(text)
+        return bool(parsed.scheme.lower() == "https" and parsed.netloc and parsed.hostname and parsed.username is None and parsed.password is None)
+    except ValueError:
+        return False
+
+
 def _trusted_issuer(policy: dict[str, Any], record: dict[str, Any], evidence_kind: str) -> bool:
     """Match evidence against an out-of-band trust anchor in the policy."""
     issuers = policy.get("trusted_issuers")
@@ -101,8 +112,7 @@ def _trusted_issuer(policy: dict[str, Any], record: dict[str, Any], evidence_kin
     anchor = _sha(record.get("trust_anchor_sha256"))
     if not issuer_id or not identity_uri or not anchor:
         return False
-    parsed = urlparse(identity_uri)
-    if parsed.scheme.lower() != "https" or not parsed.netloc:
+    if not _safe_https_uri(identity_uri):
         return False
     for entry in issuers:
         if not isinstance(entry, dict):
@@ -230,7 +240,7 @@ def screen(
                 add("source_inventory", "deny", "source is not an object", where); continue
             sid, uri = _string(source.get("source_id")), _string(source.get("uri"))
             license_id, owner = _string(source.get("license")), _string(source.get("copyright_owner"))
-            uri_valid = bool(uri and urlparse(uri).scheme.lower() in {"https", "http", "doi"} and urlparse(uri).netloc)
+            uri_valid = _safe_https_uri(uri)
             path, record, actual, error = _evidence(source.get("evidence_path"), source.get("evidence_sha256"))
             if path:
                 referenced_paths.add(path)
@@ -244,7 +254,7 @@ def screen(
                     and _string(record.get("copyright_owner")) == owner
                     and _string(record.get("record_id")) != ""
                     and _string(record.get("rights_basis")) in {"public_license_registry_record", "signed_rights_declaration"}
-                    and urlparse(_string(record.get("license_document_uri"))).scheme.lower() == "https"
+                    and _safe_https_uri(record.get("license_document_uri"))
                     and _instant(record.get("issued_at")) is not None
                 )
                 error = "" if evidence_matches else "structured rights evidence does not match source fields or lacks record/right basis/license document/issued_at"

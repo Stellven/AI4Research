@@ -23,6 +23,9 @@ def test_retention_is_exact_int(tmp_path,bad):
  m=manifest(tmp_path);p=policy(m);m["retention_days"]=bad;assert screen(m,p)["decision"]=="deny"
 def test_missing_id_denied(tmp_path):
  m=manifest(tmp_path);p=policy(m);m.pop("manifest_id");assert screen(m,p)["decision"]=="deny"
+@pytest.mark.parametrize("bad_uri",["https:not-an-authority","https://user:secret@example.invalid/data"])
+def test_malformed_or_credentialed_https_uri_is_denied(tmp_path,bad_uri):
+ m=manifest(tmp_path);record=json.loads(Path(m["sources"][0]["evidence_path"]).read_text());record["uri"]=bad_uri;path,sha=dump(tmp_path/"bad-uri-rights.json",record);m["sources"][0].update({"uri":bad_uri,"evidence_path":path,"evidence_sha256":sha});assert screen(m,policy(m))["decision"]=="deny"
 @pytest.mark.parametrize("attack",["bad_sha","nonexistent","self_string"])
 def test_bad_evidence_denied(tmp_path,attack):
  m=manifest(tmp_path);s=m["sources"][0]
