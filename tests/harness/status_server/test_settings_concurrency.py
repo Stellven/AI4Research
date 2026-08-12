@@ -17,6 +17,8 @@ Exits non-zero if any check fails. No mocks — real server, real HTTP, real con
 """
 import json
 import os
+import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -72,7 +74,7 @@ def options_headers(port, path="/settings"):
 
 def main():
     tmp = Path(tempfile.mkdtemp(prefix="solar-backend-p0-"))
-    for d in ("config", "run", "sprints", "events", "sessions", "reports"):
+    for d in ("config", "run", "sprints", "events", "sessions", "reports", "home"):
         (tmp / d).mkdir(parents=True, exist_ok=True)
     cfg_path = tmp / "config" / "solar-user-config.json"
     # Windows environment names are case-insensitive. Remove inherited aliases
@@ -82,6 +84,9 @@ def main():
         key: value for key, value in os.environ.items()
         if key.upper() not in {"HARNESS_DIR", "SOLAR_HARNESS_DIR"}
     }
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        isolated_port = probe.getsockname()[1]
     env = {
         **base_env,
         "HARNESS_DIR": str(tmp),
@@ -89,6 +94,10 @@ def main():
         "SOLAR_BIND_HOST": "127.0.0.1",
         "SOLAR_DB": str(tmp / "solar.db"),
         "SOLAR_USER_SECRETS_FILE": str(tmp / "secrets.env"),
+        "HOME": str(tmp / "home"),
+        "USERPROFILE": str(tmp / "home"),
+        "SOLAR_STATUS_PORT_START": str(isolated_port),
+        "SOLAR_STATUS_PORT_END": str(isolated_port),
     }
     proc = subprocess.Popen([sys.executable, str(SERVER)], cwd=str(tmp), env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -246,6 +255,7 @@ def main():
                 print("--- server stderr (tail) ---\n" + err)
         except Exception:
             pass
+        shutil.rmtree(tmp, ignore_errors=True)
 
     passed = sum(1 for r in results if r)
     print(f"\nBACKEND-P0: {passed}/{len(results)} passed  (server: {SERVER})")

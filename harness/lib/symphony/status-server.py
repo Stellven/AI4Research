@@ -1331,6 +1331,7 @@ _PROVIDER_KEY_ENV = {
 # readers (panes) are protected by the atomic os.replace in _write_user_config, not this lock.
 _USER_CONFIG_LOCK = threading.RLock()
 _USER_CONFIG_CACHE: dict | None = None
+_USER_CONFIG_EVER_LOADED = False
 
 
 def _publish_user_config(temporary: Path, target: Path) -> None:
@@ -1387,17 +1388,37 @@ def _publish_user_config(temporary: Path, target: Path) -> None:
         time.sleep(0.002)
 
 
-def _read_user_config() -> dict:
+def _restore_user_config_recovery() -> bool:
+    """Restore the last complete pre-transaction document after a failed publish."""
+    recovery = _USER_CONFIG_PATH.with_suffix(".json.recovery")
+    if _USER_CONFIG_PATH.exists() or not recovery.exists():
+        return False
+    try:
+        data = json.loads(recovery.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return False
+        os.replace(recovery, _USER_CONFIG_PATH)
+        # The staged document belongs to the failed request. Restoring the old
+        # committed document keeps a 500 response truthful: that request did not apply.
+        _USER_CONFIG_PATH.with_suffix(".json.tmp").unlink(missing_ok=True)
+        return True
+    except (OSError, json.JSONDecodeError):
+        return False
+
+
+def _read_user_config(*, for_update: bool = False) -> dict:
     # A raw Windows pathname reader can briefly collide with ReplaceFileW even
     # though it can never observe partial bytes.  Product readers retry that
     # sharing transition; callers therefore see the complete old/new document,
     # not a transient empty default.
-    global _USER_CONFIG_CACHE
+    global _USER_CONFIG_CACHE, _USER_CONFIG_EVER_LOADED
     # Serialize the cache and disk snapshot together. Without this read lock an
     # HTTP reader can publish an older disk snapshot into the cache just after a
     # writer committed a newer one, reintroducing a lost update on the next POST.
     with _USER_CONFIG_LOCK:
+        _restore_user_config_recovery()
         cfg = None
+        failure = ""
         for attempt in range(20):
             try:
                 cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8"))
@@ -1405,20 +1426,31 @@ def _read_user_config() -> dict:
             except (FileNotFoundError, PermissionError):
                 # A genuinely absent initial config is not a transaction. Avoid a
                 # retry delay when neither the cache nor a staged replacement exists.
-                if _USER_CONFIG_CACHE is None and not _USER_CONFIG_PATH.with_suffix(".json.tmp").exists():
+                if not _USER_CONFIG_EVER_LOADED and not _USER_CONFIG_PATH.with_suffix(".json.tmp").exists():
                     cfg = {}
                     break
                 if attempt == 19:
+                    failure = "missing_or_locked"
                     break
                 time.sleep(0.002)
-            except (OSError, json.JSONDecodeError):
+            except json.JSONDecodeError:
+                failure = "invalid_json"
+                break
+            except OSError:
+                failure = "read_error"
                 break
         if isinstance(cfg, dict):
             _USER_CONFIG_CACHE = copy.deepcopy(cfg)
+            if _USER_CONFIG_PATH.exists():
+                _USER_CONFIG_EVER_LOADED = True
             return cfg
-        # Never convert a transient read collision into an empty configuration and
-        # lose unrelated keys in the next read-modify-write transaction.
-        return copy.deepcopy(_USER_CONFIG_CACHE) if _USER_CONFIG_CACHE is not None else {}
+        # A durable deletion/corruption is not a publication transition. Drop the
+        # cache and reject read-modify-write callers so stale state cannot overwrite
+        # the damaged/missing source. Read-only surfaces fail closed to defaults.
+        _USER_CONFIG_CACHE = None
+        if for_update:
+            raise RuntimeError(f"user config unavailable for update: {failure or 'unknown'}")
+        return {}
 
 
 def _write_user_config(cfg: dict) -> None:
@@ -1427,22 +1459,44 @@ def _write_user_config(cfg: dict) -> None:
     # default). Write a temp file in the same dir, then os.replace (atomic on POSIX). Callers hold
     # _USER_CONFIG_LOCK so the surrounding read-modify-write is serialized across request threads.
     _USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    global _USER_CONFIG_CACHE
+    global _USER_CONFIG_CACHE, _USER_CONFIG_EVER_LOADED
     tmp = _USER_CONFIG_PATH.with_suffix(".json.tmp")
+    recovery = _USER_CONFIG_PATH.with_suffix(".json.recovery")
+    published = False
     try:
+        # Preserve the complete committed document before entering the Windows
+        # replacement transition. If publication removes the target and then
+        # fails, this remains the authoritative recovery copy.
+        if _USER_CONFIG_PATH.exists():
+            old_data = copy.deepcopy(_USER_CONFIG_CACHE)
+            if old_data is None:
+                old_data = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8"))
+            if not isinstance(old_data, dict):
+                raise RuntimeError("refusing to replace non-object user config")
+            old_bytes = (json.dumps(old_data, indent=2) + "\n").encode("utf-8")
+            with recovery.open("wb") as handle:
+                handle.write(old_bytes)
+                handle.flush()
+                os.fsync(handle.fileno())
         with tmp.open("w", encoding="utf-8") as handle:
             handle.write(json.dumps(cfg, indent=2) + "\n")
             handle.flush()
             os.fsync(handle.fileno())
         _publish_user_config(tmp, _USER_CONFIG_PATH)
+        published = True
         _USER_CONFIG_CACHE = copy.deepcopy(cfg)
+        _USER_CONFIG_EVER_LOADED = True
     finally:
-        # A failed publish must not leave stale bytes that a later process could
-        # mistake for the current transaction.
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
+        target_safe = _USER_CONFIG_PATH.exists()
+        # Once the target is safely published (or the old target survived a
+        # failed call), staging/recovery copies are redundant. If the target was
+        # removed, retain every complete copy for `_restore_user_config_recovery`.
+        if published or target_safe:
+            for artifact in (tmp, recovery):
+                try:
+                    artifact.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
 
 def _runtime_launch_supported() -> bool:
@@ -1656,7 +1710,7 @@ def _read_user_config_runtime() -> tuple[str, str]:
 
 def _write_user_config_models(role_models: dict) -> dict:
     """Write models.{pm,planner,builder,evaluator} into solar-user-config.json."""
-    cfg = _read_user_config()
+    cfg = _read_user_config(for_update=True)
     models = cfg.get("models") if isinstance(cfg.get("models"), dict) else {}
     model_aliases = cfg.get("model_aliases") if isinstance(cfg.get("model_aliases"), dict) else {}
     applied = {}
@@ -1688,7 +1742,7 @@ def _write_user_config_runtime(runtime: str) -> str:
     value = str(runtime or "").strip().lower()
     if value not in _VALID_PANE_RUNTIMES:
         return ""
-    cfg = _read_user_config()
+    cfg = _read_user_config(for_update=True)
     cfg["runtime"] = value
     _write_user_config(cfg)
     return value
@@ -1703,7 +1757,7 @@ def _write_user_config_codex(codex_in: dict) -> dict:
     the codex runtime launches, so the dashboard's codex choice actually uses web search."""
     if not isinstance(codex_in, dict):
         return {}
-    cfg = _read_user_config()
+    cfg = _read_user_config(for_update=True)
     codex = cfg.get("codex") if isinstance(cfg.get("codex"), dict) else {}
     applied: dict = {}
     if "search" in codex_in:
