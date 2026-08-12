@@ -4305,8 +4305,14 @@ print(json.dumps({
         [[ -f "$_eval_py" ]] || { err "eval_runner not found: $_eval_py"; exit 1; }
         python3 "$_eval_py" run "$@"
         ;;
+      curriculum-evaluate)
+        shift || true
+        _curriculum_py="$HARNESS_DIR/lib/curriculum_loop.py"
+        [[ -f "$_curriculum_py" ]] || { err "curriculum_loop not found: $_curriculum_py"; exit 1; }
+        python3 "$_curriculum_py" evaluate "$@"
+        ;;
       *)
-        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run] [--json]"
+        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run|curriculum-evaluate] [--json]"
         exit 2
         ;;
     esac
