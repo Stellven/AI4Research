@@ -10,14 +10,25 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = (Path(__file__).resolve().parents[2] / 'harness')
 ROUTER_PATH = ROOT / "tools" / "codex_pm_router.py"
+CONSUMER_PATH = ROOT / "lib" / "intent_consumer.py"
 
 
 def _load_router():
     for module_name in ("codex_pm_router", "capability_capsules", "requirement_coverage", "apo_plan_compiler"):
         sys.modules.pop(module_name, None)
     spec = importlib.util.spec_from_file_location("codex_pm_router", ROUTER_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_consumer():
+    spec = importlib.util.spec_from_file_location("intent_consumer_under_test", CONSUMER_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -502,3 +513,215 @@ def test_codex_pm_router_cli_defaults_to_rawintent(tmp_path):
     assert payload["mode"] == "rawintent"
     results = payload["consumer"]["results"]
     assert results and results[0]["status"] == "consumed"
+
+
+def test_build_pm_intake_preserves_late_instructions_in_requirements():
+    router = _load_router()
+    filler = " ".join(
+        f"The analysis must additionally cover evaluation point {index} in detail."
+        for index in range(1, 9)
+    )
+    request = (
+        "Research memory-efficient attention methods and select a promising approach. "
+        + filler
+        + " Implement a proof of concept, benchmark it against a baseline, and "
+        "deliver the code, benchmark results, and a self-contained HTML report."
+    )
+    assert len(request) > 400
+
+    payload = router.build_pm_intake(
+        request,
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+
+    requirement_ir = payload["requirement_ir"]
+    primary = requirement_ir["requirements"][0]
+    for marker in (
+        "proof of concept",
+        "benchmark it against a baseline",
+        "self-contained HTML report",
+    ):
+        assert marker in requirement_ir["normalized_goal"]
+        assert marker in primary["source_text"]
+    assert primary["id"] == "REQ-000"
+    assert len(payload["compiled_artifacts"]["product_brief"]["title"]) <= 80
+    assert router.validate_compiled_package(payload)["ok"] is True
+
+
+def test_build_pm_intake_consumer_text_keeps_full_objective_authoritative():
+    router = _load_router()
+    tail = "Deliver an evidence-backed analysis for technical leaders as a self-contained HTML report."
+    consumer_text = f"""# RawIntent Consumer Request - Search public information
+
+## Source
+
+- intent_id: intent-test
+- channel: cli_intake
+
+## Rewritten Objective
+
+Search public information about AI Native Enterprise. {tail}
+
+## Problem
+
+Search public information about AI Native Enterprise. {tail}
+
+## Raw User Intent
+
+Search public information about AI Native Enterprise. {tail}
+"""
+
+    payload = router.build_pm_intake(
+        consumer_text,
+        sprint_id="sprint-test",
+        target_system="solar-harness",
+    )
+
+    requirement_ir = payload["requirement_ir"]
+    assert tail in requirement_ir["normalized_goal"]
+    assert tail in requirement_ir["requirements"][0]["source_text"]
+
+
+def test_build_pm_intake_preserves_request_at_size_boundary():
+    router = _load_router()
+    marker = "FINAL-REQUIREMENT"
+    prefix = "Build a command-line tool. "
+    request = prefix + ("x" * (router.MAX_REQUEST_CHARS - len(prefix) - len(marker))) + marker
+
+    payload = router.build_pm_intake(request, sprint_id="sprint-test")
+
+    assert len(request) == router.MAX_REQUEST_CHARS
+    assert payload["requirement_ir"]["normalized_goal"].endswith(marker)
+    assert payload["requirement_ir"]["requirements"][0]["source_text"].endswith(marker)
+
+
+def test_generated_rawintent_envelope_preserves_request_at_size_boundary():
+    router = _load_router()
+    consumer = _load_consumer()
+    marker = "FINAL-RAWINTENT-REQUIREMENT"
+    request = ("x" * (router.MAX_REQUEST_CHARS - len(marker))) + marker
+    consumer_text = consumer.build_consumer_text(
+        {
+            "intent_id": "intent-test",
+            "source": {"channel": "cli_intake", "actor": "user"},
+            "raw": {"text": request},
+        },
+        {
+            "title": "Bounded request",
+            "objective": request,
+            "problem": request,
+            "constraints": ["Preserve the complete request."],
+            "acceptance": ["Compile the complete request."],
+        },
+        {},
+    )
+
+    assert len(consumer_text) <= router.MAX_RAWINTENT_ENVELOPE_CHARS
+    payload = router.build_pm_intake(consumer_text, sprint_id="sprint-test")
+
+    assert payload["requirement_ir"]["normalized_goal"] == request
+    assert payload["requirement_ir"]["source_inputs"]["raw_request"] == request
+
+
+def test_build_pm_intake_rejects_request_above_size_boundary():
+    router = _load_router()
+    request = "x" * (router.MAX_REQUEST_CHARS + 1)
+
+    with pytest.raises(router.RequestTooLargeError) as raised:
+        router.build_pm_intake(request, sprint_id="sprint-test")
+
+    assert raised.value.actual_chars == router.MAX_REQUEST_CHARS + 1
+    assert raised.value.max_chars == router.MAX_REQUEST_CHARS
+    assert "request_too_long" in str(raised.value)
+
+
+def test_build_pm_intake_rejects_oversized_authoritative_objective():
+    router = _load_router()
+    consumer_text = f"""# RawIntent Consumer Request - bounded raw request
+
+## Rewritten Objective
+
+{"x" * (router.MAX_REQUEST_CHARS + 1)}
+
+## Problem
+
+Bounded problem.
+
+## Raw User Intent
+
+Bounded raw request.
+"""
+
+    with pytest.raises(router.RequestTooLargeError):
+        router.build_pm_intake(consumer_text, sprint_id="sprint-test")
+
+
+def test_build_pm_intake_rejects_oversized_rawintent_envelope():
+    router = _load_router()
+    padding = "p" * router.MAX_RAWINTENT_ENVELOPE_CHARS
+    consumer_text = f"""# RawIntent Consumer Request - padded envelope
+
+## Rewritten Objective
+
+Bounded objective.
+
+## Problem
+
+Bounded problem.
+
+## Constraints
+
+{padding}
+
+## Raw User Intent
+
+Bounded raw request.
+"""
+
+    with pytest.raises(router.RequestTooLargeError) as raised:
+        router.build_pm_intake(consumer_text, sprint_id="sprint-test")
+
+    assert raised.value.actual_chars == len(consumer_text)
+    assert raised.value.max_chars == router.MAX_RAWINTENT_ENVELOPE_CHARS
+
+
+def test_rawintent_marker_inside_plain_request_does_not_bypass_size_boundary():
+    router = _load_router()
+    request = (
+        "Explain the marker # RawIntent Consumer Request without treating this as an envelope. "
+        + ("x" * router.MAX_REQUEST_CHARS)
+    )
+
+    with pytest.raises(router.RequestTooLargeError) as raised:
+        router.build_pm_intake(request, sprint_id="sprint-test")
+
+    assert raised.value.max_chars == router.MAX_REQUEST_CHARS
+
+
+def test_direct_compile_cli_reports_typed_request_size_error():
+    router = _load_router()
+    request = "x" * (router.MAX_REQUEST_CHARS + 1)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROUTER_PATH),
+            "--direct-compile",
+            "--text",
+            request,
+            "--format",
+            "json",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert json.loads(result.stdout) == {
+        "ok": False,
+        "error": "request_too_long",
+        "actual_chars": router.MAX_REQUEST_CHARS + 1,
+        "max_chars": router.MAX_REQUEST_CHARS,
+    }

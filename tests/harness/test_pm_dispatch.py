@@ -613,6 +613,57 @@ def test_cmd_compile_request_rejects_invalid_compiled_package(monkeypatch, tmp_p
     assert touched["status"] is False
 
 
+def test_cmd_compile_request_reports_typed_request_size_error(monkeypatch, tmp_path, capsys):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_DISPATCH_ALLOW_DIRECT", "1")
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", tmp_path / "sprints")
+    monkeypatch.setattr(pm_dispatch, "HARNESS_DIR", tmp_path / "harness")
+
+    class _RequestTooLargeError(ValueError):
+        def __init__(self, actual_chars, max_chars):
+            self.actual_chars = actual_chars
+            self.max_chars = max_chars
+
+    def _reject_request(*args, **kwargs):
+        raise _RequestTooLargeError(12_001, 12_000)
+
+    router = types.SimpleNamespace(
+        RequestTooLargeError=_RequestTooLargeError,
+        build_pm_intake=_reject_request,
+    )
+
+    class _Loader:
+        def exec_module(self, module):
+            return None
+
+    fake_spec = types.SimpleNamespace(loader=_Loader())
+    monkeypatch.setattr(pm_dispatch.importlib.util, "spec_from_file_location", lambda *args, **kwargs: fake_spec)
+    monkeypatch.setattr(pm_dispatch.importlib.util, "module_from_spec", lambda spec: router)
+
+    args = argparse.Namespace(
+        text="x" * 12_001,
+        input_file="",
+        sprint="sprint-test",
+        workspace_root=str(tmp_path / "workspace"),
+        paper=[],
+        log=[],
+        repo_context=[],
+        target_system="solar-harness",
+        dispatch_planner=False,
+        dry_run=False,
+    )
+
+    assert pm_dispatch.cmd_compile_request(args) == 2
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert json.loads(captured.out) == {
+        "ok": False,
+        "error": "request_too_long",
+        "actual_chars": 12_001,
+        "max_chars": 12_000,
+    }
+
+
 def test_cmd_submit_persists_failed_record_when_no_operator_available(monkeypatch, tmp_path):
     pm_dispatch = _load_pm_dispatch()
     monkeypatch.setenv("SOLAR_PM_DISPATCH_ALLOW_DIRECT", "1")

@@ -2187,14 +2187,29 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
     router = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(router)
 
-    payload = router.build_pm_intake(
-        request_text,
-        papers=list(getattr(args, "paper", []) or []),
-        logs=list(getattr(args, "log", []) or []),
-        repo_context=list(getattr(args, "repo_context", []) or []),
-        sprint_id=sprint_id,
-        target_system=str(getattr(args, "target_system", "solar-harness") or "solar-harness"),
-    )
+    try:
+        payload = router.build_pm_intake(
+            request_text,
+            papers=list(getattr(args, "paper", []) or []),
+            logs=list(getattr(args, "log", []) or []),
+            repo_context=list(getattr(args, "repo_context", []) or []),
+            sprint_id=sprint_id,
+            target_system=str(getattr(args, "target_system", "solar-harness") or "solar-harness"),
+        )
+    except router.RequestTooLargeError as exc:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": "request_too_long",
+                    "actual_chars": exc.actual_chars,
+                    "max_chars": exc.max_chars,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 2
     validation = router.validate_compiled_package(payload)
     if not validation.get("ok", False):
         print("ERROR: compiled requirement package failed validation", file=sys.stderr)
