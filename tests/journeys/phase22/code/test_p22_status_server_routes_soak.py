@@ -82,7 +82,7 @@ def _free_port() -> int:
         return int(probe.getsockname()[1])
 
 
-def _wait_ready(root: Path, proc: subprocess.Popen, timeout: float = 30.0) -> int:
+def _wait_ready(root: Path, proc: subprocess.Popen, timeout: float = 30.0) -> tuple[int, int]:
     deadline = time.monotonic() + timeout
     port_file = root / "run" / "status-server.port"
     while time.monotonic() < deadline:
@@ -91,8 +91,19 @@ def _wait_ready(root: Path, proc: subprocess.Popen, timeout: float = 30.0) -> in
         try:
             port = int(port_file.read_text(encoding="utf-8").strip())
             status, _, body, _ = _request(port, "/healthz", timeout=1.0)
-            if status == 200 and body == b"ok":
-                return port
+            runtime_status, _, runtime_body, _ = _request(port, "/runtime-info", timeout=1.0)
+            runtime = _json(runtime_body)
+            pid_file = int((root / "run" / "status-server.pid").read_text(encoding="utf-8").strip())
+            runtime_pid = int(runtime.get("pid")) if isinstance(runtime, dict) else 0
+            if (
+                status == 200
+                and body == b"ok"
+                and runtime_status == 200
+                and runtime_pid > 0
+                and runtime_pid == pid_file
+                and Path(runtime.get("harness_dir", "")).resolve() == root.resolve()
+            ):
+                return port, runtime_pid
         except (OSError, ValueError, urllib.error.URLError):
             pass
         time.sleep(0.1)
@@ -183,6 +194,107 @@ def _process_metrics(pid: int) -> dict[str, int | None]:
         kernel32.CloseHandle(snapshot)
     kernel32.CloseHandle(process)
     return {"rss_bytes": rss, "handles_or_fds": handles, "threads": thread_count}
+
+
+def _pid_active(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+            return True
+        except (ProcessLookupError, OSError):
+            return False
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+    kernel32.OpenProcess.restype = ctypes.c_void_p
+    kernel32.GetExitCodeProcess.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+    kernel32.GetExitCodeProcess.restype = ctypes.c_int
+    kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+    handle = kernel32.OpenProcess(0x1000, False, pid)
+    if not handle:
+        return False
+    code = ctypes.c_ulong()
+    ok = kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+    kernel32.CloseHandle(handle)
+    return bool(ok and code.value == 259)  # STILL_ACTIVE
+
+
+def _port_open(port: int) -> bool:
+    if port <= 0:
+        return False
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(0.3)
+        return probe.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _terminate_pid_windows(pid: int) -> bool:
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+    kernel32.OpenProcess.restype = ctypes.c_void_p
+    kernel32.TerminateProcess.argtypes = [ctypes.c_void_p, ctypes.c_uint]
+    kernel32.TerminateProcess.restype = ctypes.c_int
+    kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+    handle = kernel32.OpenProcess(0x0001, False, pid)
+    if not handle:
+        return not _pid_active(pid)
+    ok = bool(kernel32.TerminateProcess(handle, 0))
+    kernel32.CloseHandle(handle)
+    return ok
+
+
+def _stop_server(proc: subprocess.Popen | None, server_pid: int, port: int, root: Path) -> dict:
+    identity_verified_before_stop = False
+    if port > 0 and server_pid > 0:
+        try:
+            status, _, body, _ = _request(port, "/runtime-info", timeout=1.0)
+            runtime = _json(body)
+            identity_verified_before_stop = (
+                status == 200
+                and isinstance(runtime, dict)
+                and int(runtime.get("pid") or 0) == server_pid
+                and Path(runtime.get("harness_dir", "")).resolve() == root.resolve()
+            )
+        except Exception:
+            identity_verified_before_stop = False
+
+    if os.name == "nt":
+        if _pid_active(server_pid):
+            _terminate_pid_windows(server_pid)
+        # A venv launcher can be distinct from the interpreter recorded by the server.
+        if proc is not None and proc.pid != server_pid and proc.poll() is None:
+            proc.terminate()
+        method = "TerminateProcess(actual_server_pid)"
+    else:
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+        method = "SIGTERM"
+
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline and (_pid_active(server_pid) or _port_open(port)):
+        time.sleep(0.05)
+    if proc is not None:
+        try:
+            proc.wait(timeout=2.0)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3.0)
+    return {
+        "launcher_pid": proc.pid if proc is not None else None,
+        "actual_server_pid": server_pid or None,
+        "actual_server_identity_verified_before_stop": identity_verified_before_stop,
+        # On Windows the venv launcher can be a distinct parent of the interpreter that owns
+        # the listening socket.  Terminating the verified server PID makes that launcher exit
+        # non-zero, so label this as launcher evidence rather than a server failure signal.
+        "launcher_exit_code": proc.returncode if proc is not None else None,
+        "actual_server_pid_absent": not _pid_active(server_pid),
+        "port_closed": not _port_open(port),
+        "launcher_process_stopped": proc is not None and proc.poll() is not None,
+        "termination_method": method,
+        "runtime_files_remaining_before_sandbox_cleanup": sorted(
+            path.name for path in (root / "run").glob("status-server.*")
+        ),
+    }
 
 
 def _percentile(values: list[float], fraction: float) -> float:
@@ -433,8 +545,10 @@ def main() -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     root = Path(tempfile.mkdtemp(prefix="p22-128-routes-soak-"))
     token = "p22-route-token-ephemeral"
-    server_log = output.parent / "status-server.log"
+    server_log = output.parent / f"{output.stem}-status-server.log"
     proc: subprocess.Popen | None = None
+    actual_port = 0
+    actual_server_pid = 0
     result: dict = {}
     try:
         for directory in ("config", "events", "home", "reports", "run", "sessions", "sprints", "state"):
@@ -483,9 +597,9 @@ def main() -> int:
         log_handle = server_log.open("wb")
         try:
             proc = subprocess.Popen([sys.executable, "-u", str(SERVER)], cwd=str(root), env=env, stdout=log_handle, stderr=subprocess.STDOUT)
-            actual_port = _wait_ready(root, proc)
+            actual_port, actual_server_pid = _wait_ready(root, proc)
             matrix = _route_matrix(actual_port, token, root)
-            soak = _bounded_soak(actual_port, token, root, proc.pid, args.duration, args.workers)
+            soak = _bounded_soak(actual_port, token, root, actual_server_pid, args.duration, args.workers)
         finally:
             log_handle.close()
 
@@ -498,6 +612,12 @@ def main() -> int:
             "task": "Exercise the production status server across representative routes and a bounded concurrent soak.",
             "repo_head": repo_head,
             "production_entrypoint": str(SERVER.relative_to(REPO_ROOT)).replace("\\", "/"),
+            "process_identity": {
+                "launcher_pid": proc.pid,
+                "actual_server_pid": actual_server_pid,
+                "source": "status-server.pid and /runtime-info (required to match)",
+                "metrics_sampled_pid": actual_server_pid,
+            },
             "exact_command": f"{sys.executable} {Path(__file__).relative_to(REPO_ROOT)} --duration {args.duration} --workers {args.workers} --output {output}",
             "environment": {
                 "platform": sys.platform,
@@ -509,11 +629,7 @@ def main() -> int:
             },
             "route_matrix": {"passed": matrix_passed, "failed": len(matrix) - matrix_passed, "checks": matrix},
             "bounded_soak": soak,
-            "artifact_checks": {
-                "output_exists": True,
-                "server_log": str(server_log),
-                "server_log_nonempty": server_log.exists() and server_log.stat().st_size > 0,
-            },
+            "artifact_checks": {"output_exists": True, "server_log": str(server_log)},
             "result": "PASS_WITH_KNOWN_LIMITATIONS" if matrix_passed == len(matrix) and soak.get("ok") else "FAIL",
             "known_limitations": [
                 f"The stability run is a bounded {soak.get('duration_seconds')} second soak, not long-running production evidence.",
@@ -530,24 +646,29 @@ def main() -> int:
             "error": f"{type(exc).__name__}: {exc}",
         }
     finally:
-        if proc is not None and proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=8.0)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait(timeout=5.0)
-        cleanup = {
-            "server_exit_code": proc.returncode if proc is not None else None,
-            "server_process_stopped": proc is not None and proc.poll() is not None,
-            "termination_method": "TerminateProcess" if os.name == "nt" else "SIGTERM",
-            # Popen.terminate maps to TerminateProcess on Windows, so Python cannot run its
-            # finally block there. Record that distinction and prove cleanup at the sandbox
-            # boundary instead of falsely claiming a graceful signal path.
-            "runtime_files_remaining_before_sandbox_cleanup": sorted(
-                path.name for path in (root / "run").glob("status-server.*")
-            ),
-        }
+        cleanup = _stop_server(proc, actual_server_pid, actual_port, root)
+        log_text = server_log.read_text(encoding="utf-8", errors="replace") if server_log.exists() else ""
+        error_markers = [
+            marker for marker in (
+                "Traceback (most recent call last)",
+                "Exception occurred during processing of request",
+                "Fatal Python error",
+            )
+            if marker in log_text
+        ]
+        result.setdefault("artifact_checks", {}).update({
+            "server_log": str(server_log),
+            "server_log_nonempty": bool(log_text.strip()),
+            "unexpected_server_error_markers": error_markers,
+            "unexpected_server_errors_absent": not error_markers,
+            "sse_disconnect_no_noisy_traceback": "ConnectionResetError" not in log_text and not error_markers,
+        })
+        if error_markers:
+            result["result"] = "FAIL"
+            result["server_log_failure"] = {
+                "error": "unexpected_server_error_output",
+                "markers": error_markers,
+            }
         result.setdefault("cleanup", {}).update(cleanup)
         shutil.rmtree(root, ignore_errors=True)
         result["cleanup"]["sandbox_removed"] = not root.exists()
@@ -562,10 +683,14 @@ def main() -> int:
     }, indent=2, default=str))
     cleanup = result.get("cleanup", {})
     cleanup_ok = (
-        cleanup.get("server_process_stopped") is True
+        cleanup.get("actual_server_identity_verified_before_stop") is True
+        and cleanup.get("actual_server_pid_absent") is True
+        and cleanup.get("port_closed") is True
+        and cleanup.get("launcher_process_stopped") is True
         and cleanup.get("sandbox_removed") is True
     )
-    return 0 if result.get("result") == "PASS_WITH_KNOWN_LIMITATIONS" and cleanup_ok else 1
+    log_ok = result.get("artifact_checks", {}).get("unexpected_server_errors_absent") is True
+    return 0 if result.get("result") == "PASS_WITH_KNOWN_LIMITATIONS" and cleanup_ok and log_ok else 1
 
 
 if __name__ == "__main__":

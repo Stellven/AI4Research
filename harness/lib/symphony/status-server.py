@@ -14668,6 +14668,21 @@ class StatusHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "not found"}, status=404)
 
 
+class StatusThreadingHTTPServer(ThreadingHTTPServer):
+    def handle_error(self, request, client_address):
+        """Do not print a traceback for a normal HTTP/SSE client disconnect.
+
+        A streaming client can close immediately after receiving its first event.  On Windows,
+        the reset may surface in ``socketserver`` while it tries to read another request line,
+        outside ``StatusHandler._send_sse_events``' own disconnect guard.  Keep all other server
+        exceptions on the default visible path; only transport-level client departures are quiet.
+        """
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (BrokenPipeError, ConnectionAbortedError, ConnectionResetError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def _find_port() -> int:
     import socket
     for port in PORT_RANGE:
@@ -14686,7 +14701,7 @@ def _find_port() -> int:
 
 def main():
     port = _find_port()
-    server = ThreadingHTTPServer((BIND_HOST, port), StatusHandler)
+    server = StatusThreadingHTTPServer((BIND_HOST, port), StatusHandler)
     server.daemon_threads = True
     # Write port to pidfile directory so clients can discover it
     pid_dir = HARNESS_DIR / "run"
