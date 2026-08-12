@@ -265,7 +265,7 @@ def record_consent(root: Path, source: str, purpose: str, message_ref: str) -> d
     control["consents"][consent_id] = {
         "consent_id": consent_id,
         "source": source,
-        "purpose": purpose.strip()[:200],
+        "purpose": redact_text(purpose.strip()[:200]),
         "message_ref_sha256": hashlib.sha256(message_ref.encode()).hexdigest(),
         "state": "granted",
         "granted_at": now,

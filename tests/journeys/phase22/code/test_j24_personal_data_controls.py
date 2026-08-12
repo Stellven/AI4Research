@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import time
+import platform
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -43,9 +44,17 @@ def test_p22_j24_personal_data_controls(repo_root: Path, tmp_path: Path) -> None
     assertions: list[dict] = []
 
     def execute(label: str, *args: str) -> dict:
+        started = time.monotonic()
         proc = _run(tool, home, *args)
         payload = _payload(proc)
-        commands.append({"label": label, "argv": [str(tool), "--home", str(home), *args], "exit_code": proc.returncode})
+        commands.append({
+            "label": label,
+            "argv": [sys.executable, str(tool), "--home", str(home), *args],
+            "exit_code": proc.returncode,
+            "duration_seconds": round(time.monotonic() - started, 3),
+            "stdout_tail": proc.stdout[-1000:],
+            "stderr_tail": proc.stderr[-1000:],
+        })
         return {"exit_code": proc.returncode, "payload": payload}
 
     def check(name: str, condition: bool, observed: object) -> None:
@@ -92,6 +101,23 @@ def test_p22_j24_personal_data_controls(repo_root: Path, tmp_path: Path) -> None
         "journey_id": "P22-J24",
         "task": "Inspect, export, retain, selectively delete, and revoke consent for sandbox-owned local personal data.",
         "production_entrypoint": "harness/tools/privacy_control.py",
+        "required_environment": {
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+            "home_scope": "explicit temporary sandbox; no real user home accessed",
+            "credentials": "none",
+        },
+        "minimum_success_conditions": [
+            "inventory identifies local personal-data surfaces and explicit external exclusions",
+            "export is non-empty, structurally usable, and contains no seeded email or secret",
+            "retention and selective deletion remove only the requested local data",
+            "consent revocation removes the linked message-derived record",
+            "unconfirmed deletion and path escape fail closed",
+        ],
+        "level_2_features_exercised": [
+            "Privacy & Personal Data Controls",
+            "Security, Privacy, Compliance & IP Evaluator (local privacy controls only)",
+        ],
         "repo_head": repo_head,
         "run_id": run_id,
         "commands": commands,
