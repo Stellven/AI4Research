@@ -74,3 +74,43 @@ def test_rejects_inconsistent_config_features(tmp_path):
     result = _evaluate(_write(tmp_path / "traces.jsonl", rows))
     assert result["status"] == "rejected"
     assert any(error.startswith("inconsistent_config") for error in result["errors"])
+
+
+def test_rejects_string_false_instead_of_treating_it_as_success(tmp_path):
+    rows = _rows()
+    rows[3]["success"] = "false"
+    result = _evaluate(_write(tmp_path / "traces.jsonl", rows))
+    assert result["status"] == "rejected"
+    assert "invalid_success:4" in result["errors"]
+    assert result["training_arm_stats"] == {}
+
+
+def test_rejects_nan_and_infinity_in_metrics_and_config(tmp_path):
+    for field, value in [("reward", float("nan")), ("cost_usd", float("inf")), ("latency_ms", float("-inf"))]:
+        rows = _rows()
+        rows[0][field] = value
+        result = _evaluate(_write(tmp_path / f"{field}.jsonl", rows))
+        assert result["status"] == "rejected"
+        assert any(error.startswith(f"invalid_{field}:") for error in result["errors"])
+    rows = _rows()
+    rows[0]["config"]["quality"] = float("nan")
+    result = _evaluate(_write(tmp_path / "config.jsonl", rows))
+    assert "invalid_config_value:1" in result["errors"]
+
+
+def test_rejects_empty_identifiers_and_duplicate_observations(tmp_path):
+    rows = _rows()
+    rows[0]["arm"] = " "
+    rows[1]["context_id"] = ""
+    rows.append(dict(rows[2]))
+    result = _evaluate(_write(tmp_path / "traces.jsonl", rows))
+    assert result["status"] == "rejected"
+    assert "invalid_arm:1" in result["errors"]
+    assert "invalid_context_id:2" in result["errors"]
+    assert any(error.startswith("duplicate_observation:") for error in result["errors"])
+
+
+def test_rejects_non_finite_hyperparameter(tmp_path):
+    result = _evaluate(_write(tmp_path / "traces.jsonl", _rows()), beta=float("nan"))
+    assert result["status"] == "rejected"
+    assert "non_finite_surrogate_parameters" in result["errors"]

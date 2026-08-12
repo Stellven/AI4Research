@@ -29,6 +29,14 @@ def test_p22_bounded_bayesian_routing(repo_root: Path, tmp_path: Path) -> None:
     command = [sys.executable, str(tool), "evaluate", "--traces", str(traces), "--baseline-arm", "base", "--cost-weight", "1", "--latency-weight", ".1", "--max-mean-cost-usd", ".5", "--beta", ".2", "--max-selected-uncertainty", ".25", "--output", str(result_path)]
     process = subprocess.run(command, text=True, capture_output=True, timeout=30)
     result = json.loads(result_path.read_text(encoding="utf-8"))
+    attack_rows = [dict(row) for row in rows]
+    attack_rows[3]["success"] = "false"
+    attack_traces = output / "adversarial-string-boolean-traces.jsonl"
+    attack_traces.write_text("".join(json.dumps(row) + "\n" for row in attack_rows), encoding="utf-8")
+    attack_result_path = output / "adversarial-string-boolean-result.json"
+    attack_command = [sys.executable, str(tool), "evaluate", "--traces", str(attack_traces), "--baseline-arm", "base", "--output", str(attack_result_path)]
+    attack_process = subprocess.run(attack_command, text=True, capture_output=True, timeout=30)
+    attack_result = json.loads(attack_result_path.read_text(encoding="utf-8"))
     selected = result.get("policy", {}).get("selected_arm")
     assertions = {
         "production_cli_accepted": process.returncode == 0 and result["status"] == "accepted",
@@ -39,6 +47,7 @@ def test_p22_bounded_bayesian_routing(repo_root: Path, tmp_path: Path) -> None:
         "no_success_regression": not result["holdout"]["success_regressions"],
         "trace_hash_bound": result["source"]["sha256"] == hashlib.sha256(traces.read_bytes()).hexdigest(),
         "rollback_without_auto_deploy": result["rollback"] == "restore routing arm base" and result["policy"]["deployment_authorized"] is False,
+        "typed_schema_rejects_string_boolean_attack": attack_process.returncode == 2 and attack_result["status"] == "rejected" and "invalid_success:4" in attack_result["errors"] and attack_result["training_arm_stats"] == {},
     }
     evidence = {
         "schema_version": "phase22.bounded_bayesian_routing.v1",
@@ -51,6 +60,9 @@ def test_p22_bounded_bayesian_routing(repo_root: Path, tmp_path: Path) -> None:
         "stdout_tail": process.stdout[-2000:],
         "stderr_tail": process.stderr[-2000:],
         "result": str(result_path),
+        "adversarial_command": attack_command,
+        "adversarial_command_exit_code": attack_process.returncode,
+        "adversarial_result": str(attack_result_path),
         "assertions": assertions,
         "status": "PASS_WITH_KNOWN_LIMITATIONS" if all(assertions.values()) else "FAIL",
         "limitations": result.get("limitations", []),

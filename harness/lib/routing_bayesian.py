@@ -15,6 +15,35 @@ def _rows(path:Path)->list[dict[str,Any]]:
    rows.append(row)
  return rows
 
+def _finite_number(value:Any)->bool:
+ return isinstance(value,(int,float)) and not isinstance(value,bool) and math.isfinite(value)
+
+def _validate_rows(rows:list[dict[str,Any]])->list[str]:
+ errors=[]; seen=set()
+ for number,row in enumerate(rows,1):
+  split=row.get("split"); context=row.get("context_id"); arm=row.get("arm"); config=row.get("config")
+  if split not in {"train","holdout"}: errors.append(f"invalid_split:{number}")
+  if not isinstance(context,str) or not context.strip(): errors.append(f"invalid_context_id:{number}")
+  if not isinstance(arm,str) or not arm.strip(): errors.append(f"invalid_arm:{number}")
+  identity=(split,context,arm)
+  if identity in seen: errors.append(f"duplicate_observation:{number}")
+  seen.add(identity)
+  if not isinstance(config,dict) or not config:
+   errors.append(f"invalid_config:{number}")
+  else:
+   for key,value in config.items():
+    if not isinstance(key,str) or not key.strip() or not _finite_number(value):
+     errors.append(f"invalid_config_value:{number}");break
+  for field in ("reward","cost_usd","latency_ms"):
+   if not _finite_number(row.get(field)): errors.append(f"invalid_{field}:{number}")
+  if _finite_number(row.get("cost_usd")) and row["cost_usd"]<0: errors.append(f"negative_cost_usd:{number}")
+  if _finite_number(row.get("latency_ms")) and row["latency_ms"]<0: errors.append(f"negative_latency_ms:{number}")
+  if type(row.get("success")) is not bool: errors.append(f"invalid_success:{number}")
+ return errors
+
+def _rejected(path:Path,rows:list[dict[str,Any]],baseline:Any,errors:list[str])->dict[str,Any]:
+ return {"schema_version":"solar.routing_bayesian_evaluation.v1","status":"rejected","algorithm":"bounded_gaussian_process_ucb","source":{"path":str(path),"sha256":hashlib.sha256(path.read_bytes()).hexdigest(),"rows":len(rows)},"policy":{"baseline_arm":baseline if isinstance(baseline,str) else "","selected_arm":"","deployment_authorized":False},"training_arm_stats":{},"holdout":{"paired_contexts":0,"mean_utility_delta":0.0,"success_regressions":[],"deltas":[]},"errors":list(dict.fromkeys(errors)),"limitations":["This is bounded offline Gaussian-process optimization, not online reinforcement learning.","Acceptance is limited to the hash-addressed trace and never authorizes automatic deployment."]}
+
 def _rbf(a:list[float],b:list[float],scale:float)->float:
  return math.exp(-.5*sum((x-y)**2 for x,y in zip(a,b))/(scale*scale))
 
@@ -43,7 +72,11 @@ def _posterior(xs:list[list[float]],ys:list[float],point:list[float],scale:float
  return mean,math.sqrt(variance)
 
 def evaluate(path:Path,baseline:str,cost_weight:float,latency_weight:float,max_cost:float,beta:float,length_scale:float,noise:float,max_uncertainty:float)->dict[str,Any]:
- rows=_rows(path); errors=[]
+ rows=_rows(path); errors=_validate_rows(rows)
+ if not isinstance(baseline,str) or not baseline.strip(): errors.append("invalid_baseline_arm")
+ parameters={"cost_weight":cost_weight,"latency_weight":latency_weight,"max_cost":max_cost,"beta":beta,"length_scale":length_scale,"noise":noise,"max_uncertainty":max_uncertainty}
+ if any(not _finite_number(value) for value in parameters.values()): errors.append("non_finite_surrogate_parameters")
+ if errors: return _rejected(path,rows,baseline,errors)
  train=[r for r in rows if r.get("split")=="train"]; hold=[r for r in rows if r.get("split")=="holdout"]
  if not train or not hold or len(train)+len(hold)!=len(rows): errors.append("train_and_holdout_required")
  train_ctx={str(r.get("context_id") or "") for r in train}; hold_ctx={str(r.get("context_id") or "") for r in hold}
@@ -52,15 +85,16 @@ def evaluate(path:Path,baseline:str,cost_weight:float,latency_weight:float,max_c
  obs=defaultdict(list); configs={}
  for row in train:
   try:
-   arm=str(row["arm"]); raw=row["config"]
-   if not isinstance(raw,dict) or not raw: raise ValueError
-   config={str(k):float(v) for k,v in raw.items()}
+   arm=row["arm"]; raw=row["config"]
+   config={k:float(v) for k,v in raw.items()}
    if arm in configs and configs[arm]!=config: errors.append(f"inconsistent_config:{arm}")
    configs[arm]=config
-   obs[arm].append((float(row["reward"]),float(row["cost_usd"]),float(row["latency_ms"]),bool(row["success"])))
+   obs[arm].append((float(row["reward"]),float(row["cost_usd"]),float(row["latency_ms"]),row["success"]))
   except (KeyError,TypeError,ValueError): errors.append("invalid_training_observation")
  names=sorted(next(iter(configs.values()))) if configs else []
  if any(sorted(c)!=names for c in configs.values()): errors.append("inconsistent_config_features")
+ for number,row in enumerate(hold,1):
+  if row["arm"] in configs and {key:float(value) for key,value in row["config"].items()}!=configs[row["arm"]]: errors.append(f"holdout_config_mismatch:{number}")
  if baseline not in obs or len(obs)<2: errors.append("baseline_and_candidate_arms_required")
  if any(len(values)<2 for values in obs.values()): errors.append("at_least_two_observations_per_arm_required")
  stats={}; xs=[]; ys=[]
@@ -84,7 +118,7 @@ def evaluate(path:Path,baseline:str,cost_weight:float,latency_weight:float,max_c
    if baseline not in values or selected not in values: errors.append(f"unpaired_holdout:{ctx}");continue
    try:
     def utility(row): return float(row["reward"])-cost_weight*float(row["cost_usd"])-latency_weight*float(row["latency_ms"])/1000.0
-    deltas.append({"context_id":ctx,"utility_delta":utility(values[selected])-utility(values[baseline]),"selected_success":bool(values[selected]["success"]),"baseline_success":bool(values[baseline]["success"])})
+    deltas.append({"context_id":ctx,"utility_delta":utility(values[selected])-utility(values[baseline]),"selected_success":values[selected]["success"],"baseline_success":values[baseline]["success"]})
    except (KeyError,TypeError,ValueError): errors.append(f"invalid_holdout_observation:{ctx}")
  mean_delta=sum(x["utility_delta"] for x in deltas)/len(deltas) if deltas else 0.0
  regressions=[x["context_id"] for x in deltas if x["baseline_success"] and not x["selected_success"]]
