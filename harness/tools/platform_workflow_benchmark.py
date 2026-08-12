@@ -9,11 +9,13 @@ whether the score is grounded in local facts.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
 import socket
 import sqlite3
+import statistics
 import subprocess
 import sys
 import time
@@ -52,6 +54,14 @@ def write_text(path: Path, text: str) -> None:
 def write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def status_json(sid: str) -> dict[str, Any]:
@@ -226,21 +236,104 @@ def bench_config_ui(evidence_dir: Path) -> dict[str, Any]:
     return scenario_result(25, "Config UI / Status multi-tabs", checks, "UI visual quality is product work, but services/routes are live.")
 
 
-def benchmark(threshold: int, evidence_dir: Path) -> dict[str, Any]:
+def _run_scenarios(evidence_dir: Path) -> list[dict[str, Any]]:
+    calls = [
+        lambda: bench_remote_migration(evidence_dir),
+        lambda: bench_mempalace(evidence_dir),
+        lambda: bench_cortex(evidence_dir),
+        lambda: bench_tested_sprint(21, "Apple Notes / WeChat ingest", "sprint-20260508-apple-notes-wechat-ingest", "apple_notes_ingest_test", ["bash", str(HARNESS / "tests" / "test-apple-notes-ingest.sh")], evidence_dir, timeout=120),
+        lambda: bench_tested_sprint(22, "Accepted artifacts knowledge sync", "sprint-20260508-accepted-artifact-knowledge", "accepted_artifact_knowledge_test", ["bash", str(HARNESS / "tests" / "test-accepted-artifact-knowledge-sync.sh")], evidence_dir, timeout=120),
+        lambda: bench_tested_sprint(23, "Knowledge default autouse", "sprint-20260508-solar-kb-obsidian-autouse", "solar_kb_obsidian_autouse_test", ["bash", str(HARNESS / "tests" / "test-solar-kb-obsidian-autouse.sh")], evidence_dir, timeout=120),
+        lambda: bench_tested_sprint(24, "Wiki upload ingest closure", "sprint-20260508-wiki-upload-ingest-closure", "wiki_upload_ingest_closure_test", ["bash", str(HARNESS / "tests" / "test-wiki-upload-ingest-closure.sh")], evidence_dir, timeout=120),
+        lambda: bench_config_ui(evidence_dir),
+    ]
+    scenarios: list[dict[str, Any]] = []
+    for call in calls:
+        started = time.perf_counter()
+        scenario = call()
+        scenario["duration_seconds"] = round(time.perf_counter() - started, 6)
+        scenarios.append(scenario)
+    return scenarios
+
+
+def _baseline_comparison(current: list[dict[str, Any]], baseline: dict[str, Any] | None) -> dict[str, Any]:
+    if not baseline:
+        return {"status": "not_requested", "scenario_comparisons": []}
+    if baseline.get("benchmark") != "solar_platform_workflows":
+        return {"status": "invalid", "reason": "baseline benchmark identity mismatch", "scenario_comparisons": []}
+    baseline_rows = [
+        item.get("row")
+        for item in baseline.get("scenarios") or []
+        if isinstance(item, dict) and isinstance(item.get("row"), int)
+    ]
+    if len(baseline_rows) != len(set(baseline_rows)):
+        return {"status": "invalid", "reason": "baseline has duplicate scenario rows", "scenario_comparisons": []}
+    baseline_by_row = {
+        item.get("row"): item
+        for item in baseline.get("scenarios") or []
+        if isinstance(item, dict) and isinstance(item.get("row"), int)
+    }
+    comparisons = []
+    for item in current:
+        prior = baseline_by_row.get(item.get("row"))
+        if not prior:
+            continue
+        comparisons.append({
+            "row": item.get("row"),
+            "name": item.get("name"),
+            "baseline_score": prior.get("score"),
+            "current_score": item.get("score"),
+            "score_delta": round(float(item.get("score", 0)) - float(prior.get("score", 0)), 6),
+            "baseline_median_duration_seconds": (prior.get("performance") or {}).get("median_duration_seconds"),
+            "current_median_duration_seconds": (item.get("performance") or {}).get("median_duration_seconds"),
+        })
+    return {
+        "status": "completed" if comparisons and len(comparisons) == len(current) else "incomplete",
+        "baseline_benchmark": baseline.get("benchmark"),
+        "baseline_generated_at": baseline.get("generated_at"),
+        "scenario_comparisons": comparisons,
+    }
+
+
+def benchmark(
+    threshold: int,
+    evidence_dir: Path,
+    repetitions: int = 1,
+    baseline: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if repetitions < 1:
+        raise ValueError("repetitions must be at least 1")
     if evidence_dir.exists():
         shutil.rmtree(evidence_dir)
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
-    scenarios = [
-        bench_remote_migration(evidence_dir),
-        bench_mempalace(evidence_dir),
-        bench_cortex(evidence_dir),
-        bench_tested_sprint(21, "Apple Notes / WeChat ingest", "sprint-20260508-apple-notes-wechat-ingest", "apple_notes_ingest_test", ["bash", str(HARNESS / "tests" / "test-apple-notes-ingest.sh")], evidence_dir, timeout=120),
-        bench_tested_sprint(22, "Accepted artifacts knowledge sync", "sprint-20260508-accepted-artifact-knowledge", "accepted_artifact_knowledge_test", ["bash", str(HARNESS / "tests" / "test-accepted-artifact-knowledge-sync.sh")], evidence_dir, timeout=120),
-        bench_tested_sprint(23, "Knowledge default autouse", "sprint-20260508-solar-kb-obsidian-autouse", "solar_kb_obsidian_autouse_test", ["bash", str(HARNESS / "tests" / "test-solar-kb-obsidian-autouse.sh")], evidence_dir, timeout=120),
-        bench_tested_sprint(24, "Wiki upload ingest closure", "sprint-20260508-wiki-upload-ingest-closure", "wiki_upload_ingest_closure_test", ["bash", str(HARNESS / "tests" / "test-wiki-upload-ingest-closure.sh")], evidence_dir, timeout=120),
-        bench_config_ui(evidence_dir),
-    ]
+    repetition_runs = []
+    benchmark_started = time.perf_counter()
+    for index in range(repetitions):
+        repetition_dir = evidence_dir / "repetitions" / f"{index + 1:03d}"
+        started = time.perf_counter()
+        repetition_runs.append({
+            "index": index + 1,
+            "duration_seconds": 0.0,
+            "scenarios": _run_scenarios(repetition_dir),
+        })
+        repetition_runs[-1]["duration_seconds"] = round(time.perf_counter() - started, 6)
+
+    scenarios = []
+    for position, sample in enumerate(repetition_runs[0]["scenarios"]):
+        score_samples = [float(run["scenarios"][position]["score"]) for run in repetition_runs]
+        duration_samples = [float(run["scenarios"][position]["duration_seconds"]) for run in repetition_runs]
+        scenario = dict(sample)
+        scenario["score"] = round(statistics.mean(score_samples), 6)
+        scenario["passed"] = all(run["scenarios"][position]["passed"] for run in repetition_runs)
+        scenario["performance"] = {
+            "score_samples": score_samples,
+            "duration_samples_seconds": duration_samples,
+            "median_duration_seconds": round(statistics.median(duration_samples), 6),
+            "mean_duration_seconds": round(statistics.mean(duration_samples), 6),
+            "scenario_runs_per_second": round(len(duration_samples) / max(sum(duration_samples), 1e-9), 6),
+        }
+        scenarios.append(scenario)
     average = round(sum(s["score"] for s in scenarios) / max(len(scenarios), 1), 2)
     minimum = min((s["score"] for s in scenarios), default=0)
     passed = sum(1 for s in scenarios if s["passed"])
@@ -258,10 +351,78 @@ def benchmark(threshold: int, evidence_dir: Path) -> dict[str, Any]:
         "summary": {"scenarios": len(scenarios), "passed": passed, "failed": len(scenarios) - passed},
         "weights": WEIGHTS,
         "evidence_dir": str(evidence_dir),
+        "protocol": {
+            "repetitions": repetitions,
+            "isolation": "separate evidence directory per repetition",
+            "timing_clock": "time.perf_counter",
+            "resource_limits": "command-specific timeout",
+        },
+        "performance": {
+            "wall_duration_seconds": round(time.perf_counter() - benchmark_started, 6),
+            "scenario_executions": repetitions * len(scenarios),
+            "scenario_executions_per_second": round(
+                repetitions * len(scenarios) / max(time.perf_counter() - benchmark_started, 1e-9), 6
+            ),
+            "monetary_cost": {"status": "not_measured", "reason": "runner does not invoke a billable provider"},
+            "scalability": {"status": "not_measured", "reason": "repetitions measure variance, not workload scaling"},
+        },
+        "comparison": _baseline_comparison(scenarios, baseline),
         "scenarios": scenarios,
     }
     write_json(evidence_dir / "benchmark.json", data)
     return data
+
+
+def write_artifact_manifest(path: Path, benchmark_id: str, artifacts: list[Path]) -> dict[str, Any]:
+    entries = []
+    for artifact in sorted({item.resolve() for item in artifacts if item.is_file()}, key=str):
+        entries.append({"path": str(artifact), "bytes": artifact.stat().st_size, "sha256": file_sha256(artifact)})
+    payload = {
+        "schema": "solar_platform_benchmark_artifact_manifest.v1",
+        "status": "completed",
+        "benchmark": benchmark_id,
+        "artifacts": entries,
+    }
+    write_json(path, payload)
+    return payload
+
+
+def verify_artifact_manifest(path: Path) -> tuple[bool, list[str]]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return False, [f"manifest unreadable: {exc}"]
+    failures = []
+    if payload.get("schema") != "solar_platform_benchmark_artifact_manifest.v1":
+        failures.append("unexpected manifest schema")
+    if payload.get("status") != "completed":
+        failures.append("manifest status is not completed")
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, list) or not artifacts:
+        failures.append("manifest has no artifacts")
+        return False, failures
+    seen = set()
+    for entry in artifacts:
+        if not isinstance(entry, dict):
+            failures.append("manifest artifact entry is not an object")
+            continue
+        raw_path = str(entry.get("path") or "")
+        if not raw_path or not isinstance(entry.get("bytes"), int) or not isinstance(entry.get("sha256"), str):
+            failures.append(f"manifest artifact entry is incomplete: {raw_path}")
+            continue
+        artifact = Path(raw_path)
+        if raw_path in seen:
+            failures.append(f"duplicate artifact path: {raw_path}")
+            continue
+        seen.add(raw_path)
+        if not artifact.is_file():
+            failures.append(f"artifact missing: {raw_path}")
+            continue
+        if artifact.stat().st_size != entry.get("bytes"):
+            failures.append(f"artifact size mismatch: {raw_path}")
+        if file_sha256(artifact) != entry.get("sha256"):
+            failures.append(f"artifact sha256 mismatch: {raw_path}")
+    return not failures, failures
 
 
 def write_markdown(path: Path, data: dict[str, Any]) -> None:
@@ -300,10 +461,29 @@ def main() -> int:
     ap.add_argument("--out-json", default=str(REPORTS / "platform-workflow-benchmark-latest.json"))
     ap.add_argument("--out-md", default=str(REPORTS / "platform-workflow-benchmark-latest.md"))
     ap.add_argument("--evidence-dir", default=str(REPORTS / "platform-workflow-evidence" / "latest"))
+    ap.add_argument("--repetitions", type=int, default=1)
+    ap.add_argument("--baseline-json", default="")
+    ap.add_argument("--manifest", default="")
+    ap.add_argument("--verify-manifest", default="")
     args = ap.parse_args()
-    data = benchmark(args.threshold, Path(args.evidence_dir))
+    if args.verify_manifest:
+        ok, failures = verify_artifact_manifest(Path(args.verify_manifest))
+        print(json.dumps({"ok": ok, "failures": failures}, ensure_ascii=False, indent=2))
+        return 0 if ok else 2
+    baseline = None
+    if args.baseline_json:
+        baseline = json.loads(Path(args.baseline_json).read_text(encoding="utf-8"))
+        if baseline.get("process_status") != "completed" or baseline.get("benchmark") != "solar_platform_workflows":
+            raise ValueError("baseline benchmark is not completed")
+    data = benchmark(args.threshold, Path(args.evidence_dir), repetitions=args.repetitions, baseline=baseline)
     write_json(Path(args.out_json), data)
     write_markdown(Path(args.out_md), data)
+    manifest_path = Path(args.manifest) if args.manifest else Path(args.evidence_dir) / "artifact-manifest.json"
+    manifest_artifacts = [Path(args.out_json), Path(args.out_md), Path(args.evidence_dir) / "benchmark.json"]
+    if args.baseline_json:
+        manifest_artifacts.append(Path(args.baseline_json))
+    manifest_artifacts.extend(path for path in Path(args.evidence_dir).rglob("*") if path.is_file())
+    write_artifact_manifest(manifest_path, str(data.get("benchmark") or ""), manifest_artifacts)
     if args.json:
         print(json.dumps(data, ensure_ascii=False, indent=2))
     else:

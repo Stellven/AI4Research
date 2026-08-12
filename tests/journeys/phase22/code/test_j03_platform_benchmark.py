@@ -17,11 +17,26 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
     out_json = rec.run_dir / "platform-workflow-benchmark.json"
     out_md = rec.run_dir / "platform-workflow-benchmark.md"
     evidence_dir = rec.run_dir / "platform-workflow-evidence"
+    baseline_json = rec.run_dir / "platform-workflow-baseline.json"
+    baseline_md = rec.run_dir / "platform-workflow-baseline.md"
+    baseline_evidence_dir = rec.run_dir / "platform-workflow-baseline-evidence"
+    manifest = rec.run_dir / "platform-workflow-artifact-manifest.json"
+    benchmark_cli = repo_root / "harness" / "tools" / "platform_workflow_benchmark.py"
+    baseline_proc = rec.run(
+        "platform-benchmark-baseline",
+        [
+            python_executable(repo_root), str(benchmark_cli), "--json", "--threshold", "80",
+            "--out-json", str(baseline_json), "--out-md", str(baseline_md),
+            "--evidence-dir", str(baseline_evidence_dir), "--repetitions", "1",
+        ],
+        env=env,
+        timeout=240,
+    )
     proc = rec.run(
         "platform-benchmark",
         [
             python_executable(repo_root),
-            str(repo_root / "harness" / "tools" / "platform_workflow_benchmark.py"),
+            str(benchmark_cli),
             "--json",
             "--threshold",
             "80",
@@ -31,6 +46,12 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
             str(out_md),
             "--evidence-dir",
             str(evidence_dir),
+            "--repetitions",
+            "2",
+            "--baseline-json",
+            str(baseline_json),
+            "--manifest",
+            str(manifest),
         ],
         env=env,
         timeout=240,
@@ -38,6 +59,31 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
     rec.add_artifact(out_json, "benchmark_json")
     rec.add_artifact(out_md, "benchmark_markdown")
     rec.add_artifact(evidence_dir / "benchmark.json", "benchmark_evidence_index")
+    rec.add_artifact(baseline_json, "benchmark_baseline_json")
+    rec.add_artifact(manifest, "benchmark_artifact_manifest")
+    verify_proc = rec.run(
+        "platform-benchmark-manifest-verify",
+        [python_executable(repo_root), str(benchmark_cli), "--verify-manifest", str(manifest)],
+        env=env,
+        timeout=30,
+    )
+    original_markdown = out_md.read_bytes() if out_md.is_file() else b""
+    if original_markdown:
+        out_md.write_bytes(original_markdown + b"\nTAMPER-PROBE\n")
+    tamper_proc = rec.run(
+        "platform-benchmark-manifest-tamper-negative",
+        [python_executable(repo_root), str(benchmark_cli), "--verify-manifest", str(manifest)],
+        env=env,
+        timeout=30,
+    )
+    if original_markdown:
+        out_md.write_bytes(original_markdown)
+    restored_verify_proc = rec.run(
+        "platform-benchmark-manifest-restored-verify",
+        [python_executable(repo_root), str(benchmark_cli), "--verify-manifest", str(manifest)],
+        env=env,
+        timeout=30,
+    )
     parsed = out_json.exists() and json.loads(out_json.read_text(encoding="utf-8"))
     json_written = out_json.exists() and out_json.stat().st_size > 0
     markdown_written = out_md.exists() and out_md.stat().st_size > 0
@@ -89,6 +135,10 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
             and bool(parsed.get("weights"))
             and bool(parsed.get("benchmark"))
         )
+        protocol = parsed.get("protocol") if isinstance(parsed.get("protocol"), dict) else {}
+        performance = parsed.get("performance") if isinstance(parsed.get("performance"), dict) else {}
+        comparison = parsed.get("comparison") if isinstance(parsed.get("comparison"), dict) else {}
+        scenario_performance = [item.get("performance") for item in scenarios if isinstance(item, dict)]
         rec.add_assertion(
             "benchmark_quality_verdict_recorded",
             isinstance(parsed.get("ok"), bool) and isinstance(average_score, (int, float)),
@@ -119,6 +169,44 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
             framing_recorded,
             {"benchmark": parsed.get("benchmark"), "threshold": parsed.get("threshold"), "weights": parsed.get("weights")},
         )
+        rec.add_assertion(
+            "benchmark_repeated_protocol_and_timings_recorded",
+            protocol.get("repetitions") == 2
+            and performance.get("scenario_executions") == len(scenarios) * 2
+            and performance.get("scenario_executions_per_second", 0) > 0
+            and all(
+                isinstance(item, dict)
+                and len(item.get("duration_samples_seconds") or []) == 2
+                and item.get("median_duration_seconds", -1) >= 0
+                for item in scenario_performance
+            ),
+            {"protocol": protocol, "performance": performance, "scenario_performance": scenario_performance},
+        )
+        rec.add_assertion(
+            "benchmark_baseline_comparison_complete",
+            baseline_proc.returncode == 0
+            and comparison.get("status") == "completed"
+            and len(comparison.get("scenario_comparisons") or []) == len(scenarios),
+            comparison,
+        )
+        rec.add_assertion(
+            "benchmark_manifest_accepts_original_rejects_tamper",
+            verify_proc.returncode == 0 and tamper_proc.returncode == 2 and restored_verify_proc.returncode == 0,
+            {"verify": verify_proc.returncode, "tamper": tamper_proc.returncode, "restored": restored_verify_proc.returncode},
+        )
+        manifest_payload = json.loads(manifest.read_text(encoding="utf-8")) if manifest.is_file() else {}
+        manifest_paths = {str(item.get("path") or "") for item in manifest_payload.get("artifacts") or [] if isinstance(item, dict)}
+        rec.add_assertion(
+            "benchmark_manifest_covers_baseline_and_current_outputs",
+            all(str(path.resolve()) in manifest_paths for path in (baseline_json, out_json, out_md, evidence_dir / "benchmark.json")),
+            {"required": [str(path.resolve()) for path in (baseline_json, out_json, out_md, evidence_dir / "benchmark.json")], "manifest_count": len(manifest_paths)},
+        )
+        rec.add_assertion(
+            "benchmark_cost_and_scalability_boundaries_truthful",
+            (performance.get("monetary_cost") or {}).get("status") == "not_measured"
+            and (performance.get("scalability") or {}).get("status") == "not_measured",
+            performance,
+        )
         process_complete = all(
             (
                 json_written,
@@ -130,16 +218,22 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
                 average_recomputes,
                 failures_explain_verdict,
                 framing_recorded,
+                protocol.get("repetitions") == 2,
+                comparison.get("status") == "completed",
+                verify_proc.returncode == 0,
+                tamper_proc.returncode == 2,
+                restored_verify_proc.returncode == 0,
+                all(str(path.resolve()) in manifest_paths for path in (baseline_json, out_json, out_md, evidence_dir / "benchmark.json")),
             )
         )
-        rec.add_l2("Workflow", "Benchmark Framing", "threshold, scoring weights, and named scenarios were recorded; baseline and version-history variants remain outside this run", out_json, "partial")
-        rec.add_l2("Workflow", "Benchmark Protocol & Asset Preparation", "isolated harness and explicit JSON/Markdown/evidence output paths were used; repetitions and resource-limit variants remain outside this run", evidence_dir / "benchmark.json", "partial")
+        rec.add_l2("Workflow", "Benchmark Framing", "threshold, scoring weights, named scenarios, and a current baseline comparison were recorded", out_json, "full")
+        rec.add_l2("Workflow", "Benchmark Protocol & Asset Preparation", "isolated per-repetition evidence paths, two samples, command timeouts, and explicit JSON/Markdown/manifest outputs were used", evidence_dir / "benchmark.json", "full")
         rec.add_l2("Workflow", "Benchmark Execution", "official platform benchmark runner completed and wrote scored evidence even though the measured target was below threshold", out_json, "full")
-        rec.add_l2("Workflow", "Metrics & Run Evidence Collection", "per-scenario scores, failed checks, commands, and evidence artifacts were generated; detailed resource consumption was not measured", evidence_dir / "benchmark.json", "partial")
-        rec.add_l2("Workflow", "Comparative Result Analysis & Benchmark Result Packaging", "the report consistently packaged the score and failed checks; broader POC-versus-baseline comparisons remain outside this run", out_md, "partial")
-        rec.add_l2("Foundation", "Benchmark Asset Construction", "the executable benchmark configuration and durable result assets were demonstrated; authoring new datasets and baselines was not", out_json, "partial")
-        rec.add_l2("Foundation", "Performance, Cost & Benchmark Evaluator", "the evaluator computed scenario and aggregate quality results; cost, throughput, and scalability measurements were not exercised", out_json, "partial")
-        rec.add_l2("Foundation", "Build Evidence Generation", "benchmark command logs, hashes, and output artifacts were retained; build diff and compile variants were not exercised", rec.run_dir / "commands.json", "partial")
+        rec.add_l2("Workflow", "Metrics & Run Evidence Collection", "per-scenario scores, failed checks, command evidence, repeated timings, and aggregate throughput were generated; CPU and memory consumption remain unmeasured", evidence_dir / "benchmark.json", "partial")
+        rec.add_l2("Workflow", "Comparative Result Analysis & Benchmark Result Packaging", "the report packaged scores, failed checks, and per-scenario current-versus-baseline deltas", out_md, "full")
+        rec.add_l2("Foundation", "Benchmark Asset Construction", "the executable benchmark configuration, newly constructed baseline, repeated evidence directories, and durable result assets were demonstrated", baseline_json, "full")
+        rec.add_l2("Foundation", "Performance, Cost & Benchmark Evaluator", "the evaluator measured per-scenario wall time and aggregate throughput; billable-provider cost and workload scalability remain explicitly not measured", out_json, "partial")
+        rec.add_l2("Foundation", "Build Evidence Generation", "the artifact manifest hashes outputs and command evidence, accepts the originals, rejects tampering, and accepts restored bytes; compile/diff evidence remains task-dependent", manifest, "full")
     if process_complete:
         rec.finalize("PASS")
         return
