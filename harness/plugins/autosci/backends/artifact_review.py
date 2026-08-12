@@ -13,7 +13,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from research.evidence.review_proof import normalize_review_proof
+from research.evidence.review_proof import bind_reviewer_execution, normalize_review_proof
 
 
 def _read_text(path: Path, *, limit: int = 40000) -> str:
@@ -930,13 +930,12 @@ def review_artifact(
     path = resolved.get("path")
     text = str(resolved.get("text") or "")
     target = str(resolved.get("target") or inputs.get("target") or "N/A")
-    reviewer_config = _review_llm_provider_config(inputs) if _review_llm_provider_requested(inputs) else {"provider": "", "model": ""}
     proof = normalize_review_proof(
         proof_bundle_path=inputs.get("proof_bundle_path") or inputs.get("review_proof_path"),
         artifact_path=path if isinstance(path, Path) else None,
         workspace_root=workspace_root,
-        reviewer_provider=str(reviewer_config.get("provider") or ""),
-        reviewer_model=str(reviewer_config.get("model") or ""),
+        reviewer_provider="",
+        reviewer_model="",
         writer_output=inputs.get("writer_output") or inputs.get("writer_verdict") or inputs.get("writer_result"),
     )
     # The provider/command reviewer receives a fresh disk-derived context, not
@@ -955,6 +954,7 @@ def review_artifact(
             "proof_contract": proof,
         }
     review_llm = _review_llm_assessment(review_inputs, workspace_root=workspace_root, difficulty=difficulty, focus=focus)
+    proof = bind_reviewer_execution(proof, review_llm)
     if not text or not isinstance(path, Path):
         return {
             "status": "inconclusive",

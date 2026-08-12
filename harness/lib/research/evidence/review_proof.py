@@ -104,6 +104,82 @@ def _independence(bundle: dict[str, Any], reviewer_provider: str, reviewer_model
     }
 
 
+def bind_reviewer_execution(
+    proof: dict[str, Any],
+    review_execution: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind provider-independence provenance to a completed provider call.
+
+    A requested provider is configuration, not execution evidence.  This
+    function intentionally leaves the review fail-closed when the provider
+    was unavailable/failed, when a supplied file or command bridge was used,
+    or when the writer provenance is only a local fixture.
+    """
+    separation = proof.get("reviewer_separation")
+    if not isinstance(separation, dict):
+        return proof
+    current = separation.get("independence")
+    current = current if isinstance(current, dict) else {}
+    writer = current.get("writer") if isinstance(current.get("writer"), dict) else {}
+    writer_provider = str(writer.get("provider") or "").strip().lower()
+    writer_model = str(writer.get("model") or "").strip()
+    status = str(review_execution.get("status") or "").strip().lower()
+    mode = str(review_execution.get("invocation_mode") or "").strip().lower()
+    reviewer_provider = str(review_execution.get("provider") or "").strip().lower()
+    reviewer_model = str(review_execution.get("model") or "").strip()
+
+    if status != "completed" or mode != "provider" or not reviewer_provider:
+        reason = (
+            "Provider independence is not established because no completed "
+            "reviewer-provider invocation with provider provenance was recorded."
+        )
+        independence = {
+            "status": "same_provider_limitation",
+            "writer": {
+                "provider": writer_provider or "unknown",
+                "model": writer_model or "unknown",
+            },
+            "reviewer": {
+                "provider": reviewer_provider or "unverified",
+                "model": reviewer_model or "unverified",
+            },
+            "reason": reason,
+            "fully_independent": False,
+            "execution_bound": False,
+        }
+    elif writer_provider in {"", "unknown", "local", "local_fixture", "fixture"}:
+        independence = {
+            "status": "same_provider_limitation",
+            "writer": {
+                "provider": writer_provider or "unknown",
+                "model": writer_model or "unknown",
+            },
+            "reviewer": {
+                "provider": reviewer_provider,
+                "model": reviewer_model or "unknown",
+            },
+            "reason": (
+                "The reviewer provider completed, but writer provenance is a "
+                "local fixture or is missing; cross-provider independence cannot be claimed."
+            ),
+            "fully_independent": False,
+            "execution_bound": True,
+        }
+    else:
+        synthetic_bundle = {
+            "writer": {"provider": writer_provider, "model": writer_model},
+        }
+        independence = _independence(
+            synthetic_bundle,
+            reviewer_provider,
+            reviewer_model,
+        )
+        independence["execution_bound"] = True
+    separation["independence"] = independence
+    proof["reviewer_separation"] = separation
+    return proof
+
+
 def normalize_review_proof(
     *,
     proof_bundle_path: str | Path | None,

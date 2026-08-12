@@ -570,6 +570,45 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
         if review_overreach_boundary.get("final_acceptance_ready") is not True:
             non_core_limitations.append("Overreach review artifact did not preserve final_acceptance_ready in deterministic local mode.")
 
+    complete_proof = review_complete.get("proof_contract") if isinstance(review_complete.get("proof_contract"), dict) else {}
+    separation = complete_proof.get("reviewer_separation") if isinstance(complete_proof.get("reviewer_separation"), dict) else {}
+    independence = separation.get("independence") if isinstance(separation.get("independence"), dict) else {}
+    if independence.get("status") != "independent_provider":
+        non_core_limitations.append(
+            "Provider independence was not established: "
+            + str(independence.get("reason") or "no completed independent reviewer-provider proof was recorded.")
+        )
+    residual_risks = [str(item) for item in complete_proof.get("residual_risk") or []]
+    if any("external scientific validity" in item.lower() for item in residual_risks):
+        non_core_limitations.append(
+            "The bounded local evidence taxonomy detects unsupported generalization, but does not establish real-world external validity."
+        )
+    assertions.append(
+        _assertion(
+            l2=reasoning_l2,
+            criteria="Provider independence may be claimed only from completed provider execution with attributable writer and reviewer provenance.",
+            assertion="reviewer-provider independence remains fail-closed without execution proof",
+            passed=independence.get("status") == "same_provider_limitation"
+            and independence.get("fully_independent") is False
+            and independence.get("execution_bound") is False,
+            observed=independence,
+            reason="A configured, supplied, failed, or fixture reviewer path is not independent-provider execution evidence.",
+            evidence=[str(review_complete_ev), str(complete["proof"])],
+        )
+    )
+    assertions.append(
+        _assertion(
+            l2=reasoning_l2,
+            criteria="A local evidence result must not be represented as real-world generalization.",
+            assertion="external-validity scope remains explicit and bounded",
+            passed=overreach_value == "insufficient"
+            and any("external scientific validity" in item.lower() for item in residual_risks),
+            observed={"scope_overreach_verdict": overreach_value, "residual_risks": residual_risks},
+            reason="The evaluator must reject the worldwide claim while preserving the need for external domain data.",
+            evidence=[str(exp_overreach_ev), str(review_complete_ev), str(overreach["claims"])],
+        )
+    )
+
     all_evidence_files = [
         check_complete_ev,
         check_incomplete_ev,
