@@ -29,6 +29,34 @@ const cases = [
     [],
   ],
   [
+    "dashboard-only smoke rejects a sign-in screen",
+    healthy({
+      requiredContract: "dashboard",
+      bodyText:
+        "Sign in to run Solar\nUse my existing sign-in\nContinue without signing in",
+      targetMarkers: {
+        homeLanding: false,
+        authChecking: false,
+        taskInputAccessibleName: "",
+      },
+    }),
+    false,
+    ["required_text_missing", "dashboard_target_markers_missing"],
+  ],
+  [
+    "dashboard-only smoke requires target markers and named task input",
+    healthy({
+      requiredContract: "dashboard",
+      targetMarkers: {
+        homeLanding: true,
+        authChecking: false,
+        taskInputAccessibleName: "What do you want done?",
+      },
+    }),
+    true,
+    [],
+  ],
+  [
     "blank page fails",
     healthy({ rootChildCount: 0, bodyText: "" }),
     false,

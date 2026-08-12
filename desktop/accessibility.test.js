@@ -166,41 +166,97 @@ async function stop(child) {
           .slice(0, 120),
       }));
     });
-    const keyboardSequence = [];
-    const reached = new Set();
-    for (let step = 0; step < expectedKeyboard.length + 2; step += 1) {
-      await page.keyboard.press("Tab");
-      const focused = await page.evaluate(() => {
+    async function focusedProbe() {
+      return page.evaluate(() => {
         const active = document.activeElement;
         const probe = active?.getAttribute("data-solar-a11y-probe");
         return {
           index: probe === null || probe === undefined ? null : Number(probe),
           tag: active?.tagName || "",
+          focus_visible: Boolean(active?.matches(":focus-visible")),
           text: String(active?.getAttribute("aria-label") || active?.textContent || "")
             .trim()
             .slice(0, 120),
         };
       });
-      keyboardSequence.push(focused);
-      if (focused.index !== null) reached.add(focused.index);
-      if (reached.size === expectedKeyboard.length) break;
     }
-    await page.keyboard.press("Shift+Tab");
-    const reverseFocusable = await page.evaluate(() => {
-      const active = document.activeElement;
+    async function seek(key, target) {
+      const attempts = [];
+      for (let step = 0; step < expectedKeyboard.length + 2; step += 1) {
+        await page.keyboard.press(key);
+        const focused = await focusedProbe();
+        attempts.push(focused);
+        if (focused.index === target) return { focused, attempts };
+      }
+      throw new Error(`${key} did not reach keyboard probe ${target}`);
+    }
+    const first = await seek("Tab", 0);
+    const forward = [first.focused];
+    for (let target = 1; target < expectedKeyboard.length; target += 1) {
+      await page.keyboard.press("Tab");
+      forward.push(await focusedProbe());
+    }
+    const reverse = [await focusedProbe()];
+    for (let target = expectedKeyboard.length - 2; target >= 0; target -= 1) {
+      await page.keyboard.press("Shift+Tab");
+      reverse.push(await focusedProbe());
+    }
+    const reverseCycle = await seek("Shift+Tab", expectedKeyboard.length - 1);
+    const activationLocator = page.locator('[data-solar-a11y-probe="1"]');
+    await activationLocator.focus();
+    const activationTarget = await focusedProbe();
+    await page.keyboard.press("Enter");
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.waitFor({ state: "visible", timeout: 3000 });
+    const dialogOpened = await dialog.isVisible();
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "hidden", timeout: 3000 });
+    const dialogClosed = !(await dialog.isVisible());
+    const taskInput = page.getByRole("textbox", { name: "What do you want done?" });
+    const taskInputAriaSnapshot = await taskInput.ariaSnapshot();
+    const taskInputContract = await taskInput.evaluate((element) => ({
+      aria_labelledby: element.getAttribute("aria-labelledby"),
+      aria_describedby: element.getAttribute("aria-describedby"),
+      labelledby_text: (element.getAttribute("aria-labelledby") || "")
+        .split(/\s+/)
+        .map((id) => document.getElementById(id)?.textContent?.trim() || "")
+        .filter(Boolean),
+      describedby_text: (element.getAttribute("aria-describedby") || "")
+        .split(/\s+/)
+        .map((id) => document.getElementById(id)?.textContent?.trim() || "")
+        .filter(Boolean),
+    }));
+    await page.evaluate(() => {
       document.querySelectorAll("[data-solar-a11y-probe]").forEach((element) =>
         element.removeAttribute("data-solar-a11y-probe"),
       );
-      return Boolean(active && active !== document.body);
     });
+    const expectedForward = expectedKeyboard.map(({ index }) => index);
+    const expectedReverse = [...expectedForward].reverse();
     const keyboard = {
-      focusable: reached.size > 0,
       expected_count: expectedKeyboard.length,
-      reached_count: reached.size,
-      all_reachable: reached.size === expectedKeyboard.length,
-      reverse_focusable: reverseFocusable,
       expected: expectedKeyboard,
-      sequence: keyboardSequence,
+      forward,
+      reverse,
+      forward_order_valid: JSON.stringify(forward.map(({ index }) => index)) === JSON.stringify(expectedForward),
+      reverse_order_valid: JSON.stringify(reverse.map(({ index }) => index)) === JSON.stringify(expectedReverse),
+      all_focus_visible: [...forward, ...reverse].every(({ focus_visible }) => focus_visible),
+      cycle_from_first_to_last: reverseCycle.focused.index === expectedKeyboard.length - 1,
+      activation: {
+        target: activationTarget,
+        action: "Enter opens New task dialog; Escape closes it",
+        dialog_opened: dialogOpened,
+        dialog_closed: dialogClosed,
+      },
+    };
+    const accessibleName = {
+      source: "Playwright Chromium accessibility tree via locator.ariaSnapshot()",
+      task_input_aria_snapshot: taskInputAriaSnapshot,
+      dom_references: taskInputContract,
+      valid:
+        taskInputAriaSnapshot.includes('textbox "What do you want done?"') &&
+        taskInputContract.labelledby_text.includes("What do you want done?") &&
+        taskInputContract.describedby_text.length > 0,
     };
     const blocking = audit.violations.filter((item) =>
       ["critical", "serious"].includes(item.impact),
@@ -215,6 +271,7 @@ async function stop(child) {
       incomplete_count: audit.incomplete.length,
       contrast_samples: contrastSamples,
       keyboard,
+      accessible_name: accessibleName,
       violations: audit.violations.map((item) => ({
         id: item.id,
         impact: item.impact,
@@ -247,10 +304,19 @@ async function stop(child) {
     if (unresolvedContrast.length) {
       throw new Error(`axe could not resolve ${unresolvedContrast.length} color-contrast result(s)`);
     }
-    if (!keyboard.all_reachable || !keyboard.reverse_focusable) {
-      throw new Error(
-        `keyboard traversal reached ${keyboard.reached_count}/${keyboard.expected_count} controls`,
-      );
+    if (
+      !keyboard.forward_order_valid ||
+      !keyboard.reverse_order_valid ||
+      !keyboard.all_focus_visible ||
+      !keyboard.cycle_from_first_to_last ||
+      keyboard.activation.target.index !== 1 ||
+      !keyboard.activation.dialog_opened ||
+      !keyboard.activation.dialog_closed
+    ) {
+      throw new Error("keyboard order, focus-visible, cycle, or activation contract failed");
+    }
+    if (!accessibleName.valid) {
+      throw new Error("home task input lacks a visible, programmatic accessible name");
     }
     if (blocking.length) {
       throw new Error(`axe found ${blocking.length} serious/critical WCAG violation(s)`);

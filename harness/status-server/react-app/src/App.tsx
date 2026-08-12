@@ -793,14 +793,16 @@ function NewTaskDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content">
-          <Dialog.Title className="dialog-title">
+          <Dialog.Title id="new-task-dialog-title" className="dialog-title">
             Describe what you want done
           </Dialog.Title>
-          <Dialog.Description className="dialog-description">
+          <Dialog.Description id="new-task-dialog-description" className="dialog-description">
             This starts a real AI4Research intake via the existing CLI.
           </Dialog.Description>
           <form onSubmit={onSubmit} className="intake-form">
             <textarea
+              aria-labelledby="new-task-dialog-title"
+              aria-describedby="new-task-dialog-description"
               value={task}
               onChange={(event) => setTask(event.target.value)}
               placeholder="Build, investigate, verify, or produce an artifact..."
@@ -4792,8 +4794,8 @@ function HomeLanding({
   return (
     <div className="home-landing" data-testid="home-landing">
       <div className="home-inner">
-        <h1>What do you want done?</h1>
-        <p className="home-sub">
+        <h1 id="home-task-heading">What do you want done?</h1>
+        <p id="home-task-instructions" className="home-sub">
           Describe a task. AI4Research routes it through PM, Planner, Builder,
           and Evaluator agents — and tells you plainly when it stalls.
         </p>
@@ -4805,6 +4807,8 @@ function HomeLanding({
           }}
         >
           <textarea
+            aria-labelledby="home-task-heading"
+            aria-describedby="home-task-instructions"
             value={task}
             onChange={(event) => setTask(event.target.value)}
             placeholder="Build, investigate, verify, or produce an artifact…"

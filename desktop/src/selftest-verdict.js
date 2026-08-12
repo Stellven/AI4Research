@@ -22,7 +22,9 @@ function parseURL(value) {
 function assessSelftestSnapshot(snapshot) {
   const contracts = Array.isArray(snapshot.requiredText)
     ? [{ id: "custom", requiredText: snapshot.requiredText }]
-    : RUNTIME_UI_CONTRACTS;
+    : snapshot.requiredContract
+      ? RUNTIME_UI_CONTRACTS.filter(({ id }) => id === snapshot.requiredContract)
+      : RUNTIME_UI_CONTRACTS;
   const bodyText = String(snapshot.bodyText || "");
   const rendererErrors = Array.isArray(snapshot.rendererErrors)
     ? snapshot.rendererErrors.filter(Boolean).map(String)
@@ -57,6 +59,16 @@ function assessSelftestSnapshot(snapshot) {
     ]),
   );
   if (!matched) reasons.push("required_text_missing");
+  if (snapshot.requiredContract === "dashboard") {
+    const markers = snapshot.targetMarkers || {};
+    if (
+      markers.homeLanding !== true ||
+      markers.authChecking === true ||
+      markers.taskInputAccessibleName !== "What do you want done?"
+    ) {
+      reasons.push("dashboard_target_markers_missing");
+    }
+  }
   if (rendererErrors.length) reasons.push("renderer_errors_present");
 
   return {
@@ -69,6 +81,8 @@ function assessSelftestSnapshot(snapshot) {
     bodyTextLength: bodyText.length,
     matchedContract: matched ? matched.id : null,
     missingText,
+    requiredContract: String(snapshot.requiredContract || ""),
+    targetMarkers: snapshot.targetMarkers || null,
     rendererErrors,
     fallbackUsed: Boolean(snapshot.fallbackUsed),
   };
