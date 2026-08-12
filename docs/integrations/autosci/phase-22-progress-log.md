@@ -3128,3 +3128,31 @@ Date: 2026-08-11
   not claim the journey/full/brief reports are synchronized. Those status
   changes require review of the Mac run evidence or a new accepted live J16
   journey on the integrated commit.
+
+## Mac J16 evidence acceptance — P22-REPAIR-115 and 116
+
+Date: 2026-08-12
+
+- Reviewed `phase22-mac-evidence-c72747d08-p22-j16-20260812T033931Z-1817.zip`
+  against integrated baseline `c72747d08b40bf325cdc83c424ec4c2c4ef2a63a`.
+  Archive SHA-256 is
+  `7876bcdd2da00fc37c9d5203f45a4a754017b6dddacc490d4490b8ba130070f1`.
+- Archive audit found 158 entries / 145 files, one safe archive root, no path
+  traversal, duplicate entries, symlinks, suspicious compression ratios, or
+  credential-pattern findings. All 144 payload checksums matched the archive.
+- Accepted J16 run `p22-j16-20260812T033931Z-1817` completed on macOS arm64 at
+  the required repo head. Exact journey selector passed in 449.60 seconds;
+  journey result is `PASS_WITH_KNOWN_LIMITATIONS`, 12/12 assertions, zero
+  failed assertions, and no blockers.
+- The run reproduced the defect before product work (`1 failed, 2 passed`),
+  routed the approved task to physical operator
+  `mini-codex-gpt53-spark-builder-1`, changed only `discounts.py`, and passed
+  the same product suite afterward (`3 passed`). Planner and builder results
+  record OpenAI and `gpt-5.3-codex-spark`; no expensive fallback was observed.
+- Two run-specific orphan Spark workers were found after pytest, terminated by
+  exact PID, and followed by a clean second audit. Final run-specific tmux and
+  process lists were empty.
+- Accepted classifications: `P22-REPAIR-115` and `P22-REPAIR-116` are now
+  `FIXED_VERIFIED`. The remaining non-blocking boundary is that no formal eval
+  sidecar was observed; closure is supported by the physical builder result,
+  durable diff, before/after pytest, and successful eval-verdict evidence.
