@@ -204,7 +204,11 @@ def verify_historical_baseline(
         raise ValueError("baseline commit is not an ancestor of the current commit")
     current_committed_runner = _git_bytes(repo_root, "show", f"{current_commit}:{RUNNER_REPO_PATH}")
     current_runner_path = repo_root / RUNNER_REPO_PATH
-    if not current_runner_path.is_file() or current_runner_path.read_bytes() != current_committed_runner:
+    runner_clean = current_runner_path.is_file() and subprocess.run(
+        ["git", "diff", "--quiet", "HEAD", "--", RUNNER_REPO_PATH], cwd=str(repo_root),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    ).returncode == 0
+    if not runner_clean:
         raise ValueError("current benchmark runner does not match the current Git commit")
     current_runner_sha256 = hashlib.sha256(current_committed_runner).hexdigest()
     if current_runner_sha256 == runner_sha256:
