@@ -26,6 +26,7 @@ Port fallback: 8765-8775 if primary is occupied.
 """
 
 import json
+import copy
 import os
 import plistlib
 import sqlite3
@@ -1329,14 +1330,95 @@ _PROVIDER_KEY_ENV = {
 # it across the whole POST while the per-key writers re-acquire it harmlessly. Cross-PROCESS
 # readers (panes) are protected by the atomic os.replace in _write_user_config, not this lock.
 _USER_CONFIG_LOCK = threading.RLock()
+_USER_CONFIG_CACHE: dict | None = None
+
+
+def _publish_user_config(temporary: Path, target: Path) -> None:
+    """Publish a complete config without exposing a missing/partial target.
+
+    ``os.replace`` provides the required old-or-new view on POSIX.  On Windows,
+    however, CPython implements it with ``MoveFileExW``.  Replacing a destination
+    that a plain ``Path.read_text`` reader is opening can transiently remove the
+    destination or fail with a sharing violation.  ``ReplaceFileW`` preserves the
+    destination until the swap succeeds; retrying sharing violations lets an
+    uncoordinated direct reader finish without weakening the atomic-write contract.
+    """
+    if os.name != "nt" or not target.exists():
+        os.replace(temporary, target)
+        return
+
+    # Import lazily so POSIX startup and packaging do not depend on Win32 types.
+    import ctypes
+    from ctypes import wintypes
+
+    replace_file = ctypes.WinDLL("kernel32", use_last_error=True).ReplaceFileW
+    replace_file.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.LPVOID,
+    ]
+    replace_file.restype = wintypes.BOOL
+
+    # ERROR_ACCESS_DENIED / SHARING_VIOLATION / LOCK_VIOLATION plus the three
+    # ReplaceFile-specific retryable move/remove failures.
+    retryable = {5, 32, 33, 1175, 1176, 1177}
+    deadline = time.monotonic() + 5.0
+    while True:
+        # ReplaceFileW can report ERROR_UNABLE_TO_MOVE_REPLACEMENT_2 after it
+        # has already removed the old target.  Recover the still-complete
+        # replacement immediately instead of deleting it in the caller.
+        if not target.exists():
+            try:
+                os.replace(temporary, target)
+                return
+            except PermissionError:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.002)
+                continue
+        if replace_file(str(target), str(temporary), None, 0, None, None):
+            return
+        error = ctypes.get_last_error()
+        if error not in retryable or time.monotonic() >= deadline:
+            raise ctypes.WinError(error)
+        time.sleep(0.002)
 
 
 def _read_user_config() -> dict:
-    try:
-        cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8")) if _USER_CONFIG_PATH.exists() else {}
-    except Exception:
-        cfg = {}
-    return cfg if isinstance(cfg, dict) else {}
+    # A raw Windows pathname reader can briefly collide with ReplaceFileW even
+    # though it can never observe partial bytes.  Product readers retry that
+    # sharing transition; callers therefore see the complete old/new document,
+    # not a transient empty default.
+    global _USER_CONFIG_CACHE
+    # Serialize the cache and disk snapshot together. Without this read lock an
+    # HTTP reader can publish an older disk snapshot into the cache just after a
+    # writer committed a newer one, reintroducing a lost update on the next POST.
+    with _USER_CONFIG_LOCK:
+        cfg = None
+        for attempt in range(20):
+            try:
+                cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8"))
+                break
+            except (FileNotFoundError, PermissionError):
+                # A genuinely absent initial config is not a transaction. Avoid a
+                # retry delay when neither the cache nor a staged replacement exists.
+                if _USER_CONFIG_CACHE is None and not _USER_CONFIG_PATH.with_suffix(".json.tmp").exists():
+                    cfg = {}
+                    break
+                if attempt == 19:
+                    break
+                time.sleep(0.002)
+            except (OSError, json.JSONDecodeError):
+                break
+        if isinstance(cfg, dict):
+            _USER_CONFIG_CACHE = copy.deepcopy(cfg)
+            return cfg
+        # Never convert a transient read collision into an empty configuration and
+        # lose unrelated keys in the next read-modify-write transaction.
+        return copy.deepcopy(_USER_CONFIG_CACHE) if _USER_CONFIG_CACHE is not None else {}
 
 
 def _write_user_config(cfg: dict) -> None:
@@ -1345,9 +1427,22 @@ def _write_user_config(cfg: dict) -> None:
     # default). Write a temp file in the same dir, then os.replace (atomic on POSIX). Callers hold
     # _USER_CONFIG_LOCK so the surrounding read-modify-write is serialized across request threads.
     _USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    global _USER_CONFIG_CACHE
     tmp = _USER_CONFIG_PATH.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
-    os.replace(tmp, _USER_CONFIG_PATH)
+    try:
+        with tmp.open("w", encoding="utf-8") as handle:
+            handle.write(json.dumps(cfg, indent=2) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        _publish_user_config(tmp, _USER_CONFIG_PATH)
+        _USER_CONFIG_CACHE = copy.deepcopy(cfg)
+    finally:
+        # A failed publish must not leave stale bytes that a later process could
+        # mistake for the current transaction.
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _runtime_launch_supported() -> bool:
@@ -14523,8 +14618,11 @@ def _find_port() -> int:
     import socket
     for port in PORT_RANGE:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
+                # SO_REUSEADDR permits two live listeners on the same endpoint
+                # on Windows. That split requests between unrelated Solar roots
+                # and can mutate the wrong settings file. A discovery probe must
+                # treat every active listener as occupied.
                 s.bind((BIND_HOST, port))
                 return port
             except OSError:

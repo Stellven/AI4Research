@@ -6,8 +6,9 @@ touches ~/.solar), then:
   F1  OPTIONS /settings preflight advertises `X-Solar-Token` in Access-Control-Allow-Headers.
   C1a Concurrent POST /settings to DIFFERENT keys (runtime / codex / models) never loses an update
       (the read-modify-write lost-update bug).
-  C1b A reader of solar-user-config.json during a write storm never sees a torn/empty file
-      (the non-atomic write_text bug; fixed by atomic os.replace).
+  C1b A reader of solar-user-config.json during a write storm never sees torn/partial JSON.
+      Windows raw-path readers may need to retry a sharing transition; the supported HTTP reader
+      must remain available and parseable throughout the storm.
   T1  An unsafe sprint_id ("../leak", "..") on /status can't read files outside the harness dirs
       (path traversal via _runtime_events_path; fixed by _valid_sprint_id at the path chokepoints).
 
@@ -74,8 +75,15 @@ def main():
     for d in ("config", "run", "sprints", "events", "sessions", "reports"):
         (tmp / d).mkdir(parents=True, exist_ok=True)
     cfg_path = tmp / "config" / "solar-user-config.json"
+    # Windows environment names are case-insensitive. Remove inherited aliases
+    # before inserting this run's root, otherwise ``Harness_Dir`` can win over
+    # ``HARNESS_DIR`` and make the child mutate a stale desktop-test sandbox.
+    base_env = {
+        key: value for key, value in os.environ.items()
+        if key.upper() not in {"HARNESS_DIR", "SOLAR_HARNESS_DIR"}
+    }
     env = {
-        **os.environ,
+        **base_env,
         "HARNESS_DIR": str(tmp),
         "PYTHONPATH": str(REPO_HARNESS / "lib"),
         "SOLAR_BIND_HOST": "127.0.0.1",
@@ -133,49 +141,74 @@ def main():
 
         # --- C1b: torn-read watchdog reads the config file during the storm ---
         stop = threading.Event()
-        torn = {"count": 0, "samples": []}
+        torn = {"count": 0, "samples": [], "sharing_transitions": 0}
         def reader():
             while not stop.is_set():
                 try:
                     raw = cfg_path.read_text(encoding="utf-8")
                     if raw.strip():
                         json.loads(raw)  # raises on a truncated/partial write
-                except FileNotFoundError:
-                    pass
+                except (FileNotFoundError, PermissionError):
+                    # Arbitrary raw-path readers do not participate in the Windows
+                    # ReplaceFile sharing contract. They must retry; unlike a torn
+                    # document, this transition cannot be mistaken for valid config.
+                    torn["sharing_transitions"] += 1
                 except Exception as e:
                     torn["count"] += 1
                     if len(torn["samples"]) < 3:
                         torn["samples"].append(type(e).__name__)
+                time.sleep(0.0005)
         rt = threading.Thread(target=reader, daemon=True)
         rt.start()
+
+        api_errors = []
+        def api_reader():
+            while not stop.is_set():
+                try:
+                    payload = get_settings(port)
+                    if payload.get("ok") is not True:
+                        raise AssertionError(f"unexpected settings payload: {payload!r}")
+                except Exception as exc:
+                    if len(api_errors) < 3:
+                        api_errors.append(type(exc).__name__)
+        api_rt = threading.Thread(target=api_reader, daemon=True)
+        api_rt.start()
 
         # --- C1a: 3 writers hammer DIFFERENT keys concurrently; none must be lost ---
         ITER = 80
         accepted = {"runtime": 0, "codex": 0, "models": 0}
+        write_failures = []
         def w_runtime():
             for _ in range(ITER):
-                _, out = post_settings(port, {"runtime": "codex"})
+                status, out = post_settings(port, {"runtime": "codex"})
                 if out.get("applied_runtime") == "codex":
                     accepted["runtime"] += 1
+                elif len(write_failures) < 3:
+                    write_failures.append((status, out))
         def w_codex():
             for _ in range(ITER):
-                _, out = post_settings(port, {"codex": {"search": True, "effort": "high"}})
+                status, out = post_settings(port, {"codex": {"search": True, "effort": "high"}})
                 if (out.get("applied_codex") or {}).get("effort") == "high":
                     accepted["codex"] += 1
+                elif len(write_failures) < 3:
+                    write_failures.append((status, out))
         def w_models():
             for _ in range(ITER):
-                _, out = post_settings(port, {"role_models": {"pm": "claude-opus"}})
+                status, out = post_settings(port, {"role_models": {"pm": "claude-opus"}})
                 if (out.get("applied_models") or {}).get("pm"):
                     accepted["models"] += 1
+                elif len(write_failures) < 3:
+                    write_failures.append((status, out))
         threads = [threading.Thread(target=f) for f in (w_runtime, w_codex, w_models)]
         for t in threads:
             t.start()
         for t in threads:
             t.join()
-        stop.set(); rt.join(timeout=2)
+        stop.set(); rt.join(timeout=2); api_rt.join(timeout=2)
 
         # All three writers must have had their writes accepted at least once.
-        check("C1a all writers accepted", all(v > 0 for v in accepted.values()), str(accepted))
+        check("C1a every writer request accepted", all(v == ITER for v in accepted.values()),
+              f"accepted={accepted} failures={write_failures}")
 
         # Final state must contain ALL THREE keys — the lost-update bug drops at least one.
         final = get_settings(port)
@@ -183,14 +216,24 @@ def main():
         codex = final.get("codex") or {}
         codex_ok = codex.get("search") is True and str(codex.get("effort")) == "high"
         # models live under the settings payload; read the file directly for an authoritative check.
-        on_disk = json.loads(cfg_path.read_text(encoding="utf-8"))
+        on_disk = None
+        for _ in range(100):
+            try:
+                on_disk = json.loads(cfg_path.read_text(encoding="utf-8"))
+                break
+            except (FileNotFoundError, PermissionError):
+                time.sleep(0.002)
+        on_disk = on_disk or {}
         models_ok = (on_disk.get("models") or {}).get("pm") == "claude-opus"
         check("C1a runtime survived concurrent writes", runtime_ok, json.dumps(final.get("runtime")))
         check("C1a codex survived concurrent writes", codex_ok, json.dumps(codex))
         check("C1a models survived concurrent writes (no lost update)", models_ok,
               json.dumps(on_disk.get("models")))
         check("C1b no torn/partial config read during write storm",
-              torn["count"] == 0, f"torn={torn['count']} {torn['samples']}")
+              torn["count"] == 0,
+              f"torn={torn['count']} sharing_transitions={torn['sharing_transitions']} {torn['samples']}")
+        check("C1c supported HTTP settings reader stayed available during write storm",
+              not api_errors, repr(api_errors))
     finally:
         proc.terminate()
         try:
