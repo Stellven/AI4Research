@@ -163,3 +163,11 @@ def test_fixture_python_caches_are_removed_before_git_baseline(tmp_path: Path) -
     assert not cache.exists()
     assert not loose_bytecode.exists()
     assert source.exists()
+
+
+def test_journey_submits_verified_handoff_before_eval_verdict() -> None:
+    source = MODULE_PATH.read_text(encoding="utf-8")
+    handoff_call = source.index('"handoff-submit", sprint_id')
+    eval_call = source.index('"eval-verdict", sprint_id')
+
+    assert handoff_call < eval_call

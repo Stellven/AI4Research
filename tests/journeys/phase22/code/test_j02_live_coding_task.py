@@ -953,6 +953,33 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
         and "return a - b" not in repaired_text
     )
     if repair_checks_passed:
+        handoff_submit = rec.run(
+            "handoff_submit_after_verification",
+            bash_argv(repo_root, str(harness_script), "handoff-submit", sprint_id),
+            cwd=project,
+            env=env,
+            timeout=120,
+        )
+        handoff_status = _read_json_payload(status_path)
+        handoff_ready = (
+            handoff_submit.returncode == 0
+            and str(handoff_status.get("status") or "").lower() in {"reviewing", "ready_for_review"}
+        )
+        rec.add_assertion(
+            "verified_handoff_reached_reviewing",
+            handoff_ready,
+            {
+                "returncode": handoff_submit.returncode,
+                "status": handoff_status.get("status"),
+                "handoff_exists": handoff_path.exists(),
+                "stdout_tail": (handoff_submit.stdout or "")[-240:],
+                "stderr_tail": (handoff_submit.stderr or "")[-240:],
+            },
+        )
+    else:
+        handoff_ready = False
+
+    if repair_checks_passed and handoff_ready:
         eval_verdict = rec.run(
             "evaluator_verdict_pass_after_verification",
             bash_argv(repo_root, str(harness_script), "eval-verdict", sprint_id, "pass", "implementation reviewed after tests and diff checks"),
@@ -1006,7 +1033,7 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
                     "stderr_tail": (eval_verdict.stderr or "")[-400:],
                 },
             )
-    else:
+    elif not repair_checks_passed:
         rec.add_assertion(
             "evaluator_verdict_not_submitted_after_failed_repair_checks",
             True,
