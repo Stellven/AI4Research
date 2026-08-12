@@ -3196,3 +3196,20 @@ Date: 2026-08-12
 - The journey remains limited because provider-backed external novelty and
   Review LLM final acceptance were not exercised; `promotion_ready=false` is
   retained truthfully and is not treated as a card-completeness failure.
+
+## Significant shared-limitation closure — P22-J04 (6 issues)
+
+Date: 2026-08-12
+
+- Accepted current-baseline run `p22j04-20260812T051154Z-752` at code head
+  `46845d99f4be6285f29d6afb177241d1d9411ca0`: `PASS`, 15/15 assertions,
+  no known limitations, and all required durable artifacts present.
+- The production ingest path completed PDF preparation/parsing, stable repeat
+  identity, memory/graph sidecars, and wiki registration.
+- The strengthened journey independently opened and validated the registered
+  paper page, registration graph edge, ingest log, wiki index, and context
+  brief. It no longer accepts boundary booleans as self-attested proof.
+- The old “PDF imported but wiki registration incomplete” limitation is closed
+  for `P22-REPAIR-003`, `005`, `007`, `083`, `084`, and `090` as
+  `LIMITATION_CLOSED_VERIFIED`. External vaults, remote stores, and unexercised
+  document formats remain outside this result.

@@ -63,8 +63,30 @@
         "P22-REPAIR-031",
         "P22-REPAIR-057"
       ]
+    },
+    {
+      "journey_id": "P22-J04",
+      "shared_recorded_limitation": "The PDF was imported, but registration into the wiki was not completed.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 6,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j04-20260812T051154Z-752/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {
+        "passed": 15,
+        "failed": 0
+      },
+      "decision": "The current production ingest path completed source preparation, parsing, stable repeat-PDF identity, memory/graph sidecars, and wiki registration. The journey independently opened and validated the registered paper page, graph edge, ingest log, wiki index, and context brief rather than trusting boundary booleans alone.",
+      "remaining_boundary": "The accepted run covers the local AutoSci workspace wiki with the supplied PDF and Markdown carriers. It does not infer all document formats, external vaults, or remote knowledge stores.",
+      "issue_ids": [
+        "P22-REPAIR-003",
+        "P22-REPAIR-005",
+        "P22-REPAIR-007",
+        "P22-REPAIR-083",
+        "P22-REPAIR-084",
+        "P22-REPAIR-090"
+      ]
     }
   ],
-  "closed_shared_limitation_issue_count": 24,
-  "remaining_significant_issues": 48
+  "closed_shared_limitation_issue_count": 30,
+  "remaining_significant_issues": 42
 }
