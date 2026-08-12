@@ -12,6 +12,10 @@ def _save(path, payload):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _hex(label):
+    return hashlib.sha256(label.encode()).hexdigest()
+
+
 def _observation(split, observation_id, site_id, organization, successes=8, lineage=None, evidence_id=None):
     return {
         "schema": "solar.external_observation.v1",
@@ -50,6 +54,57 @@ def _bundle(tmp_path, mutate=None):
     return manifest, plan_hash
 
 
+def _registry(tmp_path, manifest, plan_hash, mutate=None):
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    plan = json.loads((tmp_path / manifest_payload["external_plan"]["path"]).read_text(encoding="utf-8"))
+    site_identities = []
+    for ref in manifest_payload["observations"]:
+        row = json.loads((tmp_path / ref["path"]).read_text(encoding="utf-8"))
+        site = row["site"]
+        site_identities.append({
+            "site_id": site["site_id"],
+            "organization_id": site["organization_id"],
+            "collection_protocol_id": site["collection_protocol_id"],
+            "identity_uri": "https://registry.example/sites/" + site["site_id"],
+            "anchor_id": "site-anchor",
+            "evidence_sha256s": [ref["sha256"]],
+            "signature_sha256": _hex("site:" + site["site_id"]),
+        })
+    registry = {
+        "schema": "solar.trust_anchor_registry.v1",
+        "anchors": [
+            {
+                "anchor_id": "protocol-anchor",
+                "identity_uri": "https://registry.example/protocols",
+                "public_key_sha256": _hex("protocol-key"),
+                "allowed_purposes": ["external_validity_plan"],
+            },
+            {
+                "anchor_id": "site-anchor",
+                "identity_uri": "https://registry.example/sites",
+                "public_key_sha256": _hex("site-key"),
+                "allowed_purposes": ["external_site_identity"],
+            },
+        ],
+        "trusted_artifacts": [
+            {
+                "artifact_id": plan["claim_id"],
+                "purpose": "external_validity_plan",
+                "sha256": plan_hash,
+                "anchor_id": "protocol-anchor",
+                "registered_at": "2026-08-01T00:00:00Z",
+                "signature_sha256": _hex("plan-signature"),
+            }
+        ],
+        "site_identities": site_identities,
+    }
+    if mutate:
+        mutate(registry)
+    path = tmp_path / "trust-registry.json"
+    _save(path, registry)
+    return path
+
+
 def test_accepts_hashed_preregistered_metrics_but_bounds_claim(tmp_path):
     result = evaluate_external_holdout(*_bundle(tmp_path))
     assert result["status"] == "accepted", result["errors"]
@@ -57,6 +112,29 @@ def test_accepts_hashed_preregistered_metrics_but_bounds_claim(tmp_path):
     assert result["claim_boundary"]["supports_universal_generalization"] is False
     assert {row["support_rate"] for row in result["site_results"]} == {0.8, 0.9}
     assert len(result["evidence_artifacts"]) == 3
+
+
+def test_accepts_trust_pinned_plan_and_site_identities(tmp_path):
+    manifest, trusted = _bundle(tmp_path)
+    registry = _registry(tmp_path, manifest, trusted)
+    result = evaluate_external_holdout(manifest, trusted, registry)
+    assert result["status"] == "accepted", result["errors"]
+    assert result["external_plan_trust"]["status"] == "accepted"
+    assert result["site_identity_contract"]["status"] == "accepted"
+    assert result["site_identity_contract"]["accepted_count"] == 3
+
+
+def test_rejects_self_attested_site_identity_not_pinned_by_registry(tmp_path):
+    manifest, trusted = _bundle(tmp_path)
+    registry = _registry(
+        tmp_path,
+        manifest,
+        trusted,
+        lambda payload: payload["site_identities"].pop(),
+    )
+    result = evaluate_external_holdout(manifest, trusted, registry)
+    assert result["status"] == "rejected"
+    assert any(error.startswith("site_identity_not_trust_pinned:2") for error in result["errors"])
 
 
 def test_rejects_tampered_evidence_after_manifest_hash(tmp_path):

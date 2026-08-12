@@ -18,6 +18,11 @@ HARNESS_DIR = Path(__file__).resolve().parents[1]
 if str(HARNESS_DIR) not in sys.path:
     sys.path.insert(0, str(HARNESS_DIR))
 from evaluators.scientific import experiment_result_gate  # noqa: E402
+from research.trust_registry import (  # noqa: E402
+    TrustRegistryError,
+    load_registry,
+    trusted_artifact,
+)
 
 SCHEMA = "experiment_result.v1"
 PLAN = "paired_randomization_test_v1"
@@ -105,7 +110,8 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 def _protocol(
-    repo: Path, commit: str, git_path: str, expected_blob: str
+    repo: Path, commit: str, git_path: str, expected_blob: str,
+    trust_registry: Path,
 ) -> tuple[dict[str, Any], dict[str, Any], datetime]:
     _need(repo.resolve().is_dir(), "protocol_repo_missing")
     _need(bool(commit) and bool(git_path) and _is_git_oid(expected_blob), "protocol_attestation_arguments")
@@ -151,12 +157,30 @@ def _protocol(
     time_proc = _git(repo, "show", "-s", "--format=%cI", commit)
     _need(time_proc.returncode == 0, "protocol_commit_time_unreadable")
     commit_time = datetime.fromisoformat(time_proc.stdout.strip())
+    content_sha256 = hashlib.sha256(content_proc.stdout.encode()).hexdigest()
+    try:
+        registry = load_registry(trust_registry)
+        trust_pin = trusted_artifact(
+            registry,
+            purpose="scientific_preregistration_protocol",
+            sha256=content_sha256,
+            artifact_id=protocol["study_id"],
+        )
+    except TrustRegistryError as exc:
+        raise InvalidComparison(f"protocol_not_matched_by_trust_registry:{exc}") from exc
     attestation = {
         "repo": str(repo.resolve()), "commit": commit,
         "git_path": git_path, "blob": actual_blob,
         "commit_time": commit_time.isoformat(),
-        "content_sha256": hashlib.sha256(content_proc.stdout.encode()).hexdigest(),
+        "content_sha256": content_sha256,
         "ancestor_of_head": True,
+        "trust_registry": str(trust_registry.resolve()),
+        "trusted_artifact": {
+            "artifact_id": trust_pin.get("artifact_id"),
+            "anchor_id": trust_pin.get("anchor_id"),
+            "registered_at": trust_pin.get("registered_at"),
+            "signature_sha256": trust_pin.get("signature_sha256"),
+        },
     }
     return protocol, attestation, commit_time
 
@@ -258,11 +282,12 @@ def _randomization_p(differences: list[float]) -> tuple[float, int, bool]:
 
 def compare(
     paths: list[Path], *, protocol_repo: Path, protocol_commit: str,
-    protocol_path: str, protocol_blob: str,
+    protocol_path: str, protocol_blob: str, trust_registry: Path,
 ) -> dict[str, Any]:
     _need(len(paths) >= 2, "at_least_two_results_required")
     protocol, protocol_attestation, commit_time = _protocol(
-        protocol_repo, protocol_commit, protocol_path, protocol_blob
+        protocol_repo, protocol_commit, protocol_path, protocol_blob,
+        trust_registry,
     )
     resolved = [path.resolve() for path in paths]
     _need(len(resolved) == len(set(resolved)), "duplicate_result_path")
@@ -366,6 +391,7 @@ def main() -> int:
     parser.add_argument("--protocol-commit", required=True)
     parser.add_argument("--protocol-path", required=True)
     parser.add_argument("--protocol-blob", required=True)
+    parser.add_argument("--trust-registry", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     try:
@@ -375,6 +401,7 @@ def main() -> int:
             protocol_commit=args.protocol_commit,
             protocol_path=args.protocol_path,
             protocol_blob=args.protocol_blob,
+            trust_registry=args.trust_registry,
         ), 0
     except (InvalidComparison, OSError, ValueError) as exc:
         report, exit_code = {

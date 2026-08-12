@@ -9,6 +9,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    from .trust_registry import TrustRegistryError, load_registry, trusted_artifact, trusted_site_identity
+except ImportError:  # pragma: no cover - direct script execution fallback
+    from trust_registry import TrustRegistryError, load_registry, trusted_artifact, trusted_site_identity
+
 SCHEMA = "solar.external_validity_holdout.v2"
 
 
@@ -32,11 +37,23 @@ def _instant(raw: Any) -> datetime | None:
         return None
 
 
-def evaluate_external_holdout(path: str | Path, trusted_plan_sha256: str = "") -> dict[str, Any]:
+def evaluate_external_holdout(
+    path: str | Path,
+    trusted_plan_sha256: str = "",
+    trust_registry_path: str | Path | None = None,
+) -> dict[str, Any]:
     manifest_path = Path(path)
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     base = manifest_path.parent
     errors: list[str] = []
+    trust_registry: dict[str, Any] = {}
+    trust_registry_error = ""
+    if trust_registry_path:
+        try:
+            trust_registry = load_registry(trust_registry_path)
+        except TrustRegistryError as exc:
+            trust_registry_error = str(exc)
+            errors.append("trust_registry_invalid:" + trust_registry_error)
 
     plan_ref = payload.get("external_plan") if isinstance(payload, dict) and isinstance(payload.get("external_plan"), dict) else {}
     plan_path = _resolve(plan_ref.get("path"), base)
@@ -72,6 +89,17 @@ def evaluate_external_holdout(path: str | Path, trusted_plan_sha256: str = "") -
         errors.append("external_plan_threshold_invalid")
     if len(allowed_holdout) < 2 or allowed_development & allowed_holdout:
         errors.append("external_plan_site_partition_invalid")
+    plan_trust_pin: dict[str, Any] = {}
+    if trust_registry and plan_path.is_file() and claim_id:
+        try:
+            plan_trust_pin = trusted_artifact(
+                trust_registry,
+                purpose="external_validity_plan",
+                sha256=_sha(plan_path),
+                artifact_id=claim_id,
+            )
+        except TrustRegistryError as exc:
+            errors.append("external_plan_not_matched_by_trust_registry:" + str(exc))
 
     refs = payload.get("observations") if isinstance(payload, dict) and isinstance(payload.get("observations"), list) else []
     observations: list[dict[str, Any]] = []
@@ -106,6 +134,7 @@ def evaluate_external_holdout(path: str | Path, trusted_plan_sha256: str = "") -
     ids: dict[str, list[str]] = {key: [] for key in ("observation_id", "evidence_id", "source_lineage_id")}
     site_ids: list[str] = []
     measured: list[dict[str, Any]] = []
+    site_identity_pins: list[dict[str, Any]] = []
     for index, row in enumerate(observations):
         site = row.get("site") if isinstance(row.get("site"), dict) else {}
         metric = row.get("metric") if isinstance(row.get("metric"), dict) else {}
@@ -116,6 +145,26 @@ def evaluate_external_holdout(path: str | Path, trusted_plan_sha256: str = "") -
         required_site = all(_text(site.get(field)) for field in ("site_id", "organization_id", "collection_protocol_id"))
         if site.get("kind") != "experimental_site" or not required_site:
             errors.append(f"experimental_site_identity_incomplete:{index}")
+        elif trust_registry:
+            try:
+                pin = trusted_site_identity(
+                    trust_registry,
+                    site_id=site_id,
+                    organization_id=_text(site.get("organization_id")),
+                    collection_protocol_id=_text(site.get("collection_protocol_id")),
+                    evidence_sha256=_text(row.get("_evidence_sha256")),
+                )
+                site_identity_pins.append(
+                    {
+                        "site_id": pin.get("site_id"),
+                        "organization_id": pin.get("organization_id"),
+                        "anchor_id": pin.get("anchor_id"),
+                        "identity_uri": pin.get("identity_uri"),
+                        "evidence_sha256": _text(row.get("_evidence_sha256")),
+                    }
+                )
+            except TrustRegistryError as exc:
+                errors.append(f"site_identity_not_trust_pinned:{index}:{exc}")
         expected_sites = allowed_development if row.get("split") == "development" else allowed_holdout
         if site_id not in expected_sites:
             errors.append(f"site_not_preregistered:{index}")
@@ -186,7 +235,21 @@ def evaluate_external_holdout(path: str | Path, trusted_plan_sha256: str = "") -
         "claim_id": claim_id,
         "manifest": {"path": str(manifest_path), "sha256": _sha(manifest_path)},
         "external_plan": {"path": str(plan_path), "sha256": _sha(plan_path) if plan_path.is_file() else "", "registered_at": _text(plan.get("registered_at"))},
+        "external_plan_trust": {
+            "registry": str(Path(trust_registry_path).resolve()) if trust_registry_path else "",
+            "artifact_id": plan_trust_pin.get("artifact_id"),
+            "anchor_id": plan_trust_pin.get("anchor_id"),
+            "signature_sha256": plan_trust_pin.get("signature_sha256"),
+            "status": "accepted" if plan_trust_pin else ("not_checked" if not trust_registry_path else "rejected"),
+            "error": trust_registry_error,
+        },
         "evidence_artifacts": evidence_artifacts,
+        "site_identity_contract": {
+            "status": "accepted" if trust_registry and len(site_identity_pins) == len(observations) and not any(error.startswith("site_identity_not_trust_pinned") for error in errors) else ("not_checked" if not trust_registry_path else "rejected"),
+            "pins": site_identity_pins,
+            "required_count": len(observations),
+            "accepted_count": len(site_identity_pins),
+        },
         "policy": {"metric_name": metric_name, "minimum_site_support_rate": threshold, "preregistered_external_sites": sorted(allowed_holdout)},
         "site_results": site_results,
         "errors": list(dict.fromkeys(errors)),
@@ -207,9 +270,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate preregistered external holdout evidence")
     parser.add_argument("input", type=Path)
     parser.add_argument("--trusted-plan-sha256", required=True, help="Out-of-band plan digest supplied by the protocol owner")
+    parser.add_argument("--trust-registry", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    result = evaluate_external_holdout(args.input, args.trusted_plan_sha256)
+    result = evaluate_external_holdout(args.input, args.trusted_plan_sha256, args.trust_registry)
     rendered = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

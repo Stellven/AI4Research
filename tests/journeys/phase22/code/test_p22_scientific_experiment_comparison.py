@@ -29,6 +29,15 @@ def test_p22_scientific_experiment_comparison(
     )
     protocol_path = fixture / "protocol.json"
     dataset_path = fixture / "labeled_retrieval.jsonl"
+    trust_registry_path = (
+        repo_root
+        / "tests"
+        / "journeys"
+        / "phase22"
+        / "fixtures"
+        / "significant"
+        / "trust_registry.json"
+    )
     protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
     dataset_hash = _sha256(dataset_path)
     protocol_git_path = protocol_path.relative_to(repo_root).as_posix()
@@ -43,6 +52,7 @@ def test_p22_scientific_experiment_comparison(
         "--protocol-commit", protocol_commit,
         "--protocol-path", protocol_git_path,
         "--protocol-blob", protocol_blob,
+        "--trust-registry", str(trust_registry_path),
     ]
 
     reranker_path = repo_root / "harness" / "lib" / "retrieval_reranker.py"
@@ -213,6 +223,27 @@ def test_p22_scientific_experiment_comparison(
     embedded_attack_process = subprocess.run(embedded_attack_command, capture_output=True, text=True, timeout=30)
     embedded_attack = json.loads(embedded_attack_output.read_text(encoding="utf-8"))
 
+    untrusted_registry = output / "untrusted-registry.json"
+    trusted_payload = json.loads(trust_registry_path.read_text(encoding="utf-8"))
+    trusted_payload["trusted_artifacts"] = [
+        item
+        for item in trusted_payload["trusted_artifacts"]
+        if item.get("purpose") != "scientific_preregistration_protocol"
+    ]
+    untrusted_registry.write_text(json.dumps(trusted_payload, indent=2) + "\n", encoding="utf-8")
+    untrusted_protocol_output = output / "untrusted-protocol-rejection.json"
+    untrusted_protocol_command = [
+        phase22_python, str(comparator_path), "compare", "--results",
+        *[str(path) for path in result_paths], "--protocol-repo", str(repo_root),
+        "--protocol-commit", protocol_commit, "--protocol-path", protocol_git_path,
+        "--protocol-blob", protocol_blob, "--trust-registry", str(untrusted_registry),
+        "--output", str(untrusted_protocol_output),
+    ]
+    untrusted_protocol_process = subprocess.run(
+        untrusted_protocol_command, capture_output=True, text=True, timeout=30
+    )
+    untrusted_protocol = json.loads(untrusted_protocol_output.read_text(encoding="utf-8"))
+
     assertions = {
         "real_production_reranker_completed": reranker.returncode == 0
         and observations["status"] == "accepted",
@@ -236,6 +267,10 @@ def test_p22_scientific_experiment_comparison(
         ),
         "git_attested_protocol_controls_analysis": comparison["protocol_attestation"]["blob"] == protocol_blob
         and comparison["protocol_attestation"]["commit"] == protocol_commit,
+        "protocol_matches_out_of_band_trust_registry": comparison["protocol_attestation"]["trusted_artifact"]["anchor_id"]
+        == "phase22-protocol-registry"
+        and comparison["protocol_attestation"]["content_sha256"]
+        == "f6a4653fd6e26ce495f9fd0b06a915b37046da9c86da2fa890a0b17919b0fe11",
         "metric_100_attack_rejected": metric_attack_process.returncode == 2
         and metric_attack["status"] == "rejected"
         and "result_metric_disagrees_with_hashed_observation" in metric_attack["errors"][0],
@@ -246,6 +281,9 @@ def test_p22_scientific_experiment_comparison(
         "missing_pair_rejected_without_effect_claim": rejection_process.returncode == 2
         and rejection["status"] == "rejected"
         and "cherry_picked_or_missing_pairs" in rejection["errors"][0],
+        "untrusted_protocol_registry_rejected": untrusted_protocol_process.returncode == 2
+        and untrusted_protocol["status"] == "rejected"
+        and "protocol_not_matched_by_trust_registry" in untrusted_protocol["errors"][0],
     }
     evidence = {
         "schema_version": "phase22.scientific_experiment_comparison_journey.v1",
@@ -292,6 +330,8 @@ def test_p22_scientific_experiment_comparison(
             "negative_rejection": str(rejected_path),
             "metric_attack_rejection": str(metric_attack_output),
             "embedded_plan_attack_comparison": str(embedded_attack_output),
+            "untrusted_protocol_rejection": str(untrusted_protocol_output),
+            "trust_registry": str(trust_registry_path),
         },
         "assertions": assertions,
         "status": "PASS_WITH_KNOWN_LIMITATIONS"
