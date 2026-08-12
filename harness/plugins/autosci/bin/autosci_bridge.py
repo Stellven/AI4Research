@@ -10271,17 +10271,22 @@ def _action_run_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
             semantic=semantic,
             result_collected=True,
         )
-        evidence.setdefault("artifacts", []).append(
-            _write_experiment_poc_handoff_package(
-                envelope,
-                experiment_id=experiment_id,
-                plan=plan,
-                evidence=evidence,
-                contract=contract,
-                semantic=semantic,
-                executor_result=executor_result,
+        # The consolidated POC handoff package proves a product-executed run,
+        # including its execution lease.  A caller may instead supply already
+        # completed runtime evidence; that path is valid, but it has no local
+        # executor lease and must not fabricate one merely to build a package.
+        if executor_result.get("executed") is True:
+            evidence.setdefault("artifacts", []).append(
+                _write_experiment_poc_handoff_package(
+                    envelope,
+                    experiment_id=experiment_id,
+                    plan=plan,
+                    evidence=evidence,
+                    contract=contract,
+                    semantic=semantic,
+                    executor_result=executor_result,
+                )
             )
-        )
         return _attach_policy_decision(evidence, policy_decision)
 
     raw["experiment_id"] = str(raw.get("experiment_id") or experiment_id)
