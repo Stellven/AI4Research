@@ -3254,3 +3254,24 @@ Date: 2026-08-12
   `LIMITATION_CLOSED_VERIFIED`. This covers the exercised coding and local
   experiment POCs; other domain-specific POC types require their own smoke
   semantics and must not be inferred.
+
+## Significant limitation reduction — P22-J03 (7 issues; 1 closed)
+
+Date: 2026-08-12
+
+- Commit `6a00eacc4` extends the production platform benchmark with explicit
+  repetitions, separate evidence directories, `perf_counter` timing,
+  throughput, a validated baseline comparison, and an independently verified
+  SHA-256 artifact manifest.
+- Accepted post-commit run `p22j03-20260812T053418Z-29420` is `PASS` with
+  15/15 assertions: one baseline execution, two current repetitions, eight
+  scenario comparisons, original manifest verify exit 0, deliberate tamper
+  rejection exit 2, and restored verify exit 0.
+- `P22-REPAIR-041` is `LIMITATION_CLOSED_VERIFIED`: repeated isolated protocol
+  runs, command timeouts, and durable JSON/Markdown/evidence/manifest assets
+  are now exercised directly.
+- `P22-REPAIR-040`, `043`, `044`, `068`, `111`, and `117` are
+  `LIMITATION_PARTIALLY_REDUCED`, not closed. Historical-version and POC
+  comparisons, CPU/memory, billable-provider cost, workload scalability, new
+  dataset authoring, and task-specific compile/diff evidence remain outside
+  this journey.

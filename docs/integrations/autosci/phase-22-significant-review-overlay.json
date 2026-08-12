@@ -129,8 +129,37 @@
         "P22-REPAIR-036",
         "P22-REPAIR-038"
       ]
+    },
+    {
+      "journey_id": "P22-J03",
+      "shared_recorded_limitation": "The benchmark lacked repeated samples, baseline comparison, detailed timing/throughput, and tamper-evident packaging.",
+      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "issue_count": 7,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j03-20260812T053418Z-29420/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {"passed": 15, "failed": 0},
+      "decision": "The production benchmark now runs an explicit baseline plus two isolated current repetitions, records per-scenario wall-time samples and aggregate throughput, packages eight current-versus-baseline comparisons, and emits a SHA-256 manifest over baseline/current reports and command evidence. The independent verifier accepted original/restored bytes and rejected a deliberately tampered Markdown report.",
+      "closed_issue_ids": ["P22-REPAIR-041"],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-040",
+        "P22-REPAIR-043",
+        "P22-REPAIR-044",
+        "P22-REPAIR-068",
+        "P22-REPAIR-111",
+        "P22-REPAIR-117"
+      ],
+      "remaining_boundary": "P22-REPAIR-041 is closed because repeated isolated protocol execution, resource timeouts, and durable assets are now directly verified. The other six remain open: historical-version and POC comparisons, CPU/memory consumption, billable-provider cost, workload scalability, newly authored datasets, and task-specific build compile/diff evidence were not exercised.",
+      "issue_ids": [
+        "P22-REPAIR-040",
+        "P22-REPAIR-041",
+        "P22-REPAIR-043",
+        "P22-REPAIR-044",
+        "P22-REPAIR-068",
+        "P22-REPAIR-111",
+        "P22-REPAIR-117"
+      ]
     }
   ],
-  "closed_shared_limitation_issue_count": 32,
-  "remaining_significant_issues": 40
+  "closed_shared_limitation_issue_count": 33,
+  "remaining_significant_issues": 39
 }
