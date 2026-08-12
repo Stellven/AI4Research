@@ -87,7 +87,8 @@ PER_L2_SUCCESS_CRITERIA: dict[str, str] = {
         "The selected model/runtime/provider is visible in a product artifact or command record for the task."
     ),
     "Code Graph Management": (
-        "A CodeGraph or code-evidence artifact is generated or updated for the J17 workspace."
+        "The production CodeGraph entrypoint constructs, queries, and validates a durable JSON graph for the J17 "
+        "workspace with source hashes and real file/module/API/function/test/runtime relations."
     ),
     "Workflow Graph Management": (
         "A WorkflowGraph, TaskGraph workflow state, or equivalent DAG artifact is generated or updated."
@@ -613,6 +614,8 @@ def _collect_paths(harness_dir: Path, sprint_id: str) -> dict[str, Path]:
         "task_graph": sprints_dir / f"{sprint_id}.task_graph.json",
         "workflow_graph": sprints_dir / f"{sprint_id}.workflow_graph.json",
         "code_graph": sprints_dir / f"{sprint_id}.code_graph.json",
+        "code_graph_validation": sprints_dir / f"{sprint_id}.code_graph.validation.json",
+        "code_graph_query": sprints_dir / f"{sprint_id}.code_graph.query.json",
         "handoff": sprints_dir / f"{sprint_id}.handoff.md",
         "eval": sprints_dir / f"{sprint_id}.eval.md",
     }
@@ -674,6 +677,20 @@ def _write_static_probe(rec: J17Recorder, harness_dir: Path, sprint_id: str, pro
         *(harness_dir / "sprints").glob(f"{sprint_id}*code*graph*.json"),
         *(harness_dir / "artifacts").glob(f"**/*{sprint_id}*code*graph*"),
     ]
+    code_graph = _read_json(paths["code_graph"])
+    code_graph_validation = _read_json(paths["code_graph_validation"])
+    code_graph_query = _read_json(paths["code_graph_query"])
+    code_graph_node_kinds = {str(node.get("kind")) for node in code_graph.get("nodes", [])}
+    code_graph_relation_types = {str(edge.get("type")) for edge in code_graph.get("edges", [])}
+    required_code_graph_kinds = {"file", "module", "api", "function", "test", "runtime"}
+    required_code_graph_relations = {
+        "file_defines_module",
+        "module_declares_api",
+        "module_declares_function",
+        "module_imports_module",
+        "test_targets_module",
+        "runtime_executes_module",
+    }
     workflow_graph_candidates = [
         paths["workflow_graph"],
         paths["task_graph"],
@@ -689,6 +706,11 @@ def _write_static_probe(rec: J17Recorder, harness_dir: Path, sprint_id: str, pro
         "signals": {
             "task_graph_exists": paths["task_graph"].exists(),
             "code_graph_exists": any(path.exists() for path in code_graph_candidates),
+            "code_graph_valid": code_graph_validation.get("valid") is True,
+            "code_graph_query_matched": int(code_graph_query.get("match_count") or 0) > 0,
+            "code_graph_has_required_node_kinds": required_code_graph_kinds <= code_graph_node_kinds,
+            "code_graph_has_required_relations": required_code_graph_relations <= code_graph_relation_types,
+            "code_graph_hash_present": len(str(code_graph.get("graph_sha256") or "")) == 64,
             "workflow_graph_exists": any(path.exists() for path in workflow_graph_candidates),
             "durable_events_exist": paths["events"].exists() or any((harness_dir / "run").glob("*queue*.json*")),
             "contains_capsule_terms": _contains_any(bundle, "capsule", "capability"),
@@ -776,10 +798,20 @@ def _record_l2(rec: J17Recorder, probe_path: Path) -> None:
             [],
         ),
         "Code Graph Management": (
-            signals.get("code_graph_exists") or _contains_any(json.dumps(probe), "code graph", "code_graph"),
-            "CodeGraph or code-evidence artifact exists or is referenced for the J17 workspace.",
+            all(
+                signals.get(name)
+                for name in (
+                    "code_graph_exists",
+                    "code_graph_valid",
+                    "code_graph_query_matched",
+                    "code_graph_has_required_node_kinds",
+                    "code_graph_has_required_relations",
+                    "code_graph_hash_present",
+                )
+            ),
+            "Production CodeGraph build/query/validate evidence covers real source, test, and runtime relations with hashes.",
             paths.get("code_graph", probe_path),
-            [] if signals.get("code_graph_exists") else ["CodeGraph evidence may be a reference rather than a standalone file."],
+            [],
         ),
         "Workflow Graph Management": (
             signals.get("workflow_graph_exists") or signals.get("task_graph_exists"),
@@ -869,7 +901,7 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
     bash_error = bash_blocker(repo_root)
     if bash_error is not None:
         blockers.append(bash_error)
-    for executable in ("git", "tmux"):
+    for executable in ("git", "tmux", "node"):
         if not command_exists(executable):
             blockers.append(f"{executable} is not available on PATH.")
     if selected_runtime not in {"codex", "claude"}:
@@ -884,6 +916,8 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
         rec.run("preflight-git-version", ["git", "--version"], env=env, timeout=30)
     if command_exists("tmux"):
         rec.run("preflight-tmux-version", ["tmux", "-V"], env=env, timeout=30)
+    if command_exists("node"):
+        rec.run("preflight-node-version", ["node", "--version"], env=env, timeout=30)
     if command_exists(selected_runtime):
         rec.run("preflight-runtime-version", [selected_runtime, "--version"], env=env, timeout=30)
     _write_json(
@@ -1017,6 +1051,83 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
                 "The resumed sprint did not reach reviewing, so the test refused to submit a false PASS verdict.",
             )
 
+        code_graph_entrypoint = repo_root / "core" / "smi" / "code-graph.mjs"
+        code_graph_path = sprint_paths["code_graph"]
+        graph_build = rec.run(
+            "code-graph-build",
+            [
+                "node",
+                str(code_graph_entrypoint),
+                "build",
+                "--root",
+                str(project),
+                "--out",
+                str(code_graph_path),
+                "--runtime-command",
+                shlex.join(_workspace_pytest_command(python_cmd)),
+            ],
+            cwd=project,
+            env=env,
+            timeout=120,
+        )
+        rec.add_assertion("standalone_code_graph_constructed", graph_build.returncode == 0, graph_build.returncode)
+        graph_query = rec.run(
+            "code-graph-query",
+            [
+                "node",
+                str(code_graph_entrypoint),
+                "query",
+                "--graph",
+                str(code_graph_path),
+                "--kind",
+                "api",
+                "--out",
+                str(sprint_paths["code_graph_query"]),
+            ],
+            cwd=project,
+            env=env,
+            timeout=120,
+        )
+        query_payload = _read_json(sprint_paths["code_graph_query"])
+        rec.add_assertion(
+            "standalone_code_graph_queried",
+            graph_query.returncode == 0 and int(query_payload.get("match_count") or 0) > 0,
+            query_payload,
+        )
+        graph_validate_command = [
+            "node",
+            str(code_graph_entrypoint),
+            "validate",
+            "--graph",
+            str(code_graph_path),
+            "--root",
+            str(project),
+            "--out",
+            str(sprint_paths["code_graph_validation"]),
+        ]
+        for relation in (
+            "file_defines_module",
+            "module_declares_api",
+            "module_declares_function",
+            "module_imports_module",
+            "test_targets_module",
+            "runtime_executes_module",
+        ):
+            graph_validate_command.extend(["--require-relation", relation])
+        graph_validation = rec.run(
+            "code-graph-validate",
+            graph_validate_command,
+            cwd=project,
+            env=env,
+            timeout=120,
+        )
+        validation_payload = _read_json(sprint_paths["code_graph_validation"])
+        rec.add_assertion(
+            "standalone_code_graph_validated",
+            graph_validation.returncode == 0 and validation_payload.get("valid") is True,
+            validation_payload,
+        )
+
         probe_path = _write_static_probe(rec, harness_dir, sprint_id, project)
         rec.add_artifact(probe_path, "j17-artifact-probe", required=True)
         _record_l2(rec, probe_path)
@@ -1039,6 +1150,9 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
                 "resume_wake_executed_from_user_tmux",
                 "resumed_sprint_reached_reviewing",
                 "workspace_tests_pass_after_product_work",
+                "standalone_code_graph_constructed",
+                "standalone_code_graph_queried",
+                "standalone_code_graph_validated",
             }
         }
         if not all(required_assertions.values()):
