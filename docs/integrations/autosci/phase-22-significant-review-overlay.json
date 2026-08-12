@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "371273d184e239c36aa23a593884458875a2a61f",
+  "reviewed_code_head": "a9436d121",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -89,16 +89,26 @@
     {
       "journey_id": "P22-J18",
       "shared_recorded_limitation": "The feature worked in local SolarUbuntu/WSL2, but other Linux setups and multi-session use were not tested.",
-      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
       "issue_count": 3,
-      "accepted_evidence": "outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T052021Z-2442749/journey-result.json",
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T071918Z-2703346/journey-result.json",
+        "outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T072027Z-461/journey-result.json"
+      ],
       "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
       "assertions": {
-        "passed": 10,
+        "passed_per_run": 11,
         "failed": 0
       },
-      "decision": "The sandbox-owned Linux lifecycle now passes install, doctor, status, status-server health/runtime/status/settings/dashboard, TMUX session observation, and uninstall. A real ownership bug for harness paths containing spaces was fixed. Five status-server scoping regressions prove that one harness does not adopt or terminate a foreign healthy listener and still cleans up its own server.",
-      "remaining_boundary": "Only SolarUbuntu/WSL2 was exercised. Other distributions, package managers, remote hosts, and a broad concurrent interactive-session matrix remain untested, so these issues are not counted as closed.",
+      "decision": "After the SolarUbuntu run, the same production install/doctor/status/status-server/TMUX/uninstall lifecycle passed sequentially in two additional isolated WSL root filesystems named Ubuntu and Ubuntu-24.04. Each run created two concurrent harness-owned TMUX sessions on distinct ports, proved cross-stop/uninstall isolation, and removed both sandboxes and sessions. Linux CLI and the exercised local TMUX lifecycle are now closed for the supported WSL/Ubuntu path.",
+      "closed_issue_ids": [
+        "P22-REPAIR-127",
+        "P22-REPAIR-138"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-120"
+      ],
+      "remaining_boundary": "The validated roots are independent WSL installations but all are Ubuntu 24.04 family. Other distribution families, package managers and native/remote hosts remain untested. Workflow & Platform Status Visibility also retains the narrower remote-host, production-authentication and broad workflow-state boundary, so P22-REPAIR-120 stays open.",
       "followup_evidence": "outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T063759Z-2613229/journey-result.json",
       "followup_decision": "The current product now passes two concurrent installed-harness status-server sessions on one real WSL tmux server. The sessions use distinct ports and harness paths; stopping and uninstalling the primary leaves the secondary healthy, and both then cleanly uninstall. A real tmux inherited-environment ownership defect was fixed by explicitly binding HOME, SOLAR_HOME, HARNESS_DIR, and SOLAR_HARNESS_DIR in each pane command.",
       "issue_ids": [
@@ -435,6 +445,6 @@
       ]
     }
   ],
-  "closed_shared_limitation_issue_count": 55,
-  "remaining_significant_issues": 17
+  "closed_shared_limitation_issue_count": 57,
+  "remaining_significant_issues": 15
 }

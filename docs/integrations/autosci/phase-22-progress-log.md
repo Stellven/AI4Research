@@ -3459,3 +3459,26 @@ Date: 2026-08-12
 - `P22-REPAIR-054` remains open. Distribution is still `local_only`, approval
   is `not_requested`, and no external recipient acceptance or long-term
   retention/revocation lifecycle was performed.
+
+## Significant repair closure — P22-J18 multi-root Linux/TMUX evidence (2 closed, 1 reduced)
+
+Date: 2026-08-12
+
+- The journey test now records the WSL distribution identity, accepts a
+  truthful structured `degraded` doctor/status result when optional Python/LLM
+  dependencies were deliberately skipped, and writes `FAIL` whenever any
+  required assertion fails. Earlier concurrent cross-distribution attempts
+  that collided through shared WSL networking or installation paths remain
+  retained as failed attempts and were not accepted.
+- Sequential accepted runs
+  `p22-j18-real-linux-status-20260812T071918Z-2703346` (`Ubuntu`) and
+  `p22-j18-real-linux-status-20260812T072027Z-461` (`Ubuntu-24.04`) each passed
+  11/11 assertions. Both performed real install, doctor/status inspection,
+  status HTTP checks, two concurrent harness-owned TMUX sessions on distinct
+  ports, cross-stop/uninstall isolation, and complete sandbox/session cleanup.
+- Together with the earlier SolarUbuntu evidence, `P22-REPAIR-127` (Linux CLI)
+  and `P22-REPAIR-138` (TMUX) are `FIXED_VERIFIED` for the supported local
+  WSL/Ubuntu path. `P22-REPAIR-120` remains open because remote hosts,
+  production authentication, and the broad workflow-state matrix were not
+  exercised. Other Linux distribution families and package managers also
+  remain explicit non-inferred boundaries.
