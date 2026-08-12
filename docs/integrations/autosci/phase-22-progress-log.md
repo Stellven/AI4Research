@@ -3297,3 +3297,24 @@ Date: 2026-08-12
 - `P22-REPAIR-015`, `016`, `017`, `019`, and `022` are classified
   `LIMITATION_CLOSED_VERIFIED`. Exhaustive coverage, full text for every paper,
   and unexercised provider variants are not inferred.
+
+## Significant evidence-review closure — P22-J08 + P22-J22 (4 issues; 2 closed)
+
+Date: 2026-08-12
+
+- Current-baseline J08 run `p22j08-20260812T060017Z-28132` remains `PASS`,
+  6/6 assertions. Post-commit J22 run `p22-j22-1786514742` at `ec5d4c1d2`
+  is `PASS`, 9/9 assertions, with complete artifact durability.
+- J22 now invokes the production `exp-eval` route over five semantically
+  different cases: supported, partially supported, refuting, inconclusive,
+  and scope overreach. The outputs retained their distinct verdicts instead
+  of collapsing blocker and residual-risk categories.
+- The journey now writes the standard top-level assertion contract while
+  retaining its prior Level-2 assertions. All ten generated product evidence
+  files are non-empty, copied under the durable run directory, and recorded
+  with SHA-256.
+- `P22-REPAIR-048` and `049` are `LIMITATION_CLOSED_VERIFIED` for the exercised
+  claim/verdict taxonomy. `P22-REPAIR-045` and `047` are only
+  `LIMITATION_PARTIALLY_REDUCED`: different real review-provider families,
+  broader scientific domains, and longitudinal/generalization evidence were
+  not exercised and remain explicit limitations.

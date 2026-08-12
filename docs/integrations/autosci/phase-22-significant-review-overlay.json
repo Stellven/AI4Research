@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "fe97cb9fe64bbdd4ea24e2069bd97d6406b47536",
+  "reviewed_code_head": "ec5d4c1d284d27185aa41a090df1c0078c4d7981",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -176,8 +176,25 @@
         "P22-REPAIR-019",
         "P22-REPAIR-022"
       ]
+    },
+    {
+      "journey_id": "P22-J08 + P22-J22",
+      "shared_recorded_limitation": "Evidence review covered only supported and overreach examples, used older non-standard journey fields, and did not prove a broader verdict/risk taxonomy.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 4,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22j08-20260812T060017Z-28132/journey-result.json",
+        "outputs/phase22-real-journeys/p22-j22-1786514742/journey-result.json"
+      ],
+      "journey_status": {"P22-J08": "PASS", "P22-J22": "PASS"},
+      "assertions": {"P22-J08": {"passed": 6, "failed": 0}, "P22-J22": {"passed": 9, "failed": 0}},
+      "decision": "The production check/review/exp-eval/refine routes now distinguish supported, partially supported, refuting, inconclusive, and scope-overreach outcomes. J22 also emits the standard assertion contract and independently verifies all ten generated evidence artifacts as non-empty, SHA-256-addressed durable copies. Claim/acceptance comparison and verdict/blocker/residual-risk classification are closed for the exercised taxonomy.",
+      "closed_issue_ids": ["P22-REPAIR-048", "P22-REPAIR-049"],
+      "partially_reduced_issue_ids": ["P22-REPAIR-045", "P22-REPAIR-047"],
+      "remaining_boundary": "Evidence assembly and external-validity review still use bounded local evidence plus the configured review route. Independent real-provider diversity, broader scientific domains, and longitudinal/generalization evidence were not exercised, so P22-REPAIR-045 and 047 remain open.",
+      "issue_ids": ["P22-REPAIR-045", "P22-REPAIR-047", "P22-REPAIR-048", "P22-REPAIR-049"]
     }
   ],
-  "closed_shared_limitation_issue_count": 38,
-  "remaining_significant_issues": 34
+  "closed_shared_limitation_issue_count": 40,
+  "remaining_significant_issues": 32
 }
