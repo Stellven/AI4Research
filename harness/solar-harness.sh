@@ -4317,8 +4317,14 @@ print(json.dumps({
         [[ -f "$_routing_py" ]] || { err "routing_bandit not found: $_routing_py"; exit 1; }
         python3 "$_routing_py" evaluate "$@"
         ;;
+      reranker-train)
+        shift || true
+        _reranker_py="$HARNESS_DIR/lib/retrieval_reranker.py"
+        [[ -f "$_reranker_py" ]] || { err "retrieval_reranker not found: $_reranker_py"; exit 1; }
+        python3 "$_reranker_py" train "$@"
+        ;;
       *)
-        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run|curriculum-evaluate|routing-evaluate] [--json]"
+        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run|curriculum-evaluate|routing-evaluate|reranker-train] [--json]"
         exit 2
         ;;
     esac
