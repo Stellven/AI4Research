@@ -1,14 +1,17 @@
 {
-  "schema_version": "phase22.scientific_comparison_protocol.v1",
+  "schema": "solar.scientific_comparison_protocol.v1",
   "study_id": "p22-retrieval-ranking-poc",
   "question": "Does the trained linear reranker improve held-out NDCG@1 over source base scores?",
   "analysis_plan": "paired_randomization_test_v1",
+  "baseline_arm": "base_score",
+  "variant_arm": "linear_reranker",
   "primary_metric": "ndcg_at_1",
   "metric_unit": "score",
   "higher_is_better": true,
   "alpha": 0.05,
   "minimum_pairs": 6,
   "independence_unit": "held_out_query",
+  "dataset_sha256": "0f9c98a1b812e564ec97bfc9345c99fd982f87588b79f8a7651c8fb531fa5637",
   "expected_pair_ids": ["query-01", "query-02", "query-03", "query-04", "query-05", "query-06", "query-07", "query-08"],
   "limitations": ["This protocol covers one hash-bound synthetic retrieval POC, not other scientific domains."]
 }
