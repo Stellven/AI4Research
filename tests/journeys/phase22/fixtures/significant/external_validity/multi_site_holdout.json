@@ -1,9 +1,9 @@
 {
   "schema": "solar.external_validity_manifest.v2",
-  "external_plan": {"path": "external_plan.json", "sha256": "1254aa136cabca6867d36a420337d5efbdd3f7e83b0e738c65c241e821d12c72"},
+  "external_plan": {"path": "external_plan.json", "sha256": "8c977513343d5e6ed9213a743abcdf7f8aa476fde54660d5308a621509337ae9"},
   "observations": [
-    {"path": "evidence/development-a.json", "sha256": "2a97e4bc4b7316ac8a2eb28281aa25399552a4600653a739dd4609cf88f80be1"},
-    {"path": "evidence/holdout-b.json", "sha256": "51fb58ab4c4c52a2028c06745daaa37543afe46c99f90085d88cb06af8ac798a"},
-    {"path": "evidence/holdout-c.json", "sha256": "adbb6d266dd0d4c760b7f4fa79ec1002ffb4d4f1a06c3a1f976a5bbb360b2ca1"}
+    {"path": "evidence/development-a.json", "sha256": "f160c187e01f77f0415e64584510a20fd1b670b7d9724ccef7bbac98b9ece3e5"},
+    {"path": "evidence/holdout-b.json", "sha256": "3296a76b93be4a6533c47ee8854535b2c7bae73e5fda416f9ead67cbefd95ace"},
+    {"path": "evidence/holdout-c.json", "sha256": "5a21c84b83143641e88b2c8618a552cb8bbb01d1d7a8bfbeead6729d7a630951"}
   ]
 }

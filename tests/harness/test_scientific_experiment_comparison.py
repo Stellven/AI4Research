@@ -15,11 +15,14 @@ PROTOCOL_COMMIT = "afb253f0f41518737be3338f1ba431968ee10016"
 PROTOCOL_BLOB = "bda32ee57ad484672782188fb64b4f948ad52e78"
 PROTOCOL_PATH = "tests/journeys/phase22/fixtures/significant/scientific_comparison/protocol.json"
 DATASET = REPO / "tests/journeys/phase22/fixtures/significant/scientific_comparison/labeled_retrieval.jsonl"
+TRUST_REGISTRY = REPO / "tests/journeys/phase22/fixtures/significant/trust_registry.json"
 ATTESTATION = {
     "protocol_repo": REPO,
     "protocol_commit": PROTOCOL_COMMIT,
     "protocol_path": PROTOCOL_PATH,
     "protocol_blob": PROTOCOL_BLOB,
+    "trust_registry": TRUST_REGISTRY,
+    "trust_registry_sha256": hashlib.sha256(TRUST_REGISTRY.read_bytes()).hexdigest(),
 }
 
 

@@ -111,7 +111,7 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 def _protocol(
     repo: Path, commit: str, git_path: str, expected_blob: str,
-    trust_registry: Path,
+    trust_registry: Path, trust_registry_sha256: str,
 ) -> tuple[dict[str, Any], dict[str, Any], datetime]:
     _need(repo.resolve().is_dir(), "protocol_repo_missing")
     _need(bool(commit) and bool(git_path) and _is_git_oid(expected_blob), "protocol_attestation_arguments")
@@ -159,7 +159,7 @@ def _protocol(
     commit_time = datetime.fromisoformat(time_proc.stdout.strip())
     content_sha256 = hashlib.sha256(content_proc.stdout.encode()).hexdigest()
     try:
-        registry = load_registry(trust_registry)
+        registry = load_registry(trust_registry, trust_registry_sha256)
         trust_pin = trusted_artifact(
             registry,
             purpose="scientific_preregistration_protocol",
@@ -175,6 +175,7 @@ def _protocol(
         "content_sha256": content_sha256,
         "ancestor_of_head": True,
         "trust_registry": str(trust_registry.resolve()),
+        "trust_registry_sha256": trust_registry_sha256.lower(),
         "trusted_artifact": {
             "artifact_id": trust_pin.get("artifact_id"),
             "anchor_id": trust_pin.get("anchor_id"),
@@ -283,11 +284,12 @@ def _randomization_p(differences: list[float]) -> tuple[float, int, bool]:
 def compare(
     paths: list[Path], *, protocol_repo: Path, protocol_commit: str,
     protocol_path: str, protocol_blob: str, trust_registry: Path,
+    trust_registry_sha256: str,
 ) -> dict[str, Any]:
     _need(len(paths) >= 2, "at_least_two_results_required")
     protocol, protocol_attestation, commit_time = _protocol(
         protocol_repo, protocol_commit, protocol_path, protocol_blob,
-        trust_registry,
+        trust_registry, trust_registry_sha256,
     )
     resolved = [path.resolve() for path in paths]
     _need(len(resolved) == len(set(resolved)), "duplicate_result_path")
@@ -392,6 +394,7 @@ def main() -> int:
     parser.add_argument("--protocol-path", required=True)
     parser.add_argument("--protocol-blob", required=True)
     parser.add_argument("--trust-registry", required=True, type=Path)
+    parser.add_argument("--trust-registry-sha256", required=True)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     try:
@@ -402,6 +405,7 @@ def main() -> int:
             protocol_path=args.protocol_path,
             protocol_blob=args.protocol_blob,
             trust_registry=args.trust_registry,
+            trust_registry_sha256=args.trust_registry_sha256,
         ), 0
     except (InvalidComparison, OSError, ValueError) as exc:
         report, exit_code = {

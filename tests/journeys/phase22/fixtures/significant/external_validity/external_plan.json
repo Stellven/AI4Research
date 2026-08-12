@@ -5,6 +5,6 @@
   "minimum_site_support_rate": 0.75,
   "registered_at": "2026-08-01T00:00:00Z",
   "authority": {"authority_id": "protocol-owner-01", "role": "independent_protocol_owner"},
-  "development_site_ids": ["development-lab-a"],
-  "external_holdout_site_ids": ["university-lab-b", "hospital-lab-c"]
+  "development_site_ids": ["fixture-development-lab-a"],
+  "external_holdout_site_ids": ["fixture-university-lab-b", "fixture-hospital-lab-c"]
 }
