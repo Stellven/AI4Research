@@ -3231,3 +3231,26 @@ Date: 2026-08-12
   `LIMITATION_PARTIALLY_REDUCED`, not closed. SolarUbuntu/WSL2 was exercised;
   other distributions/package managers, remote hosts, and a broad concurrent
   interactive-session matrix remain untested.
+
+## Significant shared-limitation closure — P22-J02 + P22-J07 (2 issues)
+
+Date: 2026-08-12
+
+- Accepted J02 run `p22j02-20260812T050401Z-2369214` remains `PASS` with
+  43/43 assertions and proves the implementation-worker repair, scoped patch,
+  target tests, artifact handoff, and canonical evaluator decision.
+- The first current-baseline J07 rerun truthfully failed because the product
+  attempted to construct a lease-bound POC handoff package for supplied
+  runtime evidence that had no local executor lease. Commit `0b267561d` limits
+  that package to product-executed runs; it does not fabricate a lease for an
+  evidence-only path.
+- Post-commit J07 run `p22j07-20260812T052538Z-32040` at `0b267561d` is
+  `PASS`, 17/17 assertions. It proves a product-generated runner, dataset,
+  exact argv allowlist, durable replay, a 2548-byte structured result,
+  `exp-status` terminal state `completed`, and `exp-eval` verdict `supported`.
+- The product-executed J21 selector also passed after the repair, preserving
+  its real execution-lease and consolidated-handoff behavior.
+- `P22-REPAIR-036` and `P22-REPAIR-038` are classified
+  `LIMITATION_CLOSED_VERIFIED`. This covers the exercised coding and local
+  experiment POCs; other domain-specific POC types require their own smoke
+  semantics and must not be inferred.

@@ -104,8 +104,33 @@
         "P22-REPAIR-127",
         "P22-REPAIR-138"
       ]
+    },
+    {
+      "journey_id": "P22-J02 + P22-J07",
+      "shared_recorded_limitation": "The experiment ran but ended without a clear final state; the earlier workflow also did not create the older eval.md evidence file.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 2,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22j02-20260812T050401Z-2369214/journey-result.json",
+        "outputs/phase22-real-journeys/p22j07-20260812T052538Z-32040/journey-result.json"
+      ],
+      "journey_status": {
+        "P22-J02": "PASS",
+        "P22-J07": "PASS"
+      },
+      "assertions": {
+        "P22-J02": {"passed": 43, "failed": 0},
+        "P22-J07": {"passed": 17, "failed": 0}
+      },
+      "decision": "J02 now proves the implementation-worker repair, scoped source patch, target tests, artifact handoff, and canonical evaluator decision. J07 independently proves a verification-ready product-generated runner, dataset, exact argv allowlist, replayable result, non-empty structured output, and an explicit completed lifecycle state followed by a supported evaluation verdict. The old missing-eval.md and unclear-final-state limitation is closed.",
+      "repair": "A current-baseline J07 rerun exposed a real regression: the product tried to build a lease-bound handoff package for an already-completed external runtime-evidence path that had no local execution lease. Commit 0b267561d restricts that package to product-executed runs; the evidence-only J07 path and the product-executed J21 path both pass after the repair.",
+      "remaining_boundary": "The result supports the exercised coding POC and deterministic local experiment POC. Other domain-specific POC types still require their own explicit smoke semantics and evidence; completed is a lifecycle terminal state and does not imply every scientific outcome is positive.",
+      "issue_ids": [
+        "P22-REPAIR-036",
+        "P22-REPAIR-038"
+      ]
     }
   ],
-  "closed_shared_limitation_issue_count": 30,
-  "remaining_significant_issues": 42
+  "closed_shared_limitation_issue_count": 32,
+  "remaining_significant_issues": 40
 }
