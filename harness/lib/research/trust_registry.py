@@ -65,20 +65,12 @@ def _instant(value: Any) -> bool:
     return parsed.tzinfo is not None
 
 
-def load_registry(
-    path: str | Path,
-    trusted_registry_sha256: str = "",
-    *,
-    approved_registry_sha256s: set[str] | None = None,
-) -> dict[str, Any]:
+def load_registry(path: str | Path, trusted_registry_sha256: str = "") -> dict[str, Any]:
     registry_path = Path(path)
     expected = _sha(trusted_registry_sha256)
     if not expected:
         raise TrustRegistryError("trust_registry_sha256_required")
-    approved = APPROVED_REGISTRY_SHA256S if approved_registry_sha256s is None else {
-        _sha(item) for item in approved_registry_sha256s
-    }
-    if expected not in approved:
+    if expected not in APPROVED_REGISTRY_SHA256S:
         raise TrustRegistryError("trust_registry_sha256_not_policy_approved")
     try:
         raw = registry_path.read_bytes()
