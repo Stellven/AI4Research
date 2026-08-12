@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 from evidence import JourneyRecorder
@@ -20,17 +21,38 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
     baseline_json = rec.run_dir / "platform-workflow-baseline.json"
     baseline_md = rec.run_dir / "platform-workflow-baseline.md"
     baseline_evidence_dir = rec.run_dir / "platform-workflow-baseline-evidence"
+    historical_runner = rec.run_dir / "historical-platform-workflow-benchmark.py"
+    baseline_provenance = rec.run_dir / "platform-workflow-baseline.provenance.json"
     manifest = rec.run_dir / "platform-workflow-artifact-manifest.json"
     benchmark_cli = repo_root / "harness" / "tools" / "platform_workflow_benchmark.py"
+    historical_commit = "6a00eacc4"
+    historical_source = subprocess.run(
+        ["git", "show", f"{historical_commit}:harness/tools/platform_workflow_benchmark.py"],
+        cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    assert historical_source.returncode == 0, historical_source.stderr.decode("utf-8", errors="replace")
+    historical_runner.write_bytes(historical_source.stdout)
     baseline_proc = rec.run(
         "platform-benchmark-baseline",
         [
-            python_executable(repo_root), str(benchmark_cli), "--json", "--threshold", "80",
+            python_executable(repo_root), str(historical_runner), "--json", "--threshold", "80",
             "--out-json", str(baseline_json), "--out-md", str(baseline_md),
             "--evidence-dir", str(baseline_evidence_dir), "--repetitions", "1",
         ],
         env=env,
         timeout=240,
+    )
+    attestation_proc = rec.run(
+        "platform-benchmark-baseline-attestation",
+        [
+            python_executable(repo_root), str(benchmark_cli),
+            "--attest-baseline-json", str(baseline_json),
+            "--attestation-out", str(baseline_provenance),
+            "--baseline-source-commit", historical_commit,
+            "--baseline-runner", str(historical_runner),
+        ],
+        env=env,
+        timeout=30,
     )
     proc = rec.run(
         "platform-benchmark",
@@ -50,6 +72,8 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
             "2",
             "--baseline-json",
             str(baseline_json),
+            "--baseline-provenance",
+            str(baseline_provenance),
             "--manifest",
             str(manifest),
         ],
@@ -60,6 +84,8 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
     rec.add_artifact(out_md, "benchmark_markdown")
     rec.add_artifact(evidence_dir / "benchmark.json", "benchmark_evidence_index")
     rec.add_artifact(baseline_json, "benchmark_baseline_json")
+    rec.add_artifact(baseline_provenance, "benchmark_baseline_provenance")
+    rec.add_artifact(historical_runner, "benchmark_historical_runner")
     rec.add_artifact(manifest, "benchmark_artifact_manifest")
     verify_proc = rec.run(
         "platform-benchmark-manifest-verify",
@@ -185,7 +211,11 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
         rec.add_assertion(
             "benchmark_baseline_comparison_complete",
             baseline_proc.returncode == 0
+            and attestation_proc.returncode == 0
             and comparison.get("status") == "completed"
+            and comparison.get("comparison_kind") == "historical_git_version"
+            and (comparison.get("provenance") or {}).get("distinct_git_commits") is True
+            and (comparison.get("provenance") or {}).get("baseline_is_ancestor") is True
             and len(comparison.get("scenario_comparisons") or []) == len(scenarios),
             comparison,
         )
@@ -198,8 +228,8 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
         manifest_paths = {str(item.get("path") or "") for item in manifest_payload.get("artifacts") or [] if isinstance(item, dict)}
         rec.add_assertion(
             "benchmark_manifest_covers_baseline_and_current_outputs",
-            all(str(path.resolve()) in manifest_paths for path in (baseline_json, out_json, out_md, evidence_dir / "benchmark.json")),
-            {"required": [str(path.resolve()) for path in (baseline_json, out_json, out_md, evidence_dir / "benchmark.json")], "manifest_count": len(manifest_paths)},
+            all(str(path.resolve()) in manifest_paths for path in (baseline_json, baseline_provenance, out_json, out_md, evidence_dir / "benchmark.json")),
+            {"required": [str(path.resolve()) for path in (baseline_json, baseline_provenance, out_json, out_md, evidence_dir / "benchmark.json")], "manifest_count": len(manifest_paths)},
         )
         rec.add_assertion(
             "benchmark_resource_cost_and_scale_measured_truthfully",
@@ -239,14 +269,14 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
                 verify_proc.returncode == 0,
                 tamper_proc.returncode == 2,
                 restored_verify_proc.returncode == 0,
-                all(str(path.resolve()) in manifest_paths for path in (baseline_json, out_json, out_md, evidence_dir / "benchmark.json")),
+                all(str(path.resolve()) in manifest_paths for path in (baseline_json, baseline_provenance, out_json, out_md, evidence_dir / "benchmark.json")),
             )
         )
-        rec.add_l2("Workflow", "Benchmark Framing", "threshold, scoring weights, named scenarios, and a current baseline comparison were recorded", out_json, "full")
+        rec.add_l2("Workflow", "Benchmark Framing", "threshold, scoring weights, named scenarios, and a Git-attested historical baseline comparison were recorded", out_json, "full")
         rec.add_l2("Workflow", "Benchmark Protocol & Asset Preparation", "isolated per-repetition evidence paths, two samples, command timeouts, and explicit JSON/Markdown/manifest outputs were used", evidence_dir / "benchmark.json", "full")
         rec.add_l2("Workflow", "Benchmark Execution", "official platform benchmark runner completed and wrote scored evidence even though the measured target was below threshold", out_json, "full")
         rec.add_l2("Workflow", "Metrics & Run Evidence Collection", "per-scenario scores, failed checks, command evidence, repeated timings, aggregate throughput, child CPU time, and peak working-set memory were generated", evidence_dir / "benchmark.json", "full")
-        rec.add_l2("Workflow", "Comparative Result Analysis & Benchmark Result Packaging", "the report packaged scores, failed checks, and per-scenario current-versus-baseline deltas", out_md, "full")
+        rec.add_l2("Workflow", "Comparative Result Analysis & Benchmark Result Packaging", "the report packaged scores, failed checks, and per-scenario deltas against a distinct ancestral Git version", out_md, "full")
         rec.add_l2("Foundation", "Benchmark Asset Construction", "the executable benchmark configuration, newly constructed baseline, repeated evidence directories, and durable result assets were demonstrated", baseline_json, "full")
         rec.add_l2("Foundation", "Performance, Cost & Benchmark Evaluator", "the evaluator measured wall time, child CPU, peak working-set memory, observed throughput/current workload scale, and a truthful zero provider cost", out_json, "full")
         rec.add_l2("Foundation", "Build Evidence Generation", "the production runner compiled, recorded runner and source-diff hashes, and the artifact manifest accepted originals, rejected tampering, and accepted restored bytes", manifest, "full")

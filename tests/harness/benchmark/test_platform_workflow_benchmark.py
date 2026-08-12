@@ -51,8 +51,9 @@ def test_platform_benchmark_repetitions_timing_and_baseline(monkeypatch, tmp_pat
     assert result["protocol"]["repetitions"] == 2
     assert result["performance"]["scenario_executions"] == 2
     assert result["performance"]["scenario_executions_per_second"] > 0
-    assert result["performance"]["monetary_cost"]["status"] == "not_measured"
-    assert result["performance"]["scalability"]["status"] == "not_measured"
+    assert result["performance"]["monetary_cost"]["status"] == "measured"
+    assert result["performance"]["monetary_cost"]["amount"] == 0.0
+    assert result["performance"]["scalability"]["status"] == "measured_current_scale"
     assert len(result["scenarios"][0]["performance"]["duration_samples_seconds"]) == 2
     assert result["comparison"]["status"] == "completed"
     assert result["comparison"]["scenario_comparisons"][0]["score_delta"] == 10
@@ -117,3 +118,49 @@ def test_platform_benchmark_manifest_rejects_malformed_entry(tmp_path):
     ok, failures = pwb.verify_artifact_manifest(manifest)
     assert ok is False
     assert failures == ["manifest artifact entry is not an object"]
+
+
+def test_historical_baseline_attestation_rejects_tamper_and_self_comparison(monkeypatch, tmp_path):
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(json.dumps({
+        "benchmark": "solar_platform_workflows",
+        "process_status": "completed",
+        "generated_at": "2026-08-12T00:00:00Z",
+        "scenarios": [{"row": 18, "score": 90}],
+    }), encoding="utf-8")
+    runner = tmp_path / "historical.py"
+    runner.write_bytes(b"historical runner\n")
+    current_runner = tmp_path / pwb.RUNNER_REPO_PATH
+    current_runner.parent.mkdir(parents=True)
+    current_runner.write_bytes(b"current runner\n")
+    attestation = tmp_path / "baseline.provenance.json"
+
+    monkeypatch.setattr(pwb, "_git_commit", lambda root, revision="HEAD": "old" if revision == "old" else "current")
+    monkeypatch.setattr(
+        pwb,
+        "_git_bytes",
+        lambda root, *args: b"current runner\n" if args[-1].startswith("current:") else b"historical runner\n",
+    )
+    monkeypatch.setattr(pwb.subprocess, "run", lambda *args, **kwargs: type("Result", (), {"returncode": 0})())
+
+    payload = pwb.attest_historical_baseline(baseline, attestation, "old", runner, tmp_path)
+    verified = pwb.verify_historical_baseline(baseline, attestation, tmp_path)
+    assert payload["source"]["git_commit"] == "old"
+    assert verified["comparison_kind"] == "historical_git_version"
+    assert verified["distinct_git_commits"] is True
+
+    baseline.write_text(baseline.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    try:
+        pwb.verify_historical_baseline(baseline, attestation, tmp_path)
+    except ValueError as exc:
+        assert "sha256" in str(exc)
+    else:
+        raise AssertionError("tampered historical baseline was accepted")
+
+    monkeypatch.setattr(pwb, "_git_commit", lambda root, revision="HEAD": "same")
+    try:
+        pwb.attest_historical_baseline(baseline, attestation, "same", runner, tmp_path)
+    except ValueError as exc:
+        assert "must differ" in str(exc)
+    else:
+        raise AssertionError("self-comparison baseline was accepted")

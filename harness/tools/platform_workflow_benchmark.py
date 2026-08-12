@@ -33,6 +33,7 @@ VAULT = Path(os.environ.get("OBSIDIAN_VAULT_PATH", HOME / "Knowledge"))
 
 WEIGHTS = {"status": 15, "files": 15, "runtime": 35, "data": 25, "ui_or_route": 10}
 MAX_SCORE = sum(WEIGHTS.values())
+RUNNER_REPO_PATH = "harness/tools/platform_workflow_benchmark.py"
 
 
 def now() -> str:
@@ -109,6 +110,116 @@ def file_sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _git_bytes(repo_root: Path, *args: str) -> bytes:
+    proc = subprocess.run(
+        ["git", *args], cwd=str(repo_root), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    if proc.returncode != 0:
+        raise ValueError(proc.stderr.decode("utf-8", errors="replace").strip() or "git command failed")
+    return proc.stdout
+
+
+def _git_commit(repo_root: Path, revision: str = "HEAD") -> str:
+    return _git_bytes(repo_root, "rev-parse", f"{revision}^{{commit}}").decode("ascii").strip()
+
+
+def attest_historical_baseline(
+    baseline_path: Path,
+    attestation_path: Path,
+    source_commit: str,
+    extracted_runner: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Bind a completed baseline artifact to the exact runner blob in Git."""
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    if baseline.get("process_status") != "completed" or baseline.get("benchmark") != "solar_platform_workflows":
+        raise ValueError("baseline benchmark is not completed")
+    commit = _git_commit(repo_root, source_commit)
+    current_commit = _git_commit(repo_root)
+    if commit == current_commit:
+        raise ValueError("historical baseline commit must differ from the current commit")
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", commit, current_commit], cwd=str(repo_root),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    ).returncode == 0
+    if not ancestor:
+        raise ValueError("historical baseline commit is not an ancestor of the current commit")
+    committed_runner = _git_bytes(repo_root, "show", f"{commit}:{RUNNER_REPO_PATH}")
+    extracted_bytes = extracted_runner.read_bytes()
+    if extracted_bytes != committed_runner:
+        raise ValueError("extracted baseline runner does not match the historical Git blob")
+    payload = {
+        "schema": "solar_platform_benchmark_baseline_provenance.v1",
+        "benchmark": "solar_platform_workflows",
+        "baseline_json": {
+            "sha256": file_sha256(baseline_path),
+            "generated_at": baseline.get("generated_at"),
+        },
+        "source": {
+            "git_commit": commit,
+            "runner_repo_path": RUNNER_REPO_PATH,
+            "runner_sha256": hashlib.sha256(committed_runner).hexdigest(),
+            "is_ancestor_of_attesting_head": True,
+            "attesting_head": current_commit,
+        },
+        "attested_at": now(),
+    }
+    write_json(attestation_path, payload)
+    return payload
+
+
+def verify_historical_baseline(
+    baseline_path: Path,
+    attestation_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Verify a baseline's bytes and historical Git identity, fail closed."""
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    attestation = json.loads(attestation_path.read_text(encoding="utf-8"))
+    if attestation.get("schema") != "solar_platform_benchmark_baseline_provenance.v1":
+        raise ValueError("unexpected baseline provenance schema")
+    if attestation.get("benchmark") != baseline.get("benchmark"):
+        raise ValueError("baseline provenance benchmark identity mismatch")
+    recorded = attestation.get("baseline_json") or {}
+    if recorded.get("sha256") != file_sha256(baseline_path):
+        raise ValueError("baseline JSON does not match its provenance sha256")
+    if recorded.get("generated_at") != baseline.get("generated_at"):
+        raise ValueError("baseline generated_at does not match its provenance")
+    source = attestation.get("source") or {}
+    commit = _git_commit(repo_root, str(source.get("git_commit") or ""))
+    current_commit = _git_commit(repo_root)
+    if commit == current_commit:
+        raise ValueError("baseline and current Git commits must differ")
+    committed_runner = _git_bytes(repo_root, "show", f"{commit}:{RUNNER_REPO_PATH}")
+    runner_sha256 = hashlib.sha256(committed_runner).hexdigest()
+    if source.get("runner_repo_path") != RUNNER_REPO_PATH or source.get("runner_sha256") != runner_sha256:
+        raise ValueError("baseline runner provenance does not match the historical Git blob")
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", commit, current_commit], cwd=str(repo_root),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    ).returncode == 0
+    if not ancestor:
+        raise ValueError("baseline commit is not an ancestor of the current commit")
+    current_committed_runner = _git_bytes(repo_root, "show", f"{current_commit}:{RUNNER_REPO_PATH}")
+    current_runner_path = repo_root / RUNNER_REPO_PATH
+    if not current_runner_path.is_file() or current_runner_path.read_bytes() != current_committed_runner:
+        raise ValueError("current benchmark runner does not match the current Git commit")
+    current_runner_sha256 = hashlib.sha256(current_committed_runner).hexdigest()
+    if current_runner_sha256 == runner_sha256:
+        raise ValueError("baseline and current benchmark runner blobs must differ")
+    return {
+        "status": "verified",
+        "comparison_kind": "historical_git_version",
+        "baseline_git_commit": commit,
+        "current_git_commit": current_commit,
+        "distinct_git_commits": True,
+        "baseline_is_ancestor": True,
+        "baseline_runner_sha256": runner_sha256,
+        "current_runner_sha256": current_runner_sha256,
+        "baseline_json_sha256": recorded.get("sha256"),
+    }
 
 
 def status_json(sid: str) -> dict[str, Any]:
@@ -303,7 +414,11 @@ def _run_scenarios(evidence_dir: Path) -> list[dict[str, Any]]:
     return scenarios
 
 
-def _baseline_comparison(current: list[dict[str, Any]], baseline: dict[str, Any] | None) -> dict[str, Any]:
+def _baseline_comparison(
+    current: list[dict[str, Any]],
+    baseline: dict[str, Any] | None,
+    provenance: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if not baseline:
         return {"status": "not_requested", "scenario_comparisons": []}
     if baseline.get("benchmark") != "solar_platform_workflows":
@@ -336,6 +451,8 @@ def _baseline_comparison(current: list[dict[str, Any]], baseline: dict[str, Any]
         })
     return {
         "status": "completed" if comparisons and len(comparisons) == len(current) else "incomplete",
+        "comparison_kind": (provenance or {}).get("comparison_kind", "unversioned_run"),
+        "provenance": provenance or {"status": "not_provided"},
         "baseline_benchmark": baseline.get("benchmark"),
         "baseline_generated_at": baseline.get("generated_at"),
         "scenario_comparisons": comparisons,
@@ -383,6 +500,7 @@ def benchmark(
     evidence_dir: Path,
     repetitions: int = 1,
     baseline: dict[str, Any] | None = None,
+    baseline_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if repetitions < 1:
         raise ValueError("repetitions must be at least 1")
@@ -474,7 +592,7 @@ def benchmark(
                 "scope": "rows 18-25 local workflow scale; no extrapolation beyond observed workload",
             },
         },
-        "comparison": _baseline_comparison(scenarios, baseline),
+        "comparison": _baseline_comparison(scenarios, baseline, baseline_provenance),
         "scenarios": scenarios,
     }
     write_json(evidence_dir / "benchmark.json", data)
@@ -571,25 +689,50 @@ def main() -> int:
     ap.add_argument("--evidence-dir", default=str(REPORTS / "platform-workflow-evidence" / "latest"))
     ap.add_argument("--repetitions", type=int, default=1)
     ap.add_argument("--baseline-json", default="")
+    ap.add_argument("--baseline-provenance", default="")
+    ap.add_argument("--attest-baseline-json", default="")
+    ap.add_argument("--attestation-out", default="")
+    ap.add_argument("--baseline-source-commit", default="")
+    ap.add_argument("--baseline-runner", default="")
     ap.add_argument("--manifest", default="")
     ap.add_argument("--verify-manifest", default="")
     args = ap.parse_args()
+    repo_root = Path(__file__).resolve().parents[2]
+    if args.attest_baseline_json:
+        if not all((args.attestation_out, args.baseline_source_commit, args.baseline_runner)):
+            raise ValueError("baseline attestation requires output, source commit, and extracted runner")
+        payload = attest_historical_baseline(
+            Path(args.attest_baseline_json), Path(args.attestation_out),
+            args.baseline_source_commit, Path(args.baseline_runner), repo_root,
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
     if args.verify_manifest:
         ok, failures = verify_artifact_manifest(Path(args.verify_manifest))
         print(json.dumps({"ok": ok, "failures": failures}, ensure_ascii=False, indent=2))
         return 0 if ok else 2
     baseline = None
+    baseline_provenance = None
     if args.baseline_json:
         baseline = json.loads(Path(args.baseline_json).read_text(encoding="utf-8"))
         if baseline.get("process_status") != "completed" or baseline.get("benchmark") != "solar_platform_workflows":
             raise ValueError("baseline benchmark is not completed")
-    data = benchmark(args.threshold, Path(args.evidence_dir), repetitions=args.repetitions, baseline=baseline)
+        if args.baseline_provenance:
+            baseline_provenance = verify_historical_baseline(
+                Path(args.baseline_json), Path(args.baseline_provenance), repo_root,
+            )
+    data = benchmark(
+        args.threshold, Path(args.evidence_dir), repetitions=args.repetitions,
+        baseline=baseline, baseline_provenance=baseline_provenance,
+    )
     write_json(Path(args.out_json), data)
     write_markdown(Path(args.out_md), data)
     manifest_path = Path(args.manifest) if args.manifest else Path(args.evidence_dir) / "artifact-manifest.json"
     manifest_artifacts = [Path(args.out_json), Path(args.out_md), Path(args.evidence_dir) / "benchmark.json"]
     if args.baseline_json:
         manifest_artifacts.append(Path(args.baseline_json))
+    if args.baseline_provenance:
+        manifest_artifacts.append(Path(args.baseline_provenance))
     manifest_artifacts.extend(path for path in Path(args.evidence_dir).rglob("*") if path.is_file())
     write_artifact_manifest(manifest_path, str(data.get("benchmark") or ""), manifest_artifacts)
     if args.json:
