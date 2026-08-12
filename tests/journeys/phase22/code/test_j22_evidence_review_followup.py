@@ -57,12 +57,14 @@ def _copy_artifact(source: Path, destination_dir: Path, label: str) -> Path:
 
 
 def _artifact_entry(path: Path, *, kind: str, source_path: Path | None = None) -> dict[str, Any]:
+    is_file = path.exists() and path.is_file()
     return {
         "type": kind,
         "path": str(path),
         "source_path": str(source_path or path),
         "exists": path.exists(),
-        "bytes": path.stat().st_size if path.exists() and path.is_file() else None,
+        "bytes": path.stat().st_size if is_file else None,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest() if is_file else None,
     }
 
 
@@ -160,6 +162,23 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
     complete["proof"] = _write_review_proof(sandbox / "proofs" / "complete.json", complete["review_target"], "complete")
     overreach["proof"] = _write_review_proof(sandbox / "proofs" / "overreach.json", overreach["review_target"], "overreach")
 
+    verdict_variants: dict[str, Path] = {}
+    baseline_experiment = _read_json(complete["experiment"])
+    for outcome in ("partially_supports", "refutes", "inconclusive"):
+        variant = json.loads(json.dumps(baseline_experiment))
+        variant["task_id"] = f"phase22-j22-{outcome}-result"
+        variant["node_id"] = f"phase22-j22-experiment-{outcome}"
+        variant["outputs"]["result"]["experiment_id"] = f"exp-phase22-{outcome}-local"
+        variant["outputs"]["result"]["outcome"] = outcome
+        variant["outputs"]["result"]["evidence_ids"] = [
+            f"exp:{outcome}-local-run",
+            f"runtime:{outcome}-local-run",
+        ]
+        verdict_variants[outcome] = _write_json(
+            sandbox / "verdict-variants" / f"experiment-result-{outcome}.json",
+            variant,
+        )
+
     input_artifacts: list[dict[str, Any]] = []
     for mapping in (complete, overreach, incomplete):
         for key, path in mapping.items():
@@ -167,6 +186,8 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
             if path.is_file():
                 assert path.stat().st_size > 0, f"empty fixture: {path}"
             input_artifacts.append(_artifact_entry(path, kind=f"fixture_{key}"))
+    for outcome, path in verdict_variants.items():
+        input_artifacts.append(_artifact_entry(path, kind=f"generated_input_experiment_{outcome}"))
 
     entrypoint_runs: list[dict[str, Any]] = []
 
@@ -340,6 +361,29 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
         action="verify_claim",
         label="exp-overreach",
     )
+    variant_payloads: dict[str, dict[str, Any]] = {}
+    variant_evidence: dict[str, Path] = {}
+    for outcome, experiment_path in verdict_variants.items():
+        _, payload, evidence_path = run_skill(
+            "exp-eval",
+            [
+                "claim-supported",
+                "--experiment-result-evidence",
+                str(experiment_path),
+                "--claims-evidence",
+                str(complete["claims"]),
+                "--code-evidence",
+                str(complete["code"]),
+                "--review-llm-evidence",
+                str(complete["review_evidence"]),
+                "--run-id",
+                f"{run_id}-exp-{outcome}",
+            ],
+            action="verify_claim",
+            label=f"exp-{outcome}",
+        )
+        variant_payloads[outcome] = payload
+        variant_evidence[outcome] = evidence_path
     _, refine_payload, refine_ev = run_skill(
         "refine",
         [
@@ -533,6 +577,7 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
         review_overreach_ev,
         exp_supported_ev,
         exp_overreach_ev,
+        *variant_evidence.values(),
         refine_ev,
     ]
     artifacts_index = input_artifacts + [
@@ -542,8 +587,70 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
         _artifact_entry(review_overreach_ev, kind="product_output"),
         _artifact_entry(exp_supported_ev, kind="product_output"),
         _artifact_entry(exp_overreach_ev, kind="product_output"),
+        *[_artifact_entry(path, kind=f"product_output_{outcome}") for outcome, path in variant_evidence.items()],
         _artifact_entry(refine_ev, kind="product_output"),
     ]
+
+    durable_product_artifacts = [
+        item
+        for item in artifacts_index
+        if str(item.get("type") or "").startswith("product_output")
+    ]
+    artifact_durability = {
+        "status": "complete" if all(
+            item.get("exists") is True
+            and int(item.get("bytes") or 0) > 0
+            and bool(item.get("sha256"))
+            and Path(str(item["path"])).is_relative_to(run_dir)
+            for item in durable_product_artifacts
+        ) else "incomplete",
+        "required_count": len(durable_product_artifacts),
+        "durable_count": sum(
+            1
+            for item in durable_product_artifacts
+            if item.get("exists") is True
+            and int(item.get("bytes") or 0) > 0
+            and bool(item.get("sha256"))
+            and Path(str(item["path"])).is_relative_to(run_dir)
+        ),
+    }
+    assertions.append(
+        _assertion(
+            l2=evidence_l2,
+            criteria="Every generated review artifact must be non-empty, hashed, and copied under the durable journey run directory.",
+            assertion="generated evidence is independently durable and hash-addressed",
+            passed=artifact_durability["status"] == "complete",
+            observed=artifact_durability,
+            reason="A route summary without independently durable generated artifacts is insufficient acceptance evidence.",
+            evidence=[str(item["path"]) for item in durable_product_artifacts],
+        )
+    )
+    expected_variant_verdicts = {
+        "partially_supports": "partially_supported",
+        "refutes": "not_supported",
+        "inconclusive": "inconclusive",
+    }
+    observed_variant_verdicts = {
+        outcome: str(((payload.get("outputs") or {}).get("verdicts") or [{}])[0].get("verdict") or "")
+        for outcome, payload in variant_payloads.items()
+    }
+    assertions.append(
+        _assertion(
+            l2=reasoning_l2,
+            criteria="exp-eval must preserve distinct supported, partial, refuting, inconclusive, and scope-overreach outcomes.",
+            assertion="exp-eval classifies the complete bounded verdict taxonomy",
+            passed=observed_variant_verdicts == expected_variant_verdicts
+            and supported_value == "supported"
+            and overreach_value == "insufficient",
+            observed={
+                "supported": supported_value,
+                **observed_variant_verdicts,
+                "scope_overreach": overreach_value,
+            },
+            reason="Collapsing partial, refuting, inconclusive, or overreach evidence into a generic verdict would hide blocker and residual-risk differences.",
+            evidence=[str(exp_supported_ev), str(exp_overreach_ev), *[str(path) for path in variant_evidence.values()]],
+        )
+    )
 
     overall_status = _status_from_assertions(assertions, non_core_limitations=non_core_limitations)
     limitations = sorted(set(non_core_limitations + [item["reason"] for item in assertions if item["status"] == "FAIL"]))
@@ -578,8 +685,23 @@ def test_p22_j22_real_evidence_review_and_followup(repo_root: Path, tmp_path: Pa
         },
         "production_entrypoints": entrypoint_runs,
         "commands": recorder.commands,
+        "assertions": [
+            {
+                "name": item["assertion"],
+                "passed": item["status"] == "PASS",
+                "detail": {
+                    "l2": item["l2"],
+                    "criteria": item["criteria"],
+                    "observed": item["observed"],
+                    "reason": item["reason"],
+                    "evidence": item["evidence"],
+                },
+            }
+            for item in assertions
+        ],
         "l2_assertions": assertions,
         "artifacts": artifacts_index,
+        "artifact_durability": artifact_durability,
         "limitations": limitations,
         "self_review": self_review,
         "evidence_dir": str(run_dir),
