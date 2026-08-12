@@ -2,6 +2,7 @@
 "use strict";
 
 const assert = require("assert");
+const crypto = require("crypto");
 const fs = require("fs");
 const http = require("http");
 const os = require("os");
@@ -15,6 +16,9 @@ const DESKTOP = path.resolve(__dirname, "..", "..", "desktop");
 const SOURCE_HARNESS = path.resolve(DESKTOP, "..", "harness");
 const ELECTRON_EXECUTABLE = process.env.SOLAR_ELECTRON_EXECUTABLE_PATH
   ? path.resolve(process.env.SOLAR_ELECTRON_EXECUTABLE_PATH)
+  : "";
+const EVIDENCE_DIR = process.env.SOLAR_DESKTOP_EVIDENCE_DIR
+  ? path.resolve(process.env.SOLAR_DESKTOP_EVIDENCE_DIR)
   : "";
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "solar-desktop-selftest-"));
 const tempHome = path.join(temp, "home");
@@ -189,6 +193,10 @@ async function stopChild(child) {
     assert.match(healthy.output, /SELFTEST OK/);
     assert.doesNotMatch(healthy.output, /SELFTEST FAIL/);
     assert.ok(fs.statSync(screenshot).size > 0, "selftest screenshot is empty");
+    if (EVIDENCE_DIR) {
+      fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
+      fs.copyFileSync(screenshot, path.join(EVIDENCE_DIR, "runtime-dashboard.png"));
+    }
     console.log("PASS  real runtime dashboard -> SELFTEST OK + nonempty screenshot");
 
     blank = await startBlankServer();
@@ -210,6 +218,30 @@ async function stopChild(child) {
     console.log(
       `ELECTRON SELFTEST E2E PASS (3/3, ${ELECTRON_EXECUTABLE ? "built executable" : "development shell"})`,
     );
+    if (EVIDENCE_DIR) {
+      const retainedShot = path.join(EVIDENCE_DIR, "runtime-dashboard.png");
+      const digest = (file) =>
+        crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+      const evidence = {
+        status: "PASS",
+        checks: {
+          real_runtime_dashboard: "PASS",
+          blank_page_fails_closed: "PASS",
+          screenshot_failure_fails_closed: "PASS",
+        },
+        executable_kind: ELECTRON_EXECUTABLE ? "built executable" : "development shell",
+        executable_path: ELECTRON_EXECUTABLE,
+        executable_sha256: ELECTRON_EXECUTABLE ? digest(ELECTRON_EXECUTABLE) : "",
+        screenshot_path: retainedShot,
+        screenshot_sha256: digest(retainedShot),
+        screenshot_bytes: fs.statSync(retainedShot).size,
+      };
+      fs.writeFileSync(
+        path.join(EVIDENCE_DIR, "packaged-smoke.json"),
+        `${JSON.stringify(evidence, null, 2)}\n`,
+        "utf8",
+      );
+    }
   } finally {
     if (blank) await new Promise((resolve) => blank.server.close(resolve));
     if (runtime) await stopChild(runtime.child);
