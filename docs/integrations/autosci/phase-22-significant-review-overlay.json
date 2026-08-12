@@ -85,6 +85,25 @@
         "P22-REPAIR-084",
         "P22-REPAIR-090"
       ]
+    },
+    {
+      "journey_id": "P22-J18",
+      "shared_recorded_limitation": "The feature worked in local SolarUbuntu/WSL2, but other Linux setups and multi-session use were not tested.",
+      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "issue_count": 3,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T052021Z-2442749/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "passed": 10,
+        "failed": 0
+      },
+      "decision": "The sandbox-owned Linux lifecycle now passes install, doctor, status, status-server health/runtime/status/settings/dashboard, TMUX session observation, and uninstall. A real ownership bug for harness paths containing spaces was fixed. Five status-server scoping regressions prove that one harness does not adopt or terminate a foreign healthy listener and still cleans up its own server.",
+      "remaining_boundary": "Only SolarUbuntu/WSL2 was exercised. Other distributions, package managers, remote hosts, and a broad concurrent interactive-session matrix remain untested, so these issues are not counted as closed.",
+      "issue_ids": [
+        "P22-REPAIR-120",
+        "P22-REPAIR-127",
+        "P22-REPAIR-138"
+      ]
     }
   ],
   "closed_shared_limitation_issue_count": 30,

@@ -3213,3 +3213,21 @@ Date: 2026-08-12
   for `P22-REPAIR-003`, `005`, `007`, `083`, `084`, and `090` as
   `LIMITATION_CLOSED_VERIFIED`. External vaults, remote stores, and unexercised
   document formats remain outside this result.
+
+## Significant limitation reduction — P22-J18 (3 issues, not closed)
+
+Date: 2026-08-12
+
+- Accepted current-baseline Linux lifecycle run
+  `p22-j18-real-linux-status-20260812T052021Z-2442749` at
+  `424ab6dbeba742adcbb1c2e93cefabfd85563aaa`: all 10 lifecycle checks passed.
+- Fixed a real ownership defect in `harness/solar-harness.sh`: the process scan
+  split command lines on spaces and could not identify an owned status server
+  when the installed harness path contained spaces.
+- Multi-session contamination/scoping regressions passed 5/5: foreign healthy
+  listeners survive another harness's stop/start lifecycle, are not adopted,
+  and owned pidfile/path-matched servers are still cleaned up.
+- `P22-REPAIR-120`, `127`, and `138` are classified
+  `LIMITATION_PARTIALLY_REDUCED`, not closed. SolarUbuntu/WSL2 was exercised;
+  other distributions/package managers, remote hosts, and a broad concurrent
+  interactive-session matrix remain untested.
