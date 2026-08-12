@@ -62,6 +62,22 @@ def test_same_document_id_changed_content_is_immutable_conflict(tmp_path):
     assert result["trace"][0]["document_version_conflicts"] == ["result"]
 
 
+def test_changed_document_across_runs_conflicts_despite_top_k_one(tmp_path):
+    corpus = tmp_path / "corpus"
+    quote = "Observed nitrate declined by twelve percent."
+    result_path = corpus / "result.json"
+    doc(corpus, "result.json", "result", quote, "local://result/a")
+    request(tmp_path / "request.json", question="nitrate result", quote=quote)
+    first = run(tmp_path, top_k=1)
+    assert first["status"] == "accepted"
+    result_path.unlink()
+    doc(corpus, "result.json", "result", quote + " A correction changed the source.", "local://result/b")
+    second = run(tmp_path, top_k=1)
+    assert second["status"] == "abstained" and second["answer"] == []
+    assert second["reasons"] == ["immutable_document_version_conflict"]
+    assert len(second["corpus"]["persistent_document_lineage"]["result"]) == 2
+
+
 def test_budget_and_cycle_guards_remain(tmp_path):
     corpus = tmp_path / "corpus"
     doc(corpus, "cats.json", "cats", "Domestic cats sleep for much of the day.")

@@ -68,6 +68,22 @@ def exact_support(claim: dict[str, Any], rows: list[dict[str, Any]]) -> list[dic
     return matches
 
 
+def audit_persistent_lineage(retriever: LearningRetriever, current_logical_ids: set[str]) -> tuple[dict[str, list[str]], list[str]]:
+    """Inspect every persisted version for current logical IDs, independent of ranking."""
+    lineage: dict[str, set[str]] = {logical_id: set() for logical_id in current_logical_ids}
+    for row in retriever.state.get("documents", {}).values():
+        if not isinstance(row, dict) or not isinstance(row.get("provenance"), dict):
+            continue
+        provenance = row["provenance"]
+        logical_id = str(provenance.get("logical_document_id") or "")
+        version = str(provenance.get("version_sha256") or "")
+        if logical_id in lineage and version:
+            lineage[logical_id].add(version)
+    normalized = {logical_id: sorted(versions) for logical_id, versions in sorted(lineage.items())}
+    conflicts = [logical_id for logical_id, versions in normalized.items() if len(versions) > 1]
+    return normalized, conflicts
+
+
 def evaluate(request_path: Path, corpus_dir: Path, state_path: Path, *, max_iterations: int,
              top_k: int = 2, reranker_state: Path | None = None) -> dict[str, Any]:
     if not 1 <= max_iterations <= 20 or top_k < 1:
@@ -84,7 +100,8 @@ def evaluate(request_path: Path, corpus_dir: Path, state_path: Path, *, max_iter
     retriever.index(documents)
     reranker = Reranker(reranker_state.resolve()) if reranker_state else None
 
-    version_conflicts = sorted(key for key, value in documents_versions.items() if len(value) > 1)
+    current_logical_ids = set(documents_versions)
+    persistent_lineage, version_conflicts = audit_persistent_lineage(retriever, current_logical_ids)
     query, seen_batches, accumulated = question, set(), {}
     trace, prior_hash, status, reasons, supports = [], "0" * 64, "abstained", [], {}
     for iteration in range(1, max_iterations + 1):
@@ -121,6 +138,7 @@ def evaluate(request_path: Path, corpus_dir: Path, state_path: Path, *, max_iter
             "iteration": iteration, "query": query, "retrieval_entrypoint": "LearningRetriever.retrieve",
             "retrieved_document_version_ids": [row["id"] for row in ranked], "batch_sha256": batch_hash,
             "verified_support": supports, "missing_claim_ids": missing,
+            "persistent_document_lineage": persistent_lineage,
             "document_version_conflicts": active_conflicts, "decision": decision, "reasons": reasons,
         }
         trace_hash = hashlib.sha256(bytes.fromhex(prior_hash) + canonical(state)).hexdigest()
@@ -137,7 +155,8 @@ def evaluate(request_path: Path, corpus_dir: Path, state_path: Path, *, max_iter
         "schema_version": "solar.self_rag.v2", "status": status, "question": question,
         "request_sha256": hashlib.sha256(request_path.read_bytes()).hexdigest(),
         "corpus": {"path": str(corpus_dir.resolve()), "document_version_count": len(documents),
-                   "index_state": str(state_path.resolve()), "retrieval_entrypoint": "advanced_ai4rnd.retrieval.learning_retrieval.LearningRetriever"},
+                   "index_state": str(state_path.resolve()), "persistent_document_lineage": persistent_lineage,
+                   "retrieval_entrypoint": "advanced_ai4rnd.retrieval.learning_retrieval.LearningRetriever"},
         "iterations_used": len(trace), "max_iterations": max_iterations, "trace": trace, "trace_sha256": prior_hash,
         "answer": answer, "answer_policy": {"unsupported_answer_count": 0, "abstained_on_failure": status != "accepted" and not answer},
         "reasons": reasons, "limitations": [

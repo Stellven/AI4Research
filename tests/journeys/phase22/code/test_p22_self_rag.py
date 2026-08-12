@@ -49,13 +49,13 @@ def test_p22_self_rag_bounded_reflection(repo_root: Path) -> None:
     conflict_request.write_text(json.dumps({"question": "What nitrate decline was measured?", "required_claims": [
         {"claim_id": "nitrate", "text": quote, "required_exact_quote": quote}]}), encoding="utf-8")
 
-    def attack(name: str, request: Path, corpus: Path):
+    def attack(name: str, request: Path, corpus: Path, *, index: Path | None = None, top_k: int = 2):
         attack_result = attack_dir / f"{name}-result.json"
-        attack_index = attack_dir / f"{name}-index.json"
+        attack_index = index or attack_dir / f"{name}-index.json"
         args = ["./harness/solar-harness.sh", "evolution", "self-rag-evaluate", "--request",
                 request.relative_to(repo_root).as_posix(), "--corpus", corpus.relative_to(repo_root).as_posix(),
                 "--index-state", attack_index.relative_to(repo_root).as_posix(), "--max-iterations", "2",
-                "--top-k", "2", "--output", attack_result.relative_to(repo_root).as_posix()]
+                "--top-k", str(top_k), "--output", attack_result.relative_to(repo_root).as_posix()]
         attack_command = (["wsl.exe", "--cd", str(repo_root), "env", f"HARNESS_DIR={posix_repo}/harness", "bash", *args]
                           if os.name == "nt" else ["bash", *args])
         attack_process = subprocess.run(attack_command, cwd=repo_root, env=env, capture_output=True, text=True, timeout=30)
@@ -63,6 +63,21 @@ def test_p22_self_rag_bounded_reflection(repo_root: Path) -> None:
 
     moon_process, moon, moon_result, moon_index = attack("moon", moon_request, moon_corpus)
     conflict_process, conflict, conflict_result, conflict_index = attack("conflict", conflict_request, conflict_corpus)
+    persistent_corpus = attack_dir / "persistent-corpus"
+    persistent_corpus.mkdir()
+    persistent_file = persistent_corpus / "result.json"
+    persistent_request = attack_dir / "persistent-request.json"
+    persistent_request.write_text(json.dumps({"question": "What nitrate decline was measured?", "required_claims": [
+        {"claim_id": "nitrate", "text": quote, "required_exact_quote": quote}]}), encoding="utf-8")
+    persistent_file.write_text(json.dumps({"document_id": "persistent-result", "text": quote,
+        "provenance": {"uri": "local-review://persistent/a"}}), encoding="utf-8")
+    persistent_index = attack_dir / "persistent-index.json"
+    first_process, first_version, first_result, _ = attack(
+        "persistent-v1", persistent_request, persistent_corpus, index=persistent_index, top_k=1)
+    persistent_file.write_text(json.dumps({"document_id": "persistent-result", "text": quote + " The source was revised.",
+        "provenance": {"uri": "local-review://persistent/b"}}), encoding="utf-8")
+    second_process, second_version, second_result, _ = attack(
+        "persistent-v2", persistent_request, persistent_corpus, index=persistent_index, top_k=1)
     all_evidence = [e for claim in result.get("answer", []) for e in claim.get("evidence", [])]
     assertions = {
         "production_solar_harness_exited_zero": process.returncode == 0,
@@ -78,6 +93,10 @@ def test_p22_self_rag_bounded_reflection(repo_root: Path) -> None:
         "moon_cheese_attack_abstained": moon_process.returncode == 0 and moon["status"] == "abstained" and moon["answer"] == [],
         "changed_document_attack_abstained": conflict_process.returncode == 0 and conflict["status"] == "abstained"
                                                and conflict["reasons"] == ["immutable_document_version_conflict"],
+        "cross_run_persistent_lineage_attack_abstained": first_process.returncode == second_process.returncode == 0
+            and first_version["status"] == "accepted" and second_version["status"] == "abstained"
+            and second_version["reasons"] == ["immutable_document_version_conflict"]
+            and len(second_version["corpus"]["persistent_document_lineage"]["persistent-result"]) == 2,
     }
     evidence = {
         "schema_version": "phase22.self_rag_journey.v2", "journey_id": "NT-memory-retrieval", "run_id": run_id,
@@ -85,7 +104,8 @@ def test_p22_self_rag_bounded_reflection(repo_root: Path) -> None:
         "production_command": command, "input": {"request": str(fixture_dir / "request.json"), "corpus": str(fixture_dir / "corpus")},
         "assertions": assertions, "exit_code": process.returncode, "stdout_tail": process.stdout[-2000:],
         "stderr_tail": process.stderr[-2000:], "artifacts": [str(result_path), str(index_path), str(moon_result),
-            str(moon_index), str(conflict_result), str(conflict_index)],
+            str(moon_index), str(conflict_result), str(conflict_index), str(first_result), str(second_result),
+            str(persistent_index)],
         "status": "PASS_WITH_KNOWN_LIMITATIONS" if all(assertions.values()) else "FAIL",
         "limitations": result.get("limitations", []),
     }
