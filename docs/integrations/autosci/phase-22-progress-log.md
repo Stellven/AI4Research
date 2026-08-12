@@ -3396,3 +3396,30 @@ Date: 2026-08-12
   output was observed. `P22-REPAIR-139` is `LIMITATION_CLOSED_VERIFIED`.
 - This does not infer every CLI command, provider model, secret backend, or
   platform variant.
+
+## Significant repair closure — CodeGraph, intent readiness, and TraceGraph (4 issues)
+
+Date: 2026-08-12
+
+- `P22-REPAIR-086`: production `code-graph.mjs build|query|validate` now writes
+  a standalone source-derived graph with 13 nodes, 19 edges, file/graph hashes,
+  query results, and fail-closed source/graph tamper checks. Focused integration
+  rerun: 2/2 tests passed. Full J17 tmux recovery remains a separate platform
+  boundary.
+- `P22-REPAIR-010` and `100`: the production intent gateway emits the minimum
+  question for an exclusive CLI/web target, records `needs_clarification`, and
+  blocks planning/autodispatch until the target is answered. Current production
+  CLI evidence is under
+  `outputs/phase22-real-journeys/p22-intent-readiness-20260812T070500Z/`;
+  focused tests are 9/9. Independent review removed an unsafe shortcut: a text
+  value such as `approval=approved` is rejected and cannot impersonate human
+  approval.
+- `P22-REPAIR-089`: Windows-safe session logging now locks a dedicated lock
+  file, and the unified `trace_graph.py` query returns events, DAG node/gate
+  state, closure, source inventory, and event/node correlation. A 40-append
+  concurrent Windows test retained 40 valid JSON records. The post-commit
+  `NT-dag-trace` journey passed with 6/6 TraceGraph assertions at
+  `outputs/phase22-not-tested/NT-dag-trace/run-20260812T070726Z/`.
+- Remaining boundaries are explicit: bounded English ambiguity rules, local
+  static CodeGraph, local JSONL/DAG trace storage, and no inferred distributed
+  backend, dynamic call graph, GUI conversation, or attributable HITL approval.
