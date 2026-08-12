@@ -3718,3 +3718,28 @@ Date: 2026-08-12
   independently authenticated multi-site study. Distinct writer-provider
   execution, attributable external review, site-identity authentication and
   real external generalization remain unproven.
+
+## Significant limitation reduction — bounded legal/IP risk screening
+
+Date: 2026-08-12
+
+- `P22-REPAIR-069` remains open as `LIMITATION_PARTIALLY_REDUCED`, while its
+  bounded local policy-screening core is `FIXED_VERIFIED`. Production command
+  `solar-harness evolution legal-risk-screen` evaluates purpose, jurisdiction,
+  retention, license/copyright and consent against raw-byte-hashed evidence;
+  unknown, missing, incompatible, expired or revoked inputs fail closed and
+  review-required outcomes never auto-admit.
+- Auto-allow requires both an out-of-band trusted issuer anchor and a
+  policy-pinned `source_id -> exact rights-evidence SHA-256`. A manifest-author
+  self-assertion with a correct hash, a forged trusted issuer name, or an
+  unpinned source can only require review, not allow. Findings carry rule ID,
+  source path and evidence hash. Atomic output replacement preserves prior
+  bytes under injected failure and input/output aliases are rejected.
+- Final independent review and URI follow-up passed 22/22 targeted and journey
+  tests, with 7/7 journey assertions at commit `43fd4a43c`. HTTPS inputs now
+  require a real authority/hostname and reject embedded credentials; this
+  remains syntax and policy validation, not network authenticity. External
+  issuer/signature authenticity, jurisdiction-specific counsel
+  or legal conclusions, external copyright ownership, hosted provider/account
+  revocation and cross-channel enforcement remain outside this local screen;
+  therefore the broad issue is not closed.

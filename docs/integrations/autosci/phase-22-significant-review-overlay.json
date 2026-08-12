@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "ff598de9e",
+  "reviewed_code_head": "43fd4a43c",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -556,13 +556,16 @@
       "shared_recorded_limitation": "The privacy lifecycle passed, but hosted account deletion, provider revocation, external channels, and unified personal-data controls remained absent.",
       "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
       "issue_count": 2,
-      "accepted_evidence": "outputs/phase22-real-journeys/p22-j24-privacy-controls-20260812T074503Z/journey-result.json",
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-j24-privacy-controls-20260812T074503Z/journey-result.json",
+        "outputs/phase22-real-journeys/p22-legal-ip-risk-20260812T141642Z/journey-result.json"
+      ],
       "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
       "assertions": {"passed": 9, "failed": 0, "commands": 9},
-      "decision": "A unified local personal-data CLI now inventories identity/profile/settings/consent stores, creates secret-safe exports, applies retention, performs confirmed selective deletion, records/revokes consent, and purges derived data. Confirmation, path/symlink escape, secret exposure and generic-delete bypass of consent revocation fail closed.",
+      "decision": "The unified local personal-data CLI covers inventory, secret-safe export, retention, selective deletion, consent revoke, and derived-data purge. A bounded legal/IP risk-screen now also checks purpose, jurisdiction, retention, license, copyright and consent against raw-byte-hashed evidence. Auto-allow requires both an out-of-band policy trust anchor and a policy-pinned source_id-to-exact-rights-evidence SHA; self-authored or forged issuer claims remain review_required. Strict types, duplicate keys, stale/alias output, expired/revoked consent, bad hashes, missing evidence, authority-less HTTPS and credential-bearing URIs fail closed, and atomic replacement preserves prior output on injected failure.",
       "closed_issue_ids": ["P22-REPAIR-135"],
       "partially_reduced_issue_ids": ["P22-REPAIR-069"],
-      "remaining_boundary": "Hosted accounts, provider/platform revocation, external messaging channels, jurisdiction/legal and copyright/IP evaluation are not implemented by this local control surface. P22-REPAIR-069 remains open.",
+      "remaining_boundary": "P22-REPAIR-069 remains open overall. The bounded local policy-screening core is verified, but external issuer/signature authenticity, jurisdiction-specific legal conclusions, legal-counsel approval, external copyright ownership, hosted provider/account revocation, and cross-channel enforcement require external systems or people.",
       "issue_ids": ["P22-REPAIR-069", "P22-REPAIR-135"]
     },
     {
