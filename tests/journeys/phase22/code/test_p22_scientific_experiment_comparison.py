@@ -30,8 +30,20 @@ def test_p22_scientific_experiment_comparison(
     protocol_path = fixture / "protocol.json"
     dataset_path = fixture / "labeled_retrieval.jsonl"
     protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
-    protocol_hash = _sha256(protocol_path)
     dataset_hash = _sha256(dataset_path)
+    protocol_git_path = protocol_path.relative_to(repo_root).as_posix()
+    protocol_commit = "afb253f0f41518737be3338f1ba431968ee10016"
+    protocol_blob = subprocess.check_output(
+        ["git", "rev-parse", f"{protocol_commit}:{protocol_git_path}"],
+        cwd=repo_root,
+        text=True,
+    ).strip()
+    attestation_args = [
+        "--protocol-repo", str(repo_root),
+        "--protocol-commit", protocol_commit,
+        "--protocol-path", protocol_git_path,
+        "--protocol-blob", protocol_blob,
+    ]
 
     reranker_path = repo_root / "harness" / "lib" / "retrieval_reranker.py"
     observation_path = output / "retrieval-observations.json"
@@ -61,24 +73,13 @@ def test_p22_scientific_experiment_comparison(
             ("base_score", query["base_ndcg_at_k"]),
             ("linear_reranker", query["rerank_ndcg_at_k"]),
         ):
-            comparison = {
-                "analysis_plan": protocol["analysis_plan"],
-                "study_id": protocol["study_id"],
-                "arm": arm,
-                "baseline_arm": "base_score",
-                "variant_arm": "linear_reranker",
+            observation = {
+                "observation_id": f"{pair_id}-{arm}",
                 "pair_id": pair_id,
+                "arm": arm,
                 "replicate_id": f"{pair_id}-{arm}",
-                "independence_unit": protocol["independence_unit"],
                 "independence_value": pair_id,
-                "protocol_sha256": protocol_hash,
-                "dataset_sha256": dataset_hash,
-                "expected_pair_ids": protocol["expected_pair_ids"],
-                "primary_metric": protocol["primary_metric"],
-                "metric_unit": protocol["metric_unit"],
-                "higher_is_better": protocol["higher_is_better"],
-                "alpha": protocol["alpha"],
-                "minimum_pairs": protocol["minimum_pairs"],
+                "source_artifact_sha256": observation_hash,
             }
             document = {
                 "schema": "experiment_result.v1",
@@ -86,7 +87,7 @@ def test_p22_scientific_experiment_comparison(
                 "sprint_id": run_id,
                 "node_id": "retrieval-ranking-experiment",
                 "status": "completed",
-                "inputs": {"comparison": comparison},
+                "inputs": {"observation": observation},
                 "outputs": {
                     "result": {
                         "experiment_id": f"{run_id}-{pair_id}-{arm}",
@@ -102,21 +103,19 @@ def test_p22_scientific_experiment_comparison(
                             f"retrieval-observation:{pair_id}",
                             f"sha256:{observation_hash}",
                         ],
+                        "execution_mode": "production_local",
+                        "command_run": " ".join(map(str, reranker_command)),
+                        "logs": ["metric independently derived from the hash-bound production reranker artifact"],
                     }
                 },
                 "artifacts": [
-                    {
-                        "type": "pre_registered_protocol",
-                        "path": str(protocol_path),
-                        "sha256": protocol_hash,
-                    },
                     {
                         "type": "labeled_dataset",
                         "path": str(dataset_path),
                         "sha256": dataset_hash,
                     },
                     {
-                        "type": "production_reranker_observations",
+                        "type": "production_metric_observations",
                         "path": str(observation_path),
                         "sha256": observation_hash,
                     },
@@ -148,6 +147,7 @@ def test_p22_scientific_experiment_comparison(
         "compare",
         "--results",
         *[str(path) for path in result_paths],
+        *attestation_args,
         "--output",
         str(comparison_path),
     ]
@@ -163,6 +163,7 @@ def test_p22_scientific_experiment_comparison(
         "compare",
         "--results",
         *[str(path) for path in result_paths[:-2]],
+        *attestation_args,
         "--output",
         str(rejected_path),
     ]
@@ -170,6 +171,47 @@ def test_p22_scientific_experiment_comparison(
         rejection_command, capture_output=True, text=True, timeout=30
     )
     rejection = json.loads(rejected_path.read_text(encoding="utf-8"))
+
+    metric_attack_dir = output / "metric-attack-results"
+    metric_attack_dir.mkdir()
+    metric_attack_paths = []
+    for source in result_paths:
+        copied = metric_attack_dir / source.name
+        copied.write_bytes(source.read_bytes())
+        metric_attack_paths.append(copied)
+    attacked = json.loads(metric_attack_paths[0].read_text(encoding="utf-8"))
+    attacked["outputs"]["result"]["metrics"][0]["value"] = 100
+    metric_attack_paths[0].write_text(json.dumps(attacked, indent=2) + "\n", encoding="utf-8")
+    metric_attack_output = output / "metric-100-attack-rejection.json"
+    metric_attack_command = [
+        phase22_python, str(comparator_path), "compare", "--results",
+        *[str(path) for path in metric_attack_paths], *attestation_args,
+        "--output", str(metric_attack_output),
+    ]
+    metric_attack_process = subprocess.run(metric_attack_command, capture_output=True, text=True, timeout=30)
+    metric_attack = json.loads(metric_attack_output.read_text(encoding="utf-8"))
+
+    embedded_attack_dir = output / "embedded-plan-attack-results"
+    embedded_attack_dir.mkdir()
+    embedded_attack_paths = []
+    for source in result_paths:
+        copied = embedded_attack_dir / source.name
+        copied.write_bytes(source.read_bytes())
+        embedded_attack_paths.append(copied)
+    attacked = json.loads(embedded_attack_paths[0].read_text(encoding="utf-8"))
+    attacked["inputs"]["comparison"] = {
+        "alpha": 1.0,
+        "expected_pair_ids": protocol["expected_pair_ids"][:4],
+    }
+    embedded_attack_paths[0].write_text(json.dumps(attacked, indent=2) + "\n", encoding="utf-8")
+    embedded_attack_output = output / "embedded-4-pair-attack-comparison.json"
+    embedded_attack_command = [
+        phase22_python, str(comparator_path), "compare", "--results",
+        *[str(path) for path in embedded_attack_paths], *attestation_args,
+        "--output", str(embedded_attack_output),
+    ]
+    embedded_attack_process = subprocess.run(embedded_attack_command, capture_output=True, text=True, timeout=30)
+    embedded_attack = json.loads(embedded_attack_output.read_text(encoding="utf-8"))
 
     assertions = {
         "real_production_reranker_completed": reranker.returncode == 0
@@ -187,7 +229,20 @@ def test_p22_scientific_experiment_comparison(
         and comparison["uncertainty"]["two_sided_sign_flip_p_value"] < 0.05,
         "all_inputs_and_artifacts_hash_bound": len(comparison["sources"]) == 16
         and all(source["sha256"] for source in comparison["sources"])
-        and all(len(source["verified_artifacts"]) == 3 for source in comparison["sources"]),
+        and all(len(source["verified_artifacts"]) == 2 for source in comparison["sources"]),
+        "canonical_result_gate_accepted_every_input": all(
+            source["canonical_experiment_result_gate"]["ok"]
+            for source in comparison["sources"]
+        ),
+        "git_attested_protocol_controls_analysis": comparison["protocol_attestation"]["blob"] == protocol_blob
+        and comparison["protocol_attestation"]["commit"] == protocol_commit,
+        "metric_100_attack_rejected": metric_attack_process.returncode == 2
+        and metric_attack["status"] == "rejected"
+        and "result_metric_disagrees_with_hashed_observation" in metric_attack["errors"][0],
+        "embedded_8_to_4_plan_attack_has_no_authority": embedded_attack_process.returncode == 0
+        and embedded_attack["status"] == "accepted"
+        and embedded_attack["sample"]["paired_count"] == 8
+        and len(embedded_attack["analysis_plan"]["pre_registered_pairs"]) == 8,
         "missing_pair_rejected_without_effect_claim": rejection_process.returncode == 2
         and rejection["status"] == "rejected"
         and "cherry_picked_or_missing_pairs" in rejection["errors"][0],
@@ -207,7 +262,7 @@ def test_p22_scientific_experiment_comparison(
             "pair_count": 8,
         },
         "production_entrypoints": [str(reranker_path), str(comparator_path)],
-        "exact_commands": [reranker_command, comparison_command, rejection_command],
+        "exact_commands": [reranker_command, comparison_command, rejection_command, metric_attack_command, embedded_attack_command],
         "environment": {
             "python": phase22_python,
             "network": "not required",
@@ -222,6 +277,8 @@ def test_p22_scientific_experiment_comparison(
             "reranker": reranker.returncode,
             "comparison": comparison_process.returncode,
             "intentional_missing_pair_rejection": rejection_process.returncode,
+            "metric_100_attack": metric_attack_process.returncode,
+            "embedded_8_to_4_plan_attack": embedded_attack_process.returncode,
         },
         "output_tails": {
             "reranker_stdout": reranker.stdout[-500:],
@@ -233,6 +290,8 @@ def test_p22_scientific_experiment_comparison(
             "experiment_result_directory": str(result_dir),
             "comparison": str(comparison_path),
             "negative_rejection": str(rejected_path),
+            "metric_attack_rejection": str(metric_attack_output),
+            "embedded_plan_attack_comparison": str(embedded_attack_output),
         },
         "assertions": assertions,
         "status": "PASS_WITH_KNOWN_LIMITATIONS"
