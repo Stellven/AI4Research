@@ -112,3 +112,32 @@ $SOLAR_SRC retained
 
 If `pipx` is installed, the smoke installs the wrapper with pipx. If `pipx` is
 absent, it uses a venv fallback and prints that the pipx leg is unverified.
+
+## Self-contained Linux runtime deliverable
+
+`distribution/runtime_deliverable.py` constructs the supported WSL/Linux
+x86_64 CPython 3.12 target. The output replay archive contains the wrapper,
+the exact Git source snapshot, JSON schema and verifier, jq, an offline harness
+wheelhouse, bootstrap/replay scripts, and a hash inventory. Construction takes
+the already-downloaded wheelhouse and jq binary as explicit inputs:
+
+```bash
+python distribution/runtime_deliverable.py build \
+  --repo-root . \
+  --output-dir /tmp/opensolar-runtime-deliverable \
+  --wheelhouse /path/to/cp312-linux-wheelhouse \
+  --jq-binary /path/to/jq-linux-amd64
+```
+
+Extract the emitted `.tar.gz`, then replay without a network connection,
+external checkout, or injected runtime environment:
+
+```bash
+tar -xzf openjiuwen-solar-runtime-deliverable-<commit>.tar.gz -C /tmp/replay
+bash /tmp/replay/runtime-deliverable/replay.sh /tmp/new-empty-sandbox
+```
+
+The replay writes atomic command, exit-code, output-hash, doctor, HTTP health,
+and rollback evidence to `<sandbox>/product/smoke-evidence.json`. When pipx is
+unavailable, the evidence reports the pipx leg as `NOT_TESTED` and records the
+isolated venv fallback separately.
