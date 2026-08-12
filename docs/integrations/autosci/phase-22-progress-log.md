@@ -3380,3 +3380,19 @@ Date: 2026-08-12
   User-Facing Deliverable Generation.
 - This does not close external distribution or compiled publication variants;
   those remain separately tracked by `P22-REPAIR-054` and `118`.
+
+## Significant stale-limit closure — P22-J18 CLI and LLM Config (2 issues)
+
+Date: 2026-08-12
+
+- The current Windows J18 configuration selector completed and refreshed the
+  isolated evidence under `.codex-tmp/phase22-worker-results/T3-tmux-prep-001`.
+- Solar, harness, status, and UI help probes all returned exit 0. The named
+  “secondary help commands fail on Windows” limitation is stale, so
+  `P22-REPAIR-129` is `LIMITATION_CLOSED_VERIFIED`.
+- The production settings write/read probe reports `status=ok`, no missing
+  aliases, and preserves the requested roles as `claude-opus-4.x` and
+  `claude-sonnet-4.x`. Runtime source is `solar-user-config.json`; no API-key
+  output was observed. `P22-REPAIR-139` is `LIMITATION_CLOSED_VERIFIED`.
+- This does not infer every CLI command, provider model, secret backend, or
+  platform variant.

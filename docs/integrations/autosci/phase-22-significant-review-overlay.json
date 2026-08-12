@@ -224,8 +224,20 @@
       "decision": "J07 now records an explicit completed experiment lifecycle state and independently checks it through exp-status. J09 produces and saves a substantive readable Markdown report, completes real provider review, and includes it in a verified local delivery handoff. These directly close the older named limitations for Runtime Control Loop and User-Facing Deliverable Generation.",
       "remaining_boundary": "J07 completed is a lifecycle state and does not imply every experimental outcome is positive. J09 external distribution and compiled publication formats remain separately open under P22-REPAIR-054 and 118.",
       "issue_ids": ["P22-REPAIR-092", "P22-REPAIR-052"]
+    },
+    {
+      "journey_id": "P22-J18",
+      "shared_recorded_limitation": "Secondary Windows help commands failed and configured model aliases were not fully preserved.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 2,
+      "accepted_evidence": ".codex-tmp/phase22-worker-results/T3-tmux-prep-001/artifacts/",
+      "journey_status": "PASS",
+      "assertions": {"CLI": {"passed": 4, "failed": 0}, "LLM_Config": {"passed": 4, "failed": 0}},
+      "decision": "The current Windows J18 selector reports exit 0 for Solar, harness, status, and UI help commands. The production settings write/read path preserves all requested aliases as claude-opus-4.x or claude-sonnet-4.x, reports no missing aliases, retains runtime source solar-user-config.json, and suppresses API keys.",
+      "remaining_boundary": "This closes the specifically recorded secondary-help and model-name roundtrip limitations. It does not infer every CLI command, provider model, secret backend, or platform variant.",
+      "issue_ids": ["P22-REPAIR-129", "P22-REPAIR-139"]
     }
   ],
-  "closed_shared_limitation_issue_count": 44,
-  "remaining_significant_issues": 28
+  "closed_shared_limitation_issue_count": 46,
+  "remaining_significant_issues": 26
 }
