@@ -4323,6 +4323,12 @@ print(json.dumps({
         [[ -f "$_reranker_py" ]] || { err "retrieval_reranker not found: $_reranker_py"; exit 1; }
         python3 "$_reranker_py" train "$@"
         ;;
+      legal-risk-screen)
+        shift || true
+        _legal_risk_py="$HARNESS_DIR/lib/legal_ip_risk.py"
+        [[ -f "$_legal_risk_py" ]] || { err "legal_ip_risk not found: $_legal_risk_py"; exit 1; }
+        python3 "$_legal_risk_py" screen "$@"
+        ;;
       self-rag-evaluate)
         shift || true
         _self_rag_py="$HARNESS_DIR/lib/self_rag.py"
