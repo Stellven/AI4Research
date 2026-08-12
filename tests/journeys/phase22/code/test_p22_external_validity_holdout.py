@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -8,6 +9,7 @@ from pathlib import Path
 def test_p22_external_validity_holdout(repo_root: Path) -> None:
     fixture = repo_root / "tests/journeys/phase22/fixtures/significant/external_validity/multi_site_holdout.json"
     trust_registry = repo_root / "tests/journeys/phase22/fixtures/significant/trust_registry.json"
+    trust_registry_sha256 = hashlib.sha256(trust_registry.read_bytes()).hexdigest()
     run_id = "p22-external-validity-holdout"
     run_dir = repo_root / "outputs/phase22-real-journeys" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -18,9 +20,11 @@ def test_p22_external_validity_holdout(repo_root: Path) -> None:
         "harness.lib.research.external_validity",
         str(fixture),
         "--trusted-plan-sha256",
-        "1254aa136cabca6867d36a420337d5efbdd3f7e83b0e738c65c241e821d12c72",
+        "8c977513343d5e6ed9213a743abcdf7f8aa476fde54660d5308a621509337ae9",
         "--trust-registry",
         str(trust_registry),
+        "--trust-registry-sha256",
+        trust_registry_sha256,
         "--output",
         str(result_path),
     ]
@@ -31,7 +35,7 @@ def test_p22_external_validity_holdout(repo_root: Path) -> None:
     assert result["manifest"]["sha256"]
     assert result["external_plan"]["sha256"]
     assert len(result["site_results"]) == 2
-    assert result["policy"]["preregistered_external_sites"] == ["hospital-lab-c", "university-lab-b"]
+    assert result["policy"]["preregistered_external_sites"] == ["fixture-hospital-lab-c", "fixture-university-lab-b"]
     assert result["claim_boundary"]["supported_on_preregistered_external_sites"] is True
     assert result["claim_boundary"]["supports_unobserved_sites"] is False
     assert result["claim_boundary"]["supports_universal_generalization"] is False
@@ -45,9 +49,10 @@ def test_p22_external_validity_holdout(repo_root: Path) -> None:
     attack_payload["site_identities"] = [
         item
         for item in attack_payload["site_identities"]
-        if item.get("site_id") != "hospital-lab-c"
+        if item.get("site_id") != "fixture-hospital-lab-c"
     ]
     attack_registry.write_text(json.dumps(attack_payload, indent=2) + "\n", encoding="utf-8")
+    attack_registry_sha256 = hashlib.sha256(attack_registry.read_bytes()).hexdigest()
     attack_path = run_dir / "missing-site-identity-rejection.json"
     attack_command = [
         sys.executable,
@@ -55,9 +60,11 @@ def test_p22_external_validity_holdout(repo_root: Path) -> None:
         "harness.lib.research.external_validity",
         str(fixture),
         "--trusted-plan-sha256",
-        "1254aa136cabca6867d36a420337d5efbdd3f7e83b0e738c65c241e821d12c72",
+        "8c977513343d5e6ed9213a743abcdf7f8aa476fde54660d5308a621509337ae9",
         "--trust-registry",
         str(attack_registry),
+        "--trust-registry-sha256",
+        attack_registry_sha256,
         "--output",
         str(attack_path),
     ]
@@ -65,7 +72,7 @@ def test_p22_external_validity_holdout(repo_root: Path) -> None:
     attack_result = json.loads(attack_path.read_text(encoding="utf-8"))
     assert attack_proc.returncode == 2
     assert attack_result["status"] == "rejected"
-    assert any(error.startswith("site_identity_not_trust_pinned:2") for error in attack_result["errors"])
+    assert "trust_registry_invalid:trust_registry_sha256_not_policy_approved" in attack_result["errors"]
 
     repo_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_root, text=True).strip()
     evidence = {

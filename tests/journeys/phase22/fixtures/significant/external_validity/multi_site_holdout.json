@@ -1,0 +1,9 @@
+{
+  "schema": "solar.external_validity_manifest.v2",
+  "external_plan": {"path": "external_plan.json", "sha256": "8c977513343d5e6ed9213a743abcdf7f8aa476fde54660d5308a621509337ae9"},
+  "observations": [
+    {"path": "evidence/development-a.json", "sha256": "f160c187e01f77f0415e64584510a20fd1b670b7d9724ccef7bbac98b9ece3e5"},
+    {"path": "evidence/holdout-b.json", "sha256": "3296a76b93be4a6533c47ee8854535b2c7bae73e5fda416f9ead67cbefd95ace"},
+    {"path": "evidence/holdout-c.json", "sha256": "5a21c84b83143641e88b2c8618a552cb8bbb01d1d7a8bfbeead6729d7a630951"}
+  ]
+}

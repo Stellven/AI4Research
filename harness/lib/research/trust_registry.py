@@ -11,6 +11,9 @@ from urllib.parse import urlparse
 
 HEX = set("0123456789abcdef")
 SCHEMA = "solar.trust_anchor_registry.v1"
+APPROVED_REGISTRY_SHA256S = {
+    "a84808e8f64888b567628acd6636c1a61b558f3d8f7f582a7eae8c68cf590edc",
+}
 
 
 class TrustRegistryError(ValueError):
@@ -62,10 +65,29 @@ def _instant(value: Any) -> bool:
     return parsed.tzinfo is not None
 
 
-def load_registry(path: str | Path) -> dict[str, Any]:
+def load_registry(
+    path: str | Path,
+    trusted_registry_sha256: str = "",
+    *,
+    approved_registry_sha256s: set[str] | None = None,
+) -> dict[str, Any]:
     registry_path = Path(path)
+    expected = _sha(trusted_registry_sha256)
+    if not expected:
+        raise TrustRegistryError("trust_registry_sha256_required")
+    approved = APPROVED_REGISTRY_SHA256S if approved_registry_sha256s is None else {
+        _sha(item) for item in approved_registry_sha256s
+    }
+    if expected not in approved:
+        raise TrustRegistryError("trust_registry_sha256_not_policy_approved")
     try:
-        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        raw = registry_path.read_bytes()
+        actual = sha256_bytes(raw)
+        if actual != expected:
+            raise TrustRegistryError("trust_registry_sha256_mismatch")
+        registry = json.loads(raw.decode("utf-8"))
+    except TrustRegistryError:
+        raise
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise TrustRegistryError(f"trust_registry_unreadable:{exc}") from exc
     if not isinstance(registry, dict):

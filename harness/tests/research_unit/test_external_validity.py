@@ -62,13 +62,13 @@ def _registry(tmp_path, manifest, plan_hash, mutate=None):
         row = json.loads((tmp_path / ref["path"]).read_text(encoding="utf-8"))
         site = row["site"]
         site_identities.append({
-            "site_id": site["site_id"],
-            "organization_id": site["organization_id"],
-            "collection_protocol_id": site["collection_protocol_id"],
-            "identity_uri": "https://registry.example/sites/" + site["site_id"],
+            "site_id": site.get("site_id", ""),
+            "organization_id": site.get("organization_id", ""),
+            "collection_protocol_id": site.get("collection_protocol_id", ""),
+            "identity_uri": "https://registry.example/sites/" + site.get("site_id", ""),
             "anchor_id": "site-anchor",
             "evidence_sha256s": [ref["sha256"]],
-            "signature_sha256": _hex("site:" + site["site_id"]),
+            "signature_sha256": _hex("site:" + site.get("site_id", "")),
         })
     registry = {
         "schema": "solar.trust_anchor_registry.v1",
@@ -101,12 +101,24 @@ def _registry(tmp_path, manifest, plan_hash, mutate=None):
     if mutate:
         mutate(registry)
     path = tmp_path / "trust-registry.json"
-    _save(path, registry)
-    return path
+    registry_hash = _save(path, registry)
+    return path, registry_hash
+
+
+def _evaluate_bundle(tmp_path, mutate=None):
+    manifest, trusted = _bundle(tmp_path, mutate)
+    registry, registry_hash = _registry(tmp_path, manifest, trusted)
+    return evaluate_external_holdout(
+        manifest,
+        trusted,
+        registry,
+        registry_hash,
+        approved_registry_sha256s={registry_hash},
+    )
 
 
 def test_accepts_hashed_preregistered_metrics_but_bounds_claim(tmp_path):
-    result = evaluate_external_holdout(*_bundle(tmp_path))
+    result = _evaluate_bundle(tmp_path)
     assert result["status"] == "accepted", result["errors"]
     assert result["claim_boundary"]["supported_on_preregistered_external_sites"] is True
     assert result["claim_boundary"]["supports_universal_generalization"] is False
@@ -116,8 +128,14 @@ def test_accepts_hashed_preregistered_metrics_but_bounds_claim(tmp_path):
 
 def test_accepts_trust_pinned_plan_and_site_identities(tmp_path):
     manifest, trusted = _bundle(tmp_path)
-    registry = _registry(tmp_path, manifest, trusted)
-    result = evaluate_external_holdout(manifest, trusted, registry)
+    registry, registry_hash = _registry(tmp_path, manifest, trusted)
+    result = evaluate_external_holdout(
+        manifest,
+        trusted,
+        registry,
+        registry_hash,
+        approved_registry_sha256s={registry_hash},
+    )
     assert result["status"] == "accepted", result["errors"]
     assert result["external_plan_trust"]["status"] == "accepted"
     assert result["site_identity_contract"]["status"] == "accepted"
@@ -126,15 +144,36 @@ def test_accepts_trust_pinned_plan_and_site_identities(tmp_path):
 
 def test_rejects_self_attested_site_identity_not_pinned_by_registry(tmp_path):
     manifest, trusted = _bundle(tmp_path)
-    registry = _registry(
+    registry, registry_hash = _registry(
         tmp_path,
         manifest,
         trusted,
         lambda payload: payload["site_identities"].pop(),
     )
-    result = evaluate_external_holdout(manifest, trusted, registry)
+    result = evaluate_external_holdout(
+        manifest,
+        trusted,
+        registry,
+        registry_hash,
+        approved_registry_sha256s={registry_hash},
+    )
     assert result["status"] == "rejected"
     assert any(error.startswith("site_identity_not_trust_pinned:2") for error in result["errors"])
+
+
+def test_rejects_omitted_trust_registry(tmp_path):
+    manifest, trusted = _bundle(tmp_path)
+    result = evaluate_external_holdout(manifest, trusted)
+    assert result["status"] == "rejected"
+    assert "trust_registry_required" in result["errors"]
+
+
+def test_rejects_forged_registry_not_policy_approved(tmp_path):
+    manifest, trusted = _bundle(tmp_path)
+    registry, registry_hash = _registry(tmp_path, manifest, trusted)
+    result = evaluate_external_holdout(manifest, trusted, registry, registry_hash)
+    assert result["status"] == "rejected"
+    assert "trust_registry_invalid:trust_registry_sha256_not_policy_approved" in result["errors"]
 
 
 def test_rejects_tampered_evidence_after_manifest_hash(tmp_path):
@@ -143,7 +182,14 @@ def test_rejects_tampered_evidence_after_manifest_hash(tmp_path):
     payload = json.loads(path.read_text())
     payload["metric"]["numerator"] = 10
     path.write_text(json.dumps(payload), encoding="utf-8")
-    result = evaluate_external_holdout(manifest, trusted)
+    registry, registry_hash = _registry(tmp_path, manifest, trusted)
+    result = evaluate_external_holdout(
+        manifest,
+        trusted,
+        registry,
+        registry_hash,
+        approved_registry_sha256s={registry_hash},
+    )
     assert result["status"] == "rejected"
     assert "observation_evidence_hash_mismatch:1" in result["errors"]
 
@@ -152,7 +198,7 @@ def test_rejects_static_boolean_instead_of_derived_counts(tmp_path):
     def attack(plan, rows):
         rows[1]["claim_supported"] = True
         rows[1]["metric"] = {"name": "success_rate", "numerator": True, "denominator": True}
-    result = evaluate_external_holdout(*_bundle(tmp_path, attack))
+    result = _evaluate_bundle(tmp_path, attack)
     assert result["status"] == "rejected"
     assert "observation_metric_counts_invalid:1" in result["errors"]
 
@@ -162,7 +208,7 @@ def test_rejects_database_provider_label_as_fake_site(tmp_path):
         plan["external_holdout_site_ids"] = ["crossref", "openalex"]
         for row, label in zip(rows[1:], ("crossref", "openalex")):
             row["site"] = {"site_id": label, "provider_family": label}
-    result = evaluate_external_holdout(*_bundle(tmp_path, attack))
+    result = _evaluate_bundle(tmp_path, attack)
     assert result["status"] == "rejected"
     assert "experimental_site_identity_incomplete:1" in result["errors"]
     assert "experimental_site_identity_incomplete:2" in result["errors"]
@@ -172,7 +218,7 @@ def test_rejects_shared_source_and_evidence_ids(tmp_path):
     def attack(plan, rows):
         rows[2]["source_lineage_id"] = rows[1]["source_lineage_id"]
         rows[2]["evidence_id"] = rows[1]["evidence_id"]
-    result = evaluate_external_holdout(*_bundle(tmp_path, attack))
+    result = _evaluate_bundle(tmp_path, attack)
     assert result["status"] == "rejected"
     assert "source_lineage_id_not_unique" in result["errors"]
     assert "evidence_id_not_unique" in result["errors"]
@@ -180,17 +226,31 @@ def test_rejects_shared_source_and_evidence_ids(tmp_path):
 
 def test_rejects_embedded_or_posthoc_plan(tmp_path):
     manifest, trusted = _bundle(tmp_path)
+    registry, registry_hash = _registry(tmp_path, manifest, trusted)
     payload = json.loads(manifest.read_text())
     payload["external_plan"] = {"claim_id": "fake", "minimum_site_support_rate": 0}
     manifest.write_text(json.dumps(payload), encoding="utf-8")
-    result = evaluate_external_holdout(manifest, trusted)
+    result = evaluate_external_holdout(
+        manifest,
+        trusted,
+        registry,
+        registry_hash,
+        approved_registry_sha256s={registry_hash},
+    )
     assert result["status"] == "rejected"
     assert "external_plan_missing" in result["errors"]
 
 
 def test_rejects_manifest_self_attested_plan_without_out_of_band_anchor(tmp_path):
-    manifest, _ = _bundle(tmp_path)
-    result = evaluate_external_holdout(manifest)
+    manifest, trusted = _bundle(tmp_path)
+    registry, registry_hash = _registry(tmp_path, manifest, trusted)
+    result = evaluate_external_holdout(
+        manifest,
+        "",
+        registry,
+        registry_hash,
+        approved_registry_sha256s={registry_hash},
+    )
     assert result["status"] == "rejected"
     assert "external_plan_not_matched_by_out_of_band_trust_anchor" in result["errors"]
 
@@ -198,7 +258,7 @@ def test_rejects_manifest_self_attested_plan_without_out_of_band_anchor(tmp_path
 def test_rejects_plan_registered_after_observations(tmp_path):
     def attack(plan, rows):
         plan["registered_at"] = "2026-08-10T00:00:00Z"
-    result = evaluate_external_holdout(*_bundle(tmp_path, attack))
+    result = _evaluate_bundle(tmp_path, attack)
     assert result["status"] == "rejected"
     assert "observation_not_post_registration:0" in result["errors"]
 
@@ -206,7 +266,7 @@ def test_rejects_plan_registered_after_observations(tmp_path):
 def test_rejects_development_holdout_lineage_leakage(tmp_path):
     def attack(plan, rows):
         rows[1]["source_lineage_id"] = rows[0]["source_lineage_id"]
-    result = evaluate_external_holdout(*_bundle(tmp_path, attack))
+    result = _evaluate_bundle(tmp_path, attack)
     assert result["status"] == "rejected"
     assert "development_holdout_source_lineage_contamination" in result["errors"]
 
@@ -214,6 +274,6 @@ def test_rejects_development_holdout_lineage_leakage(tmp_path):
 def test_rejects_same_organization_claimed_as_two_independent_sites(tmp_path):
     def attack(plan, rows):
         rows[2]["site"]["organization_id"] = rows[1]["site"]["organization_id"]
-    result = evaluate_external_holdout(*_bundle(tmp_path, attack))
+    result = _evaluate_bundle(tmp_path, attack)
     assert result["status"] == "rejected"
     assert "external_holdout_organizations_not_independent" in result["errors"]
