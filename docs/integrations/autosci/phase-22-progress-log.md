@@ -3530,3 +3530,20 @@ Date: 2026-08-12
   LoRA, DPO, GRPO, reward-model, or agent-RL weights were created or claimed,
   and the measured improvement is not generalized beyond the supplied
   hash-addressed holdout.
+
+## Significant limitation reduction — offline cost-aware bandit routing
+
+Date: 2026-08-12
+
+- `P22-REPAIR-076` is partially reduced. Production command
+  `solar-harness evolution routing-evaluate` implements offline cost-aware
+  UCB1 scoring over hash-bound traces with explicit reward, USD cost, latency,
+  exploration, and mean-cost budget inputs.
+- Run `p22-routing-20260812T074252Z` passed 6/6 assertions: the candidate was
+  selected on training observations, improved utility on two paired holdout
+  contexts, stayed within budget, had no success regression, and recorded the
+  baseline rollback. Unit negatives reject train/holdout contamination,
+  over-budget selection, and success regression (4/4 tests total).
+- This does not establish Bayesian optimization, cost-aware reinforcement
+  learning, or safe autonomous online deployment. Those explicit parts of 076
+  remain open.

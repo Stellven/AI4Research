@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "9488a496b",
+  "reviewed_code_head": "91781c3cc",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -508,6 +508,18 @@
       "decision": "The production evolution CLI now evaluates a curriculum/data-policy candidate from mined failure clusters using hash-addressed training and isolated holdout rows. The accepted run improved holdout pass rate from 50% to 100% with no regressions, bound every changed case to one intervention, emitted a rollback, and rejected contamination, regression and ambiguous-credit variants.",
       "remaining_boundary": "This closes the named active-learning/curriculum/credit-assignment data-loop gap. It does not train model weights or claim SFT, LoRA, DPO, GRPO or agent-RL capability, and the measured improvement is limited to the supplied holdout.",
       "issue_ids": ["P22-REPAIR-082"]
+    },
+    {
+      "journey_id": "NT-optimization-routing cost-aware bandit",
+      "shared_recorded_limitation": "Generic metric-based routing works. Bayesian, bandit, and cost-aware RL routing were not available.",
+      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22-routing-20260812T074252Z/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"passed": 6, "failed": 0, "negative_variants": 3},
+      "decision": "A production offline cost-aware UCB1 evaluator now learns arm scores from training traces, applies cost and latency penalties plus exploration, and requires paired holdout utility improvement with no success regression. It hash-binds the traces, rejects context contamination and over-budget/regressing candidates, and emits an explicit rollback instead of auto-deploying.",
+      "remaining_boundary": "This closes the missing bandit portion only. Bayesian optimization and cost-aware reinforcement learning are still not shipped, and no online autonomous policy deployment was authorized. P22-REPAIR-076 therefore remains open.",
+      "issue_ids": ["P22-REPAIR-076"]
     }
   ],
   "closed_shared_limitation_issue_count": 61,
