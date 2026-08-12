@@ -98,6 +98,16 @@ def test_rejects_nan_and_infinity_in_metrics_and_config(tmp_path):
     assert "invalid_config_value:1" in result["errors"]
 
 
+def test_rejects_numeric_strings_and_boolean_config_values(tmp_path):
+    rows = _rows()
+    rows[0]["reward"] = "0.60"
+    rows[1]["config"] = {"quality": True, "speed": .2}
+    result = _evaluate(_write(tmp_path / "traces.jsonl", rows))
+    assert result["status"] == "rejected"
+    assert "invalid_reward:1" in result["errors"]
+    assert "invalid_config_value:2" in result["errors"]
+
+
 def test_rejects_empty_identifiers_and_duplicate_observations(tmp_path):
     rows = _rows()
     rows[0]["arm"] = " "
