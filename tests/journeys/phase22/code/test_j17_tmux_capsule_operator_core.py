@@ -543,16 +543,61 @@ def _prepare_project(tmp_path: Path) -> Path:
     return project
 
 
+def _workspace_pytest_command(python_cmd: str) -> list[str]:
+    return [python_cmd, "-m", "pytest", "-q", "--ignore=.worktrees"]
+
+
+def test_j17_workspace_pytest_excludes_product_worktrees() -> None:
+    assert _workspace_pytest_command("python") == [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "--ignore=.worktrees",
+    ]
+
+
 def _render_user_task(rec: J17Recorder, project: Path, python_cmd: str) -> Path:
     template = _read_text(USER_TASK_TEMPLATE)
     rendered = template.format(
         workspace_root=project.resolve().as_posix(),
-        test_command=f"{python_cmd} -m pytest -q",
+        test_command=" ".join(_workspace_pytest_command(python_cmd)),
     )
     path = rec.user_input_dir / "capsule-operator-core-task.md"
     path.write_text(rendered, encoding="utf-8")
     rec.add_artifact(path, "j17-rendered-user-task", required=True)
     return path
+
+
+def _wait_for_reviewing(status_path: Path, timeout_seconds: int) -> tuple[bool, dict[str, Any]]:
+    deadline = time.monotonic() + max(1, timeout_seconds)
+    payload: dict[str, Any] = {}
+    while time.monotonic() < deadline:
+        payload = _read_json(status_path)
+        status = str(payload.get("status") or "").lower()
+        if status == "reviewing":
+            return True, payload
+        if status in {
+            "completed",
+            "failed",
+            "failed_review",
+            "cancelled",
+            "blocked",
+            "needs_human_review",
+        }:
+            return False, payload
+        time.sleep(2)
+    return False, payload
+
+
+def test_j17_review_wait_stops_at_human_review_boundary(tmp_path: Path) -> None:
+    status_path = tmp_path / "sprint.status.json"
+    _write_json(status_path, {"status": "needs_human_review", "phase": "needs_human"})
+
+    ready, payload = _wait_for_reviewing(status_path, 10)
+
+    assert ready is False
+    assert payload["status"] == "needs_human_review"
 
 
 def _collect_paths(harness_dir: Path, sprint_id: str) -> dict[str, Path]:
@@ -866,7 +911,7 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
     project = _prepare_project(tmp_path)
     python_cmd = python_executable(repo_root)
     user_task = _render_user_task(rec, project, python_cmd)
-    baseline = rec.run("baseline-pytest", [python_cmd, "-m", "pytest", "-q"], cwd=project, env=env, timeout=120)
+    baseline = rec.run("baseline-pytest", _workspace_pytest_command(python_cmd), cwd=project, env=env, timeout=120)
     rec.add_assertion("fixture_tests_pass_before_product_work", baseline.returncode == 0, baseline.returncode)
 
     user_socket = f"p22j17user{os.getpid()}"
@@ -952,15 +997,25 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
         resume_record = rec.run_in_user_tmux(user_socket, user_session, "wake-resume-after-interruption", resume_cmd, env=env, timeout=wake_timeout)
         rec.add_assertion("resume_wake_executed_from_user_tmux", resume_record["inner_exit_code"] == 0, resume_record)
 
-        verify = rec.run("post-product-pytest", [python_cmd, "-m", "pytest", "-q"], cwd=project, env=env, timeout=120)
+        reviewing_ready, reviewing_status = _wait_for_reviewing(sprint_paths["status"], wake_timeout)
+        rec.add_assertion("resumed_sprint_reached_reviewing", reviewing_ready, reviewing_status)
+
+        verify = rec.run("post-product-pytest", _workspace_pytest_command(python_cmd), cwd=project, env=env, timeout=120)
         rec.add_assertion("workspace_tests_pass_after_product_work", verify.returncode == 0, verify.returncode)
 
-        eval_cmd = (
-            f"TERM=dumb bash {_shell_path(harness_script)} eval-verdict {shlex.quote(sprint_id)} "
-            "pass 'J17 static verification found graph operator queue and recovery evidence'"
-        )
-        eval_record = rec.run_in_user_tmux(user_socket, user_session, "eval-verdict-pass", eval_cmd, env=env, timeout=120)
-        rec.add_assertion("eval_verdict_command_executed", eval_record["inner_exit_code"] == 0, eval_record)
+        if reviewing_ready:
+            eval_cmd = (
+                f"TERM=dumb bash {_shell_path(harness_script)} eval-verdict {shlex.quote(sprint_id)} "
+                "pass 'J17 static verification found graph operator queue and recovery evidence'"
+            )
+            eval_record = rec.run_in_user_tmux(user_socket, user_session, "eval-verdict-pass", eval_cmd, env=env, timeout=120)
+            rec.add_assertion("eval_verdict_command_executed", eval_record["inner_exit_code"] == 0, eval_record)
+        else:
+            rec.add_assertion(
+                "eval_verdict_not_submitted_before_reviewing",
+                True,
+                "The resumed sprint did not reach reviewing, so the test refused to submit a false PASS verdict.",
+            )
 
         probe_path = _write_static_probe(rec, harness_dir, sprint_id, project)
         rec.add_artifact(probe_path, "j17-artifact-probe", required=True)
@@ -982,6 +1037,7 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
                 "harness_restarted_after_interruption",
                 "plan_verdict_approved_from_user_tmux",
                 "resume_wake_executed_from_user_tmux",
+                "resumed_sprint_reached_reviewing",
                 "workspace_tests_pass_after_product_work",
             }
         }
@@ -1000,6 +1056,14 @@ def test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint(repo_root: Path
         limitations = sorted({lim for item in rec.observed_l2 for lim in item.get("known_limitations", [])})
         rec.finalize("PASS_WITH_KNOWN_LIMITATIONS" if limitations else "PASS", limitations=limitations)
     finally:
+        watchdog_script = harness_dir / "coordinator-watchdog.sh"
+        if watchdog_script.exists():
+            rec.run("watchdog-stop", [str(bash_argv(repo_root)[0]), str(watchdog_script), "stop"], env=env, timeout=30)
+        coordinator_pid_path = harness_dir / ".coordinator.pid"
+        if coordinator_pid_path.exists():
+            coordinator_pid = _read_text(coordinator_pid_path).strip()
+            if coordinator_pid.isdigit():
+                rec.run("coordinator-stop", ["kill", "-TERM", coordinator_pid], env=env, timeout=30)
         if tmux_started:
             rec.run(
                 "tmux-final-capture-user-session",
