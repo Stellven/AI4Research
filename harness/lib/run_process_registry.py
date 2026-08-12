@@ -75,6 +75,12 @@ class TerminalRunError(RuntimeError):
     """Raised when registering into a run that is already marked terminal."""
 
 
+def _developer_observability_enabled() -> bool:
+    return os.environ.get("SOLAR_DEVELOPER_OBSERVABILITY", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
 def _now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -560,6 +566,7 @@ def teardown(
     self_pid = os.getpid()
     handled: set[int] = set()
     killed: List[int] = []
+    term_signalled: List[int] = []
     sigkilled: List[int] = []
     already_gone: List[int] = []
     skipped: List[Dict[str, Any]] = []
@@ -603,6 +610,7 @@ def teardown(
         for entry in targets:
             try:
                 _signal_entry(entry, signal.SIGTERM)
+                term_signalled.append(int(entry["pid"]))
             except ProcessLookupError:
                 pass
         stubborn = _wait_entries_gone(targets, grace_s)
@@ -636,6 +644,9 @@ def teardown(
         "survivors": survivors,
         "finished_at": _now(),
     }
+    if _developer_observability_enabled():
+        result["term_signalled"] = term_signalled
+        result["kill_signalled"] = sigkilled
     _append(run_id, result, harness_dir)
     return result
 

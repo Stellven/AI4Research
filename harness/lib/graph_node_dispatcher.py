@@ -40,6 +40,21 @@ def _harness_dir() -> Path:
 HARNESS_DIR = _harness_dir()
 if str(HARNESS_DIR / "lib") not in sys.path:
     sys.path.insert(0, str(HARNESS_DIR / "lib"))
+try:
+    from developer_observability import (  # noqa: E402
+        enabled as _observability_enabled,
+        observe as _observe,
+        stable_id as _observation_id,
+    )
+except Exception:  # Observability must never become a graph dependency.
+    def _observe(*_args: Any, **_kwargs: Any) -> bool:
+        return False
+
+    def _observation_id(kind: str, *parts: Any) -> str:
+        return f"{kind}-unavailable"
+
+    def _observability_enabled() -> bool:
+        return False
 # HARNESS_SPRINTS_DIR override matches graph_scheduler:49 (round-4 G7).
 SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR") or (HARNESS_DIR / "sprints"))
 
@@ -9391,6 +9406,69 @@ def _append_event(sid: str, event: dict[str, Any]) -> None:
     event = dict(event)
     event.setdefault("ts", _utc_now())
     event.setdefault("sid", sid)
+    event_data = event.get("data") if isinstance(event.get("data"), dict) else {}
+    dispatch_id = (
+        event_data.get("dispatch_id")
+        or event_data.get("eval_dispatch_id")
+        or event.get("dispatch_id")
+    )
+    attempt_id = (
+        event_data.get("attempt_id")
+        or event_data.get("repair_attempt")
+        or event_data.get("evaluation_attempt")
+        or event_data.get("eval_generation")
+        or event_data.get("human_review_generation")
+        or "1"
+    )
+    graph_operation_id = _observation_id(
+        "operation",
+        sid,
+        event_data.get("node") or event.get("node_id") or "graph",
+        dispatch_id or event_data.get("task_id") or "unbound",
+        attempt_id,
+        event.get("event") or "graph.event",
+    )
+    graph_revision_sha256 = None
+    graph_revision_bytes = None
+    if _observability_enabled():
+        try:
+            graph_bytes = (SPRINTS_DIR / f"{sid}.task_graph.json").read_bytes()
+            graph_revision_sha256 = hashlib.sha256(graph_bytes).hexdigest()
+            graph_revision_bytes = len(graph_bytes)
+        except OSError:
+            pass
+    _observe(
+        str(event.get("event") or "graph.event"),
+        component="graph_node_dispatcher",
+        operation="graph_lifecycle_event",
+        operation_id=graph_operation_id,
+        phase="point",
+        status=str(event.get("status") or event.get("severity") or "") or None,
+        identifiers={
+            "sprint_id": sid,
+            "node_id": event_data.get("node") or event.get("node_id"),
+            "task_id": event_data.get("task_id") or event_data.get("pm_task_id"),
+            "dispatch_id": dispatch_id,
+            "attempt_id": attempt_id,
+            "correlation_id": event_data.get("task_id") or event_data.get("node") or sid,
+            "span_id": _observation_id("span", graph_operation_id),
+        },
+        data={
+            "actor": event.get("by") or event.get("actor"),
+            "severity": event.get("severity"),
+            "reason": event_data.get("reason"),
+            "verdict": event_data.get("verdict"),
+            "repair_attempt": event_data.get("repair_attempt"),
+            "generation": event_data.get("generation") or event_data.get("human_review_generation"),
+            "operator_id": event_data.get("operator_id"),
+            "eval_dispatch_id": event_data.get("eval_dispatch_id"),
+            "evaluation_attempt": event_data.get("evaluation_attempt"),
+            "eval_generation": event_data.get("eval_generation"),
+            "graph_revision_sha256": graph_revision_sha256,
+            "graph_revision_bytes": graph_revision_bytes,
+        },
+        provenance="observed",
+    )
     try:
         with event_file.open("a", encoding="utf-8") as f:
             f.write(json.dumps(event, ensure_ascii=False) + "\n")
@@ -10343,6 +10421,7 @@ def _submit_eval_to_operator_pool(
     dispatch_id: str,
     instruction_file: Path,
     dry_run: bool,
+    eval_generation: int = 0,
     eval_md_path: str = "",
     eval_json_path: str = "",
     artifact_snapshot: dict[str, Any] | None = None,
@@ -10389,6 +10468,8 @@ def _submit_eval_to_operator_pool(
         sid,
         "--node",
         node_id,
+        "--attempt-id",
+        str(eval_generation),
         "--task-type",
         "graph_eval",
         "--closeout-kind",
@@ -12602,6 +12683,7 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                     dispatch_id=str(assignment["dispatch_id"]),
                     instruction_file=instruction_file,
                     dry_run=dry_run,
+                    eval_generation=int(assignment["eval_generation"]),
                     eval_md_path=str(assignment["eval_md_path"]),
                     eval_json_path=str(assignment["eval_json_path"]),
                     artifact_snapshot=artifact_snapshot,
