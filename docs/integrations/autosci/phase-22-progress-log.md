@@ -3673,3 +3673,48 @@ Date: 2026-08-12
   trusted independent preregistry/signer, external replication, broad science
   domain, or released-baseline experiment was demonstrated, so this bounded
   retrieval POC is not treated as full closure.
+
+## Significant core closure — Bayesian routing and grounded Self-RAG
+
+Date: 2026-08-12
+
+- `P22-REPAIR-076` is `FIXED_VERIFIED` for bounded offline Bayesian and
+  cost-aware bandit routing, with `PASS_WITH_KNOWN_LIMITATIONS` for online/RL
+  variants. The RBF GP/GP-UCB posterior independently recomputed to `1e-12`,
+  selection changed under input perturbation, and paired holdout, cost,
+  uncertainty, success, rollback and no-auto-deploy gates are retained. Final
+  evidence passed 9/9; string booleans, NaN/Inf, numeric strings, boolean
+  configs, duplicates, empty IDs and train/holdout leakage all fail closed.
+- `P22-REPAIR-080` is `FIXED_VERIFIED` for deterministic retrieval learning and
+  bounded grounded reflection, with `PASS_WITH_KNOWN_LIMITATIONS`. The existing
+  linear reranker evidence is joined by a real production Self-RAG wrapper that
+  indexes/retrieves through `LearningRetriever`, verifies exact source spans,
+  offsets and hashes, and records a chained trace. Unsupported Moon/cats,
+  conflict, cycle and budget attacks abstain with empty answers. A two-run
+  persistent-index attack proved that a changed content/URI under one logical
+  document ID retains both version hashes and forces
+  `immutable_document_version_conflict`, even at `top_k=1`.
+- Non-core limits remain explicit: 076 does not prove online optimization,
+  autonomous deployment or cost-aware RL. 080 uses conservative exact-span
+  support rather than semantic paraphrase entailment and does not prove neural
+  fine-tuning or broad-corpus generalization.
+
+## Significant limitation reduction — external review and holdout gates
+
+Date: 2026-08-12
+
+- `P22-REPAIR-045` and `P22-REPAIR-047` remain open as
+  `LIMITATION_PARTIALLY_REDUCED`. A zero-cost local Ollama `qwen2.5:3b`
+  reviewer genuinely completed and returned `revise_required`; malformed model
+  outputs failed closed. This does not prove writer/reviewer provider
+  independence because the writer provenance was local/missing.
+- The holdout validator now uses an out-of-band plan hash, separately hashed
+  observation files and integer-derived rates; it rejects posthoc/embedded
+  plans, static support booleans, fake database sites, reused evidence/source or
+  organization identity, time inversion and tampering. Reviewer archives
+  recursively remove sensitive fields, inline token/password/secret material,
+  Bearer/API tokens, PEM private keys and URL credentials before persistence.
+- The accepted holdout run remains validator fixture evidence, not a real
+  independently authenticated multi-site study. Distinct writer-provider
+  execution, attributable external review, site-identity authentication and
+  real external generalization remain unproven.

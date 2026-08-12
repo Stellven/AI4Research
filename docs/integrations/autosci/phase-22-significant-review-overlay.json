@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "692efe965",
+  "reviewed_code_head": "ff598de9e",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -537,15 +537,18 @@
       "issue_ids": ["P22-REPAIR-082"]
     },
     {
-      "journey_id": "NT-optimization-routing cost-aware bandit",
+      "journey_id": "NT-optimization-routing bounded Bayesian and bandit",
       "shared_recorded_limitation": "Generic metric-based routing works. Bayesian, bandit, and cost-aware RL routing were not available.",
-      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "classification": "LIMITATION_CLOSED_VERIFIED_CORE_WITH_UNTESTED_VARIANTS",
       "issue_count": 1,
-      "accepted_evidence": "outputs/phase22-real-journeys/p22-routing-20260812T074252Z/journey-result.json",
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-routing-20260812T074252Z/journey-result.json",
+        ".codex-tmp/final-review-p22-076-head/outputs/phase22-real-journeys/p22-bayesian-routing-20260812T131513Z/journey-result.json"
+      ],
       "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
-      "assertions": {"passed": 6, "failed": 0, "negative_variants": 3},
-      "decision": "A production offline cost-aware UCB1 evaluator now learns arm scores from training traces, applies cost and latency penalties plus exploration, and requires paired holdout utility improvement with no success regression. It hash-binds the traces, rejects context contamination and over-budget/regressing candidates, and emits an explicit rollback instead of auto-deploying.",
-      "remaining_boundary": "This closes the missing bandit portion only. Bayesian optimization and cost-aware reinforcement learning are still not shipped, and no online autonomous policy deployment was authorized. P22-REPAIR-076 therefore remains open.",
+      "assertions": {"bandit": {"passed": 6, "failed": 0}, "bayesian": {"passed": 9, "failed": 0}, "typed_attack_variants_rejected": 10},
+      "decision": "The bounded offline optimization core is fixed and verified. Cost-aware UCB1 and a real RBF Gaussian-process/GP-UCB evaluator operate on hash-bound training traces, select under posterior uncertainty and cost limits, require paired holdout utility improvement without success regression, and retain rollback/no-auto-deploy boundaries. Independent GP recomputation matched to 1e-12, and string booleans, NaN/Inf, numeric strings, boolean configs, duplicates, empty IDs, and context leakage fail closed.",
+      "remaining_boundary": "This closure does not infer online optimization, autonomous deployment, or cost-aware reinforcement learning. Those non-core variants remain PASS_WITH_KNOWN_LIMITATIONS.",
       "issue_ids": ["P22-REPAIR-076"]
     },
     {
@@ -570,23 +573,26 @@
       "accepted_evidence": ["outputs/phase22-real-journeys/p22j05-20260812T074001Z-24400/journey-result.json", "outputs/phase22-real-journeys/p22-j22-1786520668/journey-result.json"],
       "journey_status": {"P22-J05": "PASS", "P22-J22": "PASS_WITH_KNOWN_LIMITATIONS"},
       "assertions": {"P22-J05": {"passed": 36, "failed": 0, "candidates": 10}, "P22-J22": {"passed": 11, "failed": 0}},
-      "decision": "The current public research run assembled evidence from OpenAlex, Crossref and Semantic Scholar source families. J22 independently verifies evidence scope/taxonomy and bounded supported, partial, refuting, inconclusive and overreach verdicts. Provider-independence proof is now tied to actually completed executions and rejects configured, failed or fixture-only providers.",
-      "remaining_boundary": "Public source-provider diversity is not the same as an independently executed reviewer provider. No credentialed independent reviewer, cross-site/out-of-sample generalization experiment or attributable human review was completed, so P22-REPAIR-045 and 047 remain open.",
+      "decision": "Public research evidence remains diverse across OpenAlex, Crossref and Semantic Scholar, and J22 verifies bounded verdicts. A real zero-cost Ollama qwen2.5:3b reviewer completed and returned revise_required; malformed smaller-model outputs failed closed. The external-holdout validator now requires an out-of-band plan hash, separately hashed observations, integer-derived rates, distinct site/source/evidence/organization lineage, and rejects posthoc/embedded plans, fake database sites, shared IDs, time inversion, tampering, and organization reuse. Reviewer archives recursively redact secret-like content and separately hash the redacted body.",
+      "remaining_boundary": "Both issues remain open. The Ollama reviewer did not have a distinct attributable writer provider and did not accept the thin artifact. The accepted external-holdout run is validator fixture evidence, not a real independently authenticated multi-site study or external generalization result.",
       "issue_ids": ["P22-REPAIR-045", "P22-REPAIR-047"]
     },
     {
       "journey_id": "NT-memory-retrieval linear reranker",
       "shared_recorded_limitation": "Basic persistent retrieval works. Memory learning and Self-RAG are partial, and reranker training is unavailable.",
-      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "classification": "LIMITATION_CLOSED_VERIFIED_CORE_WITH_UNTESTED_VARIANTS",
       "issue_count": 1,
-      "accepted_evidence": "outputs/phase22-real-journeys/p22-reranker-20260812T074520Z/journey-result.json",
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-reranker-20260812T074520Z/journey-result.json",
+        "outputs/phase22-real-journeys/p22-self-rag-20260812T134547Z/journey-result.json"
+      ],
       "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
-      "assertions": {"passed": 6, "failed": 0, "negative_variants": 3},
-      "decision": "A production supervised linear reranker now learns weights for term overlap, citation match, authority and freshness from labeled training rows, then requires non-regressing Recall@K, improving nDCG and retained provenance on query-isolated holdout data. Contamination, missing provenance and no-improvement variants fail closed, and rollback restores base-score ordering.",
-      "remaining_boundary": "This closes the unavailable lightweight reranker-training portion. Neural reranker fine-tuning, autonomous Self-RAG reflection and broad corpus generalization remain unproven, so P22-REPAIR-080 stays open.",
+      "assertions": {"reranker": {"passed": 6, "failed": 0}, "self_rag": {"passed": 11, "failed": 0}},
+      "decision": "The retrieval-learning core is fixed and verified. The supervised linear reranker improves query-isolated nDCG without Recall@K regression and preserves provenance. The production Self-RAG wrapper now indexes and retrieves real local documents, validates exact cited spans, offsets and hashes, runs bounded retrieve-more/accept/abstain reflection with a chained trace, rejects unsupported Moon/cats claims, and audits all persisted versions for each logical document so cross-run content/provenance changes force empty-answer abstention.",
+      "remaining_boundary": "This closes the deterministic core with PASS_WITH_KNOWN_LIMITATIONS. Exact-span verification is conservative and does not prove paraphrase entailment; neural Self-RAG/reranker fine-tuning and broad-corpus generalization remain untested variants.",
       "issue_ids": ["P22-REPAIR-080"]
     }
   ],
-  "closed_shared_limitation_issue_count": 64,
-  "remaining_significant_issues": 8
+  "closed_shared_limitation_issue_count": 66,
+  "remaining_significant_issues": 6
 }
