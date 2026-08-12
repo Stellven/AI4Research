@@ -3442,3 +3442,20 @@ Date: 2026-08-12
   `044` are improved but remain open: the baseline is freshly constructed from
   the same product version, not historical releases, and this run does not
   establish broad scientific POC-to-baseline comparisons.
+
+## Significant repair closure — P22-J09 compiled deliverable (1 closed, 1 reduced)
+
+Date: 2026-08-12
+
+- Post-commit J09 run `p22j09-20260812T071016Z-37808` at `371273d18` is
+  `PASS_WITH_KNOWN_LIMITATIONS` with 29/29 assertions.
+- The production `markdown_pdf.py` constructor built a two-page, 5.6 KB PDF
+  from the substantive report. Independent checks verified PDF header, xref,
+  EOF, source text markers, page count, and SHA-256; truncated-PDF regression
+  fails closed.
+- The tamper-checked mixed handoff now contains five files: readable Markdown,
+  compiled PDF, plan, provider review, and decision artifact. `P22-REPAIR-118`
+  is `FIXED_VERIFIED` for this exercised Markdown/PDF deliverable path.
+- `P22-REPAIR-054` remains open. Distribution is still `local_only`, approval
+  is `not_requested`, and no external recipient acceptance or long-term
+  retention/revocation lifecycle was performed.

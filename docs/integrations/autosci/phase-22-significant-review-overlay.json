@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "bc618e1439c93e97eb132dbde4751f21a15ab1de",
+  "reviewed_code_head": "371273d184e239c36aa23a593884458875a2a61f",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -407,8 +407,34 @@
         "P22-REPAIR-111",
         "P22-REPAIR-117"
       ]
+    },
+    {
+      "journey_id": "P22-J09",
+      "shared_recorded_limitation": "The final path produced a readable local report but did not complete a compiled deliverable format; external distribution and recipient acceptance were also absent.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 2,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j09-20260812T071016Z-37808/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "passed": 29,
+        "failed": 0,
+        "pdf_pages": 2,
+        "handoff_files": 5
+      },
+      "decision": "A dependency-free production constructor now renders the substantive Markdown report into a structural two-page PDF, verifies header/xref/EOF and source text markers, and records a SHA-256. The five-file mixed handoff includes Markdown, PDF, plan, provider review, and decision artifact; exact inventory/hash verification and tamper rejection remain green. This closes Report/Paper/Deliverable Construction for the exercised local Markdown/PDF path.",
+      "closed_issue_ids": [
+        "P22-REPAIR-118"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-054"
+      ],
+      "remaining_boundary": "The handoff truthfully remains local_only with approval_state=not_requested. External distribution, recipient acceptance, revocation/retention lifecycle, and attributable final human approval were not performed, so P22-REPAIR-054 stays open.",
+      "issue_ids": [
+        "P22-REPAIR-054",
+        "P22-REPAIR-118"
+      ]
     }
   ],
-  "closed_shared_limitation_issue_count": 54,
-  "remaining_significant_issues": 18
+  "closed_shared_limitation_issue_count": 55,
+  "remaining_significant_issues": 17
 }
