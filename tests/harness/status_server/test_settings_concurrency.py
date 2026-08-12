@@ -32,7 +32,7 @@ from pathlib import Path
 
 REPO_HARNESS = (Path(__file__).resolve().parents[3] / 'harness')  # .../harness
 DEFAULT_SERVER = REPO_HARNESS / "lib" / "symphony" / "status-server.py"
-SERVER = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SERVER
+SERVER = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_SERVER
 
 results = []
 def check(name, ok, detail=""):
