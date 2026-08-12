@@ -19,7 +19,9 @@ Startup: solar-harness status-server start  (writes pidfile, nohup)
          solar-harness status-server stop|restart|status
 
 Binds 127.0.0.1:8765 (loopback) on mac/Linux; 0.0.0.0 under WSL so the Windows host can reach it
-(localhostForwarding edge case). SOLAR_BIND_HOST overrides. No auth, no TLS (internal use).
+(localhostForwarding edge case). SOLAR_BIND_HOST overrides. A per-process token protects the
+dashboard and data/action routes whenever the server binds beyond loopback; health and static
+asset probes remain public. TLS remains an external deployment concern.
 Port fallback: 8765-8775 if primary is occupied.
 """
 
@@ -13864,11 +13866,12 @@ class StatusHandler(BaseHTTPRequestHandler):
     def _authorized(self, path: str) -> bool:
         if not TOKEN_ENFORCED:
             return True
-        # Exempt the bootstrap surface the page needs BEFORE it can read/send the token: the
-        # dashboard HTML, its static assets, and the health/identity probes.
+        # Static assets contain no runtime data and health/identity probes are used by the local
+        # lifecycle owner before it can discover the token file. The dashboard HTML is NOT a
+        # bootstrap exemption: it embeds AUTH_TOKEN for its JavaScript client, so serving it to an
+        # unauthenticated network peer would disclose the credential and defeat enforcement.
         if (
-            path == "/"
-            or path in ("/healthz", "/runtime-info", "/favicon.ico")
+            path in ("/healthz", "/runtime-info", "/favicon.ico")
             or path.startswith("/static/")
         ):
             return True
@@ -13881,6 +13884,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
 
@@ -13890,6 +13894,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
 
@@ -13903,6 +13908,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "public, max-age=3600")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
 
@@ -13913,6 +13919,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("X-Accel-Buffering", "no")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
 
         seen_queue: deque[str] = deque(maxlen=max(100, limit * 4))
@@ -13962,6 +13969,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("X-Accel-Buffering", "no")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
 
         prev_sig: dict | None = None
@@ -14025,12 +14033,17 @@ class StatusHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self):
         # Liveness probes (incl. the desktop shell) may use HEAD. Without a
-        # do_HEAD, BaseHTTPRequestHandler returned 501. Mirror a GET's headers
-        # with no body so probes see 200.
-        self.send_response(200)
+        # do_HEAD, BaseHTTPRequestHandler returned 501. Enforce the same token
+        # boundary as GET before returning headers; the former unconditional
+        # 200 made protected resources appear reachable without credentials.
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        authorized = self._authorized(path)
+        self.send_response(200 if authorized else 403)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Length", "0")
         self.end_headers()
 
