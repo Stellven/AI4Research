@@ -103,29 +103,21 @@ def test_answers_create_an_explicit_not_ready_to_ready_transition() -> None:
     gateway = _gateway()
     request = "Implement either a CLI or a web app."
 
-    before = gateway.compile_ambiguity_readiness(
-        request,
-        _rewritten(),
-        requires_human_confirm=True,
-    )
-    answers = gateway.parse_clarification_answers(
-        ["target_choice=CLI", "approval=approved"]
-    )
+    before = gateway.compile_ambiguity_readiness(request, _rewritten())
+    answers = gateway.parse_clarification_answers(["target_choice=CLI"])
     after = gateway.compile_ambiguity_readiness(
         request,
         _rewritten(),
-        requires_human_confirm=True,
         answers=answers,
     )
 
     assert before["ready"] is False
-    assert [row["field"] for row in before["questions"]] == ["target_choice", "approval"]
+    assert [row["field"] for row in before["questions"]] == ["target_choice"]
     assert after["ready"] is True
     assert after["status"] == "ready"
     assert after["questions"] == []
     assert after["applied_answers"] == {
         "target_choice": "CLI",
-        "approval": "approved",
     }
 
 
@@ -158,7 +150,6 @@ def test_capture_blocks_autodispatch_until_answers(
         "capture",
         "--text",
         "Implement either a CLI or a web app.",
-        "--requires-human-confirm",
         "--json",
     ]
 
@@ -180,23 +171,16 @@ def test_capture_blocks_autodispatch_until_answers(
         *common,
         "--clarification-answer",
         "target_choice=CLI",
-        "--clarification-answer",
-        "approval=approved",
         "--intent-id",
         "after",
     ]
     assert gateway.main(answered) == 0
     after = json.loads(capsys.readouterr().out)
-    after_raw = json.loads(
-        (intents / "after" / "raw_intent.json").read_text(encoding="utf-8")
-    )
     after_ir = json.loads(
         (intents / "after" / "requirement_ir.json").read_text(encoding="utf-8")
     )
 
     assert after["ready"] is True
-    assert after_raw["routing_hints"]["requires_human_confirm"] is False
-    assert after_raw["routing_hints"]["human_confirm_satisfied"] is True
     assert after_ir["compiler_next"] == "pm_planner_task_graph"
 
 
@@ -206,4 +190,18 @@ def test_clarification_answer_rejects_unknown_or_empty_fields() -> None:
     with pytest.raises(SystemExit, match="FIELD=VALUE"):
         gateway.parse_clarification_answers(["unknown=value"])
     with pytest.raises(SystemExit, match="FIELD=VALUE"):
-        gateway.parse_clarification_answers(["approval="])
+        gateway.parse_clarification_answers(["approval=approved"])
+
+
+def test_clarification_text_cannot_forge_human_approval() -> None:
+    gateway = _gateway()
+    with pytest.raises(SystemExit, match="FIELD=VALUE"):
+        gateway.parse_clarification_answers(["approval=approved"])
+    contract = gateway.compile_ambiguity_readiness(
+        "Implement the requested change.",
+        _rewritten(),
+        requires_human_confirm=True,
+        answers={"approval": "approved"},
+    )
+    assert contract["ready"] is False
+    assert contract["questions"][0]["field"] == "approval"

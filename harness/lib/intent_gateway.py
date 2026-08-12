@@ -460,7 +460,6 @@ def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
 
 
 _READINESS_ANSWER_FIELDS = {
-    "approval",
     "delivery_format",
     "execution_network",
     "mutation_policy",
@@ -601,9 +600,9 @@ def compile_ambiguity_readiness(
                 evidence_matches=matches,
             )
 
-    approval = supplied_answers.get("approval", "").lower()
-    approved = approval in {"approved", "yes", "true", "1"}
-    if requires_human_confirm and not approved:
+    # A clarification string is not attributable approval evidence.  Keep the
+    # human gate closed until the dedicated approval workflow records it.
+    if requires_human_confirm:
         add_blocker(
             reason="required_approval_missing",
             field="approval",
@@ -793,9 +792,6 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         # until every blocking field has an explicit answer.
         raw_intent["routing_hints"]["allow_autodispatch"] = False
         raw_intent["routing_hints"]["readiness_blocked"] = True
-    elif "approval" in readiness["applied_answers"]:
-        raw_intent["routing_hints"]["requires_human_confirm"] = False
-        raw_intent["routing_hints"]["human_confirm_satisfied"] = True
     trace = {
         "schema_version": "solar.requirement_trace.v1",
         "intent_id": intent_id,
