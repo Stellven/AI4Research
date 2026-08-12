@@ -42,8 +42,6 @@ def evaluate_external_holdout(
     trusted_plan_sha256: str = "",
     trust_registry_path: str | Path | None = None,
     trust_registry_sha256: str = "",
-    *,
-    approved_registry_sha256s: set[str] | None = None,
 ) -> dict[str, Any]:
     manifest_path = Path(path)
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -58,7 +56,6 @@ def evaluate_external_holdout(
             trust_registry = load_registry(
                 trust_registry_path,
                 trust_registry_sha256,
-                approved_registry_sha256s=approved_registry_sha256s,
             )
         except TrustRegistryError as exc:
             trust_registry_error = str(exc)
