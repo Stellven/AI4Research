@@ -3547,3 +3547,28 @@ Date: 2026-08-12
 - This does not establish Bayesian optimization, cost-aware reinforcement
   learning, or safe autonomous online deployment. Those explicit parts of 076
   remain open.
+
+## Significant repair closure — local privacy controls; evidence and reranker follow-up
+
+Date: 2026-08-12
+
+- `P22-REPAIR-135` is `FIXED_VERIFIED` for the local-only product boundary.
+  J24 run `p22-j24-privacy-controls-20260812T074503Z` passed 9/9 assertions
+  over inventory, secret-safe export, retention, selective deletion, consent
+  record/revoke, and derived-data purge. Confirmation, path/symlink escape and
+  consent-delete bypass negatives fail closed. `P22-REPAIR-069` remains open
+  for hosted/provider/channel and legal/IP behavior.
+- `P22-REPAIR-045` and `047` are partially reduced. Live J05 run
+  `p22j05-20260812T074001Z-24400` passed 36/36 with ten candidates from
+  OpenAlex, Crossref and Semantic Scholar families; J22 run
+  `p22-j22-1786520668` passed 11/11 evidence/verdict assertions. The product
+  now rejects configured, failed or fixture-only providers as proof of reviewer
+  independence. A real independent reviewer execution and cross-site holdout
+  generalization were not performed, so neither issue is closed.
+- `P22-REPAIR-080` is partially reduced. Run
+  `p22-reranker-20260812T074520Z` passed 6/6 assertions for a supervised linear
+  reranker: query-isolated holdout nDCG improved, Recall@1 did not regress,
+  provenance remained attached, and rollback was recorded. Four unit tests
+  include contamination, missing-provenance, and no-improvement rejection.
+  Neural reranker training, autonomous Self-RAG, and broad corpus
+  generalization remain open.
