@@ -96,17 +96,112 @@ async function stop(child) {
         resultTypes: ["violations", "incomplete"],
       }),
     );
-    await page.keyboard.press("Tab");
-    const keyboard = await page.evaluate(() => {
-      const active = document.activeElement;
-      return {
-        tag: active?.tagName || "",
-        text: String(active?.getAttribute("aria-label") || active?.textContent || "")
+    const contrastSamples = await page.evaluate(() => {
+      function parseColor(value) {
+        const match = String(value).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        if (!match) return null;
+        return {
+          rgb: match.slice(1, 4).map(Number),
+          alpha: match[4] === undefined ? 1 : Number(match[4]),
+        };
+      }
+      function luminance(rgb) {
+        const channels = rgb.map((value) => {
+          const normalized = value / 255;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      }
+      function sample(selector) {
+        const element = document.querySelector(selector);
+        if (!element) return { selector, present: false };
+        const foreground = parseColor(getComputedStyle(element).color);
+        let backgroundElement = element;
+        let background = null;
+        while (backgroundElement && (!background || background.alpha === 0)) {
+          background = parseColor(getComputedStyle(backgroundElement).backgroundColor);
+          if (background && background.alpha > 0) break;
+          backgroundElement = backgroundElement.parentElement;
+        }
+        const ratio = foreground && background
+          ? (Math.max(luminance(foreground.rgb), luminance(background.rgb)) + 0.05) /
+            (Math.min(luminance(foreground.rgb), luminance(background.rgb)) + 0.05)
+          : null;
+        return {
+          selector,
+          present: true,
+          foreground: foreground?.rgb || null,
+          background: background?.rgb || null,
+          background_source: backgroundElement?.className || backgroundElement?.tagName || null,
+          ratio: ratio === null ? null : Number(ratio.toFixed(3)),
+          minimum_ratio: 4.5,
+          passes_aa: ratio !== null && ratio >= 4.5,
+        };
+      }
+      return [sample(".new-task-button > span"), sample(".home-caption kbd")];
+    });
+    const expectedKeyboard = await page.evaluate(() => {
+      const selector = [
+        "a[href]",
+        "button:not([disabled])",
+        "textarea:not([disabled])",
+        "input:not([disabled])",
+        "select:not([disabled])",
+        "[tabindex]:not([tabindex='-1'])",
+      ].join(",");
+      const visible = [...document.querySelectorAll(selector)].filter((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+      });
+      visible.forEach((element, index) => element.setAttribute("data-solar-a11y-probe", String(index)));
+      document.activeElement?.blur();
+      return visible.map((element, index) => ({
+        index,
+        tag: element.tagName,
+        text: String(element.getAttribute("aria-label") || element.textContent || "")
           .trim()
           .slice(0, 120),
-        focusable: Boolean(active && active !== document.body),
-      };
+      }));
     });
+    const keyboardSequence = [];
+    const reached = new Set();
+    for (let step = 0; step < expectedKeyboard.length + 2; step += 1) {
+      await page.keyboard.press("Tab");
+      const focused = await page.evaluate(() => {
+        const active = document.activeElement;
+        const probe = active?.getAttribute("data-solar-a11y-probe");
+        return {
+          index: probe === null || probe === undefined ? null : Number(probe),
+          tag: active?.tagName || "",
+          text: String(active?.getAttribute("aria-label") || active?.textContent || "")
+            .trim()
+            .slice(0, 120),
+        };
+      });
+      keyboardSequence.push(focused);
+      if (focused.index !== null) reached.add(focused.index);
+      if (reached.size === expectedKeyboard.length) break;
+    }
+    await page.keyboard.press("Shift+Tab");
+    const reverseFocusable = await page.evaluate(() => {
+      const active = document.activeElement;
+      document.querySelectorAll("[data-solar-a11y-probe]").forEach((element) =>
+        element.removeAttribute("data-solar-a11y-probe"),
+      );
+      return Boolean(active && active !== document.body);
+    });
+    const keyboard = {
+      focusable: reached.size > 0,
+      expected_count: expectedKeyboard.length,
+      reached_count: reached.size,
+      all_reachable: reached.size === expectedKeyboard.length,
+      reverse_focusable: reverseFocusable,
+      expected: expectedKeyboard,
+      sequence: keyboardSequence,
+    };
     const blocking = audit.violations.filter((item) =>
       ["critical", "serious"].includes(item.impact),
     );
@@ -118,6 +213,7 @@ async function stop(child) {
       blocking_violation_count: blocking.length,
       violation_count: audit.violations.length,
       incomplete_count: audit.incomplete.length,
+      contrast_samples: contrastSamples,
       keyboard,
       violations: audit.violations.map((item) => ({
         id: item.id,
@@ -129,7 +225,13 @@ async function stop(child) {
         id: item.id,
         impact: item.impact,
         description: item.description,
-        nodes: item.nodes.map((node) => node.target),
+        nodes: item.nodes.map((node) => ({
+          target: node.target,
+          failure_summary: node.failureSummary,
+          any: node.any,
+          all: node.all,
+          none: node.none,
+        })),
       })),
     };
     const evidencePath = process.env.SOLAR_ACCESSIBILITY_EVIDENCE;
@@ -138,7 +240,18 @@ async function stop(child) {
       fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
     }
     console.log(JSON.stringify(evidence, null, 2));
-    if (!keyboard.focusable) throw new Error("Tab did not reach a focusable control");
+    const unresolvedContrast = audit.incomplete.filter((item) => item.id === "color-contrast");
+    if (contrastSamples.some((sample) => !sample.passes_aa)) {
+      throw new Error("computed contrast sample did not meet WCAG AA 4.5:1");
+    }
+    if (unresolvedContrast.length) {
+      throw new Error(`axe could not resolve ${unresolvedContrast.length} color-contrast result(s)`);
+    }
+    if (!keyboard.all_reachable || !keyboard.reverse_focusable) {
+      throw new Error(
+        `keyboard traversal reached ${keyboard.reached_count}/${keyboard.expected_count} controls`,
+      );
+    }
     if (blocking.length) {
       throw new Error(`axe found ${blocking.length} serious/critical WCAG violation(s)`);
     }

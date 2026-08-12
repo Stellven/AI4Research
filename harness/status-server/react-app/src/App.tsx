@@ -4867,7 +4867,7 @@ function HomeLanding({
         </form>
 
         <p className="home-caption">
-          Starts a real intake via the existing CLI <kbd>⌘ ↵</kbd>
+          Starts a real intake via the existing CLI <kbd>Ctrl/Cmd + Enter</kbd>
           <span className="home-caption-note">
             · crew is staged, not yet applied to runs
           </span>
