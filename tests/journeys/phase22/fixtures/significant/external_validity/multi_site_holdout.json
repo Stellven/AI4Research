@@ -1,12 +1,9 @@
 {
-  "claim_id": "p22-cross-site-retrieval-improvement",
-  "minimum_site_support_rate": 0.5,
+  "schema": "solar.external_validity_manifest.v2",
+  "external_plan": {"path": "external_plan.json", "sha256": "1254aa136cabca6867d36a420337d5efbdd3f7e83b0e738c65c241e821d12c72"},
   "observations": [
-    {"split": "development", "observation_id": "dev-a1", "site_id": "local-development", "source_id": "local:retrieval-dev-01", "provider_family": "local_fixture", "evidence_id": "p22:j05:development", "claim_supported": true},
-    {"split": "external_holdout", "observation_id": "ext-b1", "site_id": "crossref-corpus", "source_id": "crossref:10.1145/3290605.3300233", "provider_family": "crossref", "evidence_id": "p22:j05:crossref-source", "claim_supported": true},
-    {"split": "external_holdout", "observation_id": "ext-b2", "site_id": "crossref-corpus", "source_id": "crossref:10.1038/s41586-021-03819-2", "provider_family": "crossref", "evidence_id": "p22:j05:crossref-source-2", "claim_supported": false},
-    {"split": "external_holdout", "observation_id": "ext-c1", "site_id": "openalex-corpus", "source_id": "openalex:W2741809807", "provider_family": "openalex", "evidence_id": "p22:j05:openalex-source", "claim_supported": true},
-    {"split": "external_holdout", "observation_id": "ext-c2", "site_id": "openalex-corpus", "source_id": "openalex:W2963403868", "provider_family": "openalex", "evidence_id": "p22:j05:openalex-source-2", "claim_supported": true}
+    {"path": "evidence/development-a.json", "sha256": "2a97e4bc4b7316ac8a2eb28281aa25399552a4600653a739dd4609cf88f80be1"},
+    {"path": "evidence/holdout-b.json", "sha256": "51fb58ab4c4c52a2028c06745daaa37543afe46c99f90085d88cb06af8ac798a"},
+    {"path": "evidence/holdout-c.json", "sha256": "adbb6d266dd0d4c760b7f4fa79ec1002ffb4d4f1a06c3a1f976a5bbb360b2ca1"}
   ]
 }
-

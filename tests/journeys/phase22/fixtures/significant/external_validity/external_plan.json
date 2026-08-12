@@ -1,0 +1,10 @@
+{
+  "schema": "solar.external_validity_plan.v1",
+  "claim_id": "p22-bounded-retrieval-success",
+  "metric_name": "successful_retrieval_rate",
+  "minimum_site_support_rate": 0.75,
+  "registered_at": "2026-08-01T00:00:00Z",
+  "authority": {"authority_id": "protocol-owner-01", "role": "independent_protocol_owner"},
+  "development_site_ids": ["development-lab-a"],
+  "external_holdout_site_ids": ["university-lab-b", "hospital-lab-c"]
+}

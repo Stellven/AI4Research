@@ -1,0 +1,10 @@
+{
+  "schema": "solar.external_observation.v1",
+  "split": "external_holdout",
+  "observation_id": "holdout-c-001",
+  "evidence_id": "evidence-holdout-c-001",
+  "source_lineage_id": "instrument-run-holdout-c-001",
+  "collected_at": "2026-08-04T10:00:00Z",
+  "site": {"site_id": "hospital-lab-c", "kind": "experimental_site", "organization_id": "org-hospital-c", "collection_protocol_id": "retrieval-protocol-v1"},
+  "metric": {"name": "successful_retrieval_rate", "numerator": 17, "denominator": 20}
+}

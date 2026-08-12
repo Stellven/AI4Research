@@ -554,6 +554,13 @@ def _archive_provider_payload(
                     "schema": "review_llm_provider_archive.v1",
                     "provider": provider,
                     "request_sha256": request_hash,
+                    # The request body contains the review prompt and model
+                    # parameters, but never the Authorization header/API key.
+                    # Retaining this non-secret body makes the request hash
+                    # independently recomputable instead of self-attested.
+                    "request_body_redacted": request_payload,
+                    "request_redactions": ["authorization_header_not_archived"],
+                    "request_hash_canonicalization": "json.dumps(ensure_ascii=False, sort_keys=True)",
                     "response_sha256": response_hash,
                     "model_payload": model_payload,
                     "raw_response": response_payload,

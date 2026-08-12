@@ -1,134 +1,202 @@
-"""Fail-closed evaluation of source-isolated external holdout evidence.
-
-This module does not infer universal scientific validity.  It proves only
-whether a named claim met a predeclared threshold on every supplied external
-site while keeping development and holdout source lineages disjoint.
-"""
+"""Fail-closed evaluation of preregistered, artifact-backed external holdouts."""
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
-import argparse
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
-SCHEMA = "solar.external_validity_holdout.v1"
+SCHEMA = "solar.external_validity_holdout.v2"
 
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def evaluate_external_holdout(path: str | Path) -> dict[str, Any]:
-    source_path = Path(path)
-    payload = json.loads(source_path.read_text(encoding="utf-8"))
-    rows = payload.get("observations") if isinstance(payload, dict) else None
-    rows = rows if isinstance(rows, list) else []
+def _sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _resolve(raw: Any, base: Path) -> Path:
+    path = Path(_text(raw))
+    return path if path.is_absolute() else base / path
+
+
+def _instant(raw: Any) -> datetime | None:
+    try:
+        return datetime.fromisoformat(_text(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def evaluate_external_holdout(path: str | Path, trusted_plan_sha256: str = "") -> dict[str, Any]:
+    manifest_path = Path(path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    base = manifest_path.parent
     errors: list[str] = []
-    threshold = float(payload.get("minimum_site_support_rate", 0.8)) if isinstance(payload, dict) else 0.8
-    if not 0.0 <= threshold <= 1.0:
-        errors.append("minimum_site_support_rate_out_of_range")
-    if not isinstance(payload, dict) or not _text(payload.get("claim_id")):
-        errors.append("claim_id_required")
-    development = [row for row in rows if isinstance(row, dict) and row.get("split") == "development"]
-    holdout = [row for row in rows if isinstance(row, dict) and row.get("split") == "external_holdout"]
-    if not development or not holdout or len(development) + len(holdout) != len(rows):
-        errors.append("development_and_external_holdout_splits_required")
 
-    def values(items: list[dict[str, Any]], field: str) -> set[str]:
-        return {_text(row.get(field)) for row in items if _text(row.get(field))}
+    plan_ref = payload.get("external_plan") if isinstance(payload, dict) and isinstance(payload.get("external_plan"), dict) else {}
+    plan_path = _resolve(plan_ref.get("path"), base)
+    plan: dict[str, Any] = {}
+    if not plan_path.is_file():
+        errors.append("external_plan_missing")
+    elif _text(plan_ref.get("sha256")).lower() != _sha(plan_path):
+        errors.append("external_plan_hash_mismatch")
+    elif not _text(trusted_plan_sha256) or _text(trusted_plan_sha256).lower() != _sha(plan_path):
+        errors.append("external_plan_not_matched_by_out_of_band_trust_anchor")
+    else:
+        loaded = json.loads(plan_path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            plan = loaded
+        else:
+            errors.append("external_plan_not_object")
 
-    dev_sites, holdout_sites = values(development, "site_id"), values(holdout, "site_id")
-    dev_sources, holdout_sources = values(development, "source_id"), values(holdout, "source_id")
-    if dev_sites & holdout_sites:
-        errors.append("development_holdout_site_contamination")
-    if dev_sources & holdout_sources:
-        errors.append("development_holdout_source_contamination")
-    if len(holdout_sites) < 2:
-        errors.append("at_least_two_external_holdout_sites_required")
+    claim_id = _text(plan.get("claim_id"))
+    metric_name = _text(plan.get("metric_name"))
+    authority = plan.get("authority") if isinstance(plan.get("authority"), dict) else {}
+    registered_at = _instant(plan.get("registered_at"))
+    allowed_development = {_text(x) for x in plan.get("development_site_ids", []) if _text(x)}
+    allowed_holdout = {_text(x) for x in plan.get("external_holdout_site_ids", []) if _text(x)}
+    try:
+        threshold = float(plan.get("minimum_site_support_rate"))
+    except (TypeError, ValueError):
+        threshold = -1.0
+    if not claim_id or not metric_name or not _text(authority.get("authority_id")) or authority.get("role") != "independent_protocol_owner":
+        errors.append("external_plan_contract_incomplete")
+    if not registered_at:
+        errors.append("external_plan_registration_time_invalid")
+    if not 0 <= threshold <= 1:
+        errors.append("external_plan_threshold_invalid")
+    if len(allowed_holdout) < 2 or allowed_development & allowed_holdout:
+        errors.append("external_plan_site_partition_invalid")
 
-    missing: list[str] = []
-    for index, row in enumerate(holdout):
-        for field in ("observation_id", "site_id", "source_id", "provider_family", "evidence_id"):
-            if not _text(row.get(field)):
-                missing.append(f"external_holdout[{index}].{field}")
-        if not isinstance(row.get("claim_supported"), bool):
-            missing.append(f"external_holdout[{index}].claim_supported")
-    if missing:
-        errors.append("required_external_evidence_missing:" + ",".join(missing))
+    refs = payload.get("observations") if isinstance(payload, dict) and isinstance(payload.get("observations"), list) else []
+    observations: list[dict[str, Any]] = []
+    evidence_artifacts: list[dict[str, str]] = []
+    for index, ref in enumerate(refs):
+        if not isinstance(ref, dict):
+            errors.append(f"observation_ref_not_object:{index}")
+            continue
+        evidence_path = _resolve(ref.get("path"), base)
+        declared_hash = _text(ref.get("sha256")).lower()
+        if not evidence_path.is_file():
+            errors.append(f"observation_evidence_missing:{index}")
+            continue
+        actual_hash = _sha(evidence_path)
+        if declared_hash != actual_hash:
+            errors.append(f"observation_evidence_hash_mismatch:{index}")
+            continue
+        loaded = json.loads(evidence_path.read_text(encoding="utf-8"))
+        if not isinstance(loaded, dict):
+            errors.append(f"observation_evidence_not_object:{index}")
+            continue
+        loaded["_evidence_path"] = str(evidence_path)
+        loaded["_evidence_sha256"] = actual_hash
+        observations.append(loaded)
+        evidence_artifacts.append({"path": str(evidence_path), "sha256": actual_hash})
 
+    development = [row for row in observations if row.get("split") == "development"]
+    holdout = [row for row in observations if row.get("split") == "external_holdout"]
+    if not development or not holdout or len(development) + len(holdout) != len(observations):
+        errors.append("development_and_external_holdout_evidence_required")
+
+    ids: dict[str, list[str]] = {key: [] for key in ("observation_id", "evidence_id", "source_lineage_id")}
+    site_ids: list[str] = []
+    measured: list[dict[str, Any]] = []
+    for index, row in enumerate(observations):
+        site = row.get("site") if isinstance(row.get("site"), dict) else {}
+        metric = row.get("metric") if isinstance(row.get("metric"), dict) else {}
+        site_id = _text(site.get("site_id"))
+        site_ids.append(site_id)
+        for field in ids:
+            ids[field].append(_text(row.get(field)))
+        required_site = all(_text(site.get(field)) for field in ("site_id", "organization_id", "collection_protocol_id"))
+        if site.get("kind") != "experimental_site" or not required_site:
+            errors.append(f"experimental_site_identity_incomplete:{index}")
+        expected_sites = allowed_development if row.get("split") == "development" else allowed_holdout
+        if site_id not in expected_sites:
+            errors.append(f"site_not_preregistered:{index}")
+        collected_at = _instant(row.get("collected_at"))
+        if not collected_at or (registered_at and collected_at <= registered_at):
+            errors.append(f"observation_not_post_registration:{index}")
+        if _text(metric.get("name")) != metric_name:
+            errors.append(f"observation_metric_not_preregistered:{index}")
+        numerator, denominator = metric.get("numerator"), metric.get("denominator")
+        if isinstance(numerator, bool) or isinstance(denominator, bool) or not isinstance(numerator, int) or not isinstance(denominator, int) or denominator <= 0 or numerator < 0 or numerator > denominator:
+            errors.append(f"observation_metric_counts_invalid:{index}")
+            rate = 0.0
+        else:
+            rate = numerator / denominator
+        measured.append({**row, "_site_id": site_id, "_rate": rate})
+
+    for field, values in ids.items():
+        if any(not value for value in values):
+            errors.append(f"{field}_missing")
+        if len(values) != len(set(values)):
+            errors.append(f"{field}_not_unique")
+    if any(not site_id for site_id in site_ids):
+        errors.append("site_id_missing")
+    dev_lineages = {_text(row.get("source_lineage_id")) for row in development}
+    hold_lineages = {_text(row.get("source_lineage_id")) for row in holdout}
+    if dev_lineages & hold_lineages:
+        errors.append("development_holdout_source_lineage_contamination")
+
+    observed_holdout_sites = {row["_site_id"] for row in measured if row.get("split") == "external_holdout"}
+    if observed_holdout_sites != allowed_holdout:
+        errors.append("external_holdout_site_coverage_incomplete")
     site_results: list[dict[str, Any]] = []
-    for site_id in sorted(holdout_sites):
-        site_rows = [row for row in holdout if _text(row.get("site_id")) == site_id]
-        supported = sum(row.get("claim_supported") is True for row in site_rows)
-        rate = supported / len(site_rows) if site_rows else 0.0
+    for site_id in sorted(observed_holdout_sites):
+        site_rows = [row for row in measured if row.get("split") == "external_holdout" and row["_site_id"] == site_id]
+        numerator = sum(int(row["metric"]["numerator"]) for row in site_rows if isinstance(row.get("metric", {}).get("numerator"), int))
+        denominator = sum(int(row["metric"]["denominator"]) for row in site_rows if isinstance(row.get("metric", {}).get("denominator"), int))
+        rate = numerator / denominator if denominator else 0.0
         site_results.append({
             "site_id": site_id,
-            "observations": len(site_rows),
-            "supported": supported,
+            "numerator": numerator,
+            "denominator": denominator,
             "support_rate": round(rate, 4),
             "passed": rate >= threshold,
-            "source_ids": sorted(values(site_rows, "source_id")),
-            "provider_families": sorted(values(site_rows, "provider_family")),
-            "evidence_ids": sorted(values(site_rows, "evidence_id")),
+            "evidence_artifact_sha256s": sorted(row["_evidence_sha256"] for row in site_rows),
+            "source_lineage_ids": sorted(_text(row.get("source_lineage_id")) for row in site_rows),
         })
-    failed_sites = [item["site_id"] for item in site_results if not item["passed"]]
+    failed_sites = [row["site_id"] for row in site_results if not row["passed"]]
     if failed_sites:
         errors.append("external_site_threshold_failed:" + ",".join(failed_sites))
-    provider_families = values(holdout, "provider_family")
-    if len(provider_families) < 2:
-        errors.append("external_holdout_provider_diversity_insufficient")
 
     accepted = not errors
-    observed_scope = {
-        "development_sites": sorted(dev_sites),
-        "external_holdout_sites": sorted(holdout_sites),
-        "external_provider_families": sorted(provider_families),
-    }
     return {
         "schema": SCHEMA,
         "status": "accepted" if accepted else "rejected",
-        "claim_id": _text(payload.get("claim_id")) if isinstance(payload, dict) else "",
-        "source": {
-            "path": str(source_path),
-            "sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
-            "observations": len(rows),
-        },
-        "policy": {
-            "minimum_site_support_rate": threshold,
-            "required_external_sites": 2,
-            "require_source_isolation": True,
-            "require_provider_diversity": True,
-        },
-        "scope": observed_scope,
+        "claim_id": claim_id,
+        "manifest": {"path": str(manifest_path), "sha256": _sha(manifest_path)},
+        "external_plan": {"path": str(plan_path), "sha256": _sha(plan_path) if plan_path.is_file() else "", "registered_at": _text(plan.get("registered_at"))},
+        "evidence_artifacts": evidence_artifacts,
+        "policy": {"metric_name": metric_name, "minimum_site_support_rate": threshold, "preregistered_external_sites": sorted(allowed_holdout)},
         "site_results": site_results,
-        "errors": errors,
+        "errors": list(dict.fromkeys(errors)),
         "claim_boundary": {
-            "supported_on_observed_external_sites": accepted,
+            "supported_on_preregistered_external_sites": accepted,
             "supports_unobserved_sites": False,
             "supports_universal_generalization": False,
-            "allowed_statement": (
-                "The claim met the predeclared threshold on the named, source-isolated external holdout sites."
-                if accepted else
-                "The supplied external holdout does not support extending the claim beyond development evidence."
-            ),
         },
         "limitations": [
-            "Acceptance is limited to the hash-bound observations and named external sites.",
-            "Cross-site agreement does not establish causal validity or universal generalization.",
-            "Scientific and human review remain required for deployment or publication claims.",
+            "Acceptance is limited to the hash-bound plan, evidence artifacts, metric, and named experimental sites.",
+            "Artifact integrity and cross-site agreement do not establish causal validity or universal generalization.",
+            "The evaluator cannot authenticate the real-world identity of an organization; signed or independently hosted evidence is still required for adversarial settings.",
         ],
     }
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Evaluate source-isolated external holdout evidence")
+    parser = argparse.ArgumentParser(description="Evaluate preregistered external holdout evidence")
     parser.add_argument("input", type=Path)
+    parser.add_argument("--trusted-plan-sha256", required=True, help="Out-of-band plan digest supplied by the protocol owner")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    result = evaluate_external_holdout(args.input)
+    result = evaluate_external_holdout(args.input, args.trusted_plan_sha256)
     rendered = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

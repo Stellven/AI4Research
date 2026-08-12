@@ -1,0 +1,10 @@
+{
+  "schema": "solar.external_observation.v1",
+  "split": "development",
+  "observation_id": "dev-a-001",
+  "evidence_id": "evidence-dev-a-001",
+  "source_lineage_id": "instrument-run-dev-a-001",
+  "collected_at": "2026-08-02T10:00:00Z",
+  "site": {"site_id": "development-lab-a", "kind": "experimental_site", "organization_id": "org-development-a", "collection_protocol_id": "retrieval-protocol-v1"},
+  "metric": {"name": "successful_retrieval_rate", "numerator": 18, "denominator": 20}
+}
