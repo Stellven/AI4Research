@@ -147,3 +147,19 @@ def test_workflow_route_waits_for_certified_builder(monkeypatch, tmp_path: Path)
 
     assert route == "builder_main"
     assert [item["route"] for item in observations] == ["planner", "builder_main"]
+
+
+def test_fixture_python_caches_are_removed_before_git_baseline(tmp_path: Path) -> None:
+    cache = tmp_path / "pkg" / "__pycache__"
+    cache.mkdir(parents=True)
+    (cache / "module.cpython-312.pyc").write_bytes(b"bytecode")
+    loose_bytecode = tmp_path / "loose.pyo"
+    loose_bytecode.write_bytes(b"bytecode")
+    source = tmp_path / "module.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+
+    MODULE._remove_python_cache_artifacts(tmp_path)
+
+    assert not cache.exists()
+    assert not loose_bytecode.exists()
+    assert source.exists()

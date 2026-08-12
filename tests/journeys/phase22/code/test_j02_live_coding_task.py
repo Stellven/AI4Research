@@ -65,6 +65,17 @@ def _git_diff_text(path: Path, env: dict[str, str] | None = None, *, base: str =
     return proc.stdout if proc.returncode == 0 else ""
 
 
+def _remove_python_cache_artifacts(path: Path) -> None:
+    """Keep copied fixture caches out of the isolated Git baseline."""
+
+    for cache_dir in path.rglob("__pycache__"):
+        if cache_dir.is_dir():
+            shutil.rmtree(cache_dir)
+    for bytecode in path.rglob("*.py[co]"):
+        if bytecode.is_file():
+            bytecode.unlink()
+
+
 def _is_real_defect(file_path: Path) -> bool:
     return "return a - b" in file_path.read_text(encoding="utf-8", errors="replace")
 
@@ -428,6 +439,7 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
     if project.exists():
         shutil.rmtree(project)
     shutil.copytree(fixture_repo, project)
+    _remove_python_cache_artifacts(project)
 
     rec.add_assertion(
         "j02_isolated_repo_created",
