@@ -3179,3 +3179,20 @@ Date: 2026-08-12
   infer support for untested providers, models, platforms, or variants.
 - Detailed decision record:
   `docs/integrations/autosci/phase-22-significant-review-overlay.json`.
+
+## Significant shared-limitation closure — P22-J06 (7 issues)
+
+Date: 2026-08-12
+
+- Current-baseline run `p22j06-20260812T050841Z-33200` at
+  `0e4679e0d36a1b7aa2add61bf773a1d559580978` completed
+  `PASS_WITH_KNOWN_LIMITATIONS`, 10/10 assertions.
+- Both production-generated idea cards are source-backed and independently
+  contain non-empty `risk`, `falsifiability`, `validation`, and
+  `minimum_experiment` fields. The verification-ready-card assertion passed.
+- The named historical card-completeness limitation is closed for
+  `P22-REPAIR-023`, `024`, `025`, `029`, `030`, `031`, and `057` as
+  `LIMITATION_CLOSED_VERIFIED`.
+- The journey remains limited because provider-backed external novelty and
+  Review LLM final acceptance were not exercised; `promotion_ready=false` is
+  retained truthfully and is not treated as a card-completeness failure.

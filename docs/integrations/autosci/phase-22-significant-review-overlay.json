@@ -40,5 +40,31 @@
       "P22-REPAIR-112"
     ]
   },
-  "remaining_significant_issues": 55
+  "additional_reviewed_groups": [
+    {
+      "journey_id": "P22-J06",
+      "shared_recorded_limitation": "Ideas were generated, but none included a complete risk, falsifiability, validation, and smallest-experiment plan.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 7,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j06-20260812T050841Z-33200/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "passed": 10,
+        "failed": 0
+      },
+      "decision": "The current production ideate path generated two source-backed, semantically distinct cards. Both independently contain non-empty risk, falsifiability, validation, and minimum_experiment fields, and the journey's verification-ready-card assertion passed. The old card-completeness limitation is closed.",
+      "remaining_boundary": "External novelty and Review LLM final acceptance were not exercised, so the broader journey remains PASS_WITH_KNOWN_LIMITATIONS and promotion_ready remains false. This closure does not claim external novelty acceptance.",
+      "issue_ids": [
+        "P22-REPAIR-023",
+        "P22-REPAIR-024",
+        "P22-REPAIR-025",
+        "P22-REPAIR-029",
+        "P22-REPAIR-030",
+        "P22-REPAIR-031",
+        "P22-REPAIR-057"
+      ]
+    }
+  ],
+  "closed_shared_limitation_issue_count": 24,
+  "remaining_significant_issues": 48
 }
