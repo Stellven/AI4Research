@@ -3572,3 +3572,31 @@ Date: 2026-08-12
   include contamination, missing-provenance, and no-improvement rejection.
   Neural reranker training, autonomous Self-RAG, and broad corpus
   generalization remain open.
+
+## Significant limitation reduction — packaged Windows GUI and accessibility
+
+Date: 2026-08-12
+
+- `P22-REPAIR-128` and `P22-REPAIR-130` remain open and are recorded as
+  `PASS_WITH_KNOWN_LIMITATIONS`, not closed. Commit `f3b6754c8` adds a
+  reproducible Windows renderer/package preparation path, packaged desktop
+  bootstrap checks, a built-executable selftest, and an axe-core accessibility
+  probe.
+- `npm.cmd run build:win` completed in 187 seconds. The resulting unpacked
+  `Solar.exe` (SHA-256
+  `004136385aba32d857f77f3081e678ef19ad947e6e38216d985c430d719a9741`)
+  passed 3/3 checks against the real dashboard and retained a 144897-byte
+  screenshot; the exact source-shell rerun also passed 3/3. The desktop
+  bootstrap contract passed 20/20.
+- Axe-core 4.10.3 reported zero automated WCAG 2.0/2.1 A/AA violations and a
+  keyboard Tab reached a focusable control. It also reported one
+  serious-impact `incomplete` color-contrast rule covering
+  `.new-task-button > span` and `kbd`; this is not recorded as full WCAG or
+  screen-reader certification.
+- `P22-REPAIR-128` stays open because the real concurrent settings test remains
+  8/9 with 196 direct-reader `PermissionError` observations, long-running and
+  broad route variants are not tested, and the built portable wrapper was not
+  successfully runtime-smoked. `P22-REPAIR-130` stays open pending manual
+  contrast, screen-reader, and multi-monitor testing. Accepted isolated
+  evidence is under
+  `.codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/`.
