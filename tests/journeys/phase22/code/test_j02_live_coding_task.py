@@ -578,7 +578,7 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
     task_graph_path = sprint_dir / f"{sprint_id}.task_graph.json"
     handoff_path = sprint_dir / f"{sprint_id}.handoff.md"
     eval_path = sprint_dir / f"{sprint_id}.eval.md"
-    session_events_path = Path(env["HARNESS_DIR"]) / "sessions" / sprint_id / "events.jsonl"
+    session_events_path = sprint_dir / f"{sprint_id}.events.jsonl"
     gate_decisions_path = Path(env["HARNESS_DIR"]) / "experience" / "decisions.jsonl"
     requirement_ir_path = sprint_dir / f"{sprint_id}.requirement_ir.json"
     wake_timeout_seconds = int(os.environ.get("PHASE22_J02_WAKE_TIMEOUT_SECONDS", "900"))

@@ -171,3 +171,10 @@ def test_journey_submits_verified_handoff_before_eval_verdict() -> None:
     eval_call = source.index('"eval-verdict", sprint_id')
 
     assert handoff_call < eval_call
+
+
+def test_journey_reads_the_canonical_sprint_event_stream() -> None:
+    source = MODULE_PATH.read_text(encoding="utf-8")
+
+    assert 'session_events_path = sprint_dir / f"{sprint_id}.events.jsonl"' in source
+    assert '/ "sessions" / sprint_id / "events.jsonl"' not in source
