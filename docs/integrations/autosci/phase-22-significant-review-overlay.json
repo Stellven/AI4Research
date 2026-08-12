@@ -158,8 +158,26 @@
         "P22-REPAIR-111",
         "P22-REPAIR-117"
       ]
+    },
+    {
+      "journey_id": "P22-J05",
+      "shared_recorded_limitation": "Discovery was limited to one topic/two anchors and only Semantic Scholar search/reference channels, with narrow qualification, organization, and coverage review.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 5,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j05-20260812T055657Z-33540/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {"passed": 36, "failed": 0},
+      "decision": "The current live journey completed separate topic and anchor strategies with the requested anchors, negative IDs, and shortlist limits. A bounded public-provider fallback now refuses excessive Semantic Scholar Retry-After waits, supports an explicit minimum-provider-family contract, and selects a provider-diverse shortlist. The accepted run independently observed Semantic Scholar, OpenAlex, and Crossref families, stable identity/title/year/channel fields, six content-bearing candidates among ten, deduplication, negative-ID exclusion, anchor influence, completed source boundaries, and durable evidence.",
+      "remaining_boundary": "The result proves the exercised public providers, topic, anchors, and metadata/content qualification. It does not claim exhaustive literature coverage, full-text access for every paper, longitudinal recall, or all configured provider variants.",
+      "issue_ids": [
+        "P22-REPAIR-015",
+        "P22-REPAIR-016",
+        "P22-REPAIR-017",
+        "P22-REPAIR-019",
+        "P22-REPAIR-022"
+      ]
     }
   ],
-  "closed_shared_limitation_issue_count": 33,
-  "remaining_significant_issues": 39
+  "closed_shared_limitation_issue_count": 38,
+  "remaining_significant_issues": 34
 }

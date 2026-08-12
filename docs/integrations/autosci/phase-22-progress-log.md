@@ -3275,3 +3275,25 @@ Date: 2026-08-12
   comparisons, CPU/memory, billable-provider cost, workload scalability, new
   dataset authoring, and task-specific compile/diff evidence remain outside
   this journey.
+
+## Significant shared-limitation closure — P22-J05 (5 issues)
+
+Date: 2026-08-12
+
+- The initial current-baseline J05 attempt exceeded its 300-second outer
+  budget because the `/discover` native fallback still honored Semantic
+  Scholar 60/120-second waits. The orphaned attempt was terminated and was not
+  accepted as evidence.
+- Commits `e8061b317` and `fa5fb1288` bound Retry-After handling, connect the
+  existing OpenAlex/Crossref production fallback to topic discovery, expose an
+  explicit `min_provider_families` contract, and retain provider diversity in
+  the shortlist. Ordinary single-provider callers keep their prior behavior.
+- Accepted post-commit run `p22j05-20260812T055657Z-33540` at `fa5fb1288` is
+  `PASS`, 36/36 assertions, with complete artifact durability. It exercised
+  Semantic Scholar, OpenAlex, and Crossref; both topic and anchor boundaries
+  completed; 10 candidates had stable identity/title/year/channel evidence,
+  six carried content summaries, and anchor influence, deduplication, and
+  negative-ID exclusion passed.
+- `P22-REPAIR-015`, `016`, `017`, `019`, and `022` are classified
+  `LIMITATION_CLOSED_VERIFIED`. Exhaustive coverage, full text for every paper,
+  and unexercised provider variants are not inferred.
