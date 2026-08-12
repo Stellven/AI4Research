@@ -4323,6 +4323,12 @@ print(json.dumps({
         [[ -f "$_reranker_py" ]] || { err "retrieval_reranker not found: $_reranker_py"; exit 1; }
         python3 "$_reranker_py" train "$@"
         ;;
+      self-rag-evaluate)
+        shift || true
+        _self_rag_py="$HARNESS_DIR/lib/self_rag.py"
+        [[ -f "$_self_rag_py" ]] || { err "self_rag not found: $_self_rag_py"; exit 1; }
+        python3 "$_self_rag_py" run "$@"
+        ;;
       scientific-compare)
         shift || true
         _scientific_compare_py="$HARNESS_DIR/lib/scientific_experiment_comparison.py"
@@ -4330,7 +4336,7 @@ print(json.dumps({
         python3 "$_scientific_compare_py" compare "$@"
         ;;
       *)
-        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run|curriculum-evaluate|routing-evaluate|reranker-train|scientific-compare] [--json]"
+        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run|curriculum-evaluate|routing-evaluate|reranker-train|self-rag-evaluate|scientific-compare] [--json]"
         exit 2
         ;;
     esac
