@@ -3341,3 +3341,26 @@ Date: 2026-08-12
   recipient acceptance, lifecycle closure, and compiled PDF/publication formats
   were not executed. The manifest truthfully records `local_only` and approval
   `not_requested`; no HITL state was fabricated.
+
+## Significant multi-session follow-up — P22-J18 (3 issues; still partial)
+
+Date: 2026-08-12
+
+- The first two-install WSL run reproduced a real defect: tmux keeps a global
+  server environment from its first client, so the second status-server pane
+  inherited the first installation's `HARNESS_DIR` and could not establish an
+  independent runtime boundary.
+- Commit `157d94932` binds `HOME`, `USERPROFILE`, `SOLAR_HOME`, `HARNESS_DIR`,
+  `SOLAR_HARNESS_DIR`, and bind-host values in each status-server pane command.
+  The focused runtime-platform suite passes 5/5.
+- Accepted post-commit run
+  `p22-j18-real-linux-status-20260812T063759Z-2613229` at `157d94932` is
+  `PASS_WITH_KNOWN_LIMITATIONS`. Two separately installed harnesses listened on
+  distinct ports 8765/8766, each `/runtime-info` named its own absolute harness,
+  and the secondary remained healthy after primary stop and uninstall. Both
+  installations then uninstalled cleanly.
+- `P22-REPAIR-120`, `127`, and `138` remain
+  `LIMITATION_PARTIALLY_REDUCED`, because other distributions/package managers,
+  remote hosts, other terminal implementations, and a broad interactive-session
+  matrix are still untested. The earlier "no concurrent sessions" boundary is
+  now closed without extending the result to those variants.
