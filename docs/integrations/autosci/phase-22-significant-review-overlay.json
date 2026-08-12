@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "9b0b1bda4",
+  "reviewed_code_head": "692efe965",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -461,13 +461,17 @@
       "shared_recorded_limitation": "Baseline and version-history variants and broader POC-to-baseline comparisons were not tested.",
       "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
       "issue_count": 2,
-      "accepted_evidence": "outputs/phase22-real-journeys/p22j03-20260812T072943Z-13944/journey-result.json",
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22j03-20260812T072943Z-13944/journey-result.json",
+        "outputs/phase22-real-journeys/p22-scientific-comparison-20260812T124345Z/journey-result.json",
+        ".codex-tmp/phase22-worker-results/p22-044-followup/result.json"
+      ],
       "journey_status": "PASS",
       "assertions": {"passed": 16, "failed": 0},
-      "decision": "The benchmark now binds a historical baseline to an actual Git commit and filtered source content, rejects unverifiable or self-comparison inputs, and packages current-versus-baseline score, duration and speedup deltas in JSON and Markdown for eight platform workflows.",
+      "decision": "The platform benchmark binds a historical baseline to an actual Git commit and packages deltas for eight workflows. A separate scientific comparator now derives metrics from hash-bound retrieval artifacts, requires all eight planned pairs, passes the canonical experiment-result gate, rejects mutable metric and embedded-plan attacks, and reports effect 0.75, 95% CI [0.362936, 1.137064], and exact sign-flip p=0.03125.",
       "closed_issue_ids": ["P22-REPAIR-040"],
       "partially_reduced_issue_ids": ["P22-REPAIR-044"],
-      "remaining_boundary": "The exercised platform workflow comparison is not evidence of broad scientific POC significance, effect size or domain interpretation. P22-REPAIR-044 remains open for that wider mapped behavior.",
+      "remaining_boundary": "P22-REPAIR-044 remains open. Git ancestry proves the protocol blob preceded these result artifacts, but the protocol and implementation are self-authored in the same repository; no trusted independent preregistry, signer, protected ref, external replication, broad scientific domain, or released-baseline experiment was demonstrated.",
       "issue_ids": ["P22-REPAIR-040", "P22-REPAIR-044"]
     },
     {
@@ -485,7 +489,7 @@
     {
       "journey_id": "P22-J19 browser, Electron, and packaged Windows GUI",
       "shared_recorded_limitation": "Desktop/browser execution and GUI accessibility, packaging, concurrency, long-running, and multi-monitor variants were not fully tested.",
-      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "classification": "LIMITATION_CLOSED_VERIFIED_CORE_WITH_UNTESTED_VARIANTS",
       "issue_count": 2,
       "accepted_evidence": [
         "outputs/phase22-real-journeys/p22-j19-real-gui-dashboard-20260812T072916Z-32540/journey-result.json",
@@ -493,7 +497,10 @@
         ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/result.json",
         ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/packaged-smoke.json",
         ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/accessibility.json",
-        ".codex-tmp/phase22-worker-results/p22-128-concurrency/result.json"
+        ".codex-tmp/phase22-worker-results/p22-128-concurrency/result.json",
+        "outputs/phase22-real-journeys/p22-128-route-soak-postcommit-20260812T083841Z/journey-result.json",
+        ".codex-tmp/phase22-worker-results/p22-130-a11y/result.json",
+        ".codex-tmp/phase22-worker-results/p22-130-a11y/after-escape-focus-fix.json"
       ],
       "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
       "assertions": {
@@ -502,7 +509,10 @@
         "packaged_executable": {"passed": 3, "failed": 0},
         "bootstrap_contract": {"passed": 20, "failed": 0},
         "axe_violations": 0,
-        "axe_incomplete": 1,
+        "axe_incomplete": 0,
+        "keyboard_forward": {"passed": 5, "failed": 0},
+        "keyboard_reverse": {"passed": 5, "failed": 0},
+        "route_matrix": {"passed": 21, "failed": 0, "soak_requests": 4247, "soak_errors": 0},
         "windows_concurrency": {
           "original": {"passed": 8, "failed": 1},
           "post_repair_gate_checks": {"passed": 250, "failed": 0},
@@ -510,8 +520,8 @@
           "fault_injection_tests": {"passed": 3, "failed": 0}
         }
       },
-      "decision": "The real browser dashboard and seven Electron recovery states remain green. A reproducible Windows build produced the unpacked Solar.exe and portable wrapper; the unpacked executable opened the real dashboard, produced a 144897-byte screenshot, and passed real-dashboard plus two fail-closed checks. Axe-core reported zero automated WCAG 2.0/2.1 A/AA violations and keyboard focus reached a control. The Windows settings concurrency defect is also repaired: 25 bounded rounds accepted 6000/6000 POSTs with 250/250 gate checks, no lost key, torn JSON, or API error. Independent fault probes verified fail-closed behavior for durable corruption/deletion and complete recovery after a target-removal publication failure.",
-      "remaining_boundary": "P22-REPAIR-128 remains open only for long-running service stability, broad route coverage, and direct runtime smoke of the portable wrapper; an arbitrary uncoordinated Windows raw-path reader can still receive a retryable sharing transition, while supported HTTP and harness-config readers are verified. P22-REPAIR-130 remains open because axe marked two color-contrast nodes incomplete and no manual contrast, screen-reader, or multi-monitor test was performed.",
+      "decision": "P22-REPAIR-128 core is fixed and verified: the built Windows app opens the real dashboard; 25 settings-storm rounds accepted 6000/6000 POSTs; 21 authenticated/negative routes passed; bounded route soak completed 4247 requests with zero errors; actual server PID, port, log, and cleanup were independently checked. P22-REPAIR-130 core is fixed and verified: axe reports zero violations and zero incomplete checks, measured contrast is 17.235:1 and 7.033:1, forward and reverse keyboard traversal are 5/5 with dialog activation/escape and trigger-focus restoration, named textboxes appear in the Electron accessibility tree, and the rebuilt executable passed 3/3 while rejecting loading/sign-in pages. The Radix autofocus race in the audit was repaired and bootstrap-to-accessibility sequences passed repeatedly.",
+      "remaining_boundary": "Both issues close for the exercised core path with PASS_WITH_KNOWN_LIMITATIONS. P22-REPAIR-128 does not infer long-running, hostile-network, multi-host, or NSIS portable-wrapper direct-runtime behavior. P22-REPAIR-130 does not infer attributable human screen-reader use, multi-monitor behavior, every dynamic route/control, or complete WCAG certification.",
       "issue_ids": ["P22-REPAIR-128", "P22-REPAIR-130"]
     },
     {
@@ -577,6 +587,6 @@
       "issue_ids": ["P22-REPAIR-080"]
     }
   ],
-  "closed_shared_limitation_issue_count": 62,
-  "remaining_significant_issues": 10
+  "closed_shared_limitation_issue_count": 64,
+  "remaining_significant_issues": 8
 }

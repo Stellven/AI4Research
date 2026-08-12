@@ -3623,3 +3623,53 @@ Date: 2026-08-12
   the production HTTP and `harness-config.sh` readers are bounded and verified.
   Long-running service stability, broad route coverage, and portable-wrapper
   runtime smoke remain untested, so P22-REPAIR-128 is not fully closed.
+
+## Significant core closure — status service and desktop accessibility
+
+Date: 2026-08-12
+
+- `P22-REPAIR-128` is `FIXED_VERIFIED` for the core local Windows status/web
+  application path, with `PASS_WITH_KNOWN_LIMITATIONS` for non-core variants.
+  In addition to the previously accepted 6000/6000 settings POSTs, run
+  `p22-128-route-soak-postcommit-20260812T083841Z` passed 21/21 authenticated,
+  negative, artifact, SSE, settings, status, events, and orchestration checks
+  plus 4247/4247 bounded-soak requests. Independent review confirmed metrics
+  came from the actual status-server PID and that the PID and port were gone,
+  the unique log had no unexpected exception, and the sandbox was removed.
+- `P22-REPAIR-130` is `FIXED_VERIFIED` for the automated packaged Windows GUI
+  scope, with `PASS_WITH_KNOWN_LIMITATIONS`. Axe-core now reports zero
+  violations and zero incomplete checks; measured contrast is 17.235:1 and
+  7.033:1. Forward and reverse keyboard traversal each pass 5/5, dialog
+  Enter/Escape and visible textbox names pass, and the Electron accessibility
+  tree contains the named home textbox. The rebuilt `Solar.exe` passed 3/3;
+  its retained screenshot is the real dashboard and loading/sign-in pages fail
+  the selftest contract.
+- A combined regression initially exposed a test timing race: Escape could be
+  sent after the dialog DOM became visible but before Radix completed its
+  autofocus handoff. Commit `692efe965` waits for the real dialog textarea to
+  own focus, sends an actual keyboard Escape, and requires focus restoration to
+  the New task trigger. Accessibility passed 10/10 consecutive runs and five
+  bootstrap-to-accessibility sequences; the integration owner independently
+  repeated the combined sequence twice.
+- The remaining non-core variants are explicit: P22-128 does not claim
+  long-running, hostile-network, multi-host, or NSIS-wrapper direct-runtime
+  coverage. P22-130 does not claim attributable human screen-reader testing,
+  multi-monitor operation, every dynamic view/control, or full WCAG
+  certification. These limits do not keep the core Significant issues open.
+
+## Significant limitation reduction — scientific POC comparison
+
+Date: 2026-08-12
+
+- `P22-REPAIR-044` remains open as `LIMITATION_PARTIALLY_REDUCED`. The current
+  production comparator derives NDCG values from hash-bound artifacts, requires
+  all eight planned pairs, validates 16/16 inputs through the canonical
+  experiment-result gate, and rejects metric=100 tampering, embedded-plan
+  overrides, missing pairs, and artifact changes.
+- Independent recomputation matched effect `0.75`, 95% CI
+  `[0.362936, 1.137064]`, Cohen's dz, and exact sign-flip `p=0.03125`.
+  Git ancestry proves the protocol blob preceded the result artifacts, but the
+  protocol and implementation are self-authored in the same repository. No
+  trusted independent preregistry/signer, external replication, broad science
+  domain, or released-baseline experiment was demonstrated, so this bounded
+  retrieval POC is not treated as full closure.
