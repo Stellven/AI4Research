@@ -1,73 +1,73 @@
-import copy
-import hashlib
 import json
+from pathlib import Path
 
 from harness.lib.self_rag import evaluate
 
 
-def source(source_id, content):
-    return {"source_id": source_id, "uri": f"fixture://{source_id}", "content": content,
-            "sha256": hashlib.sha256(content.encode()).hexdigest()}
-
-
-def candidate(document_id, source_id, *, supports=(), contradicts=()):
-    return {"document_id": document_id, "source_id": source_id, "citation_id": f"cite:{source_id}",
-            "supports": list(supports), "contradicts": list(contradicts),
-            "features": {"term_overlap": 1, "citation_match": 1, "authority": .8, "freshness": .5}}
-
-
-def artifact():
-    return {"question": "q", "required_claims": [{"claim_id": "a", "text": "claim a"},
-            {"claim_id": "b", "text": "claim b"}], "sources": [source("sa", "a"), source("sb", "b")],
-            "retrieval_rounds": [[candidate("da", "sa", supports=("a",))],
-                                 [candidate("db", "sb", supports=("b",))]]}
-
-
-def write(tmp_path, value, name="artifact.json"):
-    path = tmp_path / name
+def write(path: Path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value), encoding="utf-8")
     return path
 
 
-def test_retrieves_more_then_accepts_source_bound_claims(tmp_path):
-    result = evaluate(write(tmp_path, artifact()), max_iterations=3)
+def doc(corpus, file_name, doc_id, text, uri=None):
+    return write(corpus / file_name, {"document_id": doc_id, "text": text,
+                 "provenance": {"uri": uri or f"local://{doc_id}"}})
+
+
+def request(path, question="controlled trial findings", quote="Observed nitrate declined by twelve percent."):
+    return write(path, {"question": question, "required_claims": [
+        {"claim_id": "finding", "text": "Nitrate declined.", "required_exact_quote": quote}]})
+
+
+def run(tmp_path, **kwargs):
+    return evaluate(tmp_path / "request.json", tmp_path / "corpus", tmp_path / "index.json",
+                    max_iterations=kwargs.get("max_iterations", 3), top_k=kwargs.get("top_k", 1))
+
+
+def test_real_index_retrieves_and_verifies_exact_span(tmp_path):
+    corpus = tmp_path / "corpus"
+    doc(corpus, "noise.json", "cats", "Domestic cats sleep for much of the day.")
+    text = "Methods were preregistered. Observed nitrate declined by twelve percent."
+    doc(corpus, "result.json", "nitrate", text)
+    request(tmp_path / "request.json", question="controlled nitrate trial findings")
+    result = run(tmp_path)
+    evidence = result["answer"][0]["evidence"][0]
     assert result["status"] == "accepted"
-    assert [x["decision"] for x in result["trace"]] == ["retrieve_more", "accept"]
-    assert result["answer_policy"]["unsupported_answer_count"] == 0
-    assert {x["source_id"] for x in result["answer"]} == {"sa", "sb"}
-    assert result["trace"][1]["previous_trace_sha256"] == result["trace"][0]["trace_sha256"]
+    assert evidence["quote"] == text[evidence["start"]:evidence["end"]]
+    assert len(evidence["quote_sha256"]) == len(evidence["source_version_sha256"]) == 64
+    assert result["corpus"]["retrieval_entrypoint"].endswith("LearningRetriever")
 
 
-def test_missing_provenance_is_rejected_and_budget_abstains(tmp_path):
-    value = artifact()
-    value["retrieval_rounds"] = [[candidate("bad", "unknown", supports=("a", "b"))]]
-    result = evaluate(write(tmp_path, value), max_iterations=1)
+def test_moon_cheese_claim_cannot_be_supported_by_cat_document(tmp_path):
+    corpus = tmp_path / "corpus"
+    doc(corpus, "cats.json", "cats", "Domestic cats sleep for much of the day and hunt at dusk.")
+    request(tmp_path / "request.json", question="Are cats evidence the Moon is cheese?",
+            quote="The Moon is made of cheese.")
+    result = run(tmp_path, max_iterations=2)
     assert result["status"] == "abstained" and result["answer"] == []
-    assert result["trace"][0]["rejected_candidates"][0]["reason"].startswith("missing_or_invalid")
+    assert result["answer_policy"]["unsupported_answer_count"] == 0
     assert "required_claim_coverage_missing" in result["reasons"]
 
 
-def test_conflicting_evidence_never_produces_answer(tmp_path):
-    value = artifact()
-    value["retrieval_rounds"] = [[candidate("support", "sa", supports=("a", "b")),
-                                  candidate("conflict", "sb", contradicts=("a",))]]
-    result = evaluate(write(tmp_path, value), max_iterations=1)
+def test_same_document_id_changed_content_is_immutable_conflict(tmp_path):
+    corpus = tmp_path / "corpus"
+    quote = "Observed nitrate declined by twelve percent."
+    doc(corpus, "version-a.json", "result", quote, "local://result/a")
+    doc(corpus, "version-b.json", "result", quote + " Later analysis disputes it.", "local://result/b")
+    request(tmp_path / "request.json", question="nitrate result", quote=quote)
+    result = run(tmp_path, top_k=2)
     assert result["status"] == "abstained" and result["answer"] == []
-    assert result["unresolved_conflicting_claim_ids"] == ["a"]
-    assert "unresolved_evidence_conflict" in result["reasons"]
+    assert result["reasons"] == ["immutable_document_version_conflict"]
+    assert result["trace"][0]["document_version_conflicts"] == ["result"]
 
 
-def test_repeated_retrieval_round_detects_cycle(tmp_path):
-    value = artifact()
-    value["retrieval_rounds"] = [value["retrieval_rounds"][0], copy.deepcopy(value["retrieval_rounds"][0])]
-    result = evaluate(write(tmp_path, value), max_iterations=5)
-    assert result["status"] == "abstained" and result["iterations_used"] == 2
-    assert result["reasons"] == ["retrieval_cycle_detected"]
-
-
-def test_tampered_source_hash_cannot_support_answer(tmp_path):
-    value = artifact()
-    value["sources"][0]["sha256"] = "0" * 64
-    result = evaluate(write(tmp_path, value), max_iterations=2)
-    assert result["status"] == "abstained" and "sa" in result["invalid_source_ids"]
-    assert result["answer_policy"]["abstained_on_failure"] is True
+def test_budget_and_cycle_guards_remain(tmp_path):
+    corpus = tmp_path / "corpus"
+    doc(corpus, "cats.json", "cats", "Domestic cats sleep for much of the day.")
+    request(tmp_path / "request.json", quote="The Moon is made of cheese.")
+    budget = run(tmp_path, max_iterations=1)
+    assert budget["reasons"][0] == "iteration_budget_exhausted"
+    cycle = evaluate(tmp_path / "request.json", corpus, tmp_path / "cycle-index.json", max_iterations=3, top_k=10)
+    assert cycle["reasons"][0] == "retrieval_cycle_detected"
+    assert cycle["iterations_used"] == 2
