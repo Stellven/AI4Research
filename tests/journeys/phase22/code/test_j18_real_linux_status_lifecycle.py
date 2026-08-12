@@ -167,6 +167,8 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
             "USERPROFILE": str(sandbox_home),
             "SOLAR_HOME": str(solar_home),
             "CLAUDE_DIR": str(claude_dir),
+            "HARNESS_DIR": str(solar_home / "harness"),
+            "SOLAR_HARNESS_DIR": str(solar_home / "harness"),
             "SOLAR_PANE_RUNTIME": "codex",
             "PHASE22_SELECTED_RUNTIME": "codex",
             "SOLAR_NO_MCP": "true",
