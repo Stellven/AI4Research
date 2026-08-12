@@ -38,6 +38,7 @@ def test_p22_scientific_experiment_comparison(
         / "significant"
         / "trust_registry.json"
     )
+    trust_registry_sha256 = _sha256(trust_registry_path)
     protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
     dataset_hash = _sha256(dataset_path)
     protocol_git_path = protocol_path.relative_to(repo_root).as_posix()
@@ -53,6 +54,7 @@ def test_p22_scientific_experiment_comparison(
         "--protocol-path", protocol_git_path,
         "--protocol-blob", protocol_blob,
         "--trust-registry", str(trust_registry_path),
+        "--trust-registry-sha256", trust_registry_sha256,
     ]
 
     reranker_path = repo_root / "harness" / "lib" / "retrieval_reranker.py"
@@ -231,12 +233,14 @@ def test_p22_scientific_experiment_comparison(
         if item.get("purpose") != "scientific_preregistration_protocol"
     ]
     untrusted_registry.write_text(json.dumps(trusted_payload, indent=2) + "\n", encoding="utf-8")
+    untrusted_registry_sha256 = _sha256(untrusted_registry)
     untrusted_protocol_output = output / "untrusted-protocol-rejection.json"
     untrusted_protocol_command = [
         phase22_python, str(comparator_path), "compare", "--results",
         *[str(path) for path in result_paths], "--protocol-repo", str(repo_root),
         "--protocol-commit", protocol_commit, "--protocol-path", protocol_git_path,
         "--protocol-blob", protocol_blob, "--trust-registry", str(untrusted_registry),
+        "--trust-registry-sha256", untrusted_registry_sha256,
         "--output", str(untrusted_protocol_output),
     ]
     untrusted_protocol_process = subprocess.run(
@@ -283,7 +287,7 @@ def test_p22_scientific_experiment_comparison(
         and "cherry_picked_or_missing_pairs" in rejection["errors"][0],
         "untrusted_protocol_registry_rejected": untrusted_protocol_process.returncode == 2
         and untrusted_protocol["status"] == "rejected"
-        and "protocol_not_matched_by_trust_registry" in untrusted_protocol["errors"][0],
+        and "trust_registry_sha256_not_policy_approved" in untrusted_protocol["errors"][0],
     }
     evidence = {
         "schema_version": "phase22.scientific_experiment_comparison_journey.v1",
