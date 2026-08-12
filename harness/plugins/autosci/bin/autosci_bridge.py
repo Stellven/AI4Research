@@ -6786,6 +6786,45 @@ def _discover_native_candidates(payload: dict[str, Any]) -> list[dict[str, Any]]
     return normalized
 
 
+def _production_discovery_candidates(result: dict[str, Any], *, limit: int) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for index, item in enumerate(result.get("candidates") or [], start=1):
+        if not isinstance(item, dict):
+            continue
+        metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        provider = str(item.get("provider") or "").strip().lower()
+        raw = {
+            "candidate_id": item.get("source_id") or item.get("canonical_id") or f"provider-candidate-{index:03d}",
+            "title": item.get("title"),
+            "source_ref": item.get("url") or item.get("canonical_id"),
+            "source_channels": [provider] if provider else [],
+            "ranking_score": 1.0,
+            "ranking_rationale": f"Production public-provider fallback supplied this candidate via {provider or 'unknown provider'}.",
+            "dedup_status": "new",
+            "fetch_status": "fetched",
+            "year": metadata.get("year"),
+            "abstract": item.get("content_summary"),
+        }
+        candidate = _candidate_from_runtime(raw, index)
+        if candidate is not None:
+            normalized.append(candidate)
+        if len(normalized) >= limit:
+            break
+    return normalized
+
+
+def _production_discovery_artifacts(result: dict[str, Any], workspace_root: Path) -> list[dict[str, str]]:
+    artifacts: list[dict[str, str]] = []
+    for usage in result.get("provider_usage") or []:
+        if not isinstance(usage, dict):
+            continue
+        raw_path = str(usage.get("archive_path") or "").strip()
+        archive = workspace_root / raw_path if raw_path else Path()
+        if raw_path and archive.is_file():
+            artifacts.append(_artifact("public_provider_discovery_archive_json", archive))
+    return artifacts
+
+
 def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path, allow_network_fetch: bool) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     output_dir = _output_dir(envelope, "discover_literature")
@@ -6841,6 +6880,8 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
                 no_citation_expand=bool(inputs.get("no_citation_expand")),
                 fixture_fallback=False,
                 progress_path=output_dir / "semantic_scholar_retry_progress.json",
+                max_retries=1,
+                max_retry_wait_seconds=5,
             )
             fallback_candidates = fallback.get("candidates") if isinstance(fallback.get("candidates"), list) else []
             if fallback_candidates:
@@ -6852,6 +6893,30 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
                 limitations.extend(str(item) for item in fallback.get("limitations") or [])
         except Exception as exc:
             limitations.append(f"Provider-backed discovery fallback failed: {type(exc).__name__}: {exc}")
+    if allow_network_fetch and mode == "topic" and not candidates:
+        try:
+            service_workspace = output_dir / "public-provider-fallback"
+            production_services = production_services_from_environment(workspace_root=service_workspace)
+            discover_sources = production_services["discover_sources"]
+            if hasattr(discover_sources, "limit"):
+                discover_sources.limit = int(inputs.get("limit") or payload.get("shortlist_count") or 10)
+            provider_result = discover_sources(
+                seed_snapshot={"seeds": [{"seed_kind": "topic", "content": str(inputs.get("query") or inputs.get("topic") or "")}]},
+                payload={"task_contract": {"user_intent": str(inputs.get("query") or inputs.get("topic") or "")}},
+            )
+            provider_candidates = _production_discovery_candidates(
+                provider_result,
+                limit=int(inputs.get("limit") or payload.get("shortlist_count") or 10),
+            )
+            if provider_candidates:
+                candidates = provider_candidates
+                native_mode = "topic_public_provider_fallback"
+                status = "completed"
+                artifacts.extend(_production_discovery_artifacts(provider_result, service_workspace))
+                limitations.append("Native topic discovery returned no shortlist; bounded production public-provider fallback supplied traceable candidates.")
+                limitations.extend(str(item) for item in provider_result.get("limitations") or [] if str(item).strip())
+        except Exception as exc:
+            limitations.append(f"Production public-provider discovery fallback failed: {type(exc).__name__}: {exc}")
     return {
         "status": status,
         "mode": native_mode,

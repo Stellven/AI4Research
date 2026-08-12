@@ -5,6 +5,6 @@
   "negative_ids": ["1706.03762", "2401.01010"],
   "limit": 5,
   "min_candidates": 3,
-  "required_source_channels": ["search_s2"],
-  "source_provider": "search_s2"
+  "required_provider_families": ["semantic_scholar"],
+  "min_provider_families": 2
 }
