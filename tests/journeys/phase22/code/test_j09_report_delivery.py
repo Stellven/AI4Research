@@ -510,6 +510,24 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     markdown_text = markdown_report.read_text(encoding="utf-8", errors="replace") if markdown_report else ""
     if markdown_report:
         rec.add_artifact(markdown_report, "readable_markdown_report")
+    pdf_report = rec.run_dir / "verifier-guided-skill-learning-report.pdf"
+    pdf_tool = repo_root / "harness" / "tools" / "markdown_pdf.py"
+    pdf_build = rec.run(
+        "publication-pdf-build",
+        [phase22_python, str(pdf_tool), "build", "--input", str(markdown_report), "--output", str(pdf_report)]
+        if markdown_report else [phase22_python, str(pdf_tool), "verify", "--input", str(pdf_report)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    pdf_verify = rec.run(
+        "publication-pdf-verify",
+        [phase22_python, str(pdf_tool), "verify", "--input", str(pdf_report)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    pdf_payload = json.loads(pdf_build.stdout) if pdf_build.returncode == 0 else {}
+    if pdf_report.is_file():
+        rec.add_artifact(pdf_report, "compiled_pdf_report")
     draft_report = draft_payload.get("outputs", {}).get("report", {}) if isinstance(draft_payload, dict) else {}
     draft_sections = draft_report.get("sections", []) if isinstance(draft_report, dict) else []
     draft_section_ids = {section.get("section_id") for section in draft_sections if isinstance(section, dict)}
@@ -539,11 +557,12 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
             "schema": "publication_delivery_request.v1",
             "delivery_id": "phase22-j09-technical-lead-handoff",
             "audience": {"role": "technical_lead", "description": "Technical decision-maker reviewing the bounded local SkillGen result."},
-            "delivery_format": "markdown_bundle",
-            "content_scope": ["report", "delivery-plan", "provider-review", "decision-artifact"],
+            "delivery_format": "mixed_bundle",
+            "content_scope": ["report", "compiled-pdf", "delivery-plan", "provider-review", "decision-artifact"],
             "permissions": {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"},
             "files": [
                 {"file_id": "report", "type": "readable_markdown_report", "source_path": str(recorded_artifact_path("readable_markdown_report")), "evidence_ids": ["report:phase22-j09"]},
+                {"file_id": "compiled-pdf", "type": "compiled_pdf_report", "source_path": str(recorded_artifact_path("compiled_pdf_report")), "evidence_ids": ["report:phase22-j09", "compile:phase22-j09"]},
                 {"file_id": "plan", "type": "report_plan", "source_path": str(recorded_artifact_path("report_plan")), "evidence_ids": ["plan:phase22-j09"]},
                 {"file_id": "review", "type": "provider_review", "source_path": str(recorded_artifact_path("artifact_review")), "evidence_ids": ["review:phase22-j09", *[str(item) for item in review_boundary.get("evidence_ids") or []]]},
                 {"file_id": "decision", "type": "decision_artifact", "source_path": str(recorded_artifact_path("decision_artifact")), "evidence_ids": ["decision:phase22-j09"]},
@@ -682,13 +701,23 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     rec.add_assertion("compile_or_checklist_evidence_recorded", compile_ev is not None, compile_result.get("_error"))
     rec.add_assertion("paper_compile_status_understood", compile_status in {"completed", "inconclusive"}, compile_status)
     rec.add_assertion(
+        "compiled_pdf_report_structurally_verified",
+        pdf_build.returncode == 0
+        and pdf_verify.returncode == 0
+        and pdf_payload.get("valid") is True
+        and pdf_payload.get("page_count", 0) >= 1
+        and len(str(pdf_payload.get("sha256") or "")) == 64
+        and pdf_report.stat().st_size > 500,
+        {"build": pdf_build.returncode, "verify": pdf_verify.returncode, "result": pdf_payload},
+    )
+    rec.add_assertion(
         "publication_delivery_contract_complete",
         delivery_build.returncode == 0
         and delivery_verify.returncode == 0
         and delivery_payload.get("audience", {}).get("role") == "technical_lead"
         and delivery_payload.get("permissions") == {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"}
         and len(delivery_payload.get("handoff_checklist") or []) >= 5
-        and len(delivery_payload.get("files") or []) == 4
+        and len(delivery_payload.get("files") or []) == 5
         and len(delivery_payload.get("evidence_index") or []) >= 4,
         {"build": delivery_build.returncode, "verify": delivery_verify.returncode, "manifest": delivery_payload},
     )
