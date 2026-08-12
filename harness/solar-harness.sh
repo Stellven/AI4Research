@@ -3850,8 +3850,11 @@ print(json.dumps({
       if _ss_is_windows; then
         return 0
       fi
-      ps ax -o pid= -o args= 2>/dev/null | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
-        $2 ~ /(^|\/)python([0-9]+([.][0-9]+)*)?$/ && $3 == script { print $1 }
+      # Match the exact script as a substring of the full command line rather
+      # than splitting argv on spaces. Installed harness paths commonly contain
+      # spaces on WSL-mounted Windows workspaces.
+      ps ax -o pid= -o comm= -o args= 2>/dev/null | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
+        $2 ~ /^python([0-9]+([.][0-9]+)*)?$/ && index($0, script) > 0 { print $1 }
       ' || true
     }
     _ss_pid_owned() {
