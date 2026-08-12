@@ -3318,3 +3318,26 @@ Date: 2026-08-12
   `LIMITATION_PARTIALLY_REDUCED`: different real review-provider families,
   broader scientific domains, and longitudinal/generalization evidence were
   not exercised and remain explicit limitations.
+
+## Significant delivery closure — P22-J09 (4 issues; 2 closed)
+
+Date: 2026-08-12
+
+- Accepted post-commit J09 run `p22j09-20260812T062722Z-14976` at
+  `6db49d2cb` is `PASS_WITH_KNOWN_LIMITATIONS`, 28/28 assertions, 16 durable
+  artifacts, and complete artifact durability.
+- The authorized low-cost OpenAI review route completed with provider/model,
+  request SHA-256, response SHA-256, persisted response, independent-provider
+  separation from the local writer, and `final_acceptance_ready=true`.
+- A new production `publication_delivery_handoff.v1` constructor and verifier
+  package the report, plan, review, and decision artifact. The manifest defines
+  the technical-lead audience, Markdown format, content scope, local-only
+  permissions, 14 evidence links, six completed handoff checks, exact file
+  inventory, per-file hashes, and secret scanning. A tampered report is rejected
+  and the restored bundle verifies. Focused constructor tests pass 3/3.
+- `P22-REPAIR-051` and `053` are `LIMITATION_CLOSED_VERIFIED` for the exercised
+  delivery-plan and reusable report-package path. `P22-REPAIR-054` and `118`
+  are only `LIMITATION_PARTIALLY_REDUCED`: HITL compile, external distribution,
+  recipient acceptance, lifecycle closure, and compiled PDF/publication formats
+  were not executed. The manifest truthfully records `local_only` and approval
+  `not_requested`; no HITL state was fabricated.
