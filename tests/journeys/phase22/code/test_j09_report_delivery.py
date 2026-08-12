@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from pathlib import Path
+
+import jsonschema
 
 from evidence import JourneyRecorder
 from journey_runner import (
@@ -106,6 +109,103 @@ def _is_stable_evidence_id(value: object) -> bool:
     return text.startswith(("claim-", "claim:", "code:", "exp-", "local:", "paper-", "phase22-", "runtime:", "task-", "wiki:"))
 
 
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "0" * 64
+
+
+def _decision_request(verdict_path: Path, experiment_path: Path) -> dict:
+    return {
+        "schema": "decision_request.v1",
+        "decision_id": "phase22-j09-bounded-rollout",
+        "title": "Choose the evidence-supported SkillGen rollout scope",
+        "problem": "Choose between a bounded local continuation and an unsupported generalized rollout.",
+        "alternatives": [
+            {
+                "alternative_id": "bounded-local",
+                "title": "Continue with a bounded local validation",
+                "description": "Retain the measured scope and collect independent external-validity evidence.",
+            },
+            {
+                "alternative_id": "generalized-rollout",
+                "title": "Generalize the result immediately",
+                "description": "Treat the local result as sufficient for a broad rollout.",
+            },
+        ],
+        "criteria": [
+            {"criterion_id": "measured-support", "name": "Measured evidence support", "weight": 0.6},
+            {"criterion_id": "external-validity", "name": "External-validity risk", "weight": 0.4},
+        ],
+        "evidence": [
+            {
+                "evidence_id": "j09-claim-verdict",
+                "evidence_type": "claim_verdict",
+                "claim_id": "claim-supported",
+                "supporting_experiment_evidence_id": "j09-experiment-result",
+                "source_path": str(verdict_path),
+                "expected_sha256": _file_sha256(verdict_path),
+                "summary": "The persisted claim verdict supports the bounded local claim.",
+            },
+            {
+                "evidence_id": "j09-experiment-result",
+                "evidence_type": "experiment_result",
+                "source_path": str(experiment_path),
+                "expected_sha256": _file_sha256(experiment_path),
+                "summary": "The approved local experiment completed and produced persisted result evidence.",
+            },
+        ],
+        "assessments": [
+            {
+                "alternative_id": "bounded-local",
+                "criterion_id": "measured-support",
+                "score": 5,
+                "rationale": "This option stays within the supported claim and completed experiment.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            },
+            {
+                "alternative_id": "bounded-local",
+                "criterion_id": "external-validity",
+                "score": 3,
+                "rationale": "The option explicitly keeps external validity unresolved.",
+                "evidence_ids": ["j09-claim-verdict"],
+            },
+            {
+                "alternative_id": "generalized-rollout",
+                "criterion_id": "measured-support",
+                "score": 0,
+                "rationale": "Neither evidence source supports generalization beyond the local dataset.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            },
+            {
+                "alternative_id": "generalized-rollout",
+                "criterion_id": "external-validity",
+                "score": 0,
+                "rationale": "The local result provides no independent external-validity evidence for a broad rollout.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            },
+        ],
+        "risks": [
+            {
+                "risk_id": "external-validity",
+                "description": "A local result could be overstated as a general result.",
+                "mitigation": "Keep the recommendation bounded and require independent review before rollout.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            }
+        ],
+        "recommendation": {
+            "alternative_id": "bounded-local",
+            "rationale": "Only the bounded continuation is explicitly supported by the measured result and claim verdict.",
+            "criterion_ids": ["measured-support", "external-validity"],
+            "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+        },
+        "limitations": [
+            "The evidence comes from one deterministic local experiment and does not establish external validity."
+        ],
+        "unresolved_review_items": [
+            "An independent reviewer must assess external validity and the proposed rollout boundary."
+        ],
+    }
+
+
 def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python: str) -> None:
     rec = JourneyRecorder(repo_root, "P22-J09")
     sandbox = tmp_path / "p22-j09"
@@ -183,6 +283,80 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     verdict_ev = action_evidence(verify, "verify_claim")
     verdict_payload = _load_json(verdict_ev)
     verdict_boundary = verdict_payload.get("outputs", {}).get("final_verdict_boundary", {})
+    if verdict_ev:
+        rec.add_artifact(Path(verdict_ev), "claim_verdict")
+        recorded_verdict = Path(rec.artifacts[-1]["path"])
+        if not recorded_verdict.is_absolute():
+            recorded_verdict = rec.run_dir / recorded_verdict
+    else:
+        recorded_verdict = rec.artifact_dir / "missing-claim-verdict.json"
+    if exp_result_ev:
+        rec.add_artifact(Path(exp_result_ev), "experiment_result_evidence")
+        recorded_experiment = Path(rec.artifacts[-1]["path"])
+        if not recorded_experiment.is_absolute():
+            recorded_experiment = rec.run_dir / recorded_experiment
+    else:
+        recorded_experiment = rec.artifact_dir / "missing-experiment-result.json"
+    decision_request_path = write_json(
+        rec.artifact_dir / "decision-request.json",
+        _decision_request(recorded_verdict, recorded_experiment),
+    )
+    decision_output = rec.artifact_dir / "decision-artifact.json"
+    decision_proc = rec.run(
+        "decision-artifact-construction",
+        [
+            phase22_python,
+            str(repo_root / "harness" / "tools" / "decision_artifact.py"),
+            "--input",
+            str(decision_request_path),
+            "--output",
+            str(decision_output),
+            "--source-root",
+            str(rec.run_dir),
+        ],
+        cwd=repo_root,
+        timeout=60,
+    )
+    decision_payload = _load_json(decision_output)
+    decision_schema = _load_json(
+        repo_root / "harness" / "schemas" / "evidence" / "decision_artifact.v1.schema.json"
+    )
+    decision_schema_error = ""
+    try:
+        jsonschema.Draft202012Validator(decision_schema).validate(decision_payload)
+    except jsonschema.ValidationError as exc:
+        decision_schema_error = exc.message
+    negative_verdict_payload = copy.deepcopy(verdict_payload)
+    negative_verdict_payload["outputs"]["verdicts"][0]["verdict"] = "not_supported"
+    negative_verdict_path = write_json(
+        rec.artifact_dir / "decision-negative-claim-verdict.json",
+        negative_verdict_payload,
+    )
+    negative_request = _decision_request(negative_verdict_path, recorded_experiment)
+    negative_request_path = write_json(
+        rec.artifact_dir / "decision-request-unsupported.json", negative_request
+    )
+    negative_output = rec.artifact_dir / "decision-artifact-unsupported.json"
+    negative_output.write_text(
+        '{"schema":"decision_artifact.v1","stale":true}\n', encoding="utf-8"
+    )
+    negative_proc = rec.run(
+        "decision-artifact-unsupported-evidence",
+        [
+            phase22_python,
+            str(repo_root / "harness" / "tools" / "decision_artifact.py"),
+            "--input",
+            str(negative_request_path),
+            "--output",
+            str(negative_output),
+            "--source-root",
+            str(rec.run_dir),
+        ],
+        cwd=repo_root,
+        timeout=60,
+    )
+    rec.add_artifact(decision_request_path, "decision_request")
+    rec.add_artifact(decision_output, "decision_artifact")
     discovery = write_json(
         sandbox / "literature-discovery.json",
         {
@@ -246,8 +420,6 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         (handoff, "report_handoff_manifest"),
         (claims, "research_claims"),
         (code_ev, "code_evidence"),
-        (exp_result_ev, "experiment_result_evidence"),
-        (verdict_ev, "claim_verdict"),
         (discovery, "discovery_evidence"),
     ):
         if path:
@@ -325,6 +497,89 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     rec.add_assertion("upstream_experiment_result_available", exp_result_ev is not None, exp_run.get("_error"))
     rec.add_assertion("upstream_claim_verdict_available", verdict_ev is not None, verify.get("_error"))
     rec.add_assertion("claim_verdict_completed", verdict_payload.get("status") == "completed", verdict_payload.get("status"))
+    rec.add_assertion("decision_constructor_completed", decision_proc.returncode == 0, decision_proc.stderr)
+    rec.add_assertion("decision_artifact_schema_valid", not decision_schema_error, decision_schema_error)
+    rec.add_assertion(
+        "decision_recommendation_traces_to_criteria_and_evidence",
+        set(decision_payload.get("recommendation", {}).get("criterion_ids", [])) == {"measured-support", "external-validity"}
+        and set(decision_payload.get("recommendation", {}).get("evidence_ids", []))
+        == {"j09-claim-verdict", "j09-experiment-result"},
+        decision_payload.get("recommendation"),
+    )
+    evidence_links = decision_payload.get("evidence_links", [])
+    rec.add_assertion(
+        "decision_evidence_provenance_reloaded_and_hashed",
+        len(evidence_links) == 2
+        and all(item.get("sha256") and Path(item.get("source_path", "")).is_file() for item in evidence_links),
+        evidence_links,
+    )
+    request_payload = _load_json(decision_request_path)
+    expected_evidence = {
+        item["evidence_id"]: item
+        for item in request_payload.get("evidence", [])
+        if isinstance(item, dict) and item.get("evidence_id")
+    }
+    evidence_links_by_id = {
+        item["evidence_id"]: item
+        for item in evidence_links
+        if isinstance(item, dict) and item.get("evidence_id")
+    }
+    rec.add_assertion(
+        "decision_typed_evidence_matches_expected_hashes",
+        {item.get("evidence_type") for item in evidence_links}
+        == {"claim_verdict", "experiment_result"}
+        and all(
+            item.get("sha256")
+            == expected_evidence.get(item.get("evidence_id"), {}).get("expected_sha256")
+            == _file_sha256(Path(item.get("source_path", "")))
+            for item in evidence_links
+        )
+        and evidence_links_by_id.get("j09-claim-verdict", {}).get("observed_support")
+        == "supported"
+        and evidence_links_by_id.get("j09-claim-verdict", {}).get(
+            "supporting_evidence_ids"
+        )
+        == ["j09-experiment-result"]
+        and evidence_links_by_id.get("j09-experiment-result", {}).get(
+            "observed_support"
+        )
+        == "supports",
+        {"request": expected_evidence, "artifact": evidence_links},
+    )
+    expected_pairs = {
+        (alternative["alternative_id"], criterion["criterion_id"])
+        for alternative in decision_payload.get("alternatives", [])
+        for criterion in decision_payload.get("criteria", [])
+    }
+    actual_pairs = {
+        (assessment.get("alternative_id"), assessment.get("criterion_id"))
+        for assessment in decision_payload.get("assessments", [])
+    }
+    rec.add_assertion(
+        "decision_assessment_matrix_complete",
+        actual_pairs == expected_pairs,
+        {"expected": sorted(expected_pairs), "actual": sorted(actual_pairs)},
+    )
+    rec.add_assertion(
+        "decision_request_provenance_matches_persisted_bytes",
+        decision_payload.get("provenance", {}).get("request_sha256")
+        == _file_sha256(decision_request_path),
+        decision_payload.get("provenance"),
+    )
+    rec.add_assertion(
+        "decision_review_and_approval_state_truthful",
+        decision_payload.get("decision_status") == "review_required"
+        and decision_payload.get("review", {}).get("status") == "pending"
+        and decision_payload.get("review", {}).get("reviewed_by") is None
+        and decision_payload.get("approval", {}).get("status") == "not_requested"
+        and decision_payload.get("approval", {}).get("approved_by") is None,
+        {"review": decision_payload.get("review"), "approval": decision_payload.get("approval")},
+    )
+    rec.add_assertion(
+        "unsupported_recommendation_fails_closed",
+        negative_proc.returncode == 2 and not negative_output.exists(),
+        negative_proc.stderr,
+    )
     rec.add_assertion("paper_plan_recorded", plan_ev is not None and plan_status in {"completed", "inconclusive"}, plan_status or plan.get("_error"))
     rec.add_assertion("paper_draft_completed", draft_ev is not None, draft.get("_error"))
     rec.add_assertion("paper_draft_status_understood", draft_status in {"completed", "inconclusive"}, draft_status)
@@ -416,6 +671,13 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         "paper-plan, draft, review, and compile/checklist routes were executed with local upstream evidence",
         draft_ev or rec.run_dir,
         "partial",
+    )
+    rec.add_l2(
+        "Foundation",
+        "Decision Artifact Construction",
+        "The production constructor built a schema-valid decision whose recommendation is bound to criteria and reloaded upstream evidence; unresolved review and approval remained explicit.",
+        decision_output,
+        True,
     )
 
     status = "PASS_WITH_KNOWN_LIMITATIONS" if limitations and all(item["passed"] for item in rec.assertions) else "PASS"

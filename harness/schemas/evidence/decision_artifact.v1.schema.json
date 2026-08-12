@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/decision_artifact.v1.schema.json",
+  "title": "Solar Evidence ABI - Decision Artifact",
+  "type": "object",
+  "required": [
+    "schema",
+    "decision_id",
+    "title",
+    "problem",
+    "decision_status",
+    "alternatives",
+    "criteria",
+    "evidence_links",
+    "assessments",
+    "risks",
+    "recommendation",
+    "limitations",
+    "review",
+    "approval",
+    "next_action",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "decision_artifact.v1"},
+    "decision_id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "problem": {"type": "string", "minLength": 1},
+    "decision_status": {"const": "review_required"},
+    "alternatives": {
+      "type": "array",
+      "minItems": 2,
+      "items": {"$ref": "#/$defs/alternative"}
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/criterion"}
+    },
+    "evidence_links": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/evidenceLink"}
+    },
+    "assessments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/assessment"}
+    },
+    "risks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/risk"}
+    },
+    "recommendation": {"$ref": "#/$defs/recommendation"},
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "review": {"$ref": "#/$defs/review"},
+    "approval": {"$ref": "#/$defs/approval"},
+    "next_action": {"type": "string", "minLength": 1},
+    "provenance": {"$ref": "#/$defs/provenance"}
+  },
+  "$defs": {
+    "ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "alternative": {
+      "type": "object",
+      "required": ["alternative_id", "title", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "alternative_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1}
+      }
+    },
+    "criterion": {
+      "type": "object",
+      "required": ["criterion_id", "name", "weight"],
+      "additionalProperties": false,
+      "properties": {
+        "criterion_id": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "weight": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+      }
+    },
+    "evidenceLink": {
+      "type": "object",
+      "required": ["evidence_id", "evidence_type", "source_path", "sha256", "semantic_locator", "observed_support", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1},
+        "evidence_type": {"type": "string", "enum": ["claim_verdict", "experiment_result"]},
+        "source_path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "semantic_locator": {"type": "string", "pattern": "^/"},
+        "observed_support": {},
+        "summary": {"type": "string", "minLength": 1},
+        "supporting_evidence_ids": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "required": ["alternative_id", "criterion_id", "score", "rationale", "evidence_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "alternative_id": {"type": "string", "minLength": 1},
+        "criterion_id": {"type": "string", "minLength": 1},
+        "score": {"type": "number", "minimum": 0, "maximum": 5},
+        "rationale": {"type": "string", "minLength": 1},
+        "evidence_ids": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "risk": {
+      "type": "object",
+      "required": ["risk_id", "description", "mitigation", "evidence_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "risk_id": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1},
+        "mitigation": {"type": "string", "minLength": 1},
+        "evidence_ids": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "required": ["alternative_id", "rationale", "criterion_ids", "evidence_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "alternative_id": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1},
+        "criterion_ids": {"$ref": "#/$defs/ids"},
+        "evidence_ids": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "review": {
+      "type": "object",
+      "required": ["status", "unresolved_items", "reviewed_by", "review_evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"const": "pending"},
+        "unresolved_items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "reviewed_by": {"type": "null"},
+        "review_evidence": {"type": "array", "maxItems": 0}
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": ["status", "approved_by", "approval_evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"const": "not_requested"},
+        "approved_by": {"type": "null"},
+        "approval_evidence": {"type": "array", "maxItems": 0}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["constructor", "constructed_at", "request_path", "request_sha256", "source_root"],
+      "additionalProperties": false,
+      "properties": {
+        "constructor": {"const": "harness.lib.research.decision_artifact.construct_decision_artifact"},
+        "constructed_at": {"type": "string", "format": "date-time"},
+        "request_path": {"type": "string", "minLength": 1},
+        "request_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "source_root": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

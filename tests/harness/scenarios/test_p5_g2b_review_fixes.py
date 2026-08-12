@@ -691,6 +691,14 @@ def test_wake_dispatch_file_carries_planner_policy_block():
     assert "planner-policy-block" in region
 
 
+def test_wake_builder_dispatch_uses_compiled_project_directory():
+    text = (_HARNESS / "solar-harness.sh").read_text(encoding="utf-8")
+    region = _region(text, "dispatch_via_operator_pool()", 'if [[ -n "$dispatch_role" ]]')
+    assert "^Project:" in region
+    assert 'work_dir_args=(--work-dir "$project_dir")' in region
+    assert '"${work_dir_args[@]}"' in region
+
+
 def test_coordinator_planner_dispatch_carries_policy_block():
     text = (_HARNESS / "coordinator.sh").read_text(encoding="utf-8")
     region = _region(text, "PRD ready → 自动派 planner", 'dispatch_to_planner "$sid" "planner_design_plan"')
