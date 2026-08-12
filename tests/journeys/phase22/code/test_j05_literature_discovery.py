@@ -112,6 +112,8 @@ def _run_discovery(
         run_id,
         "--limit",
         str(limit),
+        "--min-provider-families",
+        "2",
         "--online",
         *(item for anchor in anchors for item in ("--anchor", anchor)),
         *(item for neg in negative_ids for item in ("--negative", neg)),

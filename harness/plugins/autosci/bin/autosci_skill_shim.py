@@ -112,6 +112,7 @@ def stable_run_id(skill: str, args: argparse.Namespace) -> str:
             "venue": str(args.venue or ""),
             "year": str(args.year or ""),
             "limit": str(args.limit or ""),
+            "min_provider_families": str(args.min_provider_families or ""),
             "smoke": bool(args.smoke),
             "native_options": native_options(args),
             "skill_args": list(args.skill_args or []),
@@ -771,6 +772,8 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
                 inputs["year"] = int(args.year)
             if args.limit:
                 inputs["limit"] = int(args.limit)
+            if args.min_provider_families:
+                inputs["min_provider_families"] = int(args.min_provider_families)
             if args.wiki_root:
                 inputs["wiki_root"] = str(args.wiki_root)
             if args.no_citation_expand:
@@ -2162,6 +2165,7 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--venue", help="Venue slug for venue/year discovery")
     skill.add_argument("--year", type=int, help="Venue year for venue discovery")
     skill.add_argument("--limit", type=int, help="Maximum discovery shortlist size")
+    skill.add_argument("--min-provider-families", type=int, help="Minimum distinct public provider families required for discovery")
     skill.add_argument("--wiki-root", help="Wiki root for discovery dedup and from-wiki mode")
     skill.add_argument("--discovery-evidence", action="append", help="Existing literature_discovery.v1 evidence for ideation")
     skill.add_argument("--novelty-evidence", action="append", help="Existing Web/Semantic Scholar/DeepXiv novelty evidence JSON")

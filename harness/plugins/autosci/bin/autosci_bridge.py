@@ -6902,7 +6902,10 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
                 discover_sources.limit = int(inputs.get("limit") or payload.get("shortlist_count") or 10)
             provider_result = discover_sources(
                 seed_snapshot={"seeds": [{"seed_kind": "topic", "content": str(inputs.get("query") or inputs.get("topic") or "")}]},
-                payload={"task_contract": {"user_intent": str(inputs.get("query") or inputs.get("topic") or "")}},
+                payload={"task_contract": {
+                    "user_intent": str(inputs.get("query") or inputs.get("topic") or ""),
+                    "min_provider_families": int(inputs.get("min_provider_families") or 1),
+                }},
             )
             provider_candidates = _production_discovery_candidates(
                 provider_result,
