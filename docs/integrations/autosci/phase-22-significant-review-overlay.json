@@ -1,0 +1,44 @@
+{
+  "schema_version": "phase22_significant_review_overlay.v1",
+  "reviewed_at": "2026-08-12",
+  "local_branch": "openJiuwen-Solar",
+  "reviewed_code_head": "fe97cb9fe64bbdd4ea24e2069bd97d6406b47536",
+  "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
+  "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
+  "reviewed_group": {
+    "journey_id": "P22-J02",
+    "shared_recorded_limitation": "The older eval.md evidence file was not created.",
+    "classification": "LIMITATION_CLOSED_VERIFIED",
+    "issue_count": 17,
+    "accepted_evidence": "outputs/phase22-real-journeys/p22j02-20260812T050401Z-2369214/journey-result.json",
+    "journey_status": "PASS",
+    "assertions": {
+      "passed": 43,
+      "failed": 0
+    },
+    "mapped_l2_count": 22,
+    "known_limitations": [],
+    "decision": "The live Spark journey now completes request capture, planning, certified Builder routing, approval, physical repair, post-repair tests, scoped diff review, production handoff-submit, and fail-closed eval-verdict. Canonical evaluator evidence is independently reconciled across status history, the sprint append-only event stream, and the gate decision log; the obsolete eval.md filename is no longer treated as mandatory evidence.",
+    "remaining_boundary": "Only the exercised WSL/OpenAI Spark coding path and the 22 L2 features explicitly mapped by J02 are supported. Other providers, models, platforms, and unexercised variants are not inferred.",
+    "issue_ids": [
+      "P22-REPAIR-001",
+      "P22-REPAIR-004",
+      "P22-REPAIR-006",
+      "P22-REPAIR-008",
+      "P22-REPAIR-011",
+      "P22-REPAIR-013",
+      "P22-REPAIR-014",
+      "P22-REPAIR-067",
+      "P22-REPAIR-091",
+      "P22-REPAIR-094",
+      "P22-REPAIR-096",
+      "P22-REPAIR-102",
+      "P22-REPAIR-103",
+      "P22-REPAIR-104",
+      "P22-REPAIR-105",
+      "P22-REPAIR-108",
+      "P22-REPAIR-112"
+    ]
+  },
+  "remaining_significant_issues": 55
+}

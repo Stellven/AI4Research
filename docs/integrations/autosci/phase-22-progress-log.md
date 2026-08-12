@@ -3156,3 +3156,26 @@ Date: 2026-08-12
   `FIXED_VERIFIED`. The remaining non-blocking boundary is that no formal eval
   sidecar was observed; closure is supported by the physical builder result,
   durable diff, before/after pytest, and successful eval-verdict evidence.
+
+## Significant shared-limitation closure — P22-J02 (17 issues)
+
+Date: 2026-08-12
+
+- Accepted run `p22j02-20260812T050401Z-2369214` at code head
+  `fe97cb9fe64bbdd4ea24e2069bd97d6406b47536`: `PASS`, 43/43 assertions,
+  22 mapped Level-2 features, and no known limitations.
+- The live WSL journey used the authorized low-cost OpenAI Spark route. It
+  produced planner artifacts, waited for the certified Builder route, retained
+  that route across plan approval, executed a physical builder, changed only
+  `calculator.py`, and passed the target tests after reproducing the defect.
+- The journey now completes the production `handoff-submit` transition before
+  `eval-verdict`. It independently reconciles the resulting PASS across status
+  history, `sprints/<sid>.events.jsonl`, and the fail-closed gate decision log.
+  The historical absence of the older `eval.md` filename is therefore no
+  longer a valid limitation.
+- `P22-REPAIR-001`, `004`, `006`, `008`, `011`, `013`, `014`, `067`, `091`,
+  `094`, `096`, `102`, `103`, `104`, `105`, `108`, and `112` are classified
+  `LIMITATION_CLOSED_VERIFIED` for their shared J02 limitation. This does not
+  infer support for untested providers, models, platforms, or variants.
+- Detailed decision record:
+  `docs/integrations/autosci/phase-22-significant-review-overlay.json`.
