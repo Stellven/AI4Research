@@ -3932,8 +3932,13 @@ print(json.dumps({
           rm -f "$_SS_PID" "$_SS_PORT_FILE"
           _ss_py="${SOLAR_PYTHON:-$(command -v python3 || echo python3)}"
           if command -v tmux >/dev/null 2>&1; then
+            # A tmux server keeps a global environment from its first client.
+            # Multiple installed harnesses can share that server, so relying on
+            # inherited HARNESS_DIR/HOME makes a later session write the first
+            # harness's pid/port/token files. Bind ownership-critical paths in
+            # the pane command itself; session-name scoping alone is not enough.
             tmux new-session -d -s "$_SS_TMUX_SESSION" \
-              "cd '$HARNESS_DIR' && exec '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
+              "cd '$HARNESS_DIR' && exec env HOME='$HOME' USERPROFILE='${USERPROFILE:-$HOME}' SOLAR_HOME='${SOLAR_HOME:-$HOME/.solar}' HARNESS_DIR='$HARNESS_DIR' SOLAR_HARNESS_DIR='$HARNESS_DIR' SOLAR_BIND_HOST='${SOLAR_BIND_HOST:-127.0.0.1}' '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
           else
             nohup "$_ss_py" "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
           fi
