@@ -2997,3 +2997,100 @@ Accepted classifications:
 This entry and overlay record the accepted repair review only. The final
 journey report, full report, and brief report have not been synchronized in
 this wave; they must wait for the Mac result and a separate report validation.
+
+## Severity-blocker evidence closure — J09, J21, and J25
+
+Date: 2026-08-11
+
+Scope and integration state:
+
+- Continued locally on `openJiuwen-Solar` without pushing to small and without
+  touching the Mac-owned J15/J16 work. Accepted code/test HEAD is
+  `303dc18d876a8dcdcb43ddef9ec36ff071efb1e9`.
+- Closed the five J21 evidence gaps (`P22-REPAIR-037`, `039`, `066`, `095`,
+  `110`), replaced the old J09 mapping error for `P22-REPAIR-113` with a real
+  canonical decision-artifact path, and added dedicated J25 coverage for
+  `P22-REPAIR-119`.
+- The source issue-packet JSON remains immutable. Current accepted decisions
+  are recorded in `phase-22-blocker-review-overlay.json`.
+
+Accepted J09 / P22-REPAIR-113 evidence:
+
+- Added `decision_artifact.v1`, a production constructor and CLI. The artifact
+  requires a complete alternative-by-criterion assessment matrix and binds the
+  recommendation to criteria plus independently reloaded claim-verdict and
+  experiment-result evidence.
+- Independent review rejected three earlier versions for re-hashing tampered
+  evidence, caller-defined support semantics, incomplete comparison matrices,
+  loose JSON Pointer handling, stale output, missing upstream schema checks,
+  refuting experiment acceptance, and destructive input/output aliases. The
+  final version closed every finding with negative tests and was accepted.
+- Post-integration command:
+  `.venv\Scripts\python.exe -m pytest -q --basetemp <unique-short-path> -p no:cacheprovider tests/harness/research_unit/test_decision_artifact.py tests/journeys/phase22/code/test_j09_report_delivery.py::test_p22_j09_report_delivery`
+  -> `21 passed, 1 skipped` in 28.64 seconds. The skip is the Windows account's
+  lack of file-symlink creation privilege; direct, hardlink, resolved-path, and
+  directory-junction alias probes passed.
+- Accepted current-run evidence:
+  `outputs/phase22-real-journeys/p22j09-20260811T211231Z-16532/journey-result.json`;
+  status `PASS_WITH_KNOWN_LIMITATIONS`, 26/26 assertions, zero failures.
+
+Accepted J21 / P22-REPAIR-037, 039, 066, 095, 110 evidence:
+
+- The production execution boundary now enforces strict normalized token-wise
+  argv equality; executable-only, prefix, template, reordered, appended-token,
+  and wrong-runner variants are rejected before execution.
+- The product creates a self-contained experiment handoff package with formal
+  schema validation, provenance, component hashes, authoritative experiment
+  identity, durable manifest paths, and replay evidence. Production and
+  independent consumers accept the valid package and reject hash, provenance,
+  identity, missing-audit, and missing-audit-hash variants.
+- Lease evidence now covers acquire, heartbeat, duplicate rejection, release,
+  actual expiry, stale recovery, and archived recovery audit under the same
+  authoritative experiment ID. Product-generated assets are replayed from the
+  durable copies rather than pytest basetemp paths.
+- Independent review rejected earlier attempts whose positive package gate
+  failed, whose execution point still used a loose allowlist, whose lease IDs
+  disagreed, and whose journey could report limited-pass despite failed target
+  assertions. The final series was accepted after all probes passed.
+- Post-integration selector:
+  `.venv\Scripts\python.exe -m pytest -q --basetemp <unique-short-path> -p no:cacheprovider tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff`
+  -> 1 passed in 17.67 seconds. Accepted evidence:
+  `outputs/phase22-real-journeys/p22-j21-20260811T213551Z-33684/journey-result.json`;
+  status `PASS_WITH_KNOWN_LIMITATIONS`, 35/35 assertions, zero failures.
+
+Accepted J25 / P22-REPAIR-119 evidence:
+
+- Added a dedicated Runtime Deliverable Construction journey. The product
+  builds a durable bundle, validates its JSON schema and complete inventory,
+  scans normal and nested archive contents for secrets, rejects symlink and ZIP
+  escape/bomb variants, and records real command exit codes and output hashes.
+- The bundle includes raw Git commit/tree/blob preimages. The verifier writes
+  them into a new isolated bare repository, recomputes object IDs, resolves the
+  declared commit with `git cat-file`/`ls-tree`, and matches every source archive
+  path to the committed blob. Forged ZIP comment/tree/hash combinations and
+  proof-blob replacement are rejected. Reviewed fake-secret exemptions are
+  bound to canonical repository path plus exact value SHA-256.
+- The replay is offline and independent of an external checkout. It performs a
+  clean WSL install, status, doctor, HTTP `/healthz`, runtime uninstall, and
+  wrapper uninstall. Failed runs use run-scoped ledgers and cannot inherit old
+  positive doctor/health observations. The user-paused run was recorded as
+  `INTERRUPTED_NOT_ACCEPTABLE` and is not accepted evidence.
+- Post-integration command:
+  `.venv\Scripts\python.exe -m pytest -q --basetemp <unique-short-path> -p no:cacheprovider tests/distribution/test_runtime_deliverable.py tests/journeys/phase22/code/test_j25_runtime_deliverable_distribution.py::test_p22_j25_runtime_deliverable_distribution`
+  -> `15 passed, 2 skipped` in 78.82 seconds; skips require Windows symlink
+  privilege. Accepted evidence:
+  `outputs/phase22-real-journeys/p22j25-20260812T012357Z-15852/journey-result.json`;
+  status `PASS_WITH_KNOWN_LIMITATIONS`, 14/14 assertions, zero failures.
+
+Accepted classifications after this closure:
+
+- `FIXED_VERIFIED`: P22-REPAIR-018, 020, 034, 037, 039, 066, 095, 110, 113,
+  119.
+- `STALE_ALREADY_FIXED`: P22-REPAIR-033, 055, 070. P22-REPAIR-055 remains
+  Level-2 `NOT_TESTED` because no accepted real-task journey maps to it.
+- `ENVIRONMENT_BLOCKED`: P22-REPAIR-115 and 116 pending the separately assigned
+  Mac result. The local J16 candidate commit remains available for later
+  comparison but is not accepted as the final Mac result.
+
+The final journey report, full report, and brief report remain unsynchronized;
+they must wait for the Mac J15/J16 result and a separate report-validation step.
