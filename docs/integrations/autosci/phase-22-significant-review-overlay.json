@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "f3b6754c8",
+  "reviewed_code_head": "9b0b1bda4",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -492,7 +492,8 @@
         "outputs/phase22-real-journeys/p22-j19-electron-recovery-20260812T073500Z/recovery-screens.json",
         ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/result.json",
         ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/packaged-smoke.json",
-        ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/accessibility.json"
+        ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/accessibility.json",
+        ".codex-tmp/phase22-worker-results/p22-128-concurrency/result.json"
       ],
       "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
       "assertions": {
@@ -502,10 +503,15 @@
         "bootstrap_contract": {"passed": 20, "failed": 0},
         "axe_violations": 0,
         "axe_incomplete": 1,
-        "windows_concurrency": {"passed": 8, "failed": 1}
+        "windows_concurrency": {
+          "original": {"passed": 8, "failed": 1},
+          "post_repair_gate_checks": {"passed": 250, "failed": 0},
+          "post_repair_writes": {"accepted": 6000, "failed": 0},
+          "fault_injection_tests": {"passed": 3, "failed": 0}
+        }
       },
-      "decision": "The real browser dashboard and seven Electron recovery states remain green. A reproducible Windows build produced the unpacked Solar.exe and portable wrapper; the unpacked executable opened the real dashboard, produced a 144897-byte screenshot, and passed real-dashboard plus two fail-closed checks. Axe-core reported zero automated WCAG 2.0/2.1 A/AA violations and keyboard focus reached a control. These results materially reduce both issues but do not justify full closure.",
-      "remaining_boundary": "P22-REPAIR-128 remains open because the real concurrent settings storm is still 8/9 with direct-reader PermissionError observations, long-running and broad-route coverage are untested, and the portable wrapper was built and hashed but not successfully runtime-smoked. P22-REPAIR-130 remains open because axe marked two color-contrast nodes incomplete and no manual contrast, screen-reader, or multi-monitor test was performed.",
+      "decision": "The real browser dashboard and seven Electron recovery states remain green. A reproducible Windows build produced the unpacked Solar.exe and portable wrapper; the unpacked executable opened the real dashboard, produced a 144897-byte screenshot, and passed real-dashboard plus two fail-closed checks. Axe-core reported zero automated WCAG 2.0/2.1 A/AA violations and keyboard focus reached a control. The Windows settings concurrency defect is also repaired: 25 bounded rounds accepted 6000/6000 POSTs with 250/250 gate checks, no lost key, torn JSON, or API error. Independent fault probes verified fail-closed behavior for durable corruption/deletion and complete recovery after a target-removal publication failure.",
+      "remaining_boundary": "P22-REPAIR-128 remains open only for long-running service stability, broad route coverage, and direct runtime smoke of the portable wrapper; an arbitrary uncoordinated Windows raw-path reader can still receive a retryable sharing transition, while supported HTTP and harness-config readers are verified. P22-REPAIR-130 remains open because axe marked two color-contrast nodes incomplete and no manual contrast, screen-reader, or multi-monitor test was performed.",
       "issue_ids": ["P22-REPAIR-128", "P22-REPAIR-130"]
     },
     {

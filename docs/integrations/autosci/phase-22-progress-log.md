@@ -3600,3 +3600,26 @@ Date: 2026-08-12
   contrast, screen-reader, and multi-monitor testing. Accepted isolated
   evidence is under
   `.codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/`.
+
+## Significant limitation reduction — Windows settings concurrency
+
+Date: 2026-08-12
+
+- The concurrency portion of `P22-REPAIR-128` is `FIXED_VERIFIED`; the broad
+  issue remains open. Commits `dd4036b44`, `e154794e1`, and `9b0b1bda4`
+  repair Windows publication and port isolation, fail closed on durable
+  corruption/deletion, preserve recovery and staging after an interrupted
+  replacement, sandbox the pressure test, and make its optional server path
+  independent of the child working directory.
+- The initial gate was 8/9 and observed direct-reader sharing errors. Across
+  25 post-repair bounded rounds, 6000/6000 real settings POSTs were accepted
+  and 250/250 gate checks passed with no lost keys, torn JSON, or supported
+  HTTP-reader error. Three fault-injection tests prove that permanent invalid
+  JSON/deletion cannot be overwritten from stale cache and that a failed
+  target-removal publication retains exact old recovery plus new staging,
+  then restores the old committed state.
+- Arbitrary naked `Path.read_text()` calls on Windows can still receive a
+  retryable sharing transition and are not a supported consistency protocol;
+  the production HTTP and `harness-config.sh` readers are bounded and verified.
+  Long-running service stability, broad route coverage, and portable-wrapper
+  runtime smoke remain untested, so P22-REPAIR-128 is not fully closed.
