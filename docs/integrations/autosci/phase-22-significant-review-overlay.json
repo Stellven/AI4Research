@@ -209,8 +209,23 @@
       "partially_reduced_issue_ids": ["P22-REPAIR-054", "P22-REPAIR-118"],
       "remaining_boundary": "The bundle truthfully remains local_only with approval_state=not_requested. HITL compile, external distribution, recipient acceptance, long-term lifecycle closure, and final PDF/publication formats were not executed. Therefore distribution/lifecycle and final compiled-deliverable claims remain open.",
       "issue_ids": ["P22-REPAIR-051", "P22-REPAIR-053", "P22-REPAIR-054", "P22-REPAIR-118"]
+    },
+    {
+      "journey_id": "P22-J07 + P22-J09",
+      "shared_recorded_limitation": "J07 lacked a clear terminal experiment state, and J09 lacked completed review/final user-facing delivery evidence.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 2,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22j07-20260812T064135Z-3128/journey-result.json",
+        "outputs/phase22-real-journeys/p22j09-20260812T064153Z-3128/journey-result.json"
+      ],
+      "journey_status": {"P22-J07": "PASS", "P22-J09": "PASS_WITH_KNOWN_LIMITATIONS"},
+      "assertions": {"P22-J07": {"passed": 17, "failed": 0}, "P22-J09": {"passed": 28, "failed": 0}},
+      "decision": "J07 now records an explicit completed experiment lifecycle state and independently checks it through exp-status. J09 produces and saves a substantive readable Markdown report, completes real provider review, and includes it in a verified local delivery handoff. These directly close the older named limitations for Runtime Control Loop and User-Facing Deliverable Generation.",
+      "remaining_boundary": "J07 completed is a lifecycle state and does not imply every experimental outcome is positive. J09 external distribution and compiled publication formats remain separately open under P22-REPAIR-054 and 118.",
+      "issue_ids": ["P22-REPAIR-092", "P22-REPAIR-052"]
     }
   ],
-  "closed_shared_limitation_issue_count": 42,
-  "remaining_significant_issues": 30
+  "closed_shared_limitation_issue_count": 44,
+  "remaining_significant_issues": 28
 }

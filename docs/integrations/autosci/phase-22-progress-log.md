@@ -3364,3 +3364,19 @@ Date: 2026-08-12
   remote hosts, other terminal implementations, and a broad interactive-session
   matrix are still untested. The earlier "no concurrent sessions" boundary is
   now closed without extending the result to those variants.
+
+## Significant stale-limit closure — P22-J07 + P22-J09 (2 issues)
+
+Date: 2026-08-12
+
+- Current-head J07 run `p22j07-20260812T064135Z-3128` at `efb0993a5` is
+  `PASS`, 17/17 assertions, with no limitations. `exp-status` reports the
+  explicit terminal state `completed`; `P22-REPAIR-092` is closed as
+  `STALE_ALREADY_FIXED / LIMITATION_CLOSED_VERIFIED`.
+- Current-head J09 run `p22j09-20260812T064153Z-3128` is
+  `PASS_WITH_KNOWN_LIMITATIONS`, 28/28 assertions. It saves a substantive
+  readable Markdown report, completes the provider review, and packages the
+  report in the verified local handoff; `P22-REPAIR-052` is closed for
+  User-Facing Deliverable Generation.
+- This does not close external distribution or compiled publication variants;
+  those remain separately tracked by `P22-REPAIR-054` and `118`.
