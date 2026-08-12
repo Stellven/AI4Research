@@ -3423,3 +3423,22 @@ Date: 2026-08-12
 - Remaining boundaries are explicit: bounded English ambiguity rules, local
   static CodeGraph, local JSONL/DAG trace storage, and no inferred distributed
   backend, dynamic call graph, GUI conversation, or attributable HITL approval.
+
+## Significant repair closure — P22-J03 benchmark evidence (4 closed, 2 reduced)
+
+Date: 2026-08-12
+
+- Post-commit run `p22j03-20260812T070454Z-28468` at `bc618e143` is `PASS`
+  with 16/16 assertions. Eight production platform scenarios ran twice.
+- The benchmark records real child CPU time, peak working-set memory, wall
+  duration, throughput, and observed workload scale. Provider cost is recorded
+  as USD 0 with the truthful basis that this runner makes no billable call.
+- A versioned `rows-18-25.v1` benchmark asset binds scenarios, weights,
+  threshold, repetitions, runner, and SHA-256. Build evidence records a
+  successful production-runner compile plus runner/source-diff hashes; the
+  manifest still accepts original bytes, rejects tampering, and accepts the
+  restored bytes.
+- `P22-REPAIR-043`, `068`, `111`, and `117` are `FIXED_VERIFIED`. `040` and
+  `044` are improved but remain open: the baseline is freshly constructed from
+  the same product version, not historical releases, and this run does not
+  establish broad scientific POC-to-baseline comparisons.

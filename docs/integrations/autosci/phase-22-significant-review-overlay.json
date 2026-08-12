@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "7174110fe",
+  "reviewed_code_head": "bc618e1439c93e97eb132dbde4751f21a15ab1de",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -375,8 +375,40 @@
       "issue_ids": [
         "P22-REPAIR-089"
       ]
+    },
+    {
+      "journey_id": "P22-J03",
+      "shared_recorded_limitation": "Detailed resource consumption, cost/current-scale evaluation, reusable benchmark asset construction, and compile/diff build evidence were not measured.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 6,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j03-20260812T070454Z-28468/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {
+        "passed": 16,
+        "failed": 0
+      },
+      "decision": "The current production benchmark runs eight scenarios twice (16 executions), records child CPU, peak working-set memory, wall time and throughput, reports a truthful USD 0 provider cost, and bounds observed scale without extrapolation. It writes a versioned rows-18-25 benchmark asset, compiles the production runner, hashes the runner and source diff, and retains a tamper-checked artifact manifest. This closes the named gaps for metrics/run evidence, performance-cost evaluation, benchmark asset construction, and build evidence.",
+      "closed_issue_ids": [
+        "P22-REPAIR-043",
+        "P22-REPAIR-068",
+        "P22-REPAIR-111",
+        "P22-REPAIR-117"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-040",
+        "P22-REPAIR-044"
+      ],
+      "remaining_boundary": "The comparison uses a freshly constructed same-version baseline, not historical released versions; broad POC-to-baseline scientific comparisons remain outside this platform workflow benchmark. Those two independently recorded boundaries stay open.",
+      "issue_ids": [
+        "P22-REPAIR-040",
+        "P22-REPAIR-043",
+        "P22-REPAIR-044",
+        "P22-REPAIR-068",
+        "P22-REPAIR-111",
+        "P22-REPAIR-117"
+      ]
     }
   ],
-  "closed_shared_limitation_issue_count": 50,
-  "remaining_significant_issues": 22
+  "closed_shared_limitation_issue_count": 54,
+  "remaining_significant_issues": 18
 }
