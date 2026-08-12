@@ -3512,3 +3512,21 @@ Date: 2026-08-12
   `p22-j19-electron-recovery-20260812T073500Z/recovery-screens.json`. Formal
   accessibility, multi-monitor and packaged-installer execution are not
   inferred from these runs.
+
+## Significant repair closure — bounded curriculum and credit-assignment data loop
+
+Date: 2026-08-12
+
+- `P22-REPAIR-082` is `FIXED_VERIFIED_BOUNDED_DATA_LOOP`. Production command
+  `solar-harness evolution curriculum-evaluate` consumes hash-bound failure
+  events and split cases, prioritizes mined clusters, audits train/holdout ID
+  and source overlap, computes holdout ablation, requires one intervention for
+  every changed case, rejects regression, and emits an explicit rollback.
+- Run `p22-curriculum-20260812T073958Z` passed 6/6 assertions. The candidate
+  improved the isolated holdout from 50% to 100% with zero regressions;
+  contamination, regression, and ambiguous-credit variants all failed closed.
+  Unit regressions are 4/4.
+- This is a curriculum/data-policy loop, not model-weight training. No SFT,
+  LoRA, DPO, GRPO, reward-model, or agent-RL weights were created or claimed,
+  and the measured improvement is not generalized beyond the supplied
+  hash-addressed holdout.

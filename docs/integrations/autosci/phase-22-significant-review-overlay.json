@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "ffb9c6b83",
+  "reviewed_code_head": "9488a496b",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -496,8 +496,20 @@
       "decision": "The real browser dashboard passed intake, settings persistence and screenshot checks. Real Electron windows rendered all seven first-run/error/recovery states with their required actions, and the desktop/mobile visual gate covered overview, health, plan, process, result, decision, failed-terminal and role views.",
       "remaining_boundary": "No formal accessibility audit or multi-monitor run was performed, and a packaged installer image was not exercised in this evidence set. P22-REPAIR-130 therefore remains open rather than being inferred green.",
       "issue_ids": ["P22-REPAIR-130"]
+    },
+    {
+      "journey_id": "NT-model-training curriculum/data loop",
+      "shared_recorded_limitation": "Hard-case mining and observability work. Full active-learning, curriculum repair, and credit-assignment training remain incomplete.",
+      "classification": "LIMITATION_CLOSED_VERIFIED_BOUNDED_DATA_LOOP",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22-curriculum-20260812T073958Z/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"passed": 6, "failed": 0, "negative_variants": 3},
+      "decision": "The production evolution CLI now evaluates a curriculum/data-policy candidate from mined failure clusters using hash-addressed training and isolated holdout rows. The accepted run improved holdout pass rate from 50% to 100% with no regressions, bound every changed case to one intervention, emitted a rollback, and rejected contamination, regression and ambiguous-credit variants.",
+      "remaining_boundary": "This closes the named active-learning/curriculum/credit-assignment data-loop gap. It does not train model weights or claim SFT, LoRA, DPO, GRPO or agent-RL capability, and the measured improvement is limited to the supplied holdout.",
+      "issue_ids": ["P22-REPAIR-082"]
     }
   ],
-  "closed_shared_limitation_issue_count": 60,
-  "remaining_significant_issues": 12
+  "closed_shared_limitation_issue_count": 61,
+  "remaining_significant_issues": 11
 }
