@@ -208,10 +208,29 @@ async function stop(child) {
     await page.keyboard.press("Enter");
     const dialog = page.locator('[role="dialog"]');
     await dialog.waitFor({ state: "visible", timeout: 3000 });
+    const dialogTaskInput = dialog.getByRole("textbox", {
+      name: "Describe what you want done",
+    });
+    await dialogTaskInput.waitFor({ state: "visible", timeout: 3000 });
+    // Radix moves focus into the dialog in a layout effect. A visible content
+    // node can precede that focus hand-off by one frame; pressing Escape in
+    // that gap bypasses the mounted DismissableLayer. Wait for the product's
+    // real autofocus contract, then exercise the actual keyboard event.
+    await page.waitForFunction(
+      () => document.activeElement?.getAttribute("aria-labelledby") === "new-task-dialog-title",
+      undefined,
+      { timeout: 3000 },
+    );
     const dialogOpened = await dialog.isVisible();
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "hidden", timeout: 3000 });
     const dialogClosed = !(await dialog.isVisible());
+    await page.waitForFunction(
+      () => document.activeElement?.getAttribute("data-solar-a11y-probe") === "1",
+      undefined,
+      { timeout: 3000 },
+    );
+    const focusRestored = (await focusedProbe()).index === 1;
     const taskInput = page.getByRole("textbox", { name: "What do you want done?" });
     const taskInputAriaSnapshot = await taskInput.ariaSnapshot();
     const taskInputContract = await taskInput.evaluate((element) => ({
@@ -247,6 +266,7 @@ async function stop(child) {
         action: "Enter opens New task dialog; Escape closes it",
         dialog_opened: dialogOpened,
         dialog_closed: dialogClosed,
+        focus_restored_to_trigger: focusRestored,
       },
     };
     const accessibleName = {
@@ -311,7 +331,8 @@ async function stop(child) {
       !keyboard.cycle_from_first_to_last ||
       keyboard.activation.target.index !== 1 ||
       !keyboard.activation.dialog_opened ||
-      !keyboard.activation.dialog_closed
+      !keyboard.activation.dialog_closed ||
+      !keyboard.activation.focus_restored_to_trigger
     ) {
       throw new Error("keyboard order, focus-visible, cycle, or activation contract failed");
     }
