@@ -3094,3 +3094,37 @@ Accepted classifications after this closure:
 
 The final journey report, full report, and brief report remain unsynchronized;
 they must wait for the Mac J15/J16 result and a separate report-validation step.
+
+## Mac Phase 22 repair integration
+
+Date: 2026-08-11
+
+- The supplied short SHA `b258da0` was not present after fetching all small
+  repository refs. The actual Mac series on small `openJiuwen-Solar` was
+  `98534c6a1`, `68223a2b2`, `e970dce82`, `eb6abf0a1`, `5c07efde5`, and
+  `137a7e64b`.
+- Integrated that remote series with the local severity-repair history using
+  merge commit `6cc86cf0ea13fd98a1b8d60d1fe191028ddcb979`. A merge was required instead
+  of replaying duplicate cherry-picks because the Mac commits were already the
+  tip history of the target small branch; this preserves both histories and
+  permits a fast-forward push without rewriting the remote branch.
+- The sole textual conflict was J16. Resolution retained both the local strict
+  post-planner/post-approval workflow-route assertions and the Mac exact
+  planner-task / physical-builder result selection and watchdog cleanup.
+- Repaired two test-portability assumptions found during review: Unix mode
+  bits are not asserted on Windows, the generated POSIX harness shim is not
+  executed as a Win32 binary, and the Linux Landlock test accepts the resolved
+  Codex executable path rather than requiring the literal token `codex`.
+- Windows focused validation: `17 passed, 2 skipped` in 5.91 seconds. The two
+  skips are explicit platform-capability boundaries. WSL/Linux validation of
+  the same focused set: `19 passed` in 70.76 seconds. Python compilation and
+  `git diff --check` also passed.
+- Stopped 85 stale J16/J17 test processes left by superseded local attempts
+  before any new live-provider run. No additional live-provider journey was
+  launched during integration.
+- The Mac code repairs are integrated, but no accepted Mac journey-result file
+  was included in the pushed Git refs. Therefore this entry does not change
+  `P22-REPAIR-115` or `P22-REPAIR-116` from `ENVIRONMENT_BLOCKED`, and it does
+  not claim the journey/full/brief reports are synchronized. Those status
+  changes require review of the Mac run evidence or a new accepted live J16
+  journey on the integrated commit.
