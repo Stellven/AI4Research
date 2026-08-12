@@ -444,14 +444,24 @@ def _baseline_comparison(
         prior = baseline_by_row.get(item.get("row"))
         if not prior:
             continue
+        baseline_duration = (prior.get("performance") or {}).get("median_duration_seconds")
+        current_duration = (item.get("performance") or {}).get("median_duration_seconds")
+        duration_speedup = None
+        if isinstance(baseline_duration, (int, float)) and isinstance(current_duration, (int, float)) and current_duration > 0:
+            duration_speedup = round(float(baseline_duration) / float(current_duration), 6)
         comparisons.append({
             "row": item.get("row"),
             "name": item.get("name"),
             "baseline_score": prior.get("score"),
             "current_score": item.get("score"),
             "score_delta": round(float(item.get("score", 0)) - float(prior.get("score", 0)), 6),
-            "baseline_median_duration_seconds": (prior.get("performance") or {}).get("median_duration_seconds"),
-            "current_median_duration_seconds": (item.get("performance") or {}).get("median_duration_seconds"),
+            "baseline_median_duration_seconds": baseline_duration,
+            "current_median_duration_seconds": current_duration,
+            "duration_speedup": duration_speedup,
+            "statistical_inference": {
+                "status": "not_computed",
+                "reason": "workflow scores and durations are observational run evidence; no broad POC significance claim is made",
+            },
         })
     return {
         "status": "completed" if comparisons and len(comparisons) == len(current) else "incomplete",
@@ -659,6 +669,14 @@ def write_markdown(path: Path, data: dict[str, Any]) -> None:
     rows = []
     for item in data["scenarios"]:
         rows.append(f"| {item['row']} | {item['name']} | {'ok' if item['passed'] else 'error'} | {item['score']}/{item['max_score']} | {', '.join(item['failed_checks']) or 'N/A'} |")
+    comparison = data.get("comparison") if isinstance(data.get("comparison"), dict) else {}
+    provenance = comparison.get("provenance") if isinstance(comparison.get("provenance"), dict) else {}
+    comparison_rows = []
+    for item in comparison.get("scenario_comparisons") or []:
+        comparison_rows.append(
+            f"| {item.get('row')} | {item.get('baseline_score')} | {item.get('current_score')} | "
+            f"{item.get('score_delta')} | {item.get('duration_speedup') if item.get('duration_speedup') is not None else 'N/A'} |"
+        )
     text = "\n".join([
         f"# Solar Platform Workflow Benchmark — {data['generated_at']}",
         "",
@@ -672,6 +690,18 @@ def write_markdown(path: Path, data: dict[str, Any]) -> None:
         "| # | Workflow | Status | Score | Failed checks |",
         "|---:|---|---:|---:|---|",
         *rows,
+        "",
+        "## Baseline comparison",
+        "",
+        f"- Status: {comparison.get('status', 'not_requested')}",
+        f"- Kind: {comparison.get('comparison_kind', 'none')}",
+        f"- Baseline Git commit: {provenance.get('baseline_git_commit', 'not_attested')}",
+        f"- Current Git commit: {provenance.get('current_git_commit', 'not_attested')}",
+        "- Statistical boundary: duration speedup is observational; statistical significance and broad scientific POC effects are not claimed.",
+        "",
+        "| # | Baseline score | Current score | Score delta | Duration speedup |",
+        "|---:|---:|---:|---:|---:|",
+        *comparison_rows,
         "",
         "## Boundary",
         "",

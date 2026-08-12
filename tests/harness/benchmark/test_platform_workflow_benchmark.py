@@ -46,7 +46,16 @@ def test_platform_benchmark_repetitions_timing_and_baseline(monkeypatch, tmp_pat
         "scenarios": [{"row": 18, "name": "remote", "score": 90, "performance": {"median_duration_seconds": 1.0}}],
     }
 
-    result = pwb.benchmark(80, tmp_path / "evidence", repetitions=2, baseline=baseline)
+    provenance = {
+        "status": "verified",
+        "comparison_kind": "historical_git_version",
+        "baseline_git_commit": "a" * 40,
+        "current_git_commit": "b" * 40,
+    }
+    result = pwb.benchmark(
+        80, tmp_path / "evidence", repetitions=2,
+        baseline=baseline, baseline_provenance=provenance,
+    )
 
     assert result["protocol"]["repetitions"] == 2
     assert result["performance"]["scenario_executions"] == 2
@@ -56,7 +65,14 @@ def test_platform_benchmark_repetitions_timing_and_baseline(monkeypatch, tmp_pat
     assert result["performance"]["scalability"]["status"] == "measured_current_scale"
     assert len(result["scenarios"][0]["performance"]["duration_samples_seconds"]) == 2
     assert result["comparison"]["status"] == "completed"
+    assert result["comparison"]["comparison_kind"] == "historical_git_version"
     assert result["comparison"]["scenario_comparisons"][0]["score_delta"] == 10
+    assert result["comparison"]["scenario_comparisons"][0]["duration_speedup"] == 100.0
+    report = tmp_path / "report.md"
+    pwb.write_markdown(report, result)
+    report_text = report.read_text(encoding="utf-8")
+    assert "Baseline Git commit: " + "a" * 40 in report_text
+    assert "Statistical boundary:" in report_text
 
 
 def test_platform_benchmark_artifact_manifest_rejects_tamper(tmp_path):
