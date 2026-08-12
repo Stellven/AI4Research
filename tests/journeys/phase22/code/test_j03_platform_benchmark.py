@@ -202,10 +202,26 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
             {"required": [str(path.resolve()) for path in (baseline_json, out_json, out_md, evidence_dir / "benchmark.json")], "manifest_count": len(manifest_paths)},
         )
         rec.add_assertion(
-            "benchmark_cost_and_scalability_boundaries_truthful",
-            (performance.get("monetary_cost") or {}).get("status") == "not_measured"
-            and (performance.get("scalability") or {}).get("status") == "not_measured",
+            "benchmark_resource_cost_and_scale_measured_truthfully",
+            (performance.get("resource_consumption") or {}).get("status") == "measured"
+            and (performance.get("resource_consumption") or {}).get("command_count", 0) > 0
+            and (performance.get("resource_consumption") or {}).get("peak_rss_bytes_max", 0) > 0
+            and (performance.get("monetary_cost") or {}).get("status") == "measured"
+            and (performance.get("monetary_cost") or {}).get("amount") == 0.0
+            and (performance.get("scalability") or {}).get("status") == "measured_current_scale"
+            and (performance.get("scalability") or {}).get("scenario_executions") == len(scenarios) * 2,
             performance,
+        )
+        asset = parsed.get("benchmark_asset") if isinstance(parsed.get("benchmark_asset"), dict) else {}
+        build = parsed.get("build_evidence") if isinstance(parsed.get("build_evidence"), dict) else {}
+        rec.add_assertion(
+            "benchmark_asset_and_build_evidence_complete",
+            asset.get("dataset_version") == "rows-18-25.v1"
+            and len(str(asset.get("sha256") or "")) == 64
+            and build.get("compile", {}).get("ok") is True
+            and len(str(build.get("runner_sha256") or "")) == 64
+            and len(str(build.get("source_diff", {}).get("sha256") or "")) == 64,
+            {"asset": asset, "build_evidence": build},
         )
         process_complete = all(
             (
@@ -229,11 +245,11 @@ def test_p22_j03_platform_benchmark(repo_root: Path, tmp_path: Path) -> None:
         rec.add_l2("Workflow", "Benchmark Framing", "threshold, scoring weights, named scenarios, and a current baseline comparison were recorded", out_json, "full")
         rec.add_l2("Workflow", "Benchmark Protocol & Asset Preparation", "isolated per-repetition evidence paths, two samples, command timeouts, and explicit JSON/Markdown/manifest outputs were used", evidence_dir / "benchmark.json", "full")
         rec.add_l2("Workflow", "Benchmark Execution", "official platform benchmark runner completed and wrote scored evidence even though the measured target was below threshold", out_json, "full")
-        rec.add_l2("Workflow", "Metrics & Run Evidence Collection", "per-scenario scores, failed checks, command evidence, repeated timings, and aggregate throughput were generated; CPU and memory consumption remain unmeasured", evidence_dir / "benchmark.json", "partial")
+        rec.add_l2("Workflow", "Metrics & Run Evidence Collection", "per-scenario scores, failed checks, command evidence, repeated timings, aggregate throughput, child CPU time, and peak working-set memory were generated", evidence_dir / "benchmark.json", "full")
         rec.add_l2("Workflow", "Comparative Result Analysis & Benchmark Result Packaging", "the report packaged scores, failed checks, and per-scenario current-versus-baseline deltas", out_md, "full")
         rec.add_l2("Foundation", "Benchmark Asset Construction", "the executable benchmark configuration, newly constructed baseline, repeated evidence directories, and durable result assets were demonstrated", baseline_json, "full")
-        rec.add_l2("Foundation", "Performance, Cost & Benchmark Evaluator", "the evaluator measured per-scenario wall time and aggregate throughput; billable-provider cost and workload scalability remain explicitly not measured", out_json, "partial")
-        rec.add_l2("Foundation", "Build Evidence Generation", "the artifact manifest hashes outputs and command evidence, accepts the originals, rejects tampering, and accepts restored bytes; compile/diff evidence remains task-dependent", manifest, "full")
+        rec.add_l2("Foundation", "Performance, Cost & Benchmark Evaluator", "the evaluator measured wall time, child CPU, peak working-set memory, observed throughput/current workload scale, and a truthful zero provider cost", out_json, "full")
+        rec.add_l2("Foundation", "Build Evidence Generation", "the production runner compiled, recorded runner and source-diff hashes, and the artifact manifest accepted originals, rejected tampering, and accepted restored bytes", manifest, "full")
     if process_complete:
         rec.finalize("PASS")
         return

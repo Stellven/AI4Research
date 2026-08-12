@@ -9,6 +9,7 @@ whether the score is grounded in local facts.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import json
 import os
@@ -39,11 +40,57 @@ def now() -> str:
 
 
 def run(cmd: list[str], timeout: int = 60, cwd: Path | None = None) -> dict[str, Any]:
+    started = time.perf_counter()
     try:
-        proc = subprocess.run(cmd, text=True, capture_output=True, timeout=timeout, cwd=str(cwd) if cwd else None)
-        return {"ok": proc.returncode == 0, "exit_code": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
+        proc = subprocess.Popen(
+            cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            cwd=str(cwd) if cwd else None,
+        )
+        stdout, stderr = proc.communicate(timeout=timeout)
+        usage = _process_resource_usage(proc, time.perf_counter() - started)
+        return {"ok": proc.returncode == 0, "exit_code": proc.returncode, "stdout": stdout, "stderr": stderr, "resource_usage": usage}
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        stdout, stderr = proc.communicate()
+        usage = _process_resource_usage(proc, time.perf_counter() - started)
+        return {"ok": False, "exit_code": 124, "stdout": stdout, "stderr": stderr + "\ncommand timed out", "resource_usage": usage}
     except Exception as exc:
-        return {"ok": False, "exit_code": 99, "stdout": "", "stderr": f"{type(exc).__name__}: {exc}"}
+        return {"ok": False, "exit_code": 99, "stdout": "", "stderr": f"{type(exc).__name__}: {exc}", "resource_usage": {"wall_seconds": round(time.perf_counter() - started, 6), "status": "unavailable"}}
+
+
+def _process_resource_usage(proc: subprocess.Popen[str], wall_seconds: float) -> dict[str, Any]:
+    """Collect real child CPU/peak-memory metrics without an optional dependency."""
+    usage: dict[str, Any] = {"wall_seconds": round(wall_seconds, 6), "status": "measured"}
+    if os.name == "nt":
+        class FILETIME(ctypes.Structure):
+            _fields_ = [("low", ctypes.c_uint32), ("high", ctypes.c_uint32)]
+
+        class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+            _fields_ = [
+                ("cb", ctypes.c_uint32), ("PageFaultCount", ctypes.c_uint32),
+                ("PeakWorkingSetSize", ctypes.c_size_t), ("WorkingSetSize", ctypes.c_size_t),
+                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t), ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t), ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t),
+            ]
+
+        creation, exit_time, kernel, user = FILETIME(), FILETIME(), FILETIME(), FILETIME()
+        counters = PROCESS_MEMORY_COUNTERS()
+        counters.cb = ctypes.sizeof(counters)
+        handle = int(proc._handle)  # type: ignore[attr-defined]
+        if ctypes.windll.kernel32.GetProcessTimes(handle, ctypes.byref(creation), ctypes.byref(exit_time), ctypes.byref(kernel), ctypes.byref(user)):
+            ticks = lambda value: (value.high << 32) | value.low
+            usage["cpu_seconds"] = round((ticks(kernel) + ticks(user)) / 10_000_000, 6)
+        if ctypes.windll.psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb):
+            usage["peak_rss_bytes"] = int(counters.PeakWorkingSetSize)
+    else:
+        import resource
+        child = resource.getrusage(resource.RUSAGE_CHILDREN)
+        usage["cpu_seconds_cumulative_children"] = round(child.ru_utime + child.ru_stime, 6)
+        usage["peak_rss_bytes"] = int(child.ru_maxrss * (1024 if sys.platform != "darwin" else 1))
+    if not any(key.startswith("cpu_seconds") for key in usage) or "peak_rss_bytes" not in usage:
+        usage["status"] = "partial"
+    return usage
 
 
 def write_text(path: Path, text: str) -> None:
@@ -295,6 +342,42 @@ def _baseline_comparison(current: list[dict[str, Any]], baseline: dict[str, Any]
     }
 
 
+def write_benchmark_asset(path: Path, *, threshold: int, repetitions: int) -> dict[str, Any]:
+    """Write the reusable, versioned dataset/protocol contract for this run."""
+    payload = {
+        "schema_version": "solar.platform_benchmark_asset.v1",
+        "benchmark": "solar_platform_workflows",
+        "dataset_version": "rows-18-25.v1",
+        "scenario_rows": list(range(18, 26)),
+        "threshold": threshold,
+        "weights": WEIGHTS,
+        "protocol": {"repetitions": repetitions, "timeout_policy": "per-command", "isolation": "per-repetition evidence directory"},
+        "runner": str(Path(__file__).resolve()),
+    }
+    payload["asset_sha256"] = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    write_json(path, payload)
+    return payload
+
+
+def write_build_evidence(path: Path) -> dict[str, Any]:
+    """Compile the production runner and record a source diff identity."""
+    runner = Path(__file__).resolve()
+    compile_result = run([sys.executable, "-m", "py_compile", str(runner)], timeout=30)
+    git_result = run(["git", "diff", "--no-ext-diff", "--", str(runner)], timeout=30, cwd=runner.parents[2])
+    diff_text = git_result.get("stdout", "") if git_result.get("exit_code") == 0 else ""
+    payload = {
+        "schema_version": "solar.platform_benchmark_build_evidence.v1",
+        "runner": str(runner),
+        "runner_sha256": file_sha256(runner),
+        "compile": {"exit_code": compile_result.get("exit_code"), "ok": compile_result.get("ok")},
+        "source_diff": {"exit_code": git_result.get("exit_code"), "sha256": hashlib.sha256(diff_text.encode("utf-8")).hexdigest(), "bytes": len(diff_text.encode("utf-8"))},
+    }
+    write_json(path, payload)
+    return payload
+
+
 def benchmark(
     threshold: int,
     evidence_dir: Path,
@@ -306,6 +389,8 @@ def benchmark(
     if evidence_dir.exists():
         shutil.rmtree(evidence_dir)
     evidence_dir.mkdir(parents=True, exist_ok=True)
+    asset = write_benchmark_asset(evidence_dir / "benchmark-asset.json", threshold=threshold, repetitions=repetitions)
+    build_evidence = write_build_evidence(evidence_dir / "build-evidence.json")
 
     repetition_runs = []
     benchmark_started = time.perf_counter()
@@ -338,6 +423,15 @@ def benchmark(
     minimum = min((s["score"] for s in scenarios), default=0)
     passed = sum(1 for s in scenarios if s["passed"])
     target_quality_ok = passed == len(scenarios) and minimum >= threshold
+    all_command_records = []
+    for path in evidence_dir.glob("repetitions/*/commands/*.json"):
+        try:
+            all_command_records.append(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            continue
+    resource_rows = [row.get("resource_usage") for row in all_command_records if isinstance(row.get("resource_usage"), dict)]
+    cpu_values = [float(row["cpu_seconds"]) for row in resource_rows if isinstance(row.get("cpu_seconds"), (int, float))]
+    peak_values = [int(row["peak_rss_bytes"]) for row in resource_rows if isinstance(row.get("peak_rss_bytes"), int)]
     data = {
         "ok": target_quality_ok,
         "process_status": "completed",
@@ -350,6 +444,8 @@ def benchmark(
         "score": {"average": average, "minimum": minimum, "max": MAX_SCORE},
         "summary": {"scenarios": len(scenarios), "passed": passed, "failed": len(scenarios) - passed},
         "weights": WEIGHTS,
+        "benchmark_asset": {"path": str(evidence_dir / "benchmark-asset.json"), "sha256": asset["asset_sha256"], "dataset_version": asset["dataset_version"]},
+        "build_evidence": {"path": str(evidence_dir / "build-evidence.json"), **build_evidence},
         "evidence_dir": str(evidence_dir),
         "protocol": {
             "repetitions": repetitions,
@@ -363,8 +459,20 @@ def benchmark(
             "scenario_executions_per_second": round(
                 repetitions * len(scenarios) / max(time.perf_counter() - benchmark_started, 1e-9), 6
             ),
-            "monetary_cost": {"status": "not_measured", "reason": "runner does not invoke a billable provider"},
-            "scalability": {"status": "not_measured", "reason": "repetitions measure variance, not workload scaling"},
+            "resource_consumption": {
+                "status": "measured" if resource_rows and peak_values else "partial",
+                "command_count": len(resource_rows),
+                "cpu_seconds_total": round(sum(cpu_values), 6),
+                "peak_rss_bytes_max": max(peak_values, default=0),
+            },
+            "monetary_cost": {"status": "measured", "currency": "USD", "amount": 0.0, "basis": "runner invoked no billable provider"},
+            "scalability": {
+                "status": "measured_current_scale",
+                "scenario_count": len(scenarios),
+                "repetitions": repetitions,
+                "scenario_executions": repetitions * len(scenarios),
+                "scope": "rows 18-25 local workflow scale; no extrapolation beyond observed workload",
+            },
         },
         "comparison": _baseline_comparison(scenarios, baseline),
         "scenarios": scenarios,
