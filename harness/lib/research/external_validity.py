@@ -147,6 +147,18 @@ def evaluate_external_holdout(path: str | Path, trusted_plan_sha256: str = "") -
     observed_holdout_sites = {row["_site_id"] for row in measured if row.get("split") == "external_holdout"}
     if observed_holdout_sites != allowed_holdout:
         errors.append("external_holdout_site_coverage_incomplete")
+    holdout_organizations = [
+        _text(row.get("site", {}).get("organization_id"))
+        for row in measured
+        if row.get("split") == "external_holdout" and isinstance(row.get("site"), dict)
+    ]
+    site_organizations = {
+        row["_site_id"]: _text(row.get("site", {}).get("organization_id"))
+        for row in measured
+        if row.get("split") == "external_holdout" and isinstance(row.get("site"), dict)
+    }
+    if len(set(holdout_organizations)) != len(observed_holdout_sites):
+        errors.append("external_holdout_organizations_not_independent")
     site_results: list[dict[str, Any]] = []
     for site_id in sorted(observed_holdout_sites):
         site_rows = [row for row in measured if row.get("split") == "external_holdout" and row["_site_id"] == site_id]
@@ -161,6 +173,7 @@ def evaluate_external_holdout(path: str | Path, trusted_plan_sha256: str = "") -
             "passed": rate >= threshold,
             "evidence_artifact_sha256s": sorted(row["_evidence_sha256"] for row in site_rows),
             "source_lineage_ids": sorted(_text(row.get("source_lineage_id")) for row in site_rows),
+            "organization_id": site_organizations.get(site_id, ""),
         })
     failed_sites = [row["site_id"] for row in site_results if not row["passed"]]
     if failed_sites:

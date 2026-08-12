@@ -131,3 +131,11 @@ def test_rejects_development_holdout_lineage_leakage(tmp_path):
     result = evaluate_external_holdout(*_bundle(tmp_path, attack))
     assert result["status"] == "rejected"
     assert "development_holdout_source_lineage_contamination" in result["errors"]
+
+
+def test_rejects_same_organization_claimed_as_two_independent_sites(tmp_path):
+    def attack(plan, rows):
+        rows[2]["site"]["organization_id"] = rows[1]["site"]["organization_id"]
+    result = evaluate_external_holdout(*_bundle(tmp_path, attack))
+    assert result["status"] == "rejected"
+    assert "external_holdout_organizations_not_independent" in result["errors"]

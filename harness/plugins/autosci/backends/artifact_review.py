@@ -532,6 +532,39 @@ def _json_from_model_text(text: str) -> tuple[dict[str, Any] | None, str]:
     return payload, ""
 
 
+_ARCHIVE_SECRET_KEY = re.compile(
+    r"(?:api[_-]?key|access[_-]?token|auth(?:orization)?|bearer|client[_-]?secret|password|passwd|private[_-]?key|secret|token)",
+    re.I,
+)
+_ARCHIVE_INLINE_SECRET = re.compile(
+    r"(?i)\b(api[_-]?key|access[_-]?token|client[_-]?secret|password|passwd|secret|token)\s*([:=])\s*([^\s,;]+)"
+)
+_ARCHIVE_BEARER = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+")
+_ARCHIVE_KEY_TOKEN = re.compile(r"\b(?:sk|rk|pk)-[A-Za-z0-9_-]{8,}\b", re.I)
+_ARCHIVE_PRIVATE_KEY = re.compile(
+    r"-----BEGIN [^-\r\n]*PRIVATE KEY-----.*?-----END [^-\r\n]*PRIVATE KEY-----",
+    re.I | re.S,
+)
+_ARCHIVE_URL_CREDENTIALS = re.compile(r"(https?://)[^\s/@:]+:[^\s/@]+@", re.I)
+
+
+def _redact_archive_value(value: Any, *, key: str = "") -> Any:
+    """Return an archive-safe copy without mutating the provider payload."""
+    if key and _ARCHIVE_SECRET_KEY.search(key):
+        return "[REDACTED]"
+    if isinstance(value, dict):
+        return {str(item_key): _redact_archive_value(item, key=str(item_key)) for item_key, item in value.items()}
+    if isinstance(value, list):
+        return [_redact_archive_value(item) for item in value]
+    if not isinstance(value, str):
+        return value
+    redacted = _ARCHIVE_PRIVATE_KEY.sub("[REDACTED_PRIVATE_KEY]", value)
+    redacted = _ARCHIVE_BEARER.sub("Bearer [REDACTED]", redacted)
+    redacted = _ARCHIVE_KEY_TOKEN.sub("[REDACTED_TOKEN]", redacted)
+    redacted = _ARCHIVE_INLINE_SECRET.sub(lambda match: f"{match.group(1)}{match.group(2)}[REDACTED]", redacted)
+    return _ARCHIVE_URL_CREDENTIALS.sub(r"\1[REDACTED]@", redacted)
+
+
 def _archive_provider_payload(
     *,
     workspace_root: Path,
@@ -544,6 +577,11 @@ def _archive_provider_payload(
     response_json = json.dumps(response_payload, ensure_ascii=False, sort_keys=True)
     request_hash = hashlib.sha256(request_json.encode("utf-8")).hexdigest()
     response_hash = hashlib.sha256(response_json.encode("utf-8")).hexdigest()
+    redacted_request = _redact_archive_value(request_payload)
+    redacted_response = _redact_archive_value(response_payload)
+    redacted_model_payload = _redact_archive_value(model_payload)
+    redacted_request_json = json.dumps(redacted_request, ensure_ascii=False, sort_keys=True)
+    redacted_archive_request_hash = hashlib.sha256(redacted_request_json.encode("utf-8")).hexdigest()
     archive_dir = workspace_root / "artifacts" / "autosci" / "review-llm"
     try:
         archive_dir.mkdir(parents=True, exist_ok=True)
@@ -553,17 +591,20 @@ def _archive_provider_payload(
                 {
                     "schema": "review_llm_provider_archive.v1",
                     "provider": provider,
+                    # This binds the bytes sent to the provider, but is not
+                    # recomputable when the request contained secrets.
                     "request_sha256": request_hash,
-                    # The request body contains the review prompt and model
-                    # parameters, but never the Authorization header/API key.
-                    # Retaining this non-secret body makes the request hash
-                    # independently recomputable instead of self-attested.
-                    "request_body_redacted": request_payload,
-                    "request_redactions": ["authorization_header_not_archived"],
-                    "request_hash_canonicalization": "json.dumps(ensure_ascii=False, sort_keys=True)",
+                    "request_sha256_scope": "original_provider_request_not_recomputable_from_archive_if_redacted",
+                    # This digest is independently recomputable from the safe
+                    # body that is actually retained in the archive.
+                    "redacted_archive_request_sha256": redacted_archive_request_hash,
+                    "request_body_redacted": redacted_request,
+                    "request_redactions": ["authorization_header_not_archived", "recursive_sensitive_key_and_content_redaction"],
+                    "redacted_request_hash_canonicalization": "json.dumps(ensure_ascii=False, sort_keys=True)",
                     "response_sha256": response_hash,
-                    "model_payload": model_payload,
-                    "raw_response": response_payload,
+                    "response_sha256_scope": "original_provider_response_not_recomputable_from_archive_if_redacted",
+                    "model_payload_redacted": redacted_model_payload,
+                    "raw_response_redacted": redacted_response,
                 },
                 ensure_ascii=False,
                 indent=2,
