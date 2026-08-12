@@ -7,6 +7,278 @@
 # state and route proof. Live execution requires SOLAR_LIVE_E2E_ALLOW=1.
 set -euo pipefail
 
+# Stable live-E2E terminal classes.  Keep this function sourceable so the
+# public wrapper's exact behavior can be tested without starting a live run.
+classify_sprint_status() {
+  local status="${1:-unknown}"
+  case "$status" in
+    completed|finalized|passed|eval_passed)
+      printf '%s\n' "success"
+      return 0 ;;
+    needs_human_review)
+      printf '%s\n' "human_review"
+      return 3 ;;
+    failed|error|cancelled|rejected|archived|skipped|superseded|failed_*)
+      printf '%s\n' "failure"
+      return 1 ;;
+    *)
+      printf '%s\n' "active"
+      return 4 ;;
+  esac
+}
+
+# Terminate one process owned by this wrapper without an unbounded wait.  The
+# result variables make the actual TERM/KILL/survivor phases observable while
+# keeping the function sourceable for a real-process regression test.
+_live_e2e_pid_running() {
+  local target="$1"
+  local state
+  kill -0 "$target" >/dev/null 2>&1 || return 1
+  state="$(ps -o stat= -p "$target" 2>/dev/null | tr -d '[:space:]')"
+  [[ -n "$state" && "$state" != Z* ]]
+}
+
+terminate_owned_pid() {
+  local pid="${1:-}"
+  local grace_ticks="${2:-50}"
+  TERMINATE_TERM_PID=""
+  TERMINATE_KILL_PID=""
+  TERMINATE_SURVIVOR_PID=""
+  [[ -n "$pid" ]] || return 0
+  [[ "$grace_ticks" =~ ^[0-9]+$ ]] || grace_ticks=50
+
+  if _live_e2e_pid_running "$pid"; then
+    TERMINATE_TERM_PID="$pid"
+    kill -TERM "$pid" >/dev/null 2>&1 || true
+    local tick
+    for ((tick = 0; tick < grace_ticks; tick++)); do
+      _live_e2e_pid_running "$pid" || break
+      sleep 0.1
+    done
+  fi
+  if _live_e2e_pid_running "$pid"; then
+    TERMINATE_KILL_PID="$pid"
+    kill -KILL "$pid" >/dev/null 2>&1 || true
+    for ((tick = 0; tick < grace_ticks; tick++)); do
+      _live_e2e_pid_running "$pid" || break
+      sleep 0.1
+    done
+  fi
+  wait "$pid" >/dev/null 2>&1 || true
+  if _live_e2e_pid_running "$pid"; then
+    TERMINATE_SURVIVOR_PID="$pid"
+  fi
+}
+
+observe_uat_teardown_started() {
+  local observability_lib="$1"
+  PYTHONPATH="$observability_lib${PYTHONPATH:+:$PYTHONPATH}" python3 - <<'PY' || true
+import os
+try:
+    from developer_observability import observe, stable_id
+    operation_id = stable_id("operation", "uat-teardown", "live-e2e", os.environ.get("UAT_RUN_ID"))
+    span_id = stable_id("span", operation_id)
+    observe(
+        "uat.teardown.started",
+        component="live-codex-e2e-isolated",
+        operation="uat_teardown",
+        operation_id=operation_id,
+        phase="started",
+        status="running",
+        identifiers={"span_id": span_id, "parent_span_id": None},
+        data={},
+        provenance="observed",
+    )
+except Exception:
+    pass
+PY
+}
+
+observe_uat_teardown_completed() {
+  local observability_lib="$1"
+  local status_term="$2"
+  local status_kill="$3"
+  local status_survivor="$4"
+  local registry_path="$5"
+  local tmux_target_text="$6"
+  local tmux_survivor_text="$7"
+  local signal="$8"
+  PYTHONPATH="$observability_lib${PYTHONPATH:+:$PYTHONPATH}" python3 - \
+    "$status_term" "$status_kill" "$status_survivor" "$registry_path" \
+    "$tmux_target_text" "$tmux_survivor_text" "$signal" <<'PY' || true
+import json
+import os
+import pathlib
+import sys
+try:
+    from developer_observability import observe, stable_id
+    status_term, status_kill, status_survivor, registry_path, tmux_target_text, tmux_survivor_text, signal = sys.argv[1:]
+    registry = {}
+    try:
+        registry = json.loads(pathlib.Path(registry_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+    term_targets = ([int(status_term)] if status_term else []) + [
+        int(pid) for pid in registry.get("term_signalled", [])
+    ]
+    kill_targets = ([int(status_kill)] if status_kill else []) + [
+        int(pid) for pid in registry.get("kill_signalled", [])
+    ]
+    survivor_pids = ([int(status_survivor)] if status_survivor else []) + [
+        int(pid) for pid in registry.get("survivors", [])
+    ]
+    term_targets = list(dict.fromkeys(term_targets))
+    kill_targets = list(dict.fromkeys(kill_targets))
+    survivor_pids = list(dict.fromkeys(survivor_pids))
+    tmux_targets = list(dict.fromkeys(item for item in tmux_target_text.splitlines() if item))
+    tmux_survivors = list(dict.fromkeys(item for item in tmux_survivor_text.splitlines() if item))
+    operation_id = stable_id("operation", "uat-teardown", "live-e2e", os.environ.get("UAT_RUN_ID"))
+    parent_span = stable_id("span", operation_id)
+    common = {
+        "component": "live-codex-e2e-isolated",
+        "operation": "uat_teardown",
+        "operation_id": operation_id,
+        "provenance": "observed",
+    }
+    if term_targets:
+        observe(
+            "uat.teardown.term_sent",
+            phase="point",
+            status="sent",
+            identifiers={"span_id": stable_id("span", operation_id, "term"), "parent_span_id": parent_span},
+            data={"signal": "SIGTERM", "target_count": len(term_targets), "target_pids": term_targets},
+            **common,
+        )
+    if kill_targets:
+        observe(
+            "uat.teardown.kill_sent",
+            phase="point",
+            status="sent",
+            identifiers={"span_id": stable_id("span", operation_id, "kill"), "parent_span_id": parent_span},
+            data={"signal": "SIGKILL", "target_count": len(kill_targets), "target_pids": kill_targets},
+            **common,
+        )
+    if tmux_targets:
+        observe(
+            "uat.teardown.tmux_sessions_terminated",
+            phase="point",
+            status="survivors" if tmux_survivors else "clear",
+            identifiers={"span_id": stable_id("span", operation_id, "tmux"), "parent_span_id": parent_span},
+            data={
+                "target_count": len(tmux_targets),
+                "target_session_ids": tmux_targets,
+                "survivor_count": len(tmux_survivors),
+                "survivor_session_ids": tmux_survivors,
+            },
+            **common,
+        )
+    observe(
+        "uat.teardown.completed",
+        phase="completed",
+        terminal=True,
+        status="survivors" if survivor_pids or tmux_survivors else "clear",
+        identifiers={"span_id": parent_span, "parent_span_id": None},
+        data={
+            "survivor_count": len(survivor_pids),
+            "survivor_pids": survivor_pids,
+            "tmux_survivor_count": len(tmux_survivors),
+            "signal": signal or None,
+        },
+        **common,
+    )
+except Exception:
+    pass
+PY
+}
+
+write_terminal_state() {
+  local sid="$1"
+  local status="$2"
+  local classification="$3"
+  local exit_code="$4"
+  local poll_index="$5"
+  python3 - "$evidence_dir/TERMINAL_PRODUCT_STATE.json" "$sid" "$status" "$classification" "$exit_code" "$poll_index" <<'PY'
+import json, sys, time
+path, sid, status, classification, exit_code, poll_index = sys.argv[1:7]
+payload = {
+    "sprint_id": sid,
+    "status": status,
+    "classification": classification,
+    "exit_code": int(exit_code),
+    "poll_index": int(poll_index),
+    "observed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+}
+open(path, "w", encoding="utf-8").write(json.dumps(payload, indent=2) + "\n")
+PY
+}
+
+poll_until_terminal() {
+  local sid="$1"
+  local base_url="$2"
+  local status_file="$iso_harness/sprints/${sid}.status.json"
+  local deadline=$(( $(date +%s) + timeout_seconds ))
+  local poll_index=0
+  local last_status="missing"
+  while [[ "$(date +%s)" -le "$deadline" ]]; do
+    poll_index=$((poll_index + 1))
+    capture_http_snapshot "$base_url" "$sid"
+    python3 - "$status_file" "$evidence_dir/poll-${poll_index}.json" <<'PY'
+import json, sys, time
+status_path, out_path = sys.argv[1:3]
+try:
+    data = json.load(open(status_path, encoding="utf-8"))
+except Exception as exc:
+    data = {"status": "missing", "error": f"{type(exc).__name__}: {exc}"}
+snapshot = {
+    "polled_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "status": data.get("status") or data.get("phase") or "unknown",
+    "phase": data.get("phase"),
+    "sprint_id": data.get("sprint_id"),
+}
+open(out_path, "w", encoding="utf-8").write(json.dumps(snapshot, indent=2) + "\n")
+print(snapshot["status"])
+PY
+    local status
+    status="$(python3 - "$evidence_dir/poll-${poll_index}.json" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1])).get("status", "unknown"))
+PY
+)"
+    last_status="$status"
+    printf 'poll %03d: status=%s\n' "$poll_index" "$status" | tee -a "$evidence_dir/poll.log"
+    local classification
+    local terminal_rc
+    if classification="$(classify_sprint_status "$status")"; then
+      terminal_rc=0
+    else
+      terminal_rc=$?
+    fi
+    if [[ "$classification" != "active" ]]; then
+      write_terminal_state "$sid" "$status" "$classification" "$terminal_rc" "$poll_index"
+      return "$terminal_rc"
+    fi
+    sleep "$poll_seconds"
+  done
+  python3 - "$evidence_dir/TIMEOUT_NOT_PRODUCT_PROOF.json" "$sid" "$timeout_seconds" "$last_status" <<'PY'
+import json, sys, time
+path, sid, timeout, last_status = sys.argv[1:5]
+payload = {
+    "valid": False,
+    "reason": "timeout_before_terminal_state",
+    "sprint_id": sid,
+    "timeout_seconds": int(timeout),
+    "last_observed_status": last_status,
+    "written_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+}
+open(path, "w", encoding="utf-8").write(json.dumps(payload, indent=2) + "\n")
+PY
+  return 124
+}
+
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  return 0
+fi
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -130,6 +402,7 @@ tmux_lab_session="${tmux_session}-lab"
 tmux_bg_session="${tmux_session}-bg"
 status_pid=""
 interrupted=0
+interrupt_signal=""
 
 classify_codex_auth_source() {
   if [[ -s "$codex_home/auth.json" ]]; then
@@ -252,12 +525,22 @@ PY
 
 cleanup() {
   local exit_code=$?
+  local status_term_pid=""
+  local status_kill_pid=""
+  local status_survivor_pid=""
+  local registry_result="$evidence_dir/process-registry-teardown.json"
+  local tmux_targets=""
+  local tmux_survivors=""
+  mkdir -p "$evidence_dir"
   if [[ "$interrupted" == "1" ]]; then
     write_invalid_marker "manual_interrupt_or_termination"
   fi
+  observe_uat_teardown_started "$iso_harness/lib"
   if [[ -n "$status_pid" ]]; then
-    kill "$status_pid" >/dev/null 2>&1 || true
-    wait "$status_pid" >/dev/null 2>&1 || true
+    terminate_owned_pid "$status_pid" 50
+    status_term_pid="$TERMINATE_TERM_PID"
+    status_kill_pid="$TERMINATE_KILL_PID"
+    status_survivor_pid="$TERMINATE_SURVIVOR_PID"
   fi
   # G3 zombie-factory fix: mark the sandbox run terminal and reap its
   # registered daemons (watchdog-first) BEFORE killing sessions. Killing
@@ -266,21 +549,31 @@ cleanup() {
   # status-server sweeps killed later live runs' servers.
   if [[ -n "$sandbox" && -f "$sandbox/home/.solar/harness/lib/run_process_registry.py" ]]; then
     python3 "$sandbox/home/.solar/harness/lib/run_process_registry.py" \
-      teardown --run-id harness --grace 5 >/dev/null 2>&1 || true
+      teardown --run-id harness --grace 5 >"$registry_result" 2>/dev/null || true
   fi
   if command -v tmux >/dev/null 2>&1; then
-    tmux kill-session -t "$tmux_session" >/dev/null 2>&1 || true
-    tmux kill-session -t "$tmux_lab_session" >/dev/null 2>&1 || true
-    tmux kill-session -t "$tmux_bg_session" >/dev/null 2>&1 || true
+    local session
+    for session in "$tmux_session" "$tmux_lab_session" "$tmux_bg_session"; do
+      if tmux has-session -t "$session" >/dev/null 2>&1; then
+        tmux_targets+="${session}"$'\n'
+        tmux kill-session -t "$session" >/dev/null 2>&1 || true
+        if tmux has-session -t "$session" >/dev/null 2>&1; then
+          tmux_survivors+="${session}"$'\n'
+        fi
+      fi
+    done
   fi
+  observe_uat_teardown_completed \
+    "$iso_harness/lib" "$status_term_pid" "$status_kill_pid" "$status_survivor_pid" \
+    "$registry_result" "$tmux_targets" "$tmux_survivors" "$interrupt_signal"
   if [[ "$cleanup_sandbox" == "1" && "$sandbox" == /tmp/solar-live-codex-e2e.* ]]; then
     rm -rf "$sandbox"
   fi
   exit "$exit_code"
 }
 trap cleanup EXIT
-trap 'interrupted=1; exit 130' INT
-trap 'interrupted=1; exit 143' TERM
+trap 'interrupted=1; interrupt_signal=SIGINT; exit 130' INT
+trap 'interrupted=1; interrupt_signal=SIGTERM; exit 143' TERM
 
 prepare_isolated_harness() {
   mkdir -p "$home_dir/.solar" "$workspace" "$evidence_dir" "$logs_dir" "$bin_dir" "$archive_dir"
@@ -485,61 +778,6 @@ capture_http_snapshot() {
   curl -fsS "$base_url/settings" > "$evidence_dir/settings.json" 2>"$logs_dir/settings.err" || true
   curl -fsS "$base_url/status?sprint_id=$sid" > "$evidence_dir/status-projection.json" 2>"$logs_dir/status-projection.err" || true
   curl -fsS "$base_url/events?limit=200&sprint_id=$sid" > "$evidence_dir/events-projection.json" 2>"$logs_dir/events-projection.err" || true
-}
-
-poll_until_terminal() {
-  local sid="$1"
-  local base_url="$2"
-  local status_file="$iso_harness/sprints/${sid}.status.json"
-  local deadline=$(( $(date +%s) + timeout_seconds ))
-  local poll_index=0
-  while [[ "$(date +%s)" -le "$deadline" ]]; do
-    poll_index=$((poll_index + 1))
-    capture_http_snapshot "$base_url" "$sid"
-    python3 - "$status_file" "$evidence_dir/poll-${poll_index}.json" <<'PY'
-import json, sys, time
-status_path, out_path = sys.argv[1:3]
-try:
-    data = json.load(open(status_path, encoding="utf-8"))
-except Exception as exc:
-    data = {"status": "missing", "error": f"{type(exc).__name__}: {exc}"}
-snapshot = {
-    "polled_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    "status": data.get("status") or data.get("phase") or "unknown",
-    "phase": data.get("phase"),
-    "sprint_id": data.get("sprint_id"),
-}
-open(out_path, "w", encoding="utf-8").write(json.dumps(snapshot, indent=2) + "\n")
-print(snapshot["status"])
-PY
-    local status
-    status="$(python3 - "$evidence_dir/poll-${poll_index}.json" <<'PY'
-import json, sys
-print(json.load(open(sys.argv[1])).get("status", "unknown"))
-PY
-)"
-    printf 'poll %03d: status=%s\n' "$poll_index" "$status" | tee -a "$evidence_dir/poll.log"
-    case "$status" in
-      completed|finalized|passed)
-        return 0 ;;
-      failed|error|cancelled|rejected|failed_*)
-        return 1 ;;
-    esac
-    sleep "$poll_seconds"
-  done
-  python3 - "$evidence_dir/TIMEOUT_NOT_PRODUCT_PROOF.json" "$sid" "$timeout_seconds" <<'PY'
-import json, sys, time
-path, sid, timeout = sys.argv[1:4]
-payload = {
-    "valid": False,
-    "reason": "timeout_before_terminal_state",
-    "sprint_id": sid,
-    "timeout_seconds": int(timeout),
-    "written_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-}
-open(path, "w", encoding="utf-8").write(json.dumps(payload, indent=2) + "\n")
-PY
-  return 124
 }
 
 assert_route_proof_ok() {
