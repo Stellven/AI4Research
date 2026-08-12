@@ -377,6 +377,7 @@ def test_dispatch_node_evals_routes_autosci_contract_to_autosci_evaluator_green(
 
     assert result["ok"] is True, result
     assert submitted
+    assert submitted[0]["eval_generation"] == 0
     assert result["dispatched"][0]["pane"] == "operator:mini-codex-gpt55-medium-evaluator-1"
     assert result["dispatched"][0]["evaluation_plan"]["independence_policy"]["mechanism"] == (
         "solar_policy_gate_plus_independent_codex_evaluator"
