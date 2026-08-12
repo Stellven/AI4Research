@@ -166,6 +166,9 @@ async function runDesktopSelftest(url, options = {}) {
         await home.waitFor({ state: "visible", timeout: 10000 });
         const taskInput = page.getByRole("textbox", { name: "What do you want done?" });
         await taskInput.waitFor({ state: "visible", timeout: 3000 });
+        if (options.inspectionScreenshot) {
+          await page.screenshot({ path: options.inspectionScreenshot });
+        }
         return {
           source: "Playwright Electron renderer accessibility tree via locator.ariaSnapshot()",
           home_landing_visible: await home.isVisible(),
@@ -226,11 +229,20 @@ async function stopChild(child) {
   try {
     runtime = await startRealRuntime();
     const screenshot = path.join(temp, "runtime-dashboard.png");
-    const healthy = await runDesktopSelftest(runtime.url, { screenshot, inspectTarget: true });
+    const targetScreenshot = path.join(temp, "runtime-dashboard-target.png");
+    const healthy = await runDesktopSelftest(runtime.url, {
+      screenshot,
+      inspectTarget: true,
+      inspectionScreenshot: targetScreenshot,
+    });
     assert.strictEqual(healthy.code, 0, healthy.output);
     assert.match(healthy.output, /SELFTEST OK/);
     assert.doesNotMatch(healthy.output, /SELFTEST FAIL/);
     assert.ok(fs.statSync(screenshot).size > 0, "selftest screenshot is empty");
+    assert.ok(
+      fs.statSync(targetScreenshot).size > 0,
+      "target dashboard screenshot is empty",
+    );
     assert.strictEqual(healthy.targetInspection.home_landing_visible, true);
     assert.strictEqual(healthy.targetInspection.auth_checking_visible, false);
     assert.strictEqual(healthy.targetInspection.heading, "What do you want done?");
@@ -240,7 +252,8 @@ async function stopChild(child) {
     );
     if (EVIDENCE_DIR) {
       fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
-      fs.copyFileSync(screenshot, path.join(EVIDENCE_DIR, "runtime-dashboard.png"));
+      fs.copyFileSync(targetScreenshot, path.join(EVIDENCE_DIR, "runtime-dashboard.png"));
+      fs.copyFileSync(screenshot, path.join(EVIDENCE_DIR, "selftest-capture.png"));
     }
     console.log("PASS  real runtime dashboard -> SELFTEST OK + nonempty screenshot");
 
