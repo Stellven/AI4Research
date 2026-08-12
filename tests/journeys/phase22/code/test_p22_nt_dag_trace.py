@@ -415,6 +415,36 @@ def test_p22_nt_dag_trace() -> None:
         and all(event.get("sid") == intake_sids[1] for event in events_b)
         and intake_sids[0] != intake_sids[1]
     )
+    unified_trace = _run_cmd(
+        "unified-trace-graph-query",
+        [
+            python,
+            str(harness_dir / "lib" / "trace_graph.py"),
+            "query",
+            "--harness-dir",
+            str(harness_dir),
+            "--sprints-dir",
+            str(sprints_dir),
+            "--sprint-id",
+            pm_sid,
+        ],
+        cwd=repo_root,
+        env=env,
+        evidence_dir=evidence_dir,
+    )
+    commands.append(unified_trace)
+    unified_payload = unified_trace["stdout_json"]
+    unified_path = evidence_dir / "unified-trace-graph-query.json"
+    _write_json(unified_path, unified_payload)
+    artifact_paths.append(str(unified_path))
+    assertions["unified_trace_query_returns_graph_state_and_closure"] = (
+        unified_trace["exit_code"] == 0
+        and unified_payload.get("schema_version") == "solar.trace_graph_query.v1"
+        and unified_payload.get("sprint_id") == pm_sid
+        and unified_payload.get("graph", {}).get("node_count") == len(nodes)
+        and len(unified_payload.get("graph", {}).get("node_results", {})) == len(nodes)
+        and unified_payload.get("graph", {}).get("closure", {}).get("all_nodes_passed") is True
+    )
 
     server = _start_status_server(python, harness_dir / "lib" / "symphony" / "status-server.py", env, evidence_dir)
     try:
@@ -492,6 +522,7 @@ def test_p22_nt_dag_trace() -> None:
         and assertions["trace_run_identity_does_not_cross_files"]
         and assertions["trace_state_and_closure_recover_results"]
         and assertions["runtime_v2_modules_import_on_windows"]
+        and assertions["unified_trace_query_returns_graph_state_and_closure"]
     )
 
     l2_results = [
@@ -531,11 +562,11 @@ def test_p22_nt_dag_trace() -> None:
                 "trace_run_identity_does_not_cross_files",
                 "trace_state_and_closure_recover_results",
                 "runtime_v2_modules_import_on_windows",
+                "unified_trace_query_returns_graph_state_and_closure",
             ]},
             "evidence_paths": artifact_paths,
             "limitations": [
-                "runtime_status/session_log v2 and graph_node_dispatcher import on Windows through file_lock_compat, but this selector does not exercise concurrent append recovery under contention.",
-                "Legacy event files prove real creation and run isolation; graph state/closure prove recoverable node results, but there is not yet a single query endpoint that returns both event and graph-state records together.",
+                "The exercised local JSONL and DAG-state path is unified and portable; distributed trace backends and remote-host aggregation are not inferred.",
             ],
             "recommended_status": "PASS_WITH_KNOWN_LIMITATIONS" if trace_management_pass else "FAIL",
         },
@@ -580,6 +611,7 @@ def test_p22_nt_dag_trace() -> None:
     assert assertions["topological_order_respects_dependencies"]
     assert assertions["ready_sequence_progressed_in_topological_order"]
     assert assertions["runtime_v2_modules_import_on_windows"]
+    assert assertions["unified_trace_query_returns_graph_state_and_closure"]
     assert trace_management_pass
     assert assertions["query_run_filter_returns_only_requested_run"]
     assert assertions["query_missing_run_leaks_no_data"]
