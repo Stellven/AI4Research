@@ -2,7 +2,7 @@
   "schema_version": "phase22_significant_review_overlay.v1",
   "reviewed_at": "2026-08-12",
   "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "a9436d121",
+  "reviewed_code_head": "ffb9c6b83",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
   "reviewed_group": {
@@ -443,8 +443,61 @@
         "P22-REPAIR-054",
         "P22-REPAIR-118"
       ]
+    },
+    {
+      "journey_id": "P22-J06 live novelty",
+      "shared_recorded_limitation": "Basic idea generation worked with local evidence, but live literature search and novelty services were not tested.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j06-20260812T073114Z-14168/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"passed": 13, "failed": 0, "live_sources": 8},
+      "decision": "The production novelty chain now falls back to public OpenAlex when Semantic Scholar is rate limited, retains provider/DOI/work provenance and raw payload evidence, and applies the evidence to multiple source-backed idea candidates. Selection with max_ideas=1 records rank and defer reasons rather than silently dropping alternatives.",
+      "remaining_boundary": "The run closes the named live literature/novelty gap. Final independent Review LLM or attributable human acceptance was not claimed and remains a separate promotion boundary.",
+      "issue_ids": ["P22-REPAIR-021"]
+    },
+    {
+      "journey_id": "P22-J03 historical benchmark",
+      "shared_recorded_limitation": "Baseline and version-history variants and broader POC-to-baseline comparisons were not tested.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 2,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j03-20260812T072943Z-13944/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {"passed": 16, "failed": 0},
+      "decision": "The benchmark now binds a historical baseline to an actual Git commit and filtered source content, rejects unverifiable or self-comparison inputs, and packages current-versus-baseline score, duration and speedup deltas in JSON and Markdown for eight platform workflows.",
+      "closed_issue_ids": ["P22-REPAIR-040"],
+      "partially_reduced_issue_ids": ["P22-REPAIR-044"],
+      "remaining_boundary": "The exercised platform workflow comparison is not evidence of broad scientific POC significance, effect size or domain interpretation. P22-REPAIR-044 remains open for that wider mapped behavior.",
+      "issue_ids": ["P22-REPAIR-040", "P22-REPAIR-044"]
+    },
+    {
+      "journey_id": "P22-J18 authenticated status states",
+      "shared_recorded_limitation": "Status visibility was only proven in a narrow local setup and broader workflow/platform states were not exercised.",
+      "classification": "LIMITATION_CLOSED_VERIFIED_LOCAL_SCOPE",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22-j18-status-auth-states-20260812T073137Z-2728953/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"passed": 3, "failed": 0, "workflow_states": 5},
+      "decision": "A real security defect was repaired: token-required mode no longer serves an unauthenticated dashboard containing the token, and HEAD now enforces the same authorization boundary as GET. The accepted Ubuntu run proves unauthenticated and wrong-token rejection, correct header/query authorization, invalid-sprint rejection, and queued, active, gate-blocked, approved, reviewing and passed projections without leaving process or token artifacts.",
+      "remaining_boundary": "This closes the recorded local status-visibility limitation. TLS, federated identity, cross-host authorization and remote-host topology remain explicit non-inferred deployment boundaries.",
+      "issue_ids": ["P22-REPAIR-120"]
+    },
+    {
+      "journey_id": "P22-J19 browser and Electron GUI",
+      "shared_recorded_limitation": "The web dashboard worked in headless Chrome, but packaged desktop windows, accessibility, and multi-monitor use were not tested.",
+      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "issue_count": 1,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-j19-real-gui-dashboard-20260812T072916Z-32540/journey-result.json",
+        "outputs/phase22-real-journeys/p22-j19-electron-recovery-20260812T073500Z/recovery-screens.json"
+      ],
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"browser": 4, "electron_recovery_screens": 7, "failed": 0},
+      "decision": "The real browser dashboard passed intake, settings persistence and screenshot checks. Real Electron windows rendered all seven first-run/error/recovery states with their required actions, and the desktop/mobile visual gate covered overview, health, plan, process, result, decision, failed-terminal and role views.",
+      "remaining_boundary": "No formal accessibility audit or multi-monitor run was performed, and a packaged installer image was not exercised in this evidence set. P22-REPAIR-130 therefore remains open rather than being inferred green.",
+      "issue_ids": ["P22-REPAIR-130"]
     }
   ],
-  "closed_shared_limitation_issue_count": 57,
-  "remaining_significant_issues": 15
+  "closed_shared_limitation_issue_count": 60,
+  "remaining_significant_issues": 12
 }

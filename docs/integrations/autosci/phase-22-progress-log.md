@@ -3482,3 +3482,33 @@ Date: 2026-08-12
   production authentication, and the broad workflow-state matrix were not
   exercised. Other Linux distribution families and package managers also
   remain explicit non-inferred boundaries.
+
+## Significant repair closure — live novelty, historical benchmark, authenticated status, GUI evidence
+
+Date: 2026-08-12
+
+- `P22-REPAIR-021` is `FIXED_VERIFIED`. J06 run
+  `p22j06-20260812T073114Z-14168` passed 13/13 assertions against eight live
+  OpenAlex sources. Provider/work/DOI provenance and raw payload evidence are
+  retained, multiple source-backed candidates are generated, and bounded
+  selection records rank/defer reasons. Final independent Review LLM or human
+  acceptance remains separate from this named live-novelty closure.
+- `P22-REPAIR-040` is `FIXED_VERIFIED`. J03 run
+  `p22j03-20260812T072943Z-13944` passed 16/16 assertions with a historical
+  Git-attested baseline and packaged score/duration/speedup deltas. The narrow
+  eight-workflow portion of `P22-REPAIR-044` is improved, but broad scientific
+  POC significance/effect comparisons remain `NOT_TESTED`; 044 stays open.
+- `P22-REPAIR-120` is `FIXED_VERIFIED_LOCAL_SCOPE`. Before repair,
+  token-required mode exposed an unauthenticated dashboard containing the
+  token and allowed unauthenticated HEAD. Commit `2756c924c` makes dashboard,
+  HEAD and GET share the authorization boundary. Ubuntu run
+  `p22-j18-status-auth-states-20260812T073137Z-2728953` passed all assertions
+  across authentication negatives and six projected workflow conditions.
+  TLS/federated identity/cross-host authorization remain deployment limits.
+- GUI evidence was expanded but `P22-REPAIR-130` remains open. Current J19
+  browser evidence passed, the visual gate passed desktop/mobile workflow,
+  result, gate, failure and role views, and real Electron windows passed 7/7
+  recovery screens with durable evidence at
+  `p22-j19-electron-recovery-20260812T073500Z/recovery-screens.json`. Formal
+  accessibility, multi-monitor and packaged-installer execution are not
+  inferred from these runs.
