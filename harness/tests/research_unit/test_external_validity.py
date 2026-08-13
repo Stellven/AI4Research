@@ -12,6 +12,8 @@ PHASE22_TRUST_REGISTRY = REPO / "tests/journeys/phase22/fixtures/significant/tru
 PHASE22_TRUST_REGISTRY_SHA256 = hashlib.sha256(PHASE22_TRUST_REGISTRY.read_bytes()).hexdigest()
 PHASE22_EXTERNAL_FIXTURE = REPO / "tests/journeys/phase22/fixtures/significant/external_validity/multi_site_holdout.json"
 PHASE22_EXTERNAL_PLAN_SHA256 = "8c977513343d5e6ed9213a743abcdf7f8aa476fde54660d5308a621509337ae9"
+P22_047_FOLLOWUP_REGISTRY = REPO / "harness/config/research-trust-registries/p22-047-followup-v2.json"
+P22_047_FOLLOWUP_REGISTRY_SHA256 = "57fd7773eec381734414e2d04ed93ec19b386237031d1da099be7e5f53db2a3f"
 
 
 def _save(path, payload):
@@ -149,6 +151,15 @@ def test_accepts_trust_pinned_plan_and_site_identities(tmp_path):
     assert result["external_plan_trust"]["status"] == "accepted"
     assert result["site_identity_contract"]["status"] == "accepted"
     assert result["site_identity_contract"]["accepted_count"] == 3
+
+
+def test_followup_registry_is_reviewable_and_policy_pinned():
+    payload = json.loads(P22_047_FOLLOWUP_REGISTRY.read_text(encoding="utf-8"))
+    rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    evidence_bytes = rendered.replace("\n", "\r\n").encode("utf-8")
+    actual = hashlib.sha256(evidence_bytes).hexdigest()
+    assert actual == P22_047_FOLLOWUP_REGISTRY_SHA256
+    assert actual in trust_registry.APPROVED_REGISTRY_SHA256S
 
 
 def test_rejects_self_attested_site_identity_not_pinned_by_registry(tmp_path, monkeypatch):
