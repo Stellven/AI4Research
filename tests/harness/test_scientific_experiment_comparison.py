@@ -82,7 +82,7 @@ def _results(tmp_path: Path, deltas: list[float] | None = None) -> list[Path]:
                 {"type": "labeled_dataset", "path": str(DATASET), "sha256": dataset_hash},
                 {"type": "production_metric_observations", "path": str(observation), "sha256": observation_hash},
             ],
-            "provenance": {"operator_id": "retrieval_reranker.py", "implementation_package": "harness/lib/retrieval_reranker.py", "timestamp": "2026-08-12T09:01:00Z"},
+            "provenance": {"operator_id": "retrieval_reranker.py", "implementation_package": "harness/lib/retrieval_reranker.py", "timestamp": "2026-08-15T09:01:00Z"},
             "limitations": ["Unit fixture."],
         }
         path = tmp_path / f"{pair}-{arm}.json"

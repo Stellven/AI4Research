@@ -1,0 +1,66 @@
+{
+  "anchors": [
+    {
+      "allowed_purposes": [
+        "external_validity_plan"
+      ],
+      "anchor_id": "p22-047-followup-v2-protocol-anchor",
+      "identity_uri": "https://github.com/Coconut-ch1ken/OpenSolar/releases/tag/phase22-protocol-p22-retrieval-ranking-poc-v1",
+      "public_key_sha256": "e1ae5daf8590bb39d181d0d6216a14e5c7df8226fd37e040eb142372e833303b"
+    },
+    {
+      "allowed_purposes": [
+        "external_site_identity"
+      ],
+      "anchor_id": "p22-047-followup-v2-site-anchor",
+      "identity_uri": "https://github.com/Coconut-ch1ken/OpenSolar/releases/tag/phase22-protocol-p22-retrieval-ranking-poc-v1",
+      "public_key_sha256": "2b89f0ea9aa7dcbe518702e961a1aeac2cb430f156e7f872f3e2dac96c890c09"
+    }
+  ],
+  "schema": "solar.trust_anchor_registry.v1",
+  "site_identities": [
+    {
+      "anchor_id": "p22-047-followup-v2-site-anchor",
+      "collection_protocol_id": "retrieval-protocol-v2",
+      "evidence_sha256s": [
+        "1826c7435fbafa55143a319bc7681e8fcb7b2390e2a52fb1b12d4b6e1ef6a0ae"
+      ],
+      "identity_uri": "https://www.crossref.org/",
+      "organization_id": "crossref",
+      "signature_sha256": "5d631363d5b197d54153ec993c30abefec5724cd12c642c8aaaa1620065e8c2a",
+      "site_id": "crossref-api"
+    },
+    {
+      "anchor_id": "p22-047-followup-v2-site-anchor",
+      "collection_protocol_id": "retrieval-protocol-v2",
+      "evidence_sha256s": [
+        "14ff8534559109540074f34b61e865a0ecc813a1971e34b05df525c9f633c966"
+      ],
+      "identity_uri": "https://info.arxiv.org/about/index.html",
+      "organization_id": "cornell-arxiv",
+      "signature_sha256": "3d7b7cc898bdbb28a063da1c9910377b194cfe30ee710c7409fe81588a5661c5",
+      "site_id": "arxiv-api"
+    },
+    {
+      "anchor_id": "p22-047-followup-v2-site-anchor",
+      "collection_protocol_id": "retrieval-protocol-v2",
+      "evidence_sha256s": [
+        "731c71829fb763764f29ebc56b18048909200323d254502615a99f5c73cc6143"
+      ],
+      "identity_uri": "https://openalex.org/",
+      "organization_id": "ourresearch-openalex",
+      "signature_sha256": "293bff6329a5230d91cc21bebc6191ae5b282fd10142e2154280aa0b0af66b92",
+      "site_id": "openalex-api"
+    }
+  ],
+  "trusted_artifacts": [
+    {
+      "anchor_id": "p22-047-followup-v2-protocol-anchor",
+      "artifact_id": "p22-bounded-retrieval-success",
+      "purpose": "external_validity_plan",
+      "registered_at": "2026-08-13T21:36:35Z",
+      "sha256": "dc7bd7b0ecbb4cc36f12927677ebac7f4a396e93c76a54c79611068ec765552b",
+      "signature_sha256": "f9ae8a62f68841a8d24846a7b3f1b2fafe20a83720ed932bd6c26ce10bc31298"
+    }
+  ]
+}
