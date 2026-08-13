@@ -13,6 +13,8 @@ HEX = set("0123456789abcdef")
 SCHEMA = "solar.trust_anchor_registry.v1"
 APPROVED_REGISTRY_SHA256S = {
     "a84808e8f64888b567628acd6636c1a61b558f3d8f7f582a7eae8c68cf590edc",
+    # P22-047 prospective live follow-up registry (arXiv + OpenAlex holdouts).
+    "57fd7773eec381734414e2d04ed93ec19b386237031d1da099be7e5f53db2a3f",
 }
 
 
