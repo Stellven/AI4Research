@@ -91,11 +91,26 @@ JOURNEYS: dict[str, dict[str, Any]] = {
     "P22-J09": {
         "name": "Generate and review a deliverable research report",
         "selector": "p22_j09",
-        "live": False,
+        "live": True,
     },
     "P22-J10": {
         "name": "Backup, restore, and uninstall inside a sandbox",
         "selector": "p22_j10",
+        "live": False,
+    },
+    "P22-J25": {
+        "name": "Construct, verify, install, smoke, and roll back a runtime deliverable",
+        "selector": "p22_j25",
+        "live": False,
+    },
+    "P22-045": {
+        "name": "Live independent writer/reviewer provider provenance",
+        "selector": "p22_045_live_independent_providers",
+        "live": True,
+    },
+    "P22-071": {
+        "name": "Attributable human-review lifecycle resume",
+        "selector": "p22_071_human_review_resume",
         "live": False,
     },
 }
@@ -140,7 +155,33 @@ def repo_head(repo_root: Path) -> str:
         stderr=subprocess.PIPE,
         check=False,
     )
-    return proc.stdout.strip() if proc.returncode == 0 else f"unavailable: {redact(proc.stderr.strip())}"
+    if proc.returncode == 0:
+        return proc.stdout.strip()
+
+    git_file = repo_root / ".git"
+    if os.name != "nt" and git_file.is_file():
+        pointer = git_file.read_text(encoding="utf-8", errors="replace").strip()
+        if pointer.lower().startswith("gitdir:"):
+            raw_git_dir = pointer.split(":", 1)[1].strip().replace("\\", "/")
+            drive_match = re.match(r"^([A-Za-z]):/(.*)$", raw_git_dir)
+            git_dir = (
+                Path(f"/mnt/{drive_match.group(1).lower()}/{drive_match.group(2)}")
+                if drive_match
+                else (repo_root / raw_git_dir).resolve()
+            )
+            fallback = subprocess.run(
+                ["git", f"--git-dir={git_dir}", f"--work-tree={repo_root}", "rev-parse", "HEAD"],
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            if fallback.returncode == 0:
+                return fallback.stdout.strip()
+            proc = fallback
+    return f"unavailable: {redact(proc.stderr.strip())}"
 
 
 def command_exists(name: str) -> bool:
@@ -230,9 +271,13 @@ class JourneyRecorder:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(resolved, target)
             return target.resolve()
+        if resolved.is_dir():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(resolved, target)
+            return target.resolve()
         return resolved
 
-    def add_artifact(self, path: Path, artifact_type: str, description: str = "", *, required: bool = True) -> None:
+    def add_artifact(self, path: Path, artifact_type: str, description: str = "", *, required: bool = True) -> Path:
         path = path.resolve()
         stable_path = self._stable_artifact_path(path, artifact_type) if path.exists() else path
         exists = path.exists()
@@ -245,6 +290,8 @@ class JourneyRecorder:
             inside_run_dir = False
         if not exists:
             durability_status = "missing_required" if required else "not_applicable_optional_missing"
+        elif is_dir and inside_run_dir:
+            durability_status = "durable"
         elif is_dir:
             durability_status = "not_applicable_directory_reference"
         elif inside_run_dir:
@@ -265,6 +312,7 @@ class JourneyRecorder:
             entry["bytes"] = stable_path.stat().st_size
             entry["sha256"] = sha256(stable_path)
         self.artifacts.append(entry)
+        return stable_path
 
     def run(
         self,
@@ -295,11 +343,13 @@ class JourneyRecorder:
             )
         except subprocess.TimeoutExpired as exc:
             timed_out = True
+            stdout = exc.stdout if isinstance(exc.stdout, str) else ""
+            stderr = exc.stderr if isinstance(exc.stderr, str) else ""
             proc = subprocess.CompletedProcess(
                 argv,
                 124,
-                stdout=exc.stdout if isinstance(exc.stdout, str) else "",
-                stderr=exc.stderr if isinstance(exc.stderr, str) else f"timed out after {timeout}s",
+                stdout=stdout,
+                stderr=stderr or f"timed out after {timeout}s",
             )
         duration = time.monotonic() - started
         stdout_path.write_text(redact(proc.stdout), encoding="utf-8", errors="replace")

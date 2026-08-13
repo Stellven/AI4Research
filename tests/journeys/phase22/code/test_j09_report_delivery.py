@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+import os
 from pathlib import Path
+
+import jsonschema
 
 from evidence import JourneyRecorder
 from journey_runner import (
     action_evidence,
+    bootstrap_live_environment,
     run_autosci,
     runtime_evidence,
     write_code_evidence,
@@ -106,6 +111,103 @@ def _is_stable_evidence_id(value: object) -> bool:
     return text.startswith(("claim-", "claim:", "code:", "exp-", "local:", "paper-", "phase22-", "runtime:", "task-", "wiki:"))
 
 
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "0" * 64
+
+
+def _decision_request(verdict_path: Path, experiment_path: Path) -> dict:
+    return {
+        "schema": "decision_request.v1",
+        "decision_id": "phase22-j09-bounded-rollout",
+        "title": "Choose the evidence-supported SkillGen rollout scope",
+        "problem": "Choose between a bounded local continuation and an unsupported generalized rollout.",
+        "alternatives": [
+            {
+                "alternative_id": "bounded-local",
+                "title": "Continue with a bounded local validation",
+                "description": "Retain the measured scope and collect independent external-validity evidence.",
+            },
+            {
+                "alternative_id": "generalized-rollout",
+                "title": "Generalize the result immediately",
+                "description": "Treat the local result as sufficient for a broad rollout.",
+            },
+        ],
+        "criteria": [
+            {"criterion_id": "measured-support", "name": "Measured evidence support", "weight": 0.6},
+            {"criterion_id": "external-validity", "name": "External-validity risk", "weight": 0.4},
+        ],
+        "evidence": [
+            {
+                "evidence_id": "j09-claim-verdict",
+                "evidence_type": "claim_verdict",
+                "claim_id": "claim-supported",
+                "supporting_experiment_evidence_id": "j09-experiment-result",
+                "source_path": str(verdict_path),
+                "expected_sha256": _file_sha256(verdict_path),
+                "summary": "The persisted claim verdict supports the bounded local claim.",
+            },
+            {
+                "evidence_id": "j09-experiment-result",
+                "evidence_type": "experiment_result",
+                "source_path": str(experiment_path),
+                "expected_sha256": _file_sha256(experiment_path),
+                "summary": "The approved local experiment completed and produced persisted result evidence.",
+            },
+        ],
+        "assessments": [
+            {
+                "alternative_id": "bounded-local",
+                "criterion_id": "measured-support",
+                "score": 5,
+                "rationale": "This option stays within the supported claim and completed experiment.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            },
+            {
+                "alternative_id": "bounded-local",
+                "criterion_id": "external-validity",
+                "score": 3,
+                "rationale": "The option explicitly keeps external validity unresolved.",
+                "evidence_ids": ["j09-claim-verdict"],
+            },
+            {
+                "alternative_id": "generalized-rollout",
+                "criterion_id": "measured-support",
+                "score": 0,
+                "rationale": "Neither evidence source supports generalization beyond the local dataset.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            },
+            {
+                "alternative_id": "generalized-rollout",
+                "criterion_id": "external-validity",
+                "score": 0,
+                "rationale": "The local result provides no independent external-validity evidence for a broad rollout.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            },
+        ],
+        "risks": [
+            {
+                "risk_id": "external-validity",
+                "description": "A local result could be overstated as a general result.",
+                "mitigation": "Keep the recommendation bounded and require independent review before rollout.",
+                "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+            }
+        ],
+        "recommendation": {
+            "alternative_id": "bounded-local",
+            "rationale": "Only the bounded continuation is explicitly supported by the measured result and claim verdict.",
+            "criterion_ids": ["measured-support", "external-validity"],
+            "evidence_ids": ["j09-claim-verdict", "j09-experiment-result"],
+        },
+        "limitations": [
+            "The evidence comes from one deterministic local experiment and does not establish external validity."
+        ],
+        "unresolved_review_items": [
+            "An independent reviewer must assess external validity and the proposed rollout boundary."
+        ],
+    }
+
+
 def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python: str) -> None:
     rec = JourneyRecorder(repo_root, "P22-J09")
     sandbox = tmp_path / "p22-j09"
@@ -183,6 +285,80 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     verdict_ev = action_evidence(verify, "verify_claim")
     verdict_payload = _load_json(verdict_ev)
     verdict_boundary = verdict_payload.get("outputs", {}).get("final_verdict_boundary", {})
+    if verdict_ev:
+        rec.add_artifact(Path(verdict_ev), "claim_verdict")
+        recorded_verdict = Path(rec.artifacts[-1]["path"])
+        if not recorded_verdict.is_absolute():
+            recorded_verdict = rec.run_dir / recorded_verdict
+    else:
+        recorded_verdict = rec.artifact_dir / "missing-claim-verdict.json"
+    if exp_result_ev:
+        rec.add_artifact(Path(exp_result_ev), "experiment_result_evidence")
+        recorded_experiment = Path(rec.artifacts[-1]["path"])
+        if not recorded_experiment.is_absolute():
+            recorded_experiment = rec.run_dir / recorded_experiment
+    else:
+        recorded_experiment = rec.artifact_dir / "missing-experiment-result.json"
+    decision_request_path = write_json(
+        rec.artifact_dir / "decision-request.json",
+        _decision_request(recorded_verdict, recorded_experiment),
+    )
+    decision_output = rec.artifact_dir / "decision-artifact.json"
+    decision_proc = rec.run(
+        "decision-artifact-construction",
+        [
+            phase22_python,
+            str(repo_root / "harness" / "tools" / "decision_artifact.py"),
+            "--input",
+            str(decision_request_path),
+            "--output",
+            str(decision_output),
+            "--source-root",
+            str(rec.run_dir),
+        ],
+        cwd=repo_root,
+        timeout=60,
+    )
+    decision_payload = _load_json(decision_output)
+    decision_schema = _load_json(
+        repo_root / "harness" / "schemas" / "evidence" / "decision_artifact.v1.schema.json"
+    )
+    decision_schema_error = ""
+    try:
+        jsonschema.Draft202012Validator(decision_schema).validate(decision_payload)
+    except jsonschema.ValidationError as exc:
+        decision_schema_error = exc.message
+    negative_verdict_payload = copy.deepcopy(verdict_payload)
+    negative_verdict_payload["outputs"]["verdicts"][0]["verdict"] = "not_supported"
+    negative_verdict_path = write_json(
+        rec.artifact_dir / "decision-negative-claim-verdict.json",
+        negative_verdict_payload,
+    )
+    negative_request = _decision_request(negative_verdict_path, recorded_experiment)
+    negative_request_path = write_json(
+        rec.artifact_dir / "decision-request-unsupported.json", negative_request
+    )
+    negative_output = rec.artifact_dir / "decision-artifact-unsupported.json"
+    negative_output.write_text(
+        '{"schema":"decision_artifact.v1","stale":true}\n', encoding="utf-8"
+    )
+    negative_proc = rec.run(
+        "decision-artifact-unsupported-evidence",
+        [
+            phase22_python,
+            str(repo_root / "harness" / "tools" / "decision_artifact.py"),
+            "--input",
+            str(negative_request_path),
+            "--output",
+            str(negative_output),
+            "--source-root",
+            str(rec.run_dir),
+        ],
+        cwd=repo_root,
+        timeout=60,
+    )
+    rec.add_artifact(decision_request_path, "decision_request")
+    rec.add_artifact(decision_output, "decision_artifact")
     discovery = write_json(
         sandbox / "literature-discovery.json",
         {
@@ -246,8 +422,6 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         (handoff, "report_handoff_manifest"),
         (claims, "research_claims"),
         (code_ev, "code_evidence"),
-        (exp_result_ev, "experiment_result_evidence"),
-        (verdict_ev, "claim_verdict"),
         (discovery, "discovery_evidence"),
     ):
         if path:
@@ -278,16 +452,50 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         "--before-artifact",
         str(before),
     ]
-    plan, _ = run_autosci(rec, sandbox, "paper-plan", [*common_args, "--run-id", "p22-j09-plan"], timeout=90)
+    plan, _ = run_autosci(rec, sandbox, "paper-plan", [*common_args, "--run-id", "p22-j09-plan-pre-review"], timeout=90)
     draft, harness_dir = run_autosci(rec, sandbox, "paper-draft", [*common_args, "--run-id", "p22-j09-draft"], timeout=90)
     draft_ev = action_evidence(draft, "write_report")
     review_target = draft_ev or paper
     review_proof = _write_review_proof(sandbox / "review-proof.json", Path(review_target))
-    review, _ = run_autosci(rec, sandbox, "review", [str(review_target), "--proof-bundle", str(review_proof), "--focus", "method", "--run-id", "p22-j09-review"], timeout=90)
-    compile_result, _ = run_autosci(rec, sandbox, "paper-compile", [str(review_target), "--checklist", "--run-id", "p22-j09-compile"], timeout=90)
+    review_args = [
+        str(review_target),
+        "--proof-bundle",
+        str(review_proof),
+        "--focus",
+        "method",
+    ]
+    live_env = bootstrap_live_environment(repo_root)
+    review_provider = live_env.get("AUTOSCI_LIVE_REVIEW_LLM_PROVIDER") or live_env.get("AUTOSCI_REVIEW_LLM_PROVIDER")
+    review_model = live_env.get("AUTOSCI_LIVE_REVIEW_LLM_MODEL") or live_env.get("AUTOSCI_REVIEW_LLM_MODEL")
+    if review_provider:
+        review_args.extend(["--review", "--review-llm-provider", review_provider])
+        if review_model:
+            review_args.extend(["--review-llm-model", review_model])
+    review, _ = run_autosci(
+        rec,
+        sandbox,
+        "review",
+        [*review_args, "--run-id", "p22-j09-review"],
+        timeout=120,
+        allow_live=bool(review_provider),
+    )
+    review_ev = action_evidence(review, "review_artifact")
+    reviewed_common_args = [*common_args]
+    if review_ev:
+        reviewed_common_args.extend(["--review-llm-evidence", str(review_ev)])
+        plan, _ = run_autosci(
+            rec,
+            sandbox,
+            "paper-plan",
+            [*reviewed_common_args, "--run-id", "p22-j09-plan-reviewed"],
+            timeout=90,
+        )
+    compile_args = [str(review_target), "--checklist"]
+    if review_ev:
+        compile_args.extend(["--review-llm-evidence", str(review_ev)])
+    compile_result, _ = run_autosci(rec, sandbox, "paper-compile", [*compile_args, "--run-id", "p22-j09-compile"], timeout=90)
 
     plan_ev = action_evidence(plan, "plan_report")
-    review_ev = action_evidence(review, "review_artifact")
     compile_ev = action_evidence(compile_result, "compile_paper")
     for path, typ in (
         (plan_ev, "report_plan"),
@@ -303,6 +511,24 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     markdown_text = markdown_report.read_text(encoding="utf-8", errors="replace") if markdown_report else ""
     if markdown_report:
         rec.add_artifact(markdown_report, "readable_markdown_report")
+    pdf_report = rec.run_dir / "verifier-guided-skill-learning-report.pdf"
+    pdf_tool = repo_root / "harness" / "tools" / "markdown_pdf.py"
+    pdf_build = rec.run(
+        "publication-pdf-build",
+        [phase22_python, str(pdf_tool), "build", "--input", str(markdown_report), "--output", str(pdf_report)]
+        if markdown_report else [phase22_python, str(pdf_tool), "verify", "--input", str(pdf_report)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    pdf_verify = rec.run(
+        "publication-pdf-verify",
+        [phase22_python, str(pdf_tool), "verify", "--input", str(pdf_report)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    pdf_payload = json.loads(pdf_build.stdout) if pdf_build.returncode == 0 else {}
+    if pdf_report.is_file():
+        rec.add_artifact(pdf_report, "compiled_pdf_report")
     draft_report = draft_payload.get("outputs", {}).get("report", {}) if isinstance(draft_payload, dict) else {}
     draft_sections = draft_report.get("sections", []) if isinstance(draft_report, dict) else []
     draft_section_ids = {section.get("section_id") for section in draft_sections if isinstance(section, dict)}
@@ -321,10 +547,185 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     compile_limits = compile_payload.get("limitations", []) if isinstance(compile_payload, dict) else []
     compile_policy_blocked = compile_payload.get("outputs", {}).get("policy_decision", {}).get("blocked", False) if isinstance(compile_payload, dict) else False
 
+    def recorded_artifact_path(artifact_type: str) -> Path:
+        entry = next(item for item in rec.artifacts if item.get("type") == artifact_type)
+        path = Path(str(entry["path"]))
+        return path if path.is_absolute() else rec.run_dir / path
+
+    external_delivery_audit = Path(os.environ.get("PHASE22_J09_EXTERNAL_DELIVERY_AUDIT", "") or "")
+    external_delivery_enabled = external_delivery_audit.is_file()
+    stable_external_delivery_audit = (
+        rec.add_artifact(external_delivery_audit, "external_delivery_audit", "Approved external Gmail delivery audit.")
+        if external_delivery_enabled
+        else None
+    )
+    delivery_permissions = (
+        {
+            "distribution_scope": "external_email",
+            "approval_required": True,
+            "approval_state": "approved",
+            "approval_ref": "approval-phase22-gmail-handoff",
+            "approved_by": "user:j50058254",
+            "approved_at": "2026-08-12T00:00:00Z",
+        }
+        if external_delivery_enabled
+        else {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"}
+    )
+    external_delivery_spec = (
+        {
+            "channel": "gmail",
+            "recipient": "jms.duck1020@gmail.com",
+            "runtime_evidence_path": str(stable_external_delivery_audit),
+            "recipient_acceptance_required": False,
+        }
+        if external_delivery_enabled
+        else None
+    )
+    request_payload = {
+        "schema": "publication_delivery_request.v1",
+        "delivery_id": "phase22-j09-technical-lead-handoff",
+        "audience": {"role": "technical_lead", "description": "Technical decision-maker reviewing the bounded local SkillGen result."},
+        "delivery_format": "mixed_bundle",
+        "content_scope": ["report", "compiled-pdf", "delivery-plan", "provider-review", "decision-artifact"],
+        "permissions": delivery_permissions,
+        "files": [
+            {"file_id": "report", "type": "readable_markdown_report", "source_path": str(recorded_artifact_path("readable_markdown_report")), "evidence_ids": ["report:phase22-j09"]},
+            {"file_id": "compiled-pdf", "type": "compiled_pdf_report", "source_path": str(recorded_artifact_path("compiled_pdf_report")), "evidence_ids": ["report:phase22-j09", "compile:phase22-j09"]},
+            {"file_id": "plan", "type": "report_plan", "source_path": str(recorded_artifact_path("report_plan")), "evidence_ids": ["plan:phase22-j09"]},
+            {"file_id": "review", "type": "provider_review", "source_path": str(recorded_artifact_path("artifact_review")), "evidence_ids": ["review:phase22-j09", *[str(item) for item in review_boundary.get("evidence_ids") or []]]},
+            {"file_id": "decision", "type": "decision_artifact", "source_path": str(recorded_artifact_path("decision_artifact")), "evidence_ids": ["decision:phase22-j09"]},
+        ],
+    }
+    if external_delivery_spec:
+        request_payload["external_delivery"] = external_delivery_spec
+    delivery_request = write_json(
+        rec.artifact_dir / "publication-delivery-request.json",
+        request_payload,
+    )
+    delivery_dir = rec.run_dir / "publication-delivery"
+    delivery_tool = repo_root / "harness" / "tools" / "publication_delivery_bundle.py"
+    delivery_build = rec.run(
+        "publication-delivery-build",
+        [phase22_python, str(delivery_tool), "build", "--request", str(delivery_request), "--output-dir", str(delivery_dir), "--source-root", str(rec.run_dir)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    delivery_verify = rec.run(
+        "publication-delivery-verify",
+        [phase22_python, str(delivery_tool), "verify", "--bundle-dir", str(delivery_dir)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    delivery_manifest = delivery_dir / "publication-delivery-manifest.json"
+    delivery_payload = _load_json(delivery_manifest)
+    tamper_target = delivery_dir / delivery_payload.get("files", [{}])[0].get("path", "missing")
+    tamper_original = tamper_target.read_bytes() if tamper_target.is_file() else b""
+    if tamper_original:
+        tamper_target.write_bytes(tamper_original + b"\ntampered\n")
+    delivery_tamper = rec.run(
+        "publication-delivery-tamper-rejected",
+        [phase22_python, str(delivery_tool), "verify", "--bundle-dir", str(delivery_dir)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    if tamper_original:
+        tamper_target.write_bytes(tamper_original)
+    delivery_restored = rec.run(
+        "publication-delivery-restored-verify",
+        [phase22_python, str(delivery_tool), "verify", "--bundle-dir", str(delivery_dir)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    rec.add_artifact(delivery_request, "publication_delivery_request")
+    rec.add_artifact(delivery_manifest, "publication_delivery_manifest")
+
     rec.add_assertion("upstream_ingest_completed", not ingest.get("_error"), ingest.get("_error"))
     rec.add_assertion("upstream_experiment_result_available", exp_result_ev is not None, exp_run.get("_error"))
     rec.add_assertion("upstream_claim_verdict_available", verdict_ev is not None, verify.get("_error"))
     rec.add_assertion("claim_verdict_completed", verdict_payload.get("status") == "completed", verdict_payload.get("status"))
+    rec.add_assertion("decision_constructor_completed", decision_proc.returncode == 0, decision_proc.stderr)
+    rec.add_assertion("decision_artifact_schema_valid", not decision_schema_error, decision_schema_error)
+    rec.add_assertion(
+        "decision_recommendation_traces_to_criteria_and_evidence",
+        set(decision_payload.get("recommendation", {}).get("criterion_ids", [])) == {"measured-support", "external-validity"}
+        and set(decision_payload.get("recommendation", {}).get("evidence_ids", []))
+        == {"j09-claim-verdict", "j09-experiment-result"},
+        decision_payload.get("recommendation"),
+    )
+    evidence_links = decision_payload.get("evidence_links", [])
+    rec.add_assertion(
+        "decision_evidence_provenance_reloaded_and_hashed",
+        len(evidence_links) == 2
+        and all(item.get("sha256") and Path(item.get("source_path", "")).is_file() for item in evidence_links),
+        evidence_links,
+    )
+    request_payload = _load_json(decision_request_path)
+    expected_evidence = {
+        item["evidence_id"]: item
+        for item in request_payload.get("evidence", [])
+        if isinstance(item, dict) and item.get("evidence_id")
+    }
+    evidence_links_by_id = {
+        item["evidence_id"]: item
+        for item in evidence_links
+        if isinstance(item, dict) and item.get("evidence_id")
+    }
+    rec.add_assertion(
+        "decision_typed_evidence_matches_expected_hashes",
+        {item.get("evidence_type") for item in evidence_links}
+        == {"claim_verdict", "experiment_result"}
+        and all(
+            item.get("sha256")
+            == expected_evidence.get(item.get("evidence_id"), {}).get("expected_sha256")
+            == _file_sha256(Path(item.get("source_path", "")))
+            for item in evidence_links
+        )
+        and evidence_links_by_id.get("j09-claim-verdict", {}).get("observed_support")
+        == "supported"
+        and evidence_links_by_id.get("j09-claim-verdict", {}).get(
+            "supporting_evidence_ids"
+        )
+        == ["j09-experiment-result"]
+        and evidence_links_by_id.get("j09-experiment-result", {}).get(
+            "observed_support"
+        )
+        == "supports",
+        {"request": expected_evidence, "artifact": evidence_links},
+    )
+    expected_pairs = {
+        (alternative["alternative_id"], criterion["criterion_id"])
+        for alternative in decision_payload.get("alternatives", [])
+        for criterion in decision_payload.get("criteria", [])
+    }
+    actual_pairs = {
+        (assessment.get("alternative_id"), assessment.get("criterion_id"))
+        for assessment in decision_payload.get("assessments", [])
+    }
+    rec.add_assertion(
+        "decision_assessment_matrix_complete",
+        actual_pairs == expected_pairs,
+        {"expected": sorted(expected_pairs), "actual": sorted(actual_pairs)},
+    )
+    rec.add_assertion(
+        "decision_request_provenance_matches_persisted_bytes",
+        decision_payload.get("provenance", {}).get("request_sha256")
+        == _file_sha256(decision_request_path),
+        decision_payload.get("provenance"),
+    )
+    rec.add_assertion(
+        "decision_review_and_approval_state_truthful",
+        decision_payload.get("decision_status") == "review_required"
+        and decision_payload.get("review", {}).get("status") == "pending"
+        and decision_payload.get("review", {}).get("reviewed_by") is None
+        and decision_payload.get("approval", {}).get("status") == "not_requested"
+        and decision_payload.get("approval", {}).get("approved_by") is None,
+        {"review": decision_payload.get("review"), "approval": decision_payload.get("approval")},
+    )
+    rec.add_assertion(
+        "unsupported_recommendation_fails_closed",
+        negative_proc.returncode == 2 and not negative_output.exists(),
+        negative_proc.stderr,
+    )
     rec.add_assertion("paper_plan_recorded", plan_ev is not None and plan_status in {"completed", "inconclusive"}, plan_status or plan.get("_error"))
     rec.add_assertion("paper_draft_completed", draft_ev is not None, draft.get("_error"))
     rec.add_assertion("paper_draft_status_understood", draft_status in {"completed", "inconclusive"}, draft_status)
@@ -332,6 +733,42 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     rec.add_assertion("review_artifact_status_understood", review_payload.get("status") in {"completed", "inconclusive"}, review_payload.get("status"))
     rec.add_assertion("compile_or_checklist_evidence_recorded", compile_ev is not None, compile_result.get("_error"))
     rec.add_assertion("paper_compile_status_understood", compile_status in {"completed", "inconclusive"}, compile_status)
+    rec.add_assertion(
+        "compiled_pdf_report_structurally_verified",
+        pdf_build.returncode == 0
+        and pdf_verify.returncode == 0
+        and pdf_payload.get("valid") is True
+        and pdf_payload.get("page_count", 0) >= 1
+        and len(str(pdf_payload.get("sha256") or "")) == 64
+        and pdf_report.stat().st_size > 500,
+        {"build": pdf_build.returncode, "verify": pdf_verify.returncode, "result": pdf_payload},
+    )
+    rec.add_assertion(
+        "publication_delivery_contract_complete",
+        delivery_build.returncode == 0
+        and delivery_verify.returncode == 0
+        and delivery_payload.get("audience", {}).get("role") == "technical_lead"
+        and delivery_payload.get("permissions") == delivery_permissions
+        and len(delivery_payload.get("handoff_checklist") or []) >= 5
+        and len(delivery_payload.get("files") or []) == (6 if external_delivery_enabled else 5)
+        and len(delivery_payload.get("evidence_index") or []) >= 4,
+        {"build": delivery_build.returncode, "verify": delivery_verify.returncode, "manifest": delivery_payload},
+    )
+    if external_delivery_enabled:
+        external_delivery = delivery_payload.get("external_delivery", {})
+        rec.add_assertion(
+            "publication_delivery_external_gmail_verified",
+            external_delivery.get("channel") == "gmail"
+            and external_delivery.get("recipient") == "jms.duck1020@gmail.com"
+            and external_delivery.get("delivered") is True
+            and external_delivery.get("approval_ref") == "approval-phase22-gmail-handoff",
+            external_delivery,
+        )
+    rec.add_assertion(
+        "publication_delivery_integrity_fails_closed",
+        delivery_tamper.returncode == 2 and delivery_restored.returncode == 0,
+        {"tamper_exit": delivery_tamper.returncode, "restored_exit": delivery_restored.returncode, "tamper_stderr": delivery_tamper.stderr},
+    )
     rec.add_assertion(
         "draft_report_required_sections",
         {"summary", "findings", "evidence-map", "limitations"}.issubset(draft_section_ids),
@@ -416,6 +853,13 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         "paper-plan, draft, review, and compile/checklist routes were executed with local upstream evidence",
         draft_ev or rec.run_dir,
         "partial",
+    )
+    rec.add_l2(
+        "Foundation",
+        "Decision Artifact Construction",
+        "The production constructor built a schema-valid decision whose recommendation is bound to criteria and reloaded upstream evidence; unresolved review and approval remained explicit.",
+        decision_output,
+        True,
     )
 
     status = "PASS_WITH_KNOWN_LIMITATIONS" if limitations and all(item["passed"] for item in rec.assertions) else "PASS"
