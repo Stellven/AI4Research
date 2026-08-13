@@ -103,6 +103,16 @@ JOURNEYS: dict[str, dict[str, Any]] = {
         "selector": "p22_j25",
         "live": False,
     },
+    "P22-045": {
+        "name": "Live independent writer/reviewer provider provenance",
+        "selector": "p22_045_live_independent_providers",
+        "live": True,
+    },
+    "P22-071": {
+        "name": "Attributable human-review lifecycle resume",
+        "selector": "p22_071_human_review_resume",
+        "live": False,
+    },
 }
 
 

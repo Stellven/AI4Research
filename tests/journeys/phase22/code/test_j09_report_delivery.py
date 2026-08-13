@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import jsonschema
@@ -551,23 +552,55 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         path = Path(str(entry["path"]))
         return path if path.is_absolute() else rec.run_dir / path
 
+    external_delivery_audit = Path(os.environ.get("PHASE22_J09_EXTERNAL_DELIVERY_AUDIT", "") or "")
+    external_delivery_enabled = external_delivery_audit.is_file()
+    stable_external_delivery_audit = (
+        rec.add_artifact(external_delivery_audit, "external_delivery_audit", "Approved external Gmail delivery audit.")
+        if external_delivery_enabled
+        else None
+    )
+    delivery_permissions = (
+        {
+            "distribution_scope": "external_email",
+            "approval_required": True,
+            "approval_state": "approved",
+            "approval_ref": "approval-phase22-gmail-handoff",
+            "approved_by": "user:j50058254",
+            "approved_at": "2026-08-12T00:00:00Z",
+        }
+        if external_delivery_enabled
+        else {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"}
+    )
+    external_delivery_spec = (
+        {
+            "channel": "gmail",
+            "recipient": "jms.duck1020@gmail.com",
+            "runtime_evidence_path": str(stable_external_delivery_audit),
+            "recipient_acceptance_required": False,
+        }
+        if external_delivery_enabled
+        else None
+    )
+    request_payload = {
+        "schema": "publication_delivery_request.v1",
+        "delivery_id": "phase22-j09-technical-lead-handoff",
+        "audience": {"role": "technical_lead", "description": "Technical decision-maker reviewing the bounded local SkillGen result."},
+        "delivery_format": "mixed_bundle",
+        "content_scope": ["report", "compiled-pdf", "delivery-plan", "provider-review", "decision-artifact"],
+        "permissions": delivery_permissions,
+        "files": [
+            {"file_id": "report", "type": "readable_markdown_report", "source_path": str(recorded_artifact_path("readable_markdown_report")), "evidence_ids": ["report:phase22-j09"]},
+            {"file_id": "compiled-pdf", "type": "compiled_pdf_report", "source_path": str(recorded_artifact_path("compiled_pdf_report")), "evidence_ids": ["report:phase22-j09", "compile:phase22-j09"]},
+            {"file_id": "plan", "type": "report_plan", "source_path": str(recorded_artifact_path("report_plan")), "evidence_ids": ["plan:phase22-j09"]},
+            {"file_id": "review", "type": "provider_review", "source_path": str(recorded_artifact_path("artifact_review")), "evidence_ids": ["review:phase22-j09", *[str(item) for item in review_boundary.get("evidence_ids") or []]]},
+            {"file_id": "decision", "type": "decision_artifact", "source_path": str(recorded_artifact_path("decision_artifact")), "evidence_ids": ["decision:phase22-j09"]},
+        ],
+    }
+    if external_delivery_spec:
+        request_payload["external_delivery"] = external_delivery_spec
     delivery_request = write_json(
         rec.artifact_dir / "publication-delivery-request.json",
-        {
-            "schema": "publication_delivery_request.v1",
-            "delivery_id": "phase22-j09-technical-lead-handoff",
-            "audience": {"role": "technical_lead", "description": "Technical decision-maker reviewing the bounded local SkillGen result."},
-            "delivery_format": "mixed_bundle",
-            "content_scope": ["report", "compiled-pdf", "delivery-plan", "provider-review", "decision-artifact"],
-            "permissions": {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"},
-            "files": [
-                {"file_id": "report", "type": "readable_markdown_report", "source_path": str(recorded_artifact_path("readable_markdown_report")), "evidence_ids": ["report:phase22-j09"]},
-                {"file_id": "compiled-pdf", "type": "compiled_pdf_report", "source_path": str(recorded_artifact_path("compiled_pdf_report")), "evidence_ids": ["report:phase22-j09", "compile:phase22-j09"]},
-                {"file_id": "plan", "type": "report_plan", "source_path": str(recorded_artifact_path("report_plan")), "evidence_ids": ["plan:phase22-j09"]},
-                {"file_id": "review", "type": "provider_review", "source_path": str(recorded_artifact_path("artifact_review")), "evidence_ids": ["review:phase22-j09", *[str(item) for item in review_boundary.get("evidence_ids") or []]]},
-                {"file_id": "decision", "type": "decision_artifact", "source_path": str(recorded_artifact_path("decision_artifact")), "evidence_ids": ["decision:phase22-j09"]},
-            ],
-        },
+        request_payload,
     )
     delivery_dir = rec.run_dir / "publication-delivery"
     delivery_tool = repo_root / "harness" / "tools" / "publication_delivery_bundle.py"
@@ -715,12 +748,22 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         delivery_build.returncode == 0
         and delivery_verify.returncode == 0
         and delivery_payload.get("audience", {}).get("role") == "technical_lead"
-        and delivery_payload.get("permissions") == {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"}
+        and delivery_payload.get("permissions") == delivery_permissions
         and len(delivery_payload.get("handoff_checklist") or []) >= 5
-        and len(delivery_payload.get("files") or []) == 5
+        and len(delivery_payload.get("files") or []) == (6 if external_delivery_enabled else 5)
         and len(delivery_payload.get("evidence_index") or []) >= 4,
         {"build": delivery_build.returncode, "verify": delivery_verify.returncode, "manifest": delivery_payload},
     )
+    if external_delivery_enabled:
+        external_delivery = delivery_payload.get("external_delivery", {})
+        rec.add_assertion(
+            "publication_delivery_external_gmail_verified",
+            external_delivery.get("channel") == "gmail"
+            and external_delivery.get("recipient") == "jms.duck1020@gmail.com"
+            and external_delivery.get("delivered") is True
+            and external_delivery.get("approval_ref") == "approval-phase22-gmail-handoff",
+            external_delivery,
+        )
     rec.add_assertion(
         "publication_delivery_integrity_fails_closed",
         delivery_tamper.returncode == 2 and delivery_restored.returncode == 0,

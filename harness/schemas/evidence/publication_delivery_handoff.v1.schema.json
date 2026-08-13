@@ -27,9 +27,28 @@
       "additionalProperties": false,
       "required": ["distribution_scope", "approval_required", "approval_state"],
       "properties": {
-        "distribution_scope": {"const": "local_only"},
+        "distribution_scope": {"enum": ["local_only", "external_email"]},
         "approval_required": {"const": true},
-        "approval_state": {"enum": ["not_requested", "pending"]}
+        "approval_state": {"enum": ["not_requested", "pending", "approved"]},
+        "approval_ref": {"type": "string"},
+        "approved_by": {"type": "string"},
+        "approved_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "external_delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["channel", "recipient", "status", "delivered", "approval_ref", "runtime_evidence_path", "runtime_evidence_sha256"],
+      "properties": {
+        "channel": {"enum": ["gmail", "smtp", "gmail_smtp"]},
+        "recipient": {"type": "string", "minLength": 3},
+        "status": {"const": "completed"},
+        "delivered": {"const": true},
+        "approval_ref": {"type": "string", "minLength": 1},
+        "provider": {"type": "string"},
+        "runtime_evidence_path": {"type": "string", "pattern": "^files/[^/]+$"},
+        "runtime_evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "recipient_acceptance_required": {"type": "boolean"}
       }
     },
     "handoff_checklist": {

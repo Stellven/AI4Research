@@ -63,6 +63,104 @@ def _secret_free(data: bytes, label: str) -> None:
             raise ValueError(f"secret-like value detected in {label}")
 
 
+def _permission_mode(permissions: dict[str, Any]) -> str:
+    if permissions == {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"}:
+        return "local_only"
+    if (
+        permissions.get("distribution_scope") == "external_email"
+        and permissions.get("approval_required") is True
+        and permissions.get("approval_state") == "approved"
+        and str(permissions.get("approval_ref") or "").strip()
+        and str(permissions.get("approved_by") or "").strip()
+    ):
+        return "approved_external_email"
+    raise ValueError("delivery permission must be local-only/not-requested or approved external_email")
+
+
+def _delivery_runtime(payload: dict[str, Any]) -> dict[str, Any]:
+    if payload.get("schema") == "autosci_runtime_evidence.v1":
+        runtime = payload.get("outputs", {}).get("runtime", {})
+        return runtime if isinstance(runtime, dict) else {}
+    if payload.get("schema") == "autosci_external_delivery_audit.v1":
+        return payload
+    return {}
+
+
+def _recipient_matches(runtime: dict[str, Any], recipient: str) -> bool:
+    expected = recipient.strip().lower()
+    raw = runtime.get("to") or runtime.get("recipient") or runtime.get("recipients")
+    if isinstance(raw, list):
+        values = [str(item).strip().lower() for item in raw]
+    else:
+        values = [item.strip().lower() for item in str(raw or "").replace(";", ",").split(",")]
+    return expected in {value for value in values if value}
+
+
+def _external_delivery(
+    request: dict[str, Any],
+    source_root: Path,
+    staging: Path,
+    files: list[dict[str, Any]],
+    evidence_index: list[dict[str, Any]],
+) -> dict[str, Any]:
+    spec = request.get("external_delivery")
+    if not isinstance(spec, dict):
+        raise ValueError("approved external email delivery requires external_delivery evidence")
+    channel = str(spec.get("channel") or "").strip().lower()
+    recipient = str(spec.get("recipient") or "").strip()
+    if channel not in {"gmail", "smtp", "gmail_smtp"} or not recipient:
+        raise ValueError("external_delivery must name a supported channel and recipient")
+    runtime_source = _safe_source(str(spec.get("runtime_evidence_path") or ""), source_root)
+    runtime_bytes = runtime_source.read_bytes()
+    _secret_free(runtime_bytes, str(runtime_source))
+    runtime_payload = json.loads(runtime_bytes)
+    if not isinstance(runtime_payload, dict):
+        raise ValueError("external delivery runtime evidence must be a JSON object")
+    runtime = _delivery_runtime(runtime_payload)
+    approval_ref = str(request["permissions"].get("approval_ref") or "").strip()
+    provider = str(runtime.get("provider") or runtime_payload.get("provider") or channel).strip().lower()
+    delivered = runtime.get("delivered") is True and str(runtime.get("status") or runtime_payload.get("status") or "") == "completed"
+    if str(runtime.get("action") or runtime_payload.get("action") or "send_email") != "send_email":
+        raise ValueError("external delivery runtime evidence must describe send_email")
+    if not delivered:
+        raise ValueError("external delivery runtime evidence must prove completed delivered=true")
+    if str(runtime.get("approval_ref") or runtime_payload.get("approval_ref") or "").strip() != approval_ref:
+        raise ValueError("external delivery approval_ref mismatch")
+    if not _recipient_matches(runtime, recipient):
+        raise ValueError("external delivery recipient mismatch")
+    if channel == "gmail" and provider not in {"gmail", "gmail_connector", "gmail_smtp", "smtp"}:
+        raise ValueError("gmail delivery requires a gmail-compatible provider")
+
+    digest = _sha(runtime_bytes)
+    target_name = "99-external-delivery-runtime-evidence.json"
+    target = staging / "files" / target_name
+    target.write_bytes(runtime_bytes)
+    files.append({
+        "file_id": "external-delivery-runtime-evidence",
+        "type": "external_delivery_runtime_evidence",
+        "path": f"files/{target_name}",
+        "bytes": len(runtime_bytes),
+        "sha256": digest,
+        "source_sha256": digest,
+        "evidence_ids": [f"delivery:{approval_ref}", f"recipient:{recipient}"],
+    })
+    evidence_index.extend(
+        {"evidence_id": evidence_id, "file_id": "external-delivery-runtime-evidence", "sha256": digest}
+        for evidence_id in [f"delivery:{approval_ref}", f"recipient:{recipient}"]
+    )
+    return {
+        "channel": channel,
+        "recipient": recipient,
+        "status": "completed",
+        "delivered": True,
+        "approval_ref": approval_ref,
+        "provider": provider,
+        "runtime_evidence_path": f"files/{target_name}",
+        "runtime_evidence_sha256": digest,
+        "recipient_acceptance_required": bool(spec.get("recipient_acceptance_required", False)),
+    }
+
+
 def construct(request_path: Path, output_dir: Path, source_root: Path) -> Path:
     request_bytes = request_path.read_bytes()
     request = _load_object(request_path)
@@ -72,8 +170,7 @@ def construct(request_path: Path, output_dir: Path, source_root: Path) -> Path:
     if any(not request.get(key) for key in required):
         raise ValueError("request is missing a required delivery field")
     permissions = request["permissions"]
-    if permissions != {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"}:
-        raise ValueError("constructor only accepts truthful local-only/not-requested delivery permission")
+    permission_mode = _permission_mode(permissions)
     if output_dir.exists():
         raise ValueError(f"output directory already exists: {output_dir}")
     staging = output_dir.with_name(output_dir.name + ".tmp")
@@ -112,14 +209,19 @@ def construct(request_path: Path, output_dir: Path, source_root: Path) -> Path:
                 "evidence_ids": evidence_ids,
             })
             evidence_index.extend({"evidence_id": evidence_id, "file_id": file_id, "sha256": digest} for evidence_id in evidence_ids)
+        external_delivery = None
+        if permission_mode == "approved_external_email":
+            external_delivery = _external_delivery(request, source_root, staging, files, evidence_index)
         checklist = [
             {"check_id": "audience-defined", "status": "completed", "evidence": str(request["audience"]["role"])},
             {"check_id": "format-defined", "status": "completed", "evidence": str(request["delivery_format"])},
             {"check_id": "content-scope-defined", "status": "completed", "evidence": ", ".join(request["content_scope"])},
             {"check_id": "evidence-index-verified", "status": "completed", "evidence": f"{len(evidence_index)} indexed links"},
-            {"check_id": "permissions-fail-closed", "status": "completed", "evidence": "local_only; external approval not requested"},
+            {"check_id": "permissions-fail-closed", "status": "completed", "evidence": "local_only; external approval not requested" if permission_mode == "local_only" else "approved external_email"},
             {"check_id": "secret-scan-clean", "status": "completed", "evidence": f"{len(files)} files scanned"},
         ]
+        if external_delivery:
+            checklist.append({"check_id": "external-delivery-verified", "status": "completed", "evidence": f"{external_delivery['channel']} delivered to {external_delivery['recipient']}"})
         manifest = {
             "schema": "publication_delivery_handoff.v1",
             "delivery_id": str(request["delivery_id"]),
@@ -135,8 +237,14 @@ def construct(request_path: Path, output_dir: Path, source_root: Path) -> Path:
                 "constructed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "tool": "harness/tools/publication_delivery_bundle.py",
             },
-            "limitations": ["This is a local handoff bundle; external distribution and recipient acceptance were not requested or performed."],
+            "limitations": (
+                ["Recipient acceptance was not required by the approved delivery contract."]
+                if external_delivery and not external_delivery.get("recipient_acceptance_required")
+                else ["This is a local handoff bundle; external distribution and recipient acceptance were not requested or performed."]
+            ),
         }
+        if external_delivery:
+            manifest["external_delivery"] = external_delivery
         _validate_manifest(manifest)
         manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
         _secret_free(manifest_bytes, "publication-delivery-manifest.json")

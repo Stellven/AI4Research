@@ -6,6 +6,7 @@ import platform
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -125,6 +126,26 @@ def _http_text(url: str, *, token: str | None = None) -> dict[str, Any]:
         return {"status": 0, "content_type": "", "error": str(exc), "body_prefix": ""}
 
 
+def _body_dict(record: dict[str, Any]) -> dict[str, Any]:
+    body = record.get("body")
+    return body if isinstance(body, dict) else {}
+
+
+def _repo_head(repo_root: Path) -> str:
+    env_head = os.environ.get("PHASE22_REPO_HEAD", "").strip()
+    proc = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo_root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.returncode == 0:
+        return proc.stdout.strip()
+    return env_head or f"unavailable: {_tail(proc.stderr, 300)}"
+
+
 def _wait_for_port(port_file: Path, deadline_seconds: int = 20) -> str:
     deadline = time.monotonic() + deadline_seconds
     while time.monotonic() < deadline:
@@ -161,7 +182,7 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
     sandbox_home_b = tmp_path / "home-b"
     solar_home_b = sandbox_home_b / ".solar"
     claude_dir_b = sandbox_home_b / ".claude"
-    tmux_tmpdir = tmp_path / "tmux"
+    tmux_tmpdir = Path(tempfile.mkdtemp(prefix=f"solar-p22-j18-tmux-{os.getpid()}-", dir="/tmp"))
     tmux_tmpdir.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(
@@ -323,7 +344,7 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
             {
                 "second_port": port_b,
                 "ports_are_distinct": bool(port and port_b and port != port_b),
-                "second_runtime_owned_by_second_harness": http_checks["second_runtime_info"].get("body", {}).get("harness_dir") == str(solar_home_b / "harness"),
+                "second_runtime_owned_by_second_harness": _body_dict(http_checks["second_runtime_info"]).get("harness_dir") == str(solar_home_b / "harness"),
                 "second_session_survived_primary_stop_and_uninstall": http_checks["second_healthz_after_primary_stop"].get("status") == 200
                 and http_checks["second_healthz_after_primary_uninstall"].get("status") == 200,
                 "second_tmux_session_remained": "solar-harness-status-server-" in commands[-1]["stdout_tail"],
@@ -338,11 +359,13 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
             commands.append(_run(run_dir, "second-status-server-stop", [str(harness_script_b), "status-server", "stop"], cwd=repo_root, env=env_b, timeout=60))
         if "solar_bin_b" in locals() and solar_bin_b.exists():
             commands.append(_run(run_dir, "second-uninstall-yes", [str(solar_bin_b), "uninstall", "--yes"], cwd=repo_root, env=env_b, timeout=120))
+        shutil.rmtree(tmux_tmpdir, ignore_errors=True)
         cleanup = {
             "solar_home_exists_after_uninstall": solar_home.exists(),
             "claude_dir_exists_after_uninstall": claude_dir.exists(),
             "second_solar_home_exists_after_uninstall": solar_home_b.exists(),
             "second_claude_dir_exists_after_uninstall": claude_dir_b.exists(),
+            "tmux_tmpdir_exists_after_cleanup": tmux_tmpdir.exists(),
         }
 
     install_ok = commands[0]["exit_code"] == 0 and install_receipt_seen
@@ -372,7 +395,7 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
         and status_payload.get("install", {}).get("paths", {}).get("receipt", {}).get("state") == "ok"
     )
     health_ok = http_checks.get("healthz", {}).get("status") == 200 and http_checks.get("healthz", {}).get("body_prefix") == "ok"
-    runtime_ok = http_checks.get("runtime_info", {}).get("body", {}).get("harness_dir") == str(solar_home / "harness")
+    runtime_ok = _body_dict(http_checks.get("runtime_info", {})).get("harness_dir") == str(solar_home / "harness")
     status_payload_ok = isinstance(http_checks.get("status", {}).get("body"), dict)
     settings_payload_ok = isinstance(http_checks.get("settings", {}).get("body"), dict)
     root_ok = http_checks.get("root", {}).get("status") == 200
@@ -408,7 +431,7 @@ def test_p22_j18_real_linux_status_lifecycle(repo_root: Path, tmp_path: Path) ->
         "finished_at": _utc_now(),
         "platform": platform.platform(),
         "distribution": distro,
-        "repo_head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_root, text=True).strip(),
+        "repo_head": _repo_head(repo_root),
         "sandbox": {
             "primary": {"home": str(sandbox_home), "solar_home": str(solar_home), "claude_dir": str(claude_dir)},
             "secondary": {"home": str(sandbox_home_b), "solar_home": str(solar_home_b), "claude_dir": str(claude_dir_b)},

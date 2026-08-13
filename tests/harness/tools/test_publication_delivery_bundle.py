@@ -57,7 +57,7 @@ def test_delivery_bundle_rejects_unapproved_or_escaping_source(tmp_path: Path) -
     payload = json.loads(request.read_text(encoding="utf-8"))
     payload["permissions"]["approval_state"] = "approved"
     request.write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(ValueError, match="truthful local-only"):
+    with pytest.raises(ValueError, match="local-only/not-requested or approved external_email"):
         construct(request, tmp_path / "approved-bundle", tmp_path)
 
     outside = tmp_path.parent / "outside-publication-delivery.txt"
@@ -67,3 +67,87 @@ def test_delivery_bundle_rejects_unapproved_or_escaping_source(tmp_path: Path) -
     request.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="escapes source root"):
         construct(request, tmp_path / "escape-bundle", tmp_path)
+
+
+def test_delivery_bundle_accepts_approved_external_email_audit(tmp_path: Path) -> None:
+    request = _request(tmp_path)
+    audit = tmp_path / "external-delivery-audit.json"
+    audit.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_external_delivery_audit.v1",
+                "action": "send_email",
+                "status": "completed",
+                "provider": "gmail_connector",
+                "channel": "gmail",
+                "approval_ref": "approval-phase22-email",
+                "to": "reader@example.com",
+                "subject": "Phase 22 handoff",
+                "delivered": True,
+                "message_id_sha256": "a" * 64,
+                "thread_id_sha256": "b" * 64,
+            }
+        ),
+        encoding="utf-8",
+    )
+    payload = json.loads(request.read_text(encoding="utf-8"))
+    payload["permissions"] = {
+        "distribution_scope": "external_email",
+        "approval_required": True,
+        "approval_state": "approved",
+        "approval_ref": "approval-phase22-email",
+        "approved_by": "phase22-user",
+        "approved_at": "2026-08-12T00:00:00Z",
+    }
+    payload["external_delivery"] = {
+        "channel": "gmail",
+        "recipient": "reader@example.com",
+        "runtime_evidence_path": str(audit),
+        "recipient_acceptance_required": False,
+    }
+    request.write_text(json.dumps(payload), encoding="utf-8")
+
+    manifest_path = construct(request, tmp_path / "external-bundle", tmp_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert verify(tmp_path / "external-bundle").is_file()
+    assert manifest["permissions"]["distribution_scope"] == "external_email"
+    assert manifest["external_delivery"]["delivered"] is True
+    assert manifest["external_delivery"]["recipient"] == "reader@example.com"
+    assert any(item["file_id"] == "external-delivery-runtime-evidence" for item in manifest["files"])
+
+
+def test_delivery_bundle_rejects_external_email_recipient_mismatch(tmp_path: Path) -> None:
+    request = _request(tmp_path)
+    audit = tmp_path / "external-delivery-audit.json"
+    audit.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_external_delivery_audit.v1",
+                "action": "send_email",
+                "status": "completed",
+                "provider": "gmail_connector",
+                "approval_ref": "approval-phase22-email",
+                "to": "wrong@example.com",
+                "delivered": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    payload = json.loads(request.read_text(encoding="utf-8"))
+    payload["permissions"] = {
+        "distribution_scope": "external_email",
+        "approval_required": True,
+        "approval_state": "approved",
+        "approval_ref": "approval-phase22-email",
+        "approved_by": "phase22-user",
+    }
+    payload["external_delivery"] = {
+        "channel": "gmail",
+        "recipient": "reader@example.com",
+        "runtime_evidence_path": str(audit),
+    }
+    request.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="recipient mismatch"):
+        construct(request, tmp_path / "mismatch-bundle", tmp_path)
