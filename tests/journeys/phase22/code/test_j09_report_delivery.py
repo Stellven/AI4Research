@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import jsonschema
@@ -10,6 +11,7 @@ import jsonschema
 from evidence import JourneyRecorder
 from journey_runner import (
     action_evidence,
+    bootstrap_live_environment,
     run_autosci,
     runtime_evidence,
     write_code_evidence,
@@ -450,16 +452,50 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
         "--before-artifact",
         str(before),
     ]
-    plan, _ = run_autosci(rec, sandbox, "paper-plan", [*common_args, "--run-id", "p22-j09-plan"], timeout=90)
+    plan, _ = run_autosci(rec, sandbox, "paper-plan", [*common_args, "--run-id", "p22-j09-plan-pre-review"], timeout=90)
     draft, harness_dir = run_autosci(rec, sandbox, "paper-draft", [*common_args, "--run-id", "p22-j09-draft"], timeout=90)
     draft_ev = action_evidence(draft, "write_report")
     review_target = draft_ev or paper
     review_proof = _write_review_proof(sandbox / "review-proof.json", Path(review_target))
-    review, _ = run_autosci(rec, sandbox, "review", [str(review_target), "--proof-bundle", str(review_proof), "--focus", "method", "--run-id", "p22-j09-review"], timeout=90)
-    compile_result, _ = run_autosci(rec, sandbox, "paper-compile", [str(review_target), "--checklist", "--run-id", "p22-j09-compile"], timeout=90)
+    review_args = [
+        str(review_target),
+        "--proof-bundle",
+        str(review_proof),
+        "--focus",
+        "method",
+    ]
+    live_env = bootstrap_live_environment(repo_root)
+    review_provider = live_env.get("AUTOSCI_LIVE_REVIEW_LLM_PROVIDER") or live_env.get("AUTOSCI_REVIEW_LLM_PROVIDER")
+    review_model = live_env.get("AUTOSCI_LIVE_REVIEW_LLM_MODEL") or live_env.get("AUTOSCI_REVIEW_LLM_MODEL")
+    if review_provider:
+        review_args.extend(["--review", "--review-llm-provider", review_provider])
+        if review_model:
+            review_args.extend(["--review-llm-model", review_model])
+    review, _ = run_autosci(
+        rec,
+        sandbox,
+        "review",
+        [*review_args, "--run-id", "p22-j09-review"],
+        timeout=120,
+        allow_live=bool(review_provider),
+    )
+    review_ev = action_evidence(review, "review_artifact")
+    reviewed_common_args = [*common_args]
+    if review_ev:
+        reviewed_common_args.extend(["--review-llm-evidence", str(review_ev)])
+        plan, _ = run_autosci(
+            rec,
+            sandbox,
+            "paper-plan",
+            [*reviewed_common_args, "--run-id", "p22-j09-plan-reviewed"],
+            timeout=90,
+        )
+    compile_args = [str(review_target), "--checklist"]
+    if review_ev:
+        compile_args.extend(["--review-llm-evidence", str(review_ev)])
+    compile_result, _ = run_autosci(rec, sandbox, "paper-compile", [*compile_args, "--run-id", "p22-j09-compile"], timeout=90)
 
     plan_ev = action_evidence(plan, "plan_report")
-    review_ev = action_evidence(review, "review_artifact")
     compile_ev = action_evidence(compile_result, "compile_paper")
     for path, typ in (
         (plan_ev, "report_plan"),
@@ -475,6 +511,24 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     markdown_text = markdown_report.read_text(encoding="utf-8", errors="replace") if markdown_report else ""
     if markdown_report:
         rec.add_artifact(markdown_report, "readable_markdown_report")
+    pdf_report = rec.run_dir / "verifier-guided-skill-learning-report.pdf"
+    pdf_tool = repo_root / "harness" / "tools" / "markdown_pdf.py"
+    pdf_build = rec.run(
+        "publication-pdf-build",
+        [phase22_python, str(pdf_tool), "build", "--input", str(markdown_report), "--output", str(pdf_report)]
+        if markdown_report else [phase22_python, str(pdf_tool), "verify", "--input", str(pdf_report)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    pdf_verify = rec.run(
+        "publication-pdf-verify",
+        [phase22_python, str(pdf_tool), "verify", "--input", str(pdf_report)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    pdf_payload = json.loads(pdf_build.stdout) if pdf_build.returncode == 0 else {}
+    if pdf_report.is_file():
+        rec.add_artifact(pdf_report, "compiled_pdf_report")
     draft_report = draft_payload.get("outputs", {}).get("report", {}) if isinstance(draft_payload, dict) else {}
     draft_sections = draft_report.get("sections", []) if isinstance(draft_report, dict) else []
     draft_section_ids = {section.get("section_id") for section in draft_sections if isinstance(section, dict)}
@@ -492,6 +546,98 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     compile_status = compile_payload.get("status") if isinstance(compile_payload, dict) else "missing"
     compile_limits = compile_payload.get("limitations", []) if isinstance(compile_payload, dict) else []
     compile_policy_blocked = compile_payload.get("outputs", {}).get("policy_decision", {}).get("blocked", False) if isinstance(compile_payload, dict) else False
+
+    def recorded_artifact_path(artifact_type: str) -> Path:
+        entry = next(item for item in rec.artifacts if item.get("type") == artifact_type)
+        path = Path(str(entry["path"]))
+        return path if path.is_absolute() else rec.run_dir / path
+
+    external_delivery_audit = Path(os.environ.get("PHASE22_J09_EXTERNAL_DELIVERY_AUDIT", "") or "")
+    external_delivery_enabled = external_delivery_audit.is_file()
+    stable_external_delivery_audit = (
+        rec.add_artifact(external_delivery_audit, "external_delivery_audit", "Approved external Gmail delivery audit.")
+        if external_delivery_enabled
+        else None
+    )
+    delivery_permissions = (
+        {
+            "distribution_scope": "external_email",
+            "approval_required": True,
+            "approval_state": "approved",
+            "approval_ref": "approval-phase22-gmail-handoff",
+            "approved_by": "user:j50058254",
+            "approved_at": "2026-08-12T00:00:00Z",
+        }
+        if external_delivery_enabled
+        else {"distribution_scope": "local_only", "approval_required": True, "approval_state": "not_requested"}
+    )
+    external_delivery_spec = (
+        {
+            "channel": "gmail",
+            "recipient": "jms.duck1020@gmail.com",
+            "runtime_evidence_path": str(stable_external_delivery_audit),
+            "recipient_acceptance_required": False,
+        }
+        if external_delivery_enabled
+        else None
+    )
+    request_payload = {
+        "schema": "publication_delivery_request.v1",
+        "delivery_id": "phase22-j09-technical-lead-handoff",
+        "audience": {"role": "technical_lead", "description": "Technical decision-maker reviewing the bounded local SkillGen result."},
+        "delivery_format": "mixed_bundle",
+        "content_scope": ["report", "compiled-pdf", "delivery-plan", "provider-review", "decision-artifact"],
+        "permissions": delivery_permissions,
+        "files": [
+            {"file_id": "report", "type": "readable_markdown_report", "source_path": str(recorded_artifact_path("readable_markdown_report")), "evidence_ids": ["report:phase22-j09"]},
+            {"file_id": "compiled-pdf", "type": "compiled_pdf_report", "source_path": str(recorded_artifact_path("compiled_pdf_report")), "evidence_ids": ["report:phase22-j09", "compile:phase22-j09"]},
+            {"file_id": "plan", "type": "report_plan", "source_path": str(recorded_artifact_path("report_plan")), "evidence_ids": ["plan:phase22-j09"]},
+            {"file_id": "review", "type": "provider_review", "source_path": str(recorded_artifact_path("artifact_review")), "evidence_ids": ["review:phase22-j09", *[str(item) for item in review_boundary.get("evidence_ids") or []]]},
+            {"file_id": "decision", "type": "decision_artifact", "source_path": str(recorded_artifact_path("decision_artifact")), "evidence_ids": ["decision:phase22-j09"]},
+        ],
+    }
+    if external_delivery_spec:
+        request_payload["external_delivery"] = external_delivery_spec
+    delivery_request = write_json(
+        rec.artifact_dir / "publication-delivery-request.json",
+        request_payload,
+    )
+    delivery_dir = rec.run_dir / "publication-delivery"
+    delivery_tool = repo_root / "harness" / "tools" / "publication_delivery_bundle.py"
+    delivery_build = rec.run(
+        "publication-delivery-build",
+        [phase22_python, str(delivery_tool), "build", "--request", str(delivery_request), "--output-dir", str(delivery_dir), "--source-root", str(rec.run_dir)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    delivery_verify = rec.run(
+        "publication-delivery-verify",
+        [phase22_python, str(delivery_tool), "verify", "--bundle-dir", str(delivery_dir)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    delivery_manifest = delivery_dir / "publication-delivery-manifest.json"
+    delivery_payload = _load_json(delivery_manifest)
+    tamper_target = delivery_dir / delivery_payload.get("files", [{}])[0].get("path", "missing")
+    tamper_original = tamper_target.read_bytes() if tamper_target.is_file() else b""
+    if tamper_original:
+        tamper_target.write_bytes(tamper_original + b"\ntampered\n")
+    delivery_tamper = rec.run(
+        "publication-delivery-tamper-rejected",
+        [phase22_python, str(delivery_tool), "verify", "--bundle-dir", str(delivery_dir)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    if tamper_original:
+        tamper_target.write_bytes(tamper_original)
+    delivery_restored = rec.run(
+        "publication-delivery-restored-verify",
+        [phase22_python, str(delivery_tool), "verify", "--bundle-dir", str(delivery_dir)],
+        cwd=repo_root,
+        timeout=60,
+    )
+    rec.add_artifact(delivery_request, "publication_delivery_request")
+    rec.add_artifact(delivery_manifest, "publication_delivery_manifest")
 
     rec.add_assertion("upstream_ingest_completed", not ingest.get("_error"), ingest.get("_error"))
     rec.add_assertion("upstream_experiment_result_available", exp_result_ev is not None, exp_run.get("_error"))
@@ -587,6 +733,42 @@ def test_p22_j09_report_delivery(repo_root: Path, tmp_path: Path, phase22_python
     rec.add_assertion("review_artifact_status_understood", review_payload.get("status") in {"completed", "inconclusive"}, review_payload.get("status"))
     rec.add_assertion("compile_or_checklist_evidence_recorded", compile_ev is not None, compile_result.get("_error"))
     rec.add_assertion("paper_compile_status_understood", compile_status in {"completed", "inconclusive"}, compile_status)
+    rec.add_assertion(
+        "compiled_pdf_report_structurally_verified",
+        pdf_build.returncode == 0
+        and pdf_verify.returncode == 0
+        and pdf_payload.get("valid") is True
+        and pdf_payload.get("page_count", 0) >= 1
+        and len(str(pdf_payload.get("sha256") or "")) == 64
+        and pdf_report.stat().st_size > 500,
+        {"build": pdf_build.returncode, "verify": pdf_verify.returncode, "result": pdf_payload},
+    )
+    rec.add_assertion(
+        "publication_delivery_contract_complete",
+        delivery_build.returncode == 0
+        and delivery_verify.returncode == 0
+        and delivery_payload.get("audience", {}).get("role") == "technical_lead"
+        and delivery_payload.get("permissions") == delivery_permissions
+        and len(delivery_payload.get("handoff_checklist") or []) >= 5
+        and len(delivery_payload.get("files") or []) == (6 if external_delivery_enabled else 5)
+        and len(delivery_payload.get("evidence_index") or []) >= 4,
+        {"build": delivery_build.returncode, "verify": delivery_verify.returncode, "manifest": delivery_payload},
+    )
+    if external_delivery_enabled:
+        external_delivery = delivery_payload.get("external_delivery", {})
+        rec.add_assertion(
+            "publication_delivery_external_gmail_verified",
+            external_delivery.get("channel") == "gmail"
+            and external_delivery.get("recipient") == "jms.duck1020@gmail.com"
+            and external_delivery.get("delivered") is True
+            and external_delivery.get("approval_ref") == "approval-phase22-gmail-handoff",
+            external_delivery,
+        )
+    rec.add_assertion(
+        "publication_delivery_integrity_fails_closed",
+        delivery_tamper.returncode == 2 and delivery_restored.returncode == 0,
+        {"tamper_exit": delivery_tamper.returncode, "restored_exit": delivery_restored.returncode, "tamper_stderr": delivery_tamper.stderr},
+    )
     rec.add_assertion(
         "draft_report_required_sections",
         {"summary", "findings", "evidence-map", "limitations"}.issubset(draft_section_ids),

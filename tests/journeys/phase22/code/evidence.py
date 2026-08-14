@@ -91,7 +91,7 @@ JOURNEYS: dict[str, dict[str, Any]] = {
     "P22-J09": {
         "name": "Generate and review a deliverable research report",
         "selector": "p22_j09",
-        "live": False,
+        "live": True,
     },
     "P22-J10": {
         "name": "Backup, restore, and uninstall inside a sandbox",
@@ -101,6 +101,16 @@ JOURNEYS: dict[str, dict[str, Any]] = {
     "P22-J25": {
         "name": "Construct, verify, install, smoke, and roll back a runtime deliverable",
         "selector": "p22_j25",
+        "live": False,
+    },
+    "P22-045": {
+        "name": "Live independent writer/reviewer provider provenance",
+        "selector": "p22_045_live_independent_providers",
+        "live": True,
+    },
+    "P22-071": {
+        "name": "Attributable human-review lifecycle resume",
+        "selector": "p22_071_human_review_resume",
         "live": False,
     },
 }
@@ -333,11 +343,13 @@ class JourneyRecorder:
             )
         except subprocess.TimeoutExpired as exc:
             timed_out = True
+            stdout = exc.stdout if isinstance(exc.stdout, str) else ""
+            stderr = exc.stderr if isinstance(exc.stderr, str) else ""
             proc = subprocess.CompletedProcess(
                 argv,
                 124,
-                stdout=exc.stdout if isinstance(exc.stdout, str) else "",
-                stderr=exc.stderr if isinstance(exc.stderr, str) else f"timed out after {timeout}s",
+                stdout=stdout,
+                stderr=stderr or f"timed out after {timeout}s",
             )
         duration = time.monotonic() - started
         stdout_path.write_text(redact(proc.stdout), encoding="utf-8", errors="replace")
