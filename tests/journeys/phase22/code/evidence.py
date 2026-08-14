@@ -98,6 +98,11 @@ JOURNEYS: dict[str, dict[str, Any]] = {
         "selector": "p22_j10",
         "live": False,
     },
+    "P22-J25": {
+        "name": "Construct, verify, install, smoke, and roll back a runtime deliverable",
+        "selector": "p22_j25",
+        "live": False,
+    },
 }
 
 

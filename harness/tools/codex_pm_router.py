@@ -248,6 +248,56 @@ def _enforce_request_size(text: str) -> None:
         raise RequestTooLargeError(len(text))
 
 
+def _extract_labeled_value(text: str, label: str) -> str:
+    """Return the first explicit ``Label: value`` line from user text.
+
+    RawIntent envelopes can repeat the user's request in multiple sections.  A
+    line-oriented parser keeps paths and commands intact instead of trying to
+    recover them from the normalized, whitespace-collapsed goal summary.
+    """
+
+    match = re.search(rf"(?im)^\s*{re.escape(label)}\s*:\s*(.+?)\s*$", text)
+    if not match:
+        return ""
+    return match.group(1).strip().strip("`\"'")
+
+
+def _extract_execution_contract(text: str) -> dict[str, Any]:
+    project_dir = _extract_labeled_value(text, "Target repository path")
+    if not project_dir:
+        project_dir = _extract_labeled_value(text, "Project")
+
+    scope = _extract_labeled_value(text, "Scope")
+    constraints = _extract_labeled_value(text, "Constraints")
+    acceptance = _extract_labeled_value(text, "Acceptance")
+
+    allowed_paths: list[str] = []
+    scope_tokens = re.findall(
+        r"(?<![\w.-])([\w.-]+(?:/[\w.*-]+)*\.(?:py|js|ts|tsx|jsx|rs|go|java|kt|rb|php|cs|cpp|cc|c|h|md|json|ya?ml|toml))\b",
+        scope,
+        flags=re.I,
+    )
+    for token in scope_tokens:
+        if token not in allowed_paths:
+            allowed_paths.append(token)
+    if re.search(r"\b(?:update|modify|change|edit)\s+(?:the\s+)?tests?\b", scope, re.I):
+        allowed_paths.append("tests/**")
+
+    test_commands = [
+        command.strip()
+        for command in re.findall(r"`([^`]*(?:pytest|unittest|npm\s+test|pnpm\s+test|cargo\s+test|go\s+test)[^`]*)`", acceptance, re.I)
+        if command.strip()
+    ]
+    return {
+        "project_dir": project_dir,
+        "allowed_paths": allowed_paths,
+        "constraints": [item.strip() for item in constraints.split(",") if item.strip()],
+        "acceptance": acceptance,
+        "test_commands": test_commands,
+        "scope": scope,
+    }
+
+
 def _looks_like_raw_metadata_pollution(text: str) -> bool:
     lowered = text.lower()
     suspicious_tokens = (
@@ -665,6 +715,7 @@ def _build_contracts(
     request_text: str,
     papers: list[str],
 ) -> dict[str, Any]:
+    declared_execution = _extract_execution_contract(request_text)
     product = {
         "enabled": True,
         "goal": normalized_goal,
@@ -689,15 +740,23 @@ def _build_contracts(
             {"code": "ACCEPTANCE_COVERAGE_MISSING", "action": "add validation before dispatch"},
         ],
     }
+    allowed_paths = declared_execution["allowed_paths"] or [
+        "apps/pm-pane/**",
+        "packages/requirement-ir/**",
+        "harness/**",
+    ]
     agent_execution = {
         "enabled": True,
         "task_scope": CLASS_TO_CANONICAL[classification],
-        "allowed_paths": ["apps/pm-pane/**", "packages/requirement-ir/**", "harness/**"],
+        "project_dir": declared_execution["project_dir"],
+        "allowed_paths": allowed_paths,
         "forbidden_paths": ["infra/prod/**", ".env*", "secrets/**"],
         "commands": {
-            "test": ["pnpm test", "pnpm lint"],
+            "test": declared_execution["test_commands"] or ["pnpm test", "pnpm lint"],
             "inspect": ["rg", "python3", "pytest"],
         },
+        "declared_constraints": declared_execution["constraints"],
+        "declared_scope": declared_execution["scope"],
         "approval_required_when": [
             "new production dependency",
             "database migration",
@@ -784,6 +843,7 @@ def _render_contract_markdown(title: str, contracts: dict[str, Any]) -> str:
     lines = [
         f"# Compiled Contract — {title}",
         "",
+        *([f"Project: {agent['project_dir']}", ""] if agent.get("project_dir") else []),
         "## Canonical Sources",
         "",
         "- `requirement_ir.json` is the source of truth.",
@@ -809,6 +869,10 @@ def _render_contract_markdown(title: str, contracts: dict[str, Any]) -> str:
         "",
         "- allowed_paths:",
         *[f"  - {item}" for item in agent["allowed_paths"]],
+        "- test_commands:",
+        *[f"  - {item}" for item in agent.get("commands", {}).get("test", [])],
+        "- declared_constraints:",
+        *[f"  - {item}" for item in agent.get("declared_constraints", [])],
         "- forbidden_paths:",
         *[f"  - {item}" for item in agent["forbidden_paths"]],
         "- approval_required_when:",
@@ -1543,6 +1607,9 @@ def build_pm_intake(
     normalized_problem = _normalized_text(problem_text)
     normalized_user_intent = _normalized_text(raw_user_text)
     acceptance = _default_acceptance(request_type)
+    declared_execution = _extract_execution_contract(text)
+    if declared_execution["acceptance"]:
+        acceptance = [declared_execution["acceptance"]]
     if autosci_contract:
         acceptance = [
             "Normal Solar intake emits a research.autosci.v1 task graph.",

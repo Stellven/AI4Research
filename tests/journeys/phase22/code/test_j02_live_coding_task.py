@@ -164,6 +164,26 @@ def _wait_for_operator_result(
     return latest_dir, latest_payload
 
 
+def _operator_provider_auth_blocker(task_dir: Path | None) -> str:
+    if task_dir is None:
+        return ""
+    text = "\n".join(
+        _read_text(task_dir / name)
+        for name in ("output.log", "codex-cli-output.log", "error.log", "result.json")
+    ).lower()
+    auth_signals = (
+        "401 unauthorized",
+        "missing bearer",
+        "basic authentication",
+        "codex login",
+        "api key",
+        "not authenticated",
+    )
+    if any(signal in text for signal in auth_signals):
+        return "Codex provider authentication is unavailable in the sandboxed live journey runtime."
+    return ""
+
+
 def _artifact_if_present(rec: JourneyRecorder, path: Path, artifact_type: str, *, required: bool = True) -> None:
     if path.exists():
         rec.add_artifact(path, artifact_type, required=required)
@@ -552,9 +572,19 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
         rec.add_artifact(task_graph_path, "j02-sprint-task-graph")
 
     if not planner_completed or not planner_artifacts_ok:
+        provider_auth_blocker = _operator_provider_auth_blocker(planner_task_dir)
         rec.add_artifact(status_path, "j02-sprint-status")
         rec.add_artifact(request_file, "j02-intake-request")
         rec.add_artifact(contract_path, "j02-sprint-contract", required=True)
+        if provider_auth_blocker:
+            rec.add_assertion("live_provider_auth_available", False, provider_auth_blocker)
+            _record_j02_l2(
+                rec,
+                "Live provider execution reached Planner, but the sandboxed runtime lacked usable provider authentication.",
+                False,
+            )
+            rec.finalize("ENVIRONMENT_BLOCKED", blockers=[provider_auth_blocker])
+            return
         _record_j02_l2(
             rec,
             "Live provider execution reached Planner, but required plan/design/task-graph artifacts were not completed before Builder dispatch.",
