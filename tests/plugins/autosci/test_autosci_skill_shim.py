@@ -6727,7 +6727,7 @@ def test_autosci_skill_shim_daily_arxiv_write_creates_ingest_handoff(tmp_path: P
                         "review_llm": {
                             "status": "completed",
                             "provider": "codex",
-                            "model": "gpt-5.5",
+                            "model": "gpt-4.1-mini",
                             "evidence_ids": ["review:daily-skillgen"],
                         },
                     },
@@ -7988,7 +7988,7 @@ def test_autosci_skill_shim_refine_applies_approved_after_artifact(tmp_path: Pat
                         "review_llm": {
                             "status": "completed",
                             "provider": "openai",
-                            "model": "gpt-5.5",
+                            "model": "gpt-4.1-mini",
                             "evidence_ids": ["review:refine-report"],
                         },
                     }
@@ -8090,7 +8090,7 @@ def test_autosci_skill_shim_refine_parity_demo_auto_applies_after_artifact(tmp_p
                         "review_llm": {
                             "status": "completed",
                             "provider": "openai",
-                            "model": "gpt-5.5",
+                            "model": "gpt-4.1-mini",
                             "evidence_ids": ["review:refine-policy"],
                         },
                     }
@@ -9187,7 +9187,7 @@ def test_autosci_skill_shim_poster_attaches_review_llm_critique_boundary(tmp_pat
                         "review_llm": {
                             "status": "completed",
                             "provider": "openai_compatible",
-                            "model": "gpt-5.5",
+                            "model": "gpt-4.1-mini",
                             "evidence_ids": ["poster-review:llm"],
                         },
                     },
@@ -10732,7 +10732,7 @@ def test_autosci_skill_shim_ideate_uses_model_command_for_brainstorm(tmp_path: P
                 "        'answer': 'Model brainstorm grounded in SkillGen paper evidence.',",
                 "        'confidence': 0.72,",
                 "        'provider': 'test-model-provider',",
-                "        'model': 'gpt-5.5-test-double',",
+                "        'model': 'gpt-4.1-mini-test-double',",
                 "        'evidence_ids': ['wiki:papers/skillgen'],",
                 "        'ideas': [",
                 "            {",
@@ -10775,7 +10775,7 @@ def test_autosci_skill_shim_ideate_uses_model_command_for_brainstorm(tmp_path: P
     idea = idea_evidence["outputs"]["ideas"][0]
     assert idea["idea_id"] == "idea-model-skillgen-001"
     assert idea["generation_path"] == "model-command"
-    assert idea["model"] == "gpt-5.5-test-double"
+    assert idea["model"] == "gpt-4.1-mini-test-double"
     assert "wiki:papers/skillgen" in idea["origin_evidence_ids"]
     assert idea["promotion_ready"] is False
     assert idea["final_promotion_boundary"]["status"] == "idea_promotion_incomplete"
@@ -10797,7 +10797,7 @@ def test_autosci_skill_shim_ideate_uses_model_command_for_brainstorm(tmp_path: P
     assert "E:cross-domain-transfer" in request_payload["prompt"]
     boundary = json.loads((tmp_path / artifacts["ideate_final_promotion_boundary_json"]).read_text(encoding="utf-8"))
     assert boundary["model_brainstorm_completed"] is True
-    assert boundary["model_name"] == "gpt-5.5-test-double"
+    assert boundary["model_name"] == "gpt-4.1-mini-test-double"
     assert boundary["final_promotion_ready"] is False
     assert boundary["generation_path_coverage"]["status"] == "missing"
     pipeline_report = json.loads((tmp_path / artifacts["ideate_pipeline_report_json"]).read_text(encoding="utf-8"))
@@ -10937,7 +10937,7 @@ def test_autosci_skill_shim_ideate_promotes_with_model_novelty_and_review_eviden
                 "        'answer': 'Five-path model brainstorm grounded in SkillGen paper evidence.',",
                 "        'confidence': 0.82,",
                 "        'provider': 'test-model-provider',",
-                "        'model': 'gpt-5.5-test-double',",
+                "        'model': 'gpt-4.1-mini-test-double',",
                 "        'evidence_ids': ['wiki:papers/skillgen', 'external:web:ideate-001'],",
                 "        'ideas': ideas,",
                 "    },",
@@ -11094,7 +11094,7 @@ def _write_ideate_full_evidence_inputs(tmp_path: Path) -> tuple[Path, Path, Path
                 "outputs": {
                     "answer": "Five pilot-ready ideas.",
                     "provider": "test-model-provider",
-                    "model": "gpt-5.5-test-double",
+                    "model": "gpt-4.1-mini-test-double",
                     "evidence_ids": ["wiki:papers/skillgen", "external:web:ideate-001"],
                     "ideas": ideas,
                 },
@@ -12731,7 +12731,7 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
             "--review-llm-provider",
             "openai_compatible",
             "--review-llm-model",
-            "gpt-5.5",
+            "gpt-4.1-mini",
             "--review-llm-endpoint",
             endpoint,
             "--run-id",
@@ -12747,7 +12747,7 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
     assert captured["authorization"] == "Bearer test-provider-key"
     request_payload = captured["payload"]
     assert isinstance(request_payload, dict)
-    assert request_payload["model"] == "gpt-5.5"
+    assert request_payload["model"] == "gpt-4.1-mini"
     assert "response_format" not in request_payload
 
     summary = json.loads(proc.stdout)
@@ -12760,7 +12760,7 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
     assert review["review_available"] is True
     assert review_llm["status"] == "completed"
     assert review_llm["invocation_mode"] == "provider"
-    assert review_llm["model"] == "gpt-5.5"
+    assert review_llm["model"] == "gpt-4.1-mini"
     assert review_llm["provider"] == "openai_compatible"
     assert Path(review_llm["source_path"]).exists()
     assert "review-llm:provider" in review["evidence_ids"]
@@ -12768,7 +12768,7 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
     assert boundary["final_acceptance_ready"] is True
     assert boundary["invocation_mode"] == "provider"
     assert boundary["provider"] == "openai_compatible"
-    assert boundary["model"] == "gpt-5.5"
+    assert boundary["model"] == "gpt-4.1-mini"
     proof_artifact = next(
         artifact
         for artifact in review_evidence["artifacts"]
@@ -12827,7 +12827,7 @@ def test_autosci_skill_shim_review_normalizes_flat_openai_payload_without_status
             response = json.dumps(
                 {
                     "choices": [{"message": {"content": content}}],
-                    "model": "gpt-5.5-test",
+                    "model": "gpt-4.1-mini-test",
                     "usage": {"prompt_tokens": 20, "completion_tokens": 40, "total_tokens": 60},
                 }
             ).encode("utf-8")
@@ -12858,7 +12858,7 @@ def test_autosci_skill_shim_review_normalizes_flat_openai_payload_without_status
             "--review-llm-provider",
             "openai",
             "--review-llm-model",
-            "gpt-5.5",
+            "gpt-4.1-mini",
             "--review-llm-endpoint",
             endpoint,
             "--run-id",
@@ -12909,7 +12909,7 @@ def test_autosci_skill_shim_keeps_setup_gated(tmp_path: Path) -> None:
         "setup",
         "--run-id",
         "shim-setup",
-        extra_env={"OPENAI_API_KEY": secret_value, "AUTOSCI_REVIEW_LLM_MODEL": "gpt-5.5"},
+        extra_env={"OPENAI_API_KEY": secret_value, "AUTOSCI_REVIEW_LLM_MODEL": "gpt-4.1-mini"},
     )
     assert proc.returncode == 0, proc.stderr
     summary = json.loads(proc.stdout)
@@ -12954,7 +12954,7 @@ def test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_
         "\n".join(
             [
                 "OPENAI_API_KEY=" + secret_value,
-                "AUTOSCI_REVIEW_LLM_MODEL=gpt-5.5",
+                "AUTOSCI_REVIEW_LLM_MODEL=gpt-4.1-mini",
                 "",
             ]
         ),
@@ -12978,7 +12978,7 @@ def test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_
     assert dotenv_path.exists()
     dotenv_text = dotenv_path.read_text(encoding="utf-8")
     assert "OPENAI_API_KEY=" + secret_value in dotenv_text
-    assert "AUTOSCI_REVIEW_LLM_MODEL=gpt-5.5" in dotenv_text
+    assert "AUTOSCI_REVIEW_LLM_MODEL=gpt-4.1-mini" in dotenv_text
 
     summary = json.loads(proc.stdout)
     payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))

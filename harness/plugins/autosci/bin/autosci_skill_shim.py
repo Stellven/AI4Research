@@ -420,7 +420,22 @@ def prepare_scheduler_harness(harness_dir: Path) -> None:
         target = harness_dir / name
         if target.exists() or not source.exists():
             continue
-        target.symlink_to(source, target_is_directory=source.is_dir())
+        try:
+            target.symlink_to(source, target_is_directory=source.is_dir())
+        except OSError:
+            if os.name != "nt" or not source.is_dir():
+                raise
+            junction = subprocess.run(
+                ["cmd", "/d", "/c", "mklink", "/J", str(target), str(source)],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if junction.returncode != 0:
+                raise OSError(
+                    f"cannot expose scheduler resource {source}: "
+                    f"{junction.stderr or junction.stdout}"
+                )
     (harness_dir / "run").mkdir(parents=True, exist_ok=True)
     (harness_dir / "artifacts").mkdir(parents=True, exist_ok=True)
 

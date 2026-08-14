@@ -238,6 +238,24 @@ def _gate_evidence(evidence_path: Path, harness_dir: Path, expected_schema: str)
     return payload
 
 
+def _windows_process_exit_code(pid: int) -> int | None:
+    import ctypes
+
+    process_query_limited_information = 0x1000
+    still_active = 259
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+    if not handle:
+        return 0
+    try:
+        exit_code = ctypes.c_ulong()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            return -1
+        return None if exit_code.value == still_active else int(exit_code.value)
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def _wait_for_result(result_path: Path, daemon_pid: int | None, timeout_seconds: float) -> dict[str, Any]:
     started = time.monotonic()
     daemon_exit: int | None = None
@@ -249,15 +267,18 @@ def _wait_for_result(result_path: Path, daemon_pid: int | None, timeout_seconds:
                 "daemon_exit": daemon_exit,
             }
         if daemon_pid and daemon_exit is None:
-            try:
-                waited_pid, status = os.waitpid(daemon_pid, os.WNOHANG)
-            except ChildProcessError:
-                daemon_exit = 0
-            except OSError:
-                daemon_exit = -1
+            if os.name == "nt":
+                daemon_exit = _windows_process_exit_code(daemon_pid)
             else:
-                if waited_pid:
-                    daemon_exit = os.waitstatus_to_exitcode(status)
+                try:
+                    waited_pid, status = os.waitpid(daemon_pid, os.WNOHANG)
+                except ChildProcessError:
+                    daemon_exit = 0
+                except OSError:
+                    daemon_exit = -1
+                else:
+                    if waited_pid:
+                        daemon_exit = os.waitstatus_to_exitcode(status)
         if daemon_exit is not None and not result_path.exists():
             break
         time.sleep(0.2)

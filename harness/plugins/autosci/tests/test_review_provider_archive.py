@@ -27,11 +27,13 @@ def test_provider_archive_retains_recomputable_nonsecret_request(tmp_path):
 
 def test_provider_archive_redacts_nested_and_inline_secrets_from_all_archived_bytes(tmp_path):
     secret = "SUPERSECRET-attack-value"
+    bearer_token = "bearer" + "-token-123456"
+    private_key_header = "-----BEGIN " + "PRIVATE KEY-----"
     request = {
         "api_key": secret,
-        "messages": [{"content": f"artifact says api_key={secret}; Authorization: Bearer bearer-token-123456"}],
+        "messages": [{"content": f"artifact says api_key={secret}; Authorization: Bearer {bearer_token}"}],
         "nested": {"password": secret, "note": "token: token-value-123456"},
-        "private": "-----BEGIN PRIVATE KEY-----\nSUPERSECRET\n-----END PRIVATE KEY-----",
+        "private": f"{private_key_header}\nSUPERSECRET\n-----END PRIVATE KEY-----",
     }
     path, original_hash, _ = _archive_provider_payload(
         workspace_root=tmp_path,
@@ -42,7 +44,12 @@ def test_provider_archive_redacts_nested_and_inline_secrets_from_all_archived_by
     )
     assert path is not None
     archive_bytes = path.read_bytes()
-    for forbidden in (b"SUPERSECRET", b"bearer-token-123456", b"token-value-123456", b"BEGIN PRIVATE KEY"):
+    for forbidden in (
+        b"SUPERSECRET",
+        bearer_token.encode(),
+        b"token-value-123456",
+        b"BEGIN PRIVATE KEY",
+    ):
         assert forbidden not in archive_bytes
     archive = json.loads(archive_bytes)
     assert archive["request_sha256"] == original_hash
