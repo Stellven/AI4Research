@@ -22,7 +22,7 @@ from phase22_workbook_validation import (
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.resolve().parents[2]
 MATRIX_PATH = HERE / "atomic_feature_matrix.json"
-WORKBOOK_PATH = ROOT / ".codex-tmp/phase22-i1/phase-22-test-report.generated.xlsx"
+WORKBOOK_PATH = ROOT / "docs/integrations/autosci/phase-22-test-report.xlsx"
 
 REQUIRED_SHEETS = [
     "Workflow Features",
@@ -112,6 +112,13 @@ def test_phase22_workbook_summary_matches_matrix_counts() -> None:
             raise AssertionError(f"Missing cell R{row}C{col} in Coverage Summary.")
         return int(_value_for_cell(text, shared_strings) or 0)
 
+    def labeled_value(label: str) -> int:
+        for row, cells in sheet_rows.items():
+            label_cell = cells.get(0)
+            if label_cell is not None and _value_for_cell(label_cell, shared_strings) == label:
+                return value(row, 1)
+        raise AssertionError(f"Missing {label!r} row in Coverage Summary.")
+
     assert value(3, 1) == matrix["counts"]["l2_features"]
     assert value(4, 1) == 2047
     assert value(5, 1) == matrix["counts"]["reviewed_atomic"]
@@ -134,7 +141,9 @@ def test_phase22_workbook_summary_matches_matrix_counts() -> None:
     assert value(16, 1) == matrix["counts"]["l2_rollup"].get("FUNCTION_IMPLEMENTED_ATOMIC_TEST_FAILED", 0)
     assert value(17, 1) == matrix["counts"]["l2_rollup"].get("FUNCTION_NOT_IMPLEMENTED_TEST_BLOCKED", 0)
     assert value(18, 1) == matrix["counts"]["l2_rollup"].get("IMPLEMENTED_TEST_GAP_BLOCKED", 0)
-    assert value(30, 1) == 0
+    assert labeled_value("FAIL") == 0
+    assert labeled_value("ENVIRONMENT_BLOCKED") == 0
+    assert labeled_value("TOTAL") == matrix["counts"]["l2_features"]
 
 
 def test_phase22_workbook_formula_errors_and_opc_sanity() -> None:

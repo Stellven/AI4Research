@@ -11,7 +11,7 @@ bin/solar-daemon text eol=lf
 harness/hooks/* text eol=lf
 
 # Hashed Phase 22 evidence must retain the exact bytes recorded by trust pins.
-harness/config/research-trust-registries/** text eol=lf
+harness/config/research-trust-registries/** text eol=crlf
 tests/journeys/phase22/fixtures/significant/** text eol=lf
 
 # Binary deliverables must never receive line-ending conversion.

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import html
+import importlib.util
 import json
 import os
 import re
@@ -76,7 +77,26 @@ from backends.novelty_review import evaluate_novelty_and_review
 from backends.paper_prepare import read_paper_source
 from backends.real_data_research import run_live_research
 from services.production_research import production_services_from_environment
-from policy.gate_policy import GateDecision, decide_gate
+
+_GATE_POLICY_MODULE_NAME = "_solar_autosci_gate_policy"
+_GATE_POLICY_PATH = PLUGIN_DIR / "policy" / "gate_policy.py"
+_GATE_POLICY_SPEC = importlib.util.spec_from_file_location(
+    _GATE_POLICY_MODULE_NAME,
+    _GATE_POLICY_PATH,
+)
+if _GATE_POLICY_SPEC is None or _GATE_POLICY_SPEC.loader is None:
+    raise ImportError(f"cannot load AutoSci gate policy from {_GATE_POLICY_PATH}")
+_GATE_POLICY_MODULE = sys.modules.get(_GATE_POLICY_MODULE_NAME)
+if _GATE_POLICY_MODULE is None:
+    _GATE_POLICY_MODULE = importlib.util.module_from_spec(_GATE_POLICY_SPEC)
+    sys.modules[_GATE_POLICY_MODULE_NAME] = _GATE_POLICY_MODULE
+    try:
+        _GATE_POLICY_SPEC.loader.exec_module(_GATE_POLICY_MODULE)
+    except Exception:
+        sys.modules.pop(_GATE_POLICY_MODULE_NAME, None)
+        raise
+GateDecision = _GATE_POLICY_MODULE.GateDecision
+decide_gate = _GATE_POLICY_MODULE.decide_gate
 
 REQUIRED_EVIDENCE_FIELDS = {
     "schema",
