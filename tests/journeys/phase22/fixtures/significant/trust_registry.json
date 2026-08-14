@@ -1,0 +1,75 @@
+{
+  "schema": "solar.trust_anchor_registry.v1",
+  "anchors": [
+    {
+      "anchor_id": "phase22-protocol-registry",
+      "identity_uri": "https://registry.opensolar.local/protocols/phase22",
+      "public_key_sha256": "e0d13f5f39ae3d10f1e5f3e97956e8dcfa522987aca0c33a3d3cbd50afabe77e",
+      "allowed_purposes": [
+        "scientific_preregistration_protocol",
+        "external_validity_plan"
+      ]
+    },
+    {
+      "anchor_id": "phase22-site-registry",
+      "identity_uri": "https://registry.opensolar.local/sites/phase22",
+      "public_key_sha256": "9262ef63accb21c03a78b683d68a9f1324257ceb7ec356afc8b8dd7bb80e137c",
+      "allowed_purposes": [
+        "external_site_identity"
+      ]
+    }
+  ],
+  "trusted_artifacts": [
+    {
+      "artifact_id": "p22-retrieval-ranking-poc",
+      "purpose": "scientific_preregistration_protocol",
+      "sha256": "f6a4653fd6e26ce495f9fd0b06a915b37046da9c86da2fa890a0b17919b0fe11",
+      "anchor_id": "phase22-protocol-registry",
+      "registered_at": "2026-07-31T00:00:00Z",
+      "signature_sha256": "161d3b1794850b1fb591402d54180820eb597b8a1f9a8c6554a02c3c281ffa0d"
+    },
+    {
+      "artifact_id": "p22-bounded-retrieval-success",
+      "purpose": "external_validity_plan",
+      "sha256": "8c977513343d5e6ed9213a743abcdf7f8aa476fde54660d5308a621509337ae9",
+      "anchor_id": "phase22-protocol-registry",
+      "registered_at": "2026-08-01T00:00:00Z",
+      "signature_sha256": "14ab203fccafaa218d3ead8b73054461132e56b9b8a76b262cbd1cd55c785a54"
+    }
+  ],
+  "site_identities": [
+    {
+      "site_id": "fixture-development-lab-a",
+      "organization_id": "fixture-org-development-a",
+      "collection_protocol_id": "retrieval-protocol-v1",
+      "identity_uri": "https://registry.opensolar.local/sites/fixture-development-lab-a",
+      "anchor_id": "phase22-site-registry",
+      "evidence_sha256s": [
+        "f160c187e01f77f0415e64584510a20fd1b670b7d9724ccef7bbac98b9ece3e5"
+      ],
+      "signature_sha256": "88d8860d4985efe6cc661cdbe157b0606ad4d8437d27b30d1655595541dc1bff"
+    },
+    {
+      "site_id": "fixture-university-lab-b",
+      "organization_id": "fixture-org-university-b",
+      "collection_protocol_id": "retrieval-protocol-v1",
+      "identity_uri": "https://registry.opensolar.local/sites/fixture-university-lab-b",
+      "anchor_id": "phase22-site-registry",
+      "evidence_sha256s": [
+        "3296a76b93be4a6533c47ee8854535b2c7bae73e5fda416f9ead67cbefd95ace"
+      ],
+      "signature_sha256": "3c99f463db0cc4d08330c82b8354024d0529994a2061a17191cbebe03f20627f"
+    },
+    {
+      "site_id": "fixture-hospital-lab-c",
+      "organization_id": "fixture-org-hospital-c",
+      "collection_protocol_id": "retrieval-protocol-v1",
+      "identity_uri": "https://registry.opensolar.local/sites/fixture-hospital-lab-c",
+      "anchor_id": "phase22-site-registry",
+      "evidence_sha256s": [
+        "5a21c84b83143641e88b2c8618a552cb8bbb01d1d7a8bfbeead6729d7a630951"
+      ],
+      "signature_sha256": "2834ab8772ad1e2db406c2f6593dbaba86dd6a34a616e06d988d4128e5cabda2"
+    }
+  ]
+}
