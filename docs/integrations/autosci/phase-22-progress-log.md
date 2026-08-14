@@ -3791,3 +3791,31 @@ Date: 2026-08-14
 - Synchronization run: `phase22-final-report-sync-20260814`; reviewed repo head:
   `71a68eeef`. Output copies and render evidence are under
   `outputs/phase22-final-report-sync-20260814/`.
+
+## Post-closeout correction - Windows desktop intake
+
+Date: 2026-08-14
+
+- A real Windows desktop submission exposed `OSError: [WinError 193] %1 is not
+  a valid Win32 application` after clicking `Start work`. This invalidates the
+  earlier inference that green Phase 22 journey totals established a fully
+  usable desktop product. None of Big PRs 33, 34, 35, 38, or 39 changed the
+  desktop submission path or the status server's `/intake` CLI launcher.
+- Root cause: `_intake_command` trusted an ambient `solar` executable before
+  the harness-local launcher. In a mixed Windows/WSL environment that can
+  select an entrypoint from the wrong operating system and then attempt to
+  execute a Bash script as a Win32 application.
+- The launcher now prefers `HARNESS_DIR/solar-harness.sh`; a Windows-native
+  status server executes it through `wsl.exe`, preserving the matching WSL
+  harness path. Process-start failures return the structured
+  `intake_cli_launch_failed` error instead of leaking an unclassified raw OS
+  exception.
+- Focused regression tests passed `6 passed`. A real browser run filled the
+  home prompt, clicked `Start work`, traversed the production `/intake` route
+  on the Windows-to-WSL runtime, and navigated to session
+  `sprint-20260814-203922-intent-hi-tell-me-what-model-you-ar-15343056` without
+  a form error.
+- The canonical journey report and workbooks remain historically synchronized
+  to their accepted journey set, but must not be described as a full-product
+  pass. Desktop prompt submission and other unmapped user workflows require a
+  separate product-level acceptance audit before making that claim again.

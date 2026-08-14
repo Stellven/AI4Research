@@ -947,7 +947,48 @@ def _latest_sprint_id_after(after_ts: float) -> str:
     return str(_latest_sprint_candidate_after(after_ts).get("sprint_id") or "")
 
 
+def _running_on_windows() -> bool:
+    return os.name == "nt"
+
+
+def _windows_path_for_wsl(path: str | Path) -> str:
+    raw = str(path)
+    match = re.match(r"^([A-Za-z]):[\\/](.*)$", raw)
+    if not match:
+        return raw.replace("\\", "/")
+    drive, tail = match.groups()
+    return f"/mnt/{drive.lower()}/{tail.replace(chr(92), '/')}"
+
+
 def _intake_command(task: str) -> list[str]:
+    # The status server and its harness must remain one runtime. An ambient
+    # `solar` on PATH may belong to the Windows host while this process runs in
+    # WSL (or vice versa), which can surface as WinError 193 when it eventually
+    # tries to execute this Bash script. Prefer the harness-local entrypoint.
+    harness_sh = HARNESS_DIR / "solar-harness.sh"
+    if harness_sh.exists():
+        if _running_on_windows():
+            wsl = shutil.which("wsl.exe") or shutil.which("wsl")
+            if wsl:
+                wsl_harness = _windows_path_for_wsl(HARNESS_DIR)
+                wsl_script = _windows_path_for_wsl(harness_sh)
+                return [
+                    wsl,
+                    "--exec",
+                    "env",
+                    f"HARNESS_DIR={wsl_harness}",
+                    f"SOLAR_HARNESS_DIR={wsl_harness}",
+                    "/bin/bash",
+                    wsl_script,
+                    "intake",
+                    "--request",
+                    task,
+                ]
+            bash = shutil.which("bash.exe") or shutil.which("bash")
+            if bash:
+                return [bash, str(harness_sh), "intake", "--request", task]
+        return [str(harness_sh), "intake", "--request", task]
+
     solar = shutil.which("solar")
     if solar:
         return [solar, "harness", "intake", "--request", task]
@@ -957,7 +998,6 @@ def _intake_command(task: str) -> list[str]:
     harness = shutil.which("solar-harness")
     if harness:
         return [harness, "intake", "--request", task]
-    harness_sh = HARNESS_DIR / "solar-harness.sh"
     return [str(harness_sh), "intake", "--request", task]
 
 
@@ -1048,6 +1088,15 @@ def _intake_payload(data: dict) -> dict:
             cwd=os.getcwd(),
             env=env,
         )
+    except OSError as exc:
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "intake_cli_launch_failed",
+            "request_id": request_id,
+            "command": cmd[0],
+            "detail": f"{type(exc).__name__}: {exc}",
+        }
     except subprocess.TimeoutExpired as exc:
         output = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") + "\n" + ((exc.stderr or "") if isinstance(exc.stderr, str) else "")
         parsed = _extract_intake_id(output)
