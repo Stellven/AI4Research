@@ -1,8 +1,0 @@
-{"id": "chk_sec_intro_factual_accuracy", "section_id": "sec_intro", "check_type": "factual_accuracy", "score": 0.95, "details": "seeded pass", "passed": 1}
-{"id": "chk_sec_intro_source_coverage", "section_id": "sec_intro", "check_type": "source_coverage", "score": 0.95, "details": "seeded pass", "passed": 1}
-{"id": "chk_sec_evidence_factual_accuracy", "section_id": "sec_evidence", "check_type": "factual_accuracy", "score": 0.95, "details": "seeded pass", "passed": 1}
-{"id": "chk_sec_evidence_source_coverage", "section_id": "sec_evidence", "check_type": "source_coverage", "score": 0.95, "details": "seeded pass", "passed": 1}
-{"id": "chk_sec_tensions_factual_accuracy", "section_id": "sec_tensions", "check_type": "factual_accuracy", "score": 0.95, "details": "seeded pass", "passed": 1}
-{"id": "chk_sec_tensions_source_coverage", "section_id": "sec_tensions", "check_type": "source_coverage", "score": 0.95, "details": "seeded pass", "passed": 1}
-{"id": "chk_sec_conclusion_factual_accuracy", "section_id": "sec_conclusion", "check_type": "factual_accuracy", "score": 0.95, "details": "seeded pass", "passed": 1}
-{"id": "chk_sec_conclusion_source_coverage", "section_id": "sec_conclusion", "check_type": "source_coverage", "score": 0.95, "details": "seeded pass", "passed": 1}
