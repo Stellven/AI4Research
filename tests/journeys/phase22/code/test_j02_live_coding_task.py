@@ -65,6 +65,17 @@ def _git_diff_text(path: Path, env: dict[str, str] | None = None, *, base: str =
     return proc.stdout if proc.returncode == 0 else ""
 
 
+def _remove_python_cache_artifacts(path: Path) -> None:
+    """Keep copied fixture caches out of the isolated Git baseline."""
+
+    for cache_dir in path.rglob("__pycache__"):
+        if cache_dir.is_dir():
+            shutil.rmtree(cache_dir)
+    for bytecode in path.rglob("*.py[co]"):
+        if bytecode.is_file():
+            bytecode.unlink()
+
+
 def _is_real_defect(file_path: Path) -> bool:
     return "return a - b" in file_path.read_text(encoding="utf-8", errors="replace")
 
@@ -77,6 +88,74 @@ def _usable_status(value: str | None) -> bool:
         "eval_pass",
         "done",
         "pass",
+    }
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            rows.append(value)
+    return rows
+
+
+def _canonical_eval_verdict_evidence(
+    *,
+    sprint_id: str,
+    status_payload: dict[str, Any],
+    session_events: list[dict[str, Any]],
+    gate_decisions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    history = status_payload.get("history")
+    history_rows = history if isinstance(history, list) else []
+    status_verdicts = [
+        row
+        for row in history_rows
+        if isinstance(row, dict)
+        and row.get("event") == "eval_completed"
+        and row.get("by") == "evaluator"
+        and row.get("verdict") == "PASS"
+        and str(row.get("reason") or "").strip()
+    ]
+    event_verdicts = [
+        row
+        for row in session_events
+        if row.get("event") == "eval_passed"
+        and row.get("by") == "evaluator"
+        and row.get("verdict") in {"pass", "passed", "PASS"}
+        and row.get("sid") == sprint_id
+    ]
+    gate_verdicts = [
+        row
+        for row in gate_decisions
+        if row.get("sid") == sprint_id
+        and row.get("action_requested") == "status_transition:reviewing->passed"
+        and isinstance(row.get("decision"), dict)
+        and row["decision"].get("action") == "allow"
+        and row["decision"].get("reason") == "status_transition_allowed"
+    ]
+    valid = (
+        status_payload.get("status") == "passed"
+        and status_payload.get("phase") == "eval_passed"
+        and len(status_verdicts) == 1
+        and len(event_verdicts) == 1
+        and len(gate_verdicts) == 1
+    )
+    return {
+        "schema_version": "j02_canonical_eval_verdict_evidence.v1",
+        "sprint_id": sprint_id,
+        "valid": valid,
+        "status": status_payload.get("status"),
+        "phase": status_payload.get("phase"),
+        "status_verdicts": status_verdicts,
+        "session_verdicts": event_verdicts,
+        "gate_verdicts": gate_verdicts,
     }
 
 
@@ -126,15 +205,26 @@ def _latest_operator_result_for_sprint(
     sprint_id: str,
     *,
     seen_task_dirs: set[str] | None = None,
+    task_id_fragment: str = "",
+    excluded_task_id_fragment: str = "",
+    operator_id_fragment: str = "",
 ) -> tuple[Path | None, dict[str, Any]]:
     seen_task_dirs = seen_task_dirs or set()
     for task_dir in _operator_task_dirs(harness_dir):
         if _task_dir_key(task_dir) in seen_task_dirs:
             continue
         payload = _read_json_payload(task_dir / "result.json")
+        envelope = _read_json_payload(task_dir / "envelope.json")
+        task_ids = {str(payload.get("task_id") or ""), str(envelope.get("task_id") or "")}
+        operator_ids = {str(payload.get("operator_id") or ""), str(envelope.get("operator_id") or "")}
+        if task_id_fragment and not any(task_id_fragment in item for item in task_ids):
+            continue
+        if excluded_task_id_fragment and any(excluded_task_id_fragment in item for item in task_ids):
+            continue
+        if operator_id_fragment and not any(operator_id_fragment in item for item in operator_ids):
+            continue
         if payload.get("sprint_id") == sprint_id:
             return task_dir, payload
-        envelope = _read_json_payload(task_dir / "envelope.json")
         if envelope.get("sprint_id") == sprint_id:
             return task_dir, payload
     return None, {}
@@ -146,6 +236,9 @@ def _wait_for_operator_result(
     timeout_seconds: int,
     *,
     seen_task_dirs: set[str] | None = None,
+    task_id_fragment: str = "",
+    excluded_task_id_fragment: str = "",
+    operator_id_fragment: str = "",
 ) -> tuple[Path | None, dict[str, Any]]:
     deadline = time.monotonic() + max(1, timeout_seconds)
     latest_dir: Path | None = None
@@ -156,12 +249,57 @@ def _wait_for_operator_result(
             harness_dir,
             sprint_id,
             seen_task_dirs=seen_task_dirs,
+            task_id_fragment=task_id_fragment,
+            excluded_task_id_fragment=excluded_task_id_fragment,
+            operator_id_fragment=operator_id_fragment,
         )
         status = str(latest_payload.get("status") or "").lower()
         if status in terminal_statuses:
             return latest_dir, latest_payload
         time.sleep(2)
     return latest_dir, latest_payload
+
+
+def _wait_for_workflow_route(
+    harness_dir: Path,
+    sprint_id: str,
+    env: dict[str, str],
+    timeout_seconds: int,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Wait for the coordinator's certified route before the next wake."""
+
+    deadline = time.monotonic() + max(1, timeout_seconds)
+    observations: list[dict[str, Any]] = []
+    route = ""
+    while time.monotonic() < deadline:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(harness_dir / "lib" / "workflow_guard.py"),
+                "route",
+                sprint_id,
+                "--field",
+                "route_role",
+            ],
+            cwd=harness_dir,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        route = proc.stdout.strip().lower()
+        observations.append(
+            {
+                "route": route,
+                "returncode": proc.returncode,
+                "stderr_tail": proc.stderr[-400:],
+            }
+        )
+        if proc.returncode == 0 and route in {"builder", "builder_main"}:
+            return route, observations
+        time.sleep(2)
+    return route, observations
 
 
 def _operator_provider_auth_blocker(task_dir: Path | None) -> str:
@@ -301,6 +439,7 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
     if project.exists():
         shutil.rmtree(project)
     shutil.copytree(fixture_repo, project)
+    _remove_python_cache_artifacts(project)
 
     rec.add_assertion(
         "j02_isolated_repo_created",
@@ -439,9 +578,12 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
     task_graph_path = sprint_dir / f"{sprint_id}.task_graph.json"
     handoff_path = sprint_dir / f"{sprint_id}.handoff.md"
     eval_path = sprint_dir / f"{sprint_id}.eval.md"
+    session_events_path = sprint_dir / f"{sprint_id}.events.jsonl"
+    gate_decisions_path = Path(env["HARNESS_DIR"]) / "experience" / "decisions.jsonl"
     requirement_ir_path = sprint_dir / f"{sprint_id}.requirement_ir.json"
     wake_timeout_seconds = int(os.environ.get("PHASE22_J02_WAKE_TIMEOUT_SECONDS", "900"))
     operator_wait_seconds = int(os.environ.get("PHASE22_J02_OPERATOR_WAIT_SECONDS", str(wake_timeout_seconds)))
+    route_wait_seconds = int(os.environ.get("PHASE22_J02_ROUTE_WAIT_SECONDS", "240"))
     limitations: list[str] = []
 
     # Run-level artifact that ties sprint id and run id together for explicit handoff review.
@@ -526,6 +668,7 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
         sprint_id,
         operator_wait_seconds,
         seen_task_dirs=seen_operator_dirs,
+        task_id_fragment="-wake-planner-",
     )
     if planner_task_dir is not None:
         seen_operator_dirs.add(_task_dir_key(planner_task_dir))
@@ -596,6 +739,42 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
         )
         return
 
+    compiled_route, compile_route_observations = _wait_for_workflow_route(
+        installed_harness,
+        sprint_id,
+        env,
+        route_wait_seconds,
+    )
+    compile_route_path = sandbox / f"{run_id}-workflow-route-after-planner.json"
+    compile_route_path.write_text(
+        json.dumps(
+            {
+                "final_route": compiled_route,
+                "observations": compile_route_observations,
+                "timeout_seconds": route_wait_seconds,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rec.add_artifact(compile_route_path, "j02-workflow-route-after-planner", required=True)
+    rec.add_assertion(
+        "planner_compile_reached_builder_route",
+        compiled_route in {"builder", "builder_main"},
+        compile_route_path,
+    )
+    if compiled_route not in {"builder", "builder_main"}:
+        _record_j02_l2(
+            rec,
+            "Planner artifacts completed, but the certified workflow route did not advance to Builder.",
+            False,
+        )
+        rec.finalize("FAIL", blockers=["Planner closeout did not reach a certified builder route."])
+        return
+
     plan = rec.run(
         "plan_verdict_approve",
         bash_argv(
@@ -615,6 +794,42 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
     sprint_status_after_plan = _read_json_payload(status_path)
     rec.add_assertion("plan_verdict_updates_status", _progress_status(sprint_status_after_plan.get("status")), sprint_status_after_plan.get("status"))
 
+    approved_route, approved_route_observations = _wait_for_workflow_route(
+        installed_harness,
+        sprint_id,
+        env,
+        min(route_wait_seconds, 60),
+    )
+    approved_route_path = sandbox / f"{run_id}-workflow-route-after-approval.json"
+    approved_route_path.write_text(
+        json.dumps(
+            {
+                "final_route": approved_route,
+                "observations": approved_route_observations,
+                "timeout_seconds": min(route_wait_seconds, 60),
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rec.add_artifact(approved_route_path, "j02-workflow-route-after-approval", required=True)
+    rec.add_assertion(
+        "plan_approval_preserved_builder_route",
+        approved_route in {"builder", "builder_main"},
+        approved_route_path,
+    )
+    if approved_route not in {"builder", "builder_main"}:
+        _record_j02_l2(
+            rec,
+            "Plan approval did not preserve the certified Builder route.",
+            False,
+        )
+        rec.finalize("FAIL", blockers=["Plan approval did not preserve the certified builder route."])
+        return
+
     wake = rec.run(
         "wake_builder_after_plan_approval",
         bash_argv(repo_root, str(harness_script), "wake", sprint_id),
@@ -628,6 +843,8 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
         sprint_id,
         operator_wait_seconds,
         seen_task_dirs=seen_operator_dirs,
+        excluded_task_id_fragment="-wake-planner-",
+        operator_id_fragment="builder",
     )
     if operator_task_dir is not None:
         seen_operator_dirs.add(_task_dir_key(operator_task_dir))
@@ -736,6 +953,33 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
         and "return a - b" not in repaired_text
     )
     if repair_checks_passed:
+        handoff_submit = rec.run(
+            "handoff_submit_after_verification",
+            bash_argv(repo_root, str(harness_script), "handoff-submit", sprint_id),
+            cwd=project,
+            env=env,
+            timeout=120,
+        )
+        handoff_status = _read_json_payload(status_path)
+        handoff_ready = (
+            handoff_submit.returncode == 0
+            and str(handoff_status.get("status") or "").lower() in {"reviewing", "ready_for_review"}
+        )
+        rec.add_assertion(
+            "verified_handoff_reached_reviewing",
+            handoff_ready,
+            {
+                "returncode": handoff_submit.returncode,
+                "status": handoff_status.get("status"),
+                "handoff_exists": handoff_path.exists(),
+                "stdout_tail": (handoff_submit.stdout or "")[-240:],
+                "stderr_tail": (handoff_submit.stderr or "")[-240:],
+            },
+        )
+    else:
+        handoff_ready = False
+
+    if repair_checks_passed and handoff_ready:
         eval_verdict = rec.run(
             "evaluator_verdict_pass_after_verification",
             bash_argv(repo_root, str(harness_script), "eval-verdict", sprint_id, "pass", "implementation reviewed after tests and diff checks"),
@@ -753,20 +997,25 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
                 _usable_status(final_status),
                 {"status": final_status, "status_file": str(status_path)},
             )
-            evaluator_path_present = eval_path.exists() and eval_path.stat().st_size > 0
-            if evaluator_path_present:
-                rec.add_assertion("evaluator_path_present", True, eval_path.stat().st_size)
-                rec.add_artifact(eval_path, "j02-eval-verdict")
-            else:
-                limitations.append(
-                    "The formal eval-verdict command accepted the sprint and updated status to a usable final state, "
-                    "but the legacy eval.md sidecar was not emitted; command stdout/stderr and status.json remain the durable verdict evidence."
-                )
-                rec.add_assertion(
-                    "evaluator_path_limitation_recorded",
-                    True,
-                    {"eval_path": str(eval_path), "status": final_status},
-                )
+            canonical_evidence = _canonical_eval_verdict_evidence(
+                sprint_id=sprint_id,
+                status_payload=sprint_status_final,
+                session_events=_read_jsonl(session_events_path),
+                gate_decisions=_read_jsonl(gate_decisions_path),
+            )
+            canonical_evidence_path = sandbox / f"{run_id}-canonical-eval-verdict.json"
+            canonical_evidence_path.write_text(
+                json.dumps(canonical_evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            rec.add_artifact(canonical_evidence_path, "j02-canonical-eval-verdict", required=True)
+            rec.add_assertion(
+                "canonical_evaluator_evidence_consistent",
+                canonical_evidence["valid"],
+                canonical_evidence,
+            )
+            if eval_path.exists() and eval_path.stat().st_size > 0:
+                rec.add_artifact(eval_path, "j02-legacy-eval-verdict", required=False)
         else:
             limitation = (
                 "Formal eval-verdict remained blocked after live code repair/test verification. "
@@ -784,7 +1033,7 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
                     "stderr_tail": (eval_verdict.stderr or "")[-400:],
                 },
             )
-    else:
+    elif not repair_checks_passed:
         rec.add_assertion(
             "evaluator_verdict_not_submitted_after_failed_repair_checks",
             True,
@@ -803,7 +1052,7 @@ def test_p22_j02_live_coding_task(repo_root: Path, tmp_path: Path) -> None:
         rec,
         (
             "Sprint created, plan approved, live Codex operator completed, real diff and target tests verified. "
-            "Formal evaluator verdict is recorded when the legacy graph/handoff gate accepts the sprint; otherwise retained as a known limitation."
+            "Canonical evaluator verdict is independently reconciled across status history, session events, and the fail-closed gate decision log."
         ),
         all(item["passed"] for item in rec.assertions),
     )

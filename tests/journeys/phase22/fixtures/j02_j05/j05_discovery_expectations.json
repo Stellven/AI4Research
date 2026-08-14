@@ -2,8 +2,8 @@
   "run_id": "p22-j05-literature",
   "min_candidates": 3,
   "limit": 5,
-  "required_source_channels": [
-    "search_s2"
+  "required_provider_families": [
+    "semantic_scholar"
   ],
-  "source_provider": "search_s2"
+  "min_provider_families": 2
 }

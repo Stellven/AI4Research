@@ -243,6 +243,56 @@ def _extract_effective_request_text(text: str) -> dict[str, str]:
     }
 
 
+def _extract_labeled_value(text: str, label: str) -> str:
+    """Return the first explicit ``Label: value`` line from user text.
+
+    RawIntent envelopes can repeat the user's request in multiple sections.  A
+    line-oriented parser keeps paths and commands intact instead of trying to
+    recover them from the normalized, whitespace-collapsed goal summary.
+    """
+
+    match = re.search(rf"(?im)^\s*{re.escape(label)}\s*:\s*(.+?)\s*$", text)
+    if not match:
+        return ""
+    return match.group(1).strip().strip("`\"'")
+
+
+def _extract_execution_contract(text: str) -> dict[str, Any]:
+    project_dir = _extract_labeled_value(text, "Target repository path")
+    if not project_dir:
+        project_dir = _extract_labeled_value(text, "Project")
+
+    scope = _extract_labeled_value(text, "Scope")
+    constraints = _extract_labeled_value(text, "Constraints")
+    acceptance = _extract_labeled_value(text, "Acceptance")
+
+    allowed_paths: list[str] = []
+    scope_tokens = re.findall(
+        r"(?<![\w.-])([\w.-]+(?:/[\w.*-]+)*\.(?:py|js|ts|tsx|jsx|rs|go|java|kt|rb|php|cs|cpp|cc|c|h|md|json|ya?ml|toml))\b",
+        scope,
+        flags=re.I,
+    )
+    for token in scope_tokens:
+        if token not in allowed_paths:
+            allowed_paths.append(token)
+    if re.search(r"\b(?:update|modify|change|edit)\s+(?:the\s+)?tests?\b", scope, re.I):
+        allowed_paths.append("tests/**")
+
+    test_commands = [
+        command.strip()
+        for command in re.findall(r"`([^`]*(?:pytest|unittest|npm\s+test|pnpm\s+test|cargo\s+test|go\s+test)[^`]*)`", acceptance, re.I)
+        if command.strip()
+    ]
+    return {
+        "project_dir": project_dir,
+        "allowed_paths": allowed_paths,
+        "constraints": [item.strip() for item in constraints.split(",") if item.strip()],
+        "acceptance": acceptance,
+        "test_commands": test_commands,
+        "scope": scope,
+    }
+
+
 def _enforce_request_size(text: str) -> None:
     if len(text) > MAX_REQUEST_CHARS:
         raise RequestTooLargeError(len(text))

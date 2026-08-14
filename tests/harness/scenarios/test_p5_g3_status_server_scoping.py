@@ -206,7 +206,10 @@ def test_start_does_not_adopt_foreign_listener(tmp_path, foreign_server):
 
     result = _run_ss(harness, "start")
 
-    assert result.returncode == 0, result.stderr
+    # The intentionally trivial owned server exits immediately, so start must
+    # report readiness failure. The contract under test is that the foreign
+    # healthy listener was not adopted as this harness's server.
+    assert result.returncode != 0, result.stdout
     port_file = harness / "run" / "status-server.port"
     recorded = port_file.read_text(encoding="utf-8").strip() if port_file.exists() else ""
     assert recorded != str(port), (

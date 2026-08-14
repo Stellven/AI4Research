@@ -8,6 +8,7 @@ stay under artifacts/autosci/runs and harness/run.
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,11 +42,24 @@ def load_json_if_exists(path: Path) -> dict[str, Any] | None:
     return load_json(path)
 
 
+def _windows_long_path(path: Path) -> str:
+    resolved = str(path.resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved[2:]
+    return "\\\\?\\" + resolved
+
+
 def write_text_if_changed(path: Path, content: str) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and path.read_text(encoding="utf-8") == content:
-        return False
-    path.write_text(content, encoding="utf-8")
+    long_path = _windows_long_path(path)
+    if path.exists():
+        with open(long_path, "r", encoding="utf-8") as fh:
+            if fh.read() == content:
+                return False
+    with open(long_path, "w", encoding="utf-8") as fh:
+        fh.write(content)
     return True
 
 

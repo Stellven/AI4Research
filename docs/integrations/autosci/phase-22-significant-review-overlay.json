@@ -1,0 +1,601 @@
+{
+  "schema_version": "phase22_significant_review_overlay.v1",
+  "reviewed_at": "2026-08-12",
+  "local_branch": "openJiuwen-Solar",
+  "reviewed_code_head": "43fd4a43c",
+  "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
+  "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
+  "reviewed_group": {
+    "journey_id": "P22-J02",
+    "shared_recorded_limitation": "The older eval.md evidence file was not created.",
+    "classification": "LIMITATION_CLOSED_VERIFIED",
+    "issue_count": 17,
+    "accepted_evidence": "outputs/phase22-real-journeys/p22j02-20260812T050401Z-2369214/journey-result.json",
+    "journey_status": "PASS",
+    "assertions": {
+      "passed": 43,
+      "failed": 0
+    },
+    "mapped_l2_count": 22,
+    "known_limitations": [],
+    "decision": "The live Spark journey now completes request capture, planning, certified Builder routing, approval, physical repair, post-repair tests, scoped diff review, production handoff-submit, and fail-closed eval-verdict. Canonical evaluator evidence is independently reconciled across status history, the sprint append-only event stream, and the gate decision log; the obsolete eval.md filename is no longer treated as mandatory evidence.",
+    "remaining_boundary": "Only the exercised WSL/OpenAI Spark coding path and the 22 L2 features explicitly mapped by J02 are supported. Other providers, models, platforms, and unexercised variants are not inferred.",
+    "issue_ids": [
+      "P22-REPAIR-001",
+      "P22-REPAIR-004",
+      "P22-REPAIR-006",
+      "P22-REPAIR-008",
+      "P22-REPAIR-011",
+      "P22-REPAIR-013",
+      "P22-REPAIR-014",
+      "P22-REPAIR-067",
+      "P22-REPAIR-091",
+      "P22-REPAIR-094",
+      "P22-REPAIR-096",
+      "P22-REPAIR-102",
+      "P22-REPAIR-103",
+      "P22-REPAIR-104",
+      "P22-REPAIR-105",
+      "P22-REPAIR-108",
+      "P22-REPAIR-112"
+    ]
+  },
+  "additional_reviewed_groups": [
+    {
+      "journey_id": "P22-J06",
+      "shared_recorded_limitation": "Ideas were generated, but none included a complete risk, falsifiability, validation, and smallest-experiment plan.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 7,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j06-20260812T050841Z-33200/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "passed": 10,
+        "failed": 0
+      },
+      "decision": "The current production ideate path generated two source-backed, semantically distinct cards. Both independently contain non-empty risk, falsifiability, validation, and minimum_experiment fields, and the journey's verification-ready-card assertion passed. The old card-completeness limitation is closed.",
+      "remaining_boundary": "External novelty and Review LLM final acceptance were not exercised, so the broader journey remains PASS_WITH_KNOWN_LIMITATIONS and promotion_ready remains false. This closure does not claim external novelty acceptance.",
+      "issue_ids": [
+        "P22-REPAIR-023",
+        "P22-REPAIR-024",
+        "P22-REPAIR-025",
+        "P22-REPAIR-029",
+        "P22-REPAIR-030",
+        "P22-REPAIR-031",
+        "P22-REPAIR-057"
+      ]
+    },
+    {
+      "journey_id": "P22-J04",
+      "shared_recorded_limitation": "The PDF was imported, but registration into the wiki was not completed.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 6,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j04-20260812T051154Z-752/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {
+        "passed": 15,
+        "failed": 0
+      },
+      "decision": "The current production ingest path completed source preparation, parsing, stable repeat-PDF identity, memory/graph sidecars, and wiki registration. The journey independently opened and validated the registered paper page, graph edge, ingest log, wiki index, and context brief rather than trusting boundary booleans alone.",
+      "remaining_boundary": "The accepted run covers the local AutoSci workspace wiki with the supplied PDF and Markdown carriers. It does not infer all document formats, external vaults, or remote knowledge stores.",
+      "issue_ids": [
+        "P22-REPAIR-003",
+        "P22-REPAIR-005",
+        "P22-REPAIR-007",
+        "P22-REPAIR-083",
+        "P22-REPAIR-084",
+        "P22-REPAIR-090"
+      ]
+    },
+    {
+      "journey_id": "P22-J18",
+      "shared_recorded_limitation": "The feature worked in local SolarUbuntu/WSL2, but other Linux setups and multi-session use were not tested.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 3,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T071918Z-2703346/journey-result.json",
+        "outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T072027Z-461/journey-result.json"
+      ],
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "passed_per_run": 11,
+        "failed": 0
+      },
+      "decision": "After the SolarUbuntu run, the same production install/doctor/status/status-server/TMUX/uninstall lifecycle passed sequentially in two additional isolated WSL root filesystems named Ubuntu and Ubuntu-24.04. Each run created two concurrent harness-owned TMUX sessions on distinct ports, proved cross-stop/uninstall isolation, and removed both sandboxes and sessions. Linux CLI and the exercised local TMUX lifecycle are now closed for the supported WSL/Ubuntu path.",
+      "closed_issue_ids": [
+        "P22-REPAIR-127",
+        "P22-REPAIR-138"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-120"
+      ],
+      "remaining_boundary": "The validated roots are independent WSL installations but all are Ubuntu 24.04 family. Other distribution families, package managers and native/remote hosts remain untested. Workflow & Platform Status Visibility also retains the narrower remote-host, production-authentication and broad workflow-state boundary, so P22-REPAIR-120 stays open.",
+      "followup_evidence": "outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T063759Z-2613229/journey-result.json",
+      "followup_decision": "The current product now passes two concurrent installed-harness status-server sessions on one real WSL tmux server. The sessions use distinct ports and harness paths; stopping and uninstalling the primary leaves the secondary healthy, and both then cleanly uninstall. A real tmux inherited-environment ownership defect was fixed by explicitly binding HOME, SOLAR_HOME, HARNESS_DIR, and SOLAR_HARNESS_DIR in each pane command.",
+      "issue_ids": [
+        "P22-REPAIR-120",
+        "P22-REPAIR-127",
+        "P22-REPAIR-138"
+      ]
+    },
+    {
+      "journey_id": "P22-J02 + P22-J07",
+      "shared_recorded_limitation": "The experiment ran but ended without a clear final state; the earlier workflow also did not create the older eval.md evidence file.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 2,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22j02-20260812T050401Z-2369214/journey-result.json",
+        "outputs/phase22-real-journeys/p22j07-20260812T052538Z-32040/journey-result.json"
+      ],
+      "journey_status": {
+        "P22-J02": "PASS",
+        "P22-J07": "PASS"
+      },
+      "assertions": {
+        "P22-J02": {
+          "passed": 43,
+          "failed": 0
+        },
+        "P22-J07": {
+          "passed": 17,
+          "failed": 0
+        }
+      },
+      "decision": "J02 now proves the implementation-worker repair, scoped source patch, target tests, artifact handoff, and canonical evaluator decision. J07 independently proves a verification-ready product-generated runner, dataset, exact argv allowlist, replayable result, non-empty structured output, and an explicit completed lifecycle state followed by a supported evaluation verdict. The old missing-eval.md and unclear-final-state limitation is closed.",
+      "repair": "A current-baseline J07 rerun exposed a real regression: the product tried to build a lease-bound handoff package for an already-completed external runtime-evidence path that had no local execution lease. Commit 0b267561d restricts that package to product-executed runs; the evidence-only J07 path and the product-executed J21 path both pass after the repair.",
+      "remaining_boundary": "The result supports the exercised coding POC and deterministic local experiment POC. Other domain-specific POC types still require their own explicit smoke semantics and evidence; completed is a lifecycle terminal state and does not imply every scientific outcome is positive.",
+      "issue_ids": [
+        "P22-REPAIR-036",
+        "P22-REPAIR-038"
+      ]
+    },
+    {
+      "journey_id": "P22-J03",
+      "shared_recorded_limitation": "The benchmark lacked repeated samples, baseline comparison, detailed timing/throughput, and tamper-evident packaging.",
+      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "issue_count": 7,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j03-20260812T053418Z-29420/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {
+        "passed": 15,
+        "failed": 0
+      },
+      "decision": "The production benchmark now runs an explicit baseline plus two isolated current repetitions, records per-scenario wall-time samples and aggregate throughput, packages eight current-versus-baseline comparisons, and emits a SHA-256 manifest over baseline/current reports and command evidence. The independent verifier accepted original/restored bytes and rejected a deliberately tampered Markdown report.",
+      "closed_issue_ids": [
+        "P22-REPAIR-041"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-040",
+        "P22-REPAIR-043",
+        "P22-REPAIR-044",
+        "P22-REPAIR-068",
+        "P22-REPAIR-111",
+        "P22-REPAIR-117"
+      ],
+      "remaining_boundary": "P22-REPAIR-041 is closed because repeated isolated protocol execution, resource timeouts, and durable assets are now directly verified. The other six remain open: historical-version and POC comparisons, CPU/memory consumption, billable-provider cost, workload scalability, newly authored datasets, and task-specific build compile/diff evidence were not exercised.",
+      "issue_ids": [
+        "P22-REPAIR-040",
+        "P22-REPAIR-041",
+        "P22-REPAIR-043",
+        "P22-REPAIR-044",
+        "P22-REPAIR-068",
+        "P22-REPAIR-111",
+        "P22-REPAIR-117"
+      ]
+    },
+    {
+      "journey_id": "P22-J05",
+      "shared_recorded_limitation": "Discovery was limited to one topic/two anchors and only Semantic Scholar search/reference channels, with narrow qualification, organization, and coverage review.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 5,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j05-20260812T055657Z-33540/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {
+        "passed": 36,
+        "failed": 0
+      },
+      "decision": "The current live journey completed separate topic and anchor strategies with the requested anchors, negative IDs, and shortlist limits. A bounded public-provider fallback now refuses excessive Semantic Scholar Retry-After waits, supports an explicit minimum-provider-family contract, and selects a provider-diverse shortlist. The accepted run independently observed Semantic Scholar, OpenAlex, and Crossref families, stable identity/title/year/channel fields, six content-bearing candidates among ten, deduplication, negative-ID exclusion, anchor influence, completed source boundaries, and durable evidence.",
+      "remaining_boundary": "The result proves the exercised public providers, topic, anchors, and metadata/content qualification. It does not claim exhaustive literature coverage, full-text access for every paper, longitudinal recall, or all configured provider variants.",
+      "issue_ids": [
+        "P22-REPAIR-015",
+        "P22-REPAIR-016",
+        "P22-REPAIR-017",
+        "P22-REPAIR-019",
+        "P22-REPAIR-022"
+      ]
+    },
+    {
+      "journey_id": "P22-J08 + P22-J22",
+      "shared_recorded_limitation": "Evidence review covered only supported and overreach examples, used older non-standard journey fields, and did not prove a broader verdict/risk taxonomy.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 4,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22j08-20260812T060017Z-28132/journey-result.json",
+        "outputs/phase22-real-journeys/p22-j22-1786514742/journey-result.json"
+      ],
+      "journey_status": {
+        "P22-J08": "PASS",
+        "P22-J22": "PASS"
+      },
+      "assertions": {
+        "P22-J08": {
+          "passed": 6,
+          "failed": 0
+        },
+        "P22-J22": {
+          "passed": 9,
+          "failed": 0
+        }
+      },
+      "decision": "The production check/review/exp-eval/refine routes now distinguish supported, partially supported, refuting, inconclusive, and scope-overreach outcomes. J22 also emits the standard assertion contract and independently verifies all ten generated evidence artifacts as non-empty, SHA-256-addressed durable copies. Claim/acceptance comparison and verdict/blocker/residual-risk classification are closed for the exercised taxonomy.",
+      "closed_issue_ids": [
+        "P22-REPAIR-048",
+        "P22-REPAIR-049"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-045",
+        "P22-REPAIR-047"
+      ],
+      "remaining_boundary": "Evidence assembly and external-validity review still use bounded local evidence plus the configured review route. Independent real-provider diversity, broader scientific domains, and longitudinal/generalization evidence were not exercised, so P22-REPAIR-045 and 047 remain open.",
+      "issue_ids": [
+        "P22-REPAIR-045",
+        "P22-REPAIR-047",
+        "P22-REPAIR-048",
+        "P22-REPAIR-049"
+      ]
+    },
+    {
+      "journey_id": "P22-J09",
+      "shared_recorded_limitation": "Live review, reusable delivery packaging, HITL final approval, provider-backed compile, and external lifecycle closure were incomplete.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 4,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j09-20260812T062722Z-14976/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "passed": 28,
+        "failed": 0
+      },
+      "decision": "J09 now completes a real low-cost OpenAI provider review with request/response hashes and final_acceptance_ready. A production constructor builds and independently verifies a local-only handoff bundle containing the readable report, reviewed plan, provider review, and decision artifact, with audience/format/content/permission contracts, 14 evidence links, six checklist checks, SHA-256 integrity, secret scanning, exact inventory, and tamper rejection.",
+      "closed_issue_ids": [
+        "P22-REPAIR-051",
+        "P22-REPAIR-053"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-054",
+        "P22-REPAIR-118"
+      ],
+      "remaining_boundary": "The bundle truthfully remains local_only with approval_state=not_requested. HITL compile, external distribution, recipient acceptance, long-term lifecycle closure, and final PDF/publication formats were not executed. Therefore distribution/lifecycle and final compiled-deliverable claims remain open.",
+      "issue_ids": [
+        "P22-REPAIR-051",
+        "P22-REPAIR-053",
+        "P22-REPAIR-054",
+        "P22-REPAIR-118"
+      ]
+    },
+    {
+      "journey_id": "P22-J07 + P22-J09",
+      "shared_recorded_limitation": "J07 lacked a clear terminal experiment state, and J09 lacked completed review/final user-facing delivery evidence.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 2,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22j07-20260812T064135Z-3128/journey-result.json",
+        "outputs/phase22-real-journeys/p22j09-20260812T064153Z-3128/journey-result.json"
+      ],
+      "journey_status": {
+        "P22-J07": "PASS",
+        "P22-J09": "PASS_WITH_KNOWN_LIMITATIONS"
+      },
+      "assertions": {
+        "P22-J07": {
+          "passed": 17,
+          "failed": 0
+        },
+        "P22-J09": {
+          "passed": 28,
+          "failed": 0
+        }
+      },
+      "decision": "J07 now records an explicit completed experiment lifecycle state and independently checks it through exp-status. J09 produces and saves a substantive readable Markdown report, completes real provider review, and includes it in a verified local delivery handoff. These directly close the older named limitations for Runtime Control Loop and User-Facing Deliverable Generation.",
+      "remaining_boundary": "J07 completed is a lifecycle state and does not imply every experimental outcome is positive. J09 external distribution and compiled publication formats remain separately open under P22-REPAIR-054 and 118.",
+      "issue_ids": [
+        "P22-REPAIR-092",
+        "P22-REPAIR-052"
+      ]
+    },
+    {
+      "journey_id": "P22-J18",
+      "shared_recorded_limitation": "Secondary Windows help commands failed and configured model aliases were not fully preserved.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 2,
+      "accepted_evidence": ".codex-tmp/phase22-worker-results/T3-tmux-prep-001/artifacts/",
+      "journey_status": "PASS",
+      "assertions": {
+        "CLI": {
+          "passed": 4,
+          "failed": 0
+        },
+        "LLM_Config": {
+          "passed": 4,
+          "failed": 0
+        }
+      },
+      "decision": "The current Windows J18 selector reports exit 0 for Solar, harness, status, and UI help commands. The production settings write/read path preserves all requested aliases as claude-opus-4.x or claude-sonnet-4.x, reports no missing aliases, retains runtime source solar-user-config.json, and suppresses API keys.",
+      "remaining_boundary": "This closes the specifically recorded secondary-help and model-name roundtrip limitations. It does not infer every CLI command, provider model, secret backend, or platform variant.",
+      "issue_ids": [
+        "P22-REPAIR-129",
+        "P22-REPAIR-139"
+      ]
+    },
+    {
+      "journey_id": "P22-J17 / P22-REPAIR-086 focused production evidence",
+      "shared_recorded_limitation": "The workflow referenced code-graph concepts but did not construct a standalone CodeGraph artifact.",
+      "classification": "FIXED_VERIFIED",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22-086-code-graph-postcommit-20260812T064838Z/",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "focused_tests_passed": 2,
+        "focused_tests_failed": 0,
+        "graph_nodes": 13,
+        "graph_edges": 19,
+        "validation_errors": 0
+      },
+      "decision": "The production code-graph CLI now constructs, queries, and validates a standalone solar.code_graph.v1 artifact from real Python and TypeScript sources. Per-file and whole-graph SHA-256 checks, source tampering, graph tampering, and dangling-edge rejection were independently rerun on the integration branch.",
+      "remaining_boundary": "The graph is a deterministic local static source/runtime graph. Full J17 tmux interruption recovery, dynamic call graphs, and every language/toolchain remain outside this narrow closure.",
+      "issue_ids": [
+        "P22-REPAIR-086"
+      ]
+    },
+    {
+      "journey_id": "P22 intent readiness production CLI",
+      "shared_recorded_limitation": "The product did not generate its own clarification question and readiness was inferred from saved artifacts instead of an explicit clarification transition.",
+      "classification": "FIXED_VERIFIED",
+      "issue_count": 2,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22-intent-readiness-20260812T070500Z/",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "focused_tests_passed": 9,
+        "focused_tests_failed": 0,
+        "before_ready": false,
+        "after_ready": true,
+        "forged_approval_rejected": true
+      },
+      "decision": "The production intent gateway now emits a stable minimum clarification question for mutually exclusive targets, blocks planning and autodispatch while unresolved, and admits planning only after an explicit field answer. Text claiming approval is rejected and cannot satisfy the separate human gate.",
+      "remaining_boundary": "The detector is a bounded deterministic English ruleset, not open-domain semantic disambiguation or a GUI conversation. Attributable human approval remains a separate fail-closed lifecycle requirement.",
+      "issue_ids": [
+        "P22-REPAIR-010",
+        "P22-REPAIR-100"
+      ]
+    },
+    {
+      "journey_id": "NT-dag-trace",
+      "shared_recorded_limitation": "Windows v2 session logging depended on Unix fcntl and no unified trace-query API existed.",
+      "classification": "FIXED_VERIFIED",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-not-tested/NT-dag-trace/run-20260812T070726Z/",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "journey_tests_passed": 1,
+        "journey_tests_failed": 0,
+        "trace_assertions_passed": 6,
+        "trace_assertions_failed": 0,
+        "concurrent_append_records": 40
+      },
+      "decision": "SessionLog uses the cross-platform lock compatibility layer with a dedicated lock file, avoiding Windows JSONL corruption. The production trace_graph query returns scoped events, graph state, gate results, closure, source inventory, and event-to-node correlation in one bounded artifact; 40 concurrent Windows appends retained unique valid records.",
+      "remaining_boundary": "This proves the local JSONL/DAG-state implementation. Distributed trace backends, remote-host aggregation, and every daemon query surface remain outside the exercised boundary.",
+      "issue_ids": [
+        "P22-REPAIR-089"
+      ]
+    },
+    {
+      "journey_id": "P22-J03",
+      "shared_recorded_limitation": "Detailed resource consumption, cost/current-scale evaluation, reusable benchmark asset construction, and compile/diff build evidence were not measured.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 6,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j03-20260812T070454Z-28468/journey-result.json",
+      "journey_status": "PASS",
+      "assertions": {
+        "passed": 16,
+        "failed": 0
+      },
+      "decision": "The current production benchmark runs eight scenarios twice (16 executions), records child CPU, peak working-set memory, wall time and throughput, reports a truthful USD 0 provider cost, and bounds observed scale without extrapolation. It writes a versioned rows-18-25 benchmark asset, compiles the production runner, hashes the runner and source diff, and retains a tamper-checked artifact manifest. This closes the named gaps for metrics/run evidence, performance-cost evaluation, benchmark asset construction, and build evidence.",
+      "closed_issue_ids": [
+        "P22-REPAIR-043",
+        "P22-REPAIR-068",
+        "P22-REPAIR-111",
+        "P22-REPAIR-117"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-040",
+        "P22-REPAIR-044"
+      ],
+      "remaining_boundary": "The comparison uses a freshly constructed same-version baseline, not historical released versions; broad POC-to-baseline scientific comparisons remain outside this platform workflow benchmark. Those two independently recorded boundaries stay open.",
+      "issue_ids": [
+        "P22-REPAIR-040",
+        "P22-REPAIR-043",
+        "P22-REPAIR-044",
+        "P22-REPAIR-068",
+        "P22-REPAIR-111",
+        "P22-REPAIR-117"
+      ]
+    },
+    {
+      "journey_id": "P22-J09",
+      "shared_recorded_limitation": "The final path produced a readable local report but did not complete a compiled deliverable format; external distribution and recipient acceptance were also absent.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 2,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j09-20260812T071016Z-37808/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "passed": 29,
+        "failed": 0,
+        "pdf_pages": 2,
+        "handoff_files": 5
+      },
+      "decision": "A dependency-free production constructor now renders the substantive Markdown report into a structural two-page PDF, verifies header/xref/EOF and source text markers, and records a SHA-256. The five-file mixed handoff includes Markdown, PDF, plan, provider review, and decision artifact; exact inventory/hash verification and tamper rejection remain green. This closes Report/Paper/Deliverable Construction for the exercised local Markdown/PDF path.",
+      "closed_issue_ids": [
+        "P22-REPAIR-118"
+      ],
+      "partially_reduced_issue_ids": [
+        "P22-REPAIR-054"
+      ],
+      "remaining_boundary": "The handoff truthfully remains local_only with approval_state=not_requested. External distribution, recipient acceptance, revocation/retention lifecycle, and attributable final human approval were not performed, so P22-REPAIR-054 stays open.",
+      "issue_ids": [
+        "P22-REPAIR-054",
+        "P22-REPAIR-118"
+      ]
+    },
+    {
+      "journey_id": "P22-J06 live novelty",
+      "shared_recorded_limitation": "Basic idea generation worked with local evidence, but live literature search and novelty services were not tested.",
+      "classification": "LIMITATION_CLOSED_VERIFIED",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22j06-20260812T073114Z-14168/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"passed": 13, "failed": 0, "live_sources": 8},
+      "decision": "The production novelty chain now falls back to public OpenAlex when Semantic Scholar is rate limited, retains provider/DOI/work provenance and raw payload evidence, and applies the evidence to multiple source-backed idea candidates. Selection with max_ideas=1 records rank and defer reasons rather than silently dropping alternatives.",
+      "remaining_boundary": "The run closes the named live literature/novelty gap. Final independent Review LLM or attributable human acceptance was not claimed and remains a separate promotion boundary.",
+      "issue_ids": ["P22-REPAIR-021"]
+    },
+    {
+      "journey_id": "P22-J03 historical benchmark",
+      "shared_recorded_limitation": "Baseline and version-history variants and broader POC-to-baseline comparisons were not tested.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 2,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22j03-20260812T072943Z-13944/journey-result.json",
+        "outputs/phase22-real-journeys/p22-scientific-comparison-20260812T124345Z/journey-result.json",
+        ".codex-tmp/phase22-worker-results/p22-044-followup/result.json"
+      ],
+      "journey_status": "PASS",
+      "assertions": {"passed": 16, "failed": 0},
+      "decision": "The platform benchmark binds a historical baseline to an actual Git commit and packages deltas for eight workflows. A separate scientific comparator now derives metrics from hash-bound retrieval artifacts, requires all eight planned pairs, passes the canonical experiment-result gate, rejects mutable metric and embedded-plan attacks, and reports effect 0.75, 95% CI [0.362936, 1.137064], and exact sign-flip p=0.03125.",
+      "closed_issue_ids": ["P22-REPAIR-040"],
+      "partially_reduced_issue_ids": ["P22-REPAIR-044"],
+      "remaining_boundary": "P22-REPAIR-044 remains open. Git ancestry proves the protocol blob preceded these result artifacts, but the protocol and implementation are self-authored in the same repository; no trusted independent preregistry, signer, protected ref, external replication, broad scientific domain, or released-baseline experiment was demonstrated.",
+      "issue_ids": ["P22-REPAIR-040", "P22-REPAIR-044"]
+    },
+    {
+      "journey_id": "P22-J18 authenticated status states",
+      "shared_recorded_limitation": "Status visibility was only proven in a narrow local setup and broader workflow/platform states were not exercised.",
+      "classification": "LIMITATION_CLOSED_VERIFIED_LOCAL_SCOPE",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22-j18-status-auth-states-20260812T073137Z-2728953/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"passed": 3, "failed": 0, "workflow_states": 5},
+      "decision": "A real security defect was repaired: token-required mode no longer serves an unauthenticated dashboard containing the token, and HEAD now enforces the same authorization boundary as GET. The accepted Ubuntu run proves unauthenticated and wrong-token rejection, correct header/query authorization, invalid-sprint rejection, and queued, active, gate-blocked, approved, reviewing and passed projections without leaving process or token artifacts.",
+      "remaining_boundary": "This closes the recorded local status-visibility limitation. TLS, federated identity, cross-host authorization and remote-host topology remain explicit non-inferred deployment boundaries.",
+      "issue_ids": ["P22-REPAIR-120"]
+    },
+    {
+      "journey_id": "P22-J19 browser, Electron, and packaged Windows GUI",
+      "shared_recorded_limitation": "Desktop/browser execution and GUI accessibility, packaging, concurrency, long-running, and multi-monitor variants were not fully tested.",
+      "classification": "LIMITATION_CLOSED_VERIFIED_CORE_WITH_UNTESTED_VARIANTS",
+      "issue_count": 2,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-j19-real-gui-dashboard-20260812T072916Z-32540/journey-result.json",
+        "outputs/phase22-real-journeys/p22-j19-electron-recovery-20260812T073500Z/recovery-screens.json",
+        ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/result.json",
+        ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/packaged-smoke.json",
+        ".codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/accessibility.json",
+        ".codex-tmp/phase22-worker-results/p22-128-concurrency/result.json",
+        "outputs/phase22-real-journeys/p22-128-route-soak-postcommit-20260812T083841Z/journey-result.json",
+        ".codex-tmp/phase22-worker-results/p22-130-a11y/result.json",
+        ".codex-tmp/phase22-worker-results/p22-130-a11y/after-escape-focus-fix.json"
+      ],
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {
+        "browser": 4,
+        "electron_recovery_screens": 7,
+        "packaged_executable": {"passed": 3, "failed": 0},
+        "bootstrap_contract": {"passed": 20, "failed": 0},
+        "axe_violations": 0,
+        "axe_incomplete": 0,
+        "keyboard_forward": {"passed": 5, "failed": 0},
+        "keyboard_reverse": {"passed": 5, "failed": 0},
+        "route_matrix": {"passed": 21, "failed": 0, "soak_requests": 4247, "soak_errors": 0},
+        "windows_concurrency": {
+          "original": {"passed": 8, "failed": 1},
+          "post_repair_gate_checks": {"passed": 250, "failed": 0},
+          "post_repair_writes": {"accepted": 6000, "failed": 0},
+          "fault_injection_tests": {"passed": 3, "failed": 0}
+        }
+      },
+      "decision": "P22-REPAIR-128 core is fixed and verified: the built Windows app opens the real dashboard; 25 settings-storm rounds accepted 6000/6000 POSTs; 21 authenticated/negative routes passed; bounded route soak completed 4247 requests with zero errors; actual server PID, port, log, and cleanup were independently checked. P22-REPAIR-130 core is fixed and verified: axe reports zero violations and zero incomplete checks, measured contrast is 17.235:1 and 7.033:1, forward and reverse keyboard traversal are 5/5 with dialog activation/escape and trigger-focus restoration, named textboxes appear in the Electron accessibility tree, and the rebuilt executable passed 3/3 while rejecting loading/sign-in pages. The Radix autofocus race in the audit was repaired and bootstrap-to-accessibility sequences passed repeatedly.",
+      "remaining_boundary": "Both issues close for the exercised core path with PASS_WITH_KNOWN_LIMITATIONS. P22-REPAIR-128 does not infer long-running, hostile-network, multi-host, or NSIS portable-wrapper direct-runtime behavior. P22-REPAIR-130 does not infer attributable human screen-reader use, multi-monitor behavior, every dynamic route/control, or complete WCAG certification.",
+      "issue_ids": ["P22-REPAIR-128", "P22-REPAIR-130"]
+    },
+    {
+      "journey_id": "NT-model-training curriculum/data loop",
+      "shared_recorded_limitation": "Hard-case mining and observability work. Full active-learning, curriculum repair, and credit-assignment training remain incomplete.",
+      "classification": "LIMITATION_CLOSED_VERIFIED_BOUNDED_DATA_LOOP",
+      "issue_count": 1,
+      "accepted_evidence": "outputs/phase22-real-journeys/p22-curriculum-20260812T073958Z/journey-result.json",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"passed": 6, "failed": 0, "negative_variants": 3},
+      "decision": "The production evolution CLI now evaluates a curriculum/data-policy candidate from mined failure clusters using hash-addressed training and isolated holdout rows. The accepted run improved holdout pass rate from 50% to 100% with no regressions, bound every changed case to one intervention, emitted a rollback, and rejected contamination, regression and ambiguous-credit variants.",
+      "remaining_boundary": "This closes the named active-learning/curriculum/credit-assignment data-loop gap. It does not train model weights or claim SFT, LoRA, DPO, GRPO or agent-RL capability, and the measured improvement is limited to the supplied holdout.",
+      "issue_ids": ["P22-REPAIR-082"]
+    },
+    {
+      "journey_id": "NT-optimization-routing bounded Bayesian and bandit",
+      "shared_recorded_limitation": "Generic metric-based routing works. Bayesian, bandit, and cost-aware RL routing were not available.",
+      "classification": "LIMITATION_CLOSED_VERIFIED_CORE_WITH_UNTESTED_VARIANTS",
+      "issue_count": 1,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-routing-20260812T074252Z/journey-result.json",
+        ".codex-tmp/final-review-p22-076-head/outputs/phase22-real-journeys/p22-bayesian-routing-20260812T131513Z/journey-result.json"
+      ],
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"bandit": {"passed": 6, "failed": 0}, "bayesian": {"passed": 9, "failed": 0}, "typed_attack_variants_rejected": 10},
+      "decision": "The bounded offline optimization core is fixed and verified. Cost-aware UCB1 and a real RBF Gaussian-process/GP-UCB evaluator operate on hash-bound training traces, select under posterior uncertainty and cost limits, require paired holdout utility improvement without success regression, and retain rollback/no-auto-deploy boundaries. Independent GP recomputation matched to 1e-12, and string booleans, NaN/Inf, numeric strings, boolean configs, duplicates, empty IDs, and context leakage fail closed.",
+      "remaining_boundary": "This closure does not infer online optimization, autonomous deployment, or cost-aware reinforcement learning. Those non-core variants remain PASS_WITH_KNOWN_LIMITATIONS.",
+      "issue_ids": ["P22-REPAIR-076"]
+    },
+    {
+      "journey_id": "P22-J24 unified local privacy controls",
+      "shared_recorded_limitation": "The privacy lifecycle passed, but hosted account deletion, provider revocation, external channels, and unified personal-data controls remained absent.",
+      "classification": "MIXED_CLOSED_AND_PARTIALLY_REDUCED",
+      "issue_count": 2,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-j24-privacy-controls-20260812T074503Z/journey-result.json",
+        "outputs/phase22-real-journeys/p22-legal-ip-risk-20260812T141642Z/journey-result.json"
+      ],
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"passed": 9, "failed": 0, "commands": 9},
+      "decision": "The unified local personal-data CLI covers inventory, secret-safe export, retention, selective deletion, consent revoke, and derived-data purge. A bounded legal/IP risk-screen now also checks purpose, jurisdiction, retention, license, copyright and consent against raw-byte-hashed evidence. Auto-allow requires both an out-of-band policy trust anchor and a policy-pinned source_id-to-exact-rights-evidence SHA; self-authored or forged issuer claims remain review_required. Strict types, duplicate keys, stale/alias output, expired/revoked consent, bad hashes, missing evidence, authority-less HTTPS and credential-bearing URIs fail closed, and atomic replacement preserves prior output on injected failure.",
+      "closed_issue_ids": ["P22-REPAIR-135"],
+      "partially_reduced_issue_ids": ["P22-REPAIR-069"],
+      "remaining_boundary": "P22-REPAIR-069 remains open overall. The bounded local policy-screening core is verified, but external issuer/signature authenticity, jurisdiction-specific legal conclusions, legal-counsel approval, external copyright ownership, hosted provider/account revocation, and cross-channel enforcement require external systems or people.",
+      "issue_ids": ["P22-REPAIR-069", "P22-REPAIR-135"]
+    },
+    {
+      "journey_id": "P22-J05 + P22-J22 evidence/external-validity follow-up",
+      "shared_recorded_limitation": "Full evidence-boundary variants, provider independence and broader external-validity variants remained limited.",
+      "classification": "LIMITATION_PARTIALLY_REDUCED",
+      "issue_count": 2,
+      "accepted_evidence": ["outputs/phase22-real-journeys/p22j05-20260812T074001Z-24400/journey-result.json", "outputs/phase22-real-journeys/p22-j22-1786520668/journey-result.json"],
+      "journey_status": {"P22-J05": "PASS", "P22-J22": "PASS_WITH_KNOWN_LIMITATIONS"},
+      "assertions": {"P22-J05": {"passed": 36, "failed": 0, "candidates": 10}, "P22-J22": {"passed": 11, "failed": 0}},
+      "decision": "Public research evidence remains diverse across OpenAlex, Crossref and Semantic Scholar, and J22 verifies bounded verdicts. A real zero-cost Ollama qwen2.5:3b reviewer completed and returned revise_required; malformed smaller-model outputs failed closed. The external-holdout validator now requires an out-of-band plan hash, separately hashed observations, integer-derived rates, distinct site/source/evidence/organization lineage, and rejects posthoc/embedded plans, fake database sites, shared IDs, time inversion, tampering, and organization reuse. Reviewer archives recursively redact secret-like content and separately hash the redacted body.",
+      "remaining_boundary": "Both issues remain open. The Ollama reviewer did not have a distinct attributable writer provider and did not accept the thin artifact. The accepted external-holdout run is validator fixture evidence, not a real independently authenticated multi-site study or external generalization result.",
+      "issue_ids": ["P22-REPAIR-045", "P22-REPAIR-047"]
+    },
+    {
+      "journey_id": "NT-memory-retrieval linear reranker",
+      "shared_recorded_limitation": "Basic persistent retrieval works. Memory learning and Self-RAG are partial, and reranker training is unavailable.",
+      "classification": "LIMITATION_CLOSED_VERIFIED_CORE_WITH_UNTESTED_VARIANTS",
+      "issue_count": 1,
+      "accepted_evidence": [
+        "outputs/phase22-real-journeys/p22-reranker-20260812T074520Z/journey-result.json",
+        "outputs/phase22-real-journeys/p22-self-rag-20260812T134547Z/journey-result.json"
+      ],
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "assertions": {"reranker": {"passed": 6, "failed": 0}, "self_rag": {"passed": 11, "failed": 0}},
+      "decision": "The retrieval-learning core is fixed and verified. The supervised linear reranker improves query-isolated nDCG without Recall@K regression and preserves provenance. The production Self-RAG wrapper now indexes and retrieves real local documents, validates exact cited spans, offsets and hashes, runs bounded retrieve-more/accept/abstain reflection with a chained trace, rejects unsupported Moon/cats claims, and audits all persisted versions for each logical document so cross-run content/provenance changes force empty-answer abstention.",
+      "remaining_boundary": "This closes the deterministic core with PASS_WITH_KNOWN_LIMITATIONS. Exact-span verification is conservative and does not prove paraphrase entailment; neural Self-RAG/reranker fine-tuning and broad-corpus generalization remain untested variants.",
+      "issue_ids": ["P22-REPAIR-080"]
+    }
+  ],
+  "closed_shared_limitation_issue_count": 66,
+  "remaining_significant_issues": 6
+}

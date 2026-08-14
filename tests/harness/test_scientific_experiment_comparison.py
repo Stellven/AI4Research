@@ -11,7 +11,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "harness" / "lib"))
 from scientific_experiment_comparison import InvalidComparison, compare  # noqa: E402
 
-PROTOCOL_COMMIT = "1614a96b3b1ffbde1df6876457c113321d2567c0"
+PROTOCOL_COMMIT = "afb253f0f41518737be3338f1ba431968ee10016"
 PROTOCOL_BLOB = "bda32ee57ad484672782188fb64b4f948ad52e78"
 PROTOCOL_PATH = "tests/journeys/phase22/fixtures/significant/scientific_comparison/protocol.json"
 DATASET = REPO / "tests/journeys/phase22/fixtures/significant/scientific_comparison/labeled_retrieval.jsonl"
@@ -82,7 +82,7 @@ def _results(tmp_path: Path, deltas: list[float] | None = None) -> list[Path]:
                 {"type": "labeled_dataset", "path": str(DATASET), "sha256": dataset_hash},
                 {"type": "production_metric_observations", "path": str(observation), "sha256": observation_hash},
             ],
-            "provenance": {"operator_id": "retrieval_reranker.py", "implementation_package": "harness/lib/retrieval_reranker.py", "timestamp": "2026-08-15T09:01:00Z"},
+            "provenance": {"operator_id": "retrieval_reranker.py", "implementation_package": "harness/lib/retrieval_reranker.py", "timestamp": "2026-08-12T09:01:00Z"},
             "limitations": ["Unit fixture."],
         }
         path = tmp_path / f"{pair}-{arm}.json"

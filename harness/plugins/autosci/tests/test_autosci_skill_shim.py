@@ -943,6 +943,28 @@ def test_autosci_skill_shim_runs_research_pipeline(tmp_path: Path) -> None:
     assert_gate_inconclusive_without_reasons(gate)
 
 
+def test_research_preserves_full_natural_language_prompt_and_run_id(tmp_path: Path) -> None:
+    proc = run_shim(
+        tmp_path,
+        "$research",
+        "梳理网页",
+        "https://example.org/seed",
+        "并生成中文报告",
+        "--run-id",
+        "real-data-run-001",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    expected = "梳理网页 https://example.org/seed 并生成中文报告"
+    assert payload["inputs"]["target"] == expected
+    action = payload["outputs"]["skill_run"]["actions"][0]
+    evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert evidence["sprint_id"] == "real-data-run-001"
+    assert evidence["inputs"]["prompt"] == expected
+    assert evidence["inputs"]["run_id"] == "real-data-run-001"
+
+
 def test_autosci_skill_shim_research_start_from_writes_pipeline_artifacts(tmp_path: Path) -> None:
     proc = run_shim(
         tmp_path,
@@ -12425,6 +12447,37 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
         "The method uses a dataset, metric, baseline, evidence artifact, and claim-linked result table.\n",
         encoding="utf-8",
     )
+    source_text = "The method uses a dataset, metric, baseline, evidence artifact, and claim-linked result table."
+    proof_source = tmp_path / "skillgen-review-provider.source.txt"
+    proof_source.write_text(source_text + "\n", encoding="utf-8")
+    proof_bundle = tmp_path / "skillgen-review-provider.proof.json"
+    proof_bundle.write_text(
+        json.dumps(
+            {
+                "schema": "scientific_review_proof.v1",
+                "writer": {"provider": "openai", "model": "writer-model"},
+                "artifact": {
+                    "path": str(review_target),
+                    "sha256": hashlib.sha256(review_target.read_bytes()).hexdigest(),
+                },
+                "claims": [
+                    {
+                        "claim_id": "claim.provider-review-method",
+                        "claim": source_text,
+                        "source": {
+                            "source_id": "source.provider-review-method",
+                            "path": str(proof_source),
+                            "sha256": hashlib.sha256(proof_source.read_bytes()).hexdigest(),
+                        },
+                        "evidence_span": {"start": 0, "end": len(source_text), "text": source_text},
+                        "acceptance_criterion": "The provider reviewer must reload and check the persisted method claim.",
+                        "residual_risk": "The HTTP server is a unit-test transport fixture, not live-provider acceptance evidence.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     captured: dict[str, object] = {}
 
     class Handler(BaseHTTPRequestHandler):
@@ -12497,6 +12550,8 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
             "gpt-5.5",
             "--review-llm-endpoint",
             endpoint,
+            "--proof-bundle",
+            str(proof_bundle),
             "--run-id",
             "shim-review-llm-provider",
             extra_env={"OPENAI_API_KEY": "test-provider-key", "OPENROUTER_API_KEY": ""},
@@ -12524,6 +12579,11 @@ def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: 
     assert review_llm["invocation_mode"] == "provider"
     assert review_llm["model"] == "gpt-5.5"
     assert review_llm["provider"] == "openai_compatible"
+    independence = review["proof_contract"]["reviewer_separation"]["independence"]
+    assert independence["status"] == "independent_provider"
+    assert independence["execution_bound"] is True
+    assert independence["writer"]["provider"] == "openai"
+    assert independence["reviewer"]["provider"] == "openai_compatible"
     assert Path(review_llm["source_path"]).exists()
     assert "review-llm:provider" in review["evidence_ids"]
     boundary = review_evidence["outputs"]["final_acceptance_boundary"]

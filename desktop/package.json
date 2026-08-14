@@ -9,14 +9,16 @@
   "scripts": {
     "start": "electron .",
     "selftest": "SOLAR_DESKTOP_SELFTEST=1 electron .",
+    "test:accessibility": "node accessibility.test.js",
     "gate": "node verify.js",
-    "build:renderer": "bash build-renderer.sh",
+    "build:renderer": "node build-renderer.js",
     "prepackage-check": "node prepackage-check.js",
-    "build:win": "bash build-renderer.sh && node prepackage-check.js && electron-builder --win portable",
-    "build:mac": "bash build-renderer.sh && node prepackage-check.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg",
-    "build:linux": "bash build-renderer.sh && node prepackage-check.js && electron-builder --linux AppImage"
+    "build:win": "node build-renderer.js && node prepackage-check.js && node prepare-package-resources.js && electron-builder --win portable",
+    "build:mac": "node build-renderer.js && node prepackage-check.js && node prepare-package-resources.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg",
+    "build:linux": "node build-renderer.js && node prepackage-check.js && node prepare-package-resources.js && electron-builder --linux AppImage"
   },
   "devDependencies": {
+    "axe-core": "^4.10.3",
     "electron": "^42.6.1",
     "electron-builder": "^26.15.3",
     "playwright": "^1.61.1"
@@ -31,21 +33,10 @@
     ],
     "extraResources": [
       {
-        "from": "../harness",
+        "from": ".packaging/harness",
         "to": "harness",
         "filter": [
-          "**/*",
-          "!templates/persona",
-          "!run/**",
-          "!state/**",
-          "!logs/**",
-          "!cache/**",
-          "!venvs/**",
-          "!vendor/**",
-          "!quarantine/**",
-          "!**/node_modules/**",
-          "!**/__pycache__/**",
-          "!**/*.pyc"
+          "**/*"
         ]
       },
       {

@@ -1,0 +1,21 @@
+{
+  "sprint_id": "sprint-nt-model-training",
+  "nodes": [
+    {
+      "id": "R8",
+      "goal": "Hard case: terminal research evaluator node missing quality-gate proof",
+      "status": "passed",
+      "required_capabilities": ["research.factuality_evaluator"],
+      "research_quality_gate": {
+        "ok": false,
+        "verdict": "FAIL",
+        "auto_run": false,
+        "metrics": {"citation_accuracy": 0.0},
+        "reason": "missing_training_operator_binding"
+      }
+    }
+  ],
+  "node_results": {
+    "R8": {"status": "passed", "gate_status": "failed"}
+  }
+}

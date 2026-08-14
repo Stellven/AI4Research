@@ -594,43 +594,6 @@ def _wait_for_operator_result(
     return latest_dir, latest_payload
 
 
-def test_j16_operator_result_lookup_targets_the_physical_builder(tmp_path: Path) -> None:
-    harness_dir = tmp_path / "harness"
-    result_root = harness_dir / "run" / "operator-results" / "operator"
-    child_dir = result_root / "child"
-    builder_dir = result_root / "builder"
-    child_dir.mkdir(parents=True)
-    builder_dir.mkdir()
-    sprint_id = "sprint-j16-regression"
-    _write_json(
-        child_dir / "result.json",
-        {
-            "sprint_id": sprint_id,
-            "task_id": f"pm-{sprint_id}-S1-child",
-            "operator_id": "mini-codex-planner-1",
-            "status": "completed",
-        },
-    )
-    _write_json(
-        builder_dir / "result.json",
-        {
-            "sprint_id": sprint_id,
-            "task_id": f"pm-{sprint_id}-S4-final",
-            "operator_id": "mini-codex-builder-1",
-            "status": "completed",
-        },
-    )
-
-    task_dir, payload = _latest_operator_result_for_sprint(
-        harness_dir,
-        sprint_id,
-        operator_id_fragment="builder",
-    )
-
-    assert task_dir == builder_dir
-    assert payload["operator_id"] == "mini-codex-builder-1"
-
-
 def _wait_for_workflow_route(
     harness_dir: Path,
     sprint_id: str,
@@ -671,6 +634,43 @@ def _wait_for_workflow_route(
             return route, observations
         time.sleep(2)
     return route, observations
+
+
+def test_j16_operator_result_lookup_targets_the_physical_builder(tmp_path: Path) -> None:
+    harness_dir = tmp_path / "harness"
+    result_root = harness_dir / "run" / "operator-results" / "operator"
+    child_dir = result_root / "child"
+    builder_dir = result_root / "builder"
+    child_dir.mkdir(parents=True)
+    builder_dir.mkdir()
+    sprint_id = "sprint-j16-regression"
+    _write_json(
+        child_dir / "result.json",
+        {
+            "sprint_id": sprint_id,
+            "task_id": f"pm-{sprint_id}-S1-child",
+            "operator_id": "mini-codex-planner-1",
+            "status": "completed",
+        },
+    )
+    _write_json(
+        builder_dir / "result.json",
+        {
+            "sprint_id": sprint_id,
+            "task_id": f"pm-{sprint_id}-S4-final",
+            "operator_id": "mini-codex-builder-1",
+            "status": "completed",
+        },
+    )
+
+    task_dir, payload = _latest_operator_result_for_sprint(
+        harness_dir,
+        sprint_id,
+        operator_id_fragment="builder",
+    )
+
+    assert task_dir == builder_dir
+    assert payload["operator_id"] == "mini-codex-builder-1"
 
 
 def _prepare_user_inputs(rec: J16Recorder, project: Path, run_id: str) -> dict[str, Path]:

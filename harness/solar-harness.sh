@@ -3850,8 +3850,11 @@ print(json.dumps({
       if _ss_is_windows; then
         return 0
       fi
-      ps ax -o pid= -o args= 2>/dev/null | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
-        $2 ~ /(^|\/)python([0-9]+([.][0-9]+)*)?$/ && $3 == script { print $1 }
+      # Match the exact script as a substring of the full command line rather
+      # than splitting argv on spaces. Installed harness paths commonly contain
+      # spaces on WSL-mounted Windows workspaces.
+      ps ax -o pid= -o comm= -o args= 2>/dev/null | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
+        $2 ~ /^python([0-9]+([.][0-9]+)*)?$/ && index($0, script) > 0 { print $1 }
       ' || true
     }
     _ss_pid_owned() {
@@ -3929,8 +3932,13 @@ print(json.dumps({
           rm -f "$_SS_PID" "$_SS_PORT_FILE"
           _ss_py="${SOLAR_PYTHON:-$(command -v python3 || echo python3)}"
           if command -v tmux >/dev/null 2>&1; then
+            # A tmux server keeps a global environment from its first client.
+            # Multiple installed harnesses can share that server, so relying on
+            # inherited HARNESS_DIR/HOME makes a later session write the first
+            # harness's pid/port/token files. Bind ownership-critical paths in
+            # the pane command itself; session-name scoping alone is not enough.
             tmux new-session -d -s "$_SS_TMUX_SESSION" \
-              "cd '$HARNESS_DIR' && exec '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
+              "cd '$HARNESS_DIR' && exec env HOME='$HOME' USERPROFILE='${USERPROFILE:-$HOME}' SOLAR_HOME='${SOLAR_HOME:-$HOME/.solar}' HARNESS_DIR='$HARNESS_DIR' SOLAR_HARNESS_DIR='$HARNESS_DIR' SOLAR_BIND_HOST='${SOLAR_BIND_HOST:-127.0.0.1}' '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
           else
             nohup "$_ss_py" "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
           fi
@@ -4297,8 +4305,44 @@ print(json.dumps({
         [[ -f "$_eval_py" ]] || { err "eval_runner not found: $_eval_py"; exit 1; }
         python3 "$_eval_py" run "$@"
         ;;
+      curriculum-evaluate)
+        shift || true
+        _curriculum_py="$HARNESS_DIR/lib/curriculum_loop.py"
+        [[ -f "$_curriculum_py" ]] || { err "curriculum_loop not found: $_curriculum_py"; exit 1; }
+        python3 "$_curriculum_py" evaluate "$@"
+        ;;
+      routing-evaluate)
+        shift || true
+        _routing_py="$HARNESS_DIR/lib/routing_bandit.py"
+        [[ -f "$_routing_py" ]] || { err "routing_bandit not found: $_routing_py"; exit 1; }
+        python3 "$_routing_py" evaluate "$@"
+        ;;
+      reranker-train)
+        shift || true
+        _reranker_py="$HARNESS_DIR/lib/retrieval_reranker.py"
+        [[ -f "$_reranker_py" ]] || { err "retrieval_reranker not found: $_reranker_py"; exit 1; }
+        python3 "$_reranker_py" train "$@"
+        ;;
+      legal-risk-screen)
+        shift || true
+        _legal_risk_py="$HARNESS_DIR/lib/legal_ip_risk.py"
+        [[ -f "$_legal_risk_py" ]] || { err "legal_ip_risk not found: $_legal_risk_py"; exit 1; }
+        python3 "$_legal_risk_py" screen "$@"
+        ;;
+      self-rag-evaluate)
+        shift || true
+        _self_rag_py="$HARNESS_DIR/lib/self_rag.py"
+        [[ -f "$_self_rag_py" ]] || { err "self_rag not found: $_self_rag_py"; exit 1; }
+        python3 "$_self_rag_py" run "$@"
+        ;;
+      scientific-compare)
+        shift || true
+        _scientific_compare_py="$HARNESS_DIR/lib/scientific_experiment_comparison.py"
+        [[ -f "$_scientific_compare_py" ]] || { err "scientific_experiment_comparison not found: $_scientific_compare_py"; exit 1; }
+        python3 "$_scientific_compare_py" compare "$@"
+        ;;
       *)
-        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run] [--json]"
+        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run|curriculum-evaluate|routing-evaluate|reranker-train|self-rag-evaluate|scientific-compare] [--json]"
         exit 2
         ;;
     esac

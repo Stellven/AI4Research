@@ -42,7 +42,7 @@ def test_p22_scientific_experiment_comparison(
     protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
     dataset_hash = _sha256(dataset_path)
     protocol_git_path = protocol_path.relative_to(repo_root).as_posix()
-    protocol_commit = "1614a96b3b1ffbde1df6876457c113321d2567c0"
+    protocol_commit = "afb253f0f41518737be3338f1ba431968ee10016"
     protocol_blob = subprocess.check_output(
         ["git", "rev-parse", f"{protocol_commit}:{protocol_git_path}"],
         cwd=repo_root,

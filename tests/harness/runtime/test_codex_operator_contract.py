@@ -275,7 +275,8 @@ def test_codex_operator_projects_auth_on_non_linux(tmp_path, monkeypatch):
     sandbox_codex_home = Path(env["CODEX_HOME"])
     assert sandbox_codex_home.parent.parent == tmp_path / "operator-state"
     assert (sandbox_codex_home / "auth.json").read_text(encoding="utf-8") == '{"fixture": true}\n'
-    assert (sandbox_codex_home / "auth.json").stat().st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert (sandbox_codex_home / "auth.json").stat().st_mode & 0o777 == 0o600
     assert (sandbox_codex_home / "config.toml").read_text(encoding="utf-8") == (
         'cli_auth_credentials_store = "file"\n'
     )
@@ -309,7 +310,9 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
 
     assert command[0] == sys.executable
     assert command[1].endswith("landlock_exec.py")
-    assert command[-4:] == ["--", "codex", "exec", "-"]
+    assert command[-4] == "--"
+    assert Path(command[-3]).name == "codex"
+    assert command[-2:] == ["exec", "-"]
     assert proof["mode"] == "landlock"
     assert proof["strict"] is True
     assert str(harness_dir.resolve()) in proof["read_only"]
@@ -346,6 +349,7 @@ def test_codex_operator_refuses_disabled_isolation_for_strict_run(tmp_path, monk
         )
 
 
+@pytest.mark.skipif(os.name == "nt", reason="generated harness shim is a POSIX shell script")
 def test_codex_operator_binds_model_shell_to_active_harness(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_active_harness", ROOT / "tools" / "codex_operator.py")
     harness_dir = tmp_path / "clean-harness"

@@ -286,7 +286,10 @@ summary:focus-visible,
 .new-task-button,
 .primary-button {
   color: #ffffff;
-  background: linear-gradient(180deg, #2a2b2f 0%, var(--solar-control) 100%);
+  /* Keep the background deterministic for contrast tooling. The previous
+     near-black gradient was visually compliant, but automated WCAG audits
+     could not resolve the background behind nested button text. */
+  background: var(--solar-control);
   font-size: var(--solar-type-sm);
   font-weight: 680;
   box-shadow:
@@ -2532,6 +2535,9 @@ summary:focus-visible,
   border: 1px solid var(--solar-line);
   border-radius: 4px;
   color: var(--solar-muted);
+  /* An explicit surface lets contrast tools resolve this small text without
+     guessing through transparent ancestors. */
+  background: var(--solar-surface);
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-micro);
 }

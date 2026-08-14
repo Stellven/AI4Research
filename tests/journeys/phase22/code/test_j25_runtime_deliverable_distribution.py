@@ -12,7 +12,7 @@ from evidence import JourneyRecorder
 
 def _wsl_path(path: Path) -> str:
     proc = subprocess.run(
-        ["wsl.exe", "wslpath", "-a", "--", str(path.resolve())],
+        ["wsl.exe", "--exec", "wslpath", "-a", "--", str(path.resolve())],
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -47,6 +47,16 @@ def test_wsl_path_preserves_spaces_and_removes_backslashes(tmp_path: Path) -> No
     assert translated.startswith("/mnt/")
     assert "directory with spaces" in translated
     assert "\\" not in translated
+
+    # Without --exec, wsl.exe lets the Linux shell consume the backslashes in
+    # an unquoted Windows path. A no-space path exercises that interop branch.
+    compact = tmp_path / "compact" / "artifact.whl"
+    compact.parent.mkdir(parents=True)
+    compact.write_bytes(b"wheel")
+    compact_translated = _wsl_path(compact)
+    assert compact_translated.startswith("/mnt/")
+    assert compact_translated.endswith("/compact/artifact.whl")
+    assert "\\" not in compact_translated
 
 
 def test_smoke_failure_atomically_replaces_stale_healthy_evidence(repo_root: Path) -> None:

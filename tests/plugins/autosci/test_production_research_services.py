@@ -240,6 +240,50 @@ def test_literature_discovery_falls_back_after_semantic_retry_budget_is_exceeded
     assert any("no early retry was attempted" in item for item in result["limitations"])
 
 
+def test_literature_discovery_can_require_provider_diversity(tmp_path: Path) -> None:
+    def backend(**_kwargs):
+        return {
+            "status": "completed",
+            "candidates": [
+                {
+                    "candidate_id": f"s2-{index}",
+                    "paperId": f"s2-{index}",
+                    "title": f"Semantic source {index}",
+                    "source_ref": f"https://www.semanticscholar.org/paper/s2-{index}",
+                    "source_channels": ["search_s2"],
+                }
+                for index in range(1, 4)
+            ],
+            "limitations": [],
+        }
+
+    discovery = LiteratureDiscoveryService(tmp_path, backend=backend, limit=4)
+    discovery._openalex = lambda query: (
+        [
+            {
+                "source_id": "openalex:1",
+                "canonical_id": "https://openalex.org/W1",
+                "title": "Independent OpenAlex source",
+                "url": "https://openalex.org/W1",
+                "provider": "openalex",
+                "metadata": {"year": 2026},
+                "provenance": {"provider": "openalex", "query": query},
+                "content_summary": "Independent provider content.",
+            }
+        ],
+        {"provider": "openalex", "request_url": "https://api.openalex.org/works", "response_sha256": "a" * 64},
+    )
+
+    result = discovery(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "provider diversity"}]},
+        payload={"task_contract": {"min_provider_families": 2}},
+    )
+
+    assert {item["provider"] for item in result["candidates"]} == {"semantic_scholar", "openalex"}
+    assert result["candidates"][0]["provider"] == "semantic_scholar"
+    assert result["candidates"][1]["provider"] == "openalex"
+
+
 def test_literature_discovery_archives_under_long_windows_workspace_path(tmp_path: Path) -> None:
     long_root = (
         tmp_path

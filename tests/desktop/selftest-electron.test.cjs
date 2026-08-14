@@ -2,6 +2,7 @@
 "use strict";
 
 const assert = require("assert");
+const crypto = require("crypto");
 const fs = require("fs");
 const http = require("http");
 const os = require("os");
@@ -15,6 +16,9 @@ const DESKTOP = path.resolve(__dirname, "..", "..", "desktop");
 const SOURCE_HARNESS = path.resolve(DESKTOP, "..", "harness");
 const ELECTRON_EXECUTABLE = process.env.SOLAR_ELECTRON_EXECUTABLE_PATH
   ? path.resolve(process.env.SOLAR_ELECTRON_EXECUTABLE_PATH)
+  : "";
+const EVIDENCE_DIR = process.env.SOLAR_DESKTOP_EVIDENCE_DIR
+  ? path.resolve(process.env.SOLAR_DESKTOP_EVIDENCE_DIR)
   : "";
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "solar-desktop-selftest-"));
 const tempHome = path.join(temp, "home");
@@ -42,6 +46,17 @@ function copyRuntimeFixture() {
       return !parts.some((part) => excluded.has(part));
     },
   });
+  // The dashboard normally shells out to provider CLIs for up to eight seconds
+  // while deciding whether to show sign-in. This isolated smoke is proving the
+  // packaged dashboard, not a host credential. Return the product's documented
+  // `unknown` state deterministically so AuthGate degrades open without reading
+  // or copying any real credentials.
+  const authFixture = path.join(tempHarness, "auth-helpers.sh");
+  fs.writeFileSync(
+    authFixture,
+    '#!/usr/bin/env bash\nprintf \'%s\\n\' \'{"ok":true,"codex":"unknown","claude":"unknown","glm":"unknown","source":"desktop-selftest-fixture"}\'\n',
+    "utf8",
+  );
 }
 
 function waitFor(predicate, timeoutMs, label) {
@@ -133,6 +148,10 @@ async function runDesktopSelftest(url, options = {}) {
       SOLAR_BACKEND_URL: url,
       SOLAR_DESKTOP_SELFTEST: "1",
       SOLAR_DESKTOP_SELFTEST_TIMEOUT_MS: String(options.timeoutMs || 5000),
+      SOLAR_DESKTOP_SELFTEST_REQUIRED_CONTRACT: "dashboard",
+      // Keep the verified renderer alive long enough for Playwright to inspect
+      // Electron's own accessibility tree before the selftest exits.
+      SOLAR_DESKTOP_SELFTEST_EXIT_DELAY_MS: options.inspectTarget ? "3000" : "300",
       SOLAR_DESKTOP_SHOT: options.screenshot || "",
       SOLAR_ELECTRON_DISABLE_SANDBOX: "1",
       ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
@@ -140,6 +159,28 @@ async function runDesktopSelftest(url, options = {}) {
   };
   if (ELECTRON_EXECUTABLE) launchOptions.executablePath = ELECTRON_EXECUTABLE;
   const application = await electron.launch(launchOptions);
+  const targetInspection = options.inspectTarget
+    ? (async () => {
+        const page = await application.firstWindow();
+        const home = page.locator('[data-testid="home-landing"]');
+        await home.waitFor({ state: "visible", timeout: 10000 });
+        const taskInput = page.getByRole("textbox", { name: "What do you want done?" });
+        await taskInput.waitFor({ state: "visible", timeout: 3000 });
+        if (options.inspectionScreenshot) {
+          await page.screenshot({ path: options.inspectionScreenshot });
+        }
+        return {
+          source: "Playwright Electron renderer accessibility tree via locator.ariaSnapshot()",
+          home_landing_visible: await home.isVisible(),
+          auth_checking_visible: await page
+            .locator('[data-testid="auth-checking"]')
+            .isVisible()
+            .catch(() => false),
+          heading: await page.getByRole("heading", { name: "What do you want done?" }).innerText(),
+          task_input_aria_snapshot: await taskInput.ariaSnapshot(),
+        };
+      })()
+    : Promise.resolve(null);
   const output = [];
   application.on("console", (message) => output.push(message.text()));
   const child = application.process();
@@ -161,7 +202,11 @@ async function runDesktopSelftest(url, options = {}) {
         );
       }),
     ]);
-    return { ...result, output: output.join("\n") };
+    return {
+      ...result,
+      output: output.join("\n"),
+      targetInspection: await targetInspection,
+    };
   } finally {
     clearTimeout(timer);
     if (child.exitCode === null) await application.close().catch(() => {});
@@ -184,11 +229,32 @@ async function stopChild(child) {
   try {
     runtime = await startRealRuntime();
     const screenshot = path.join(temp, "runtime-dashboard.png");
-    const healthy = await runDesktopSelftest(runtime.url, { screenshot });
+    const targetScreenshot = path.join(temp, "runtime-dashboard-target.png");
+    const healthy = await runDesktopSelftest(runtime.url, {
+      screenshot,
+      inspectTarget: true,
+      inspectionScreenshot: targetScreenshot,
+    });
     assert.strictEqual(healthy.code, 0, healthy.output);
     assert.match(healthy.output, /SELFTEST OK/);
     assert.doesNotMatch(healthy.output, /SELFTEST FAIL/);
     assert.ok(fs.statSync(screenshot).size > 0, "selftest screenshot is empty");
+    assert.ok(
+      fs.statSync(targetScreenshot).size > 0,
+      "target dashboard screenshot is empty",
+    );
+    assert.strictEqual(healthy.targetInspection.home_landing_visible, true);
+    assert.strictEqual(healthy.targetInspection.auth_checking_visible, false);
+    assert.strictEqual(healthy.targetInspection.heading, "What do you want done?");
+    assert.match(
+      healthy.targetInspection.task_input_aria_snapshot,
+      /textbox "What do you want done\?"/,
+    );
+    if (EVIDENCE_DIR) {
+      fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
+      fs.copyFileSync(targetScreenshot, path.join(EVIDENCE_DIR, "runtime-dashboard.png"));
+      fs.copyFileSync(screenshot, path.join(EVIDENCE_DIR, "selftest-capture.png"));
+    }
     console.log("PASS  real runtime dashboard -> SELFTEST OK + nonempty screenshot");
 
     blank = await startBlankServer();
@@ -210,6 +276,36 @@ async function stopChild(child) {
     console.log(
       `ELECTRON SELFTEST E2E PASS (3/3, ${ELECTRON_EXECUTABLE ? "built executable" : "development shell"})`,
     );
+    if (EVIDENCE_DIR) {
+      const retainedShot = path.join(EVIDENCE_DIR, "runtime-dashboard.png");
+      const digest = (file) =>
+        crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+      const evidence = {
+        status: "PASS",
+        checks: {
+          real_runtime_dashboard: "PASS",
+          blank_page_fails_closed: "PASS",
+          screenshot_failure_fails_closed: "PASS",
+        },
+        executable_kind: ELECTRON_EXECUTABLE ? "built executable" : "development shell",
+        executable_path: ELECTRON_EXECUTABLE,
+        executable_sha256: ELECTRON_EXECUTABLE ? digest(ELECTRON_EXECUTABLE) : "",
+        screenshot_path: retainedShot,
+        screenshot_sha256: digest(retainedShot),
+        screenshot_bytes: fs.statSync(retainedShot).size,
+        auth_fixture: {
+          state: "unknown",
+          source: "desktop-selftest-fixture",
+          note: "isolated credential-free state; product AuthGate degrades open",
+        },
+        target_dashboard: healthy.targetInspection,
+      };
+      fs.writeFileSync(
+        path.join(EVIDENCE_DIR, "packaged-smoke.json"),
+        `${JSON.stringify(evidence, null, 2)}\n`,
+        "utf8",
+      );
+    }
   } finally {
     if (blank) await new Promise((resolve) => blank.server.close(resolve));
     if (runtime) await stopChild(runtime.child);

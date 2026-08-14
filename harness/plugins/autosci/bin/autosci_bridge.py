@@ -6786,6 +6786,45 @@ def _discover_native_candidates(payload: dict[str, Any]) -> list[dict[str, Any]]
     return normalized
 
 
+def _production_discovery_candidates(result: dict[str, Any], *, limit: int) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for index, item in enumerate(result.get("candidates") or [], start=1):
+        if not isinstance(item, dict):
+            continue
+        metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        provider = str(item.get("provider") or "").strip().lower()
+        raw = {
+            "candidate_id": item.get("source_id") or item.get("canonical_id") or f"provider-candidate-{index:03d}",
+            "title": item.get("title"),
+            "source_ref": item.get("url") or item.get("canonical_id"),
+            "source_channels": [provider] if provider else [],
+            "ranking_score": 1.0,
+            "ranking_rationale": f"Production public-provider fallback supplied this candidate via {provider or 'unknown provider'}.",
+            "dedup_status": "new",
+            "fetch_status": "fetched",
+            "year": metadata.get("year"),
+            "abstract": item.get("content_summary"),
+        }
+        candidate = _candidate_from_runtime(raw, index)
+        if candidate is not None:
+            normalized.append(candidate)
+        if len(normalized) >= limit:
+            break
+    return normalized
+
+
+def _production_discovery_artifacts(result: dict[str, Any], workspace_root: Path) -> list[dict[str, str]]:
+    artifacts: list[dict[str, str]] = []
+    for usage in result.get("provider_usage") or []:
+        if not isinstance(usage, dict):
+            continue
+        raw_path = str(usage.get("archive_path") or "").strip()
+        archive = workspace_root / raw_path if raw_path else Path()
+        if raw_path and archive.is_file():
+            artifacts.append(_artifact("public_provider_discovery_archive_json", archive))
+    return artifacts
+
+
 def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path, allow_network_fetch: bool) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     output_dir = _output_dir(envelope, "discover_literature")
@@ -6841,6 +6880,8 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
                 no_citation_expand=bool(inputs.get("no_citation_expand")),
                 fixture_fallback=False,
                 progress_path=output_dir / "semantic_scholar_retry_progress.json",
+                max_retries=1,
+                max_retry_wait_seconds=5,
             )
             fallback_candidates = fallback.get("candidates") if isinstance(fallback.get("candidates"), list) else []
             if fallback_candidates:
@@ -6852,6 +6893,33 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
                 limitations.extend(str(item) for item in fallback.get("limitations") or [])
         except Exception as exc:
             limitations.append(f"Provider-backed discovery fallback failed: {type(exc).__name__}: {exc}")
+    if allow_network_fetch and mode == "topic" and not candidates:
+        try:
+            service_workspace = output_dir / "public-provider-fallback"
+            production_services = production_services_from_environment(workspace_root=service_workspace)
+            discover_sources = production_services["discover_sources"]
+            if hasattr(discover_sources, "limit"):
+                discover_sources.limit = int(inputs.get("limit") or payload.get("shortlist_count") or 10)
+            provider_result = discover_sources(
+                seed_snapshot={"seeds": [{"seed_kind": "topic", "content": str(inputs.get("query") or inputs.get("topic") or "")}]},
+                payload={"task_contract": {
+                    "user_intent": str(inputs.get("query") or inputs.get("topic") or ""),
+                    "min_provider_families": int(inputs.get("min_provider_families") or 1),
+                }},
+            )
+            provider_candidates = _production_discovery_candidates(
+                provider_result,
+                limit=int(inputs.get("limit") or payload.get("shortlist_count") or 10),
+            )
+            if provider_candidates:
+                candidates = provider_candidates
+                native_mode = "topic_public_provider_fallback"
+                status = "completed"
+                artifacts.extend(_production_discovery_artifacts(provider_result, service_workspace))
+                limitations.append("Native topic discovery returned no shortlist; bounded production public-provider fallback supplied traceable candidates.")
+                limitations.extend(str(item) for item in provider_result.get("limitations") or [] if str(item).strip())
+        except Exception as exc:
+            limitations.append(f"Production public-provider discovery fallback failed: {type(exc).__name__}: {exc}")
     return {
         "status": status,
         "mode": native_mode,
@@ -7233,6 +7301,149 @@ def _write_phase9_foundation_sidecars(envelope: dict[str, Any], paper_evidence: 
         _write_evidence_payload(memory_path, memory_evidence),
         _write_evidence_payload(graph_path, graph_evidence),
     ]
+
+
+def _register_ingest_paper_wiki(
+    envelope: dict[str, Any],
+    paper_evidence: dict[str, Any],
+    sidecar_paths: list[str],
+) -> list[dict[str, str]]:
+    outputs = paper_evidence.get("outputs") if isinstance(paper_evidence.get("outputs"), dict) else {}
+    paper = outputs.get("paper") if isinstance(outputs.get("paper"), dict) else {}
+    paper_id = str(paper.get("paper_id") or "").strip()
+    title = str(paper.get("title") or "").strip()
+    if not paper_id or not title:
+        return []
+    existing_state = _ingest_wiki_registration_state(envelope, paper)
+    if all(
+        bool(existing_state.get(key))
+        for key in ("paper_registered", "graph_registered", "index_rebuilt", "context_rebuilt")
+    ):
+        return []
+
+    wiki_root = _wiki_roots_for_write(envelope)[0]
+    page_path = wiki_root / "papers" / f"{_slug(paper_id)}.md"
+    evidence_path = _configured_output_path(
+        envelope,
+        "evidence_payload_path",
+        _output_dir(envelope, "ingest_paper") / "ingest_paper.evidence.json",
+        legacy_key="evidence_path",
+        legacy_suffix=".json",
+    )
+    evidence_refs = _unique_strings(
+        [
+            _rel(evidence_path),
+            *[str(path) for path in sidecar_paths],
+            str(paper.get("source_ref") or ""),
+        ]
+    )
+    abstract = str(paper.get("abstract") or "").strip()
+    sections = paper.get("sections") if isinstance(paper.get("sections"), list) else []
+    section_lines: list[str] = []
+    for section in sections[:6]:
+        if not isinstance(section, dict):
+            continue
+        section_title = str(section.get("title") or "Section").strip() or "Section"
+        section_text = str(section.get("text") or "").strip()
+        if section_text:
+            section_lines.extend([f"### {section_title}", "", section_text, ""])
+
+    page_body = "\n".join(
+        [
+            "---",
+            f"title: {_frontmatter_string(title)}",
+            f"paper_id: {_frontmatter_string(paper_id)}",
+            f"source_ref: {_frontmatter_string(paper.get('source_ref') or '')}",
+            f"source_type: {_frontmatter_string(paper.get('source_type') or '')}",
+            "autosci_source_action: \"ingest\"",
+            f"registered_at: {_frontmatter_string(datetime.now(UTC).replace(microsecond=0).isoformat().replace('+00:00', 'Z'))}",
+            "---",
+            "",
+            f"# {title}",
+            "",
+            f"Paper id: `{paper_id}`",
+            "",
+            "## Abstract",
+            "",
+            abstract or "N/A",
+            "",
+            "## Extracted Sections",
+            "",
+            *(section_lines or ["N/A", ""]),
+            "## Evidence",
+            "",
+            "Evidence:",
+            *[f"- `{ref}`" for ref in evidence_refs],
+            "",
+        ]
+    )
+    _write_text_if_changed_bridge(page_path, page_body)
+
+    edges_path = wiki_root / "graph" / "edges.jsonl"
+    edges_path.parent.mkdir(parents=True, exist_ok=True)
+    edge = {
+        "edge_type": "source_candidate_ingested",
+        "source_type": "ingest_paper",
+        "source_id": str(envelope.get("run_id") or envelope.get("task_id") or "ingest"),
+        "relation": "registered",
+        "target_type": "paper",
+        "target_id": paper_id,
+        "target_path": _rel(page_path),
+        "title": title,
+        "source_ref": str(paper.get("source_ref") or ""),
+        "evidence_refs": evidence_refs,
+        "timestamp": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    }
+    already_registered = False
+    if edges_path.exists():
+        for raw_line in edges_path.read_text(encoding="utf-8").splitlines():
+            try:
+                existing_edge = json.loads(raw_line)
+            except json.JSONDecodeError:
+                continue
+            if (
+                isinstance(existing_edge, dict)
+                and str(existing_edge.get("edge_type") or "") == "source_candidate_ingested"
+                and str(existing_edge.get("target_id") or "") == paper_id
+            ):
+                already_registered = True
+                break
+    if not already_registered:
+        line = json.dumps(edge, sort_keys=True)
+        edges_path.open("a", encoding="utf-8").write(line + "\n")
+
+    evidence_ids = _unique_strings([paper_id, str(paper.get("source_ref") or "")])
+    log_path = _write_generic_wiki_log(
+        wiki_root,
+        "Ingest Paper",
+        page_path,
+        evidence_ids,
+        f"Registered ingested paper `{paper_id}` ({title}) into the local AutoSci wiki.",
+    )
+    rebuilt_paths = _rebuild_generic_wiki_views(
+        wiki_root,
+        str(envelope.get("run_id") or envelope.get("sprint_id") or "autosci-ingest"),
+        page_path,
+        evidence_ids,
+    )
+    artifacts = paper_evidence.setdefault("artifacts", [])
+    wiki_artifacts = [
+        {"type": "wiki_paper", "path": _rel(page_path)},
+        {"type": "wiki_graph_edges", "path": _rel(edges_path)},
+        {"type": "wiki_log", "path": _rel(log_path)},
+        *[{"type": "wiki_rebuild", "path": _rel(path)} for path in rebuilt_paths],
+    ]
+    known = {
+        (str(item.get("type") or ""), str(item.get("path") or ""))
+        for item in artifacts
+        if isinstance(item, dict)
+    }
+    for artifact in wiki_artifacts:
+        key = (artifact["type"], artifact["path"])
+        if key not in known:
+            artifacts.append(artifact)
+            known.add(key)
+    return wiki_artifacts
 
 
 def _artifact_path_exists(raw_path: Any) -> bool:
@@ -23794,6 +24005,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     if args.action in {"ingest_paper", "prepare_paper_source"}:
         sidecar_evidence_paths = _write_phase9_foundation_sidecars(envelope, evidence)
         extra["sidecar_evidence_paths"] = sidecar_evidence_paths
+        wiki_registration_artifacts = _register_ingest_paper_wiki(envelope, evidence, sidecar_evidence_paths)
+        if wiki_registration_artifacts:
+            extra["wiki_registration_artifacts"] = wiki_registration_artifacts
         evidence = _attach_ingest_final_source_registration_boundary(envelope, evidence, sidecar_evidence_paths)
     if args.action == "evaluate_ideas":
         sidecar_paths = [_write_phase11_idea_memory_sidecar(envelope, evidence)]

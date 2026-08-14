@@ -328,6 +328,18 @@ def _provider_identifier_status(
             "status": "passed" if not issues else "missing",
             "issues": issues,
         }
+    if provider == "openalex":
+        issues = (
+            []
+            if (_valid_http_url(source_id) or doi or valid_url)
+            else ["openalex requires a work id URL, DOI, or absolute http(s) URL."]
+        )
+        return {
+            "schema": "openalex",
+            "required_any": ["id", "DOI", "url"],
+            "status": "passed" if not issues else "missing",
+            "issues": issues,
+        }
     issues = [] if (valid_url or doi or arxiv_id or s2_id or deepxiv_id or source_id) else ["external source requires a durable id or URL."]
     return {
         "schema": "external",
@@ -418,6 +430,7 @@ def _external_provenance_report(external: dict[str, Any]) -> dict[str, Any]:
             "query",
             "fetched_at",
             "semantic_scholar.paperId_or_externalIds",
+            "openalex.work_id_or_doi_or_url",
             "web.absolute_http_url",
             "deepxiv.deepxiv_id_or_doi_or_arxiv_or_url",
             "raw_payload_sha256",
@@ -454,7 +467,7 @@ def _online_providers(inputs: dict[str, Any]) -> list[str]:
         values = [str(item) for item in raw]
     else:
         env_value = os.environ.get("AUTOSCI_NOVELTY_PROVIDERS", "").strip()
-        values = env_value.split(",") if env_value else ["semantic_scholar", "web", "deepxiv"]
+        values = env_value.split(",") if env_value else ["semantic_scholar", "openalex", "web", "deepxiv"]
     out: list[str] = []
     for value in values:
         provider = value.strip().lower().replace("-", "_")
@@ -540,6 +553,71 @@ def _fetch_semantic_scholar_sources(
     ]
     return sources, {
         "provider": "semantic_scholar",
+        "status": "completed" if sources else "inconclusive",
+        "source_count": len(sources),
+        "query": query,
+        "endpoint": endpoint,
+        "raw_payload_ref": endpoint,
+        "raw_payload_sha256": payload_hash,
+        "raw_payload_archive_path": archive["path"],
+        "raw_payload_archive_status": archive["status"],
+    }
+
+
+def _fetch_openalex_sources(
+    query: str,
+    limit: int,
+    inputs: dict[str, Any],
+    workspace_root: Path,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    endpoint = os.environ.get(
+        "AUTOSCI_OPENALEX_SEARCH_URL",
+        "https://api.openalex.org/works?search={query}&per-page={limit}&select=id,doi,title",
+    )
+    try:
+        payload = _fetch_json_url(endpoint, query=query, limit=limit)
+    except (
+        OSError,
+        TimeoutError,
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        json.JSONDecodeError,
+        ValueError,
+    ) as exc:
+        return [], {
+            "provider": "openalex",
+            "status": "failed",
+            "reason": str(exc),
+            "query": query,
+            "endpoint": endpoint,
+        }
+    payload_hash = _payload_sha256(payload)
+    archive = _archive_payload(payload, inputs, workspace_root, provider="openalex", payload_hash=payload_hash)
+    normalized_items: list[dict[str, Any]] = []
+    for item in _candidate_items(payload):
+        if not isinstance(item, dict):
+            continue
+        normalized = dict(item)
+        normalized["title"] = item.get("title") or item.get("display_name") or ""
+        normalized["url"] = item.get("url") or item.get("id") or ""
+        normalized["provider"] = "openalex"
+        normalized_items.append(normalized)
+    sources = [
+        source
+        for index, item in enumerate(normalized_items)
+        if (source := _normalize_external_source(
+            item,
+            endpoint,
+            index,
+            provider_hint="openalex",
+            raw_payload_ref=endpoint,
+            raw_payload_sha256=payload_hash,
+            raw_payload_archive_path=archive["path"],
+            raw_payload_archive_status=archive["status"],
+        )) is not None
+    ]
+    return sources, {
+        "provider": "openalex",
         "status": "completed" if sources else "inconclusive",
         "source_count": len(sources),
         "query": query,
@@ -656,6 +734,8 @@ def _fetch_online_sources(idea: dict[str, Any], inputs: dict[str, Any], workspac
     fetchers = {
         "semantic_scholar": _fetch_semantic_scholar_sources,
         "s2": _fetch_semantic_scholar_sources,
+        "openalex": _fetch_openalex_sources,
+        "open_alex": _fetch_openalex_sources,
         "web": _fetch_web_sources,
         "deepxiv": _fetch_deepxiv_sources,
     }
@@ -849,7 +929,7 @@ def evaluate_novelty_and_review(
                 "source_count": 0,
                 "checked_paths": [],
                 "provider_statuses": [],
-                "reason": "No Web/Semantic Scholar/DeepXiv novelty evidence path was supplied and online novelty fetch was not requested.",
+                "reason": "No OpenAlex/Web/Semantic Scholar/DeepXiv novelty evidence path was supplied and online novelty fetch was not requested.",
             }
         )
     external_sources = list(external.get("sources") or [])
@@ -887,7 +967,7 @@ def evaluate_novelty_and_review(
         if failed_overlap:
             risks.append(f"Overlaps failed idea memory: {failed_ref}.")
         if external.get("status") != "completed":
-            risks.append("External Web/Semantic Scholar/DeepXiv novelty evidence is unavailable or invalid.")
+            risks.append("External OpenAlex/Web/Semantic Scholar/DeepXiv novelty evidence is unavailable or invalid.")
 
     review_mode = "local_surrogate"
     review_available = False

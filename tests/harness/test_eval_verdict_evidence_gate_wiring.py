@@ -121,3 +121,10 @@ def test_eval_verdict_pass_runs_end_to_end_and_transitions_status(
     transitions = [event for event in events if event["type"] == "state_transition"]
     assert transitions[-1]["payload"]["from"] == "reviewing"
     assert transitions[-1]["payload"]["to"] == "passed"
+
+    decisions_path = harness_dir / "experience" / "decisions.jsonl"
+    decisions = [json.loads(line) for line in decisions_path.read_text(encoding="utf-8").splitlines()]
+    assert decisions[-1]["sid"] == sid
+    assert decisions[-1]["action_requested"] == "status_transition:reviewing->passed"
+    assert decisions[-1]["decision"]["action"] == "allow"
+    assert decisions[-1]["decision"]["reason"] == "status_transition_allowed"

@@ -738,6 +738,11 @@ class LiteratureDiscoveryService:
         candidates: list[dict[str, Any]] = []
         limitations: list[str] = []
         traces: list[dict[str, Any]] = []
+        task_contract = payload.get("task_contract") if isinstance(payload.get("task_contract"), dict) else {}
+        try:
+            min_provider_families = max(1, int(task_contract.get("min_provider_families") or 1))
+        except (TypeError, ValueError):
+            min_provider_families = 1
         for seed in seed_snapshot.get("seeds") or []:
             if not isinstance(seed, dict) or str(seed.get("seed_kind") or "") != "url":
                 continue
@@ -784,7 +789,8 @@ class LiteratureDiscoveryService:
             except ResearchOperatorError as exc:
                 limitations.append(f"Wikipedia fallback boundary: {exc.error_type}: {exc}")
                 traces.append({"provider": "wikipedia", "status": "failed", "error_type": exc.error_type})
-        if len(candidates) < 3:
+        provider_families = {str(item.get("provider") or "") for item in candidates if str(item.get("provider") or "")}
+        if len(candidates) < 3 or len(provider_families) < min_provider_families:
             try:
                 openalex, trace = self._openalex(query)
                 candidates.extend(openalex)
@@ -792,7 +798,8 @@ class LiteratureDiscoveryService:
             except ResearchOperatorError as exc:
                 limitations.append(f"OpenAlex fallback boundary: {exc.error_type}: {exc}")
                 traces.append({"provider": "openalex", "status": "failed", "error_type": exc.error_type})
-        if len(candidates) < 3:
+        provider_families = {str(item.get("provider") or "") for item in candidates if str(item.get("provider") or "")}
+        if len(candidates) < 3 or len(provider_families) < min_provider_families:
             try:
                 crossref, trace = self._crossref(query)
                 candidates.extend(crossref)
@@ -800,7 +807,7 @@ class LiteratureDiscoveryService:
             except ResearchOperatorError as exc:
                 limitations.append(f"Crossref fallback boundary: {exc.error_type}: {exc}")
                 traces.append({"provider": "crossref", "status": "failed", "error_type": exc.error_type})
-        deduped: list[dict[str, Any]] = []
+        deduped_all: list[dict[str, Any]] = []
         seen: set[str] = set()
         for candidate in candidates:
             key = str(candidate.get("canonical_id") or candidate.get("url") or candidate.get("title") or "").strip().lower()
@@ -809,9 +816,26 @@ class LiteratureDiscoveryService:
             seen.add(key)
             candidate["candidate_sha256"] = stable_json_sha256(candidate)
             candidate["query"] = query
-            deduped.append(candidate)
-            if len(deduped) >= self.limit + 1:
-                break
+            deduped_all.append(candidate)
+        deduped: list[dict[str, Any]] = []
+        if min_provider_families > 1:
+            selected_keys: set[str] = set()
+            for candidate in deduped_all:
+                provider = str(candidate.get("provider") or "")
+                if not provider or provider in selected_keys:
+                    continue
+                deduped.append(candidate)
+                selected_keys.add(provider)
+                if len(selected_keys) >= min_provider_families:
+                    break
+            for candidate in deduped_all:
+                if candidate in deduped:
+                    continue
+                deduped.append(candidate)
+                if len(deduped) >= self.limit:
+                    break
+        else:
+            deduped = deduped_all[: self.limit + 1]
         if not deduped:
             raise ResearchOperatorError(
                 "All configured public discovery providers returned no traceable sources",

@@ -19,11 +19,14 @@ Startup: solar-harness status-server start  (writes pidfile, nohup)
          solar-harness status-server stop|restart|status
 
 Binds 127.0.0.1:8765 (loopback) on mac/Linux; 0.0.0.0 under WSL so the Windows host can reach it
-(localhostForwarding edge case). SOLAR_BIND_HOST overrides. No auth, no TLS (internal use).
+(localhostForwarding edge case). SOLAR_BIND_HOST overrides. A per-process token protects the
+dashboard and data/action routes whenever the server binds beyond loopback; health and static
+asset probes remain public. TLS remains an external deployment concern.
 Port fallback: 8765-8775 if primary is occupied.
 """
 
 import json
+import copy
 import os
 import plistlib
 import sqlite3
@@ -316,6 +319,68 @@ def _events_for_request(sprint_id: str, limit: int = 50) -> list:
         next_event["_event_source"] = source_kind
         normalized.append(next_event)
     return normalized
+
+
+def _parse_event_time(value: object) -> datetime.datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+
+def _event_field_values(event: dict, *keys: str) -> set[str]:
+    values: set[str] = set()
+    for key in keys:
+        raw = event.get(key)
+        if raw is None:
+            continue
+        if isinstance(raw, (list, tuple, set)):
+            candidates = raw
+        else:
+            candidates = [raw]
+        for item in candidates:
+            text = str(item or "").strip()
+            if text:
+                values.add(text)
+    return values
+
+
+def _filter_events_for_request(
+    events: list,
+    *,
+    project: str = "",
+    actor: str = "",
+    since: str = "",
+) -> list:
+    project = str(project or "").strip()
+    actor = str(actor or "").strip()
+    since_dt = _parse_event_time(since)
+    filtered: list = []
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if project:
+            project_values = _event_field_values(event, "project", "project_id", "repo", "workspace", "workspace_id")
+            if project not in project_values:
+                continue
+        if actor:
+            actor_values = _event_field_values(event, "actor", "actor_id", "source")
+            if actor not in actor_values:
+                continue
+        if since_dt is not None:
+            event_dt = _parse_event_time(event.get("ts") or event.get("timestamp") or event.get("created_at"))
+            if event_dt is None or event_dt < since_dt:
+                continue
+        filtered.append(event)
+    return filtered
 
 
 def _safe_rel(path: Path, root: Path) -> str:
@@ -1167,10 +1232,17 @@ def _settings_payload() -> dict:
 
     # Authoritative overlay: solar-user-config.json .models.* is what panes
     # actually use (and what POST /settings writes), so it wins over config.env.
+    # Keep the user-facing alias separately: dashboard/API callers need to see
+    # whether they chose "opus", "sonnet", or "anthropic-sonnet", while panes
+    # still launch from the unambiguous canonical route alias in .models.*.
+    user_model_aliases = _read_user_config_model_aliases()
     for role, alias in _read_user_config_models().items():
         if role in ("pm", "planner", "builder", "evaluator") and alias:
+            user_alias = str(user_model_aliases.get(role) or alias)
             role_models[role] = {
                 "model": _alias_to_model_id(str(alias)),
+                "configured_alias": str(alias),
+                "user_alias": user_alias,
                 "source": "solar-user-config.json",
             }
 
@@ -1258,14 +1330,127 @@ _PROVIDER_KEY_ENV = {
 # it across the whole POST while the per-key writers re-acquire it harmlessly. Cross-PROCESS
 # readers (panes) are protected by the atomic os.replace in _write_user_config, not this lock.
 _USER_CONFIG_LOCK = threading.RLock()
+_USER_CONFIG_CACHE: dict | None = None
+_USER_CONFIG_EVER_LOADED = False
 
 
-def _read_user_config() -> dict:
+def _publish_user_config(temporary: Path, target: Path) -> None:
+    """Publish a complete config without exposing a missing/partial target.
+
+    ``os.replace`` provides the required old-or-new view on POSIX.  On Windows,
+    however, CPython implements it with ``MoveFileExW``.  Replacing a destination
+    that a plain ``Path.read_text`` reader is opening can transiently remove the
+    destination or fail with a sharing violation.  ``ReplaceFileW`` preserves the
+    destination until the swap succeeds; retrying sharing violations lets an
+    uncoordinated direct reader finish without weakening the atomic-write contract.
+    """
+    if os.name != "nt" or not target.exists():
+        os.replace(temporary, target)
+        return
+
+    # Import lazily so POSIX startup and packaging do not depend on Win32 types.
+    import ctypes
+    from ctypes import wintypes
+
+    replace_file = ctypes.WinDLL("kernel32", use_last_error=True).ReplaceFileW
+    replace_file.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.LPVOID,
+    ]
+    replace_file.restype = wintypes.BOOL
+
+    # ERROR_ACCESS_DENIED / SHARING_VIOLATION / LOCK_VIOLATION plus the three
+    # ReplaceFile-specific retryable move/remove failures.
+    retryable = {5, 32, 33, 1175, 1176, 1177}
+    deadline = time.monotonic() + 5.0
+    while True:
+        # ReplaceFileW can report ERROR_UNABLE_TO_MOVE_REPLACEMENT_2 after it
+        # has already removed the old target.  Recover the still-complete
+        # replacement immediately instead of deleting it in the caller.
+        if not target.exists():
+            try:
+                os.replace(temporary, target)
+                return
+            except PermissionError:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.002)
+                continue
+        if replace_file(str(target), str(temporary), None, 0, None, None):
+            return
+        error = ctypes.get_last_error()
+        if error not in retryable or time.monotonic() >= deadline:
+            raise ctypes.WinError(error)
+        time.sleep(0.002)
+
+
+def _restore_user_config_recovery() -> bool:
+    """Restore the last complete pre-transaction document after a failed publish."""
+    recovery = _USER_CONFIG_PATH.with_suffix(".json.recovery")
+    if _USER_CONFIG_PATH.exists() or not recovery.exists():
+        return False
     try:
-        cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8")) if _USER_CONFIG_PATH.exists() else {}
-    except Exception:
-        cfg = {}
-    return cfg if isinstance(cfg, dict) else {}
+        data = json.loads(recovery.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return False
+        os.replace(recovery, _USER_CONFIG_PATH)
+        # The staged document belongs to the failed request. Restoring the old
+        # committed document keeps a 500 response truthful: that request did not apply.
+        _USER_CONFIG_PATH.with_suffix(".json.tmp").unlink(missing_ok=True)
+        return True
+    except (OSError, json.JSONDecodeError):
+        return False
+
+
+def _read_user_config(*, for_update: bool = False) -> dict:
+    # A raw Windows pathname reader can briefly collide with ReplaceFileW even
+    # though it can never observe partial bytes.  Product readers retry that
+    # sharing transition; callers therefore see the complete old/new document,
+    # not a transient empty default.
+    global _USER_CONFIG_CACHE, _USER_CONFIG_EVER_LOADED
+    # Serialize the cache and disk snapshot together. Without this read lock an
+    # HTTP reader can publish an older disk snapshot into the cache just after a
+    # writer committed a newer one, reintroducing a lost update on the next POST.
+    with _USER_CONFIG_LOCK:
+        _restore_user_config_recovery()
+        cfg = None
+        failure = ""
+        for attempt in range(20):
+            try:
+                cfg = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8"))
+                break
+            except (FileNotFoundError, PermissionError):
+                # A genuinely absent initial config is not a transaction. Avoid a
+                # retry delay when neither the cache nor a staged replacement exists.
+                if not _USER_CONFIG_EVER_LOADED and not _USER_CONFIG_PATH.with_suffix(".json.tmp").exists():
+                    cfg = {}
+                    break
+                if attempt == 19:
+                    failure = "missing_or_locked"
+                    break
+                time.sleep(0.002)
+            except json.JSONDecodeError:
+                failure = "invalid_json"
+                break
+            except OSError:
+                failure = "read_error"
+                break
+        if isinstance(cfg, dict):
+            _USER_CONFIG_CACHE = copy.deepcopy(cfg)
+            if _USER_CONFIG_PATH.exists():
+                _USER_CONFIG_EVER_LOADED = True
+            return cfg
+        # A durable deletion/corruption is not a publication transition. Drop the
+        # cache and reject read-modify-write callers so stale state cannot overwrite
+        # the damaged/missing source. Read-only surfaces fail closed to defaults.
+        _USER_CONFIG_CACHE = None
+        if for_update:
+            raise RuntimeError(f"user config unavailable for update: {failure or 'unknown'}")
+        return {}
 
 
 def _write_user_config(cfg: dict) -> None:
@@ -1274,9 +1459,44 @@ def _write_user_config(cfg: dict) -> None:
     # default). Write a temp file in the same dir, then os.replace (atomic on POSIX). Callers hold
     # _USER_CONFIG_LOCK so the surrounding read-modify-write is serialized across request threads.
     _USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    global _USER_CONFIG_CACHE, _USER_CONFIG_EVER_LOADED
     tmp = _USER_CONFIG_PATH.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
-    os.replace(tmp, _USER_CONFIG_PATH)
+    recovery = _USER_CONFIG_PATH.with_suffix(".json.recovery")
+    published = False
+    try:
+        # Preserve the complete committed document before entering the Windows
+        # replacement transition. If publication removes the target and then
+        # fails, this remains the authoritative recovery copy.
+        if _USER_CONFIG_PATH.exists():
+            old_data = copy.deepcopy(_USER_CONFIG_CACHE)
+            if old_data is None:
+                old_data = json.loads(_USER_CONFIG_PATH.read_text(encoding="utf-8"))
+            if not isinstance(old_data, dict):
+                raise RuntimeError("refusing to replace non-object user config")
+            old_bytes = (json.dumps(old_data, indent=2) + "\n").encode("utf-8")
+            with recovery.open("wb") as handle:
+                handle.write(old_bytes)
+                handle.flush()
+                os.fsync(handle.fileno())
+        with tmp.open("w", encoding="utf-8") as handle:
+            handle.write(json.dumps(cfg, indent=2) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        _publish_user_config(tmp, _USER_CONFIG_PATH)
+        published = True
+        _USER_CONFIG_CACHE = copy.deepcopy(cfg)
+        _USER_CONFIG_EVER_LOADED = True
+    finally:
+        target_safe = _USER_CONFIG_PATH.exists()
+        # Once the target is safely published (or the old target survived a
+        # failed call), staging/recovery copies are redundant. If the target was
+        # removed, retain every complete copy for `_restore_user_config_recovery`.
+        if published or target_safe:
+            for artifact in (tmp, recovery):
+                try:
+                    artifact.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
 
 def _runtime_launch_supported() -> bool:
@@ -1471,6 +1691,12 @@ def _read_user_config_models() -> dict:
     return models if isinstance(models, dict) else {}
 
 
+def _read_user_config_model_aliases() -> dict:
+    cfg = _read_user_config()
+    aliases = cfg.get("model_aliases")
+    return aliases if isinstance(aliases, dict) else {}
+
+
 def _read_user_config_runtime() -> tuple[str, str]:
     cfg = _read_user_config()
     runtime = str(cfg.get("runtime") or "").strip().lower()
@@ -1484,19 +1710,30 @@ def _read_user_config_runtime() -> tuple[str, str]:
 
 def _write_user_config_models(role_models: dict) -> dict:
     """Write models.{pm,planner,builder,evaluator} into solar-user-config.json."""
-    cfg = _read_user_config()
+    cfg = _read_user_config(for_update=True)
     models = cfg.get("models") if isinstance(cfg.get("models"), dict) else {}
+    model_aliases = cfg.get("model_aliases") if isinstance(cfg.get("model_aliases"), dict) else {}
     applied = {}
     for role in ("pm", "planner", "builder", "evaluator"):
         rid = role_models.get(role)
         if not rid:
             continue
+        requested_alias = str(rid or "").strip().lower()
         alias = _model_id_to_alias(rid)
         if alias not in _VALID_MODEL_ALIASES:
             continue
         models[role] = alias
-        applied[role] = alias
+        if requested_alias in _VALID_MODEL_ALIASES:
+            model_aliases[role] = requested_alias
+            applied[role] = requested_alias
+        else:
+            model_aliases.pop(role, None)
+            applied[role] = alias
     cfg["models"] = models
+    if model_aliases:
+        cfg["model_aliases"] = model_aliases
+    else:
+        cfg.pop("model_aliases", None)
     _write_user_config(cfg)
     return applied
 
@@ -1505,7 +1742,7 @@ def _write_user_config_runtime(runtime: str) -> str:
     value = str(runtime or "").strip().lower()
     if value not in _VALID_PANE_RUNTIMES:
         return ""
-    cfg = _read_user_config()
+    cfg = _read_user_config(for_update=True)
     cfg["runtime"] = value
     _write_user_config(cfg)
     return value
@@ -1520,7 +1757,7 @@ def _write_user_config_codex(codex_in: dict) -> dict:
     the codex runtime launches, so the dashboard's codex choice actually uses web search."""
     if not isinstance(codex_in, dict):
         return {}
-    cfg = _read_user_config()
+    cfg = _read_user_config(for_update=True)
     codex = cfg.get("codex") if isinstance(cfg.get("codex"), dict) else {}
     applied: dict = {}
     if "search" in codex_in:
@@ -1592,6 +1829,11 @@ def _settings_write_payload(data: dict) -> tuple[dict, int]:
     return {
         "ok": True,
         "applied_models": applied_models,
+        "applied_canonical_models": {
+            role: _model_id_to_alias(model)
+            for role, model in role_models.items()
+            if role in applied_models
+        },
         "applied_runtime": applied_runtime,
         "applied_codex": applied_codex,
         "written_keys": written_keys,
@@ -13773,11 +14015,12 @@ class StatusHandler(BaseHTTPRequestHandler):
     def _authorized(self, path: str) -> bool:
         if not TOKEN_ENFORCED:
             return True
-        # Exempt the bootstrap surface the page needs BEFORE it can read/send the token: the
-        # dashboard HTML, its static assets, and the health/identity probes.
+        # Static assets contain no runtime data and health/identity probes are used by the local
+        # lifecycle owner before it can discover the token file. The dashboard HTML is NOT a
+        # bootstrap exemption: it embeds AUTH_TOKEN for its JavaScript client, so serving it to an
+        # unauthenticated network peer would disclose the credential and defeat enforcement.
         if (
-            path == "/"
-            or path in ("/healthz", "/runtime-info", "/favicon.ico")
+            path in ("/healthz", "/runtime-info", "/favicon.ico")
             or path.startswith("/static/")
         ):
             return True
@@ -13790,6 +14033,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
 
@@ -13799,6 +14043,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
 
@@ -13812,6 +14057,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "public, max-age=3600")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
 
@@ -13822,6 +14068,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("X-Accel-Buffering", "no")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
 
         seen_queue: deque[str] = deque(maxlen=max(100, limit * 4))
@@ -13871,6 +14118,7 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("X-Accel-Buffering", "no")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
 
         prev_sig: dict | None = None
@@ -13934,12 +14182,17 @@ class StatusHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self):
         # Liveness probes (incl. the desktop shell) may use HEAD. Without a
-        # do_HEAD, BaseHTTPRequestHandler returned 501. Mirror a GET's headers
-        # with no body so probes see 200.
-        self.send_response(200)
+        # do_HEAD, BaseHTTPRequestHandler returned 501. Enforce the same token
+        # boundary as GET before returning headers; the former unconditional
+        # 200 made protected resources appear reachable without credentials.
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        authorized = self._authorized(path)
+        self.send_response(200 if authorized else 403)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Length", "0")
         self.end_headers()
 
@@ -14151,6 +14404,9 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif path == "/events":
             sprint_id = params.get("sprint_id", [""])[0]
+            project = params.get("project", [""])[0]
+            actor = params.get("actor", [""])[0]
+            since = params.get("since", [""])[0]
             try:
                 limit = int(params.get("limit", ["50"])[0])
                 limit = max(1, min(limit, 500))
@@ -14163,7 +14419,14 @@ class StatusHandler(BaseHTTPRequestHandler):
             if wants_sse:
                 self._send_sse_events(sprint_id, limit)
             else:
-                self._send_json(_events_for_request(sprint_id, limit=limit))
+                self._send_json(
+                    _filter_events_for_request(
+                        _events_for_request(sprint_id, limit=limit),
+                        project=project,
+                        actor=actor,
+                        since=since,
+                    )
+                )
 
         elif path == "/integrations":
             refresh = params.get("refresh", ["0"])[0].lower() in ("1", "true", "yes")
@@ -14405,12 +14668,30 @@ class StatusHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "not found"}, status=404)
 
 
+class StatusThreadingHTTPServer(ThreadingHTTPServer):
+    def handle_error(self, request, client_address):
+        """Do not print a traceback for a normal HTTP/SSE client disconnect.
+
+        A streaming client can close immediately after receiving its first event.  On Windows,
+        the reset may surface in ``socketserver`` while it tries to read another request line,
+        outside ``StatusHandler._send_sse_events``' own disconnect guard.  Keep all other server
+        exceptions on the default visible path; only transport-level client departures are quiet.
+        """
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (BrokenPipeError, ConnectionAbortedError, ConnectionResetError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def _find_port() -> int:
     import socket
     for port in PORT_RANGE:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
+                # SO_REUSEADDR permits two live listeners on the same endpoint
+                # on Windows. That split requests between unrelated Solar roots
+                # and can mutate the wrong settings file. A discovery probe must
+                # treat every active listener as occupied.
                 s.bind((BIND_HOST, port))
                 return port
             except OSError:
@@ -14420,7 +14701,7 @@ def _find_port() -> int:
 
 def main():
     port = _find_port()
-    server = ThreadingHTTPServer((BIND_HOST, port), StatusHandler)
+    server = StatusThreadingHTTPServer((BIND_HOST, port), StatusHandler)
     server.daemon_threads = True
     # Write port to pidfile directory so clients can discover it
     pid_dir = HARNESS_DIR / "run"

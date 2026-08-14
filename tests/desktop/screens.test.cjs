@@ -7,8 +7,16 @@
 // titles + action buttons are platform-agnostic; the Windows copy branch is covered by the Pester
 // side. solar-action navigation is intercepted by main.js (we only assert the buttons exist).
 const { _electron: electron } = require("playwright");
+const fs = require("fs");
 const path = require("path");
 const DESKTOP = path.resolve(__dirname, "..", "..", "desktop");
+const EVIDENCE_PATH = process.env.SOLAR_SCREEN_EVIDENCE || "";
+
+function writeEvidence(payload) {
+  if (!EVIDENCE_PATH) return;
+  fs.mkdirSync(path.dirname(EVIDENCE_PATH), { recursive: true });
+  fs.writeFileSync(EVIDENCE_PATH, JSON.stringify(payload, null, 2) + "\n");
+}
 
 const CASES = [
   {
@@ -59,6 +67,12 @@ const CASES = [
     });
     await probe.close();
   } catch (e) {
+    writeEvidence({
+      schema_version: "solar.desktop.recovery_screens.v1",
+      status: "ENVIRONMENT_BLOCKED",
+      error: String(e.message).split("\n")[0],
+      cases: [],
+    });
     console.log(
       "SKIP: Electron cannot launch in this environment (" +
         String(e.message).split("\n")[0] +
@@ -69,6 +83,7 @@ const CASES = [
 
   let pass = 0;
   let fail = 0;
+  const results = [];
   for (const c of CASES) {
     let app;
     try {
@@ -95,21 +110,33 @@ const CASES = [
           `PASS  ${c.mode}  ("${c.title}" + [${c.buttons.join(", ")}])`,
         );
         pass++;
+        results.push({ mode: c.mode, title: c.title, buttons: c.buttons, status: "PASS" });
       } else {
         console.log(
           `FAIL  ${c.mode}: missing button(s): ${missing.join(", ")}`,
         );
         fail++;
+        results.push({ mode: c.mode, title: c.title, buttons: c.buttons, missing, status: "FAIL" });
       }
     } catch (e) {
       console.log(`FAIL  ${c.mode}: ${String(e.message).split("\n")[0]}`);
       fail++;
+      results.push({ mode: c.mode, title: c.title, buttons: c.buttons, error: String(e.message).split("\n")[0], status: "FAIL" });
     } finally {
       try {
         await app?.close();
       } catch {}
     }
   }
+  writeEvidence({
+    schema_version: "solar.desktop.recovery_screens.v1",
+    status: fail === 0 ? "PASS" : "FAIL",
+    platform: process.platform,
+    electron_entrypoint: "desktop/src/main.js",
+    passed: pass,
+    failed: fail,
+    cases: results,
+  });
   console.log(`\nSCREENS: ${pass} passed, ${fail} failed`);
   process.exit(fail === 0 ? 0 : 1);
 })();

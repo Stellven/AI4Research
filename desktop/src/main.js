@@ -101,7 +101,14 @@ function finishSelftest(ok, details = {}) {
   const code = ok ? 0 : 1;
   process.exitCode = code;
   log(`SELFTEST ${ok ? "OK" : "FAIL"}`, JSON.stringify(details));
-  setTimeout(() => app.exit(code), 300);
+  const configuredDelay = Number.parseInt(
+    process.env.SOLAR_DESKTOP_SELFTEST_EXIT_DELAY_MS || "300",
+    10,
+  );
+  const exitDelay = Number.isFinite(configuredDelay)
+    ? Math.max(0, Math.min(configuredDelay, 3000))
+    : 300;
+  setTimeout(() => app.exit(code), exitDelay);
 }
 
 async function collectSelftestSnapshot(targetWebContents) {
@@ -120,12 +127,25 @@ async function collectSelftestSnapshot(targetWebContents) {
         rendererErrors = ["selftest diagnostics unavailable: " + String(error)];
       }
       const root = document.getElementById("root");
+      const homeLanding = document.querySelector('[data-testid="home-landing"]');
+      const taskInput = homeLanding && homeLanding.querySelector("textarea");
+      const labelledBy = taskInput && taskInput.getAttribute("aria-labelledby");
+      const taskInputAccessibleName = String(labelledBy || "")
+        .split(/\\s+/)
+        .map((id) => document.getElementById(id)?.textContent?.trim() || "")
+        .filter(Boolean)
+        .join(" ");
       return {
         actualURL: window.location.href,
         readyState: document.readyState,
         rootChildCount: root ? root.childElementCount : 0,
         bodyText: document.body ? (document.body.innerText || "") : "",
         rendererErrors,
+        targetMarkers: {
+          homeLanding: Boolean(homeLanding),
+          authChecking: Boolean(document.querySelector('[data-testid="auth-checking"]')),
+          taskInputAccessibleName,
+        },
       };
     })()`,
     true,
@@ -168,6 +188,7 @@ async function waitForSelftestVerdict(
     last = assessSelftestSnapshot({
       expectedURL,
       fallbackUsed,
+      requiredContract: process.env.SOLAR_DESKTOP_SELFTEST_REQUIRED_CONTRACT || "",
       ...snapshot,
     });
     if (last.ok || last.reasons.some((reason) => terminalReasons.has(reason))) {

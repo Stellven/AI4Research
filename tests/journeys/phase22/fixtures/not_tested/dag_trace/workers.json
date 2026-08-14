@@ -1,0 +1,40 @@
+{
+  "workers": [
+    {
+      "pane": "operator-pool:builder.0",
+      "role": "builder",
+      "models": ["codex", "sonnet"],
+      "skills": [
+        "architecture-writing",
+        "code_impl",
+        "test_generation",
+        "test_execution",
+        "verification",
+        "documentation",
+        "harness.dag",
+        "workflow.planning"
+      ],
+      "capabilities": [
+        "architecture-writing",
+        "code_impl",
+        "test_generation",
+        "test_execution",
+        "verification",
+        "documentation",
+        "harness.dag",
+        "workflow.planning"
+      ],
+      "available": true,
+      "load": 0
+    },
+    {
+      "pane": "operator-pool:evaluator.0",
+      "role": "evaluator",
+      "models": ["codex", "sonnet"],
+      "skills": ["verification", "review", "harness.verification"],
+      "capabilities": ["verification", "review", "harness.verification"],
+      "available": true,
+      "load": 0
+    }
+  ]
+}

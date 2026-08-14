@@ -1,0 +1,3 @@
+{"id":"sft-001","prompt":"Classify: PASS - verifier result","completion":"positive","license":"synthetic-phase22-local","source":"phase22-not-tested-model-training"}
+{"id":"sft-002","prompt":"Classify: FAIL - missing evidence","completion":"negative","license":"synthetic-phase22-local","source":"phase22-not-tested-model-training"}
+{"id":"sft-003","prompt":"Classify: pass with caveat","completion":"positive","license":"synthetic-phase22-local","source":"phase22-not-tested-model-training"}
