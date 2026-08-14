@@ -88,6 +88,20 @@ def test_readme_is_the_verbatim_stellven_source_tip_blob() -> None:
     assert git("rev-parse", f"HEAD:README.md") == git("rev-parse", f"{SOURCE}:README.md")
 
 
+def test_moved_and_semantic_source_blobs_are_not_reintroduced_at_legacy_paths() -> None:
+    ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+    current_tree = tree("HEAD")
+    for item in ledger["paths"]:
+        if item["classification"] not in {"PRESERVED_MOVED", "PRESERVED_SEMANTICALLY"}:
+            continue
+        source_blob = item["original_blob_hash"]
+        current_blob = current_tree.get(item["original_path"])
+        if source_blob is None:
+            assert current_blob is None
+        else:
+            assert current_blob != source_blob
+
+
 def test_no_illegal_paths_or_prohibited_recovered_state() -> None:
     ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
     prohibited = re.compile(r"(^|/)(\.env(?:\.|$)|node_modules|__pycache__|cache|outputs|status\.json|events\.jsonl)(/|$)|\.lock$", re.I)
