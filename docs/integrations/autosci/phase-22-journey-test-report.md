@@ -1,8 +1,68 @@
 ﻿# Phase 22 Journey Test Report
 
-Generated: 2026-08-07
-Run ID: `known-issues-final-integration-20260807`
-Repo head before final integration commit: `13348759d4659fc7484ba482134c0811175f206c`
+Generated: 2026-08-14
+Run ID: `phase22-final-report-sync-20260814`
+Repo head before report synchronization: `71a68eeef`
+
+## Repair Closure Synchronization Addendum
+
+This addendum supersedes older conclusions for the 25 repair IDs listed below.
+It integrates the accepted blocker-review evidence plus the later Windows,
+WSL, macOS, live-provider, external-delivery, external-data, trust-anchor, and
+attributable human-approval evidence. It does not convert unexercised features
+or variants to PASS.
+
+Current L2 status counts:
+
+| Status | L2 count |
+|---|---:|
+| PASS | 30 |
+| PASS_WITH_KNOWN_LIMITATIONS | 86 |
+| FAIL | 0 |
+| ENVIRONMENT_BLOCKED | 0 |
+| NOT_AVAILABLE | 25 |
+| NOT_TESTED | 1 |
+| Total | 142 |
+
+Accepted repair synchronization:
+
+| Repair ID | Current L2 conclusion | Accepted evidence and retained boundary |
+|---|---|---|
+| P22-REPAIR-044 | PASS_WITH_KNOWN_LIMITATIONS | The hash-bound retrieval comparison passed with a policy-pinned trust registry, protocol commit/blob checks, 13/13 journey assertions, and adversarial rejection tests. The GitHub release is an immutable external anchor published after the result, not a claim of a pre-result release timestamp; broad-domain benchmarking remains untested. |
+| P22-REPAIR-045 | PASS_WITH_KNOWN_LIMITATIONS | A live OpenRouter writer and OpenAI reviewer completed with independent provider provenance and 4/4 assertions. This proves the authorized provider pair, not every provider/model combination. |
+| P22-REPAIR-047 | PASS_WITH_KNOWN_LIMITATIONS | The production evaluator accepted preregistered arXiv and OpenAlex holdouts at 18/20 each; signatures, receipts, hashes, timestamps, and registry pins verified. The conclusion is limited to the fixed corpus, matching rule, providers, and collection time. |
+| P22-REPAIR-054 | PASS_WITH_KNOWN_LIMITATIONS | The authorized Phase 22 handoff was delivered through Gmail and J09 passed 30/30 assertions. Recipient acceptance was explicitly not required; other channels and long-term lifecycle variants remain untested. |
+| P22-REPAIR-069 | PASS_WITH_KNOWN_LIMITATIONS | The local legal/IP gate passed fail-closed checks and the named artifact received attributable internal approval for the stated CA, 30-day, no-personal-data use. This is internal approval, not legal advice or external counsel. |
+| P22-REPAIR-071 | PASS_WITH_KNOWN_LIMITATIONS | The focused lifecycle journey entered human review, resumed with attributable approval, recorded the transition, and rejected replay. Broader parity variants remain outside this focused proof. |
+| P22-REPAIR-121 | PASS | The current production trace selector passed project, actor, run, and future-since filters. |
+| P22-REPAIR-125 | PASS | A real Darwin arm64 run passed the macOS App lane. Per explicit user direction, the evidence is accepted despite the retained `desktop/package.json` build-command delta note. |
+| P22-REPAIR-126 | PASS | The same real Darwin arm64 run passed the macOS CLI install/status/uninstall lane; CLI-relevant files were unchanged against the reviewed head. |
+| P22-REPAIR-131 | PASS_WITH_KNOWN_LIMITATIONS | The Windows UI-lite path no longer crashes, and both WSL Ubuntu tmux/status selectors passed. Other Linux distributions, terminal implementations, and full live-Claude pane operation were not inferred. |
+
+Accepted blocker-review reconciliation:
+
+| Repair ID | Current L2 conclusion | Accepted evidence and retained boundary |
+|---|---|---|
+| P22-REPAIR-018 | PASS_WITH_KNOWN_LIMITATIONS | The live research route extracted 15 exact-span, hash-linked technical signals from 9 real sources. Unseen full text and exhaustive coverage are not claimed. |
+| P22-REPAIR-020 | PASS_WITH_KNOWN_LIMITATIONS | The same run validated 3 cross-source trends and 2 evidence-linked gaps. These are bounded themes, not causal longitudinal findings. |
+| P22-REPAIR-033 | PASS_WITH_KNOWN_LIMITATIONS | J06 generated complete source-backed falsifiability fields. External novelty and Review LLM variants remain outside scope. |
+| P22-REPAIR-034 | PASS | J07 passed a durable verification-ready plan with exact command admission, bound assets, safe outputs, and replay. |
+| P22-REPAIR-037 | PASS_WITH_KNOWN_LIMITATIONS | J21 bound the generated plan, assets, configuration, and exact argv to the command executed on the local Python experiment path. |
+| P22-REPAIR-039 | PASS_WITH_KNOWN_LIMITATIONS | J21 produced a schema-validated, hash-linked, replayable handoff package; unrelated package families were not inferred. |
+| P22-REPAIR-055 | NOT_TESTED | The old atomic failure is stale and 14 capability tests pass, but no accepted real-task journey maps to this L2. |
+| P22-REPAIR-066 | PASS_WITH_KNOWN_LIMITATIONS | J21 accepted valid contracts and rejected invalid, unsupported, provenance-corrupt, and identity-corrupt variants for the exercised evaluator family. |
+| P22-REPAIR-070 | PASS_WITH_KNOWN_LIMITATIONS | The overbroad worldwide claim is now rejected while bounded claims pass; unexercised Review LLM/final-verdict variants remain limited. |
+| P22-REPAIR-095 | PASS_WITH_KNOWN_LIMITATIONS | J21 proved lease acquire, heartbeat, duplicate rejection, release, expiry, stale recovery, and recovery audit for the exercised adapter. |
+| P22-REPAIR-110 | PASS_WITH_KNOWN_LIMITATIONS | J21 generated and replayed durable experiment assets for the tested Python path; other asset types remain untested. |
+| P22-REPAIR-113 | PASS_WITH_KNOWN_LIMITATIONS | J09 produced a schema-valid decision artifact with a complete criterion matrix and checked evidence provenance; external approval variants remain limited. |
+| P22-REPAIR-115 | PASS_WITH_KNOWN_LIMITATIONS | The accepted macOS J16 run completed the physical Spark integration path with 12/12 assertions; other providers, models, and platforms are not inferred. |
+| P22-REPAIR-116 | PASS_WITH_KNOWN_LIMITATIONS | The same macOS run reproduced the defect, applied the scoped repair, and passed the before/after suite; the missing formal eval sidecar remains an audit note. |
+| P22-REPAIR-119 | PASS_WITH_KNOWN_LIMITATIONS | J25 passed bundle construction, Git-preimage checks, offline lifecycle checks, uninstall, and rollback on WSL/Linux CPython 3.12. |
+
+The synchronized full and brief workbooks retain the atomic inventory as a
+diagnostic layer. Journey conclusions do not overwrite atomic enums. There are
+no current L2 FAIL rows, but 25 features remain NOT_AVAILABLE and one remains
+NOT_TESTED, so this is not a claim that all 142 Level 2 features passed.
 
 ## Final Integration Addendum
 
@@ -106,16 +166,16 @@ and 33 `No accepted journey evidence`. The baseline is recorded at
 | P22-J06 | FAIL | Idea generation produced usable candidates: 7 mapped L2s are limited passes, while Falsifiability Screening & Hypothesis Contracting and Verification-Ready POC Design remain failed. |
 | P22-J07 | PASS_WITH_KNOWN_LIMITATIONS | The local experiment process and metric checks completed. Runtime lifecycle is a limited pass, but `exp-status` remained unknown/inconclusive; seven planned L2s lacked direct assertions. |
 | P22-J08 | FAIL | Claim & Acceptance-Criteria Comparison failed because an overbroad all-inputs/all-environments claim was marked supported. Later J22 evidence and explicitly labeled management inferences provide current conclusions for the related review L2s without converting the J08 defect to a pass. |
-| P22-J09 | PASS_WITH_KNOWN_LIMITATIONS | Markdown report and evidence bundle produced; Review LLM/writeback/HITL compile boundaries limited. |
+| P22-J09 | PASS_WITH_KNOWN_LIMITATIONS | The report package, compiled PDF, policy-bound review artifacts, and authorized Gmail delivery completed; 30/30 assertions passed. Other delivery channels and long-term lifecycle variants remain untested. Evidence: `outputs/phase22-real-journeys/p22j09-20260812T172710Z-22124/journey-result.json`. |
 | P22-J10 | ENVIRONMENT_BLOCKED | Git Bash/MINGW install lifecycle probe returned unsupported OS. |
 | P22-J11 | PASS_WITH_KNOWN_LIMITATIONS | Capsule/operator/model registry probes passed with version/governance limitations. |
 | P22-J12 | ENVIRONMENT_BLOCKED | Queue/failure recovery path imports Unix-only `fcntl`; WSL preflight access denied. |
-| P22-J13 | FAIL | Local UI path crashes on Windows because `signal.SIGPIPE` is unavailable. |
+| P22-J13 | PASS_WITH_KNOWN_LIMITATIONS | The Windows UI-lite path no longer crashes and the current selector passed. WSL tmux/status coverage is supplied separately by the accepted P22-J18 rerun; packaged Electron launch was not part of J13. Evidence: `outputs/phase22-real-journeys/p22j13-20260812T172016Z-20044/journey-result.json`. |
 | P22-J14 | NOT_AVAILABLE | No implemented WeChat channel intake entrypoint was found. |
-| P22-J15 | PASS_WITH_KNOWN_LIMITATIONS | Portable macOS evidence was reviewed: macOS CLI passed and macOS App passed with a named limitation. The Windows checkout does not reproduce macOS execution, but the accepted evidence bundle is retained. |
+| P22-J15 | PASS | The imported evidence bundle records a real Darwin arm64 run with the macOS App and CLI lanes passing. The App result is accepted by explicit user direction with the `desktop/package.json` delta retained as an audit note. Evidence: `.codex-tmp/phase22-worker-results/p22-125-126-macos-import/result.json`. |
 | P22-J16 | FAIL | Authorized live-provider TMUX journey ran in SolarUbuntu. The journey-level result is FAIL: harness-start returned inner exit 1 and the scoped defect repair was not verified by a passing diff/tests path. L2 outcomes: 7 PASS, 2 PASS_WITH_KNOWN_LIMITATIONS, 2 FAIL. Evidence: outputs/phase22-real-journeys/p22-j16-20260730T120542Z-1126077/journey-result.json. |
 | P22-J17 | FAIL | Authorized live-provider TMUX journey ran in SolarUbuntu. The journey-level result is FAIL because harness-start, harness-restart-after-interruption, and eval-verdict-pass returned inner exit 1. L2 outcomes: 12 PASS, 1 PASS_WITH_KNOWN_LIMITATIONS. Evidence: outputs/phase22-real-journeys/p22-j17-20260730T121910Z-1142293/journey-result.json. |
-| P22-J18 | PASS_WITH_KNOWN_LIMITATIONS | Real Linux/status lifecycle ran in SolarUbuntu with sandbox install, doctor/status, status-server health/runtime/status/settings/dashboard checks, tmux session observation, stop, and uninstall cleanup. Evidence: outputs/phase22-real-journeys/p22-j18-real-linux-status-20260730T055644Z-792684/journey-result.json. |
+| P22-J18 | PASS_WITH_KNOWN_LIMITATIONS | Ubuntu-24.04 WSL2 ran the tmux CLI/status selector and real Linux lifecycle selector successfully; the latter passed 11/11 assertions. Other distributions and full live-Claude pane operation remain untested. Evidence: `outputs/phase22-real-journeys/p22-j18-real-linux-status-20260812T210634Z-384/journey-result.json`. |
 | P22-J19 | PASS_WITH_KNOWN_LIMITATIONS | Production web/status dashboard rendered in installed Chrome headless against a sandbox status-server, persisted Codex settings through the backend, reflected values in the Settings UI, and captured a non-empty screenshot. Evidence: outputs/phase22-real-journeys/p22-j19-real-gui-dashboard-20260730T055154Z-14104/journey-result.json. |
 | P22-J20 | ENVIRONMENT_BLOCKED | The research-synthesis attempt reached the provider boundary but did not obtain a usable provider-backed paper set. Its two affected L2 stakeholder conclusions are explicitly labeled management inferences, so this journey block does not create a current L2 environment block. Evidence: `outputs/phase22-real-journeys/p22-j20-20260730T160702Z/journey-result.json`. |
 | P22-J21 | FAIL with mixed L2 outcomes | The real experiment/build/handoff task produced 1 PASS, 5 limited passes, and 2 failures in the worker evidence; the accepted L2 roll-up retains the reviewed per-feature conclusions. Evidence: `.codex-tmp/phase22-worker-results/J21-experiment-build-001/result.json`. |
@@ -148,7 +208,6 @@ and 33 `No accepted journey evidence`. The baseline is recorded at
 
 - P22-J06 idea cards lacked verification-ready falsifiability/minimum-experiment fields; only the two directly affected L2s remain failed.
 - P22-J08 exp-eval supported a deliberately overbroad claim.
-- P22-J13 Windows local UI crashed on missing `signal.SIGPIPE`.
 - P22-J16 live-provider TMUX journey failed harness/eval and scoped defect-repair acceptance criteria.
 - P22-J17 live-provider TMUX journey failed required harness start/restart/eval-verdict command assertions.
 
@@ -162,10 +221,10 @@ and 33 `No accepted journey evidence`. The baseline is recorded at
   `eval-verdict` accepted the sprint.
 - J12 failure recovery: Unix-only `fcntl` path blocked on Windows.
 - J14 WeChat identity: no current production entrypoint.
-- J15 macOS App and macOS CLI: a Mac runner reported CLI `PASS` and App `PASS_WITH_KNOWN_LIMITATIONS`; the Windows checkout lacks the ignored raw artifacts, so a small portable evidence summary is still required for independent audit.
+- J15 macOS App and macOS CLI: resolved by the accepted Darwin arm64 evidence bundle. Both lanes are recorded as `PASS`; the App package-command delta remains an audit note by explicit user direction, not an environment blocker.
 - J05 literature discovery: the earlier Semantic Scholar rate-limit block is resolved. The accepted Windows live run used Semantic Scholar search/reference channels; other providers/source families remain untested, and Technical Signal Extraction plus Trend & Gap Analysis still lack direct journey evidence.
 - J16/J17/TMUX: environment blocker is resolved by authorized SolarUbuntu live-provider runs; both journeys now record product-level FAIL boundaries rather than platform blocks.
-- J18 Linux CLI/status/TMUX: local SolarUbuntu lifecycle evidence is accepted as PASS_WITH_KNOWN_LIMITATIONS; remote hosts, concurrent sessions, other terminal implementations, distribution variants, and full live repair journeys remain untested.
+- J18 Linux CLI/status/TMUX: the current Ubuntu-24.04 WSL2 selectors passed; remote hosts, concurrent sessions, other terminal implementations, distribution variants, and full live repair journeys remain untested.
 - J19 GUI: local Chrome headless status-dashboard evidence is accepted as PASS_WITH_KNOWN_LIMITATIONS; packaged Electron/manual attach/accessibility/account-channel variants remain untested or unavailable.
 - J20 and J24: these individual attempts remain environment-blocked, but the current L2 roll-up uses clearly labeled management inferences rather than environment-blocked conclusions. They are not direct proof.
 - J23 model routing/auditing: the earlier Windows 10013 attempt is superseded by the accepted WSL2 live-provider run. Provider latency is optional when absent, and both routed-call and audit L2 criteria passed.

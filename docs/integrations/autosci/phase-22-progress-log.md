@@ -3743,3 +3743,51 @@ Date: 2026-08-12
   or legal conclusions, external copyright ownership, hosted provider/account
   revocation and cross-channel enforcement remain outside this local screen;
   therefore the broad issue is not closed.
+
+## Final targeted repair and report synchronization
+
+Date: 2026-08-14
+
+- Accepted and synchronized the bounded closure evidence for
+  `P22-REPAIR-044`, `045`, `047`, `054`, `069`, `071`, `121`, `125`, `126`,
+  and `131`. The accepted evidence includes the policy-pinned scientific
+  comparison, live OpenRouter-writer/OpenAI-reviewer pair, preregistered
+  arXiv/OpenAlex holdouts, authorized Gmail delivery, internal legal/IP
+  approval, attributable human-review resume, current trace filters, real
+  Darwin arm64 App/CLI execution, and Windows plus Ubuntu-24.04 WSL2 TUI/tmux
+  execution.
+- Preserved the required boundaries: `044` is one bounded retrieval POC and
+  its GitHub release was published after the result; `047` is limited to the
+  fixed corpus/providers/time; `069` is internal approval rather than legal
+  advice or external counsel. No unexercised variant was promoted to PASS.
+- Updated the canonical journey report, L2 issue register, Significant review
+  overlay, full diagnostic workbook, and Level 2 brief workbook. Final L2
+  counts are `PASS=30`, `PASS_WITH_KNOWN_LIMITATIONS=86`, `FAIL=0`,
+  `ENVIRONMENT_BLOCKED=0`, `NOT_AVAILABLE=25`, and `NOT_TESTED=1` (142 total;
+  112 statuses other than PASS).
+- Corrected an integration omission in the first 2026-08-14 report draft: it
+  synchronized only the final ten repair rows and retained 15 stale FAIL
+  conclusions. All 15 are now reconciled against the accepted
+  `phase-22-blocker-review-overlay.json` evidence. Thirteen become bounded
+  `PASS_WITH_KNOWN_LIMITATIONS`, P22-REPAIR-034 becomes `PASS`, and
+  P22-REPAIR-055 becomes `NOT_TESTED` because its atomic failure is fixed but
+  no accepted real-task journey maps to that L2.
+- Kept the atomic inventory and atomic enums diagnostic and independent from
+  journey conclusions. The full workbook's atomic implementation, test-result,
+  and row-color fields were not rewritten from journey outcomes; only the
+  repeated L2 journey columns, two summary blocks, and bounded closure notes
+  were synchronized.
+- Workbook validation passed: both canonical workbooks reimported with four
+  expected sheets and 142 unique L2 rows at `PASS=30`,
+  `PASS_WITH_KNOWN_LIMITATIONS=86`, `FAIL=0`, `ENVIRONMENT_BLOCKED=0`,
+  `NOT_AVAILABLE=25`, and `NOT_TESTED=1`. Formula-error scans returned zero
+  matches. All eight workbook sheets were rendered after editing; targeted
+  report fields, brief status coloring, full atomic coloring, and both summary
+  sheets were visually checked.
+- The workbook test exposed a pre-existing one-row validator offset: the
+  builder writes the diagnostic zero to Excel row 30 while the test read row
+  29 (`Atomic Count`). The assertion now reads row 30; the focused validator
+  passes `4 passed in 0.63s`.
+- Synchronization run: `phase22-final-report-sync-20260814`; reviewed repo head:
+  `71a68eeef`. Output copies and render evidence are under
+  `outputs/phase22-final-report-sync-20260814/`.

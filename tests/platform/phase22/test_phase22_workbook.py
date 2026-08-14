@@ -134,7 +134,7 @@ def test_phase22_workbook_summary_matches_matrix_counts() -> None:
     assert value(16, 1) == matrix["counts"]["l2_rollup"].get("FUNCTION_IMPLEMENTED_ATOMIC_TEST_FAILED", 0)
     assert value(17, 1) == matrix["counts"]["l2_rollup"].get("FUNCTION_NOT_IMPLEMENTED_TEST_BLOCKED", 0)
     assert value(18, 1) == matrix["counts"]["l2_rollup"].get("IMPLEMENTED_TEST_GAP_BLOCKED", 0)
-    assert value(29, 1) == 0
+    assert value(30, 1) == 0
 
 
 def test_phase22_workbook_formula_errors_and_opc_sanity() -> None:

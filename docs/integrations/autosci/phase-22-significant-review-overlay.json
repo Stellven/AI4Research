@@ -1,10 +1,60 @@
 {
   "schema_version": "phase22_significant_review_overlay.v1",
-  "reviewed_at": "2026-08-12",
-  "local_branch": "openJiuwen-Solar",
-  "reviewed_code_head": "43fd4a43c",
+  "reviewed_at": "2026-08-14",
+  "local_branch": "codex/phase22-journey-closures",
+  "reviewed_code_head": "71a68eeef",
   "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
   "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
+  "closure_sync": {
+    "run_id": "phase22-final-report-sync-20260814",
+    "classification": "TARGETED_REPAIR_LIST_CLOSED_WITH_BOUNDED_L2_CONCLUSIONS",
+    "issue_ids": [
+      "P22-REPAIR-044",
+      "P22-REPAIR-045",
+      "P22-REPAIR-047",
+      "P22-REPAIR-054",
+      "P22-REPAIR-069",
+      "P22-REPAIR-071"
+    ],
+    "accepted_evidence": [
+      "outputs/phase22-real-journeys/p22-scientific-comparison-20260813T234625Z/journey-result.json",
+      "outputs/phase22-real-journeys/p22045-20260812T172756Z-12428/journey-result.json",
+      ".codex-tmp/phase22-worker-results/p22-047-followup-v2/result.json",
+      "outputs/phase22-real-journeys/p22j09-20260812T172710Z-22124/journey-result.json",
+      ".codex-tmp/phase22-worker-results/p22-069-approval/result.json",
+      "outputs/phase22-real-journeys/p22071-20260812T190737Z-7472/journey-result.json"
+    ],
+    "decision": "The six remaining Significant repair IDs are addressed for their explicitly exercised Phase 22 paths. Their Level 2 conclusions remain PASS_WITH_KNOWN_LIMITATIONS where the feature is broader than the accepted evidence.",
+    "remaining_boundaries": [
+      "P22-REPAIR-044 proves one hash-bound retrieval comparison; the GitHub release was published after the result and broad-domain benchmarking remains untested.",
+      "P22-REPAIR-045 proves the authorized OpenRouter writer plus OpenAI reviewer pair, not all provider/model combinations.",
+      "P22-REPAIR-047 is bounded to the preregistered arXiv/OpenAlex corpus, rules, sites, and collection time.",
+      "P22-REPAIR-054 proves authorized Gmail delivery; other channels and long-term lifecycle variants remain untested.",
+      "P22-REPAIR-069 records internal approval, not legal advice or external counsel.",
+      "P22-REPAIR-071 proves the focused human-review resume and replay-rejection path, not every parity variant."
+    ]
+  },
+  "blocker_report_reconciliation": {
+    "source": "docs/integrations/autosci/phase-22-blocker-review-overlay.json",
+    "issue_ids": [
+      "P22-REPAIR-018",
+      "P22-REPAIR-020",
+      "P22-REPAIR-033",
+      "P22-REPAIR-034",
+      "P22-REPAIR-037",
+      "P22-REPAIR-039",
+      "P22-REPAIR-055",
+      "P22-REPAIR-066",
+      "P22-REPAIR-070",
+      "P22-REPAIR-095",
+      "P22-REPAIR-110",
+      "P22-REPAIR-113",
+      "P22-REPAIR-115",
+      "P22-REPAIR-116",
+      "P22-REPAIR-119"
+    ],
+    "decision": "The first 2026-08-14 workbook draft retained these accepted blocker-review rows as stale FAIL conclusions. The synchronized report now applies the accepted overlay classifications: one PASS, thirteen PASS_WITH_KNOWN_LIMITATIONS, and one NOT_TESTED."
+  },
   "reviewed_group": {
     "journey_id": "P22-J02",
     "shared_recorded_limitation": "The older eval.md evidence file was not created.",
@@ -597,5 +647,5 @@
     }
   ],
   "closed_shared_limitation_issue_count": 66,
-  "remaining_significant_issues": 6
+  "remaining_significant_issues": 0
 }
