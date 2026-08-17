@@ -268,7 +268,7 @@ def test_codex_operator_materializes_direct_skill_bridge_evidence(tmp_path, monk
     assert contract["command_protocol"]["mode"]
     assert contract["command_protocol"]["execution_surface"] == "direct_command_operator"
     assert contract["workflow_contract"]["phases"]
-    assert contract["delivery_expectation"]
+    assert contract["workflow_contract"]["delivery_expectation"]
     result = json.loads((tmp_path / "skill-dispatch-result.json").read_text(encoding="utf-8"))
     assert result["status"] == "completed"
     assert result["selected_skills"] == ["research_compilation"]

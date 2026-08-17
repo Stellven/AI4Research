@@ -113,10 +113,12 @@ def _materialize_skill_bridge_evidence(task_dir: Path, dispatch: str) -> dict[st
             "execution_surface": "direct_command_operator",
             "record_exact_commands": True,
         },
-        "workflow_contract": {"phases": workflow_phases},
-        "delivery_expectation": str(
-            primary.get("delivery_expectation") or "phase_checklist_and_decision_log"
-        ),
+        "workflow_contract": {
+            "phases": workflow_phases,
+            "delivery_expectation": str(
+                primary.get("delivery_expectation") or "phase_checklist_and_decision_log"
+            ),
+        },
     }
     task_dir.mkdir(parents=True, exist_ok=True)
     prompt = (
@@ -153,7 +155,6 @@ def _materialize_skill_bridge_evidence(task_dir: Path, dispatch: str) -> dict[st
                 "capsule_id": capsule_id,
                 "command_protocol": evidence["command_protocol"],
                 "workflow_contract": evidence["workflow_contract"],
-                "delivery_expectation": evidence["delivery_expectation"],
             },
             indent=2,
             ensure_ascii=False,
