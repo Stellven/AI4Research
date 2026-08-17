@@ -10456,6 +10456,17 @@ def _build_autosci_operator_envelope(
     output_dir = HARNESS_DIR / "artifacts" / "autosci" / "runs" / sid / node_id
     evidence_path = _autosci_primary_output_path(sid, node)
     expected_schema = _node_expected_schema(node)
+    capsule_plan_ir = (
+        payload.get("capsule_plan_ir")
+        if isinstance(payload.get("capsule_plan_ir"), dict)
+        else {}
+    )
+    selected_skills = list(
+        capsule_plan_ir.get("selected_skills")
+        or node.get("selected_skills")
+        or node.get("required_skills")
+        or []
+    )
     inputs = {
         "graph_path": graph_path,
         "node_id": node_id,
@@ -10492,8 +10503,9 @@ def _build_autosci_operator_envelope(
         "logical_operator": str(node.get("logical_operator") or ""),
         "capability_capsule_id": str(node.get("capability_capsule_id") or ""),
         "capability_native": bool(node.get("capability_native") or node.get("capability_capsule_id")),
+        "selected_skills": selected_skills,
         "write_scope": list(node.get("write_scope") or []),
-        "capsule_plan_ir": payload.get("capsule_plan_ir") if isinstance(payload.get("capsule_plan_ir"), dict) else {},
+        "capsule_plan_ir": capsule_plan_ir,
         "physical_plan_ir": payload.get("physical_plan_ir") if isinstance(payload.get("physical_plan_ir"), dict) else {},
         "plan_artifacts": payload.get("plan_artifacts") if isinstance(payload.get("plan_artifacts"), dict) else {},
         "lease_ttl_seconds": int(ttl),

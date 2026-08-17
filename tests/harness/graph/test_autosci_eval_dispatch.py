@@ -649,6 +649,33 @@ def test_normal_intake_autosci_dispatch_ready_uses_exact_autosci_operator(
     )
 
 
+def test_autosci_operator_envelope_preserves_node_required_skills() -> None:
+    import graph_node_dispatcher as gnd
+    implementation = getattr(gnd, "_IMPL", gnd)
+
+    envelope = implementation._build_autosci_operator_envelope(
+        sid="sprint-skill-bridge",
+        node_id="R3",
+        node={
+            "id": "R3",
+            "goal": "Compile the grounded research report.",
+            "dispatch_task_type": "research",
+            "capability_capsule_id": "cap.skill-execution-bridge",
+            "required_skills": ["research_compilation"],
+            "write_scope": ["workspace/research/report/"],
+        },
+        graph={},
+        graph_path=str(HARNESS / "sprints" / "sprint-skill-bridge.task_graph.json"),
+        operator_id="mini-codex-gpt55-medium-builder-1",
+        dispatch_id="graph-sprint-skill-bridge-R3",
+        instruction_file=HARNESS / "sprints" / "sprint-skill-bridge.R3-dispatch.md",
+        payload={"capsule_plan_ir": {"selected_skills": []}},
+        ttl=30,
+    )
+
+    assert envelope["selected_skills"] == ["research_compilation"]
+
+
 def test_openai_policy_keeps_provider_neutral_autosci_operator(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
