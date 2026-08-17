@@ -93,6 +93,33 @@ def discover(lane: str, assignments: list[dict[str, str]]) -> list[str]:
     return sorted(found)
 
 
+# A shard reports; the gate judges. Exiting non-zero merely because tests are red
+# put nine "Process completed with exit code 1" annotations on every pull request
+# even when the gate's verdict was clean, which trains people to read a red
+# annotation as meaningless. The shard therefore succeeds when it produced
+# results and fails only when it did not: no document, an empty one, or one that
+# will not parse. A shard that dies without writing is still caught twice, here
+# and again by the gate's missing-shard verdict, which keys on the suite name
+# inside the document rather than on the artifact's file name.
+def _reported(junit: Path) -> int:
+    try:
+        tree = ET.parse(junit)
+    except (OSError, ET.ParseError) as exc:
+        print(f"::error::shard produced no readable JUnit at {junit}: {exc}", flush=True)
+        return 1
+    if not any(tree.getroot().iter("testcase")):
+        print(f"::error::shard wrote {junit} but it contains no test cases", flush=True)
+        return 1
+    return 0
+
+
+# pytest exit codes: 0 all passed, 1 tests failed, 2 interrupted, 3 internal
+# error, 4 usage error, 5 nothing collected. Only 0, 1 and 5 mean the run itself
+# worked; the rest mean pytest never got far enough to report, so they stay
+# fatal here.
+PYTEST_RAN = frozenset({0, 1, PYTEST_NO_TESTS_COLLECTED})
+
+
 def run_pytest(files: list[str], junit: Path, extra: list[str], suite: str) -> int:
     junit.parent.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
@@ -116,7 +143,12 @@ def run_pytest(files: list[str], junit: Path, extra: list[str], suite: str) -> i
         cwd=REPO_ROOT,
         check=False,
     )
-    return 0 if result.returncode == PYTEST_NO_TESTS_COLLECTED else result.returncode
+    if result.returncode not in PYTEST_RAN:
+        print(f"::error::pytest exited {result.returncode}; the shard did not run", flush=True)
+        return result.returncode
+    if result.returncode == PYTEST_NO_TESTS_COLLECTED:
+        return 0
+    return _reported(junit)
 
 
 # Characters XML 1.0 forbids outright. Shell tests print terminal control codes
@@ -193,7 +225,7 @@ def run_subprocess_lane(
     root.set("failures", str(failures))
     junit.parent.mkdir(parents=True, exist_ok=True)
     ET.ElementTree(root).write(junit, encoding="utf-8", xml_declaration=True)
-    return 1 if failures else 0
+    return _reported(junit)
 
 
 def main() -> int:

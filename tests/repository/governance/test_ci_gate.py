@@ -11,6 +11,7 @@ before it was closed. They are regression tests, not hypotheticals.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -299,3 +300,112 @@ def test_gate_scripts_are_executable_and_compile():
     for script in (GATE, CENSUS, SHARD_RUNNER):
         assert script.is_file(), script
         subprocess.run([sys.executable, "-m", "py_compile", str(script)], check=True)
+
+
+def _run_shard(tmp_path: Path, lane: str, junit_name: str = "out.xml"):
+    junit = tmp_path / junit_name
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SHARD_RUNNER),
+            "--lane",
+            lane,
+            "--shard",
+            "0",
+            "--of",
+            "1",
+            "--junit",
+            str(junit),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+    return proc, junit
+
+
+def _load_shard_runner():
+    spec = importlib.util.spec_from_file_location("shard_runner", SHARD_RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_a_subprocess_shard_with_red_tests_still_exits_zero(tmp_path):
+    """A shard reports; the gate judges.
+
+    The script lane is red on every current run, so this exercises the real
+    thing rather than a fixture. Exiting non-zero here put nine failure
+    annotations on every pull request whose gate verdict was clean, which
+    teaches people that a red annotation carries no information.
+    """
+    proc, junit = _run_shard(tmp_path, "script")
+    assert junit.is_file(), proc.stderr
+    assert 'failures="0"' not in junit.read_text(encoding="utf-8"), (
+        "this test only means something while the script lane is red"
+    )
+    assert proc.returncode == 0, proc.stdout[-2000:]
+
+
+def test_a_pytest_shard_with_red_tests_still_exits_zero(tmp_path):
+    """The pytest lane has its own exit path, and six of the nine shards use it.
+
+    Written after the subprocess-lane version above survived a mutation that
+    restored `return result.returncode` in run_pytest: one test covering one of
+    two lanes reads as covering both.
+    """
+    # run_pytest hard-codes --timeout, which is a usage error without this
+    # plugin, and a usage error is exit 4 rather than the exit 1 this test is
+    # about. requirements/ci.txt pins it, so CI always has it.
+    pytest.importorskip("pytest_timeout")
+    module = _load_shard_runner()
+    red = tmp_path / "test_red.py"
+    red.write_text("def test_fails():\n    assert False\n", encoding="utf-8")
+    junit = tmp_path / "pytest-0.xml"
+
+    code = module.run_pytest([str(red)], junit, [], "pytest-0")
+
+    assert junit.is_file()
+    assert 'failures="1"' in junit.read_text(encoding="utf-8")
+    assert code == 0
+
+
+def test_a_pytest_shard_that_never_ran_fails(tmp_path):
+    """Exit 4 is a usage error: pytest never got far enough to report anything.
+
+    Only 0, 1 and 5 mean the run itself worked. Folding every code into success
+    would turn a mis-invoked shard into a green job with no results.
+    """
+    module = _load_shard_runner()
+    junit = tmp_path / "pytest-0.xml"
+
+    code = module.run_pytest(["--not-a-real-flag"], junit, [], "pytest-0")
+
+    assert code != 0
+
+
+def test_a_shard_that_writes_no_cases_fails(tmp_path):
+    """The other half of the rule: silence is not success.
+
+    Without this, relaxing the exit code would turn a shard that died before
+    writing anything into a green job. The gate's missing-shard verdict is the
+    second line of defence, not the first.
+    """
+    junit = tmp_path / "empty.xml"
+    junit.write_text('<?xml version="1.0" ?><testsuite name="script-0" tests="0"/>', "utf-8")
+    proc = subprocess.run(
+        [sys.executable, "-c", CHECK_REPORTED.format(runner=SHARD_RUNNER, junit=junit)],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip().endswith("1"), proc.stdout
+
+
+CHECK_REPORTED = (
+    "import importlib.util,sys;"
+    "s=importlib.util.spec_from_file_location('shard', r'{runner}');"
+    "m=importlib.util.module_from_spec(s);s.loader.exec_module(m);"
+    "import pathlib;print(m._reported(pathlib.Path(r'{junit}')))"
+)
