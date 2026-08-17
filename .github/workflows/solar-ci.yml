@@ -607,22 +607,25 @@ jobs:
         env:
           # NOT ENFORCING YET. Deliberate, temporary, and one word to reverse.
           #
-          # GAP-008 (docs/testing/COVERAGE-GAPS.md): two cases in
-          # tests/plugins/autosci/test_autosci_skill_shim.py are confirmed
-          # nondeterministic across three runs of the same commit, cause not yet
-          # classified. Both are green-side, so each blocks as a new failure when
-          # it fires. A single green-side nondeterministic test cannot be absorbed
-          # by the baseline at all: leave it out and it blocks as a new failure,
-          # record it and it blocks as an unrecorded fix on the runs where it
-          # passes.
+          # tests/ci_baseline.json is now recorded from a GitHub Actions run
+          # rather than from a laptop, which was the precondition for turning
+          # this on (GAP-012 in docs/testing/COVERAGE-GAPS.md). What is still
+          # missing is a second run proving that baseline reproduces: a run
+          # reporting "clean" against it. Flipping this in the same change that
+          # rewrote the baseline would make a clean result unfalsifiable, since
+          # a green build would then prove nothing about whether the list is
+          # right.
           #
-          # Enforcing now would block pull requests for a reason unrelated to
-          # their contents, which teaches people to ignore this job in week one.
-          # The job still runs everything and reports everything; it just does not
-          # fail the build.
+          # Enforcing before that also risks blocking pull requests for reasons
+          # unrelated to their contents, which teaches people to ignore this job
+          # in week one. The job still runs everything and reports everything;
+          # it just does not fail the build.
           #
-          # Set to "true" when GAP-008 is fixed, or contained by a quarantine that
-          # carries an owner, an expiry, a reason and a linked defect.
+          # Set to "true" once a run reports a clean verdict against this
+          # baseline without any change to it. Green-side nondeterminism, if any
+          # survives, has to be contained by a quarantine carrying an owner, an
+          # expiry, a reason and a linked defect - not absorbed by the baseline,
+          # which cannot hold a test that passes some runs and fails others.
           ENFORCING: "false"
           R_CENSUS: ${{ steps.census.outcome }}
           R_REGRESSION: ${{ steps.regression.outcome }}

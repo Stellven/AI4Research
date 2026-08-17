@@ -567,10 +567,37 @@ partial correction would imply the remaining 319 entries had been verified, and
 they have not: the 68 shell and script entries were not re-run at all, and
 "passes when alone" is a weaker claim than "passes on a GitHub Actions VM".
 
-**Fix:** regenerate the baseline on the CI runner itself, with the shards run
-one at a time, which is what CI actually does. Roughly ninety minutes for all
-nine. Until then the baseline carries `"provisional": true`, it is not
-trustworthy, and `ENFORCING` stays `false` — for this reason now, not GAP-008.
+### Resolved by GitHub Actions run 87
+
+The baseline is now recorded from CI rather than from a laptop. What that run
+showed is worse than contention, and worth recording because the cause was a
+methodology error, not a machine:
+
+| | count |
+| --- | ---: |
+| entries the local baseline was missing | **10** |
+| entries that were never red on CI | **8** |
+| net | 324 → 326 |
+
+The ten missing entries were not flakes. **All ten fail at the base commit
+`5cccc0b49` with a clean worktree.** They were missed because the local baseline
+was generated from a working tree with 65 files staged for deletion, so every
+test that reads repository state — tracked generated artifacts, workbook
+outputs, reconciliation blobs — saw a repository that exists nowhere.
+
+The lesson generalises: **a baseline may only be generated from a committed
+tree, and preferably from CI.** Nothing about the local tooling detects a dirty
+worktree, and nothing warned.
+
+Of the five entries this document previously called contaminated, only one —
+`daily_arxiv` — appears in CI's unrecorded-fix list. The other four are red on
+CI as well. "Passes when run alone on a quiet laptop" was a weaker signal than
+it looked, and the earlier claim that all five were never product failures was
+wrong.
+
+**Remaining before `ENFORCING` can be flipped:** one run reporting a clean
+verdict against this baseline with no change to it. Flipping in the same change
+that rewrote the baseline would make a clean result unfalsifiable.
 
 ### GAP-008 resolution
 

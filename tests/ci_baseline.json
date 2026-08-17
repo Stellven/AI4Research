@@ -1,7 +1,7 @@
 {
   "schema": "solar.tests.baseline.v1",
-  "note": "Tests that were already red. This list may only shrink: CI compares it against the same file on the base branch and blocks any entry this branch added. Regenerate with scripts/check-test-baseline.py --update after fixing tests, and review the removals in the diff.\n\nPROVISIONAL, see GAP-012 in docs/testing/COVERAGE-GAPS.md. This list was recorded from a nine-shard composed run on one machine. Re-running 255 of these entries in isolation showed at least five that pass when not run under shard load, so they were never product failures:\n  tests/harness/lib/social_browser_backend_x/test_lease_ratelimit.py::TestBrowserLeaseClientMockFallback::test_blocker_guard_ok_selects_real_backend\n  tests/harness/runtime/test_mirage_context_access_plane.py::test_context_usage_verifier_fails_missing_required_source\n  tests/harness/runtime/test_mirage_context_access_plane.py::test_context_usage_verifier_requires_code_source\n  tests/journeys/phase22/code/test_j04_paper_ingestion.py::test_p22_j04_paper_ingestion\n  tests/plugins/autosci/test_autosci_skill_shim.py::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest\nThey are deliberately left in rather than hand-removed: a partial correction would imply the remaining entries were verified, and they were not. The gate ships with ENFORCING: false until this file is regenerated on the CI runner itself, which is the only environment whose timing matters.",
-  "count": 324,
+  "note": "Tests that were already red. This list may only shrink: CI compares it against the same file on the base commit and blocks any entry this branch added. Regenerate with scripts/check-test-baseline.py --update after fixing tests, and review the removals in the diff.\n\nRecorded from GitHub Actions run 87 on this branch: 9 of 9 shards, 7,222 cases, 326 red. The previous revision of this file was generated locally from a working tree with 65 files staged for deletion, so every test that reads repository state saw a repository that does not exist. That produced 10 missing entries and 8 entries that were never red on CI. All 10 were confirmed red at the base commit 5cccc0b49 with a clean worktree, so none is a regression from this branch.",
+  "count": 326,
   "known_failures": [
     {
       "test": "tests.foundation.capability_capsules.test_capability_capsule_definition_atomic::test_atomic_capability_capsule_definition_assembly__duplicate_identity_version",
@@ -232,6 +232,10 @@
       "reason": "AssertionError: { \"action_count\": 1, \"autosci_command\": \"/review\", \"evidence_path\": \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-2/tmp/pytest-of-ssubr/pytest-"
     },
     {
+      "test": "tests.harness.integrations.gepa_optimizer.test_promote::test_promotion_target_rejects_non_tmp_path",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
       "test": "tests.harness.integrations.test_capability_fusion_benchmark::shell",
       "reason": "exit 1"
     },
@@ -249,10 +253,6 @@
     },
     {
       "test": "tests.harness.legacy_shell.test_dispatch_modal::shell",
-      "reason": "exit 1"
-    },
-    {
-      "test": "tests.harness.legacy_shell.vendor.autoresearch.tests.test_context_overflow::shell",
       "reason": "exit 1"
     },
     {
@@ -282,6 +282,10 @@
     {
       "test": "tests.harness.livework.test_events.TestNoMock::test_no_mock_patch_in_file",
       "reason": "AssertionError: Mock usage found: ['0'] assert ['0'] == [] Left contains one more item: '0' Use -v to get more diff"
+    },
+    {
+      "test": "tests.harness.livework.test_heartbeat_hook.TestNoAutopilotChange::test_autopilot_sh_unchanged",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
     },
     {
       "test": "tests.harness.livework.test_heartbeat_hook.TestRunnerEmitRealEvents::test_actual_runner_writes_event_from_arbitrary_cwd",
@@ -382,6 +386,10 @@
     {
       "test": "tests.harness.research_orchestration.test_research_phase01_integration::test_phase1_route_files_remain_nonactive",
       "reason": "AssertionError: assert 'active' == 'draft' - draft + active"
+    },
+    {
+      "test": "tests.harness.research_orchestration.test_research_transport::test_malformed_stdout_is_classified[-empty_stdout]",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
     },
     {
       "test": "tests.harness.runtime.test_activity_runtime::shell",
@@ -580,16 +588,8 @@
       "reason": "KeyError: 'human_review'"
     },
     {
-      "test": "tests.harness.scenarios.test_rc9_installed_runtime_ownership::test_harness_status_rejects_tmux_prefix_match",
-      "reason": "subprocess.CalledProcessError: Command '['tmux', 'new-session', '-d', '-s', 'solar-harness-status-server-fixture', 'sleep 60']' returned non-zero exit status 1."
-    },
-    {
       "test": "tests.harness.scenarios.test_rc9_installed_runtime_ownership::test_status_start_ignores_argv_decoy_that_only_mentions_server_path",
       "reason": "AssertionError: assert 1 == 0 + where 1 = CompletedProcess(args=['bash', '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-...de=1, stdout='\\x1b[0;31m[Harness]\\x1b"
-    },
-    {
-      "test": "tests.harness.scenarios.test_rc9_installed_runtime_ownership::test_watchdog_session_probe_rejects_tmux_prefix_match",
-      "reason": "subprocess.CalledProcessError: Command '['tmux', 'new-session', '-d', '-s', 'solar-harness-status-server-fixture', 'sleep 60']' returned non-zero exit status 1."
     },
     {
       "test": "tests.harness.supervision.test_live_claude_e2e_sandbox_preflight::test_prepare_only_sandbox_env_passes_anthropic_contract_preflight",
@@ -700,6 +700,10 @@
       "reason": "exit 1"
     },
     {
+      "test": "tests.harness.test_autosci_phase_c_premerge_readiness::test_generated_artifacts_remain_untracked_for_premerge",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
       "test": "tests.harness.test_autosci_premerge_gate::shell",
       "reason": "exit 127"
     },
@@ -800,14 +804,6 @@
       "reason": "exit 1"
     },
     {
-      "test": "tests.harness.test_knowledge_ingest_dispatcher::shell",
-      "reason": "exit 127"
-    },
-    {
-      "test": "tests.harness.test_knowledge_ingest_registry::shell",
-      "reason": "exit 127"
-    },
-    {
       "test": "tests.harness.test_knowledge_qmd_watermarks::shell",
       "reason": "exit 2"
     },
@@ -822,10 +818,6 @@
     {
       "test": "tests.harness.test_knowledge_semantic_extract_health::test_thunderomlx_health_resolves_legacy_mini_alias_to_loaded_qwen",
       "reason": "AssertionError: assert False is True + where False = <function thunderomlx_healthy at 0x7c7687f57600>(Namespace(endpoint='http://127.0.0.1:8002', proxy_model='mini-thunderomlx-qwen36-knowledge', local"
-    },
-    {
-      "test": "tests.harness.test_knowledge_spans::shell",
-      "reason": "exit 127"
     },
     {
       "test": "tests.harness.test_knowledge_v2.TestV3Naming::test_semantic_md_files_exist",
@@ -1092,16 +1084,28 @@
       "reason": "AttributeError: 'NoneType' object has no attribute 'get'"
     },
     {
+      "test": "tests.platform.phase22.test_phase22_workbook::test_phase22_workbook_formula_errors_and_opc_sanity",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.platform.phase22.test_phase22_workbook::test_phase22_workbook_has_expected_sheets_and_reimport_shape",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.platform.phase22.test_phase22_workbook::test_phase22_workbook_output_exists",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.platform.phase22.test_phase22_workbook::test_phase22_workbook_summary_matches_matrix_counts",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
       "test": "tests.platform.provider.test_provider_onboarding::shell",
       "reason": "exit 1"
     },
     {
       "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_control_routes_emit_approved_external_runtime_proofs[$setup-setup_status-setup]",
       "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...: \"setup\",\\n \"status\": \"failed\",\\n \"w"
-    },
-    {
-      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest",
-      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/tmp/pytest-of-ssubr/pytest-0/test_autosci_skill_shim_da"
     },
     {
       "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_exp_pilot_run_executes_approved_native_command_without_wiki_writeback",
@@ -1232,8 +1236,16 @@
       "reason": "AssertionError: { \"evidence_status\": \"completed\", \"ok\": false, \"path\": \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-3/tmp/pytest-of-ssubr/pytest-0/test_invent"
     },
     {
+      "test": "tests.repository.governance.test_overwritten_contribution_reconciliation::test_readme_is_the_verbatim_stellven_source_tip_blob",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
       "test": "tests.repository.governance.test_overwritten_contribution_reconciliation::test_reconciliation_actions_have_current_evidence",
       "reason": "AssertionError: assert 'Feature list stuff/Solar_Harness_All_Sources_2026-07-16/files/asi/autosci_consistency_inventory.stderr.txt' in {'.agents/skills/ask/SKILL.md', '.agents/skills/check/SKILL.md', "
+    },
+    {
+      "test": "tests.repository.governance.test_overwritten_contribution_reconciliation::test_reconciliation_is_complete_and_resolved",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
     },
     {
       "test": "tests.repository.release.test_release_cut_safety::shell",
@@ -1241,10 +1253,6 @@
     },
     {
       "test": "tests.repository.release.test_release_public_tree::shell",
-      "reason": "exit 1"
-    },
-    {
-      "test": "tests.scripts.test_local::shell",
       "reason": "exit 1"
     },
     {
@@ -1299,6 +1307,5 @@
       "test": "tests.workflow.ingestion.test_phase22_batch001_wf005_dedup::test_wf005_02_same_id_replay_is_idempotent",
       "reason": "assert 0 == 1 + where 0 = len([])"
     }
-  ],
-  "provisional": true
+  ]
 }
