@@ -26,7 +26,7 @@ Phase 23 does not inherit a product PASS/FAIL merely from Phase 22 reports or is
 ### P23-001 — Windows App stalls at `prd_ready` and never dispatches the planner
 
 - **Severity:** Blocker
-- **Status:** CONFIRMED_REPRODUCIBLE / NOT YET FIXED
+- **Status:** CODE REPAIRED / LIVE WINDOWS ACCEPTANCE PENDING
 - **Reported surface:** Windows AI4Research desktop application.
 - **Observed user impact:** a submitted request remains at `State transition — PHASE prd ready`; the plan shows `0/3`, and Builder/Evaluator nodes remain pending indefinitely.
 - **Scope confirmation:** all 5 status-bearing sprints currently present in the running `C:/p22all/harness/sprints` runtime are at `phase=prd_ready`, and all 5 have a failed planner dispatch claim. This is a systemic dispatch failure, not one malformed request.
@@ -46,6 +46,12 @@ Phase 23 does not inherit a product PASS/FAIL merely from Phase 22 reports or is
   3. add bounded retry/recovery after operator availability changes without duplicating planner dispatch;
   4. add Windows+WSL regression coverage using the same status-server intake and role-pool dispatch path.
 - **Acceptance:** a fresh Windows App request advances from intake/`prd_ready` to a genuinely dispatched and running planner, then to graph execution and a usable answer. The accepted run must contain matching current-run status/events/operator result evidence and must not depend on a fabricated worker or manually edited sprint state.
+- **Code repair evidence (2026-08-17):**
+  - `8d2259e198df7af486a5822d749e6b03f8d0f313` routes a Windows-hosted intake through `wsl.exe` and prevents the Bash entrypoint from being launched as a Win32 executable. Its four status-server intake regression tests pass on Windows.
+  - `55ec2ea78f74ce157b0cec4314861a44bef2a040` sends the backend token on the desktop shell's initial navigation as well as later navigation.
+  - the current `harness/tools/pm_dispatch.py` resolves a stale absolute `/opt/homebrew/bin/codex` record by the executable basename on the active host, invalidates a cached `command_path_missing` result when that executable appears, and passes `test_codex_operator_health_accepts_path_resolved_codex`.
+  - the repaired webapp/desktop gate passes 9/9 on this Windows checkout, including a real backend, functional browser flow, SSE, rapid session switching, and desktop/mobile visual checks.
+- **Why acceptance is still pending:** the packaged/running App has not yet been restarted and synchronized from this canonical commit, and no fresh permitted-model task has produced matching planner-through-result evidence. The previous runtime records used a model the user prohibited for live calls, so this repair did not silently launch it.
 
 ## Reclassified Phase 22 review findings
 
@@ -75,3 +81,37 @@ The earlier P22-044/P22-045/P22-047/P22-054/P22-069/P22-071 findings remain usef
   canonical directory. Scratch files and local run outputs remain excluded
   from commits.
 - No remote push is authorized or performed by this recovery.
+
+### 2026-08-17 — P23-002 canonical branch integration repaired
+
+- The original `OpenSolar-Canonical` directory now owns the checked-out
+  `openJiuwen-Solar` branch. The temporary `C:/p22all` checkout is no longer
+  the publishing or development source of truth.
+- Accepted branch work was integrated with immutable mappings recorded in
+  `docs/integrations/autosci/phase-23-integration-ledger.md`:
+  - Phase 22 closure/desktop token protection -> `55ec2ea78f74ce157b0cec4314861a44bef2a040`;
+  - epic global WIP activation gate -> `7d7ae2a1d9f5264764b1a7eafbe499047c028ca9`;
+  - Windows/WSL, browser-profile, governance, and integration-gate repairs ->
+    `bc3e9ff59d6d11d7a90fd9a2fb4052b51fc76896`.
+- Audited inventory:
+  - 47 local non-ancestor branch tips classified;
+  - 42 remote refs sharing 21 unique non-ancestor tips classified;
+  - 3 accepted original-to-integrated mappings verified reachable;
+  - 0 unclassified candidate fixes.
+- Repairs in `bc3e9ff59` include:
+  - WSL path conversion using `wsl.exe --exec` from a Windows checkout;
+  - browser profile copies that omit volatile extension/cache trees;
+  - current `.cjs` desktop test paths and explicit missing-path checks;
+  - a CRLF-safe release version parser using TOML and Python AST;
+  - portable webapp gate Python/Playwright dependency resolution and unique pytest temp directories;
+  - portable S04 fake CLI coverage and stronger semantic preservation checks for moved Python tests;
+  - useful stderr on epic activation failures and a working moved Epic shell test.
+- Verification completed:
+  - focused and integration Python suite: `144 passed`;
+  - Epic/activation WSL shell suite: `PASS=20 FAIL=0`;
+  - release coherence: `PASS`;
+  - webapp/desktop gate: `PASS=9 FAIL=0 SKIP=0`;
+  - `git diff --check`: pass.
+- Historical scratch outputs and untracked Phase 22 inspection files remain
+  uncommitted. They are not part of `openJiuwen-Solar` and were not deleted.
+- No remote push was performed.
