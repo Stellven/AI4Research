@@ -39,6 +39,23 @@ TESTS_ROOT = REPO_ROOT / "tests"
 
 # Mirrors pytest.ini: python_files and norecursedirs.
 PY_PATTERNS = ("test_*.py", "*_test.py")
+
+# Test files in every other language the repository uses. Without these the
+# census counted 887 files and reported nothing unclassified while 36 tests were
+# invisible to it: 17 TypeScript files under tests/core that only `bun test`
+# would find and no workflow runs, 9 Electron .cjs files reachable only from
+# desktop-build.yml (which triggers on pull requests to main, under desktop/**
+# paths, so not on this branch), 6 .mjs files nothing references, and 4
+# PowerShell files of which install-matrix.yml runs two.
+#
+# "0 unclassified" has to mean every test file, or the number is worse than no
+# number: it reads as a guarantee and was one only for Python and shell.
+OTHER_PATTERNS = (
+    "test_*.ts", "test-*.ts", "*.test.ts",
+    "test_*.mjs", "test-*.mjs", "*.test.mjs",
+    "test_*.cjs", "test-*.cjs", "*.test.cjs",
+    "*.Tests.ps1",
+)
 SKIP_DIRS = {
     ".git",
     ".venv",
@@ -61,7 +78,8 @@ def discover() -> list[str]:
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for filename in filenames:
             is_py = any(fnmatch.fnmatch(filename, pattern) for pattern in PY_PATTERNS)
-            if not is_py and not filename.endswith(".sh"):
+            is_other = any(fnmatch.fnmatch(filename, pattern) for pattern in OTHER_PATTERNS)
+            if not is_py and not is_other and not filename.endswith(".sh"):
                 continue
             found.append(Path(dirpath, filename).relative_to(REPO_ROOT).as_posix())
     return sorted(found)

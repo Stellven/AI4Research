@@ -18,10 +18,58 @@ Referenced by ID from the code that carries the gap.
 | GAP-006 | Secret scan excused on pull requests | **closed** 2026-08-14 |
 | GAP-007 | Almost no test is calibrated | open, structural |
 | GAP-008 | Scheduler asserts on an operator log it did not wait for | latent race, **does not block CI** |
-| GAP-012 | The baseline was recorded under local concurrency CI does not have | **open, blocks enforcement** |
+| GAP-012 | The baseline was recorded under local concurrency CI does not have | **closed** by run 88 |
 | GAP-009 | test_autosci_skill_shim.py depends on state other test files create | open, test isolation |
 | GAP-010 | 45 test files outside tests/ are run by nothing | open |
 | GAP-011 | The suite runs on Linux only | open, scoped decision |
+| GAP-013 | 34 test files inside tests/ are run by nothing | **open**, now visible |
+
+---
+
+## GAP-013 — 34 test files inside `tests/` that nothing executes
+
+The census originally inspected only `test_*.py`, `*_test.py` and `*.sh`. It
+reported **887 files, 0 unclassified**, and that number was worse than no number:
+it reads as a guarantee about the whole directory and was one only for Python and
+shell.
+
+Extending it to TypeScript, Node and PowerShell raised the count to 916 and
+surfaced 34 files with no runner at all:
+
+| what | count | why nothing runs it |
+| --- | ---: | --- |
+| `tests/core/*.test.ts` | 17 | `package.json` defines `test = bun test`, but no workflow runs it. `install-matrix.yml` runs `bun install` only. |
+| `tests/desktop/**/*.test.cjs` | 9 | `desktop-build.yml` runs three of them, but only on pull requests to `main`, under `desktop/**` paths. This branch targets `openJiuwen-Solar`. The other six are referenced nowhere. |
+| `*.mjs` under `tests/` | 6 | No workflow, script or `package.json` entry references them. |
+| `tests/platform/windows/*.Tests.ps1` | 2 | `install-matrix.yml` runs `install.Tests.ps1` on `windows-latest`. `windows-evidence-doctor.Tests.ps1` is referenced by nothing. |
+
+All 34 now carry an `excluded` lane and a written reason in
+`tests/ci_lanes.json`, so each is a recorded decision. That is not the same as
+being tested. **Nothing here is covered; it is only no longer hidden.**
+
+Seven more files were deleted rather than classified: stale duplicates at the
+root of `tests/` left behind by the August move, each with a live twin deeper in
+the tree.
+
+```
+tests/test-release-cut-safety.sh              -> tests/repository/release/test_release_cut_safety.sh
+tests/test-release-public-tree.sh             -> tests/repository/release/test_release_public_tree.sh
+tests/test-release-checklist.sh               -> tests/repository/release/test_release_checklist.sh
+tests/test-release-coherence-tracked-inputs.sh-> tests/repository/release/test_release_coherence_tracked_inputs.sh
+tests/test-provider-onboarding.sh             -> tests/platform/provider/test_provider_onboarding.sh
+tests/install.Tests.ps1                       -> tests/platform/windows/install.Tests.ps1
+tests/windows-evidence-doctor.Tests.ps1       -> tests/platform/windows/windows-evidence-doctor.Tests.ps1
+```
+
+They had drifted, and CI was running both copies. `test-release-checklist.sh` was
+red while `test_release_checklist.sh` passes, which is what a stale copy looks
+like from the outside: a permanent failure nobody can fix, because the file
+being fixed is not the file being run.
+
+**Decisions this leaves open, none of them CI's to make:** whether the 17
+TypeScript tests should run at all, whether `desktop-build.yml` should trigger
+on `openJiuwen-Solar`, and whether the six unreferenced `.mjs` files describe
+contracts worth keeping.
 
 ---
 

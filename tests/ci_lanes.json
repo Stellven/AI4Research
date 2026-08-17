@@ -46,6 +46,36 @@
       "reason": "non-Linux host: shells out to wsl.exe -d Ubuntu, which only exists on a Windows host, and expects a prebuilt venv under .codex-tmp/phase5-platform-rerun-final-venv."
     },
     {
+      "glob": "tests/platform/windows/install.Tests.ps1",
+      "lane": "excluded",
+      "reason": "other workflow: Pester, run by .github/workflows/install-matrix.yml on windows-latest. The nine shards are Linux, so this cannot run there. Covered, but not by this gate - see GAP-011."
+    },
+    {
+      "glob": "tests/platform/windows/windows-evidence-doctor.Tests.ps1",
+      "lane": "excluded",
+      "reason": "NO RUNNER. Pester file that nothing executes: no workflow and no script references it. Kept because it is a Windows evidence-doctor contract, not because it runs. See GAP-013."
+    },
+    {
+      "glob": "tests/desktop/**",
+      "lane": "excluded",
+      "reason": "other workflow, conditionally: three of these nine are run by .github/workflows/desktop-build.yml, which triggers on pull requests to main under desktop/** paths only. This branch targets openJiuwen-Solar, so none of them run here. The other six are referenced by nothing. See GAP-013."
+    },
+    {
+      "glob": "tests/core/*.test.ts",
+      "lane": "excluded",
+      "reason": "NO RUNNER. `bun test` would discover these, and package.json defines `test = bun test`, but no workflow runs it - install-matrix.yml runs `bun install` only. Seventeen TypeScript test files execute nowhere. See GAP-013."
+    },
+    {
+      "glob": "tests/**/*.test.ts",
+      "lane": "excluded",
+      "reason": "NO RUNNER. Same as tests/core/*.test.ts: a bun target with no workflow behind it. See GAP-013."
+    },
+    {
+      "glob": "tests/**/*.mjs",
+      "lane": "excluded",
+      "reason": "NO RUNNER. Node test files referenced by no workflow, script or package.json entry. See GAP-013."
+    },
+    {
       "glob": "tests/*.sh",
       "lane": "shell",
       "reason": "every bash test under tests/ at any depth; fnmatch '*' crosses path separators"
