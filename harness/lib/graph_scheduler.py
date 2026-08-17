@@ -340,16 +340,9 @@ def _attach_runtime_planes(
     for node_id, result in node_results.items():
         if node_id not in ids or not isinstance(result, dict):
             continue
-        status = str(result.get("status") or "").strip().lower()
-        if status:
-            ids[node_id]["status"] = status
-        updated_at = str(result.get("updated_at") or "").strip()
-        if updated_at:
-            ids[node_id]["updated_at"] = updated_at
-        if result.get("assigned_to"):
-            ids[node_id]["assigned_to"] = result.get("assigned_to")
-        if result.get("dispatch_id"):
-            ids[node_id]["dispatch_id"] = result.get("dispatch_id")
+        for field in RUNTIME_NODE_SPEC_FIELDS:
+            if field in result:
+                ids[node_id][field] = deepcopy(result[field])
 
 
 def _runtime_state_from_graph(graph: dict[str, Any], *, graph_path: Path | None = None) -> dict[str, Any]:
