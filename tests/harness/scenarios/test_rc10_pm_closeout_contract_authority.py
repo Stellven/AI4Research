@@ -519,3 +519,36 @@ def test_terminal_failure_recovery_is_generation_fenced_and_reopens_only_depende
     )
     assert replay["ok"] is False
     assert "node_not_terminal_failed" in replay["reason"]
+
+
+def test_human_review_history_keeps_generation_monotonic_after_terminal_projection() -> None:
+    prior = {
+        "schema_version": gs.HUMAN_REVIEW_SCHEMA_VERSION,
+        "generation": 3,
+        "state": "blocked",
+        "reason": "previous bounded failure",
+    }
+    graph = {
+        "sprint_id": SID,
+        "nodes": [
+            {
+                "id": "S3",
+                "status": "failed",
+                "depends_on": [],
+                "human_review_history": [prior],
+            }
+        ],
+        "node_results": {"S3": {"status": "failed"}},
+    }
+
+    assert gs.human_review_generation(graph, "S3") == 3
+    current = gs.enter_node_human_review(
+        graph,
+        "S3",
+        reason="new terminal infrastructure failure",
+        next_action="inspect and resume",
+        writer="test_terminal_recovery",
+        author_type="human",
+    )
+
+    assert current["generation"] == 4
