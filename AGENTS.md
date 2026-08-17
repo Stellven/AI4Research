@@ -140,6 +140,19 @@ override the journey plan, current code, or actual journey evidence.
 
 ## Test Execution Rules
 
+- CI runs every test file and judges a pull request on what it changed, not on
+  an absolute pass rate. `docs/testing/CI-TEST-GATE.md` explains the mechanism.
+  Two files carry it: `tests/ci_baseline.json` (tests that were already red;
+  may only shrink) and `tests/ci_lanes.json` (which runner owns each file).
+- Adding a test file means it either runs under pytest, or it gets a lane and a
+  written reason in `tests/ci_lanes.json`. `scripts/check-test-census.py` fails
+  on any file that is neither.
+- You cannot add an entry to `tests/ci_baseline.json` to silence a test your
+  change broke: the gate compares that file against the base commit and blocks
+  additions. Deleting or renaming a failing test is blocked the same way.
+- Known gaps in what CI checks are tracked in `docs/testing/COVERAGE-GAPS.md`
+  with IDs. If you remove a check, add or update an entry there rather than
+  leaving the loss implicit in a comment.
 - Prefer the repository `.venv` and the runner used by the existing suite.
 - Give parallel pytest runs unique `--basetemp` and cache directories.
 - Never redirect logs into the same `--basetemp` directory.

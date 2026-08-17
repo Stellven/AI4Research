@@ -1,0 +1,48 @@
+# Python dependencies for continuous integration test runs.
+#
+# Versions are pinned exactly rather than floored like requirements/harness.txt.
+# CI judges a pull request by comparing the tests that are red now against
+# tests/ci_baseline.json. A dependency that resolved to a different version than
+# the one the baseline was recorded against would surface as a test changing
+# state, which is indistinguishable from a real regression. The resolution has
+# to be fixed, not merely compatible.
+#
+# Bump deliberately, in its own pull request, so the effect is attributable, and
+# regenerate the baseline in that same pull request if the bump moves any test.
+
+# Test runner.
+pytest==9.1.1
+
+# Caps a single hung test rather than letting it consume the whole job
+# budget. At least one test drives a subprocess that waits on a provider
+# that is not there; without a per-test ceiling that one test can take the
+# shard's entire timeout and the shard then reports nothing.
+pytest-timeout==2.4.0
+
+# Imported by the suite. Without flask, four test modules fail at collection
+# time, which makes pytest exit 2 and takes the whole run down rather than
+# failing those modules; without pydantic, several harness imports fail the
+# same way.
+beautifulsoup4==4.15.0
+Flask==3.1.3
+jsonschema==4.26.0
+pydantic==2.13.4
+pypdf==6.15.0
+PyYAML==6.0.3
+requests==2.34.2
+rich==15.0.0
+
+# Transitive, pinned so a resolver change cannot alter a comparison.
+attrs==26.1.0
+certifi==2026.7.22
+charset-normalizer==3.4.9
+idna==3.18
+iniconfig==2.3.0
+jsonschema-specifications==2025.9.1
+packaging==26.3
+pluggy==1.6.0
+pydantic_core==2.46.4
+referencing==0.37.0
+rpds-py==2026.6.3
+soupsieve==2.9.2
+urllib3==2.7.0
