@@ -635,3 +635,32 @@ def test_projection_narrative_dedups_and_humanizes(tmp_path: Path) -> None:
 
     fast, _ = mod.build_projection_payload(sid, mode="fast")
     assert fast.get("narrative"), "narrative must ship in fast mode too"
+
+
+def test_failed_planner_dispatch_is_projected_as_a_stall(tmp_path: Path) -> None:
+    mod = _load_routes()
+
+    projection, _ = _scenario_projection(
+        mod,
+        tmp_path,
+        "planner-dispatch-failed",
+        status={
+            "status": "drafting",
+            "phase": "prd_ready",
+            "handoff_to": "planner",
+            "planner_dispatch_claim": {
+                "owner": "operator_pool",
+                "state": "failed",
+                "failure_reason": "no_dispatchable_operator_for_role: planner",
+                "returncode": 1,
+            },
+        },
+        graph={"nodes": [{"id": "N0", "goal": "plan", "status": "pending"}]},
+    )
+    stall = projection["dispatch"]["stall"]
+
+    assert stall["is_stalled"] is True
+    assert stall["state"] == "planner_dispatch_failed"
+    assert stall["title"] == "Planner could not start"
+    assert stall["reasons"] == ["no_dispatchable_operator_for_role: planner"]
+    assert "No dispatchable Planner operator" in stall["detail"]

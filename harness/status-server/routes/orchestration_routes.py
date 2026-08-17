@@ -834,6 +834,22 @@ def _build_stall_summary(
             "detail": "Solar reported a blocked gate. The dashboard is showing the stall rather than treating the sprint as complete.",
             "reasons": reasons,
         }
+    planner_claim = status.get("planner_dispatch_claim")
+    if isinstance(planner_claim, dict) and str(planner_claim.get("state") or "").lower() == "failed":
+        failure_reason = str(planner_claim.get("failure_reason") or "planner_dispatch_failed").strip()
+        no_operator = "no_dispatchable_operator_for_role" in failure_reason
+        return {
+            "is_stalled": True,
+            "state": "planner_dispatch_failed",
+            "severity": "warn",
+            "title": "Planner could not start",
+            "detail": (
+                "No dispatchable Planner operator is available. Solar can retry after operator health recovers."
+                if no_operator
+                else "Solar could not hand the task to the Planner. Solar can retry after the dispatch failure clears."
+            ),
+            "reasons": [failure_reason],
+        }
     governance_state = str((plan_governance or {}).get("state") or "").strip().lower()
     if (
         "planning_complete" in phase
