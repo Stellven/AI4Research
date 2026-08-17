@@ -282,3 +282,26 @@ def test_read_only_analysis_scope_node_canonicalizes_to_admitted_audit_type():
         registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
     )
     assert resolved["capability_capsule_id"] == "cap.requirement-compiler-audit"
+
+
+def test_skill_execution_bridge_is_registered_for_runtime_admission():
+    registry_path = ROOT / "config" / "capability-capsules.registry.yaml"
+
+    entry = caps.get_registry_entry(
+        "cap.skill-execution-bridge",
+        path=registry_path,
+    )
+
+    assert entry is not None
+    assert Path(entry.manifest_path).name == "cap.skill-execution-bridge.yaml"
+    resolved = caps.resolve_capability_capsule_for_task(
+        {
+            "task_type": "research",
+            "objective": "Compile the grounded research report.",
+            "selected_skills": ["research_compilation"],
+            "capability_capsule_id": "cap.skill-execution-bridge",
+        },
+        operator_id="mini-codex-gpt55-medium-builder-1",
+        registry_path=registry_path,
+    )
+    assert resolved["capability_capsule_id"] == "cap.skill-execution-bridge"
