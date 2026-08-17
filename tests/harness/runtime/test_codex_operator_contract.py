@@ -355,6 +355,7 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert str(tmp_path.resolve()) not in proof["read_write"]
     assert str(Path("/etc/resolv.conf").resolve()) in proof["read_only"]
     sandbox_codex_home = Path(env["CODEX_HOME"])
+    assert Path(env["HOME"]) == sandbox_codex_home.parent
     assert sandbox_codex_home == Path(env["CODEX_SQLITE_HOME"]) / "home"
     assert (sandbox_codex_home / "auth.json").is_file()
     assert not (sandbox_codex_home / "auth.json").is_symlink()

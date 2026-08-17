@@ -287,6 +287,9 @@ def _filesystem_isolated_command(
     state_home = Path(tempfile.mkdtemp(prefix=f"{os.getpid()}-", dir=state_root))
     atexit.register(shutil.rmtree, state_home, ignore_errors=True)
     env["CODEX_SQLITE_HOME"] = str(state_home)
+    # Login shells spawned by Codex must not probe the operator user's real
+    # profile, which is intentionally outside the Landlock read boundary.
+    env["HOME"] = str(state_home)
     tmp_dir = task_dir / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
     env["TMPDIR"] = str(tmp_dir)
