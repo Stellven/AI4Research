@@ -228,6 +228,17 @@ def generate_planner_artifacts(*, runtime_root: Path, sprint_id: str) -> dict[st
     from graph_scheduler import validate_graph  # noqa: WPS433
     from runtime_status import transition_status  # noqa: WPS433
 
+    validation = validate_graph(graph)
+    if not validation.get("ok"):
+        return {"ok": False, "reason": "invalid_task_graph", "validation": validation, "sprint_id": sprint_id}
+
+    _write_text(design_path, build_design_markdown(sprint_id=sprint_id, prd_text=prd_text, contract_text=contract_text, graph=graph))
+    _write_text(plan_path, build_plan_markdown(sprint_id=sprint_id, contract_text=contract_text, graph=graph))
+    _write_json(traceability_path, build_traceability_payload(sprint_id=sprint_id, graph=graph))
+
+    # Planner artifacts must exist before certification. This ordering prevents
+    # a caller from obtaining a Builder-authorizing certificate while the
+    # independent Planner's design/plan evidence is still absent.
     compile_verdict = compile_planner_graph(sprint_root, sprint_id)
     if not compile_verdict.get("ok"):
         return {
@@ -238,14 +249,6 @@ def generate_planner_artifacts(*, runtime_root: Path, sprint_id: str) -> dict[st
         }
     if compile_verdict.get("stamped"):
         graph = _read_json(graph_path)
-
-    validation = validate_graph(graph)
-    if not validation.get("ok"):
-        return {"ok": False, "reason": "invalid_task_graph", "validation": validation, "sprint_id": sprint_id}
-
-    _write_text(design_path, build_design_markdown(sprint_id=sprint_id, prd_text=prd_text, contract_text=contract_text, graph=graph))
-    _write_text(plan_path, build_plan_markdown(sprint_id=sprint_id, contract_text=contract_text, graph=graph))
-    _write_json(traceability_path, build_traceability_payload(sprint_id=sprint_id, graph=graph))
 
     updated, message = transition_status(
         status_path,
