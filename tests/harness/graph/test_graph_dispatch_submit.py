@@ -744,6 +744,13 @@ class TestSendToPaneLiteral:
         assert '"repair_attempt": 2' in text
         assert '"eval_dispatch_id": "eval-after-repair"' in text
         assert '"repair_context_created_at": "2026-06-29T20:00:00Z"' in text
+        assert '"schema_version": "solar.eval.v1"' in text
+        assert f'"sprint_id": "{sid}"' in text
+        assert '"generated_by": "operator:mini-codex-evaluator"' in text
+        assert '"generation_mode": "assigned_evaluator"' in text
+        assert '"proof_level": "independent_verification"' in text
+        assert '"command_line": "operator_pool_eval:eval-after-repair"' in text
+        assert f'"workspace_root": "{gnd.HARNESS_DIR.parent}"' in text
 
     def test_direct_node_verdict_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
         """Primary evaluator node-verdict FAIL uses the same repair path as sidecar reconcile."""

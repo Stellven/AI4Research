@@ -7181,9 +7181,16 @@ solar-harness session evaluate "{sid}" --json
    ```bash
    cat > "{eval_json}" <<'EOF'
    {{
+     "schema_version": "solar.eval.v1",
+     "sprint_id": "{sid}",
      "node_id": "{node_id}",
      "verdict": "PASS",
      "summary": "",
+     "generated_by": "{pane}",
+     "generation_mode": "assigned_evaluator",
+     "proof_level": "independent_verification",
+     "command_line": "operator_pool_eval:{dispatch_id}",
+     "workspace_root": "{HARNESS_DIR.parent}",
      "eval_generation": {eval_generation},
      "repair_attempt": {eval_generation},
      "eval_dispatch_id": "{dispatch_id}",
