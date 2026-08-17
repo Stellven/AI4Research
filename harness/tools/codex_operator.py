@@ -238,6 +238,30 @@ def _existing_paths(values: list[Path]) -> list[Path]:
     return result
 
 
+def _path_filesystem_type(path: Path) -> str:
+    """Return the Linux mount type containing path, using longest-prefix match."""
+    try:
+        resolved = path.expanduser().resolve(strict=False)
+        best: tuple[int, str] | None = None
+        for line in Path("/proc/self/mountinfo").read_text(encoding="utf-8").splitlines():
+            fields = line.split()
+            separator = fields.index("-")
+            mountpoint = Path(
+                fields[4]
+                .replace("\\040", " ")
+                .replace("\\011", "\t")
+                .replace("\\012", "\n")
+                .replace("\\134", "\\")
+            )
+            if resolved == mountpoint or resolved.is_relative_to(mountpoint):
+                candidate = (len(mountpoint.parts), fields[separator + 1].lower())
+                if best is None or candidate[0] > best[0]:
+                    best = candidate
+        return best[1] if best else ""
+    except (OSError, ValueError):
+        return ""
+
+
 def _filesystem_isolated_command(
     command: list[str],
     *,
@@ -349,14 +373,33 @@ def _filesystem_isolated_command(
     wrapper = Path(__file__).with_name("landlock_exec.py").resolve(strict=False)
     if not wrapper.is_file():
         raise RuntimeError(f"Landlock wrapper is missing: {wrapper}")
+    drvfs = _path_filesystem_type(harness_dir) in {"9p", "v9fs"}
     wrapped = [sys.executable, str(wrapper)]
+    if drvfs:
+        unshare = shutil.which("unshare", path=env.get("PATH"))
+        mount_wrapper = Path(__file__).with_name("mount_namespace_exec.py").resolve(strict=False)
+        if not unshare or not mount_wrapper.is_file():
+            raise RuntimeError("strict WSL operator scope requires unshare and mount_namespace_exec.py")
+        wrapped = [
+            unshare,
+            "--user",
+            "--map-root-user",
+            "--mount",
+            sys.executable,
+            str(mount_wrapper),
+        ]
+        for path in read_write:
+            if path == Path("/dev") or path.is_relative_to(Path("/dev")):
+                continue
+            wrapped.extend(["--read-write", str(path)])
+        wrapped.extend(["--", sys.executable, str(wrapper), "--read-scope-only"])
     for path in read_only:
         wrapped.extend(["--read-only", str(path)])
     for path in read_write:
         wrapped.extend(["--read-write", str(path)])
     wrapped.extend(["--", *command])
     return wrapped, {
-        "mode": "landlock",
+        "mode": "mount_namespace+landlock-read" if drvfs else "landlock",
         "strict": strict,
         "read_only": [str(path) for path in read_only],
         "read_write": [str(path) for path in read_write],

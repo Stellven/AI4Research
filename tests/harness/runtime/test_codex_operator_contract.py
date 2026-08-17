@@ -381,6 +381,78 @@ def test_codex_operator_refuses_disabled_isolation_for_strict_run(tmp_path, monk
         )
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="WSL mount isolation is Linux-only")
+def test_codex_operator_uses_mount_namespace_for_drvfs(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_drvfs", ROOT / "tools" / "codex_operator.py")
+    harness_dir = tmp_path / "harness"
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    work_dir = harness_dir / "sprints" / "sprint-1" / "workdir"
+    task_dir.mkdir(parents=True)
+    work_dir.mkdir(parents=True)
+    source_codex_home = tmp_path / "source-codex-home"
+    source_codex_home.mkdir()
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.setenv("SOLAR_CODEX_SOURCE_HOME", str(source_codex_home))
+    monkeypatch.setenv("SOLAR_CODEX_OPERATOR_STATE_ROOT", str(tmp_path / "operator-state"))
+    monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "1")
+    monkeypatch.setattr(codex_operator, "_path_filesystem_type", lambda _path: "9p")
+    env = codex_operator._codex_exec_env(task_dir)
+
+    command, proof = codex_operator._filesystem_isolated_command(
+        ["codex", "exec", "-"], task_dir=task_dir, cwd=work_dir, env=env
+    )
+
+    assert Path(command[0]).name == "unshare"
+    assert "mount_namespace_exec.py" in command
+    assert "landlock_exec.py" in command
+    assert "--read-scope-only" in command
+    assert proof["mode"] == "mount_namespace+landlock-read"
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="WSL mount isolation is Linux-only")
+def test_drvfs_mount_namespace_writes_only_declared_paths(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_drvfs_live", ROOT / "tools" / "codex_operator.py")
+    if codex_operator._path_filesystem_type(ROOT) not in {"9p", "v9fs"}:
+        pytest.skip("requires a WSL DrvFS checkout")
+    harness_dir = tmp_path / "harness"
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    work_dir = harness_dir / "sprints" / "sprint-1" / "workdir"
+    allowed = harness_dir / "sprints" / "allowed.md"
+    denied = harness_dir / "sprints" / "denied.md"
+    task_dir.mkdir(parents=True)
+    work_dir.mkdir(parents=True)
+    allowed.parent.mkdir(parents=True, exist_ok=True)
+    allowed.touch()
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.setenv("SOLAR_CODEX_OPERATOR_STATE_ROOT", "/tmp/solar-codex-mount-test")
+    monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "1")
+    env = codex_operator._codex_exec_env(task_dir)
+    env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"] = json.dumps([str(allowed)])
+    env["TEST_ALLOWED_OUTPUT"] = str(allowed)
+    env["TEST_DENIED_OUTPUT"] = str(denied)
+    script = (
+        "import os\n"
+        "from pathlib import Path\n"
+        "Path(os.environ['TEST_ALLOWED_OUTPUT']).write_text('ok', encoding='utf-8')\n"
+        "try:\n"
+        "    Path(os.environ['TEST_DENIED_OUTPUT']).write_text('bad', encoding='utf-8')\n"
+        "except OSError:\n"
+        "    pass\n"
+        "else:\n"
+        "    raise SystemExit(9)\n"
+    )
+
+    command, proof = codex_operator._filesystem_isolated_command(
+        [sys.executable, "-c", script], task_dir=task_dir, cwd=work_dir, env=env
+    )
+    result = subprocess.run(command, env=env, text=True, capture_output=True, check=False)
+
+    assert result.returncode == 0, result.stderr
+    assert proof["mode"] == "mount_namespace+landlock-read"
+    assert allowed.read_text(encoding="utf-8") == "ok"
+    assert not denied.exists()
+
+
 @pytest.mark.skipif(os.name == "nt", reason="generated harness shim is a POSIX shell script")
 def test_codex_operator_binds_model_shell_to_active_harness(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_active_harness", ROOT / "tools" / "codex_operator.py")
