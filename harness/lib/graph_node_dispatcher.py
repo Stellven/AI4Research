@@ -7215,11 +7215,15 @@ Handoff: `{handoff}`
 - Snapshot Schema: `{artifact_snapshot_schema or "N/A"}`
 - Snapshot Path: `{artifact_snapshot_path or "N/A"}`
 - Snapshot Digest: `{artifact_snapshot_digest or "N/A"}`
+- `Snapshot Digest` is Solar's canonical content digest over the snapshot schema, sprint/node,
+  generation, and normalized rows. It is the `snapshot_digest` field inside the sidecar; it is
+  intentionally not the SHA-256 of the complete JSON file bytes. Do not compare it with
+  `sha256sum <snapshot-path>`.
 - Read the snapshot sidecar and inspect the exact paths listed there. For a row whose authority is
   `published`, those destination bytes are authoritative; do not substitute a mutable staging copy.
 - The machine-readable JSON MUST copy `artifact_snapshot_schema`, `artifact_snapshot_path`, and
-  `artifact_snapshot_digest` exactly. Any byte change after dispatch invalidates PASS and requires a
-  fresh evaluation generation.
+  `artifact_snapshot_digest` exactly. Any change to the canonical snapshot material after dispatch
+  invalidates PASS and requires a fresh evaluation generation.
 
 ## Handoff Candidates
 

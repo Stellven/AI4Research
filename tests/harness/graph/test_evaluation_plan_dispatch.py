@@ -213,6 +213,11 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     node = {
         "id": "N3",
         "goal": "review with explicit plan",
+        "eval_artifact_snapshot": {
+            "schema": "solar.eval_artifact_snapshot.v1",
+            "path": "/tmp/sid-eval-text.N3-eval-snapshot.json",
+            "snapshot_digest": "a" * 64,
+        },
         "evaluation_plan": {
             "review_mode": "single",
             "required_evaluators": 1,
@@ -235,6 +240,11 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     assert "## Evaluation Plan" in text
     assert "Review Mode: `single`" in text
     assert '"evaluation_plan": {' in text
+    assert "canonical content digest" in text
+    assert "intentionally not the SHA-256 of the complete JSON file bytes" in text
+    assert "Do not compare it with" in text
+    assert "Any change to the canonical snapshot material" in text
+    assert "Any byte change after dispatch" not in text
 
 
 def _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid: str, node_id: str) -> None:
