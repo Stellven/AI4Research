@@ -76,11 +76,21 @@ def test_legacy_coordinator_keeps_builder_pool_off_by_default():
 
 def test_dispatcher_defaults_pool_on_only_for_product_mode(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", raising=False)
+    monkeypatch.delenv("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", raising=False)
+    monkeypatch.delenv("SOLAR_PM_OPERATOR_DISPATCH", raising=False)
     monkeypatch.setenv("SOLAR_PRODUCT_MODE", "1")
     assert gnd._builder_operator_pool_enabled() is True
 
     monkeypatch.setenv("SOLAR_PRODUCT_MODE", "0")
     assert gnd._builder_operator_pool_enabled() is False
+
+
+def test_pm_operator_lifecycle_enables_graph_builder_pool(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", raising=False)
+    monkeypatch.setenv("SOLAR_PRODUCT_MODE", "0")
+    monkeypatch.setenv("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", "1")
+
+    assert gnd._builder_operator_pool_enabled() is True
 
 
 def test_dispatcher_honors_explicit_product_pool_kill_switch(monkeypatch: pytest.MonkeyPatch):

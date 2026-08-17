@@ -9116,7 +9116,14 @@ def _ensure_lease(pane: str, sid: str, dispatch_id: str, ttl: int, dry_run: bool
 def _builder_operator_pool_enabled() -> bool:
     configured = str(os.environ.get("SOLAR_GRAPH_BUILDER_OPERATOR_POOL") or "").strip().lower()
     if not configured:
-        return _product_mode_enabled()
+        # The PM operator switch governs the complete operator-backed
+        # lifecycle. Enabling it for Planner but silently disabling it for DAG
+        # builders strands the first ready node as ``no_matching_worker``.
+        pm_operator_enabled = any(
+            str(os.environ.get(name) or "").strip().lower() in {"1", "true", "on", "yes"}
+            for name in ("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", "SOLAR_PM_OPERATOR_DISPATCH")
+        )
+        return pm_operator_enabled or _product_mode_enabled()
     return configured not in {
         "0",
         "false",
