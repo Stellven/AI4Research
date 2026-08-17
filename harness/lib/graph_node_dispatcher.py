@@ -9953,6 +9953,7 @@ def _submit_eval_to_operator_pool(
     dry_run: bool,
     eval_md_path: str = "",
     eval_json_path: str = "",
+    artifact_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dispatch_preview = instruction_file.read_text(encoding="utf-8")
     if len(dispatch_preview) > 60000:
@@ -10009,6 +10010,62 @@ def _submit_eval_to_operator_pool(
         "--context",
         context,
     ]
+    snapshot = artifact_snapshot if isinstance(artifact_snapshot, dict) else {}
+    snapshot_path = str(snapshot.get("path") or "")
+    snapshot_is_valid = (
+        snapshot.get("schema") == _EVAL_ARTIFACT_SNAPSHOT_SCHEMA
+        and snapshot.get("ok") is True
+        and str(snapshot.get("sid") or "") == sid
+        and str(snapshot.get("node_id") or "") == node_id
+        and not snapshot.get("violations")
+        and snapshot_path == str(_eval_snapshot_file(sid, node_id))
+        and str(snapshot.get("snapshot_digest") or "") == _eval_snapshot_digest(snapshot)
+    )
+    persisted_snapshot: dict[str, Any] = {}
+    if snapshot_is_valid:
+        try:
+            loaded_snapshot = json.loads(Path(snapshot_path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            loaded_snapshot = None
+        if isinstance(loaded_snapshot, dict):
+            persisted_snapshot = loaded_snapshot
+        snapshot_is_valid = (
+            persisted_snapshot.get("ok") is True
+            and str(persisted_snapshot.get("snapshot_digest") or "")
+            == str(snapshot.get("snapshot_digest") or "")
+            and str(persisted_snapshot.get("snapshot_digest") or "")
+            == _eval_snapshot_digest(persisted_snapshot)
+        )
+    if snapshot and not snapshot_is_valid:
+        return {
+            "ok": False,
+            "reason": "operator_pool_eval_snapshot_scope_invalid",
+            "instruction_file": str(instruction_file),
+        }
+    if snapshot_is_valid:
+        snapshot_rows = (
+            persisted_snapshot.get("rows")
+            if isinstance(persisted_snapshot.get("rows"), list)
+            else []
+        )
+        read_grants = [snapshot_path]
+        for row in snapshot_rows:
+            if not isinstance(row, dict):
+                return {
+                    "ok": False,
+                    "reason": "operator_pool_eval_snapshot_scope_invalid",
+                    "instruction_file": str(instruction_file),
+                }
+            row_path = str(row.get("path") or "").strip()
+            if not row_path or row.get("exists") is not True or row.get("unsafe"):
+                return {
+                    "ok": False,
+                    "reason": "operator_pool_eval_snapshot_scope_invalid",
+                    "instruction_file": str(instruction_file),
+                }
+            read_grants.append(row_path)
+        for path in dict.fromkeys(read_grants):
+            cmd.extend(["--read-scope", path])
     if dry_run:
         cmd.append("--dry-run")
     env = _broker_env(sid)
@@ -12083,6 +12140,7 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                     dry_run=dry_run,
                     eval_md_path=str(assignment["eval_md_path"]),
                     eval_json_path=str(assignment["eval_json_path"]),
+                    artifact_snapshot=artifact_snapshot,
                 )
                 sent = bool(submit_result.get("ok"))
                 if sent:

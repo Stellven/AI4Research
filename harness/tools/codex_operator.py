@@ -238,6 +238,28 @@ def _existing_paths(values: list[Path]) -> list[Path]:
     return result
 
 
+def _declared_read_scope_paths(env: dict[str, str], cwd: Path) -> list[Path]:
+    """Resolve the operator envelope's exact read grants.
+
+    Relative graph scopes are anchored to the sprint workdir. Evaluator
+    snapshots may add absolute published paths after their bytes and digest
+    have been frozen by graph dispatch.
+    """
+    try:
+        declared = json.loads(env.get("SOLAR_OPERATOR_READ_SCOPE_JSON") or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(declared, list):
+        return []
+    paths: list[Path] = []
+    for value in declared:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        path = Path(value).expanduser()
+        paths.append(path if path.is_absolute() else cwd / path)
+    return _existing_paths(paths)
+
+
 def _path_filesystem_type(path: Path) -> str:
     """Return the Linux mount type containing path, using longest-prefix match."""
     try:
@@ -337,6 +359,7 @@ def _filesystem_isolated_command(
         )
         if path.exists()
     ]
+    declared_read_scope = _declared_read_scope_paths(env, cwd)
     read_only = _existing_paths(
         [
             Path("/usr"),
@@ -351,6 +374,7 @@ def _filesystem_isolated_command(
             harness_dir,
             harness_dir.parent / "AGENTS.md",
             harness_dir.parent / ".agents",
+            *declared_read_scope,
         ]
     )
     read_directories = _existing_paths([harness_dir.parent])

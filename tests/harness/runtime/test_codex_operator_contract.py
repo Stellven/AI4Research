@@ -335,6 +335,15 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     exact_handoff.parent.mkdir(parents=True, exist_ok=True)
     exact_handoff.touch()
     env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"] = json.dumps([str(exact_handoff)])
+    published = tmp_path / "published" / "evidence.jsonl"
+    published.parent.mkdir()
+    published.write_text("evidence\n", encoding="utf-8")
+    relative_read = work_dir / "inputs" / "source.json"
+    relative_read.parent.mkdir()
+    relative_read.write_text("{}\n", encoding="utf-8")
+    env["SOLAR_OPERATOR_READ_SCOPE_JSON"] = json.dumps(
+        [str(published), "inputs/source.json"]
+    )
 
     command, proof = codex_operator._filesystem_isolated_command(
         ["codex", "exec", "-"], task_dir=task_dir, cwd=work_dir, env=env
@@ -352,6 +361,8 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert str(work_dir.resolve()) in proof["read_write"]
     assert str(task_dir.resolve()) in proof["read_write"]
     assert str(exact_handoff.resolve()) in proof["read_write"]
+    assert str(published.resolve()) in proof["read_only"]
+    assert str(relative_read.resolve()) in proof["read_only"]
     assert str(tmp_path.resolve()) not in proof["read_write"]
     assert str(Path("/etc/resolv.conf").resolve()) in proof["read_only"]
     sandbox_codex_home = Path(env["CODEX_HOME"])

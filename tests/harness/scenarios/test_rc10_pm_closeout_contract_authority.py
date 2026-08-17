@@ -335,6 +335,34 @@ def test_graph_node_and_graph_eval_submitters_declare_distinct_closeout_kinds(
 
     eval_dispatch = tmp_path / "eval-dispatch.md"
     eval_dispatch.write_text("# independent graph evaluation\n", encoding="utf-8")
+    snapshot_path = tmp_path / "sprints" / f"{SID}.S3-eval-snapshot.json"
+    published = tmp_path / "published" / "S3-output.json"
+    published.parent.mkdir()
+    published.write_text("{}\n", encoding="utf-8")
+    snapshot = {
+        "schema": gnd._EVAL_ARTIFACT_SNAPSHOT_SCHEMA,
+        "sid": SID,
+        "node_id": "S3",
+        "generation": 0,
+        "captured_at": "2026-08-17T00:00:00Z",
+        "rows": [
+            {
+                "scope": "read",
+                "authority": "published",
+                "declared": "published/S3-output.json",
+                "path": str(published),
+                "exists": True,
+                "unsafe": False,
+            }
+        ],
+        "violations": [],
+        "ok": True,
+        "reason": "",
+        "path": str(snapshot_path),
+    }
+    snapshot["snapshot_digest"] = gnd._eval_snapshot_digest(snapshot)
+    snapshot_path.parent.mkdir(exist_ok=True)
+    snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
     eval_result = gnd._submit_eval_to_operator_pool(
         sid=SID,
         node_id="S3",
@@ -345,6 +373,7 @@ def test_graph_node_and_graph_eval_submitters_declare_distinct_closeout_kinds(
         dry_run=True,
         eval_md_path=str(tmp_path / "sprints" / f"{SID}.S3-eval-q2.md"),
         eval_json_path=str(tmp_path / "sprints" / f"{SID}.S3-eval-q2.json"),
+        artifact_snapshot=snapshot,
     )
     assert eval_result["ok"] is True
 
@@ -358,3 +387,54 @@ def test_graph_node_and_graph_eval_submitters_declare_distinct_closeout_kinds(
         str(tmp_path / "sprints" / f"{SID}.S3-eval-q2.md"),
         str(tmp_path / "sprints" / f"{SID}.S3-eval-q2.json"),
     ]
+    read_indexes = [index for index, value in enumerate(eval_cmd) if value == "--read-scope"]
+    assert [eval_cmd[index + 1] for index in read_indexes] == [
+        str(snapshot_path),
+        str(published),
+    ]
+
+
+def test_graph_eval_submitter_refuses_tampered_snapshot_read_grants(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    called = False
+
+    def fake_run(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("invalid snapshot must not reach pm_dispatch")
+
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path / "sprints")
+    monkeypatch.setattr(gnd.subprocess, "run", fake_run)
+    dispatch = tmp_path / "eval-dispatch.md"
+    dispatch.write_text("# eval\n", encoding="utf-8")
+    snapshot_path = tmp_path / "sprints" / f"{SID}.S3-eval-snapshot.json"
+    snapshot_path.parent.mkdir()
+    snapshot = {
+        "schema": gnd._EVAL_ARTIFACT_SNAPSHOT_SCHEMA,
+        "sid": SID,
+        "node_id": "S3",
+        "generation": 0,
+        "rows": [{"path": str(tmp_path), "exists": True, "unsafe": False}],
+        "violations": [],
+        "ok": True,
+        "path": str(snapshot_path),
+    }
+    snapshot["snapshot_digest"] = gnd._eval_snapshot_digest(snapshot)
+    snapshot_path.write_text(json.dumps({**snapshot, "rows": []}), encoding="utf-8")
+
+    result = gnd._submit_eval_to_operator_pool(
+        sid=SID,
+        node_id="S3",
+        graph_path=str(tmp_path / "graph.json"),
+        pane="operator-pool:evaluator.0",
+        dispatch_id="dispatch-eval",
+        instruction_file=dispatch,
+        dry_run=False,
+        artifact_snapshot=snapshot,
+    )
+
+    assert result["ok"] is False
+    assert result["reason"] == "operator_pool_eval_snapshot_scope_invalid"
+    assert called is False

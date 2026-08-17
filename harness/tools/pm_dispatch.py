@@ -178,6 +178,7 @@ def _build_pm_operator_envelope(
     task_graph_node: dict[str, Any] | None = None,
     capsule_submit: dict[str, Any] | None = None,
     expected_artifacts: list[str] | None = None,
+    additional_read_scope: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build the canonical PM/operator envelope.
 
@@ -239,6 +240,13 @@ def _build_pm_operator_envelope(
         envelope["write_scope"] = list(task_graph_node.get("write_scope") or [])
         envelope["write_scope_root"] = envelope["work_dir"]
         envelope["write_scope_resolution"] = "relative_to_write_scope_root"
+    if additional_read_scope:
+        merged_read_scope = list(envelope.get("read_scope") or [])
+        for value in additional_read_scope:
+            normalized = str(value or "").strip()
+            if normalized and normalized not in merged_read_scope:
+                merged_read_scope.append(normalized)
+        envelope["read_scope"] = merged_read_scope
     if capsule_submit.get("capability_capsule_id"):
         envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
         envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
@@ -2339,6 +2347,16 @@ def cmd_submit(args: argparse.Namespace) -> int:
         logical_operator=logical_operator,
     )
     task_type = _canonicalize_capsule_task_type(capsule_submit, task_type)
+    additional_read_scope = list(getattr(args, "read_scope", []) or [])
+    if additional_read_scope and (
+        task_type != "graph_eval"
+        or os.environ.get("SOLAR_PM_DISPATCH_SOURCE") != "graph_node_dispatcher"
+    ):
+        print(
+            "ERROR: --read-scope is reserved for graph-dispatch evaluator snapshots",
+            file=sys.stderr,
+        )
+        return 1
     if capsule_submit.get("capability_capsule_id"):
         capsule_submit["dispatch_task_type"] = task_type
         if isinstance(capsule_submit.get("capsule_plan"), dict):
@@ -2497,6 +2515,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
         task_graph_node=task_graph_node,
         capsule_submit=capsule_submit,
         expected_artifacts=expected_artifacts,
+        additional_read_scope=additional_read_scope,
     )
 
     record: dict[str, Any] = {
@@ -3474,6 +3493,12 @@ def main() -> int:
         help="closeout 检查的精确产物路径；仅 graph_eval 可覆盖为受限 quorum sidecar pair",
     )
     s.add_argument("--context", default="", help="额外上下文（注入 dispatch 文件）")
+    s.add_argument(
+        "--read-scope",
+        action="append",
+        default=[],
+        help="追加精确只读路径；用于 graph evaluator 冻结快照授权",
+    )
     s.add_argument("--work-dir", default="", help="算子工作目录；默认 <sprint>/workdir")
     s.add_argument("--dry-run", action="store_true", help="预览，不实际提交")
 

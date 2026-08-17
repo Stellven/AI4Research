@@ -247,11 +247,12 @@ def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_p
             "read_scope": ["dispatch/envelope.json"],
             "write_scope": ["artifacts/scientific/literature.json"],
         },
+        additional_read_scope=[str(tmp_path / "published"), "dispatch/envelope.json"],
     )
 
     assert envelope["workflow_contract"] == "research.autosci.v1"
     assert envelope["strict_filesystem_boundaries"] is True
-    assert envelope["read_scope"] == ["dispatch/envelope.json"]
+    assert envelope["read_scope"] == ["dispatch/envelope.json", str(tmp_path / "published")]
     assert envelope["write_scope"] == ["artifacts/scientific/literature.json"]
     assert envelope["write_scope_root"] == str(sprints / sid / "workdir")
     assert envelope["write_scope_resolution"] == "relative_to_write_scope_root"
