@@ -14,7 +14,7 @@ Referenced by ID from the code that carries the gap.
 | GAP-002 | Broker integration contracts assert absent symbols | open, needs a product decision |
 | GAP-003 | 324 baselined failures are unclassified | open |
 | GAP-004 | Four test files excluded from public CI | open by design, re-check on change |
-| GAP-005 | No flake quarantine, so a flaky test blocks | open |
+| GAP-005 | No flake quarantine, so a flaky test blocks | **open**, first instance run 90 |
 | GAP-006 | Secret scan excused on pull requests | **closed** 2026-08-14 |
 | GAP-007 | Almost no test is calibrated | open, structural |
 | GAP-008 | Scheduler asserts on an operator log it did not wait for | latent race, **does not block CI** |
@@ -262,6 +262,34 @@ The gate blocks when a baselined test passes, so a genuinely flaky test that
 happens to pass will block a pull request that had nothing to do with it. The
 only escapes today are fixing the test or excluding it from the lane manifest,
 and exclusion removes the coverage entirely.
+
+### First observed instance, run 90
+
+The first enforcing run blocked on exactly one thing, and it was this:
+
+```
+tests.harness.research_orchestration.test_research_transport::test_malformed_stdout_is_classified[-empty_stdout]
+```
+
+Red on run 87. Green on run 90. Green locally at the base commit `5cccc0b49`.
+Nothing in this branch touches it. That is a flake, and it is the shape this gap
+predicted: a green-side nondeterministic test cannot be held by the baseline at
+all — leave it out and it blocks as a new failure, record it and it blocks as an
+unrecorded fix on the runs where it passes.
+
+**Hypothesis, not a diagnosis.** The test spawns a subprocess with
+`timeout_seconds=5` and asserts on the resulting `error_type`. Under load a
+timeout would classify differently. Run 87's failure reason was not captured, so
+this is unconfirmed and no fix has been attempted on the strength of it.
+
+**Action taken:** the entry was removed from the baseline, which is what the gate
+asked for and what the ratchet requires, because the test passes. If it goes red
+again, it will block as a new failure, and that second observation is what gives
+a diagnosis enough evidence to act on.
+
+**Action still owed:** a third state. Quarantined, carrying an owner, an expiry,
+a reason and a linked defect, that runs and reports but does not gate. Until it
+exists, every flake costs one blocked pull request and one baseline edit.
 
 What is missing is a third state: quarantined, with an owner and an expiry, that
 runs and reports but does not gate. Google reports roughly 16% of their test
