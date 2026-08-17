@@ -244,6 +244,9 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     assert "intentionally not the SHA-256 of the complete JSON file bytes" in text
     assert "Do not compare it with" in text
     assert "Any change to the canonical snapshot material" in text
+    assert "post-verdict closeout transaction" in text
+    assert "stale sidecar records an earlier publication error" in text
+    assert "will block closeout deterministically" in text
     assert "Any byte change after dispatch" not in text
 
 

@@ -7283,6 +7283,11 @@ Handoff: `{handoff}`
   `sha256sum <snapshot-path>`.
 - Read the snapshot sidecar and inspect the exact paths listed there. For a row whose authority is
   `published`, those destination bytes are authoritative; do not substitute a mutable staging copy.
+- Publication of this node's current outputs is a post-verdict closeout transaction: Solar runs it
+  only after you return PASS. A publish sidecar from an earlier generation that is not referenced by
+  the current snapshot is historical evidence, not a current acceptance condition. Do not FAIL only
+  because such a stale sidecar records an earlier publication error; Solar will re-run publication
+  after PASS and will block closeout deterministically if the current publication fails.
 - The machine-readable JSON MUST copy `artifact_snapshot_schema`, `artifact_snapshot_path`, and
   `artifact_snapshot_digest` exactly. Any change to the canonical snapshot material after dispatch
   invalidates PASS and requires a fresh evaluation generation.
