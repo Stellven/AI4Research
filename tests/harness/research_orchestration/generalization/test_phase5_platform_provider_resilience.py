@@ -833,6 +833,7 @@ def test_provider_hard_failures_are_not_written_as_completed(
     result = runtime.run(
         prompt="Synthesize provider hard failure behavior.",
         run_id=f"phase5-hard-failure-{expected_text.replace('_', '-')}",
+        explicit_workflow="research_synthesis",
         max_steps=4,
     )
 
@@ -918,8 +919,18 @@ def test_retry_does_not_resubmit_completed_upstream_node_after_provider_failure(
         },
     )
 
-    first = runtime.run(prompt="Check retry dedupe.", run_id="phase5-dedupe", max_steps=4)
-    resumed = runtime.run(prompt="Check retry dedupe.", run_id="phase5-dedupe", run_mode="resume")
+    first = runtime.run(
+        prompt="Check retry dedupe.",
+        run_id="phase5-dedupe",
+        explicit_workflow="research_synthesis",
+        max_steps=4,
+    )
+    resumed = runtime.run(
+        prompt="Check retry dedupe.",
+        run_id="phase5-dedupe",
+        run_mode="resume",
+        explicit_workflow="research_synthesis",
+    )
 
     assert first["final_status"] == "failed"
     assert resumed["final_status"] == "failed"

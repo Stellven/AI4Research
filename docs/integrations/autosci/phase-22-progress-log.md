@@ -3819,3 +3819,35 @@ Date: 2026-08-14
   to their accepted journey set, but must not be described as a full-product
   pass. Desktop prompt submission and other unmapped user workflows require a
   separate product-level acceptance audit before making that claim again.
+
+## Local branch integration audit and moved-test correction
+
+Date: 2026-08-17
+
+- Audited all 87 local branch tips against `openJiuwen-Solar`. After accepted
+  merges, 46 branch tips remain outside the ancestry: 41 contain only
+  patch-equivalent work already present on the integration line, while five
+  retain old composite commits whose useful behavior is present in canonical
+  paths or has been explicitly superseded.
+- Merged the exact recovery commits `da3809ca5` and `fb256f920` through merge
+  commit `544d24fd8`, removing 518 legacy-path files introduced by the broken
+  exact restore while retaining later canonical files. Merged the original
+  trust-anchor branch through `2b4ad2901`; its 16 audited files were
+  byte-identical before and after the merge.
+- Did not restore the obsolete Phase 5, legacy R3/R4/R5, or pre-baseline trees.
+  Their tests now live under `tests/`, their production behavior is covered by
+  later implementations, and the pre-baseline `real_data_research` monolith is
+  explicitly forbidden as the default production backend.
+- Corrected three integration-era test assumptions exposed by removing the
+  duplicate old tree: lifecycle fixtures now resolve under canonical
+  `tests/harness/`, custom provider probes select their intended workflow
+  explicitly, and capability-registry assertions match the active workflow
+  selection while retaining the opt-in production-route boundary.
+- Final focused validation passed `119 passed` in `92.04s` using short,
+  isolated Windows pytest base/cache directories. Recovery governance passed,
+  the Stellven README exactness check passed, and the trust-anchor, provider,
+  lifecycle, status-route, scientific-action, and benchmark regression suites
+  passed. `git diff --check` and Git connectivity checks passed.
+- Four other worktrees still contain tracked, uncommitted user changes. They
+  were preserved and excluded from this committed-branch integration audit;
+  no report or workbook synchronization is claimed for those changes.
