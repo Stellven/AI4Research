@@ -305,34 +305,41 @@ def test_projection_payload_surfaces_ui_action_contract(tmp_path: Path) -> None:
     assert payload["timeline"]
 
 
-def _install_fake_solar(bin_dir: Path) -> None:
+def _install_fake_solar(bin_dir: Path) -> list[str]:
+    script = bin_dir / "fake_solar.py"
     _write_text(
-        bin_dir / "solar",
-        """#!/usr/bin/env bash
-set -eu
-printf '%s\n' "$*" > "$HARNESS_DIR/verdict-args.txt"
-cmd="$2"
-sid="$3"
-verdict="${4:-}"
-status="active"
-phase="unknown"
-if [[ "$cmd" == "plan-verdict" ]]; then
-  phase="plan_reviewed"
-  if [[ "$verdict" == "approve" ]]; then status="approved"; else status="active"; fi
-elif [[ "$cmd" == "eval-verdict" ]]; then
-  phase="eval_completed"
-  if [[ "$verdict" == "pass" ]]; then status="passed"; else status="failed_review"; fi
-elif [[ "$cmd" == "handoff-submit" ]]; then
-  sid="$3"
-  phase="implementation_completed"
-  status="reviewing"
-fi
-mkdir -p "$HARNESS_DIR/sprints"
-printf '{"sprint_id":"%s","status":"%s","phase":"%s","title":"Verdict Sprint"}\n' "$sid" "$status" "$phase" > "$HARNESS_DIR/sprints/$sid.status.json"
-echo "$cmd: $sid -> $status"
+        script,
+        """from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+args = sys.argv[1:]
+root = Path(os.environ["HARNESS_DIR"])
+(root / "verdict-args.txt").write_text(" ".join(args) + "\\n", encoding="utf-8")
+cmd = args[1]
+sid = args[2]
+verdict = args[3] if len(args) > 3 else ""
+status, phase = "active", "unknown"
+if cmd == "plan-verdict":
+    phase = "plan_reviewed"
+    status = "approved" if verdict == "approve" else "active"
+elif cmd == "eval-verdict":
+    phase = "eval_completed"
+    status = "passed" if verdict == "pass" else "failed_review"
+elif cmd == "handoff-submit":
+    phase, status = "implementation_completed", "reviewing"
+(root / "sprints").mkdir(parents=True, exist_ok=True)
+(root / "sprints" / f"{sid}.status.json").write_text(
+    json.dumps({"sprint_id": sid, "status": status, "phase": phase, "title": "Verdict Sprint"}),
+    encoding="utf-8",
+)
+print(f"{cmd}: {sid} -> {status}")
 """,
     )
-    (bin_dir / "solar").chmod(0o755)
+    return [sys.executable, str(script), "harness"]
 
 
 def test_plan_verdict_payload_validates_and_runs_safe_cli(tmp_path: Path, monkeypatch) -> None:
@@ -341,8 +348,8 @@ def test_plan_verdict_payload_validates_and_runs_safe_cli(tmp_path: Path, monkey
     _patch_dirs(mod, tree)
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
-    _install_fake_solar(fake_bin)
-    monkeypatch.setenv("PATH", f"{fake_bin}:{os.environ.get('PATH', '')}")
+    command_prefix = _install_fake_solar(fake_bin)
+    monkeypatch.setattr(mod, "_solar_harness_command_prefix", lambda: command_prefix)
     monkeypatch.setenv("HARNESS_DIR", str(tree["root"]))
 
     payload, status_code = mod.submit_plan_verdict_payload("sprint-active", {"verdict": "approve", "reason": "scope ok"})
@@ -378,8 +385,8 @@ def test_handoff_submit_payload_is_supported_only_for_ready_handoff(tmp_path: Pa
     _patch_dirs(mod, tree)
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
-    _install_fake_solar(fake_bin)
-    monkeypatch.setenv("PATH", f"{fake_bin}:{os.environ.get('PATH', '')}")
+    command_prefix = _install_fake_solar(fake_bin)
+    monkeypatch.setattr(mod, "_solar_harness_command_prefix", lambda: command_prefix)
     monkeypatch.setenv("HARNESS_DIR", str(tree["root"]))
     _write_json(tree["sprints"] / "sprint-active.status.json", {
         "sprint_id": "sprint-active",

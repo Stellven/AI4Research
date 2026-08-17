@@ -43,8 +43,27 @@ fi
 # ---- check 2: pipx package version + URL coherence (PKG-003) --------------
 log "check 2: pipx distribution coherent with VERSION"
 PIPX=distribution/pipx
-PYPROJECT_V="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$PIPX/pyproject.toml")"
-INIT_V="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' "$PIPX/opensolar_cli/__init__.py")"
+PIPX_VERSIONS="$(python3 - <<'PY' | tr -d '\r'
+import ast
+import tomllib
+from pathlib import Path
+
+root = Path("distribution/pipx")
+project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+module = ast.parse((root / "opensolar_cli/__init__.py").read_text(encoding="utf-8"))
+init_version = ""
+for statement in module.body:
+    if not isinstance(statement, ast.Assign):
+        continue
+    if any(isinstance(target, ast.Name) and target.id == "__version__" for target in statement.targets):
+        init_version = ast.literal_eval(statement.value)
+        break
+print(project.get("project", {}).get("version", ""))
+print(init_version)
+PY
+)"
+PYPROJECT_V="$(printf '%s\n' "$PIPX_VERSIONS" | sed -n '1p')"
+INIT_V="$(printf '%s\n' "$PIPX_VERSIONS" | sed -n '2p')"
 [ "$PYPROJECT_V" = "$PEP440" ] && ok "pyproject version $PYPROJECT_V" \
     || fail "pipx pyproject version '$PYPROJECT_V' != '$PEP440'"
 [ "$INIT_V" = "$PEP440" ] && ok "__init__ version $INIT_V" \
@@ -81,8 +100,11 @@ VERSIONED_PATHS=(
     distribution/pipx
     desktop/package.json
     desktop/package-lock.json
-    tests/desktop/bootstrap-contract.test.js
+    tests/desktop/bootstrap-contract.test.cjs
 )
+for path in "${VERSIONED_PATHS[@]}"; do
+    [ -e "$path" ] || fail "version-bearing surface missing: $path"
+done
 PUBLIC_STALE_TAGS="$(git grep -hoE 'v1\.0\.0-rc\.[0-9]+' -- "${VERSIONED_PATHS[@]}" \
     | grep -v "^$TAG$" | sort -u || true)"
 if [ -n "$PUBLIC_STALE_TAGS" ]; then

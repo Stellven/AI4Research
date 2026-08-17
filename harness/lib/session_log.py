@@ -60,6 +60,7 @@ class SessionLog:
         self.session_id = session_id
         self._dir = os.path.join(base, "sessions", session_id)
         self._path = os.path.join(self._dir, "events.jsonl")
+        self._lock_path = os.path.join(self._dir, "events.lock")
         self._seq = 0
         self._seen_idem: set[str] = set()
         os.makedirs(self._dir, exist_ok=True)
@@ -118,8 +119,11 @@ class SessionLog:
             raise ValueError(f"Unknown event type: {event_type!r}")
 
         event_id = str(uuid.uuid4())
-        with open(self._path, "a+", encoding="utf-8") as fh:
-            fcntl.flock(fh, fcntl.LOCK_EX)
+        # Keep the Windows lock byte out of the JSONL data stream.
+        with open(self._lock_path, "a+b") as lock_fh, open(
+            self._path, "a+", encoding="utf-8"
+        ) as fh:
+            fcntl.flock(lock_fh, fcntl.LOCK_EX)
             # Re-scan under the file lock. Multiple SessionLog instances can be
             # alive in the same process or in sibling processes; relying only on
             # this instance's _seen_idem/_seq lets at-least-once adoption write
@@ -144,7 +148,7 @@ class SessionLog:
             if idempotency_key and idempotency_key in locked_seen:
                 self._seq = max(self._seq, locked_seq)
                 self._seen_idem.update(locked_seen)
-                fcntl.flock(fh, fcntl.LOCK_UN)
+                fcntl.flock(lock_fh, fcntl.LOCK_UN)
                 raise DuplicateEventError(
                     f"Duplicate idempotency_key={idempotency_key!r} — event suppressed"
                 )
@@ -167,7 +171,9 @@ class SessionLog:
                 "payload": payload or {},
             }
             fh.write(json.dumps(event, ensure_ascii=False) + "\n")
-            fcntl.flock(fh, fcntl.LOCK_UN)
+            fh.flush()
+            os.fsync(fh.fileno())
+            fcntl.flock(lock_fh, fcntl.LOCK_UN)
 
         if idempotency_key:
             self._seen_idem.add(idempotency_key)

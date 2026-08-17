@@ -241,6 +241,47 @@ def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, m
     assert str(tmp_path) in cmd
 
 
+def test_codex_operator_prefers_harness_wide_model_policy(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_model_policy", ROOT / "tools" / "codex_operator.py")
+    monkeypatch.setenv("CODEX_MODEL", "gpt-5.5")
+    monkeypatch.setenv("SOLAR_CODEX_MODEL", "gpt-5.3-codex-spark")
+
+    assert codex_operator._codex_model() == "gpt-5.3-codex-spark"
+
+
+def test_codex_operator_projects_auth_on_non_linux(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_non_linux_auth", ROOT / "tools" / "codex_operator.py")
+    harness_dir = tmp_path / "harness"
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    work_dir = tmp_path / "work"
+    source_codex_home = tmp_path / "source-codex-home"
+    task_dir.mkdir(parents=True)
+    work_dir.mkdir()
+    source_codex_home.mkdir()
+    (source_codex_home / "auth.json").write_text('{"fixture": true}\n', encoding="utf-8")
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.setenv("SOLAR_CODEX_SOURCE_HOME", str(source_codex_home))
+    monkeypatch.setenv("SOLAR_CODEX_OPERATOR_STATE_ROOT", str(tmp_path / "operator-state"))
+    monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "0")
+    monkeypatch.setattr(codex_operator.sys, "platform", "darwin")
+    env = codex_operator._codex_exec_env(task_dir)
+
+    command, proof = codex_operator._filesystem_isolated_command(
+        ["codex", "exec", "-"], task_dir=task_dir, cwd=work_dir, env=env
+    )
+
+    assert command == ["codex", "exec", "-"]
+    assert proof == {"mode": "unsupported", "strict": False}
+    sandbox_codex_home = Path(env["CODEX_HOME"])
+    assert sandbox_codex_home.parent.parent == tmp_path / "operator-state"
+    assert (sandbox_codex_home / "auth.json").read_text(encoding="utf-8") == '{"fixture": true}\n'
+    if os.name != "nt":
+        assert (sandbox_codex_home / "auth.json").stat().st_mode & 0o777 == 0o600
+    assert (sandbox_codex_home / "config.toml").read_text(encoding="utf-8") == (
+        'cli_auth_credentials_store = "file"\n'
+    )
+
+
 @pytest.mark.skipif(sys.platform != "linux", reason="Landlock is Linux-only")
 def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_landlock", ROOT / "tools" / "codex_operator.py")
@@ -269,7 +310,9 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
 
     assert command[0] == sys.executable
     assert command[1].endswith("landlock_exec.py")
-    assert command[-4:] == ["--", "codex", "exec", "-"]
+    assert command[-4] == "--"
+    assert Path(command[-3]).name == "codex"
+    assert command[-2:] == ["exec", "-"]
     assert proof["mode"] == "landlock"
     assert proof["strict"] is True
     assert str(harness_dir.resolve()) in proof["read_only"]
@@ -306,6 +349,7 @@ def test_codex_operator_refuses_disabled_isolation_for_strict_run(tmp_path, monk
         )
 
 
+@pytest.mark.skipif(os.name == "nt", reason="generated harness shim is a POSIX shell script")
 def test_codex_operator_binds_model_shell_to_active_harness(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_active_harness", ROOT / "tools" / "codex_operator.py")
     harness_dir = tmp_path / "clean-harness"

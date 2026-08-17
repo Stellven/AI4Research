@@ -101,6 +101,22 @@ DEFAULT_OPERATOR_PROVIDERS = frozenset(
     if p.strip()
 )
 
+COST_TIER_RANK = {"low": 0, "medium": 1, "high": 2}
+
+
+def _max_cost_tier() -> str:
+    return str(os.environ.get("SOLAR_PM_MAX_COST_TIER") or "").strip().lower()
+
+
+def _operator_matches_cost_policy(op: dict[str, Any]) -> bool:
+    ceiling = _max_cost_tier()
+    if not ceiling:
+        return True
+    if ceiling not in COST_TIER_RANK:
+        return False
+    tier = str(op.get("cost_tier") or "medium").strip().lower()
+    return COST_TIER_RANK.get(tier, COST_TIER_RANK["medium"]) <= COST_TIER_RANK[ceiling]
+
 
 def _operator_matches_provider_policy(op: dict[str, Any]) -> bool:
     if not DEFAULT_OPERATOR_PROVIDERS:
@@ -1222,6 +1238,8 @@ def _role_spillover_candidates(
             continue
         if not _operator_matches_provider_policy(op):
             continue
+        if not _operator_matches_cost_policy(op):
+            continue
         op_roles = _operator_roles(op)
         if norm_role in op_roles:
             continue
@@ -1294,6 +1312,11 @@ def select_operator_by_role(
             if not _operator_matches_provider_policy(op):
                 provider = str(op.get("provider") or op.get("vendor") or "unknown")
                 return "", {}, f"preferred_operator_provider_mismatch: {prefer_operator}: {provider}"
+            if not _operator_matches_cost_policy(op):
+                return "", {}, (
+                    f"preferred_operator_cost_tier_exceeds_ceiling: {prefer_operator}: "
+                    f"operator={op.get('cost_tier') or 'medium'} ceiling={_max_cost_tier() or 'unset'}"
+                )
             task_reject_reason = _operator_reject_reason_for_task(op, norm_role, task_type)
             if task_reject_reason:
                 return "", {}, f"preferred_operator_rejected_for_task: {prefer_operator}: {task_reject_reason}"
@@ -1312,6 +1335,8 @@ def select_operator_by_role(
         if bool(op.get("deprecated")):
             continue
         if not _operator_matches_provider_policy(op):
+            continue
+        if not _operator_matches_cost_policy(op):
             continue
         ok, _ = is_dispatchable(op)
         if not ok:

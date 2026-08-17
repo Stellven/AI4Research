@@ -309,8 +309,20 @@ def _load_schema(path: Optional[Path] = None) -> Dict[str, Any]:
 def _flatten_registry(raw: Dict[str, Any], registry_path: Path) -> List[RegistryEntry]:
     capsules = raw.get("capsules", {})
     entries: List[RegistryEntry] = []
+    seen_identities: set[tuple[str, str, str]] = set()
     for capsule_kind in ("capability", "guard", "resource"):
         for item in capsules.get(capsule_kind, []) or []:
+            identity = (
+                str(item.get("capsule_kind", capsule_kind)),
+                str(item["capability_capsule_id"]),
+                str(item["version"]),
+            )
+            if identity in seen_identities:
+                raise CapsuleRegistryError(
+                    "duplicate capability capsule registry entry: "
+                    f"{identity[0]} {identity[1]}@{identity[2]}"
+                )
+            seen_identities.add(identity)
             manifest_path = Path(item["manifest_path"])
             if not manifest_path.is_absolute():
                 manifest_path = (registry_path.parent / manifest_path).resolve()

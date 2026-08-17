@@ -2205,3 +2205,1648 @@ not independent proof of 2049 forecasts; the WebAssembly survey is bounded and
 five of eight validated sources are broader compiler/CPU/HPC context; and live
 provider candidates still require human review. No core acceptance blocker
 remains for the four exercised tasks.
+
+## NOT_TESTED production-path validation and review
+
+Logged: 2026-08-10
+
+Five isolated workers added and executed production-path validation for the ten
+L2 rows recorded as `NOT_TESTED` by the later known-issues final integration.
+The integration review read each worker result and evidence set, inspected the
+new journey tests, and independently reran all five exact test files with
+separate `--basetemp` and cache directories. The review run completed with
+`5 passed`, zero pytest failures, and zero collection errors. A passing pytest
+result here means the executable audit reached and truthfully classified the
+product behavior; it does not mean every audited L2 passed its product success
+criteria.
+
+Accepted L2 decisions:
+
+- `PASS_WITH_KNOWN_LIMITATIONS`: `Memory, Retrieval, and Evidence (Memory
+  Learning / Self-RAG / Reranker Training)`; `Runtime and Resource Routing
+  (Bayesian Optimization / Bandits / Cost-Aware RL)`; `Trace Graph
+  Management`; `Data, Benchmarks, Curriculum, and Observability (Active
+  Learning / Hard-Case Mining / Credit Assignment)`.
+- `FAIL`: `Technical Signal Extraction`; `Trend & Gap Analysis`; `Execution
+  Trace Search & Inspection`.
+- `NOT_AVAILABLE`: `Text-Based Artifacts (GEPA / MIPROv2 / TextGrad)`; `DAG
+  and Agent Organization (AFlow / MCTS / ADAS)`; `Model Policies and Weights
+  (SFT / LoRA / DPO / GRPO / Agent RL)`.
+
+The literature production path obtained five real public sources and completed
+provider-backed discovery, but it did not emit source-traceable structured
+technical signals or a cross-source trend. The richer research route failed at
+the planner with Windows `PermissionError: [WinError 5] Access is denied`, so
+both literature-analysis L2 rows are product `FAIL`, not test PASS.
+
+The execution-trace production endpoint correctly filtered by run and returned
+chronological results, but ignored project, actor, and time-range filters. Trace
+graph persistence itself worked with Windows limitations. The named AFlow,
+MCTS, ADAS, SFT, LoRA, DPO, GRPO, Agent RL, MIPROv2, and TextGrad product
+bindings were not found; these rows are now classified as unavailable rather
+than left untested. Generic metric routing, persistent retrieval, and the
+harness-native hard-case/scorecard loop worked only for their supported subset
+and therefore remain limited passes.
+
+Accepted worker evidence:
+
+- `.codex-tmp/phase22-worker-results/NT-literature/result.json`
+- `.codex-tmp/phase22-worker-results/NT-optimization-routing/result.json`
+- `.codex-tmp/phase22-worker-results/NT-memory-retrieval/result.json`
+- `.codex-tmp/phase22-worker-results/NT-model-training/result.json`
+- `.codex-tmp/phase22-worker-results/NT-dag-trace/result.json`
+
+The resulting counts are `PASS=26`, `PASS_WITH_KNOWN_LIMITATIONS=72`,
+`FAIL=17`, `ENVIRONMENT_BLOCKED=2`, `NOT_AVAILABLE=25`, and `NOT_TESTED=0`,
+totaling 142. The full, brief, and ultra-brief reports were synchronized. The
+full report retains the latest upstream atomic diagnostic values and formulas
+while its L2 journey fields, evidence, and status colors agree with the brief
+reports. The L2 issue register was regenerated from the synchronized full
+report.
+
+Final validation confirmed identical 142-L2 counts across all three reports,
+all ten reviewed evidence bindings, no `NOT_TESTED` rows, no formula-error
+markers, and unchanged atomic diagnostic values/formulas. Validation output:
+`outputs/phase22-not-tested-report-sync-20260810/final-validator.json`.
+
+### Post-baseline routing audit isolation repair
+
+Logged: 2026-08-10
+
+After rebasing the accepted Phase 22 evidence onto `origin/openJiuwen-Solar`,
+the optimization/routing journey initially failed because its synthetic
+operator registry was not mirrored at the newer runtime-state seam. The
+sandbox's empty production registry therefore classified both fixture-owned
+operators as disabled and returned `operator_selector_no_match`. The journey
+test now supplies an isolated runtime-state lookup for its two fixture-owned
+operators while leaving the production selector, scoring rules, and success
+assertions unchanged. This is a test-isolation repair, not a product-status
+override.
+
+### Repair issue packets regenerated with freshness gates
+
+Logged: 2026-08-10
+
+Generated a current-baseline repair handoff for every Phase 22 L2 recorded as
+`FAIL`, `ENVIRONMENT_BLOCKED`, or `PASS_WITH_KNOWN_LIMITATIONS`. Per user
+instruction, GitHub CI findings and the 25 `NOT_AVAILABLE` rows are excluded.
+The output contains 91 stable issue packets: 15 recorded blockers, 72
+limitations requiring severity/reproduction triage, 2 mild failures, and 2
+macOS evidence-reconciliation items. Every packet contains the L2 contract,
+recorded observation, production entrypoints, exact selector(s), evidence
+paths, repair success evidence, and a mandatory current-baseline verification
+decision before product edits.
+
+Freshness review explicitly flags six J21-based `FAIL` rows as likely stale
+because the current J21 source recommends pass or limited-pass outcomes, the
+J08 validity-evaluator row as an inferred mapping, the trace-search diagnostic
+as encoding the known failed-filter behavior, and both macOS rows as evidence
+reconciliation rather than confirmed product failures. No L2 report status was
+changed by this packaging step. Artifacts:
+
+- `docs/integrations/autosci/phase-22-repair-issue-packets.json`
+- `docs/integrations/autosci/phase-22-repair-issue-packets.md`
+
+### P0 severity repair wave 1 accepted fixes
+
+Logged: 2026-08-10
+
+Started the severity-driven P0 repair wave from
+`docs/integrations/autosci/phase-22-repair-issue-packets.json` at baseline
+`c331eec8b905007b785fa494041af1efc2139a89`. Per user instruction, GitHub CI
+findings were excluded because CI is being handled separately.
+
+Accepted and integrated two reviewed worker commits into
+`codex/fix-autosci-plan-governance`:
+
+- `51a0b0072` (`P22-REPAIR-055`): `harness/lib/capability_capsules.py` now
+  rejects duplicate capability capsule registry identities by
+  `(capsule_kind, capability_capsule_id, version)`. Worker baseline evidence
+  reproduced the exact selector failure; post-repair validation passed
+  `tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py`
+  plus `tests/harness/test_capability_capsules.py` with 14 passing tests.
+- `ab8d5aee7` (`P22-REPAIR-037`, `039`, `066`, `095`, `110`, `119` evidence
+  freshness): `harness/plugins/autosci/bin/autosci_workspace_projector.py` now
+  writes projected AutoSci workspace pages through a Windows long-path-safe
+  helper. The current J21 journey selector passed after integration, confirming
+  the POC build and handoff path works in this Windows worktree when the
+  projector can write long sandbox artifact paths.
+
+Current classification decisions from the accepted worker results:
+
+- `P22-REPAIR-055`: `CONFIRMED_REPRODUCIBLE`, repaired, post-repair `PASS`.
+- `P22-REPAIR-113`: stale as a recorded `FAIL`; current J09 rerun is
+  `PASS_WITH_KNOWN_LIMITATIONS`, so no product edit was accepted for this row.
+- `P22-REPAIR-115` and `P22-REPAIR-116`: `ENVIRONMENT_BLOCKED` on this Windows
+  machine because the exact J16 tmux journey requires a tmux-capable runtime.
+- J21-backed P0 rows remain evidence-update candidates rather than confirmed
+  hard failures after the integrated J21 selector passed; report status changes
+  are deferred until the integration owner regenerates and validates the shared
+  reports.
+
+Integration validation run in the main worktree:
+
+- `.venv\Scripts\python.exe -m pytest tests/foundation/capability_capsules/test_capability_capsule_definition_atomic.py tests/harness/test_capability_capsules.py -q --basetemp .codex-tmp/pytest/root-integrated-capsules-basetemp -o cache_dir=.codex-tmp/pytest/root-integrated-capsules-cache`
+  -> 14 passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff --basetemp .codex-tmp/pytest/root-integrated-j21-basetemp -o cache_dir=.codex-tmp/pytest/root-integrated-j21-cache`
+  -> 1 passed.
+
+Remaining P0 work after this entry: complete the research/scientific reliability
+group (`P22-REPAIR-018`, `020`, `033`, `034`, `070`) and finish report
+regeneration/validation after all accepted P0 fixes are integrated.
+
+Follow-up correction: review of the `p0-experiment` worker result showed that
+the accepted J21 repair consisted of three commits, not only the final projector
+commit. The integration owner subsequently cherry-picked and validated the full
+B-worker chain:
+
+- `d67082239`: update the J21 artifact resolver to read POC artifacts from the
+  current action evidence payload as well as legacy top-level artifact lists.
+- `03798df61`: make generated experiment POC assets and the generated POC runner
+  write result files through Windows long-path-safe helpers.
+- `ab8d5aee7`: make AutoSci workspace projector page writes long-path-safe.
+
+After the full B-worker chain was integrated, the main worktree reran
+`tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff`
+with `.codex-tmp/pytest/root-integrated-j21-after-bfull-basetemp` and the
+selector passed. `git diff --check` also passed.
+
+Research P0 follow-up triage was also run in the `p0-research` worktree before
+being interrupted for lack of final handoff. The accepted read-only
+classifications from current-baseline journey evidence are:
+
+- `P22-REPAIR-018` and `P22-REPAIR-020` remain confirmed product failures.
+  Latest NT-literature evidence found five real public sources and one gap, but
+  still recorded no structured signal types, no cross-source trend, and no
+  completed real-data research run. The latest journey-result continued to
+  recommend `FAIL` for both Technical Signal Extraction and Trend & Gap
+  Analysis.
+- `P22-REPAIR-033` and `P22-REPAIR-034` remain confirmed incomplete. Latest
+  J06 passed overall only as `PASS_WITH_KNOWN_LIMITATIONS`; its L2 observations
+  still marked falsifiability contracts and verification-ready POC design as
+  false. Latest J07 remained `FAIL` with only partial verification-ready POC
+  design evidence.
+- `P22-REPAIR-070` appears stale or mis-mapped as a recorded P0: latest J08
+  passed and produced claim/acceptance comparison evidence. No product edit was
+  accepted for this inferred validity-evaluator packet during this wave.
+
+Superseding repair entry for `P22-REPAIR-018` and `P22-REPAIR-020`: the main
+worktree repaired the NT-literature production evidence path so the accepted
+journey now emits source-backed method, technical-claim, and experiment/evidence
+signals, an explicit cross-source trend comparison, a source-backed gap and
+uncertainty section, and a bounded real-data research probe result without
+claiming the full protected research lifecycle executed. The repair keeps the
+survey limitations explicit: signals are title/source-level triage until
+paper-level extraction verifies exact methods and measured effects.
+
+Implementation changes in
+`harness/plugins/autosci/bin/autosci_bridge.py`:
+
+- `write_survey` now derives conservative signal, trend, and gap sections from
+  the supplied citation map, preserving source ids in each evidence list.
+- `discover_literature` now falls back to the existing provider-backed discovery
+  backend when the native `tools/discover.py from-anchors` subprocess times out
+  before producing a shortlist.
+- `run_research_lifecycle` now writes
+  `real-data-workspace/real-data-research-run.json` for explicitly online
+  requests as a bounded read-only probe, while leaving the main lifecycle status
+  gated/inconclusive unless full stage evidence is supplied.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_p22_nt_literature_analysis.py::test_phase22_not_tested_literature_signal_and_trend_validation --basetemp .codex-tmp/pytest/root-nt-literature-after-a2-basetemp -o cache_dir=.codex-tmp/pytest/root-nt-literature-after-a2-cache`
+  -> 1 passed.
+- Evidence run:
+  `outputs/phase22-not-tested/NT-literature/nt-literature-20260810T194729Z-26168/journey-result.json`.
+  Observed five real public sources, signal types
+  `experiment_or_evidence`, `method`, and `technical_claim`, one trend, two
+  gaps, and `research_run_status=completed`.
+- Both affected Level 2 rows now recommend `PASS_WITH_KNOWN_LIMITATIONS` with
+  zero failed assertions in the accepted run.
+
+Superseding repair entry for `P22-REPAIR-033` and `P22-REPAIR-034`: current
+main-worktree J06/J07 evidence no longer supports the earlier hard-fail
+classification. J06 generated source-backed idea cards with complete
+risk/falsifiability/validation/minimum-experiment fields, and J07 generated a
+local POC design with command allowlist, expected artifacts, and success
+criteria. The journey recorder code was stale: it continued to hard-code the
+affected Level 2 observations as `false`/generic `partial` even when the
+assertions and product evidence showed verification-card and POC-design
+coverage.
+
+Recorder updates:
+
+- `tests/journeys/phase22/code/test_j06_idea_generation.py` now derives
+  Falsifiability Screening & Hypothesis Contracting and Verification-Ready POC
+  Design observations from the actual verification-ready card assertion.
+- `tests/journeys/phase22/code/test_j07_experiment_lifecycle.py` now records
+  Verification-Ready POC Design support from the produced `experiment_plan.v1`
+  command allowlist, expected artifacts, and success criteria.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j06_idea_generation.py::test_p22_j06_idea_generation --basetemp .codex-tmp/pytest/root-j06-recorder-fix-basetemp -o cache_dir=.codex-tmp/pytest/root-j06-recorder-fix-cache`
+  -> 1 passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j07_experiment_lifecycle.py::test_p22_j07_experiment_lifecycle --basetemp .codex-tmp/pytest/root-j07-recorder-fix2-basetemp -o cache_dir=.codex-tmp/pytest/root-j07-recorder-fix2-cache`
+  -> 1 passed.
+- Accepted evidence runs:
+  `outputs/phase22-real-journeys/p22j06-20260810T195057Z-22316/journey-result.json`
+  and
+  `outputs/phase22-real-journeys/p22j07-20260810T195140Z-33668/journey-result.json`.
+  J06 remains `PASS_WITH_KNOWN_LIMITATIONS` because live literature discovery
+  and provider-backed novelty were not in this offline journey; J07 remains
+  `PASS_WITH_KNOWN_LIMITATIONS` because final status/audit terminal checks are
+  still incomplete. Both affected L2 observations are now recorded as
+  `partial`, not `false`.
+
+Current `P22-REPAIR-070` check: reran
+`tests/journeys/phase22/code/test_j08_claim_verification.py::test_p22_j08_claim_verification`
+with `.codex-tmp/pytest/root-j08-final-check-basetemp`; the selector passed.
+The accepted evidence run
+`outputs/phase22-real-journeys/p22j08-20260810T195252Z-15324/journey-result.json`
+is `PASS` and records Claim & Acceptance-Criteria Comparison as exercised
+through `exp-eval`. No product edit was accepted for `P22-REPAIR-070`; the
+packet remains stale/mis-mapped against current journey evidence.
+
+P0 wave closure summary for the baseline packet set:
+
+- Repaired or superseded by accepted current evidence: `P22-REPAIR-018`,
+  `P22-REPAIR-020`, `P22-REPAIR-033`, `P22-REPAIR-034`, `P22-REPAIR-037`,
+  `P22-REPAIR-039`, `P22-REPAIR-055`, `P22-REPAIR-066`, `P22-REPAIR-095`,
+  `P22-REPAIR-110`, and `P22-REPAIR-119`.
+- Stale/mis-mapped or evidence-refresh only: `P22-REPAIR-070` and
+  `P22-REPAIR-113`.
+- Environment blocked on this Windows host: `P22-REPAIR-115` and
+  `P22-REPAIR-116` because the exact tmux journey requires a tmux-capable
+  runtime.
+
+Shared report/workbook regeneration is still deferred until the remaining
+non-P0 packet triage is complete and can be synchronized in one reviewed pass.
+
+P1 triage wave started after P0 closure. Three read-only subagents classified
+the `P1_LIMITATION_REQUIRES_SEVERITY_TRIAGE` packets by category and wrote
+isolated results under `.codex-tmp/phase22-p1-triage/` without editing shared
+reports or matrices. The highest-confidence cross-category actionable cluster
+was J24 privacy lifecycle: `P22-REPAIR-135` and the privacy/security portion of
+`P22-REPAIR-069`.
+
+Accepted J24 repair: `lib/installer/copy-engine.sh` no longer uses a bare
+`cp -R` before cleanup when `rsync` is unavailable. The fallback now uses a
+`tar` stream with the same runtime-state exclusions applied before copying, so
+live harness state such as `run/codex-state` and dangling symlinks are not
+copied into sandbox installs. This keeps the installer contract as "copy code
+and packaged assets, not machine state" and fixes the Windows/Git Bash failure
+where `cp` exited before lifecycle execution.
+
+Validation:
+
+- `bash -n lib/installer/copy-engine.sh` -> passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j24_privacy_lifecycle.py::test_p22_j24_real_privacy_lifecycle --basetemp .codex-tmp/pytest/root-j24-copy-fix-basetemp -o cache_dir=.codex-tmp/pytest/root-j24-copy-fix-cache`
+  -> 1 passed.
+- Evidence run:
+  `outputs/phase22-real-journeys/p22-j24-20260810T200556Z/journey-result.json`.
+  The journey now recommends `PASS_WITH_KNOWN_LIMITATIONS`; remaining
+  limitations are local-only privacy lifecycle coverage and no cloud-account
+  policy revocation or consent-dashboard variant.
+
+Accepted J18 LLM Config repair for `P22-REPAIR-139`: the status-server settings
+write path now preserves the user-facing model aliases selected through
+`POST /settings` while keeping the underlying pane route aliases canonical.
+Specifically, `harness/lib/symphony/status-server.py` records a separate
+`model_aliases` map for user-visible aliases such as `opus`, `sonnet`, and
+`anthropic-sonnet`, continues to write unambiguous `models.*` route aliases
+such as `claude-opus` and `claude-sonnet`, and returns both the user-facing
+`applied_models` and diagnostic `applied_canonical_models`.
+
+Validation:
+
+- `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS=1 .venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j18_tmux_cli_status_config.py::test_p22_j18_tmux_cli_status_config --basetemp .codex-tmp/pytest/root-j18-llm-alias-basetemp -o cache_dir=.codex-tmp/pytest/root-j18-llm-alias-cache`
+  -> 1 passed, with two Windows cp1252 subprocess-reader warnings.
+- Accepted isolated evidence:
+  `.codex-tmp/phase22-worker-results/T3-tmux-prep-001/artifacts/j18-llm-config.json`
+  now records `llm_model_roundtrip_ok=true`,
+  `missing_expected_aliases=[]`, `status=ok`, no secrets in the output, and
+  `applied_models` preserving `claude-opus`, `sonnet`, `opus`, and
+  `anthropic-sonnet`.
+- J18 prep summary:
+  `.codex-tmp/phase22-worker-results/T3-tmux-prep-001/artifacts/j18-overall-prep-summary.json`
+  now records `LLM Config=PASS` and `User Settings=PASS`. Linux CLI remains
+  `ENVIRONMENT_BLOCKED` on this Windows host, and TMUX/Web Status Service
+  remain `PASS_WITH_KNOWN_LIMITATIONS` under prep-mode evidence.
+
+Additional non-acceptance check: `tests/harness/status_server/test_settings_concurrency.py`
+was run as a script and reported 8/9 checks passing, with the remaining failure
+being a Windows `PermissionError` direct-file-read race during concurrent
+`os.replace` writes. That issue is tracked as a separate settings-concurrency
+portability limitation and was not used to reject the J18 alias repair because
+the J18 acceptance selector passed and the new alias layer does not change the
+atomic write primitive.
+
+Accepted J04 ingest/wiki registration repair for `P22-REPAIR-083`,
+`P22-REPAIR-084`, and `P22-REPAIR-090`: `harness/plugins/autosci/bin/autosci_bridge.py`
+now performs local AutoSci wiki registration during `ingest_paper` after the
+research memory/graph sidecars are written and before the final source
+registration boundary is computed. The repair writes or refreshes the paper
+page, graph edge, log entry, index, and context brief under the isolated
+workspace wiki, while preserving the existing behavior where a pre-registered
+paper/page/graph/index/context does not require a log entry to be considered
+ready.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m py_compile harness/plugins/autosci/bin/autosci_bridge.py`
+  -> passed.
+- `.venv\Scripts\python.exe -m pytest tests/plugins/autosci/test_bridge_smoke.py::test_phase9_ingest_registration_boundary_does_not_require_log_entry harness/plugins/autosci/tests/test_autosci_skill_shim.py::test_autosci_skill_shim_ingest_final_source_registration_boundary_ready_with_wiki_state --basetemp .codex-tmp/pytest/root-j04-ingest-focused2-basetemp -o cache_dir=.codex-tmp/pytest/root-j04-ingest-focused2-cache`
+  -> 2 passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j04_paper_ingestion.py::test_p22_j04_paper_ingestion --basetemp .codex-tmp/pytest/root-j04-wiki-after2-basetemp -o cache_dir=.codex-tmp/pytest/root-j04-wiki-after2-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j04-20260810T201812Z-22340/journey-result.json`
+  now records `status=PASS`, no limitations, and a final source registration
+  boundary with `final_registration_ready=true`, `wiki_registration_ready=true`,
+  `paper_registered=true`, `graph_registered=true`, `index_rebuilt=true`, and
+  `context_rebuilt=true`.
+
+Non-acceptance note: a broad run of `tests/plugins/autosci/test_bridge_smoke.py`
+from the repository root collected unrelated legacy failures where subprocess
+fixtures were looked up relative to a temporary cwd, plus one pre-existing
+experiment-status expectation mismatch. The targeted ingest registration
+tests above passed and were used as the acceptance evidence for this J04
+repair.
+
+Accepted J07 terminal lifecycle repair for `P22-REPAIR-092` and the J07 portion
+of `P22-REPAIR-036`/`P22-REPAIR-038`: `harness/plugins/autosci/bin/autosci_bridge.py`
+now treats JSON files supplied through `exp-status --collect --after-artifact`
+as fallback local experiment result payloads when no explicit
+`experiment_result_evidence` is supplied. This preserves explicit evidence as
+authoritative, but lets the local monitor path report a terminal state for the
+same result file that the approved local experiment command just wrote.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m py_compile harness/plugins/autosci/bin/autosci_bridge.py`
+  -> passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j07_experiment_lifecycle.py::test_p22_j07_experiment_lifecycle --basetemp .codex-tmp/pytest/root-j07-terminal-after-basetemp -o cache_dir=.codex-tmp/pytest/root-j07-terminal-after-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j07-20260810T202057Z-26328/journey-result.json`
+  now records `status=PASS`, no limitations, and
+  `exp_status_reached_terminal_state=true` with status report state
+  `completed`.
+
+Scope note: this fixes the local J07 terminal-state path. Claims tied to the
+paired J02 live/tmux workflow remain environment-blocked on this Windows host
+until rerun with live authorization and tmux available.
+
+Accepted J21 parity/handoff recorder refresh for `P22-REPAIR-071`: the J21
+journey selector now uses a strict HITL gate for the negative "missing
+approval" run and reads the current structured runtime evidence emitted by
+`exp-run` (`outputs.final_runtime_audit_boundary` and
+`outputs.result.command_run`/`exit_code`) instead of older limitation strings.
+The unsupported overbroad claim assertion also treats the current
+`insufficient` verdict as a non-supported result.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff --basetemp .codex-tmp/pytest/root-j21-p1-recorder-fix-basetemp -o cache_dir=.codex-tmp/pytest/root-j21-p1-recorder-fix-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22-j21-20260810T202810Z-30352/journey-result.json`
+  records no failed assertions. It remains `PASS_WITH_KNOWN_LIMITATIONS`
+  because the local parity-demo path still does not provide attributable human
+  approval and the handoff artifact is not a benchmark-native consolidated
+  bundle.
+
+Accepted P1 trace-query repair for `P22-REPAIR-089`: `harness/lib/symphony/status-server.py`
+now applies local `/events` query filters for `project`, `actor`, and `since`
+in addition to the existing `sprint_id` and `limit` handling. The NT DAG trace
+selector was extended to require those filters to pass and to smoke-import the
+runtime v2 trace modules on Windows, proving that the old `fcntl` import
+blocker is no longer present in the current selector environment.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m py_compile harness/lib/symphony/status-server.py tests/journeys/phase22/code/test_p22_nt_dag_trace.py`
+  -> passed.
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_p22_nt_dag_trace.py::test_p22_nt_dag_trace --basetemp .codex-tmp/pytest/root-nt-trace-089-verify-basetemp -o cache_dir=.codex-tmp/pytest/root-nt-trace-089-verify-cache`
+  -> 1 passed.
+- Accepted evidence:
+  `.codex-tmp/phase22-worker-results/NT-dag-trace/result.json` and
+  `outputs/phase22-not-tested/NT-dag-trace/run-20260810T203607Z`.
+
+Remaining limitations: trace graph management is still
+`PASS_WITH_KNOWN_LIMITATIONS` because the selector proves import portability
+but not concurrent append recovery under contention, and because there is still
+no single unified query endpoint that returns both legacy event records and
+graph-state/closure records together. The core daemon `/orchestrator/events`
+surface remains outside this repair and was not changed.
+
+Accepted J06 P1 integration review for `P22-REPAIR-021`, `P22-REPAIR-023`,
+`P22-REPAIR-024`, `P22-REPAIR-025`, `P22-REPAIR-029`, `P22-REPAIR-030`, and
+`P22-REPAIR-031`: the current J06 selector passes all local idea-generation,
+source-grounding, evaluation, selection-rationale, and verification-ready-card
+assertions. No product code change was accepted for this batch because the
+remaining limitations are live literature discovery, provider-backed novelty,
+and Review LLM final acceptance boundaries, which require explicit provider or
+live authorization rather than local repair.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j06_idea_generation.py::test_p22_j06_idea_generation --basetemp .codex-tmp/pytest/root-j06-p1-recheck-basetemp -o cache_dir=.codex-tmp/pytest/root-j06-p1-recheck-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j06-20260810T203652Z-32368/journey-result.json`
+  remains `PASS_WITH_KNOWN_LIMITATIONS` with all assertions passing.
+
+Accepted J09 P1 integration review for `P22-REPAIR-051`, `P22-REPAIR-052`,
+`P22-REPAIR-053`, and `P22-REPAIR-054`: the current J09 selector passes all
+local report-plan, report-draft, review-output, compile-checklist, readable
+Markdown, and exact evidence-id reference assertions. No product code change
+was accepted for this batch because the remaining limitations are intentional
+provider/HITL/external-distribution boundaries: Review LLM was not executed,
+compile/publish remains policy gated, and final acceptance cannot be completed
+from local surrogate evidence alone.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j09_report_delivery.py::test_p22_j09_report_delivery --basetemp .codex-tmp/pytest/p1-j09-local-recheck-basetemp -o cache_dir=.codex-tmp/pytest/p1-j09-local-recheck-cache`
+  -> 1 passed.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j09-20260810T203147Z-3496/journey-result.json`
+  remains `PASS_WITH_KNOWN_LIMITATIONS` with all assertions passing.
+
+Accepted J05 P1 boundary review for `P22-REPAIR-022`: the current J05
+literature-discovery selector is marked `live_provider` and enters
+`discover --online` / Semantic Scholar anchor discovery. In this repair batch
+there was no explicit authorization for live/provider execution, so the
+attempted online selector run was stopped and was not accepted as journey
+evidence. No product or test code change was accepted; the remaining Search
+Coverage Review limitation is classified as a live/provider boundary until an
+authorized provider-backed run is requested.
+
+Validation:
+
+- Worker result:
+  `.codex-tmp/phase22-worker-results/p1-j05-literature-repair/result.json`
+  classifies `P22-REPAIR-022` as `ENVIRONMENT_OR_LIVE_PROVIDER_BOUNDARY`.
+- Partial non-accepted run evidence:
+  `outputs/phase22-real-journeys/p22j05-20260810T205022Z-24520` contains only
+  stdout/stderr from the aborted online attempt and no accepted
+  `journey-result.json`.
+- Tracked worktree check after stopping the live/provider run showed no
+  product or test edits from the J05 worker.
+
+Accepted J03 P1 benchmark review for `P22-REPAIR-040`, `P22-REPAIR-041`,
+`P22-REPAIR-043`, `P22-REPAIR-044`, `P22-REPAIR-068`, `P22-REPAIR-111`, and
+`P22-REPAIR-117`: the current J03 selector passes and the old benchmark
+framing, protocol, metrics, comparative packaging, performance/cost evaluator,
+benchmark asset, and build-evidence limitations are stale against current
+journey evidence. No product or test code change was accepted for J03.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j03_platform_benchmark.py::test_p22_j03_platform_benchmark --basetemp .codex-tmp/pytest/root-j03-current-basetemp -o cache_dir=.codex-tmp/pytest/root-j03-current-cache`
+  -> 1 passed.
+- Accepted worker result:
+  `.codex-tmp/phase22-worker-results/p1-j03-benchmark-fast/result.json`.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j03-20260810T212622Z-2280/journey-result.json`
+  records `PASS` with no limitations.
+
+Accepted J04 P1 memory/graph review for `P22-REPAIR-083`,
+`P22-REPAIR-084`, and `P22-REPAIR-090`: the current J04 selector passes and
+records source registration, wiki registration, persistent memory sidecar, and
+concept/memory graph sidecar readiness. The old "PDF imported but wiki
+registration not completed" limitations are stale against current evidence.
+No additional product code change was required in this batch.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j04_paper_ingestion.py::test_p22_j04_paper_ingestion --basetemp .codex-tmp/pytest/root-j04-fast-basetemp -o cache_dir=.codex-tmp/pytest/root-j04-fast-cache`
+  -> 1 passed.
+- Accepted worker result:
+  `.codex-tmp/phase22-worker-results/p1-j04-j05-research-fast/result.json`.
+- Accepted journey evidence:
+  `outputs/phase22-real-journeys/p22j04-20260810T211713Z-27592/journey-result.json`
+  records `PASS` with source registration, wiki, memory, and graph assertions
+  passing.
+
+Accepted J05 live-provider timeout classification repair for `P22-REPAIR-022`:
+after live provider authorization, the J05 selector contacted the provider
+path but the topic discovery command timed out. The journey harness previously
+recorded empty stderr for a timeout whose `TimeoutExpired.stderr` was an empty
+string, so the J05 provider blocker could not classify the timeout and the
+journey was mislabeled as product `FAIL`. `JourneyRecorder.run()` now records
+`timed out after <N>s` when timeout stderr is empty, and the J05 selector
+recognizes return code `124` / `timed out` as an environment/provider boundary.
+The selector also accepts `PHASE22_J05_DISCOVERY_TIMEOUT_SECONDS` so timeout
+classification can be verified without waiting for the full live-provider
+budget.
+
+Validation:
+
+- `.venv\Scripts\python.exe -m py_compile tests/journeys/phase22/code/evidence.py tests/journeys/phase22/code/test_j05_literature_discovery.py`
+  -> passed.
+- Full authorized live attempt before the repair:
+  `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j05_literature_discovery.py::test_p22_j05_literature_discovery --basetemp .codex-tmp/pytest/root-j05-live-fast-basetemp -o cache_dir=.codex-tmp/pytest/root-j05-live-fast-cache`
+  -> failed after the provider-backed topic discovery timed out; non-accepted
+  evidence:
+  `outputs/phase22-real-journeys/p22j05-20260810T211737Z-29084/journey-result.json`.
+- Timeout classification verification:
+  `$env:PHASE22_J05_DISCOVERY_TIMEOUT_SECONDS='5'; .venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j05_literature_discovery.py::test_p22_j05_literature_discovery --basetemp .codex-tmp/pytest/root-j05-timeout-classification2-basetemp -o cache_dir=.codex-tmp/pytest/root-j05-timeout-classification2-cache`
+  -> 1 skipped with journey status `ENVIRONMENT_BLOCKED`; accepted evidence:
+  `outputs/phase22-real-journeys/p22j05-20260810T212431Z-28412/journey-result.json`.
+
+Remaining J05 limitation: a full `PASS` still requires the live provider to
+return topic and anchor discovery results within the configured timeout and to
+produce completed source-provider boundary evidence. The accepted repair only
+prevents provider timeouts from being mislabeled as product failures.
+
+Accepted Spark worker evidence review: five external Spark worker result files
+were reviewed under `.codex-tmp/phase22-worker-results/`. The root review did
+not accept every Spark classification as-is; it replaced non-durable or
+environment-incomplete evidence where needed and recorded unaccepted gaps.
+
+Validation:
+
+- Root review result:
+  `.codex-tmp/phase22-worker-results/root-spark-review/result.json`.
+- Reviewed Spark files:
+  `.codex-tmp/phase22-worker-results/spark-j02-j07-lifecycle/result.json`,
+  `.codex-tmp/phase22-worker-results/spark-j08-j22-claim-review/result.json`,
+  `.codex-tmp/phase22-worker-results/spark-j18-platform-status/result.json`,
+  `.codex-tmp/phase22-worker-results/spark-j19-gui-status/result.json`, and
+  `.codex-tmp/phase22-worker-results/spark-j16-j17-tmux-codegraph/result.json`.
+
+Accepted from Spark plus root replacement evidence:
+
+- J08/J22 `P22-REPAIR-048` and `P22-REPAIR-049`: accepted as
+  `STALE_ALREADY_FIXED`, but not from the Spark artifact paths because several
+  `.codex-tmp/pytest/...` paths referenced by the worker were not durable at
+  review time. Root reran:
+  `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j08_claim_verification.py::test_p22_j08_claim_verification --basetemp .codex-tmp/pytest/root-verify-spark-j08-basetemp -o cache_dir=.codex-tmp/pytest/root-verify-spark-j08-cache`
+  -> 1 passed, with accepted evidence
+  `outputs/phase22-real-journeys/p22j08-20260810T214416Z-27532/journey-result.json`.
+  Root also reran:
+  `.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j22_evidence_review_followup.py::test_p22_j22_real_evidence_review_and_followup --basetemp .codex-tmp/pytest/root-verify-spark-j22-basetemp -o cache_dir=.codex-tmp/pytest/root-verify-spark-j22-cache`
+  -> 1 passed, with accepted evidence
+  `outputs/phase22-real-journeys/p22-j22-1786398256/journey-result.json`.
+- J18 `P22-REPAIR-120`, `P22-REPAIR-127`, `P22-REPAIR-129`,
+  `P22-REPAIR-138`, and `P22-REPAIR-139`: accepted from
+  `.codex-tmp/phase22-worker-results/spark-j18-platform-status/result.json`.
+  Windows-verifiable CLI and LLM Config evidence passed; Linux remains
+  `ENVIRONMENT_BLOCKED`; TMUX remains `PASS_WITH_KNOWN_LIMITATIONS` because
+  tmux is absent on this Windows host.
+- J16/J17 `P22-REPAIR-086` and `P22-REPAIR-100`: accepted as
+  `ENVIRONMENT_BLOCKED` from journey evidence
+  `outputs/phase22-real-journeys/p22-j16-20260810T214127Z-23068/journey-result.json`
+  and
+  `outputs/phase22-real-journeys/p22-j17-20260810T214133Z-27672/journey-result.json`;
+  both selectors skipped before real tmux execution because tmux is not visible
+  on PATH.
+- J19 GUI `P22-REPAIR-128`: Spark originally classified the GUI path as
+  environment-blocked because `PHASE22_NODE_BIN` was unset. Root supplied the
+  bundled Node runtime, bundled node modules, and installed Chrome:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j19_real_gui_dashboard.py::test_p22_j19_real_gui_dashboard --basetemp .codex-tmp/pytest/root-verify-spark-j19-gui4-basetemp -o cache_dir=.codex-tmp/pytest/root-verify-spark-j19-gui4-cache`
+  -> 1 passed, with accepted evidence
+  `outputs/phase22-real-journeys/p22-j19-real-gui-dashboard-20260810T214538Z-25436/journey-result.json`.
+
+Not accepted from Spark:
+
+- J02-dependent classifications for `P22-REPAIR-067`, `P22-REPAIR-091`,
+  `P22-REPAIR-094`, `P22-REPAIR-096`, `P22-REPAIR-102`, `P22-REPAIR-103`,
+  `P22-REPAIR-104`, `P22-REPAIR-105`, `P22-REPAIR-108`, and
+  `P22-REPAIR-112` were not accepted because the Spark J02 selector skipped
+  after not setting live-authorization variables, despite current user
+  authorization. J07 evidence from the same worker is useful as partial
+  support, but it does not prove the J02-only P1 issues.
+- J19 TMUX UI `P22-REPAIR-130` was not accepted because the Spark selector
+  skipped before tmux execution with `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS`
+  unset. It still needs a gated rerun plus a tmux availability decision.
+
+Configured rerun after explicit user authorization: root configured the local
+environment for live-provider, serial TMUX, bundled Node, bundled node modules,
+and installed Chrome, then reran the affected journey selectors. CI remained
+out of scope.
+
+Validation:
+
+- Root configured rerun result:
+  `.codex-tmp/phase22-worker-results/root-configured-rerun/result.json`.
+- J02 live/network selector:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j02_live_coding_task.py::test_p22_j02_live_coding_task --basetemp .codex-tmp/pytest/root-j02-live-configured-basetemp -o cache_dir=.codex-tmp/pytest/root-j02-live-configured-cache`
+  -> 1 skipped with journey status `ENVIRONMENT_BLOCKED`; accepted evidence:
+  `outputs/phase22-real-journeys/p22j02-20260811T134511Z-5288/journey-result.json`.
+  Live/network authorization variables were set, so the prior authorization
+  gap is superseded. The remaining blocker is `tmux is not available on PATH`.
+- J16 TMUX requirements-builder selector:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j16_tmux_requirements_builder.py::test_p22_j16_tmux_requirements_builder_real_user_defect_repair --basetemp .codex-tmp/pytest/root-j16-tmux-configured-basetemp -o cache_dir=.codex-tmp/pytest/root-j16-tmux-configured-cache`
+  -> 1 skipped with journey status `ENVIRONMENT_BLOCKED`; accepted evidence:
+  `outputs/phase22-real-journeys/p22-j16-20260811T134558Z-36492/journey-result.json`.
+  The remaining blocker is `tmux is not available on PATH`.
+- J17 TMUX capsule-operator selector:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j17_tmux_capsule_operator_core.py::test_p22_j17_tmux_capsule_operator_core_real_user_entrypoint --basetemp .codex-tmp/pytest/root-j17-tmux-configured-basetemp -o cache_dir=.codex-tmp/pytest/root-j17-tmux-configured-cache`
+  -> 1 skipped with journey status `ENVIRONMENT_BLOCKED`; accepted evidence:
+  `outputs/phase22-real-journeys/p22-j17-20260811T134558Z-19800/journey-result.json`.
+  The remaining blocker is `tmux is not available on PATH`.
+- J19 TMUX UI/account/channel selector:
+  `.venv\Scripts\python.exe -m pytest -rs tests/journeys/phase22/code/test_j19_tmux_ui_account_channels.py::test_p22_j19_tmux_ui_account_channels --basetemp .codex-tmp/pytest/root-j19-tmux-configured-basetemp -o cache_dir=.codex-tmp/pytest/root-j19-tmux-configured-cache`
+  -> 1 passed with accepted evidence:
+  `.codex-tmp/pytest/root-j19-tmux-configured-basetemp/test_p22_j19_tmux_ui_account_c0/p22-j19/j19-result.json`.
+  Because `PHASE22_ENABLE_SERIAL_TMUX_JOURNEYS` was set, the prior gate-unset
+  rejection for `P22-REPAIR-130` is superseded. The accepted per-Level-2
+  statuses are: User Profile Management `PASS`; Privacy & Personal Data
+  Controls `PASS_WITH_KNOWN_LIMITATIONS`; Wechat
+  `PASS_WITH_KNOWN_LIMITATIONS`; GUI `ENVIRONMENT_BLOCKED`; Windows App
+  `FAIL`.
+
+Current blocker after configured rerun: this Windows host still has no `tmux`
+on PATH. To turn J02/J16/J17 from `ENVIRONMENT_BLOCKED` into executable
+journeys, rerun them from a Linux/WSL environment with tmux installed or expose
+a compatible tmux binary on PATH.
+
+WSL/TMUX/Codex configured rerun: root configured the `Ubuntu` WSL distro with
+an isolated `.codex-tmp/wsl-phase22-venv`, temporary `jq`, and Codex CLI
+`0.147.0` under `.codex-tmp/wsl-bin`, then reran J02/J16/J17. The temporary
+Codex install briefly added a PATH block to `/home/james/.bashrc`; root removed
+that exact installer block after inspection, leaving the runtime under
+`.codex-tmp` only. A stale test-created WSL tmux session whose cwd was the
+deleted J02 sandbox was also killed.
+
+Repairs accepted before rerun:
+
+- `harness/solar-harness.sh`: fixed `set -u` failures by defaulting unset
+  `SOLAR_HARNESS_SESSION` to the already computed `SESSION_NAME` when
+  constructing Codex pane runtime environment.
+- `harness/tools/codex_operator.py`: fixed Landlock execution of PATH symlinked
+  Codex binaries by executing the resolved binary target.
+- J16/J17 journey fixtures now copy top-level harness `*.sh` scripts into the
+  isolated harness, so `solar-harness.sh start` can find `coordinator.sh`,
+  `pane-launcher.sh`, `session.sh`, and related shell entrypoints.
+- J02/J16/J17 now classify explicit Codex/OpenAI provider-auth failures as
+  `ENVIRONMENT_BLOCKED` instead of product `FAIL`.
+
+Validation:
+
+- Root WSL rerun result:
+  `.codex-tmp/phase22-worker-results/root-wsl-tmux-codex-rerun/result.json`.
+- Syntax/static checks:
+  `.venv\Scripts\python.exe -m py_compile harness/tools/codex_operator.py tests/journeys/phase22/code/test_j02_live_coding_task.py tests/journeys/phase22/code/test_j16_tmux_requirements_builder.py tests/journeys/phase22/code/test_j17_tmux_capsule_operator_core.py`
+  -> passed.
+  `wsl.exe -d Ubuntu --cd <repo> -- bash -n harness/solar-harness.sh`
+  -> passed.
+  `git diff --check -- <changed tracked files>`
+  -> passed.
+- J02 WSL live/tmux selector:
+  `wsl.exe -d Ubuntu --cd <repo> -- bash -lc '.codex-tmp/run-wsl-j02.sh'`
+  -> 1 skipped with accepted status `ENVIRONMENT_BLOCKED`; evidence:
+  `outputs/phase22-real-journeys/p22j02-20260811T144203Z-69477/journey-result.json`.
+- J16 WSL live/tmux selector:
+  `wsl.exe -d Ubuntu --cd <repo> -- bash -lc '.codex-tmp/run-wsl-j16-j17.sh'`
+  -> J16 1 skipped with accepted status `ENVIRONMENT_BLOCKED`; evidence:
+  `outputs/phase22-real-journeys/p22-j16-20260811T150043Z-122212/journey-result.json`.
+  The same combined script hit a J17 pytest basetemp cleanup error after J16;
+  J17 was rerun separately with a fresh basetemp.
+- J17 WSL live/tmux selector:
+  `wsl.exe -d Ubuntu --cd <repo> -- bash -lc '.codex-tmp/run-wsl-j17-final.sh'`
+  -> 1 skipped with accepted status `ENVIRONMENT_BLOCKED`; evidence:
+  `outputs/phase22-real-journeys/p22-j17-20260811T150530Z-143258/journey-result.json`.
+
+Remaining blocker after WSL/TMUX/Codex setup: tmux and the native Linux Codex
+CLI are now available, but the sandboxed Codex runtime has no usable provider
+authentication. The final accepted blocker for J02/J16/J17 is:
+`Codex provider authentication is unavailable in the sandboxed live journey
+runtime.`
+
+## Severity-blocker repair integration — local `openJiuwen-Solar`
+
+Date: 2026-08-11
+
+Scope and baseline:
+
+- Reviewed the 15 P0 packets named in
+  `docs/integrations/autosci/phase-22-repair-issue-packets.json`.
+- Started from the small-repository baseline
+  `940f735fa7da44dff8d4b96f49de9012169191c8` and integrated accepted worker
+  repairs through code/test head
+  `cfde62c9bb0bbfc645726ad335e9cd5b6f93937f` on local branch
+  `openJiuwen-Solar`.
+- Did not push to small. The small remote remains at `940f735f` so the Mac
+  worker can finish P22-REPAIR-115 and P22-REPAIR-116 against its fixed
+  baseline.
+- The original issue-packet JSON remains an immutable severity snapshot for
+  baseline `c331eec8`; current classifications are recorded in
+  `docs/integrations/autosci/phase-22-blocker-review-overlay.json`.
+
+Accepted repairs:
+
+- Literature extraction and trend analysis now use content-bearing public
+  evidence with exact-span/hash provenance, cross-source trends, evidence
+  gaps, bounded provider retry behavior, direct artifact validation, and
+  production-provider channel normalization.
+- Experiment design now preserves the verification contract, fails closed on
+  readiness/approval/argv spoofing, binds durable assets, and executes the
+  exact planned command. The fixture exemption is restricted to a truthful
+  deterministic local-fixture profile.
+- J21 evidence now validates the actual runtime result rather than the old
+  four-byte placeholder and explicitly records the L2 boundaries that the
+  journey does not prove.
+- Windows journey portability now uses a short sandbox, represents missing
+  evidence as absent, and records/cleans controlled timeouts without reading
+  the repository root as evidence.
+
+Independent review outcomes:
+
+- The final P22-REPAIR-034 series was accepted after negative probes for
+  malicious/prefix/template argv, legacy readiness spoofing, unknown modes,
+  out-of-workspace assets, mismatched datasets, and unsafe output targets.
+- The final P22-REPAIR-018/020 series was accepted after provider Retry-After,
+  provenance-tamper, rationale-consistency, and production-channel taxonomy
+  review.
+- J21's initial unqualified-pass interpretation was rejected; the integrated
+  result preserves `PASS_WITH_KNOWN_LIMITATIONS`, `INSUFFICIENT_EVIDENCE`, and
+  `MAPPING_ERROR` boundaries instead.
+
+Final validation at `cfde62c9`:
+
+- Live literature selector: 1 passed in 27.50 seconds. Evidence:
+  `outputs/phase22-not-tested/NT-literature/nt-literature-20260811T183344Z-35752/journey-result.json`.
+  Both mapped L2 features are `PASS_WITH_KNOWN_LIMITATIONS`; there are no
+  failed assertions. Independent validation found 9 sources, 9 evidence
+  records, 15 method/result/limitation signals, 3 cross-source trends, and 2
+  source-linked gaps.
+- J06: 1 passed in 21.89 seconds. Evidence:
+  `outputs/phase22-real-journeys/p22j06-20260811T183659Z-28060/journey-result.json`.
+- J07: 1 passed in 23.60 seconds. Evidence:
+  `outputs/phase22-real-journeys/p22j07-20260811T183659Z-13024/journey-result.json`.
+- J21: 1 passed in 37.17 seconds. Evidence:
+  `outputs/phase22-real-journeys/p22-j21-20260811T183659Z-1228/journey-result.json`.
+
+Accepted classifications:
+
+- `FIXED_VERIFIED`: P22-REPAIR-018, 020, 034.
+- `STALE_ALREADY_FIXED`: P22-REPAIR-033, 055, 070. P22-REPAIR-055 remains
+  Level-2 `NOT_TESTED` because no accepted real-task journey maps to it.
+- `INSUFFICIENT_EVIDENCE`: P22-REPAIR-037, 039, 066, 095, 110. The exercised
+  J21 paths work, but its evidence does not prove the full breadth of those
+  L2 contracts.
+- `MAPPING_ERROR` / Level-2 `NOT_TESTED`: P22-REPAIR-113 and 119.
+- `ENVIRONMENT_BLOCKED`: P22-REPAIR-115 and 116 pending the authorized Mac
+  provider run.
+
+This entry and overlay record the accepted repair review only. The final
+journey report, full report, and brief report have not been synchronized in
+this wave; they must wait for the Mac result and a separate report validation.
+
+## Severity-blocker evidence closure — J09, J21, and J25
+
+Date: 2026-08-11
+
+Scope and integration state:
+
+- Continued locally on `openJiuwen-Solar` without pushing to small and without
+  touching the Mac-owned J15/J16 work. Accepted code/test HEAD is
+  `303dc18d876a8dcdcb43ddef9ec36ff071efb1e9`.
+- Closed the five J21 evidence gaps (`P22-REPAIR-037`, `039`, `066`, `095`,
+  `110`), replaced the old J09 mapping error for `P22-REPAIR-113` with a real
+  canonical decision-artifact path, and added dedicated J25 coverage for
+  `P22-REPAIR-119`.
+- The source issue-packet JSON remains immutable. Current accepted decisions
+  are recorded in `phase-22-blocker-review-overlay.json`.
+
+Accepted J09 / P22-REPAIR-113 evidence:
+
+- Added `decision_artifact.v1`, a production constructor and CLI. The artifact
+  requires a complete alternative-by-criterion assessment matrix and binds the
+  recommendation to criteria plus independently reloaded claim-verdict and
+  experiment-result evidence.
+- Independent review rejected three earlier versions for re-hashing tampered
+  evidence, caller-defined support semantics, incomplete comparison matrices,
+  loose JSON Pointer handling, stale output, missing upstream schema checks,
+  refuting experiment acceptance, and destructive input/output aliases. The
+  final version closed every finding with negative tests and was accepted.
+- Post-integration command:
+  `.venv\Scripts\python.exe -m pytest -q --basetemp <unique-short-path> -p no:cacheprovider tests/harness/research_unit/test_decision_artifact.py tests/journeys/phase22/code/test_j09_report_delivery.py::test_p22_j09_report_delivery`
+  -> `21 passed, 1 skipped` in 28.64 seconds. The skip is the Windows account's
+  lack of file-symlink creation privilege; direct, hardlink, resolved-path, and
+  directory-junction alias probes passed.
+- Accepted current-run evidence:
+  `outputs/phase22-real-journeys/p22j09-20260811T211231Z-16532/journey-result.json`;
+  status `PASS_WITH_KNOWN_LIMITATIONS`, 26/26 assertions, zero failures.
+
+Accepted J21 / P22-REPAIR-037, 039, 066, 095, 110 evidence:
+
+- The production execution boundary now enforces strict normalized token-wise
+  argv equality; executable-only, prefix, template, reordered, appended-token,
+  and wrong-runner variants are rejected before execution.
+- The product creates a self-contained experiment handoff package with formal
+  schema validation, provenance, component hashes, authoritative experiment
+  identity, durable manifest paths, and replay evidence. Production and
+  independent consumers accept the valid package and reject hash, provenance,
+  identity, missing-audit, and missing-audit-hash variants.
+- Lease evidence now covers acquire, heartbeat, duplicate rejection, release,
+  actual expiry, stale recovery, and archived recovery audit under the same
+  authoritative experiment ID. Product-generated assets are replayed from the
+  durable copies rather than pytest basetemp paths.
+- Independent review rejected earlier attempts whose positive package gate
+  failed, whose execution point still used a loose allowlist, whose lease IDs
+  disagreed, and whose journey could report limited-pass despite failed target
+  assertions. The final series was accepted after all probes passed.
+- Post-integration selector:
+  `.venv\Scripts\python.exe -m pytest -q --basetemp <unique-short-path> -p no:cacheprovider tests/journeys/phase22/code/test_j21_experiment_build_handoff.py::test_p22_j21_real_experiment_build_and_handoff`
+  -> 1 passed in 17.67 seconds. Accepted evidence:
+  `outputs/phase22-real-journeys/p22-j21-20260811T213551Z-33684/journey-result.json`;
+  status `PASS_WITH_KNOWN_LIMITATIONS`, 35/35 assertions, zero failures.
+
+Accepted J25 / P22-REPAIR-119 evidence:
+
+- Added a dedicated Runtime Deliverable Construction journey. The product
+  builds a durable bundle, validates its JSON schema and complete inventory,
+  scans normal and nested archive contents for secrets, rejects symlink and ZIP
+  escape/bomb variants, and records real command exit codes and output hashes.
+- The bundle includes raw Git commit/tree/blob preimages. The verifier writes
+  them into a new isolated bare repository, recomputes object IDs, resolves the
+  declared commit with `git cat-file`/`ls-tree`, and matches every source archive
+  path to the committed blob. Forged ZIP comment/tree/hash combinations and
+  proof-blob replacement are rejected. Reviewed fake-secret exemptions are
+  bound to canonical repository path plus exact value SHA-256.
+- The replay is offline and independent of an external checkout. It performs a
+  clean WSL install, status, doctor, HTTP `/healthz`, runtime uninstall, and
+  wrapper uninstall. Failed runs use run-scoped ledgers and cannot inherit old
+  positive doctor/health observations. The user-paused run was recorded as
+  `INTERRUPTED_NOT_ACCEPTABLE` and is not accepted evidence.
+- Post-integration command:
+  `.venv\Scripts\python.exe -m pytest -q --basetemp <unique-short-path> -p no:cacheprovider tests/distribution/test_runtime_deliverable.py tests/journeys/phase22/code/test_j25_runtime_deliverable_distribution.py::test_p22_j25_runtime_deliverable_distribution`
+  -> `15 passed, 2 skipped` in 78.82 seconds; skips require Windows symlink
+  privilege. Accepted evidence:
+  `outputs/phase22-real-journeys/p22j25-20260812T012357Z-15852/journey-result.json`;
+  status `PASS_WITH_KNOWN_LIMITATIONS`, 14/14 assertions, zero failures.
+
+Accepted classifications after this closure:
+
+- `FIXED_VERIFIED`: P22-REPAIR-018, 020, 034, 037, 039, 066, 095, 110, 113,
+  119.
+- `STALE_ALREADY_FIXED`: P22-REPAIR-033, 055, 070. P22-REPAIR-055 remains
+  Level-2 `NOT_TESTED` because no accepted real-task journey maps to it.
+- `ENVIRONMENT_BLOCKED`: P22-REPAIR-115 and 116 pending the separately assigned
+  Mac result. The local J16 candidate commit remains available for later
+  comparison but is not accepted as the final Mac result.
+
+The final journey report, full report, and brief report remain unsynchronized;
+they must wait for the Mac J15/J16 result and a separate report-validation step.
+
+## Mac Phase 22 repair integration
+
+Date: 2026-08-11
+
+- The supplied short SHA `b258da0` was not present after fetching all small
+  repository refs. The actual Mac series on small `openJiuwen-Solar` was
+  `98534c6a1`, `68223a2b2`, `e970dce82`, `eb6abf0a1`, `5c07efde5`, and
+  `137a7e64b`.
+- Integrated that remote series with the local severity-repair history using
+  merge commit `6cc86cf0ea13fd98a1b8d60d1fe191028ddcb979`. A merge was required instead
+  of replaying duplicate cherry-picks because the Mac commits were already the
+  tip history of the target small branch; this preserves both histories and
+  permits a fast-forward push without rewriting the remote branch.
+- The sole textual conflict was J16. Resolution retained both the local strict
+  post-planner/post-approval workflow-route assertions and the Mac exact
+  planner-task / physical-builder result selection and watchdog cleanup.
+- Repaired two test-portability assumptions found during review: Unix mode
+  bits are not asserted on Windows, the generated POSIX harness shim is not
+  executed as a Win32 binary, and the Linux Landlock test accepts the resolved
+  Codex executable path rather than requiring the literal token `codex`.
+- Windows focused validation: `17 passed, 2 skipped` in 5.91 seconds. The two
+  skips are explicit platform-capability boundaries. WSL/Linux validation of
+  the same focused set: `19 passed` in 70.76 seconds. Python compilation and
+  `git diff --check` also passed.
+- Stopped 85 stale J16/J17 test processes left by superseded local attempts
+  before any new live-provider run. No additional live-provider journey was
+  launched during integration.
+- The Mac code repairs are integrated, but no accepted Mac journey-result file
+  was included in the pushed Git refs. Therefore this entry does not change
+  `P22-REPAIR-115` or `P22-REPAIR-116` from `ENVIRONMENT_BLOCKED`, and it does
+  not claim the journey/full/brief reports are synchronized. Those status
+  changes require review of the Mac run evidence or a new accepted live J16
+  journey on the integrated commit.
+
+## Mac J16 evidence acceptance — P22-REPAIR-115 and 116
+
+Date: 2026-08-12
+
+- Reviewed `phase22-mac-evidence-c72747d08-p22-j16-20260812T033931Z-1817.zip`
+  against integrated baseline `c72747d08b40bf325cdc83c424ec4c2c4ef2a63a`.
+  Archive SHA-256 is
+  `7876bcdd2da00fc37c9d5203f45a4a754017b6dddacc490d4490b8ba130070f1`.
+- Archive audit found 158 entries / 145 files, one safe archive root, no path
+  traversal, duplicate entries, symlinks, suspicious compression ratios, or
+  credential-pattern findings. All 144 payload checksums matched the archive.
+- Accepted J16 run `p22-j16-20260812T033931Z-1817` completed on macOS arm64 at
+  the required repo head. Exact journey selector passed in 449.60 seconds;
+  journey result is `PASS_WITH_KNOWN_LIMITATIONS`, 12/12 assertions, zero
+  failed assertions, and no blockers.
+- The run reproduced the defect before product work (`1 failed, 2 passed`),
+  routed the approved task to physical operator
+  `mini-codex-gpt53-spark-builder-1`, changed only `discounts.py`, and passed
+  the same product suite afterward (`3 passed`). Planner and builder results
+  record OpenAI and `gpt-5.3-codex-spark`; no expensive fallback was observed.
+- Two run-specific orphan Spark workers were found after pytest, terminated by
+  exact PID, and followed by a clean second audit. Final run-specific tmux and
+  process lists were empty.
+- Accepted classifications: `P22-REPAIR-115` and `P22-REPAIR-116` are now
+  `FIXED_VERIFIED`. The remaining non-blocking boundary is that no formal eval
+  sidecar was observed; closure is supported by the physical builder result,
+  durable diff, before/after pytest, and successful eval-verdict evidence.
+
+## Significant shared-limitation closure — P22-J02 (17 issues)
+
+Date: 2026-08-12
+
+- Accepted run `p22j02-20260812T050401Z-2369214` at code head
+  `fe97cb9fe64bbdd4ea24e2069bd97d6406b47536`: `PASS`, 43/43 assertions,
+  22 mapped Level-2 features, and no known limitations.
+- The live WSL journey used the authorized low-cost OpenAI Spark route. It
+  produced planner artifacts, waited for the certified Builder route, retained
+  that route across plan approval, executed a physical builder, changed only
+  `calculator.py`, and passed the target tests after reproducing the defect.
+- The journey now completes the production `handoff-submit` transition before
+  `eval-verdict`. It independently reconciles the resulting PASS across status
+  history, `sprints/<sid>.events.jsonl`, and the fail-closed gate decision log.
+  The historical absence of the older `eval.md` filename is therefore no
+  longer a valid limitation.
+- `P22-REPAIR-001`, `004`, `006`, `008`, `011`, `013`, `014`, `067`, `091`,
+  `094`, `096`, `102`, `103`, `104`, `105`, `108`, and `112` are classified
+  `LIMITATION_CLOSED_VERIFIED` for their shared J02 limitation. This does not
+  infer support for untested providers, models, platforms, or variants.
+- Detailed decision record:
+  `docs/integrations/autosci/phase-22-significant-review-overlay.json`.
+
+## Significant shared-limitation closure — P22-J06 (7 issues)
+
+Date: 2026-08-12
+
+- Current-baseline run `p22j06-20260812T050841Z-33200` at
+  `0e4679e0d36a1b7aa2add61bf773a1d559580978` completed
+  `PASS_WITH_KNOWN_LIMITATIONS`, 10/10 assertions.
+- Both production-generated idea cards are source-backed and independently
+  contain non-empty `risk`, `falsifiability`, `validation`, and
+  `minimum_experiment` fields. The verification-ready-card assertion passed.
+- The named historical card-completeness limitation is closed for
+  `P22-REPAIR-023`, `024`, `025`, `029`, `030`, `031`, and `057` as
+  `LIMITATION_CLOSED_VERIFIED`.
+- The journey remains limited because provider-backed external novelty and
+  Review LLM final acceptance were not exercised; `promotion_ready=false` is
+  retained truthfully and is not treated as a card-completeness failure.
+
+## Significant shared-limitation closure — P22-J04 (6 issues)
+
+Date: 2026-08-12
+
+- Accepted current-baseline run `p22j04-20260812T051154Z-752` at code head
+  `46845d99f4be6285f29d6afb177241d1d9411ca0`: `PASS`, 15/15 assertions,
+  no known limitations, and all required durable artifacts present.
+- The production ingest path completed PDF preparation/parsing, stable repeat
+  identity, memory/graph sidecars, and wiki registration.
+- The strengthened journey independently opened and validated the registered
+  paper page, registration graph edge, ingest log, wiki index, and context
+  brief. It no longer accepts boundary booleans as self-attested proof.
+- The old “PDF imported but wiki registration incomplete” limitation is closed
+  for `P22-REPAIR-003`, `005`, `007`, `083`, `084`, and `090` as
+  `LIMITATION_CLOSED_VERIFIED`. External vaults, remote stores, and unexercised
+  document formats remain outside this result.
+
+## Significant limitation reduction — P22-J18 (3 issues, not closed)
+
+Date: 2026-08-12
+
+- Accepted current-baseline Linux lifecycle run
+  `p22-j18-real-linux-status-20260812T052021Z-2442749` at
+  `424ab6dbeba742adcbb1c2e93cefabfd85563aaa`: all 10 lifecycle checks passed.
+- Fixed a real ownership defect in `harness/solar-harness.sh`: the process scan
+  split command lines on spaces and could not identify an owned status server
+  when the installed harness path contained spaces.
+- Multi-session contamination/scoping regressions passed 5/5: foreign healthy
+  listeners survive another harness's stop/start lifecycle, are not adopted,
+  and owned pidfile/path-matched servers are still cleaned up.
+- `P22-REPAIR-120`, `127`, and `138` are classified
+  `LIMITATION_PARTIALLY_REDUCED`, not closed. SolarUbuntu/WSL2 was exercised;
+  other distributions/package managers, remote hosts, and a broad concurrent
+  interactive-session matrix remain untested.
+
+## Significant shared-limitation closure — P22-J02 + P22-J07 (2 issues)
+
+Date: 2026-08-12
+
+- Accepted J02 run `p22j02-20260812T050401Z-2369214` remains `PASS` with
+  43/43 assertions and proves the implementation-worker repair, scoped patch,
+  target tests, artifact handoff, and canonical evaluator decision.
+- The first current-baseline J07 rerun truthfully failed because the product
+  attempted to construct a lease-bound POC handoff package for supplied
+  runtime evidence that had no local executor lease. Commit `0b267561d` limits
+  that package to product-executed runs; it does not fabricate a lease for an
+  evidence-only path.
+- Post-commit J07 run `p22j07-20260812T052538Z-32040` at `0b267561d` is
+  `PASS`, 17/17 assertions. It proves a product-generated runner, dataset,
+  exact argv allowlist, durable replay, a 2548-byte structured result,
+  `exp-status` terminal state `completed`, and `exp-eval` verdict `supported`.
+- The product-executed J21 selector also passed after the repair, preserving
+  its real execution-lease and consolidated-handoff behavior.
+- `P22-REPAIR-036` and `P22-REPAIR-038` are classified
+  `LIMITATION_CLOSED_VERIFIED`. This covers the exercised coding and local
+  experiment POCs; other domain-specific POC types require their own smoke
+  semantics and must not be inferred.
+
+## Significant limitation reduction — P22-J03 (7 issues; 1 closed)
+
+Date: 2026-08-12
+
+- Commit `6a00eacc4` extends the production platform benchmark with explicit
+  repetitions, separate evidence directories, `perf_counter` timing,
+  throughput, a validated baseline comparison, and an independently verified
+  SHA-256 artifact manifest.
+- Accepted post-commit run `p22j03-20260812T053418Z-29420` is `PASS` with
+  15/15 assertions: one baseline execution, two current repetitions, eight
+  scenario comparisons, original manifest verify exit 0, deliberate tamper
+  rejection exit 2, and restored verify exit 0.
+- `P22-REPAIR-041` is `LIMITATION_CLOSED_VERIFIED`: repeated isolated protocol
+  runs, command timeouts, and durable JSON/Markdown/evidence/manifest assets
+  are now exercised directly.
+- `P22-REPAIR-040`, `043`, `044`, `068`, `111`, and `117` are
+  `LIMITATION_PARTIALLY_REDUCED`, not closed. Historical-version and POC
+  comparisons, CPU/memory, billable-provider cost, workload scalability, new
+  dataset authoring, and task-specific compile/diff evidence remain outside
+  this journey.
+
+## Significant shared-limitation closure — P22-J05 (5 issues)
+
+Date: 2026-08-12
+
+- The initial current-baseline J05 attempt exceeded its 300-second outer
+  budget because the `/discover` native fallback still honored Semantic
+  Scholar 60/120-second waits. The orphaned attempt was terminated and was not
+  accepted as evidence.
+- Commits `e8061b317` and `fa5fb1288` bound Retry-After handling, connect the
+  existing OpenAlex/Crossref production fallback to topic discovery, expose an
+  explicit `min_provider_families` contract, and retain provider diversity in
+  the shortlist. Ordinary single-provider callers keep their prior behavior.
+- Accepted post-commit run `p22j05-20260812T055657Z-33540` at `fa5fb1288` is
+  `PASS`, 36/36 assertions, with complete artifact durability. It exercised
+  Semantic Scholar, OpenAlex, and Crossref; both topic and anchor boundaries
+  completed; 10 candidates had stable identity/title/year/channel evidence,
+  six carried content summaries, and anchor influence, deduplication, and
+  negative-ID exclusion passed.
+- `P22-REPAIR-015`, `016`, `017`, `019`, and `022` are classified
+  `LIMITATION_CLOSED_VERIFIED`. Exhaustive coverage, full text for every paper,
+  and unexercised provider variants are not inferred.
+
+## Significant evidence-review closure — P22-J08 + P22-J22 (4 issues; 2 closed)
+
+Date: 2026-08-12
+
+- Current-baseline J08 run `p22j08-20260812T060017Z-28132` remains `PASS`,
+  6/6 assertions. Post-commit J22 run `p22-j22-1786514742` at `ec5d4c1d2`
+  is `PASS`, 9/9 assertions, with complete artifact durability.
+- J22 now invokes the production `exp-eval` route over five semantically
+  different cases: supported, partially supported, refuting, inconclusive,
+  and scope overreach. The outputs retained their distinct verdicts instead
+  of collapsing blocker and residual-risk categories.
+- The journey now writes the standard top-level assertion contract while
+  retaining its prior Level-2 assertions. All ten generated product evidence
+  files are non-empty, copied under the durable run directory, and recorded
+  with SHA-256.
+- `P22-REPAIR-048` and `049` are `LIMITATION_CLOSED_VERIFIED` for the exercised
+  claim/verdict taxonomy. `P22-REPAIR-045` and `047` are only
+  `LIMITATION_PARTIALLY_REDUCED`: different real review-provider families,
+  broader scientific domains, and longitudinal/generalization evidence were
+  not exercised and remain explicit limitations.
+
+## Significant delivery closure — P22-J09 (4 issues; 2 closed)
+
+Date: 2026-08-12
+
+- Accepted post-commit J09 run `p22j09-20260812T062722Z-14976` at
+  `6db49d2cb` is `PASS_WITH_KNOWN_LIMITATIONS`, 28/28 assertions, 16 durable
+  artifacts, and complete artifact durability.
+- The authorized low-cost OpenAI review route completed with provider/model,
+  request SHA-256, response SHA-256, persisted response, independent-provider
+  separation from the local writer, and `final_acceptance_ready=true`.
+- A new production `publication_delivery_handoff.v1` constructor and verifier
+  package the report, plan, review, and decision artifact. The manifest defines
+  the technical-lead audience, Markdown format, content scope, local-only
+  permissions, 14 evidence links, six completed handoff checks, exact file
+  inventory, per-file hashes, and secret scanning. A tampered report is rejected
+  and the restored bundle verifies. Focused constructor tests pass 3/3.
+- `P22-REPAIR-051` and `053` are `LIMITATION_CLOSED_VERIFIED` for the exercised
+  delivery-plan and reusable report-package path. `P22-REPAIR-054` and `118`
+  are only `LIMITATION_PARTIALLY_REDUCED`: HITL compile, external distribution,
+  recipient acceptance, lifecycle closure, and compiled PDF/publication formats
+  were not executed. The manifest truthfully records `local_only` and approval
+  `not_requested`; no HITL state was fabricated.
+
+## Significant multi-session follow-up — P22-J18 (3 issues; still partial)
+
+Date: 2026-08-12
+
+- The first two-install WSL run reproduced a real defect: tmux keeps a global
+  server environment from its first client, so the second status-server pane
+  inherited the first installation's `HARNESS_DIR` and could not establish an
+  independent runtime boundary.
+- Commit `157d94932` binds `HOME`, `USERPROFILE`, `SOLAR_HOME`, `HARNESS_DIR`,
+  `SOLAR_HARNESS_DIR`, and bind-host values in each status-server pane command.
+  The focused runtime-platform suite passes 5/5.
+- Accepted post-commit run
+  `p22-j18-real-linux-status-20260812T063759Z-2613229` at `157d94932` is
+  `PASS_WITH_KNOWN_LIMITATIONS`. Two separately installed harnesses listened on
+  distinct ports 8765/8766, each `/runtime-info` named its own absolute harness,
+  and the secondary remained healthy after primary stop and uninstall. Both
+  installations then uninstalled cleanly.
+- `P22-REPAIR-120`, `127`, and `138` remain
+  `LIMITATION_PARTIALLY_REDUCED`, because other distributions/package managers,
+  remote hosts, other terminal implementations, and a broad interactive-session
+  matrix are still untested. The earlier "no concurrent sessions" boundary is
+  now closed without extending the result to those variants.
+
+## Significant stale-limit closure — P22-J07 + P22-J09 (2 issues)
+
+Date: 2026-08-12
+
+- Current-head J07 run `p22j07-20260812T064135Z-3128` at `efb0993a5` is
+  `PASS`, 17/17 assertions, with no limitations. `exp-status` reports the
+  explicit terminal state `completed`; `P22-REPAIR-092` is closed as
+  `STALE_ALREADY_FIXED / LIMITATION_CLOSED_VERIFIED`.
+- Current-head J09 run `p22j09-20260812T064153Z-3128` is
+  `PASS_WITH_KNOWN_LIMITATIONS`, 28/28 assertions. It saves a substantive
+  readable Markdown report, completes the provider review, and packages the
+  report in the verified local handoff; `P22-REPAIR-052` is closed for
+  User-Facing Deliverable Generation.
+- This does not close external distribution or compiled publication variants;
+  those remain separately tracked by `P22-REPAIR-054` and `118`.
+
+## Significant stale-limit closure — P22-J18 CLI and LLM Config (2 issues)
+
+Date: 2026-08-12
+
+- The current Windows J18 configuration selector completed and refreshed the
+  isolated evidence under `.codex-tmp/phase22-worker-results/T3-tmux-prep-001`.
+- Solar, harness, status, and UI help probes all returned exit 0. The named
+  “secondary help commands fail on Windows” limitation is stale, so
+  `P22-REPAIR-129` is `LIMITATION_CLOSED_VERIFIED`.
+- The production settings write/read probe reports `status=ok`, no missing
+  aliases, and preserves the requested roles as `claude-opus-4.x` and
+  `claude-sonnet-4.x`. Runtime source is `solar-user-config.json`; no API-key
+  output was observed. `P22-REPAIR-139` is `LIMITATION_CLOSED_VERIFIED`.
+- This does not infer every CLI command, provider model, secret backend, or
+  platform variant.
+
+## Significant repair closure — CodeGraph, intent readiness, and TraceGraph (4 issues)
+
+Date: 2026-08-12
+
+- `P22-REPAIR-086`: production `code-graph.mjs build|query|validate` now writes
+  a standalone source-derived graph with 13 nodes, 19 edges, file/graph hashes,
+  query results, and fail-closed source/graph tamper checks. Focused integration
+  rerun: 2/2 tests passed. Full J17 tmux recovery remains a separate platform
+  boundary.
+- `P22-REPAIR-010` and `100`: the production intent gateway emits the minimum
+  question for an exclusive CLI/web target, records `needs_clarification`, and
+  blocks planning/autodispatch until the target is answered. Current production
+  CLI evidence is under
+  `outputs/phase22-real-journeys/p22-intent-readiness-20260812T070500Z/`;
+  focused tests are 9/9. Independent review removed an unsafe shortcut: a text
+  value such as `approval=approved` is rejected and cannot impersonate human
+  approval.
+- `P22-REPAIR-089`: Windows-safe session logging now locks a dedicated lock
+  file, and the unified `trace_graph.py` query returns events, DAG node/gate
+  state, closure, source inventory, and event/node correlation. A 40-append
+  concurrent Windows test retained 40 valid JSON records. The post-commit
+  `NT-dag-trace` journey passed with 6/6 TraceGraph assertions at
+  `outputs/phase22-not-tested/NT-dag-trace/run-20260812T070726Z/`.
+- Remaining boundaries are explicit: bounded English ambiguity rules, local
+  static CodeGraph, local JSONL/DAG trace storage, and no inferred distributed
+  backend, dynamic call graph, GUI conversation, or attributable HITL approval.
+
+## Significant repair closure — P22-J03 benchmark evidence (4 closed, 2 reduced)
+
+Date: 2026-08-12
+
+- Post-commit run `p22j03-20260812T070454Z-28468` at `bc618e143` is `PASS`
+  with 16/16 assertions. Eight production platform scenarios ran twice.
+- The benchmark records real child CPU time, peak working-set memory, wall
+  duration, throughput, and observed workload scale. Provider cost is recorded
+  as USD 0 with the truthful basis that this runner makes no billable call.
+- A versioned `rows-18-25.v1` benchmark asset binds scenarios, weights,
+  threshold, repetitions, runner, and SHA-256. Build evidence records a
+  successful production-runner compile plus runner/source-diff hashes; the
+  manifest still accepts original bytes, rejects tampering, and accepts the
+  restored bytes.
+- `P22-REPAIR-043`, `068`, `111`, and `117` are `FIXED_VERIFIED`. `040` and
+  `044` are improved but remain open: the baseline is freshly constructed from
+  the same product version, not historical releases, and this run does not
+  establish broad scientific POC-to-baseline comparisons.
+
+## Significant repair closure — P22-J09 compiled deliverable (1 closed, 1 reduced)
+
+Date: 2026-08-12
+
+- Post-commit J09 run `p22j09-20260812T071016Z-37808` at `371273d18` is
+  `PASS_WITH_KNOWN_LIMITATIONS` with 29/29 assertions.
+- The production `markdown_pdf.py` constructor built a two-page, 5.6 KB PDF
+  from the substantive report. Independent checks verified PDF header, xref,
+  EOF, source text markers, page count, and SHA-256; truncated-PDF regression
+  fails closed.
+- The tamper-checked mixed handoff now contains five files: readable Markdown,
+  compiled PDF, plan, provider review, and decision artifact. `P22-REPAIR-118`
+  is `FIXED_VERIFIED` for this exercised Markdown/PDF deliverable path.
+- `P22-REPAIR-054` remains open. Distribution is still `local_only`, approval
+  is `not_requested`, and no external recipient acceptance or long-term
+  retention/revocation lifecycle was performed.
+
+## Significant repair closure — P22-J18 multi-root Linux/TMUX evidence (2 closed, 1 reduced)
+
+Date: 2026-08-12
+
+- The journey test now records the WSL distribution identity, accepts a
+  truthful structured `degraded` doctor/status result when optional Python/LLM
+  dependencies were deliberately skipped, and writes `FAIL` whenever any
+  required assertion fails. Earlier concurrent cross-distribution attempts
+  that collided through shared WSL networking or installation paths remain
+  retained as failed attempts and were not accepted.
+- Sequential accepted runs
+  `p22-j18-real-linux-status-20260812T071918Z-2703346` (`Ubuntu`) and
+  `p22-j18-real-linux-status-20260812T072027Z-461` (`Ubuntu-24.04`) each passed
+  11/11 assertions. Both performed real install, doctor/status inspection,
+  status HTTP checks, two concurrent harness-owned TMUX sessions on distinct
+  ports, cross-stop/uninstall isolation, and complete sandbox/session cleanup.
+- Together with the earlier SolarUbuntu evidence, `P22-REPAIR-127` (Linux CLI)
+  and `P22-REPAIR-138` (TMUX) are `FIXED_VERIFIED` for the supported local
+  WSL/Ubuntu path. `P22-REPAIR-120` remains open because remote hosts,
+  production authentication, and the broad workflow-state matrix were not
+  exercised. Other Linux distribution families and package managers also
+  remain explicit non-inferred boundaries.
+
+## Significant repair closure — live novelty, historical benchmark, authenticated status, GUI evidence
+
+Date: 2026-08-12
+
+- `P22-REPAIR-021` is `FIXED_VERIFIED`. J06 run
+  `p22j06-20260812T073114Z-14168` passed 13/13 assertions against eight live
+  OpenAlex sources. Provider/work/DOI provenance and raw payload evidence are
+  retained, multiple source-backed candidates are generated, and bounded
+  selection records rank/defer reasons. Final independent Review LLM or human
+  acceptance remains separate from this named live-novelty closure.
+- `P22-REPAIR-040` is `FIXED_VERIFIED`. J03 run
+  `p22j03-20260812T072943Z-13944` passed 16/16 assertions with a historical
+  Git-attested baseline and packaged score/duration/speedup deltas. The narrow
+  eight-workflow portion of `P22-REPAIR-044` is improved, but broad scientific
+  POC significance/effect comparisons remain `NOT_TESTED`; 044 stays open.
+- `P22-REPAIR-120` is `FIXED_VERIFIED_LOCAL_SCOPE`. Before repair,
+  token-required mode exposed an unauthenticated dashboard containing the
+  token and allowed unauthenticated HEAD. Commit `2756c924c` makes dashboard,
+  HEAD and GET share the authorization boundary. Ubuntu run
+  `p22-j18-status-auth-states-20260812T073137Z-2728953` passed all assertions
+  across authentication negatives and six projected workflow conditions.
+  TLS/federated identity/cross-host authorization remain deployment limits.
+- GUI evidence was expanded but `P22-REPAIR-130` remains open. Current J19
+  browser evidence passed, the visual gate passed desktop/mobile workflow,
+  result, gate, failure and role views, and real Electron windows passed 7/7
+  recovery screens with durable evidence at
+  `p22-j19-electron-recovery-20260812T073500Z/recovery-screens.json`. Formal
+  accessibility, multi-monitor and packaged-installer execution are not
+  inferred from these runs.
+
+## Significant repair closure — bounded curriculum and credit-assignment data loop
+
+Date: 2026-08-12
+
+- `P22-REPAIR-082` is `FIXED_VERIFIED_BOUNDED_DATA_LOOP`. Production command
+  `solar-harness evolution curriculum-evaluate` consumes hash-bound failure
+  events and split cases, prioritizes mined clusters, audits train/holdout ID
+  and source overlap, computes holdout ablation, requires one intervention for
+  every changed case, rejects regression, and emits an explicit rollback.
+- Run `p22-curriculum-20260812T073958Z` passed 6/6 assertions. The candidate
+  improved the isolated holdout from 50% to 100% with zero regressions;
+  contamination, regression, and ambiguous-credit variants all failed closed.
+  Unit regressions are 4/4.
+- This is a curriculum/data-policy loop, not model-weight training. No SFT,
+  LoRA, DPO, GRPO, reward-model, or agent-RL weights were created or claimed,
+  and the measured improvement is not generalized beyond the supplied
+  hash-addressed holdout.
+
+## Significant limitation reduction — offline cost-aware bandit routing
+
+Date: 2026-08-12
+
+- `P22-REPAIR-076` is partially reduced. Production command
+  `solar-harness evolution routing-evaluate` implements offline cost-aware
+  UCB1 scoring over hash-bound traces with explicit reward, USD cost, latency,
+  exploration, and mean-cost budget inputs.
+- Run `p22-routing-20260812T074252Z` passed 6/6 assertions: the candidate was
+  selected on training observations, improved utility on two paired holdout
+  contexts, stayed within budget, had no success regression, and recorded the
+  baseline rollback. Unit negatives reject train/holdout contamination,
+  over-budget selection, and success regression (4/4 tests total).
+- This does not establish Bayesian optimization, cost-aware reinforcement
+  learning, or safe autonomous online deployment. Those explicit parts of 076
+  remain open.
+
+## Significant repair closure — local privacy controls; evidence and reranker follow-up
+
+Date: 2026-08-12
+
+- `P22-REPAIR-135` is `FIXED_VERIFIED` for the local-only product boundary.
+  J24 run `p22-j24-privacy-controls-20260812T074503Z` passed 9/9 assertions
+  over inventory, secret-safe export, retention, selective deletion, consent
+  record/revoke, and derived-data purge. Confirmation, path/symlink escape and
+  consent-delete bypass negatives fail closed. `P22-REPAIR-069` remains open
+  for hosted/provider/channel and legal/IP behavior.
+- `P22-REPAIR-045` and `047` are partially reduced. Live J05 run
+  `p22j05-20260812T074001Z-24400` passed 36/36 with ten candidates from
+  OpenAlex, Crossref and Semantic Scholar families; J22 run
+  `p22-j22-1786520668` passed 11/11 evidence/verdict assertions. The product
+  now rejects configured, failed or fixture-only providers as proof of reviewer
+  independence. A real independent reviewer execution and cross-site holdout
+  generalization were not performed, so neither issue is closed.
+- `P22-REPAIR-080` is partially reduced. Run
+  `p22-reranker-20260812T074520Z` passed 6/6 assertions for a supervised linear
+  reranker: query-isolated holdout nDCG improved, Recall@1 did not regress,
+  provenance remained attached, and rollback was recorded. Four unit tests
+  include contamination, missing-provenance, and no-improvement rejection.
+  Neural reranker training, autonomous Self-RAG, and broad corpus
+  generalization remain open.
+
+## Significant limitation reduction — packaged Windows GUI and accessibility
+
+Date: 2026-08-12
+
+- `P22-REPAIR-128` and `P22-REPAIR-130` remain open and are recorded as
+  `PASS_WITH_KNOWN_LIMITATIONS`, not closed. Commit `f3b6754c8` adds a
+  reproducible Windows renderer/package preparation path, packaged desktop
+  bootstrap checks, a built-executable selftest, and an axe-core accessibility
+  probe.
+- `npm.cmd run build:win` completed in 187 seconds. The resulting unpacked
+  `Solar.exe` (SHA-256
+  `004136385aba32d857f77f3081e678ef19ad947e6e38216d985c430d719a9741`)
+  passed 3/3 checks against the real dashboard and retained a 144897-byte
+  screenshot; the exact source-shell rerun also passed 3/3. The desktop
+  bootstrap contract passed 20/20.
+- Axe-core 4.10.3 reported zero automated WCAG 2.0/2.1 A/AA violations and a
+  keyboard Tab reached a focusable control. It also reported one
+  serious-impact `incomplete` color-contrast rule covering
+  `.new-task-button > span` and `kbd`; this is not recorded as full WCAG or
+  screen-reader certification.
+- `P22-REPAIR-128` stays open because the real concurrent settings test remains
+  8/9 with 196 direct-reader `PermissionError` observations, long-running and
+  broad route variants are not tested, and the built portable wrapper was not
+  successfully runtime-smoked. `P22-REPAIR-130` stays open pending manual
+  contrast, screen-reader, and multi-monitor testing. Accepted isolated
+  evidence is under
+  `.codex-tmp/phase22-worker-results/p22-128-130-packaged-gui/`.
+
+## Significant limitation reduction — Windows settings concurrency
+
+Date: 2026-08-12
+
+- The concurrency portion of `P22-REPAIR-128` is `FIXED_VERIFIED`; the broad
+  issue remains open. Commits `dd4036b44`, `e154794e1`, and `9b0b1bda4`
+  repair Windows publication and port isolation, fail closed on durable
+  corruption/deletion, preserve recovery and staging after an interrupted
+  replacement, sandbox the pressure test, and make its optional server path
+  independent of the child working directory.
+- The initial gate was 8/9 and observed direct-reader sharing errors. Across
+  25 post-repair bounded rounds, 6000/6000 real settings POSTs were accepted
+  and 250/250 gate checks passed with no lost keys, torn JSON, or supported
+  HTTP-reader error. Three fault-injection tests prove that permanent invalid
+  JSON/deletion cannot be overwritten from stale cache and that a failed
+  target-removal publication retains exact old recovery plus new staging,
+  then restores the old committed state.
+- Arbitrary naked `Path.read_text()` calls on Windows can still receive a
+  retryable sharing transition and are not a supported consistency protocol;
+  the production HTTP and `harness-config.sh` readers are bounded and verified.
+  Long-running service stability, broad route coverage, and portable-wrapper
+  runtime smoke remain untested, so P22-REPAIR-128 is not fully closed.
+
+## Significant core closure — status service and desktop accessibility
+
+Date: 2026-08-12
+
+- `P22-REPAIR-128` is `FIXED_VERIFIED` for the core local Windows status/web
+  application path, with `PASS_WITH_KNOWN_LIMITATIONS` for non-core variants.
+  In addition to the previously accepted 6000/6000 settings POSTs, run
+  `p22-128-route-soak-postcommit-20260812T083841Z` passed 21/21 authenticated,
+  negative, artifact, SSE, settings, status, events, and orchestration checks
+  plus 4247/4247 bounded-soak requests. Independent review confirmed metrics
+  came from the actual status-server PID and that the PID and port were gone,
+  the unique log had no unexpected exception, and the sandbox was removed.
+- `P22-REPAIR-130` is `FIXED_VERIFIED` for the automated packaged Windows GUI
+  scope, with `PASS_WITH_KNOWN_LIMITATIONS`. Axe-core now reports zero
+  violations and zero incomplete checks; measured contrast is 17.235:1 and
+  7.033:1. Forward and reverse keyboard traversal each pass 5/5, dialog
+  Enter/Escape and visible textbox names pass, and the Electron accessibility
+  tree contains the named home textbox. The rebuilt `Solar.exe` passed 3/3;
+  its retained screenshot is the real dashboard and loading/sign-in pages fail
+  the selftest contract.
+- A combined regression initially exposed a test timing race: Escape could be
+  sent after the dialog DOM became visible but before Radix completed its
+  autofocus handoff. Commit `692efe965` waits for the real dialog textarea to
+  own focus, sends an actual keyboard Escape, and requires focus restoration to
+  the New task trigger. Accessibility passed 10/10 consecutive runs and five
+  bootstrap-to-accessibility sequences; the integration owner independently
+  repeated the combined sequence twice.
+- The remaining non-core variants are explicit: P22-128 does not claim
+  long-running, hostile-network, multi-host, or NSIS-wrapper direct-runtime
+  coverage. P22-130 does not claim attributable human screen-reader testing,
+  multi-monitor operation, every dynamic view/control, or full WCAG
+  certification. These limits do not keep the core Significant issues open.
+
+## Significant limitation reduction — scientific POC comparison
+
+Date: 2026-08-12
+
+- `P22-REPAIR-044` remains open as `LIMITATION_PARTIALLY_REDUCED`. The current
+  production comparator derives NDCG values from hash-bound artifacts, requires
+  all eight planned pairs, validates 16/16 inputs through the canonical
+  experiment-result gate, and rejects metric=100 tampering, embedded-plan
+  overrides, missing pairs, and artifact changes.
+- Independent recomputation matched effect `0.75`, 95% CI
+  `[0.362936, 1.137064]`, Cohen's dz, and exact sign-flip `p=0.03125`.
+  Git ancestry proves the protocol blob preceded the result artifacts, but the
+  protocol and implementation are self-authored in the same repository. No
+  trusted independent preregistry/signer, external replication, broad science
+  domain, or released-baseline experiment was demonstrated, so this bounded
+  retrieval POC is not treated as full closure.
+
+## Significant core closure — Bayesian routing and grounded Self-RAG
+
+Date: 2026-08-12
+
+- `P22-REPAIR-076` is `FIXED_VERIFIED` for bounded offline Bayesian and
+  cost-aware bandit routing, with `PASS_WITH_KNOWN_LIMITATIONS` for online/RL
+  variants. The RBF GP/GP-UCB posterior independently recomputed to `1e-12`,
+  selection changed under input perturbation, and paired holdout, cost,
+  uncertainty, success, rollback and no-auto-deploy gates are retained. Final
+  evidence passed 9/9; string booleans, NaN/Inf, numeric strings, boolean
+  configs, duplicates, empty IDs and train/holdout leakage all fail closed.
+- `P22-REPAIR-080` is `FIXED_VERIFIED` for deterministic retrieval learning and
+  bounded grounded reflection, with `PASS_WITH_KNOWN_LIMITATIONS`. The existing
+  linear reranker evidence is joined by a real production Self-RAG wrapper that
+  indexes/retrieves through `LearningRetriever`, verifies exact source spans,
+  offsets and hashes, and records a chained trace. Unsupported Moon/cats,
+  conflict, cycle and budget attacks abstain with empty answers. A two-run
+  persistent-index attack proved that a changed content/URI under one logical
+  document ID retains both version hashes and forces
+  `immutable_document_version_conflict`, even at `top_k=1`.
+- Non-core limits remain explicit: 076 does not prove online optimization,
+  autonomous deployment or cost-aware RL. 080 uses conservative exact-span
+  support rather than semantic paraphrase entailment and does not prove neural
+  fine-tuning or broad-corpus generalization.
+
+## Significant limitation reduction — external review and holdout gates
+
+Date: 2026-08-12
+
+- `P22-REPAIR-045` and `P22-REPAIR-047` remain open as
+  `LIMITATION_PARTIALLY_REDUCED`. A zero-cost local Ollama `qwen2.5:3b`
+  reviewer genuinely completed and returned `revise_required`; malformed model
+  outputs failed closed. This does not prove writer/reviewer provider
+  independence because the writer provenance was local/missing.
+- The holdout validator now uses an out-of-band plan hash, separately hashed
+  observation files and integer-derived rates; it rejects posthoc/embedded
+  plans, static support booleans, fake database sites, reused evidence/source or
+  organization identity, time inversion and tampering. Reviewer archives
+  recursively remove sensitive fields, inline token/password/secret material,
+  Bearer/API tokens, PEM private keys and URL credentials before persistence.
+- The accepted holdout run remains validator fixture evidence, not a real
+  independently authenticated multi-site study. Distinct writer-provider
+  execution, attributable external review, site-identity authentication and
+  real external generalization remain unproven.
+
+## Significant limitation reduction — bounded legal/IP risk screening
+
+Date: 2026-08-12
+
+- `P22-REPAIR-069` remains open as `LIMITATION_PARTIALLY_REDUCED`, while its
+  bounded local policy-screening core is `FIXED_VERIFIED`. Production command
+  `solar-harness evolution legal-risk-screen` evaluates purpose, jurisdiction,
+  retention, license/copyright and consent against raw-byte-hashed evidence;
+  unknown, missing, incompatible, expired or revoked inputs fail closed and
+  review-required outcomes never auto-admit.
+- Auto-allow requires both an out-of-band trusted issuer anchor and a
+  policy-pinned `source_id -> exact rights-evidence SHA-256`. A manifest-author
+  self-assertion with a correct hash, a forged trusted issuer name, or an
+  unpinned source can only require review, not allow. Findings carry rule ID,
+  source path and evidence hash. Atomic output replacement preserves prior
+  bytes under injected failure and input/output aliases are rejected.
+- Final independent review and URI follow-up passed 22/22 targeted and journey
+  tests, with 7/7 journey assertions at commit `43fd4a43c`. HTTPS inputs now
+  require a real authority/hostname and reject embedded credentials; this
+  remains syntax and policy validation, not network authenticity. External
+  issuer/signature authenticity, jurisdiction-specific counsel
+  or legal conclusions, external copyright ownership, hosted provider/account
+  revocation and cross-channel enforcement remain outside this local screen;
+  therefore the broad issue is not closed.
+
+## Final targeted repair and report synchronization
+
+Date: 2026-08-14
+
+- Accepted and synchronized the bounded closure evidence for
+  `P22-REPAIR-044`, `045`, `047`, `054`, `069`, `071`, `121`, `125`, `126`,
+  and `131`. The accepted evidence includes the policy-pinned scientific
+  comparison, live OpenRouter-writer/OpenAI-reviewer pair, preregistered
+  arXiv/OpenAlex holdouts, authorized Gmail delivery, internal legal/IP
+  approval, attributable human-review resume, current trace filters, real
+  Darwin arm64 App/CLI execution, and Windows plus Ubuntu-24.04 WSL2 TUI/tmux
+  execution.
+- Preserved the required boundaries: `044` is one bounded retrieval POC and
+  its GitHub release was published after the result; `047` is limited to the
+  fixed corpus/providers/time; `069` is internal approval rather than legal
+  advice or external counsel. No unexercised variant was promoted to PASS.
+- Updated the canonical journey report, L2 issue register, Significant review
+  overlay, full diagnostic workbook, and Level 2 brief workbook. Final L2
+  counts are `PASS=30`, `PASS_WITH_KNOWN_LIMITATIONS=86`, `FAIL=0`,
+  `ENVIRONMENT_BLOCKED=0`, `NOT_AVAILABLE=25`, and `NOT_TESTED=1` (142 total;
+  112 statuses other than PASS).
+- Corrected an integration omission in the first 2026-08-14 report draft: it
+  synchronized only the final ten repair rows and retained 15 stale FAIL
+  conclusions. All 15 are now reconciled against the accepted
+  `phase-22-blocker-review-overlay.json` evidence. Thirteen become bounded
+  `PASS_WITH_KNOWN_LIMITATIONS`, P22-REPAIR-034 becomes `PASS`, and
+  P22-REPAIR-055 becomes `NOT_TESTED` because its atomic failure is fixed but
+  no accepted real-task journey maps to that L2.
+- Kept the atomic inventory and atomic enums diagnostic and independent from
+  journey conclusions. The full workbook's atomic implementation, test-result,
+  and row-color fields were not rewritten from journey outcomes; only the
+  repeated L2 journey columns, two summary blocks, and bounded closure notes
+  were synchronized.
+- Workbook validation passed: both canonical workbooks reimported with four
+  expected sheets and 142 unique L2 rows at `PASS=30`,
+  `PASS_WITH_KNOWN_LIMITATIONS=86`, `FAIL=0`, `ENVIRONMENT_BLOCKED=0`,
+  `NOT_AVAILABLE=25`, and `NOT_TESTED=1`. Formula-error scans returned zero
+  matches. All eight workbook sheets were rendered after editing; targeted
+  report fields, brief status coloring, full atomic coloring, and both summary
+  sheets were visually checked.
+- The workbook test exposed a pre-existing one-row validator offset: the
+  builder writes the diagnostic zero to Excel row 30 while the test read row
+  29 (`Atomic Count`). The assertion now reads row 30; the focused validator
+  passes `4 passed in 0.63s`.
+- Synchronization run: `phase22-final-report-sync-20260814`; reviewed repo head:
+  `71a68eeef`. Output copies and render evidence are under
+  `outputs/phase22-final-report-sync-20260814/`.
+## Post-closeout correction - Windows desktop intake
+
+Date: 2026-08-14
+
+- A real Windows desktop submission exposed `OSError: [WinError 193] %1 is not
+  a valid Win32 application` after clicking `Start work`. This invalidates the
+  earlier inference that green Phase 22 journey totals established a fully
+  usable desktop product. None of Big PRs 33, 34, 35, 38, or 39 changed the
+  desktop submission path or the status server's `/intake` CLI launcher.
+- Root cause: `_intake_command` trusted an ambient `solar` executable before
+  the harness-local launcher. In a mixed Windows/WSL environment that can
+  select an entrypoint from the wrong operating system and then attempt to
+  execute a Bash script as a Win32 application.
+- The launcher now prefers `HARNESS_DIR/solar-harness.sh`; a Windows-native
+  status server executes it through `wsl.exe`, preserving the matching WSL
+  harness path. Process-start failures return the structured
+  `intake_cli_launch_failed` error instead of leaking an unclassified raw OS
+  exception.
+- Focused regression tests passed `6 passed`. A real browser run filled the
+  home prompt, clicked `Start work`, traversed the production `/intake` route
+  on the Windows-to-WSL runtime, and navigated to session
+  `sprint-20260814-203922-intent-hi-tell-me-what-model-you-ar-15343056` without
+  a form error.
+- The canonical journey report and workbooks remain historically synchronized
+  to their accepted journey set, but must not be described as a full-product
+  pass. Desktop prompt submission and other unmapped user workflows require a
+  separate product-level acceptance audit before making that claim again.
+
+## Local branch integration audit and moved-test correction
+
+Date: 2026-08-17
+
+- Audited all 87 local branch tips against `openJiuwen-Solar`. After accepted
+  merges, 46 branch tips remain outside the ancestry: 41 contain only
+  patch-equivalent work already present on the integration line, while five
+  retain old composite commits whose useful behavior is present in canonical
+  paths or has been explicitly superseded.
+- Merged the exact recovery commits `da3809ca5` and `fb256f920` through merge
+  commit `544d24fd8`, removing 518 legacy-path files introduced by the broken
+  exact restore while retaining later canonical files. Merged the original
+  trust-anchor branch through `2b4ad2901`; its 16 audited files were
+  byte-identical before and after the merge.
+- Did not restore the obsolete Phase 5, legacy R3/R4/R5, or pre-baseline trees.
+  Their tests now live under `tests/`, their production behavior is covered by
+  later implementations, and the pre-baseline `real_data_research` monolith is
+  explicitly forbidden as the default production backend.
+- Corrected three integration-era test assumptions exposed by removing the
+  duplicate old tree: lifecycle fixtures now resolve under canonical
+  `tests/harness/`, custom provider probes select their intended workflow
+  explicitly, and capability-registry assertions match the active workflow
+  selection while retaining the opt-in production-route boundary.
+- Final focused validation passed `119 passed` in `92.04s` using short,
+  isolated Windows pytest base/cache directories. Recovery governance passed,
+  the Stellven README exactness check passed, and the trust-anchor, provider,
+  lifecycle, status-route, scientific-action, and benchmark regression suites
+  passed. `git diff --check` and Git connectivity checks passed.
+- Four other worktrees still contain tracked, uncommitted user changes. They
+  were preserved and excluded from this committed-branch integration audit;
+  no report or workbook synchronization is claimed for those changes.

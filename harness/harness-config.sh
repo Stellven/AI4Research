@@ -28,15 +28,27 @@ solar_config_json_get() {
   "$SOLAR_CONFIG_PYTHON" - "$SOLAR_USER_CONFIG" "$dotted_key" "$default_value" <<'PY'
 import json
 import sys
+import time
 from pathlib import Path
 
 path = Path(sys.argv[1])
 key = sys.argv[2]
 default = sys.argv[3]
 
-try:
-    data = json.loads(path.read_text(encoding="utf-8"))
-except Exception:
+data = None
+for attempt in range(20):
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        break
+    except (FileNotFoundError, PermissionError):
+        # ReplaceFileW may briefly deny/open-transition a raw pathname reader.
+        # Retry so launchers consume the committed old/new settings instead of
+        # silently reverting to a default during a dashboard write.
+        if attempt < 19:
+            time.sleep(0.002)
+    except (OSError, json.JSONDecodeError):
+        break
+if data is None:
     print(default)
     raise SystemExit(0)
 

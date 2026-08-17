@@ -1,0 +1,94 @@
+{
+  "task_id": "nt-optimization-routing-runtime-001",
+  "node": {
+    "id": "N-routing-001",
+    "goal": "Route a verifier-oriented text evaluation task to the best available resource using quality, latency, cost, and capacity constraints.",
+    "task_type": "verification",
+    "operator_selector": {
+      "task_type": "verification",
+      "role": "evaluator",
+      "constraints": {
+        "max_cost_tier": "medium",
+        "max_latency_tier": "medium"
+      },
+      "required_capabilities": {
+        "review": ">=4"
+      }
+    }
+  },
+  "base_profile": {
+    "name": "evaluator",
+    "role": "evaluator",
+    "provider": "openai"
+  },
+  "operators": {
+    "z-first-expensive-low-quality": {
+      "display_name": "First Expensive Low Quality Evaluator",
+      "role": "evaluator",
+      "profile": "expensive-evaluator",
+      "enabled": true,
+      "available": true,
+      "provider": "openai",
+      "model": "gpt-expensive",
+      "backend": "command",
+      "command": "codex",
+      "auth_mode": "none",
+      "quota_guard_state": "ok",
+      "task_classes": ["verification", "review"],
+      "capability": {
+        "review": 4
+      },
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "metrics": {
+        "task_success_rate_7d": 0.60,
+        "avg_latency_sec": 9.5,
+        "avg_cost_per_success": 0.42,
+        "capacity_available": 1
+      }
+    },
+    "a-selected-low-cost-fast": {
+      "display_name": "Selected Low Cost Fast Evaluator",
+      "role": "evaluator",
+      "profile": "low-cost-evaluator",
+      "enabled": true,
+      "available": true,
+      "provider": "openai",
+      "model": "gpt-efficient",
+      "backend": "command",
+      "command": "codex",
+      "auth_mode": "none",
+      "quota_guard_state": "ok",
+      "task_classes": ["verification", "review", "cost-aware"],
+      "capability": {
+        "review": 5
+      },
+      "cost_tier": "low",
+      "latency_tier": "low",
+      "preferred_for": ["verification", "review"],
+      "metrics": {
+        "task_success_rate_7d": 0.86,
+        "avg_latency_sec": 2.1,
+        "avg_cost_per_success": 0.08,
+        "capacity_available": 3
+      }
+    }
+  },
+  "historical_rewards": [
+    {
+      "operator_id": "z-first-expensive-low-quality",
+      "reward": 0.58,
+      "latency_ms": 9500,
+      "cost_usd": 0.42,
+      "quality": 0.60
+    },
+    {
+      "operator_id": "a-selected-low-cost-fast",
+      "reward": 0.88,
+      "latency_ms": 2100,
+      "cost_usd": 0.08,
+      "quality": 0.86
+    }
+  ],
+  "seed": 22023
+}

@@ -576,10 +576,11 @@ pane_runtime_cli_path() {
 }
 
 pane_runtime_env_assignments() {
+  local harness_session="${SOLAR_HARNESS_SESSION:-$SESSION_NAME}"
   case "$SOLAR_PANE_RUNTIME" in
     codex)
       printf 'SOLAR_PANE_RUNTIME=codex SOLAR_CODEX_BYPASS=%q' "${SOLAR_CODEX_BYPASS:-1}"
-      printf ' SOLAR_HARNESS_SESSION=%q' "$SOLAR_HARNESS_SESSION"
+      printf ' SOLAR_HARNESS_SESSION=%q' "$harness_session"
       [[ -n "${SOLAR_CODEX_SOURCE_HOME:-}" ]] && printf ' SOLAR_CODEX_SOURCE_HOME=%q' "$SOLAR_CODEX_SOURCE_HOME"
       [[ -n "${SOLAR_CODEX_BIN:-}" ]] && printf ' SOLAR_CODEX_BIN=%q' "$SOLAR_CODEX_BIN"
       [[ -n "${SOLAR_CODEX_MODEL:-}" ]] && printf ' SOLAR_CODEX_MODEL=%q' "$SOLAR_CODEX_MODEL"
@@ -599,10 +600,11 @@ pane_launch_prefix() {
 
 configure_tmux_pane_runtime_env() {
   local session="$1" var
+  local harness_session="${SOLAR_HARNESS_SESSION:-$SESSION_NAME}"
   tmux set-environment -t "$session" HARNESS_DIR "$HARNESS_DIR" 2>/dev/null || true
   tmux set-environment -t "$session" SOLAR_HARNESS_DIR "$HARNESS_DIR" 2>/dev/null || true
   tmux set-environment -t "$session" SOLAR_PANE_RUNTIME "$SOLAR_PANE_RUNTIME" 2>/dev/null || true
-  tmux set-environment -t "$session" SOLAR_HARNESS_SESSION "$SOLAR_HARNESS_SESSION" 2>/dev/null || true
+  tmux set-environment -t "$session" SOLAR_HARNESS_SESSION "$harness_session" 2>/dev/null || true
   case "$SOLAR_PANE_RUNTIME" in
     codex)
       tmux set-environment -t "$session" SOLAR_CODEX_BYPASS "${SOLAR_CODEX_BYPASS:-1}" 2>/dev/null || true
@@ -2436,6 +2438,17 @@ fallback_pane=${fallback_pane}
 dispatch_md=${SPRINTS_DIR}/${sid}.dispatch.md
 CTX
 )
+    local -a work_dir_args=()
+    if [[ "$role" == "builder" ]]; then
+      local project_dir=""
+      project_dir=$(grep -m1 '^Project:' "$SPRINTS_DIR/${sid}.contract.md" 2>/dev/null | sed 's/^Project:[[:space:]]*//' || true)
+      if [[ -n "$project_dir" && -d "$project_dir" ]]; then
+        work_dir_args=(--work-dir "$project_dir")
+      elif [[ -n "$project_dir" ]]; then
+        warn "builder project directory from compiled contract is unavailable: ${project_dir}"
+        return 1
+      fi
+    fi
     local submit_output="" attempt
     for attempt in 1 2; do
       if submit_output=$(SOLAR_PM_DISPATCH_ALLOW_DIRECT=1 python3 "$HARNESS_DIR/tools/pm_dispatch.py" submit \
@@ -2444,7 +2457,8 @@ CTX
         --sprint "$sid" \
         --node "wake-${role}" \
         --objective "$objective" \
-        --context "$context" 2>&1); then
+        --context "$context" \
+        "${work_dir_args[@]}" 2>&1); then
         bash "$HARNESS_DIR/session.sh" append "$sid" "{\"event\":\"waked\",\"by\":\"wake\",\"data\":{\"from_status\":\"${original_st}\",\"target_pane\":\"operator-pool:${role}\",\"fallback_pane\":\"${fallback_pane}\",\"attempt\":${attempt}}}" 2>/dev/null || true
         ok "Sprint ${sid} 已恢复 → operator-pool:${role} (从 ${original_st})"
         [[ -n "$submit_output" ]] && printf '%s\n' "$submit_output"
@@ -3836,8 +3850,11 @@ print(json.dumps({
       if _ss_is_windows; then
         return 0
       fi
-      ps ax -o pid= -o args= 2>/dev/null | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
-        $2 ~ /(^|\/)python([0-9]+([.][0-9]+)*)?$/ && $3 == script { print $1 }
+      # Match the exact script as a substring of the full command line rather
+      # than splitting argv on spaces. Installed harness paths commonly contain
+      # spaces on WSL-mounted Windows workspaces.
+      ps ax -o pid= -o comm= -o args= 2>/dev/null | awk -v script="$HARNESS_DIR/lib/symphony/status-server.py" '
+        $2 ~ /^python([0-9]+([.][0-9]+)*)?$/ && index($0, script) > 0 { print $1 }
       ' || true
     }
     _ss_pid_owned() {
@@ -3915,8 +3932,13 @@ print(json.dumps({
           rm -f "$_SS_PID" "$_SS_PORT_FILE"
           _ss_py="${SOLAR_PYTHON:-$(command -v python3 || echo python3)}"
           if command -v tmux >/dev/null 2>&1; then
+            # A tmux server keeps a global environment from its first client.
+            # Multiple installed harnesses can share that server, so relying on
+            # inherited HARNESS_DIR/HOME makes a later session write the first
+            # harness's pid/port/token files. Bind ownership-critical paths in
+            # the pane command itself; session-name scoping alone is not enough.
             tmux new-session -d -s "$_SS_TMUX_SESSION" \
-              "cd '$HARNESS_DIR' && exec '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
+              "cd '$HARNESS_DIR' && exec env HOME='$HOME' USERPROFILE='${USERPROFILE:-$HOME}' SOLAR_HOME='${SOLAR_HOME:-$HOME/.solar}' HARNESS_DIR='$HARNESS_DIR' SOLAR_HARNESS_DIR='$HARNESS_DIR' SOLAR_BIND_HOST='${SOLAR_BIND_HOST:-127.0.0.1}' '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
           else
             nohup "$_ss_py" "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
           fi
@@ -4283,8 +4305,44 @@ print(json.dumps({
         [[ -f "$_eval_py" ]] || { err "eval_runner not found: $_eval_py"; exit 1; }
         python3 "$_eval_py" run "$@"
         ;;
+      curriculum-evaluate)
+        shift || true
+        _curriculum_py="$HARNESS_DIR/lib/curriculum_loop.py"
+        [[ -f "$_curriculum_py" ]] || { err "curriculum_loop not found: $_curriculum_py"; exit 1; }
+        python3 "$_curriculum_py" evaluate "$@"
+        ;;
+      routing-evaluate)
+        shift || true
+        _routing_py="$HARNESS_DIR/lib/routing_bandit.py"
+        [[ -f "$_routing_py" ]] || { err "routing_bandit not found: $_routing_py"; exit 1; }
+        python3 "$_routing_py" evaluate "$@"
+        ;;
+      reranker-train)
+        shift || true
+        _reranker_py="$HARNESS_DIR/lib/retrieval_reranker.py"
+        [[ -f "$_reranker_py" ]] || { err "retrieval_reranker not found: $_reranker_py"; exit 1; }
+        python3 "$_reranker_py" train "$@"
+        ;;
+      legal-risk-screen)
+        shift || true
+        _legal_risk_py="$HARNESS_DIR/lib/legal_ip_risk.py"
+        [[ -f "$_legal_risk_py" ]] || { err "legal_ip_risk not found: $_legal_risk_py"; exit 1; }
+        python3 "$_legal_risk_py" screen "$@"
+        ;;
+      self-rag-evaluate)
+        shift || true
+        _self_rag_py="$HARNESS_DIR/lib/self_rag.py"
+        [[ -f "$_self_rag_py" ]] || { err "self_rag not found: $_self_rag_py"; exit 1; }
+        python3 "$_self_rag_py" run "$@"
+        ;;
+      scientific-compare)
+        shift || true
+        _scientific_compare_py="$HARNESS_DIR/lib/scientific_experiment_comparison.py"
+        [[ -f "$_scientific_compare_py" ]] || { err "scientific_experiment_comparison not found: $_scientific_compare_py"; exit 1; }
+        python3 "$_scientific_compare_py" compare "$@"
+        ;;
       *)
-        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run] [--json]"
+        err "用法: $0 evolution [status|scorecard|recommend|run-loop|promote|demote-degraded|mine-failures|eval-run|curriculum-evaluate|routing-evaluate|reranker-train|self-rag-evaluate|scientific-compare] [--json]"
         exit 2
         ;;
     esac

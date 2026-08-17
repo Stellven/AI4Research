@@ -1,0 +1,10 @@
+{
+  "schema": "solar.external_observation.v1",
+  "split": "external_holdout",
+  "observation_id": "holdout-b-001",
+  "evidence_id": "evidence-holdout-b-001",
+  "source_lineage_id": "instrument-run-holdout-b-001",
+  "collected_at": "2026-08-03T10:00:00Z",
+  "site": {"site_id": "fixture-university-lab-b", "kind": "experimental_site", "organization_id": "fixture-org-university-b", "collection_protocol_id": "retrieval-protocol-v1"},
+  "metric": {"name": "successful_retrieval_rate", "numerator": 16, "denominator": 20}
+}

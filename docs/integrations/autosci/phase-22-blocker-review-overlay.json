@@ -1,0 +1,137 @@
+{
+  "schema_version": "phase22_blocker_review_overlay.v1",
+  "reviewed_at": "2026-08-11",
+  "local_branch": "openJiuwen-Solar",
+  "reviewed_code_head": "c72747d08b40bf325cdc83c424ec4c2c4ef2a63a",
+  "small_remote_baseline": "940f735fa7da44dff8d4b96f49de9012169191c8",
+  "pushed_to_small": true,
+  "source_packet_snapshot": "docs/integrations/autosci/phase-22-repair-issue-packets.json",
+  "source_packet_snapshot_baseline": "c331eec8b905007b785fa494041af1efc2139a89",
+  "classification_counts": {
+    "FIXED_VERIFIED": 12,
+    "STALE_ALREADY_FIXED": 3,
+    "INSUFFICIENT_EVIDENCE": 0,
+    "MAPPING_ERROR": 0,
+    "ENVIRONMENT_BLOCKED": 0
+  },
+  "accepted_evidence": {
+    "research": "outputs/phase22-not-tested/NT-literature/nt-literature-20260811T183344Z-35752/journey-result.json",
+    "idea_generation": "outputs/phase22-real-journeys/p22j06-20260811T183659Z-28060/journey-result.json",
+    "experiment_design": "outputs/phase22-real-journeys/p22j07-20260811T183659Z-13024/journey-result.json",
+    "decision_artifact": "outputs/phase22-real-journeys/p22j09-20260811T211231Z-16532/journey-result.json",
+    "poc_handoff": "outputs/phase22-real-journeys/p22-j21-20260811T213551Z-33684/journey-result.json",
+    "runtime_deliverable": "outputs/phase22-real-journeys/p22j25-20260812T012357Z-15852/journey-result.json",
+    "mac_product_integration": {
+      "archive": "phase22-mac-evidence-c72747d08-p22-j16-20260812T033931Z-1817.zip",
+      "archive_sha256": "7876bcdd2da00fc37c9d5203f45a4a754017b6dddacc490d4490b8ba130070f1",
+      "journey_run_id": "p22-j16-20260812T033931Z-1817"
+    }
+  },
+  "issues": [
+    {
+      "issue_id": "P22-REPAIR-018",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "The production research route now extracts content-bearing method, result, and limitation signals with exact-span and SHA-256 provenance. The final live run validated 15 signals from 9 sources with no failed assertions.",
+      "remaining_boundary": "Provider extracts are normally abstracts or visible text; unseen full text and exhaustive coverage are not claimed."
+    },
+    {
+      "issue_id": "P22-REPAIR-020",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "The final live run independently validated 3 cross-source trends and 2 source-linked evidence gaps.",
+      "remaining_boundary": "The trends are recurring cross-source themes, not longitudinal causal findings."
+    },
+    {
+      "issue_id": "P22-REPAIR-033",
+      "classification": "STALE_ALREADY_FIXED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "The reported missing falsifiability fields no longer reproduce in J06.",
+      "remaining_boundary": "External novelty and Review LLM variants remain outside the accepted run."
+    },
+    {
+      "issue_id": "P22-REPAIR-034",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS",
+      "decision": "J07 now uses a verification-ready, durable plan with exact argv admission, truthful approval preflight, bound assets, safe output creation, and replay of the planned command.",
+      "remaining_boundary": "The network-access restriction is a design/admission contract and is not proof of OS-level network sandboxing."
+    },
+    {
+      "issue_id": "P22-REPAIR-037",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 now binds the product-generated plan, assets, configuration, and strict normalized argv to the command executed by the production exp-run path; executable-only, prefix, template, reordered, and appended-token variants are rejected.",
+      "remaining_boundary": "The accepted result is PASS_WITH_KNOWN_LIMITATIONS for the exercised local Python experiment path; other integration/configuration variants are not inferred."
+    },
+    {
+      "issue_id": "P22-REPAIR-039",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 now produces a self-contained, schema-validated handoff package with provenance, component hashes, cross-component identity checks, and a durable replay contract; production and independent consumers accept the valid package and reject invalid variants.",
+      "remaining_boundary": "The accepted package is the exercised AutoSci experiment handoff contract; unrelated benchmark package families remain outside this result."
+    },
+    {
+      "issue_id": "P22-REPAIR-055",
+      "classification": "STALE_ALREADY_FIXED",
+      "journey_status": "NOT_TESTED",
+      "decision": "The exact diagnostic selector and 14 capability-manifest tests pass, so the old atomic failure is stale.",
+      "remaining_boundary": "No accepted real-task journey currently maps to Capability Capsule Definition and Assembly."
+    },
+    {
+      "issue_id": "P22-REPAIR-066",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 exercises production result, package, and claim evaluators on valid, invalid, supported, and unsupported inputs; provenance/hash and cross-component identity corruption are rejected.",
+      "remaining_boundary": "The evidence covers the named experiment handoff/result/claim contracts, not every schema or evaluator in the product."
+    },
+    {
+      "issue_id": "P22-REPAIR-070",
+      "classification": "STALE_ALREADY_FIXED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "The old unsupported worldwide-claim acceptance does not reproduce; bounded claims pass and overbroad claims are rejected.",
+      "remaining_boundary": "Review LLM and final-verdict variants remain outside the accepted run."
+    },
+    {
+      "issue_id": "P22-REPAIR-095",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 proves acquire, heartbeat, duplicate rejection, release, real expiry detection, stale recovery, and archived recovery audit under one authoritative experiment identity.",
+      "remaining_boundary": "The evidence covers the exercised ResearchLeaseAdapter path, not a complete cross-runtime admission matrix."
+    },
+    {
+      "issue_id": "P22-REPAIR-110",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J21 uses product-generated runner, input, allowlist, and manifest assets, rewrites the durable manifest to durable copies, and replays those copies to reproduce the result.",
+      "remaining_boundary": "The exercised Python experiment asset does not cover all experimental asset types."
+    },
+    {
+      "issue_id": "P22-REPAIR-113",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "J09 now invokes a production canonical decision-artifact constructor over real claim-verdict and experiment-result evidence. The schema-valid artifact binds its recommendation to a complete alternative-by-criterion assessment matrix and cryptographically checked evidence provenance.",
+      "remaining_boundary": "Review remains truthfully pending and approval not requested; external Review LLM, HITL approval, and broader decision types are not inferred."
+    },
+    {
+      "issue_id": "P22-REPAIR-115",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "Mac J16 on the integrated small baseline completed the real tmux product path through planner, approval, the physical Spark builder, scoped code repair, post-repair pytest, and eval verdict. Independent ZIP review verified 12/12 assertions, all internal checksums, and no credential findings.",
+      "remaining_boundary": "The run covers the exercised macOS Codex/Spark product-integration path; other providers, models, and platforms are not inferred."
+    },
+    {
+      "issue_id": "P22-REPAIR-116",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "Mac J16 reproduced the defect before repair (1 failed, 2 passed), the physical builder changed only discounts.py, and the same suite passed after repair (3 passed). The accepted journey completed with 12/12 assertions and no blockers.",
+      "remaining_boundary": "The formal eval sidecar was not observed; the accepted closure relies on the real builder result, durable diff, before/after pytest, and successful eval-verdict evidence."
+    },
+    {
+      "issue_id": "P22-REPAIR-119",
+      "classification": "FIXED_VERIFIED",
+      "journey_status": "PASS_WITH_KNOWN_LIMITATIONS",
+      "decision": "Dedicated J25 constructs and verifies a self-contained runtime deliverable, binds the source archive to raw Git commit/tree/blob preimages in an isolated bare repository, performs offline clean-sandbox install/start/status/doctor/health checks, and verifies runtime plus wrapper rollback.",
+      "remaining_boundary": "Accepted coverage is WSL/Linux x86_64 CPython 3.12; pipx, containers, launchd, workflow packaging, macOS, and native Windows remain NOT_TESTED."
+    }
+  ]
+}

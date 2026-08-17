@@ -1,6 +1,8 @@
 # Built/minified webapp bundles are generated artifacts: exclude from textual diff +
 # whitespace (git diff --check) checks and from language stats.
 harness/status-server/static/p0-app/assets/** -diff linguist-generated
+harness/status-server/react-app/index.html text eol=lf
+harness/status-server/static/p0-app/index.html text eol=lf
 
 # Shell scripts must stay LF even on a Windows checkout (CRLF breaks bash / WSL).
 *.sh text eol=lf
@@ -9,6 +11,10 @@ harness/status-server/static/p0-app/assets/** -diff linguist-generated
 bin/solar text eol=lf
 bin/solar-daemon text eol=lf
 harness/hooks/* text eol=lf
+
+# Hashed Phase 22 evidence must retain the exact bytes recorded by trust pins.
+harness/config/research-trust-registries/** text eol=crlf
+tests/journeys/phase22/fixtures/significant/** text eol=lf
 
 # Binary deliverables must never receive line-ending conversion.
 *.xlsx binary

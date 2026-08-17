@@ -1,0 +1,6 @@
+{
+  "sprint_id": "sprint-nt-dag-trace",
+  "tool": "dag_trace_probe",
+  "request": "Design and implement a multi-step dependency-aware DAG trace validation workflow. The task must include planning, implementation, tests, and independent review so dependency ordering and trace inspection can be verified.",
+  "workflow_id": "code.cli_smoke"
+}

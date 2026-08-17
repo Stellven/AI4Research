@@ -1,0 +1,17 @@
+{
+  "provider_channel": "s2_reference",
+  "minimum_success_conditions": {
+    "technical_signal_extraction": [
+      "Production entrypoint obtains at least 3 real public sources.",
+      "Production output contains structured method, technical claim, and experiment/evidence signals.",
+      "Important signals carry source ids or URLs.",
+      "Signals are about the requested topic and are not fixture answers."
+    ],
+    "trend_gap_analysis": [
+      "Production output compares multiple source-backed results.",
+      "At least one trend is stated with source support.",
+      "At least one gap, controversy, or uncertainty is stated with basis and uncertainty.",
+      "Analysis is topic-relevant and not a file-existence check."
+    ]
+  }
+}

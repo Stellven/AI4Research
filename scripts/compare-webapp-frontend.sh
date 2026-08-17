@@ -2,7 +2,7 @@
 # compare-webapp-frontend.sh — FRONTEND/browser differential across refs. Heavier than the fast
 # gate (per-ref vite build + a real headless-chromium run), so this is a RELEASE-CANDIDATE / NIGHTLY
 # gate, NOT part of scripts/verify-webapp-session.sh. Per ref: materialize (git archive) -> symlink
-# react-app node_modules -> vite build that ref's bundle -> run tests/desktop/frontend-scenarios.test.js
+# react-app node_modules -> vite build that ref's bundle -> run tests/desktop/frontend-scenarios.test.cjs
 # against that ref's real backend + bundle -> tabulate Markdown. Proves the FRONTEND session-isolation
 # / transparency fixes (provenance chips, freshness visibility, session route doesn't crash) are
 # present in the fixed tree and ABSENT in the base.
@@ -16,7 +16,7 @@
 set -u
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 RA_NM="$repo/harness/status-server/react-app/node_modules"
-SCEN="$repo/tests/desktop/frontend-scenarios.test.js"
+SCEN="$repo/tests/desktop/frontend-scenarios.test.cjs"
 KEYS=(provenance-chips freshness-visible session-no-crash)
 
 [ -d "$repo/desktop/node_modules/playwright" ] || { echo "NOT VERIFIED: desktop Playwright missing"; echo "  fix: ( cd desktop && npm ci && npx playwright install chromium )"; exit 1; }

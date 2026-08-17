@@ -66,6 +66,7 @@ except Exception:  # pragma: no cover - older harness installs may not have it
     workflow_route = None  # type: ignore
 QMD_PROXY_HEALTH = HARNESS / "state" / "qmd-mcp-ipv4-health.json"
 TELEMETRY_ONLY_FINDINGS = {
+    "epic_activation_backpressure",
     "knowledge_context_sqlite_only",
     "knowledge_context_timeout",
     "knowledge_probe_failed",
@@ -120,6 +121,9 @@ TERMINAL_STATUSES = {"passed", "completed", "finalized", "done", "cancelled", "a
 GRAPH_READY_HANDOFFS = {"builder", "builder_main", "builder_parallel", "builder-lab"}
 GRAPH_EVAL_HANDOFFS = {"evaluator", "reviewer"}
 BUILDER_QUEUE_FINDINGS = {"ready_for_builder", "active_without_handoff", "pane_idle_with_pending_artifact"}
+EPIC_ACTIVE_CHILD_LIMIT = int(os.environ.get("SOLAR_EPIC_ACTIVE_CHILD_LIMIT", "12"))
+EPIC_ACTIVE_CHILD_STATUSES = {"active", "approved", "reviewing", "ready_for_review"}
+EPIC_ACTIVE_CHILD_PHASES = {"prd_ready", "planning_complete", "graph_dispatch_active", "handoff_ready", "builder_in_progress"}
 
 import sys
 sys.path.insert(0, str(HARNESS / "lib"))
@@ -233,6 +237,48 @@ def save_json(path: Path, data: dict) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
     tmp.replace(path)
+
+
+def epic_child_slice_from_sid(sid: str) -> str:
+    match = re.search(r"-s\d{2}-([a-z0-9-]+)$", sid)
+    return match.group(1) if match else "unknown"
+
+
+def is_active_epic_child_status(status: dict) -> bool:
+    if not (status.get("epic_id") or status.get("dependency_policy") == "activated_by_epic_dag"):
+        return False
+    state = str(status.get("status") or "").lower()
+    phase = str(status.get("phase") or "").lower()
+    if state in {"passed", "completed", "eval_passed", "cancelled", "canceled", "closed", "superseded", "interrupted"}:
+        return False
+    return state in EPIC_ACTIVE_CHILD_STATUSES or phase in EPIC_ACTIVE_CHILD_PHASES
+
+
+def epic_activation_pressure(limit: int | None = None) -> dict:
+    cap = max(0, int(EPIC_ACTIVE_CHILD_LIMIT if limit is None else limit))
+    active = []
+    for path in sorted(SPRINTS.glob("sprint-*.status.json")):
+        status = load_json(path)
+        if not is_active_epic_child_status(status):
+            continue
+        sid = str(status.get("sprint_id") or status.get("id") or path.name.removesuffix(".status.json"))
+        active.append(
+            {
+                "sid": sid,
+                "epic_id": str(status.get("epic_id") or ""),
+                "slice": str(status.get("slice") or epic_child_slice_from_sid(sid)),
+                "status": str(status.get("status") or ""),
+                "phase": str(status.get("phase") or ""),
+            }
+        )
+    remaining = max(0, cap - len(active))
+    return {
+        "limit": cap,
+        "active_count": len(active),
+        "remaining": remaining,
+        "active_sample": active[:12],
+        "backpressure": remaining <= 0,
+    }
 
 
 def load_state() -> dict:
@@ -2195,6 +2241,8 @@ def set_epic_child_node_status(sid: str, node_status: str) -> bool:
 
 def inspect_epics() -> list[dict]:
     findings = []
+    activation_pressure = epic_activation_pressure()
+    backpressure_reported = False
     for meta_path in sorted(SPRINTS.glob("epic-*.epic.json"), key=lambda p: p.stat().st_mtime, reverse=True):
         meta = load_json(meta_path)
         epic_id = meta.get("epic_id") or meta_path.name.removesuffix(".epic.json")
@@ -2232,6 +2280,22 @@ def inspect_epics() -> list[dict]:
                     })
                     continue
                 ready.append({"sid": child_sid, "node_id": node.get("id")})
+        if ready and activation_pressure and activation_pressure.get("backpressure"):
+            if not backpressure_reported:
+                findings.append(
+                    {
+                        "sid": str(epic_id),
+                        "type": "epic_activation_backpressure",
+                        "severity": "warn",
+                        "target": "",
+                        "message": "Global epic child WIP limit reached; suppressing new child activation.",
+                        "ready_children_suppressed": ready,
+                        "blocked_children": blocked,
+                        "activation_pressure": activation_pressure,
+                    }
+                )
+                backpressure_reported = True
+            continue
         if ready:
             findings.append(
                 {
@@ -3415,7 +3479,14 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
             try:
                 proc = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
                 payload = json.loads(proc.stdout) if proc.stdout.strip().startswith("{") else {"stdout": proc.stdout[-2000:]}
-                result = {"sid": sid, "action": ftype, "ok": proc.returncode == 0, "returncode": proc.returncode, **payload}
+                result = {
+                    "sid": sid,
+                    "action": ftype,
+                    "ok": proc.returncode == 0,
+                    "returncode": proc.returncode,
+                    "stderr": proc.stderr[-2000:],
+                    **payload,
+                }
             except Exception as exc:
                 result = {"sid": sid, "action": ftype, "ok": False, "error": str(exc)}
             append_event(sid, "autopilot_epic_activate_ready", "info" if result.get("ok") else "warn", result)

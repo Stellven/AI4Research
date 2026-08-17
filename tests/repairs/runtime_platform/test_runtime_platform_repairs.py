@@ -134,3 +134,20 @@ def test_status_server_repeated_lifecycle_releases_reserved_test_port(tmp_path: 
             path.unlink(missing_ok=True)
         assert not (harness / "run" / "status-server.pid").exists()
         assert not (harness / "run" / "status-server.port").exists()
+
+
+def test_status_server_tmux_command_binds_per_harness_environment() -> None:
+    source = (REPO_ROOT / "harness" / "solar-harness.sh").read_text(encoding="utf-8")
+    command = next(
+        line
+        for line in source.splitlines()
+        if "exec env HOME='$HOME'" in line and "status-server.py" in line
+    )
+    for token in (
+        "USERPROFILE=",
+        "SOLAR_HOME=",
+        "HARNESS_DIR=",
+        "SOLAR_HARNESS_DIR=",
+        "SOLAR_BIND_HOST=",
+    ):
+        assert token in command

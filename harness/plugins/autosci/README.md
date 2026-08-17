@@ -20,8 +20,8 @@ documents and writes them under declared plugin artifact scopes.
 bin/python3 plugins/autosci/bin/autosci_bridge.py --help
 bin/python3 plugins/autosci/bin/autosci_bridge.py smoke
 bin/python3 plugins/autosci/bin/autosci_bridge.py validate --result artifacts/autosci/smoke/result.json
-bin/python3 plugins/autosci/bin/autosci_bridge.py run --action prepare_paper_source --envelope plugins/autosci/tests/fixtures/envelope.ingest_paper.json
-bin/python3 plugins/autosci/bin/autosci_bridge.py run --action ingest_paper --envelope plugins/autosci/tests/fixtures/envelope.ingest_paper.json
+bin/python3 plugins/autosci/bin/autosci_bridge.py run --action prepare_paper_source --envelope tests/plugins/autosci/fixtures/envelope.ingest_paper.json
+bin/python3 plugins/autosci/bin/autosci_bridge.py run --action ingest_paper --envelope tests/plugins/autosci/fixtures/envelope.ingest_paper.json
 ```
 
 Supported fixture-mode actions verified through Phase 16:
@@ -49,7 +49,7 @@ Phase 9 paper-ingestion smoke writes the canonical foundation artifacts:
 ```bash
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action ingest_paper \
-  --envelope plugins/autosci/tests/fixtures/envelope.ingest_paper.json
+  --envelope tests/plugins/autosci/fixtures/envelope.ingest_paper.json
 
 bin/python3 evaluators/scientific/paper_gate.py artifacts/scientific/smoke/research_paper.json
 bin/python3 evaluators/scientific/memory_update_gate.py artifacts/scientific/smoke/research_memory_update.json
@@ -93,13 +93,13 @@ Phase 10 claim/method/code mapping smoke:
 ```bash
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action extract_claims \
-  --envelope plugins/autosci/tests/fixtures/envelope.extract_claims.json
+  --envelope tests/plugins/autosci/fixtures/envelope.extract_claims.json
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action extract_methods \
-  --envelope plugins/autosci/tests/fixtures/envelope.extract_methods.json
+  --envelope tests/plugins/autosci/fixtures/envelope.extract_methods.json
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action map_code_evidence \
-  --envelope plugins/autosci/tests/fixtures/envelope.map_code_evidence.json
+  --envelope tests/plugins/autosci/fixtures/envelope.map_code_evidence.json
 
 bin/python3 evaluators/scientific/claims_gate.py artifacts/scientific/smoke/research_claims.json
 bin/python3 evaluators/scientific/method_gate.py artifacts/scientific/smoke/research_method.json
@@ -111,10 +111,10 @@ Phase 11 idea generation/evaluation smoke:
 ```bash
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action generate_ideas \
-  --envelope plugins/autosci/tests/fixtures/envelope.generate_ideas.json
+  --envelope tests/plugins/autosci/fixtures/envelope.generate_ideas.json
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action evaluate_ideas \
-  --envelope plugins/autosci/tests/fixtures/envelope.evaluate_ideas.json
+  --envelope tests/plugins/autosci/fixtures/envelope.evaluate_ideas.json
 
 bin/python3 evaluators/scientific/idea_gate.py artifacts/scientific/smoke/idea_evaluation.json
 bin/python3 evaluators/scientific/memory_update_gate.py artifacts/scientific/smoke/research_memory_update.ideas.json
@@ -125,13 +125,13 @@ Phase 12 experiment lifecycle smoke:
 ```bash
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action design_experiment \
-  --envelope plugins/autosci/tests/fixtures/envelope.design_experiment.json
+  --envelope tests/plugins/autosci/fixtures/envelope.design_experiment.json
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action run_experiment \
-  --envelope plugins/autosci/tests/fixtures/envelope.run_experiment.fixture.json
+  --envelope tests/plugins/autosci/fixtures/envelope.run_experiment.fixture.json
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action monitor_experiment \
-  --envelope plugins/autosci/tests/fixtures/envelope.monitor_experiment.json
+  --envelope tests/plugins/autosci/fixtures/envelope.monitor_experiment.json
 
 bin/python3 evaluators/scientific/experiment_plan_gate.py artifacts/scientific/smoke/experiment_plan.json
 bin/python3 evaluators/scientific/experiment_result_gate.py artifacts/scientific/smoke/experiment_result.json
@@ -143,7 +143,7 @@ Phase 13 claim verification smoke:
 ```bash
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action verify_claim \
-  --envelope plugins/autosci/tests/fixtures/envelope.verify_claim.supported.json
+  --envelope tests/plugins/autosci/fixtures/envelope.verify_claim.supported.json
 
 bin/python3 evaluators/scientific/claim_verdict_gate.py artifacts/scientific/smoke/claim_verdict.json
 ```
@@ -159,7 +159,7 @@ Phase 14 report and publication bundle smoke:
 ```bash
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action write_report \
-  --envelope plugins/autosci/tests/fixtures/envelope.write_report.json
+  --envelope tests/plugins/autosci/fixtures/envelope.write_report.json
 
 bin/python3 evaluators/scientific/report_gate.py artifacts/scientific/smoke/scientific_report.json
 bin/python3 evaluators/scientific/publication_gate.py artifacts/scientific/smoke/publication_bundle.json
@@ -175,7 +175,7 @@ Phase 16 workflow evolution smoke:
 ```bash
 bin/python3 plugins/autosci/bin/autosci_bridge.py run \
   --action evolve_workflow \
-  --envelope plugins/autosci/tests/fixtures/envelope.evolve_workflow.failed_run.json
+  --envelope tests/plugins/autosci/fixtures/envelope.evolve_workflow.failed_run.json
 
 bin/python3 evaluators/scientific/workflow_evolution_gate.py artifacts/scientific/smoke/workflow_evolution.json
 ```

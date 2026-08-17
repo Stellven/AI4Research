@@ -64,10 +64,22 @@ copy_payload() {
         # behavior holds on openrsync, which ships as rsync on newer macOS.
         rsync "$@" --exclude 'release/artifacts/' "$src/" "$dst/"
     else
-        # No rsync: copy everything, then enforce the same exclude
-        # contract on the destination. A bare cp -R would silently carry
-        # local runtime state into the install.
-        cp -R "$src/." "$dst/"
+        # No rsync: still exclude runtime state before copying.  A bare
+        # cp -R can fail before cleanup when a live runtime directory contains
+        # dangling symlinks, and it can silently carry machine state into the
+        # install.
+        if command -v tar >/dev/null 2>&1; then
+            set -- -cf -
+            for d in $COPY_EXCLUDE_DIRS; do
+                set -- "$@" --exclude="./$d" --exclude="./$d/*" --exclude="*/$d" --exclude="*/$d/*"
+            done
+            for f in $COPY_EXCLUDE_FILES; do
+                set -- "$@" --exclude="./$f" --exclude="*/$f"
+            done
+            (cd "$src" && tar "$@" --exclude="./release/artifacts" --exclude="./release/artifacts/*" .) | (cd "$dst" && tar -xf -)
+        else
+            cp -R "$src/." "$dst/"
+        fi
         for d in $COPY_EXCLUDE_DIRS; do
             find "$dst" -name "$d" -prune -exec rm -rf {} + 2>/dev/null || true
         done

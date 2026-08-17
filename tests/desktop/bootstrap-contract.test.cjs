@@ -24,6 +24,8 @@ const app = read("../harness/status-server/react-app/src/App.tsx");
 const pkg = JSON.parse(read("package.json"));
 const autotest = read("autotest.sh");
 const selftestElectron = read("../tests/desktop/selftest-electron.test.cjs");
+const buildRenderer = read("build-renderer.js");
+const prepareResources = read("prepare-package-resources.js");
 // Keep static workflow assertions portable across Git's CRLF/LF checkout
 // policy. The contract is structural; line-ending normalization must not turn
 // a valid Windows checkout into a false release-gate failure.
@@ -33,6 +35,9 @@ const desktopWorkflow = read("../.github/workflows/desktop-build.yml").replace(
 );
 const desktopGateJob = desktopWorkflow.split("\n  gate:\n")[1] || "";
 const macResources = (pkg.build.mac.extraResources || []).map((entry) => entry.to);
+const harnessResource = (pkg.build.extraResources || []).find(
+  (entry) => entry.to === "harness",
+);
 
 assert(
   "fresh packaged app syncs bundled harness before network installer",
@@ -122,6 +127,24 @@ assert(
   "desktop autotest runs the selftest truth suite",
   autotest.includes("node ../tests/desktop/src/selftest-verdict.test.cjs") &&
     autotest.includes("node ../tests/desktop/selftest-electron.test.cjs"),
+);
+
+assert(
+  "desktop packaging uses cross-platform renderer and private-state-free staging",
+  pkg.scripts["build:renderer"] === "node build-renderer.js" &&
+    pkg.scripts["build:win"].includes("node prepare-package-resources.js") &&
+    pkg.scripts["build:mac"].includes("node prepare-package-resources.js") &&
+    pkg.scripts["build:linux"].includes("node prepare-package-resources.js") &&
+    harnessResource?.from === ".packaging/harness" &&
+    buildRenderer.includes("vite.js") &&
+    prepareResources.includes('"run"') &&
+    prepareResources.includes('"quarantine"'),
+);
+
+assert(
+  "desktop autotest runs automated accessibility audit",
+  autotest.includes("node accessibility.test.js") &&
+    pkg.scripts["test:accessibility"] === "node accessibility.test.js",
 );
 
 assert(
