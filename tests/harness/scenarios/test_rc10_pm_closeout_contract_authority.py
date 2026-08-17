@@ -31,6 +31,7 @@ for entry in (HARNESS / "tools", HARNESS / "lib"):
         sys.path.insert(0, str(entry))
 
 import pm_dispatch as pmd  # noqa: E402
+import graph_scheduler as gs  # noqa: E402
 
 
 def _load_graph_dispatcher():
@@ -438,3 +439,83 @@ def test_graph_eval_submitter_refuses_tampered_snapshot_read_grants(
     assert result["ok"] is False
     assert result["reason"] == "operator_pool_eval_snapshot_scope_invalid"
     assert called is False
+
+
+def test_terminal_failure_recovery_is_generation_fenced_and_reopens_only_dependency_skips(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = tmp_path / "harness"
+    sprints = harness / "sprints"
+    sprints.mkdir(parents=True)
+    monkeypatch.setattr(gnd, "HARNESS_DIR", harness)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(gs, "HARNESS_DIR", harness)
+    monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
+    graph = {
+        "sprint_id": SID,
+        "nodes": [
+            {"id": "S3", "status": "failed", "depends_on": [], "repair_attempts": 1},
+            {
+                "id": "S4",
+                "status": "skipped",
+                "depends_on": ["S3"],
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["S3"],
+            },
+            {
+                "id": "S5",
+                "status": "skipped",
+                "depends_on": ["S4"],
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["S4"],
+            },
+            {"id": "manual-skip", "status": "skipped", "depends_on": ["S3"]},
+        ],
+        "node_results": {
+            "S3": {"status": "failed"},
+            "S4": {"status": "skipped"},
+            "S5": {"status": "skipped"},
+            "manual-skip": {"status": "skipped"},
+        },
+        "gate_results": {},
+        "required_gates": [],
+    }
+    graph_path = sprints / f"{SID}.task_graph.json"
+    gs.save_graph(graph_path, graph)
+
+    mismatch = gnd.escalate_terminal_failure_to_human_review(
+        graph_path,
+        "S3",
+        expected_repair_generation=0,
+        actor="release-owner",
+        reason="fixed evaluator sandbox",
+    )
+    assert mismatch["ok"] is False
+    assert "generation_mismatch" in mismatch["reason"]
+    assert gs.node_status(gs.load_graph(graph_path), "S3") == "failed"
+
+    recovered = gnd.escalate_terminal_failure_to_human_review(
+        graph_path,
+        "S3",
+        expected_repair_generation=1,
+        actor="release-owner",
+        reason="fixed evaluator sandbox",
+    )
+    assert recovered["ok"] is True
+    assert recovered["reopened_descendants"] == ["S4", "S5"]
+    saved = gs.load_graph(graph_path)
+    assert gs.node_status(saved, "S3") == "needs_human_review"
+    assert gs.node_status(saved, "S4") == "pending"
+    assert gs.node_status(saved, "S5") == "pending"
+    assert gs.node_status(saved, "manual-skip") == "skipped"
+
+    replay = gnd.escalate_terminal_failure_to_human_review(
+        graph_path,
+        "S3",
+        expected_repair_generation=1,
+        actor="release-owner",
+        reason="replayed owner action",
+    )
+    assert replay["ok"] is False
+    assert "node_not_terminal_failed" in replay["reason"]

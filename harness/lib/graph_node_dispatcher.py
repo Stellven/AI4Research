@@ -3509,6 +3509,151 @@ def resume_human_review(
     return result
 
 
+def escalate_terminal_failure_to_human_review(
+    graph_path: str | Path,
+    node_id: str,
+    *,
+    expected_repair_generation: int,
+    actor: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Open an explicit recovery generation for one terminal failed node.
+
+    Automatic scheduling remains unable to reopen terminal work. This seam is
+    generation-fenced, requires an identified human actor and reason, and only
+    reopens descendants that were mechanically skipped by this dependency.
+    The ordinary ``resume-human-review`` command remains the sole transition
+    from the resulting review block back to executable work.
+    """
+    actor = str(actor or "").strip()
+    reason = str(reason or "").strip()
+    if not actor:
+        return {"ok": False, "reason": "terminal_recovery_actor_required", "node": node_id}
+    if not reason:
+        return {"ok": False, "reason": "terminal_recovery_reason_required", "node": node_id}
+    try:
+        graph = load_graph(graph_path)
+        node = _node_by_id(graph, node_id)
+        if node is None:
+            return {"ok": False, "reason": f"unknown node: {node_id}", "node": node_id}
+        current = str(node_status(graph, node_id) or "").strip().lower()
+        if current != "failed":
+            return {
+                "ok": False,
+                "reason": f"node_not_terminal_failed:{current or 'pending'}",
+                "node": node_id,
+            }
+        repair_generation = _node_repair_attempts(node)
+        if int(expected_repair_generation) != repair_generation:
+            return {
+                "ok": False,
+                "reason": (
+                    "terminal_recovery_generation_mismatch:"
+                    f"expected={repair_generation}:received={expected_repair_generation}"
+                ),
+                "node": node_id,
+            }
+    except (TypeError, ValueError) as exc:
+        return {"ok": False, "reason": f"terminal_recovery_generation_invalid:{exc}", "node": node_id}
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": f"terminal_recovery_validation_error:{type(exc).__name__}:{exc}",
+            "node": node_id,
+        }
+
+    sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
+    record = enter_node_human_review(
+        graph,
+        node_id,
+        reason=f"terminal_failure_recovery:{reason}",
+        next_action="inspect the terminal evidence and explicitly resume this generation",
+        writer="escalate_terminal_failure_to_human_review",
+        author_type="human",
+    )
+
+    reopened_descendants: list[str] = []
+    reopened = {node_id}
+    changed = True
+    while changed:
+        changed = False
+        for candidate in graph.get("nodes") or []:
+            candidate_id = str(candidate.get("id") or "")
+            if not candidate_id or candidate_id in reopened:
+                continue
+            if str(node_status(graph, candidate_id) or "").lower() != "skipped":
+                continue
+            if str(candidate.get("skip_reason") or "") != "blocked_by_failed_dependency":
+                continue
+            dependencies = {str(value) for value in (candidate.get("depends_on") or [])}
+            if not dependencies.intersection(reopened):
+                continue
+            prior = "skipped"
+            now = _utc_now()
+            candidate["status"] = "pending"
+            candidate["updated_at"] = now
+            candidate.pop("skip_reason", None)
+            candidate.pop("blocked_by_failed_dependency", None)
+            graph.setdefault("node_results", {})[candidate_id] = {
+                "status": "pending",
+                "updated_at": now,
+                "note": f"reopened_after_terminal_recovery:{node_id}",
+            }
+            _ledger_transition(
+                sid,
+                candidate_id,
+                prior,
+                "pending",
+                "escalate_terminal_failure_to_human_review",
+                author_type="human",
+                note=reason,
+                recovered_dependency=node_id,
+            )
+            reopened.add(candidate_id)
+            reopened_descendants.append(candidate_id)
+            changed = True
+
+    save_graph(graph_path, graph)
+    _record_node_runstate(
+        sid,
+        node_id,
+        {
+            "human_review_generation": int(record.get("generation") or 0),
+            "repair_attempt": repair_generation,
+            "last_eval_result": "TERMINAL_RECOVERY_REQUESTED",
+            "last_eval_reason": reason,
+            "next_action": "explicit_human_resume_required",
+            "status": "needs_human_review",
+        },
+    )
+    _append_event(
+        sid,
+        {
+            "event": "graph_node_terminal_failure_escalated",
+            "by": "human",
+            "severity": "warning",
+            "data": {
+                "node": node_id,
+                "actor": actor,
+                "reason": reason,
+                "repair_generation": repair_generation,
+                "human_review_generation": record.get("generation"),
+                "reopened_descendants": reopened_descendants,
+            },
+        },
+    )
+    return {
+        "ok": True,
+        "node": node_id,
+        "status": "needs_human_review",
+        "actor": actor,
+        "reason": reason,
+        "repair_generation": repair_generation,
+        "human_review_generation": int(record.get("generation") or 0),
+        "reopened_descendants": reopened_descendants,
+    }
+
+
 def _archive_stale_repair_eval_sidecars(
     sid: str,
     node: dict[str, Any],
@@ -13337,6 +13482,13 @@ def main() -> int:
     p.add_argument("--actor", required=True)
     p.add_argument("--reason", required=True)
 
+    p = sub.add_parser("escalate-terminal-failure")
+    p.add_argument("--graph", required=True)
+    p.add_argument("--node", required=True)
+    p.add_argument("--generation", required=True, type=int)
+    p.add_argument("--actor", required=True)
+    p.add_argument("--reason", required=True)
+
     args = ap.parse_args()
     if args.cmd == "drain-queue":
         result = drain_queue(args.sprint, args.dry_run, args.max_items, args.ttl)
@@ -13360,6 +13512,14 @@ def main() -> int:
             args.graph,
             args.node,
             expected_generation=args.generation,
+            actor=args.actor,
+            reason=args.reason,
+        )
+    elif args.cmd == "escalate-terminal-failure":
+        result = escalate_terminal_failure_to_human_review(
+            args.graph,
+            args.node,
+            expected_repair_generation=args.generation,
             actor=args.actor,
             reason=args.reason,
         )
