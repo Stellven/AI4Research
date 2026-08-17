@@ -220,3 +220,11 @@ live-provider-artifacts/
 # Ensure templates and examples are always committed (redundant but explicit):
 !.env.example
 !.env.template
+
+# (G05) Byproducts the test suite writes into the checkout. Running the suite
+# used to leave these behind as untracked files, which made `git status` noisy
+# and put a 226 MB vendored clone one `git add -A` away from the index.
+harness/.wiki-capture-server.pid
+harness/.wiki-capture-server.port
+harness/vendor/hermes-agent/
+tests/experience/

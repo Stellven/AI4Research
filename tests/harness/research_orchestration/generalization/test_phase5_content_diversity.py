@@ -15,7 +15,9 @@ from typing import Any
 HARNESS = (Path(__file__).resolve().parents[4] / 'harness')
 REPO = HARNESS.parent
 BRIDGE = HARNESS / "plugins" / "autosci" / "bin" / "autosci_bridge.py"
-FIXTURE = HARNESS / "tests" / "research_orchestration" / "fixtures" / "phase5" / "content_diversity" / "cases.json"
+# Fixtures live in the canonical tests tree. This used to name them through
+# harness/tests/, a stale copy where they no longer exist.
+FIXTURE = REPO / "tests" / "harness" / "research_orchestration" / "fixtures" / "phase5" / "content_diversity" / "cases.json"
 BASE_COMMIT = "ea571c94ed06b439fb5ae0532ec4e934cea3c022"
 RESULT_ROOT_ENV = "PHASE5_CONTENT_DIVERSITY_RESULT_ROOT"
 DEFAULT_RESULT_ROOT = REPO / ".codex-tmp" / "phase5-worker-results" / "content-diversity"

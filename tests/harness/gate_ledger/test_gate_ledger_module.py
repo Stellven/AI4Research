@@ -221,6 +221,21 @@ def test_self_graded_eval_never_consumable():
     assert gl.is_gate_consumable(rec, current_generation=2) is False
 
 
+def test_neutralized_record_never_consumable():
+    """A record marked applied=False must not feed a gate decision.
+
+    Every other test that sets applied=False also sets a doctor author or
+    gate_consumable=False, so each of those would still be rejected with this
+    guard deleted. Mutating `applied is False` to a no-op survived the whole
+    gate_ledger suite; this is the case that kills it: an assigned evaluator,
+    current generation, not self-graded, neutralized only by applied.
+    """
+    rec = {"kind": "eval_verdict", "author": {"type": "evaluator", "operator_id": "op-1"},
+           "verdict": "PASS", "verdict_kind": "content", "eval_generation": 2,
+           "applied": False}
+    assert gl.is_gate_consumable(rec, current_generation=2) is False
+
+
 def test_stale_generation_not_consumable():
     rec = {"kind": "eval_verdict", "author": {"type": "evaluator", "operator_id": "op-1"},
            "verdict": "PASS", "verdict_kind": "content", "eval_generation": 1}

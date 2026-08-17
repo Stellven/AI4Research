@@ -821,7 +821,16 @@ def test_drain_builder_ready_submits_and_marks_graph(monkeypatch, tmp_path):
     )
 
     assert rc == 0
-    graph = json.loads((sprints / "sprint-drain.task_graph.json").read_text(encoding="utf-8"))
-    assert graph["nodes"][0]["status"] == "dispatched"
-    assert graph["nodes"][0]["dispatched_via"] == "pm_dispatch"
-    assert graph["nodes"][0]["pm_task_id"] == "pm-sprint-drain-B1-test"
+    # task_graph.json is a spec document: save_graph() strips the runtime plane
+    # into a sibling <sprint>.task_dag.state.json and load_graph() merges it
+    # back. Reading the file directly therefore sees no status at all, which is
+    # what this assertion used to do. Go through load_graph so the assertion
+    # tracks the real contract instead of the on-disk spec layout.
+    graph_scheduler = pm_dispatch._load_graph_scheduler_module()
+    graph = graph_scheduler.load_graph(sprints / "sprint-drain.task_graph.json")
+    node = next(n for n in graph["nodes"] if n["id"] == "B1")
+    assert node["status"] == "dispatched"
+    # dispatched_via and pm_task_id are written onto node_results, not the node.
+    results = graph["node_results"]["B1"]
+    assert results["dispatched_via"] == "pm_dispatch"
+    assert results["pm_task_id"] == "pm-sprint-drain-B1-test"

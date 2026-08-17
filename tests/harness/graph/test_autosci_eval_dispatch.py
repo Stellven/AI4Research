@@ -14,8 +14,11 @@ import pytest
 HARNESS = (Path(__file__).resolve().parents[3] / 'harness')
 LIB = HARNESS / "lib"
 ADAPTER = HARNESS / "plugins" / "autosci" / "bin" / "autosci_eval_adapter.py"
-PASS_EVIDENCE = HARNESS / "tests" / "evaluators" / "scientific" / "fixtures" / "pass" / "research_paper.json"
-FAIL_EVIDENCE = HARNESS / "tests" / "evaluators" / "scientific" / "fixtures" / "fail" / "research_paper.json"
+# Fixtures live in the canonical tests tree. harness/tests/ is a stale copy;
+# reading through it made this test depend on a directory nothing maintains.
+_EVIDENCE = HARNESS.parent / "tests" / "harness" / "evaluators" / "scientific" / "fixtures"
+PASS_EVIDENCE = _EVIDENCE / "pass" / "research_paper.json"
+FAIL_EVIDENCE = _EVIDENCE / "fail" / "research_paper.json"
 
 if str(LIB) not in sys.path:
     sys.path.insert(0, str(LIB))
