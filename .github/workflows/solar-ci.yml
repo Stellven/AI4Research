@@ -85,6 +85,15 @@ jobs:
         continue-on-error: true
         run: python scripts/check-windows-filenames.py
 
+      - name: Syntax check critical runtime files
+        id: runtime_syntax
+        continue-on-error: true
+        run: |
+          python -m py_compile \
+            harness/lib/graph_node_dispatcher.py \
+            harness/lib/symphony/status-server.py \
+            harness/scripts/tech_hotspot_radar.py
+
       - name: Verify repository safety fixtures
         id: safety_fixtures
         continue-on-error: true
@@ -111,10 +120,11 @@ jobs:
           R_SECRET_SCAN: ${{ steps.secret_scan.outcome }}
           R_WINDOWS_FILENAMES: ${{ steps.windows_filenames.outcome }}
           R_SAFETY_FIXTURES: ${{ steps.safety_fixtures.outcome }}
+          R_RUNTIME_SYNTAX: ${{ steps.runtime_syntax.outcome }}
         run: |
           failed=0
           for gate in hygiene negative_controls safe_staging secret_scan \
-                      windows_filenames safety_fixtures; do
+                      windows_filenames safety_fixtures runtime_syntax; do
             var="R_$(printf '%s' "$gate" | tr '[:lower:]' '[:upper:]')"
             outcome="${!var}"
             [ "$outcome" = "success" ] && continue
@@ -135,173 +145,6 @@ jobs:
           done
           [ "$failed" -eq 0 ] || { echo "repository hygiene: one or more gates failed"; exit 1; }
           echo "repository hygiene: all gates passed"
-
-  python-smoke:
-    name: Python smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
-
-      - name: Syntax check critical runtime files
-        run: |
-          python -m py_compile \
-            harness/lib/graph_node_dispatcher.py \
-            harness/lib/symphony/status-server.py \
-            harness/scripts/tech_hotspot_radar.py
-
-      # Was excused on pull requests while test_pm_dispatch.py asserted a stale
-      # graph contract. task_graph.json is a spec document and the runtime plane
-      # now lives in a sibling state file; the test reads through load_graph()
-      # and passes, so this blocks again.
-      - name: Run graph and dispatch smoke tests
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-        run: |
-          python -m pytest -q \
-            tests/harness/graph/test_pm_inbox_closeout_reconcile.py \
-            tests/harness/graph/test_graph_status_sync.py \
-            tests/harness/graph/test_parent_ready_closeout.py \
-            tests/harness/graph/test_task_graph_state_io.py \
-            tests/harness/graph/test_graph_dispatch_lease_busy.py \
-            tests/harness/graph/test_graph_dispatch_submit.py \
-            tests/harness/graph/test_worker_assignment_reasons.py \
-            tests/harness/test_eval_verdict_evidence_gate_wiring.py \
-            tests/harness/test_pm_dispatch.py
-
-  hf-ai-influence-smoke:
-    name: HF and AI Influence smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
-
-      - name: Run HF and report center smoke tests
-        run: |
-          python -m pytest -q \
-            tests/harness/test_tech_hotspot_browser_agent_cmd.py \
-            tests/harness/test_hf_paper_insight_runtime.py \
-            tests/harness/test_hf_paper_insight_schema.py \
-            tests/harness/test_hf_paper_insight_scoring.py \
-            tests/harness/test_ai_influence_status_server.py
-          python tests/harness/test_status_server_ai_influence.py
-
-  harness-shell-smoke:
-    name: Harness shell smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
-
-      # One step per script. These used to run as a single `bash -eo pipefail`
-      # block, so the first failing script aborted the rest: a broken import in
-      # test_multi_task_entrypoint.sh meant check-harness-plumbing.sh never ran
-      # at all, and its own separate failure went unseen for weeks.
-      - name: Autopilot prerequisite dict
-        id: autopilot_prereq
-        continue-on-error: true
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-        run: bash tests/harness/test_autopilot_prereq_dict.sh
-
-      - name: Coordinator dispatch template escaping
-        id: dispatch_escaping
-        continue-on-error: true
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-        run: bash tests/harness/test_coordinator_dispatch_template_escaping.sh
-
-      - name: Graph dispatch pane role guard
-        id: pane_role_guard
-        continue-on-error: true
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-        run: bash tests/harness/test_graph_dispatch_pane_role_guard.sh
-
-      - name: Multi-task entrypoint
-        id: multi_task_entrypoint
-        continue-on-error: true
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-        run: bash tests/harness/test_multi_task_entrypoint.sh
-
-      - name: PM planner HTML artifacts
-        id: pm_planner_html
-        continue-on-error: true
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-        run: bash tests/harness/test_pm_planner_html_artifacts.sh
-
-      - name: Harness plumbing
-        id: harness_plumbing
-        continue-on-error: true
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-        run: bash scripts/check-harness-plumbing.sh
-
-      - name: Solar UI lite
-        id: solar_ui_lite
-        continue-on-error: true
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-        run: bash scripts/check-solar-ui-lite.sh
-
-      - name: Harness shell smoke verdict
-        shell: bash
-        env:
-          R_AUTOPILOT_PREREQ: ${{ steps.autopilot_prereq.outcome }}
-          R_DISPATCH_ESCAPING: ${{ steps.dispatch_escaping.outcome }}
-          R_PANE_ROLE_GUARD: ${{ steps.pane_role_guard.outcome }}
-          R_MULTI_TASK_ENTRYPOINT: ${{ steps.multi_task_entrypoint.outcome }}
-          R_PM_PLANNER_HTML: ${{ steps.pm_planner_html.outcome }}
-          R_HARNESS_PLUMBING: ${{ steps.harness_plumbing.outcome }}
-          R_SOLAR_UI_LITE: ${{ steps.solar_ui_lite.outcome }}
-        run: |
-          failed=0
-          for check in autopilot_prereq dispatch_escaping pane_role_guard \
-                       multi_task_entrypoint pm_planner_html harness_plumbing \
-                       solar_ui_lite; do
-            var="R_$(printf '%s' "$check" | tr '[:lower:]' '[:upper:]')"
-            if [ "${!var}" != "success" ]; then
-              echo "::error::$check failed"
-              failed=1
-            fi
-          done
-          [ "$failed" -eq 0 ] || { echo "harness shell smoke: one or more checks failed"; exit 1; }
-          echo "harness shell smoke: all checks passed"
 
   autosci-premerge-gate:
     name: AutoSci premerge gate
@@ -338,43 +181,6 @@ jobs:
         continue-on-error: ${{ github.event_name == 'pull_request' }}
         run: |
           bash tests/harness/test_autosci_premerge_gate.sh
-
-  verification-release-gate:
-    name: Verification release gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    env:
-      PYTHONPATH: harness
-      SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
-
-      - name: Run evaluator and closeout gate tests
-        run: |
-          python -m pytest -q \
-            tests/harness/graph/test_acceptance_closeout.py \
-            tests/harness/graph/test_node_proof_obligations.py \
-            tests/harness/graph/test_evaluation_plan_dispatch.py \
-            tests/harness/graph/test_evaluator_pool_discovery.py \
-            tests/harness/runtime/test_verification_gate.py \
-            tests/harness/test_compile_eval.py \
-            tests/harness/test_compiled_sprint_review_closeout.py \
-            tests/harness/test_hf_s05_verification_release_closeout.py \
-            tests/harness/test_thunderomlx_kvtc_s05_closeout.py \
-            tests/harness/research_unit/test_evaluator.py \
-            tests/harness/research_unit/test_cli.py \
-            tests/harness/research_survey/test_survey_evaluator.py
 
   release-packaging-smoke:
     name: Release packaging smoke
@@ -605,28 +411,31 @@ jobs:
       - name: Verdict
         shell: bash
         env:
-          # NOT ENFORCING YET. Deliberate, temporary, and one word to reverse.
+          # ENFORCING. This job fails the build on any of the eight verdicts in
+          # scripts/check-test-baseline.py.
           #
-          # tests/ci_baseline.json is now recorded from a GitHub Actions run
-          # rather than from a laptop, which was the precondition for turning
-          # this on (GAP-012 in docs/testing/COVERAGE-GAPS.md). What is still
-          # missing is a second run proving that baseline reproduces: a run
-          # reporting "clean" against it. Flipping this in the same change that
-          # rewrote the baseline would make a clean result unfalsifiable, since
-          # a green build would then prove nothing about whether the list is
-          # right.
+          # Turned on here rather than later because this same change removes
+          # four blocking jobs whose tests the nine shards already run. Leaving
+          # this advisory while deleting them would drop protection instead of
+          # moving it.
           #
-          # Enforcing before that also risks blocking pull requests for reasons
-          # unrelated to their contents, which teaches people to ignore this job
-          # in week one. The job still runs everything and reports everything;
-          # it just does not fail the build.
+          # Evidence: tests/ci_baseline.json is recorded from GitHub Actions,
+          # not from a laptop, which was the precondition (GAP-012 in
+          # docs/testing/COVERAGE-GAPS.md). Run 87 reported BLOCKED and named
+          # every discrepancy in the local list; run 88 reported clean against
+          # the corrected list, 7,222 cases and an exact set match.
           #
-          # Set to "true" once a run reports a clean verdict against this
-          # baseline without any change to it. Green-side nondeterminism, if any
-          # survives, has to be contained by a quarantine carrying an owner, an
-          # expiry, a reason and a linked defect - not absorbed by the baseline,
-          # which cannot hold a test that passes some runs and fails others.
-          ENFORCING: "false"
+          # The one entry removed from the baseline in this change was removed
+          # because the test now passes - the 44 tracked files it objected to
+          # are gone - which the ratchet requires rather than permits.
+          #
+          # Green-side nondeterminism, if any survives, must be contained by a
+          # quarantine carrying an owner, an expiry, a reason and a linked
+          # defect. It cannot be absorbed by the baseline, which has no way to
+          # hold a test that passes some runs and fails others: leave it out and
+          # it blocks as a new failure, record it and it blocks as an unrecorded
+          # fix on the runs where it passes.
+          ENFORCING: "true"
           R_CENSUS: ${{ steps.census.outcome }}
           R_REGRESSION: ${{ steps.regression.outcome }}
         run: |

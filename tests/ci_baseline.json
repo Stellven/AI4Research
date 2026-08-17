@@ -1,7 +1,7 @@
 {
   "schema": "solar.tests.baseline.v1",
   "note": "Tests that were already red. This list may only shrink: CI compares it against the same file on the base commit and blocks any entry this branch added. Regenerate with scripts/check-test-baseline.py --update after fixing tests, and review the removals in the diff.\n\nRecorded from GitHub Actions run 87 on this branch: 9 of 9 shards, 7,222 cases, 326 red. The previous revision of this file was generated locally from a working tree with 65 files staged for deletion, so every test that reads repository state saw a repository that does not exist. That produced 10 missing entries and 8 entries that were never red on CI. All 10 were confirmed red at the base commit 5cccc0b49 with a clean worktree, so none is a regression from this branch.",
-  "count": 326,
+  "count": 325,
   "known_failures": [
     {
       "test": "tests.foundation.capability_capsules.test_capability_capsule_definition_atomic::test_atomic_capability_capsule_definition_assembly__duplicate_identity_version",
@@ -698,10 +698,6 @@
     {
       "test": "tests.harness.test_autopilot_pane_role_guard::script",
       "reason": "exit 1"
-    },
-    {
-      "test": "tests.harness.test_autosci_phase_c_premerge_readiness::test_generated_artifacts_remain_untracked_for_premerge",
-      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
     },
     {
       "test": "tests.harness.test_autosci_premerge_gate::shell",
