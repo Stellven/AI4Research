@@ -2637,7 +2637,7 @@ def dispatch_ready_graph_nodes(sid: str, lease: bool = True) -> dict:
         import plan_validator  # type: ignore
 
         plan_guard = plan_validator.check_planner_graph_dispatchable(
-            graph, sprints_dir=SPRINTS_DIR, sid=sid
+            graph, sprints_dir=SPRINTS, sid=sid
         )
     except Exception as guard_exc:
         if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
