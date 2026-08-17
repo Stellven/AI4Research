@@ -19,10 +19,26 @@ HARNESS_ROOT = REPO_ROOT / "harness"
 HARNESS_LIB = HARNESS_ROOT / "lib"
 HARNESS_TOOLS = HARNESS_ROOT / "tools"
 
-for path in (REPO_ROOT, HARNESS_ROOT, HARNESS_LIB, HARNESS_TOOLS):
+# Import precedence, highest first. `harness/lib` MUST outrank `harness/tools`:
+# 172 module names exist in both directories, and for the refactored ones
+# `tools/<name>.py` is a thin CLI wrapper whose own docstring says "the
+# implementation lives in harness/lib". The previous loop inserted each entry at
+# position 0, which reversed this tuple and put `tools` first, so the suite
+# imported wrappers instead of implementations. That single ordering silently
+# produced 101 setup errors in tests/harness/scenarios (monkeypatching
+# module-level constants the wrapper does not define) and made
+# tests/harness/gate_ledger and tests/harness/lib uncollectable.
+#
+# Downstream conftests re-insert `harness/lib` under an `if not in sys.path`
+# guard, which is a no-op once it is present at any position, so the order has
+# to be correct here.
+IMPORT_PRECEDENCE = (HARNESS_LIB, HARNESS_TOOLS, HARNESS_ROOT, REPO_ROOT)
+
+for path in reversed(IMPORT_PRECEDENCE):
     value = str(path)
-    if value not in sys.path:
-        sys.path.insert(0, value)
+    while value in sys.path:
+        sys.path.remove(value)
+    sys.path.insert(0, value)
 
 os.environ.setdefault("HARNESS_DIR", str(HARNESS_ROOT))
 os.environ.setdefault("SOLAR_HARNESS_DIR", str(HARNESS_ROOT))
