@@ -293,3 +293,62 @@ def test_build_eval_dispatch_text_requires_research_gate_for_deepresearch_node(m
     assert "solar-harness research eval-artifacts --eval-json" in text
     assert "Do not PASS unless `research_quality_gate.ok=true`" in text
     assert "DeepResearch deterministic artifact gate is **not required**" not in text
+
+
+def test_synthesis_only_node_does_not_inherit_grounded_report_bundle_proofs() -> None:
+    node = {
+        "id": "R2",
+        "write_scope": ["workspace/research/synthesis/synthesis_plan.json"],
+        "proof_obligations": [
+            {
+                "kind": "self_check",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "check.source_packs_verified",
+            },
+            {
+                "kind": "self_check",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "check.grounded_report_bundle_written",
+            },
+            {
+                "kind": "postcondition",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "output_present",
+                "field": "claims_jsonl",
+            },
+            {
+                "kind": "pass_condition",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "final.md citations resolve to evidence.jsonl",
+            },
+        ],
+    }
+
+    obligations = gnd._node_proof_obligations("sid-synthesis-only", node)
+
+    assert [item["requirement"] for item in obligations] == ["check.source_packs_verified"]
+
+
+def test_deepresearch_node_keeps_grounded_report_bundle_proofs() -> None:
+    node = {
+        "id": "R3",
+        "research_quality_gate_required": True,
+        "proof_obligations": [
+            {
+                "kind": "postcondition",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "output_present",
+                "field": "claims_jsonl",
+            },
+            {
+                "kind": "postcondition",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "output_present",
+                "field": "research_eval_json",
+            },
+        ],
+    }
+
+    obligations = gnd._node_proof_obligations("sid-deepresearch", node)
+
+    assert [item["field"] for item in obligations] == ["claims_jsonl", "research_eval_json"]

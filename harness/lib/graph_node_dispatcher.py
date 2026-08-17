@@ -5609,6 +5609,34 @@ def _dedupe_proof_obligations(obligations: list[dict[str, Any]]) -> list[dict[st
     return deduped
 
 
+_GROUNDED_REPORT_BUNDLE_PROOF_FIELDS = {
+    "claims_jsonl",
+    "report_ast_json",
+    "final_md",
+    "research_eval_json",
+}
+
+
+def _is_grounded_report_bundle_proof(obligation: dict[str, Any]) -> bool:
+    if str(obligation.get("source_capsule_id") or "") != "cap.requirement-research-synthesizer":
+        return False
+    field = str(obligation.get("field") or "").strip()
+    if field in _GROUNDED_REPORT_BUNDLE_PROOF_FIELDS:
+        return True
+    requirement = str(obligation.get("requirement") or "").lower()
+    return any(
+        token in requirement
+        for token in (
+            "grounded_report_bundle",
+            "grounded report bundle",
+            "claims.jsonl",
+            "report_ast.json",
+            "final.md",
+            "research_eval.json",
+        )
+    )
+
+
 def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, Any]]:
     obligations: list[dict[str, Any]] = []
     inline = node.get("proof_obligations")
@@ -5629,7 +5657,15 @@ def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, An
             continue
         _append_proof_obligations(obligations, _read_json_file_safe(_artifact_path(path) or path))
 
-    return _dedupe_proof_obligations(obligations)
+    deduped = _dedupe_proof_obligations(obligations)
+    if not _node_requires_deepresearch_quality_gate(node):
+        # A claim-planning node may use the grounded-research capsule to emit only
+        # synthesis_plan.json. The full report-bundle postconditions belong to the
+        # later compile node, as reflected by the evaluator's DeepResearch gate
+        # instruction. Applying them here makes a valid synthesis plan fail for
+        # artifacts this node neither declares nor owns.
+        deduped = [item for item in deduped if not _is_grounded_report_bundle_proof(item)]
+    return deduped
 
 
 # --- Deterministic secret-leak guard + resource binding (general builder/operator path) ---
