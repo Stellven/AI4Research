@@ -1,6 +1,8 @@
 # Built/minified webapp bundles are generated artifacts: exclude from textual diff +
 # whitespace (git diff --check) checks and from language stats.
 harness/status-server/static/p0-app/assets/** -diff linguist-generated
+harness/status-server/react-app/index.html text eol=lf
+harness/status-server/static/p0-app/index.html text eol=lf
 
 # Shell scripts must stay LF even on a Windows checkout (CRLF breaks bash / WSL).
 *.sh text eol=lf

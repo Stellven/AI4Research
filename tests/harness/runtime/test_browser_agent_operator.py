@@ -353,6 +353,23 @@ def test_stage_browser_profile_removes_restore_artifacts(tmp_path):
     shutil.rmtree(cleanup_dir, ignore_errors=True)
 
 
+def test_stage_browser_profile_skips_volatile_extension_assets(tmp_path):
+    root = tmp_path / "Chrome"
+    profile = root / "Profile 1"
+    extensions = profile / "Extensions" / "some-extension"
+    extensions.mkdir(parents=True)
+    (extensions / "plugin.min.js").write_text("volatile", encoding="utf-8")
+    (profile / "Cookies").write_text("cookie-db", encoding="utf-8")
+
+    staged_dir, cleanup_dir = bjrt._stage_browser_profile(root, "Profile 1")
+
+    assert cleanup_dir is not None
+    staged_profile = Path(staged_dir) / "Profile 1"
+    assert (staged_profile / "Cookies").exists()
+    assert not (staged_profile / "Extensions").exists()
+    shutil.rmtree(cleanup_dir, ignore_errors=True)
+
+
 def test_stage_browser_profile_skips_when_already_staged(tmp_path):
     """Verify already-staged temp profiles are passed through unchanged."""
     staged_root = tmp_path / "browser-use-user-data-dir-existing"

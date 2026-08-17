@@ -2,7 +2,9 @@
 # Regression test: large requirement -> Epic + child PRDs/contracts + dependency activation.
 
 set -euo pipefail
-cd "$(dirname "$0")/.."
+export PYTHONIOENCODING=utf-8
+export PYTHONUTF8=1
+cd "$(dirname "$0")/../../harness"
 
 PASS=0
 FAIL=0
@@ -11,6 +13,7 @@ trap 'rm -rf "$TMPDIR_TEST"' EXIT
 mkdir -p "$TMPDIR_TEST/sprints" "$TMPDIR_TEST/lib" "$TMPDIR_TEST/events" "$TMPDIR_TEST/run" "$TMPDIR_TEST/state"
 cp lib/epic_decomposer.py "$TMPDIR_TEST/lib/epic_decomposer.py"
 cp lib/prerequisite_resolver.py "$TMPDIR_TEST/lib/prerequisite_resolver.py"
+cp lib/autosci_intake_contract.py "$TMPDIR_TEST/lib/autosci_intake_contract.py"
 
 ok() { echo "PASS: $*"; PASS=$((PASS+1)); }
 fail() { echo "FAIL: $*"; FAIL=$((FAIL+1)); }

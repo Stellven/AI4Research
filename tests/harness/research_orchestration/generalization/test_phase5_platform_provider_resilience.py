@@ -560,8 +560,10 @@ def _assert_completed_platform_path(payload: dict[str, Any], *, run_id: str, art
 
 def _wsl_path(path: Path) -> str:
     proc = subprocess.run(
-        ["wsl.exe", "-d", "Ubuntu", "--", "wslpath", "-a", str(path)],
+        ["wsl.exe", "-d", "Ubuntu", "--exec", "wslpath", "-a", "--", str(path.resolve())],
         text=True,
+        encoding="utf-8",
+        errors="replace",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,

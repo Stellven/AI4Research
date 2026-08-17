@@ -444,6 +444,24 @@ def _remove_profile_restore_artifacts(root: Path, profile_directory: str) -> Non
                     pass
 
 
+def _browser_profile_copy_ignore(_directory: str, names: list[str]) -> set[str]:
+    """Skip volatile browser assets that are not needed for session reuse."""
+    ignored = {
+        "Extensions",
+        "Extension State",
+        "Extension Rules",
+        "Extension Scripts",
+        "Extension Cookies",
+        "ShaderCache",
+        "GrShaderCache",
+        "GPUCache",
+        "Code Cache",
+        "Cache",
+        "DawnCache",
+    }
+    return {name for name in names if name in ignored}
+
+
 def refresh_browser_profile_cache(user_data_dir: str | Path | None, profile_directory: str | None) -> Optional[Path]:
     if not user_data_dir or not profile_directory:
         return None
@@ -456,7 +474,7 @@ def refresh_browser_profile_cache(user_data_dir: str | Path | None, profile_dire
     if cache_root.exists():
         shutil.rmtree(cache_root, ignore_errors=True)
     cache_root.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source_profile, cache_profile)
+    shutil.copytree(source_profile, cache_profile, ignore=_browser_profile_copy_ignore)
     local_state_src = source_root / "Local State"
     if local_state_src.exists():
         shutil.copy(local_state_src, cache_root / "Local State")
@@ -508,7 +526,7 @@ def prepare_browser_profile_runtime(
     if not seed_root.exists() or not seed_profile.exists():
         return None
     runtime_root.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(seed_profile, runtime_profile)
+    shutil.copytree(seed_profile, runtime_profile, ignore=_browser_profile_copy_ignore)
     local_state_src = seed_root / "Local State"
     if local_state_src.exists():
         shutil.copy(local_state_src, runtime_root / "Local State")
@@ -569,7 +587,7 @@ def _stage_browser_profile(
 
     staged_root = Path(tempfile.mkdtemp(prefix=_STAGED_PROFILE_PREFIX))
     staged_profile = staged_root / profile_directory
-    shutil.copytree(source_profile, staged_profile)
+    shutil.copytree(source_profile, staged_profile, ignore=_browser_profile_copy_ignore)
 
     local_state_src = source_root / "Local State"
     if local_state_src.exists():

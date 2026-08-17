@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import re
 import subprocess
@@ -82,6 +83,37 @@ def test_reconciliation_actions_have_current_evidence() -> None:
             assert targets and all(target in tracked for target in targets)
         if classification.startswith("INTENTIONALLY_EXCLUDED"):
             assert item["action"].strip() and item["evidence"].strip()
+
+
+def test_semantically_preserved_python_tests_keep_test_case_identities() -> None:
+    ledger = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+
+    def test_ids(source: str) -> set[str]:
+        tree = ast.parse(source)
+        return {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name.startswith("test_")
+        }
+
+    for item in ledger["paths"]:
+        if item["classification"] != "PRESERVED_SEMANTICALLY":
+            continue
+        if not item["original_path"].endswith(".py") or not item["original_blob_hash"]:
+            continue
+        original_ids = test_ids(git("cat-file", "blob", item["original_blob_hash"]).decode("utf-8"))
+        if not original_ids:
+            continue
+        current_ids: set[str] = set()
+        for target in item["current_corresponding_paths"]:
+            if target.endswith(".py"):
+                current_ids.update(test_ids((ROOT / target).read_text(encoding="utf-8")))
+        assert original_ids <= current_ids, {
+            "original_path": item["original_path"],
+            "targets": item["current_corresponding_paths"],
+            "missing_test_ids": sorted(original_ids - current_ids),
+        }
 
 
 def test_readme_is_the_verbatim_stellven_source_tip_blob() -> None:

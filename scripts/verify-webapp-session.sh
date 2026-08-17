@@ -19,13 +19,42 @@ cd "$repo"
 RA="harness/status-server/react-app"
 pass=0; fail=0; skip=0
 
-run() {  # run <name> <cmd...>   (exit 0=PASS, 2=SKIP[os-impossible only], other=FAIL/not-verified)
+if [ -n "${PYTHON:-}" ]; then
+  PYTHON_BIN="$PYTHON"
+elif [ -x "$repo/.venv/bin/python" ]; then
+  PYTHON_BIN="$repo/.venv/bin/python"
+elif command -v cygpath >/dev/null 2>&1 && [ -x "$repo/.venv/Scripts/python.exe" ]; then
+  PYTHON_BIN="$(cygpath -w "$repo/.venv/Scripts/python.exe")"
+else
+  PYTHON_BIN="$(command -v python3 || true)"
+fi
+if command -v cygpath >/dev/null 2>&1; then
+  PYTEST_TEMP_ROOT="${SOLAR_TEST_TEMP_ROOT:-${TEMP:-/tmp}}"
+  PYTEST_BASE="$(cygpath -w "$PYTEST_TEMP_ROOT")\\solar-webapp-pytest-$$-$RANDOM"
+  PYTEST_CACHE="$(cygpath -w "$PYTEST_TEMP_ROOT")\\solar-webapp-cache-$$-$RANDOM"
+else
+  PYTEST_TEMP_ROOT="${SOLAR_TEST_TEMP_ROOT:-${TMPDIR:-/tmp}}"
+  PYTEST_BASE="$PYTEST_TEMP_ROOT/solar-webapp-pytest-$$-$RANDOM"
+  PYTEST_CACHE="$PYTEST_TEMP_ROOT/solar-webapp-cache-$$-$RANDOM"
+fi
+
+node_with_desktop_deps() {
+  local modules="$repo/desktop/node_modules"
+  if command -v cygpath >/dev/null 2>&1; then
+    modules="$(cygpath -w "$modules")"
+  fi
+  NODE_PATH="$modules${NODE_PATH:+:$NODE_PATH}" node "$@"
+}
+
+run() {  # run <name> <cmd...>   (exit 0=PASS, any non-zero=FAIL/not-verified)
   local name="$1"; shift
   printf '\n--- %s ---\n' "$name"
   "$@"; local rc=$?
-  if   [ "$rc" -eq 0 ]; then echo "PASS: $name"; pass=$((pass + 1))
-  elif [ "$rc" -eq 2 ]; then echo "SKIP: $name (OS-impossible)"; skip=$((skip + 1))
-  else echo "FAIL: $name (rc=$rc)"; fail=$((fail + 1)); fi
+  if [ "$rc" -eq 0 ]; then
+    echo "PASS: $name"; pass=$((pass + 1))
+  else
+    echo "FAIL: $name (rc=$rc)"; fail=$((fail + 1))
+  fi
 }
 
 need() {  # need <thing> <reproducible-fix-cmd> ; emits NOT VERIFIED + returns 1 (counts as FAIL)
@@ -35,16 +64,17 @@ need() {  # need <thing> <reproducible-fix-cmd> ; emits NOT VERIFIED + returns 1
 }
 
 backend_pytest() {
-  command -v python3 >/dev/null || { need "python3 not on PATH" "install Python 3.10+"; return 1; }
-  python3 -m pytest -q \
+  [ -n "$PYTHON_BIN" ] || { need "Python not on PATH and repository .venv missing" "install Python 3.10+ or create .venv"; return 1; }
+  "$PYTHON_BIN" -m pytest -q \
     tests/harness/test_status_server_session_scoping.py \
-    tests/harness/test_s04_orchestration_routes.py 2>&1 | tail -3
+    tests/harness/test_s04_orchestration_routes.py \
+    --basetemp "$PYTEST_BASE" -o "cache_dir=$PYTEST_CACHE" 2>&1 | tail -3
   return "${PIPESTATUS[0]}"
 }
 
 settings_concurrency() {
-  command -v python3 >/dev/null || { need "python3 not on PATH" "install Python 3.10+"; return 1; }
-  python3 tests/harness/status_server/test_settings_concurrency.py 2>&1 | tail -3
+  [ -n "$PYTHON_BIN" ] || { need "Python not on PATH and repository .venv missing" "install Python 3.10+ or create .venv"; return 1; }
+  "$PYTHON_BIN" tests/harness/status_server/test_settings_concurrency.py 2>&1 | tail -3
   return "${PIPESTATUS[0]}"
 }
 
@@ -74,21 +104,21 @@ bundle_consistency() {
 
 desktop_functional() {
   command -v node >/dev/null || { need "node not on PATH" "install Node.js 18+"; return 1; }
-  [ -f tests/desktop/functional.test.js ] || { need "tests/desktop/functional.test.js absent" "checkout the desktop tests"; return 1; }
+  [ -f tests/desktop/functional.test.cjs ] || { need "tests/desktop/functional.test.cjs absent" "checkout the desktop tests"; return 1; }
   if [ ! -d desktop/node_modules ] || [ ! -d desktop/node_modules/playwright ]; then
     need "desktop Playwright deps missing" "( cd desktop && npm ci && npx playwright install chromium )"; return 1
   fi
-  node tests/desktop/functional.test.js 2>&1 | tail -5
+  node_with_desktop_deps tests/desktop/functional.test.cjs 2>&1 | tail -5
   return "${PIPESTATUS[0]}"
 }
 
 desktop_rapid_switch() {
   command -v node >/dev/null || { need "node not on PATH" "install Node.js 18+"; return 1; }
-  [ -f tests/desktop/rapid-switch.test.js ] || { need "tests/desktop/rapid-switch.test.js absent" "checkout the desktop tests"; return 1; }
+  [ -f tests/desktop/rapid-switch.test.cjs ] || { need "tests/desktop/rapid-switch.test.cjs absent" "checkout the desktop tests"; return 1; }
   if [ ! -d desktop/node_modules/playwright ]; then
     need "desktop Playwright deps missing" "( cd desktop && npm ci && npx playwright install chromium )"; return 1
   fi
-  node tests/desktop/rapid-switch.test.js 2>&1 | tail -4
+  node_with_desktop_deps tests/desktop/rapid-switch.test.cjs 2>&1 | tail -4
   return "${PIPESTATUS[0]}"
 }
 
@@ -98,11 +128,11 @@ desktop_rapid_switch() {
 # no-worker note, and there is no mobile horizontal overflow.
 desktop_overhaul_visual() {
   command -v node >/dev/null || { need "node not on PATH" "install Node.js 18+"; return 1; }
-  [ -f tests/desktop/overhaul-visual.test.js ] || { need "tests/desktop/overhaul-visual.test.js absent" "checkout the desktop tests"; return 1; }
+  [ -f tests/desktop/overhaul-visual.test.cjs ] || { need "tests/desktop/overhaul-visual.test.cjs absent" "checkout the desktop tests"; return 1; }
   if [ ! -d desktop/node_modules/playwright ]; then
     need "desktop Playwright deps missing" "( cd desktop && npm ci && npx playwright install chromium )"; return 1
   fi
-  node tests/desktop/overhaul-visual.test.js 2>&1 | tail -6
+  node_with_desktop_deps tests/desktop/overhaul-visual.test.cjs 2>&1 | tail -6
   return "${PIPESTATUS[0]}"
 }
 

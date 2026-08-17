@@ -3479,7 +3479,14 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
             try:
                 proc = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
                 payload = json.loads(proc.stdout) if proc.stdout.strip().startswith("{") else {"stdout": proc.stdout[-2000:]}
-                result = {"sid": sid, "action": ftype, "ok": proc.returncode == 0, "returncode": proc.returncode, **payload}
+                result = {
+                    "sid": sid,
+                    "action": ftype,
+                    "ok": proc.returncode == 0,
+                    "returncode": proc.returncode,
+                    "stderr": proc.stderr[-2000:],
+                    **payload,
+                }
             except Exception as exc:
                 result = {"sid": sid, "action": ftype, "ok": False, "error": str(exc)}
             append_event(sid, "autopilot_epic_activate_ready", "info" if result.get("ok") else "warn", result)
