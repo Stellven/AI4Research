@@ -3791,7 +3791,6 @@ Date: 2026-08-14
 - Synchronization run: `phase22-final-report-sync-20260814`; reviewed repo head:
   `71a68eeef`. Output copies and render evidence are under
   `outputs/phase22-final-report-sync-20260814/`.
-
 ## Post-closeout correction - Windows desktop intake
 
 Date: 2026-08-14

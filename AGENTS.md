@@ -209,3 +209,33 @@ validated it.
 - Keep `.codex-tmp/`, rendered inspections, temporary spreadsheets, Excel
   `~$` files, local environments, and credentials out of commits.
 - Never touch the real home directory during install or uninstall tests.
+
+### Required Pre-Push Integration Gate
+
+Before pushing `openJiuwen-Solar` to either `origin` or `stellven`, treat that
+branch as the sole publishing branch and complete all of the following checks:
+
+1. Fetch and prune both remotes. Verify that the current
+   `origin/openJiuwen-Solar` and `stellven/openJiuwen-Solar` tips are ancestors
+   of the candidate local `openJiuwen-Solar` tip.
+2. Maintain an explicit ledger of candidate fixes using immutable commit
+   hashes. Classify each candidate individually as `accepted`, `superseded`,
+   `obsolete`, or `rejected`, with a reason or replacement hash. Only fixes
+   explicitly marked `accepted` may be integrated. For each accepted fix,
+   verify with `git merge-base --is-ancestor` that its exact commit is reachable
+   from the candidate publishing tip.
+3. If an accepted fix was cherry-picked or squashed, record the original and
+   integrated commit hashes, verify the integrated hash is reachable, and
+   review patch equivalence. Never treat a similar subject line as proof.
+4. Review `git branch --no-merged openJiuwen-Solar` as an inventory only.
+   Never bulk-merge all local branches, all worktree branches, or every branch
+   reported by `--no-merged`; the existence of a branch is not approval to
+   integrate it. Classify each relevant branch and integrate only its
+   individually reviewed fixes that the ledger marks `accepted`.
+5. Require a clean publishing worktree, relevant passing tests, and explicit
+   user approval. Block the push if any accepted fix or remote tip is missing
+   or its disposition is unclear.
+6. Push the same verified `openJiuwen-Solar` commit to both remotes, then fetch
+   and verify that both remote branch tips resolve to that exact commit. Never
+   force-push unless the user explicitly authorizes the specific history
+   rewrite after reviewing its impact.

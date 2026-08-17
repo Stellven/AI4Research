@@ -1460,7 +1460,15 @@ function loadDashboard(url) {
   targetWebContents.on("did-finish-load", onFinish);
   targetWebContents.on("did-fail-load", onFail);
   log("loading runtime dashboard:", url);
-  void targetWebContents.loadURL(url).catch((error) => {
+  // The status server protects every dashboard request with its loopback token.
+  // Authenticate the initial navigation with a header so the server can return
+  // the HTML that injects window.__SOLAR_TOKEN__ for subsequent API calls. Keep
+  // the token out of the URL, history, diagnostics, and desktop logs.
+  const token = readToken();
+  const loadOptions = token
+    ? { extraHeaders: `X-Solar-Token: ${token}\r\n` }
+    : undefined;
+  void targetWebContents.loadURL(url, loadOptions).catch((error) => {
     if (SELFTEST) {
       cleanup();
       finishSelftest(false, {
