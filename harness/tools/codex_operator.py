@@ -21,13 +21,38 @@ if _HARNESS_LIB_DIR not in sys.path:
 from codex_cli_runtime import resolve_codex_cli
 
 
+def _declared_output_guidance() -> str:
+    try:
+        outputs = json.loads(os.environ.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
+    except (TypeError, ValueError):
+        return ""
+    paths = [str(item).strip() for item in outputs if isinstance(item, str) and item.strip()]
+    if not paths:
+        return ""
+    rendered = "\n".join(f"- `{path}`" for path in paths)
+    return (
+        "## Solar filesystem output contract\n\n"
+        "Solar may pre-create the exact declared output paths as zero-byte placeholders so "
+        "Landlock can grant file-level write access. A placeholder is not a completed artifact. "
+        "Write these files in place; do not delete and recreate them. When using apply_patch on "
+        "an existing placeholder, use Update File rather than Add File.\n\n"
+        "Declared writable outputs:\n"
+        f"{rendered}"
+    )
+
+
 def _read_dispatch() -> str:
     dispatch_file = os.environ.get("DISPATCH_FILE") or os.environ.get("SOLAR_MULTI_TASK_DISPATCH_FILE")
     if dispatch_file:
         path = Path(dispatch_file).expanduser()
         if path.exists():
-            return path.read_text(encoding="utf-8", errors="replace")
-    return sys.stdin.read()
+            dispatch = path.read_text(encoding="utf-8", errors="replace")
+        else:
+            dispatch = sys.stdin.read()
+    else:
+        dispatch = sys.stdin.read()
+    guidance = _declared_output_guidance()
+    return f"{dispatch.rstrip()}\n\n{guidance}\n" if guidance else dispatch
 
 
 def _write_pm_result(task_dir: Path, output_file: Path, output: str, exit_code: int) -> None:

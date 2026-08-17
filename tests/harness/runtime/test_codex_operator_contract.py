@@ -215,6 +215,23 @@ def test_operatord_refuses_expected_artifact_outside_authorized_roots(tmp_path, 
         )
 
 
+def test_codex_operator_explains_precreated_output_placeholders(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_output_guidance", ROOT / "tools" / "codex_operator.py")
+    dispatch_file = tmp_path / "dispatch.md"
+    dispatch_file.write_text("# Build the artifacts\n", encoding="utf-8")
+    expected = tmp_path / "design.md"
+    expected.touch()
+    monkeypatch.setenv("DISPATCH_FILE", str(dispatch_file))
+    monkeypatch.setenv("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON", json.dumps([str(expected)]))
+
+    dispatch = codex_operator._read_dispatch()
+
+    assert dispatch.startswith("# Build the artifacts")
+    assert "zero-byte placeholders" in dispatch
+    assert "use Update File rather than Add File" in dispatch
+    assert str(expected) in dispatch
+
+
 def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract", ROOT / "tools" / "codex_operator.py")
     harness_dir = tmp_path / "harness"
