@@ -251,6 +251,7 @@ def _build_pm_operator_envelope(
         envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
         envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
         envelope["capsule_plan"] = capsule_submit.get("capsule_plan", {})
+        envelope["selected_skills"] = list(capsule_submit.get("selected_skills") or [])
     if capsule_submit.get("capsule_override_reason"):
         envelope["capsule_override_reason"] = str(capsule_submit["capsule_override_reason"])
     return envelope
@@ -910,6 +911,12 @@ def _capsule_submit_metadata(node: dict[str, Any] | None) -> dict[str, Any]:
         "dispatch_task_type": node.get("dispatch_task_type") or capsule_plan.get("dispatch_task_type"),
         "logical_operator": node.get("logical_operator", ""),
         "capsule_plan": capsule_plan,
+        "selected_skills": list(
+            capsule_plan.get("selected_skills")
+            or node.get("selected_skills")
+            or node.get("required_skills")
+            or []
+        ),
     }
 
 
@@ -2375,6 +2382,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
                     "task_type": task_type,
                     "objective": objective[:300],
                     "capability_capsule_id": capsule_submit["capability_capsule_id"],
+                    "selected_skills": list(capsule_submit.get("selected_skills") or []),
                 }
             )
         except Exception:

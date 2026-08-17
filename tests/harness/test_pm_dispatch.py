@@ -281,6 +281,7 @@ def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
                     "capability_native": True,
                     "capability_capsule_id": "cap.requirement-compiler-implementation",
                     "dispatch_task_type": "implementation",
+                    "required_skills": ["python_implementation"],
                     "capsule_plan": {
                         "capability_native": True,
                         "capability_capsule_id": "cap.requirement-compiler-implementation",
@@ -361,6 +362,7 @@ def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
         assert envelope["capability_capsule_id"] == "cap.requirement-compiler-implementation"
         assert envelope["logical_operator"] == "ImplementationWorker"
         assert envelope["task_type"] == "implementation"
+        assert envelope["selected_skills"] == ["python_implementation"]
 
 
 def test_cmd_submit_canonicalizes_analysis_audit_node_before_submit(monkeypatch):
