@@ -390,6 +390,8 @@ def test_codex_operator_uses_mount_namespace_for_drvfs(tmp_path, monkeypatch):
     work_dir = harness_dir / "sprints" / "sprint-1" / "workdir"
     task_dir.mkdir(parents=True)
     work_dir.mkdir(parents=True)
+    (tmp_path / "AGENTS.md").write_text("# Test agent instructions\n", encoding="utf-8")
+    (tmp_path / ".agents").mkdir()
     source_codex_home = tmp_path / "source-codex-home"
     source_codex_home.mkdir()
     monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
@@ -408,6 +410,9 @@ def test_codex_operator_uses_mount_namespace_for_drvfs(tmp_path, monkeypatch):
     assert "landlock_exec.py" in command
     assert "--read-scope-only" in command
     assert proof["mode"] == "mount_namespace+landlock-read"
+    assert str(tmp_path.resolve()) in proof["read_directories"]
+    assert str((tmp_path / "AGENTS.md").resolve()) in proof["read_only"]
+    assert str((tmp_path / ".agents").resolve()) in proof["read_only"]
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="WSL mount isolation is Linux-only")

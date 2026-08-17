@@ -349,8 +349,11 @@ def _filesystem_isolated_command(
             resolved_binary.parent,
             *resolved_system_network_files,
             harness_dir,
+            harness_dir.parent / "AGENTS.md",
+            harness_dir.parent / ".agents",
         ]
     )
+    read_directories = _existing_paths([harness_dir.parent])
     try:
         declared_outputs = json.loads(env.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
     except (TypeError, ValueError):
@@ -396,6 +399,8 @@ def _filesystem_isolated_command(
                 continue
             wrapped.extend(["--read-write", str(path)])
         wrapped.extend(["--", sys.executable, str(wrapper), "--read-scope-only"])
+    for path in read_directories:
+        wrapped.extend(["--read-directory", str(path)])
     for path in read_only:
         wrapped.extend(["--read-only", str(path)])
     for path in read_write:
@@ -404,6 +409,7 @@ def _filesystem_isolated_command(
     return wrapped, {
         "mode": "mount_namespace+landlock-read" if drvfs else "landlock",
         "strict": strict,
+        "read_directories": [str(path) for path in read_directories],
         "read_only": [str(path) for path in read_only],
         "read_write": [str(path) for path in read_write],
     }

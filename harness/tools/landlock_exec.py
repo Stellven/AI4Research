@@ -105,6 +105,7 @@ def restrict_filesystem(
     read_only: list[Path],
     read_write: list[Path],
     *,
+    read_directories: list[Path] | None = None,
     enforce_writes: bool = True,
 ) -> dict[str, object]:
     libc = ctypes.CDLL(None, use_errno=True)
@@ -132,6 +133,7 @@ def restrict_filesystem(
     try:
         seen: set[tuple[str, str]] = set()
         for mode, paths, access, result in (
+            ("dir", read_directories or [], handled & ACCESS_FS_READ_DIR, resolved_ro),
             ("ro", read_only, read_access(handled), resolved_ro),
             ("rw", read_write, handled, resolved_rw),
         ):
@@ -158,6 +160,7 @@ def restrict_filesystem(
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--read-directory", action="append", default=[])
     parser.add_argument("--read-only", action="append", default=[])
     parser.add_argument("--read-write", action="append", default=[])
     parser.add_argument(
@@ -180,6 +183,7 @@ def main(argv: list[str] | None = None) -> int:
         proof = restrict_filesystem(
             [Path(item) for item in args.read_only],
             [Path(item) for item in args.read_write],
+            read_directories=[Path(item) for item in args.read_directory],
             enforce_writes=not args.read_scope_only,
         )
     except OSError as exc:
