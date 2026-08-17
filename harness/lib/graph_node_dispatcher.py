@@ -3509,6 +3509,64 @@ def resume_human_review(
     return result
 
 
+def _reopen_mechanically_skipped_descendants(
+    graph: dict[str, Any],
+    sid: str,
+    node_id: str,
+    *,
+    writer: str,
+    author_type: str,
+    note: str,
+) -> list[str]:
+    """Reopen descendants skipped only because ``node_id`` had failed.
+
+    A terminal dependency failure mechanically skips its downstream chain. If
+    that dependency later becomes executable again or receives a valid PASS,
+    those synthetic skips must not remain terminal work of their own.
+    """
+    reopened_descendants: list[str] = []
+    reopened = {node_id}
+    changed = True
+    while changed:
+        changed = False
+        for candidate in graph.get("nodes") or []:
+            candidate_id = str(candidate.get("id") or "")
+            if not candidate_id or candidate_id in reopened:
+                continue
+            if str(node_status(graph, candidate_id) or "").lower() != "skipped":
+                continue
+            if str(candidate.get("skip_reason") or "") != "blocked_by_failed_dependency":
+                continue
+            dependencies = {str(value) for value in (candidate.get("depends_on") or [])}
+            if not dependencies.intersection(reopened):
+                continue
+            prior = "skipped"
+            now = _utc_now()
+            candidate["status"] = "pending"
+            candidate["updated_at"] = now
+            candidate.pop("skip_reason", None)
+            candidate.pop("blocked_by_failed_dependency", None)
+            graph.setdefault("node_results", {})[candidate_id] = {
+                "status": "pending",
+                "updated_at": now,
+                "note": f"reopened_after_dependency_recovery:{node_id}",
+            }
+            _ledger_transition(
+                sid,
+                candidate_id,
+                prior,
+                "pending",
+                writer,
+                author_type=author_type,
+                note=note,
+                recovered_dependency=node_id,
+            )
+            reopened.add(candidate_id)
+            reopened_descendants.append(candidate_id)
+            changed = True
+    return reopened_descendants
+
+
 def escalate_terminal_failure_to_human_review(
     graph_path: str | Path,
     node_id: str,
@@ -3572,46 +3630,14 @@ def escalate_terminal_failure_to_human_review(
         author_type="human",
     )
 
-    reopened_descendants: list[str] = []
-    reopened = {node_id}
-    changed = True
-    while changed:
-        changed = False
-        for candidate in graph.get("nodes") or []:
-            candidate_id = str(candidate.get("id") or "")
-            if not candidate_id or candidate_id in reopened:
-                continue
-            if str(node_status(graph, candidate_id) or "").lower() != "skipped":
-                continue
-            if str(candidate.get("skip_reason") or "") != "blocked_by_failed_dependency":
-                continue
-            dependencies = {str(value) for value in (candidate.get("depends_on") or [])}
-            if not dependencies.intersection(reopened):
-                continue
-            prior = "skipped"
-            now = _utc_now()
-            candidate["status"] = "pending"
-            candidate["updated_at"] = now
-            candidate.pop("skip_reason", None)
-            candidate.pop("blocked_by_failed_dependency", None)
-            graph.setdefault("node_results", {})[candidate_id] = {
-                "status": "pending",
-                "updated_at": now,
-                "note": f"reopened_after_terminal_recovery:{node_id}",
-            }
-            _ledger_transition(
-                sid,
-                candidate_id,
-                prior,
-                "pending",
-                "escalate_terminal_failure_to_human_review",
-                author_type="human",
-                note=reason,
-                recovered_dependency=node_id,
-            )
-            reopened.add(candidate_id)
-            reopened_descendants.append(candidate_id)
-            changed = True
+    reopened_descendants = _reopen_mechanically_skipped_descendants(
+        graph,
+        sid,
+        node_id,
+        writer="escalate_terminal_failure_to_human_review",
+        author_type="human",
+        note=reason,
+    )
 
     save_graph(graph_path, graph)
     _record_node_runstate(
@@ -13341,6 +13367,16 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
     if eval_json:
         note_parts.append(f"eval_json={eval_json}")
     eval_assignments = _node_eval_assignments(node)
+    reopened_descendants: list[str] = []
+    if status == "passed":
+        reopened_descendants = _reopen_mechanically_skipped_descendants(
+            graph,
+            sid,
+            node_id,
+            writer="node_verdict",
+            author_type="policy",
+            note=reason or "dependency_passed",
+        )
     if status == "failed":
         resolved_eval_json = str(eval_json or _eval_json_file(sid, node_id))
         eval_payload = _read_json_file_safe(resolved_eval_json)
@@ -13479,6 +13515,7 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
         "research_quality_gate": research_quality_gate,
         "workspace_publish": workspace_publish,
         "coverage_refresh": coverage_refresh,
+        "reopened_descendants": reopened_descendants,
     }
 
 
