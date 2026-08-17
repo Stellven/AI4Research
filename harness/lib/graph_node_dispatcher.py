@@ -6262,9 +6262,13 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
             presence[artifact_key] = candidate.exists()
     operator_results_root = HARNESS_DIR / "run" / "operator-results"
     if operator_results_root.exists():
+        execution_attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
+        current_task_id = str(execution_attempt.get("task_id") or node.get("pm_task_id") or "").strip()
         for result_json in operator_results_root.glob("*/*/result.json"):
             data = _read_json_file_safe(result_json)
             if str(data.get("sprint_id") or "") != sid or str(data.get("node_id") or "") != node_id:
+                continue
+            if current_task_id and str(data.get("task_id") or "").strip() != current_task_id:
                 continue
             result_dir = result_json.parent
             skill_dispatch_result = result_dir / "skill-dispatch-result.json"
