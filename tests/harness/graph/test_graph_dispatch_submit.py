@@ -409,6 +409,41 @@ class TestSendToPaneLiteral:
             }
         ]
 
+    def test_reconcile_pass_reopens_mechanically_skipped_descendants(
+        self, tmp_harness, monkeypatch
+    ):
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph["nodes"][0]["status"] = "reviewing"
+        graph["nodes"][1].update(
+            {
+                "status": "skipped",
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["N1"],
+            }
+        )
+        graph["node_results"] = {
+            "N1": {"status": "reviewing"},
+            "N2": {"status": "skipped", "reason": "blocked_by_failed_dependency"},
+        }
+        (sprints / f"{sid}.N1-handoff.md").write_text("# handoff\n", encoding="utf-8")
+        (sprints / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
+        (sprints / f"{sid}.N1-eval.json").write_text(
+            json.dumps({"verdict": "PASS", "node_id": "N1"}) + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(
+            graph, sprints / f"{sid}.task_graph.json"
+        )
+
+        assert graph["node_results"]["N1"]["status"] == "passed"
+        assert graph["node_results"]["N2"]["status"] == "pending"
+        assert graph["nodes"][1]["status"] == "pending"
+        assert repaired[0]["reopened_descendants"] == ["N2"]
+
     def test_reconcile_blocks_self_graded_pass_eval_sidecar(self, tmp_harness, monkeypatch):
         """Eval-backfill guard on the reconcile path: a PASS eval.json sidecar the executing agent
         wrote itself, with NO independent eval report (no {sid}.N1-eval.md, no eval-dispatch sidecar),

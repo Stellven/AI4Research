@@ -4753,6 +4753,14 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             if eval_verdict == "PASS" and _node_eval_self_graded(sid, node_id):
                 node.pop("assigned_to", None)
                 node.pop("dispatch_id", None)
+                reopened_descendants = _reopen_mechanically_skipped_descendants(
+                    graph,
+                    sid,
+                    node_id,
+                    writer="_reconcile_existing_dispatches",
+                    author_type="policy",
+                    note=f"reconciled_from_eval_sidecar:{Path(eval_json_path).name}",
+                )
                 repaired.append(
                     {
                         "node": node_id,
@@ -4900,6 +4908,11 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                         "eval_json": eval_json_path,
                         "verdict": eval_verdict,
                         "closeout_receipt": closeout.get("closeout_receipt"),
+                        **(
+                            {"reopened_descendants": reopened_descendants}
+                            if reopened_descendants
+                            else {}
+                        ),
                     }
                 )
                 continue
@@ -4917,6 +4930,18 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             node["status"] = verdict_status
             node["updated_at"] = _utc_now()
             node["eval_json"] = eval_json_path
+            reopened_descendants = (
+                _reopen_mechanically_skipped_descendants(
+                    graph,
+                    sid,
+                    node_id,
+                    writer="_reconcile_existing_dispatches",
+                    author_type="policy",
+                    note=f"reconciled_from_eval_sidecar:{Path(eval_json_path).name}",
+                )
+                if verdict_status == "passed"
+                else []
+            )
             repaired.append(
                 {
                     "node": node_id,
@@ -4925,6 +4950,11 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     "handoff": str(handoff_file),
                     "eval_json": eval_json_path,
                     "verdict": eval_verdict,
+                    **(
+                        {"reopened_descendants": reopened_descendants}
+                        if reopened_descendants
+                        else {}
+                    ),
                 }
             )
             continue
