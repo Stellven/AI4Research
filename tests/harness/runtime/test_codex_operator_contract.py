@@ -232,6 +232,48 @@ def test_codex_operator_explains_precreated_output_placeholders(tmp_path, monkey
     assert str(expected) in dispatch
 
 
+def test_codex_operator_materializes_direct_skill_bridge_evidence(tmp_path, monkeypatch):
+    codex_operator = _load_module(
+        "codex_operator_contract_skill_bridge",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    monkeypatch.setenv(
+        "SOLAR_OPERATOR_ENVELOPE_JSON",
+        json.dumps(
+            {
+                "selected_skills": ["research_compilation"],
+                "resolved_capability_capsule": {
+                    "id": "cap.skill-execution-bridge",
+                    "selected_skills": ["research_compilation"],
+                },
+                "task_graph_node": {"required_skills": ["research_compilation"]},
+            }
+        ),
+    )
+
+    evidence = codex_operator._materialize_skill_bridge_evidence(
+        tmp_path,
+        "Compile the grounded report.",
+    )
+    codex_operator._write_skill_bridge_result(tmp_path, evidence, 0)
+
+    expected = {
+        "skill-dispatch-result.json",
+        "skill-dispatch-pane-prompt.md",
+        "skill-dispatch-selection-proof.json",
+        "skill-dispatch-bridge-contract.json",
+    }
+    assert expected.issubset({path.name for path in tmp_path.iterdir()})
+    contract = json.loads((tmp_path / "skill-dispatch-bridge-contract.json").read_text(encoding="utf-8"))
+    assert contract["command_protocol"]["mode"]
+    assert contract["command_protocol"]["execution_surface"] == "direct_command_operator"
+    assert contract["workflow_contract"]["phases"]
+    assert contract["delivery_expectation"]
+    result = json.loads((tmp_path / "skill-dispatch-result.json").read_text(encoding="utf-8"))
+    assert result["status"] == "completed"
+    assert result["selected_skills"] == ["research_compilation"]
+
+
 def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract", ROOT / "tools" / "codex_operator.py")
     harness_dir = tmp_path / "harness"
