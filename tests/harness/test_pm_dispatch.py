@@ -745,6 +745,32 @@ def test_codex_operator_health_accepts_path_resolved_codex(monkeypatch):
     }
 
 
+def test_codex_operator_health_accepts_wsl_desktop_materialization(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    materialized = tmp_path / "run" / "codex-cli-runtime" / "fixture" / "codex"
+    monkeypatch.setattr(pm_dispatch.shutil, "which", lambda _cmd: None)
+    monkeypatch.setattr(
+        pm_dispatch,
+        "resolve_codex_cli",
+        lambda *_args, **_kwargs: (materialized, "windows_desktop_wsl_copy"),
+    )
+
+    ok, reason = pm_dispatch._command_path_available(
+        "/opt/homebrew/bin/codex",
+        {
+            "provider": "openai",
+            "model": "gpt-5.5",
+            "command_path": "/opt/homebrew/bin/codex",
+        },
+    )
+
+    assert ok is True
+    assert reason == (
+        "command_path_resolved_via_windows_desktop_wsl_copy:"
+        f"{materialized}"
+    )
+
+
 def _write_builder_ready_graph(sprints: Path, sprint_id: str) -> None:
     (sprints / f"{sprint_id}.status.json").write_text(
         json.dumps({"status": "active", "phase": "planning_complete"}),

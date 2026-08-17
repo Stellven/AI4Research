@@ -48,6 +48,7 @@ if sys.path and sys.path[0] != _PM_LIB_DIR:
         sys.path.remove(_PM_LIB_DIR)
     sys.path.insert(0, _PM_LIB_DIR)
 
+from codex_cli_runtime import resolve_codex_cli
 from task_lifecycle import activate_execution_attempt
 
 HOME = Path.home()
@@ -705,6 +706,16 @@ def _command_path_available(command_path: str, op: dict[str, Any]) -> tuple[bool
         resolved = shutil.which("codex")
         if resolved:
             return True, f"command_path_resolved_via_path:{resolved}"
+        try:
+            materialized, source = resolve_codex_cli(
+                HARNESS_DIR,
+                env=os.environ,
+                configured_path=command_path,
+            )
+        except OSError:
+            materialized, source = None, ""
+        if materialized:
+            return True, f"command_path_resolved_via_{source}:{materialized}"
     return False, f"command_path_missing:{command_path}"
 
 

@@ -14,6 +14,12 @@ import tempfile
 import time
 from pathlib import Path
 
+_HARNESS_LIB_DIR = str(Path(__file__).resolve().parents[1] / "lib")
+if _HARNESS_LIB_DIR not in sys.path:
+    sys.path.insert(0, _HARNESS_LIB_DIR)
+
+from codex_cli_runtime import resolve_codex_cli
+
 
 def _read_dispatch() -> str:
     dispatch_file = os.environ.get("DISPATCH_FILE") or os.environ.get("SOLAR_MULTI_TASK_DISPATCH_FILE")
@@ -165,8 +171,14 @@ def _codex_model() -> str:
     return policy_model or configured_model or "gpt-5.5"
 
 
-def _codex_exec_command(model: str, effort: str, cwd: str, output_file: Path) -> list[str]:
-    cmd = ["codex"]
+def _codex_exec_command(
+    model: str,
+    effort: str,
+    cwd: str,
+    output_file: Path,
+    codex_binary: str = "codex",
+) -> list[str]:
+    cmd = [codex_binary]
     if _codex_live_search_requested():
         cmd.append("--search")
     cmd.append("exec")
@@ -252,7 +264,12 @@ def _filesystem_isolated_command(
 
     codex_arg0_dir = codex_home / "tmp" / "arg0"
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
-    codex_binary = Path(shutil.which("codex", path=env.get("PATH")) or "codex")
+    command_binary = Path(command[0]).expanduser() if command else Path("codex")
+    codex_binary = (
+        command_binary
+        if command_binary.is_file()
+        else Path(shutil.which("codex", path=env.get("PATH")) or "codex")
+    )
     resolved_binary = codex_binary.resolve(strict=False)
     if command and Path(command[0]).name == codex_binary.name:
         command = [str(resolved_binary), *command[1:]]
@@ -401,7 +418,15 @@ def main() -> int:
         return 72
 
     codex_env = _codex_exec_env(task_dir)
-    raw_cmd = _codex_exec_command(model, effort, cwd, output_file)
+    codex_binary, resolution = resolve_codex_cli(
+        Path(codex_env["HARNESS_DIR"]),
+        env=codex_env,
+        configured_path=os.environ.get("SOLAR_CODEX_BIN", ""),
+    )
+    if codex_binary is None:
+        print(f"ERROR: Codex CLI unavailable: {resolution}", file=sys.stderr)
+        return 69
+    raw_cmd = _codex_exec_command(model, effort, cwd, output_file, str(codex_binary))
     try:
         cmd, fs_scope = _filesystem_isolated_command(
             raw_cmd,

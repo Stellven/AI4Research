@@ -249,6 +249,21 @@ def test_codex_operator_prefers_harness_wide_model_policy(tmp_path, monkeypatch)
     assert codex_operator._codex_model() == "gpt-5.3-codex-spark"
 
 
+def test_codex_operator_uses_resolved_cross_platform_binary(tmp_path):
+    codex_operator = _load_module("codex_operator_contract_binary", ROOT / "tools" / "codex_operator.py")
+    binary = tmp_path / "codex"
+    command = codex_operator._codex_exec_command(
+        "gpt-5.5",
+        "medium",
+        str(tmp_path),
+        tmp_path / "last.md",
+        str(binary),
+    )
+
+    assert command[0] == str(binary)
+    assert command[1] == "exec"
+
+
 def test_codex_operator_projects_auth_on_non_linux(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_non_linux_auth", ROOT / "tools" / "codex_operator.py")
     harness_dir = tmp_path / "harness"
