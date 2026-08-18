@@ -4899,6 +4899,14 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     continue
                 node.pop("assigned_to", None)
                 node.pop("dispatch_id", None)
+                reopened_descendants = _reopen_mechanically_skipped_descendants(
+                    graph,
+                    sid,
+                    node_id,
+                    writer="_reconcile_existing_dispatches",
+                    author_type="policy",
+                    note=f"reconciled_from_eval_sidecar:{Path(eval_json_path).name}",
+                )
                 repaired.append(
                     {
                         "node": node_id,

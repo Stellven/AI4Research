@@ -86,3 +86,54 @@ def test_skill_dispatch_proof_reads_current_execution_attempt_only(tmp_path, mon
     assert str(current_dir / "skill-dispatch-pane-prompt.md") in support
     assert str(current_dir / "skill-dispatch-selection-proof.json") in support
     assert str(current_dir / "skill-dispatch-bridge-contract.json") in support
+
+
+def test_contracted_reconcile_pass_reopens_skipped_descendant(tmp_path, monkeypatch):
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    sid = "sprint-contracted-reconcile-pass"
+    graph = {
+        "sprint_id": sid,
+        "workflow_contract_id": "test.contract.v1",
+        "nodes": [
+            {"id": "N1", "status": "reviewing", "depends_on": []},
+            {
+                "id": "N2",
+                "status": "skipped",
+                "depends_on": ["N1"],
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["N1"],
+            },
+        ],
+        "node_results": {
+            "N1": {"status": "reviewing"},
+            "N2": {"status": "skipped", "reason": "blocked_by_failed_dependency"},
+        },
+        "gate_results": {},
+    }
+    graph_path = sprints / f"{sid}.task_graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    (sprints / f"{sid}.N1-handoff.md").write_text("# Handoff\n", encoding="utf-8")
+    (sprints / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
+    (sprints / f"{sid}.N1-eval.json").write_text(
+        json.dumps({"verdict": "PASS", "generation_mode": "assigned_evaluator"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(gnd, "release_lease", lambda *args, **kwargs: {"released": True})
+    monkeypatch.setattr(gnd, "_validate_eval_artifact_snapshot", lambda *args, **kwargs: {"ok": True})
+
+    def finalize(_sid, node, current_graph, **kwargs):
+        node["status"] = "passed"
+        current_graph["node_results"][node["id"]]["status"] = "passed"
+        current_graph["gate_results"][node["id"]] = "passed"
+        return {"ok": True, "closeout_receipt": {"schema": "solar.node_closeout.v1"}}
+
+    monkeypatch.setattr(gnd, "_finalize_node_pass", finalize)
+
+    repaired = gnd._reconcile_existing_dispatches(graph, graph_path)
+
+    assert graph["nodes"][1]["status"] == "pending"
+    assert graph["node_results"]["N2"]["status"] == "pending"
+    assert repaired[0]["reopened_descendants"] == ["N2"]
