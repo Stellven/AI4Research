@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 
-STATUS_SERVER = Path(__file__).resolve().parents[1] / "lib" / "symphony" / "status-server.py"
+STATUS_SERVER = Path(__file__).resolve().parents[2] / "harness" / "lib" / "symphony" / "status-server.py"
 
 
 def _load_status_server(monkeypatch, tmp_path: Path):

@@ -6,8 +6,8 @@
     "INTENTIONALLY_EXCLUDED_GENERATED_STATE": 1816,
     "INTENTIONALLY_EXCLUDED_OBSOLETE_DUPLICATE": 2126,
     "INTENTIONALLY_EXCLUDED_SECRET_OR_LOCAL_STATE": 1,
-    "PRESERVED_EXACT": 1358,
-    "SUPERSEDED_BY_NEWER_IMPLEMENTATION": 137
+    "PRESERVED_EXACT": 1357,
+    "SUPERSEDED_BY_NEWER_IMPLEMENTATION": 138
   },
   "fixed_revisions": {
     "common_ancestor": "a3a0ecaae82eed1e87d8dabb9eab520796c4a1bd",
@@ -3632,7 +3632,7 @@
         ".github/workflows/install-matrix.yml"
       ],
       "current_blob_hashes": [
-        "1bfecd1c92a8bd16983031510305ac9d9ac4dde6"
+        "1bc62efc2192235c8ab8d376a70c85c7508b84f8"
       ],
       "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
       "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
@@ -3672,7 +3672,7 @@
         ".github/workflows/solar-ci.yml"
       ],
       "current_blob_hashes": [
-        "e381ade5d54b65057ae28c7d0a6eb714e16cbdfc"
+        "5bdb2a03c9d828d333633687ba976b97046f7116"
       ],
       "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
       "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
@@ -41724,11 +41724,11 @@
         "harness/lib/intent_gateway.py"
       ],
       "current_blob_hashes": [
-        "c9bbbe137ba445df7156c893bd4f3b22aad1548e"
+        "bb4f87e47d4edf79af2075c9e47766eb645d0e9a"
       ],
-      "classification": "PRESERVED_EXACT",
-      "evidence": "Source-tip blob equals the current blob at the same path.",
-      "action": "No write required.",
+      "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
+      "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
+      "action": "Keep the final-integration implementation.",
       "validation": "Validated by tests/repository/governance/test_overwritten_contribution_reconciliation.py."
     },
     {
@@ -81176,7 +81176,7 @@
         "harness/tools/codex_pm_router.py"
       ],
       "current_blob_hashes": [
-        "696192645d12090f12142cc7bdea8a249ae3e5f2"
+        "2ee58a524a43d60cc17d40ff8d112050b4692616"
       ],
       "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
       "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
@@ -81743,7 +81743,7 @@
         "harness/tools/pm_dispatch.py"
       ],
       "current_blob_hashes": [
-        "1d6f20c97c21bf5a7f453c54011f5c0ff56b4134"
+        "7329d7365d89d92a7491924a7a65f6705c67ecaf"
       ],
       "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
       "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
@@ -90436,6 +90436,7 @@
     "harness/lib/epic_decomposer.py",
     "harness/lib/graph_node_dispatcher.py",
     "harness/lib/graph_scheduler.py",
+    "harness/lib/intent_gateway.py",
     "harness/lib/operator_flow_control.py",
     "harness/lib/operator_runtime.py",
     "harness/lib/pane_role_pool.py",
@@ -90516,5 +90517,7 @@
     ],
     "non_product_runner_limit": "The clone-based test_release_coherence_tracked_inputs.sh exceeded the 180-second command limit after the direct coherence gate passed; it is recorded as runner-duration evidence, not a product failure."
   },
-  "unresolved_count": 0
+  "unresolved_count": 0,
+  "needs_human_decision_count": 0,
+  "tracked_target_missing_count": 1685
 }
