@@ -6200,6 +6200,25 @@ def _proof_support_artifacts_block(sid: str, node: dict[str, Any]) -> str:
     if _proof_obligations_require_field(sid, node, "patch_diff"):
         patch_diff = _existing_node_patch_diff(sid, node)
         entries.append(("patch_diff", patch_diff or _node_patch_diff_candidates(sid, node)[0]))
+    obligations = _node_proof_obligations(sid, node)
+    skill_proof_required = any(
+        "skill_dispatch" in str(obligation.get("requirement") or "")
+        for obligation in obligations
+        if isinstance(obligation, dict)
+    )
+    execution_attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
+    task_id = str(execution_attempt.get("task_id") or node.get("pm_task_id") or "").strip()
+    operator_id = str(execution_attempt.get("operator_id") or node.get("operator_id") or "").strip()
+    if skill_proof_required and task_id and operator_id:
+        result_dir = HARNESS_DIR / "run" / "operator-results" / operator_id / task_id
+        entries.extend(
+            [
+                ("skill_dispatch_result", result_dir / "skill-dispatch-result.json"),
+                ("skill_dispatch_prompt", result_dir / "skill-dispatch-pane-prompt.md"),
+                ("skill_dispatch_selection_proof", result_dir / "skill-dispatch-selection-proof.json"),
+                ("skill_dispatch_contract", result_dir / "skill-dispatch-bridge-contract.json"),
+            ]
+        )
     if not entries:
         return "- `N/A`"
     lines = []
@@ -6207,7 +6226,7 @@ def _proof_support_artifacts_block(sid: str, node: dict[str, Any]) -> str:
         state = "present" if path.exists() else "missing"
         lines.append(f"- `{kind}`: `{path}` ({state})")
     lines.append("")
-    lines.append("Read these sidecars before failing guard/resource/adapter proof obligations.")
+    lines.append("Read these sidecars before failing their corresponding proof obligations.")
     return "\n".join(lines)
 
 

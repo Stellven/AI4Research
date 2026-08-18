@@ -58,7 +58,19 @@ def test_skill_dispatch_proof_reads_current_execution_attempt_only(tmp_path, mon
             encoding="utf-8",
         )
     _write_skill_proof(old_dir)
-    node = {"id": "N1", "execution_attempt": {"task_id": "current-task"}}
+    node = {
+        "id": "N1",
+        "execution_attempt": {
+            "task_id": "current-task",
+            "operator_id": "mini-codex-builder",
+        },
+        "proof_obligations": [
+            {
+                "kind": "self_check",
+                "requirement": "check.skill_dispatch_result_written",
+            }
+        ],
+    }
     monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
     monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path)
 
@@ -69,3 +81,8 @@ def test_skill_dispatch_proof_reads_current_execution_attempt_only(tmp_path, mon
     after = gnd._proof_artifact_presence(sid, node)
     assert after["skill_dispatch_result"] is True
     assert after["check.skill_dispatch_delivery_expectation_declared"] is True
+    support = gnd._proof_support_artifacts_block(sid, node)
+    assert str(current_dir / "skill-dispatch-result.json") in support
+    assert str(current_dir / "skill-dispatch-pane-prompt.md") in support
+    assert str(current_dir / "skill-dispatch-selection-proof.json") in support
+    assert str(current_dir / "skill-dispatch-bridge-contract.json") in support
