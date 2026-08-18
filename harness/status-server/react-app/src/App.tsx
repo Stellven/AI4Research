@@ -82,6 +82,7 @@ import type { AuthLoginStatus, AuthStatus } from "./api";
 import type { AgentRole } from "./format";
 import { activeNodeActor, nodeActor } from "./nodeActor";
 import { pipelineStages, type TerminalRunOutcome } from "./runPipeline";
+import { perRunUsageLabel } from "./runUsage";
 import {
   ROLE_META,
   ROLE_ORDER,
@@ -1505,7 +1506,7 @@ function SessionView({
               onOpenResult={rail.openArtifact}
               requestId={requestId}
             />
-            <RunHealth projection={projection} />
+            <RunHealth projection={projection} usage={session.usage} />
             <PlanFlow projection={projection} isBlocked={isBlocked} />
             <div
               className={`process-results-layout ${rail.open ? "rail-open" : "rail-collapsed"}`}
@@ -1948,22 +1949,25 @@ function projectionWorkersReady(projection?: ProjectionData): {
   return { total: stats.total, ready: stats.ready + stats.busy };
 }
 
-// A compact health strip surfacing the transparency data the backend already computes:
-// worker readiness, estimated cost, and the active blocker — none of which the UI showed.
-function RunHealth({ projection }: { projection?: ProjectionResponse }) {
+// A compact health strip surfacing worker readiness, truthful per-run usage
+// availability, and the active blocker.
+function RunHealth({
+  projection,
+  usage,
+}: {
+  projection?: ProjectionResponse;
+  usage?: UsagePayload;
+}) {
   const data = projection?.data;
   if (!data) return null;
   const stats = workerStats(data);
-  const resources = ((data.dispatch || {}) as { resources?: unknown })
-    .resources as Record<string, unknown> | undefined;
-  const cost = Number(resources?.estimated_total_cost) || 0;
   const mismatch = data.capability_mismatch;
   const status = asString(data.status || data.sprint?.status);
   const phase = asString(data.phase || data.sprint?.phase);
   const hasBlocker = !isTerminalRun(status, phase) && Boolean(mismatch?.present);
   const blockedNode = asString(mismatch?.blocked_node);
   const missing = asString(mismatch?.missing_capability);
-  if (stats.total === 0 && !cost && !hasBlocker) return null;
+  if (stats.total === 0 && !hasBlocker) return null;
   return (
     <section
       className="run-health"
@@ -1984,12 +1988,13 @@ function RunHealth({ projection }: { projection?: ProjectionResponse }) {
           </span>
         )}
       </div>
-      {cost > 0 && (
-        <div className="run-health-item">
-          <span className="run-health-label">Est. cost</span>
-          <span className="run-health-value">${cost.toFixed(2)}</span>
-        </div>
-      )}
+      <div
+        className="run-health-item"
+        title="Solar only shows measured per-run usage here. Task-graph cost estimates are not provider billing records."
+      >
+        <span className="run-health-label">Usage</span>
+        <span className="run-health-value">{perRunUsageLabel(usage)}</span>
+      </div>
       {hasBlocker && (
         <div className="run-health-item run-health-blocker">
           <AlertTriangle size={13} aria-hidden="true" />
