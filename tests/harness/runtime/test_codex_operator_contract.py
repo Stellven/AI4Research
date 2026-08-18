@@ -237,19 +237,22 @@ def test_codex_operator_materializes_direct_skill_bridge_evidence(tmp_path, monk
         "codex_operator_contract_skill_bridge",
         ROOT / "tools" / "codex_operator.py",
     )
-    monkeypatch.setenv(
-        "SOLAR_OPERATOR_ENVELOPE_JSON",
+    envelope_path = tmp_path / "envelope.json"
+    envelope_path.write_text(
         json.dumps(
             {
+                "capability_capsule_id": "cap.skill-execution-bridge",
                 "selected_skills": ["research_compilation"],
                 "resolved_capability_capsule": {
-                    "id": "cap.skill-execution-bridge",
-                    "selected_skills": ["research_compilation"],
+                    "capability_capsule_id": "cap.skill-execution-bridge",
+                    "selected_skills": [],
                 },
                 "task_graph_node": {"required_skills": ["research_compilation"]},
             }
         ),
+        encoding="utf-8",
     )
+    monkeypatch.setenv("SOLAR_OPERATOR_ENVELOPE_JSON", str(envelope_path))
 
     evidence = codex_operator._materialize_skill_bridge_evidence(
         tmp_path,

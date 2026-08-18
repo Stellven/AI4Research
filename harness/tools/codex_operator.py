@@ -34,6 +34,12 @@ def _read_operator_envelope() -> dict[str, object]:
     raw = os.environ.get("SOLAR_OPERATOR_ENVELOPE_JSON") or ""
     if not raw.strip():
         return {}
+    candidate = Path(raw).expanduser()
+    if candidate.is_file():
+        try:
+            raw = candidate.read_text(encoding="utf-8")
+        except OSError:
+            return {}
     try:
         payload = json.loads(raw)
     except (TypeError, ValueError):
