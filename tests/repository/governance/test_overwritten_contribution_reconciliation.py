@@ -48,6 +48,11 @@ def test_reconciliation_is_complete_and_resolved() -> None:
     assert len({item["original_path"] for item in paths}) == len(paths)
     assert all(item["classification"] in ALLOWED for item in paths)
     assert ledger["unresolved_count"] == 0
+    # Clarified metrics: needs_human_decision_count must equal legacy
+    # unresolved_count; tracked_target_missing_count is independent.
+    assert ledger["needs_human_decision_count"] == ledger["unresolved_count"]
+    assert isinstance(ledger["tracked_target_missing_count"], int)
+    assert ledger["tracked_target_missing_count"] >= 0
     assert all(item["classification"] != "NEEDS_HUMAN_DECISION" for item in paths)
     assert Counter(item["classification"] for item in paths) == Counter(ledger["classification_counts"])
 
