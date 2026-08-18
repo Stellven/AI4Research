@@ -1,0 +1,780 @@
+{
+  "schema_version": "solar.workflow_contract.v1",
+  "workflow_id": "research.evidence_to_poc.v1",
+  "version": "1.3",
+  "title": "Fixed research evidence-to-PoC workflow",
+  "dag_variant": "research",
+  "stages_mode": "fixed",
+  "trigger": {
+    "explicit_markers": [],
+    "selection": "typed RESEARCH intake",
+    "on_match": "instantiate the fixed Solar-owned topology without Planner generation"
+  },
+  "provider_policy": {
+    "runtime": "research_synthesis",
+    "allowed_providers": [
+      "openai",
+      "openrouter"
+    ],
+    "route_proof_required": true,
+    "route_records": "per_stage_execution_append_only"
+  },
+  "artifact_roots": {
+    "canonical": "sprints/<sid>/workdir/",
+    "aliases": [],
+    "root_policy": "normalize_then_check"
+  },
+  "required_roles": [
+    "builder",
+    "evaluator"
+  ],
+  "required_artifacts": [
+    "artifacts/research_evidence_to_poc/revision/report.md",
+    "artifacts/research_evidence_to_poc/final/final_acceptance.json"
+  ],
+  "dashboard": {
+    "conditional_part_b": {
+      "status": "conditional",
+      "reason": "Part B runs only for execution_profile=part_a_plus_poc and pauses at an exact-plan human approval gate.",
+      "stages": [
+        "poc_handoff",
+        "idea_evaluation",
+        "experiment_design",
+        "experiment_approval",
+        "experiment_run",
+        "claim_verification",
+        "final_delivery"
+      ]
+    }
+  },
+  "release_proof_level": "P4",
+  "stages": [
+    {
+      "id": "seed_fetch",
+      "gate_family": "G_SOURCE",
+      "node_kind": "artifact",
+      "logical_operator": "ResearchSeedFetcher",
+      "depends_on": [],
+      "task_type": "research",
+      "allowed_capsules": [
+        "cap.research-seed-snapshot"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/seed/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/seed/seed_snapshot.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "seed_snapshot_is_hash_bound",
+          "field": "artifacts/research_evidence_to_poc/seed/seed_snapshot.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "A1 · Seed fetch",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    },
+    {
+      "id": "source_discovery",
+      "gate_family": "G_SOURCE",
+      "node_kind": "artifact",
+      "logical_operator": "ResearchSourceDiscovery",
+      "depends_on": [
+        "seed_fetch"
+      ],
+      "task_type": "research",
+      "allowed_capsules": [
+        "cap.research-public-source-discovery"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/discovery/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/discovery/source_discovery.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "source_candidates_are_hash_bound",
+          "field": "artifacts/research_evidence_to_poc/discovery/source_discovery.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "A2 · Source acquisition",
+      "timeouts": {
+        "result_timeout_sec": 600
+      }
+    },
+    {
+      "id": "source_validation",
+      "gate_family": "G_SOURCE",
+      "node_kind": "verify",
+      "logical_operator": "ResearchSourceValidator",
+      "depends_on": [
+        "source_discovery"
+      ],
+      "task_type": "research",
+      "allowed_capsules": [
+        "cap.research-source-validation"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/validation/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/validation/source_validation.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "validated_sources_are_hash_bound",
+          "field": "artifacts/research_evidence_to_poc/validation/source_validation.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "A3 · Source validation",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    },
+    {
+      "id": "evidence_synthesis",
+      "gate_family": "G_SYNTHESIS",
+      "node_kind": "artifact",
+      "logical_operator": "ResearchEvidenceSynthesizer",
+      "depends_on": [
+        "seed_fetch",
+        "source_validation"
+      ],
+      "task_type": "research",
+      "allowed_capsules": [
+        "cap.research-evidence-synthesis"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai",
+          "openrouter"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/synthesis/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/synthesis/evidence_synthesis.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "claims_reference_validated_sources",
+          "field": "artifacts/research_evidence_to_poc/synthesis/evidence_synthesis.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "A4 · Evidence synthesis",
+      "timeouts": {
+        "result_timeout_sec": 900
+      }
+    },
+    {
+      "id": "report_draft",
+      "gate_family": "G_SYNTHESIS",
+      "node_kind": "artifact",
+      "logical_operator": "ResearchReportDraftOperator",
+      "depends_on": [
+        "evidence_synthesis"
+      ],
+      "task_type": "report-writing",
+      "allowed_capsules": [
+        "cap.research-report-draft"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai",
+          "openrouter"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/report/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/report/report_draft.json",
+          "type": "json"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/report/report.md",
+          "type": "markdown"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "report_is_evidence_linked",
+          "field": "artifacts/research_evidence_to_poc/report/report_draft.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "A5 · Report draft",
+      "timeouts": {
+        "result_timeout_sec": 900
+      }
+    },
+    {
+      "id": "independent_review",
+      "gate_family": "G_REVIEW",
+      "node_kind": "verify",
+      "logical_operator": "ResearchIndependentReviewOperator",
+      "depends_on": [
+        "report_draft",
+        "source_validation"
+      ],
+      "task_type": "review",
+      "allowed_capsules": [
+        "cap.research-independent-review"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai",
+          "openrouter"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/review/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/review/independent_review.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "independent_review_is_hash_bound",
+          "field": "artifacts/research_evidence_to_poc/review/independent_review.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "A6 · Separate evidence review",
+      "timeouts": {
+        "result_timeout_sec": 900
+      }
+    },
+    {
+      "id": "report_revision",
+      "gate_family": "G_REVIEW",
+      "node_kind": "artifact",
+      "logical_operator": "ResearchReportRevisionOperator",
+      "depends_on": [
+        "source_validation",
+        "evidence_synthesis",
+        "report_draft",
+        "independent_review"
+      ],
+      "task_type": "report-writing",
+      "allowed_capsules": [
+        "cap.research-report-revision"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai",
+          "openrouter"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/revision/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/revision/report_revision.json",
+          "type": "json"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/revision/report.md",
+          "type": "markdown"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "revision_preserves_lineage",
+          "field": "artifacts/research_evidence_to_poc/revision/report_revision.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "A7 · Bounded revision",
+      "timeouts": {
+        "result_timeout_sec": 900
+      }
+    },
+    {
+      "id": "final_acceptance",
+      "gate_family": "G_ACCEPTANCE",
+      "node_kind": "verify",
+      "logical_operator": "ResearchFinalAcceptanceOperator",
+      "depends_on": [
+        "source_validation",
+        "evidence_synthesis",
+        "report_draft",
+        "independent_review",
+        "report_revision"
+      ],
+      "task_type": "verification",
+      "allowed_capsules": [
+        "cap.research-final-acceptance"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/final/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/final/final_acceptance.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "complete_lineage_is_recomputed",
+          "field": "artifacts/research_evidence_to_poc/final/final_acceptance.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "A8 · Final acceptance",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    },
+    {
+      "id": "poc_handoff",
+      "gate_family": "G_POC",
+      "node_kind": "artifact",
+      "logical_operator": "ScientificIdeaGenerator",
+      "depends_on": [
+        "seed_fetch",
+        "source_discovery",
+        "source_validation",
+        "evidence_synthesis",
+        "report_draft",
+        "independent_review",
+        "report_revision",
+        "final_acceptance"
+      ],
+      "task_type": "research",
+      "allowed_capsules": [
+        "cap.research-evidence-poc-handoff"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/handoff/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/handoff/poc_handoff.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "part_b_handoff_is_ledger_and_manifest_bound",
+          "field": "artifacts/research_evidence_to_poc/poc/handoff/poc_handoff.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "B1 · Evidence-to-PoC handoff (conditional)",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    },
+    {
+      "id": "idea_evaluation",
+      "gate_family": "G_POC",
+      "node_kind": "verify",
+      "logical_operator": "ScientificIdeaEvaluator",
+      "depends_on": [
+        "poc_handoff"
+      ],
+      "task_type": "review",
+      "allowed_capsules": [
+        "cap.research-poc-idea-evaluation"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/idea/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/idea/idea_evaluation.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "poc_idea_is_evidence_bound",
+          "field": "artifacts/research_evidence_to_poc/poc/idea/idea_evaluation.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "B2 · Idea evaluation (conditional)",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    },
+    {
+      "id": "experiment_design",
+      "gate_family": "G_POC",
+      "node_kind": "artifact",
+      "logical_operator": "ScientificExperimentDesigner",
+      "depends_on": [
+        "idea_evaluation"
+      ],
+      "task_type": "planning",
+      "allowed_capsules": [
+        "cap.research-poc-experiment-design"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/design/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/design/experiment_plan.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "experiment_plan_is_bounded_and_hash_bound",
+          "field": "artifacts/research_evidence_to_poc/poc/design/experiment_plan.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "B3 · Bounded experiment design (conditional)",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    },
+    {
+      "id": "experiment_approval",
+      "gate_family": "G_APPROVAL",
+      "node_kind": "verify",
+      "logical_operator": "ScientificExperimentApprovalValidator",
+      "depends_on": [
+        "experiment_design"
+      ],
+      "task_type": "verification",
+      "allowed_capsules": [
+        "cap.research-experiment-approval"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/approval/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/approval/experiment_approval.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "human_approval_matches_exact_plan_generation_and_scope",
+          "field": "artifacts/research_evidence_to_poc/poc/approval/experiment_approval.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "B4 · Exact-plan human approval (conditional)",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    },
+    {
+      "id": "experiment_run",
+      "gate_family": "G_POC",
+      "node_kind": "artifact",
+      "logical_operator": "ScientificExperimentRunner",
+      "depends_on": [
+        "poc_handoff",
+        "experiment_design",
+        "experiment_approval"
+      ],
+      "task_type": "verification",
+      "allowed_capsules": [
+        "cap.research-evidence-poc-experiment-run"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/run/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/run/experiment_result.json",
+          "type": "json"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/run/benchmark_raw.json",
+          "type": "json",
+          "evidence_schema": "solar.fixed_research.benchmark_raw.v1"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/run/stdout.txt",
+          "type": "text",
+          "evidence_schema": "text/plain"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/run/stderr.json",
+          "type": "json",
+          "evidence_schema": "solar.fixed_research.command_stream.v1"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "real_no_network_benchmark_evidence_is_recorded",
+          "field": "artifacts/research_evidence_to_poc/poc/run/experiment_result.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "B5 · Deterministic experiment run (conditional)",
+      "timeouts": {
+        "result_timeout_sec": 1200
+      }
+    },
+    {
+      "id": "claim_verification",
+      "gate_family": "G_POC",
+      "node_kind": "verify",
+      "logical_operator": "ScientificClaimVerifier",
+      "depends_on": [
+        "experiment_design",
+        "experiment_run"
+      ],
+      "task_type": "verification",
+      "allowed_capsules": [
+        "cap.research-evidence-poc-claim-verification"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/verification/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/poc/verification/claim_verification.json",
+          "type": "json"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "poc_claim_is_reconciled_to_raw_metrics",
+          "field": "artifacts/research_evidence_to_poc/poc/verification/claim_verification.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "B6 · Claim verification (conditional)",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    },
+    {
+      "id": "final_delivery",
+      "gate_family": "G_DELIVERY",
+      "node_kind": "artifact",
+      "logical_operator": "ScientificFinalDelivery",
+      "depends_on": [
+        "final_acceptance",
+        "report_revision",
+        "poc_handoff",
+        "experiment_run",
+        "claim_verification"
+      ],
+      "task_type": "report-writing",
+      "allowed_capsules": [
+        "cap.research-evidence-poc-final-delivery"
+      ],
+      "allowed_operators": {
+        "role": "builder",
+        "providers": [
+          "openai"
+        ]
+      },
+      "outputs": [
+        {
+          "path": "artifacts/research_evidence_to_poc/delivery/",
+          "type": "directory"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/delivery/final_delivery.json",
+          "type": "json"
+        },
+        {
+          "path": "artifacts/research_evidence_to_poc/delivery/final_delivery.md",
+          "type": "markdown"
+        }
+      ],
+      "proof_obligations": [
+        {
+          "kind": "acceptance",
+          "requirement": "final_delivery_binds_report_poc_metrics_verdict_and_limitations",
+          "field": "artifacts/research_evidence_to_poc/delivery/final_delivery.json",
+          "proof_kind": "artifact_presence"
+        }
+      ],
+      "evaluator_gate": {
+        "kind": "none",
+        "on_fail": "fail"
+      },
+      "dashboard_label": "B7 · Final evidence delivery (conditional)",
+      "timeouts": {
+        "result_timeout_sec": 300
+      }
+    }
+  ]
+}

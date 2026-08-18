@@ -220,3 +220,4 @@ live-provider-artifacts/
 # Ensure templates and examples are always committed (redundant but explicit):
 !.env.example
 !.env.template
+.gstack/

@@ -1,0 +1,57 @@
+capability_capsule_id: cap.research-seed-snapshot
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Seed Snapshot
+  description: Freeze the exact research request and controller-owned acquisition authority before source discovery.
+applicability:
+  task_types: [research]
+  positive_signals: [research seed, request provenance, acquisition authority]
+  negative_signals: [network retrieval, model synthesis, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: research_request, type: markdown}
+      - {name: acquisition_authority, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: seed_snapshot, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [research]}
+  postconditions:
+    - {check: output_present, field: seed_snapshot_json}
+  invariants:
+    - The snapshot binds the exact request, acquisition mode, source-pack authority, and public retrieval policy by digest.
+    - This stage performs no network or model call.
+composition:
+  consumes: [{type: artifact.research_request}, {type: artifact.acquisition_authority}]
+  produces: [{type: artifact.seed_snapshot}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: []
+effects:
+  read: [request.raw, controller.acquisition_authority]
+  write: [artifacts.seed_snapshot]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [request_authority_mismatch]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-research-synthesis-seed-fetch-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

@@ -1,0 +1,58 @@
+capability_capsule_id: cap.research-independent-review
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Independent Review
+  description: Independently review a research draft in a separate fresh context and record findings and limitations.
+applicability:
+  task_types: [review]
+  positive_signals: [independent review, critique, limitation discovery]
+  negative_signals: [report authoring, network retrieval, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: report_draft, type: json}
+      - {name: source_validation, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: independent_review, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [review]}
+  postconditions:
+    - {check: output_present, field: independent_review_json}
+  invariants:
+    - The review runs in a separate fresh context from the drafting call and does not reuse its state.
+    - Findings cite the exact draft sections and evidence they dispute or confirm.
+    - The reviewer records limitations it cannot resolve rather than asserting resolution.
+composition:
+  consumes: [{type: artifact.report_draft}, {type: artifact.source_validation}]
+  produces: [{type: artifact.independent_review}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-report-draft]
+effects:
+  read: [artifacts.report_draft, artifacts.source_validation]
+  write: [artifacts.independent_review]
+  execute: []
+  network: [api.openai.com]
+  cost: [codex_subscription_quota]
+  risk: [reviewer_context_contamination, unchallenged_conclusion]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [codex-research-independent-review-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

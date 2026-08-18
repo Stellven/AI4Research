@@ -66,6 +66,198 @@ capsules:
     - acceptance
     owner: opensolar
     default_operator_profile: mini-claude-sonnet-evaluator-print
+  - capability_capsule_id: cap.research-experiment-approval
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-experiment-approval.yaml
+    tags:
+    - research
+    - experiment
+    - human-approval
+    owner: opensolar
+    default_operator_profile: autosci-research-poc-experiment-approval-worker
+  - capability_capsule_id: cap.research-seed-snapshot
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-seed-snapshot.yaml
+    tags: [research, seed, provenance]
+    owner: opensolar
+    default_operator_profile: autosci-research-synthesis-seed-fetch-worker
+  - capability_capsule_id: cap.research-public-source-discovery
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-public-source-discovery.yaml
+    tags: [research, discovery, public-api, provenance]
+    owner: opensolar
+    default_operator_profile: autosci-research-synthesis-source-discovery-worker
+  - capability_capsule_id: cap.research-source-validation
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-source-validation.yaml
+    tags: [research, validation, relevance, provenance]
+    owner: opensolar
+    default_operator_profile: autosci-research-synthesis-source-validation-worker
+  - capability_capsule_id: cap.research-evidence-synthesis
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-evidence-synthesis.yaml
+    tags: [research, synthesis, evidence, codex]
+    owner: opensolar
+    default_operator_profile: codex-research-evidence-synthesis-worker
+  - capability_capsule_id: cap.research-independent-review
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-independent-review.yaml
+    tags: [research, review, independence, codex]
+    owner: opensolar
+    default_operator_profile: codex-research-independent-review-worker
+  - capability_capsule_id: cap.research-report-revision
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-report-revision.yaml
+    tags: [research, revision, preservation, codex]
+    owner: opensolar
+    default_operator_profile: codex-research-report-revision-worker
+  - capability_capsule_id: cap.research-final-acceptance
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-final-acceptance.yaml
+    tags: [research, acceptance, deterministic]
+    owner: opensolar
+    default_operator_profile: autosci-research-synthesis-final-acceptance-worker
+  - capability_capsule_id: cap.research-evidence-poc-handoff
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-evidence-poc-handoff.yaml
+    tags: [research, handoff, manifest, deterministic]
+    owner: opensolar
+    default_operator_profile: autosci-research-poc-handoff-worker
+  - capability_capsule_id: cap.research-poc-idea-evaluation
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-poc-idea-evaluation.yaml
+    tags: [research, poc, selection, deterministic]
+    owner: opensolar
+    default_operator_profile: autosci-research-poc-idea-evaluation-worker
+  - capability_capsule_id: cap.research-poc-experiment-design
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-poc-experiment-design.yaml
+    tags: [research, experiment, planning, deterministic]
+    owner: opensolar
+    default_operator_profile: autosci-research-poc-experiment-design-worker
+  - capability_capsule_id: cap.autosci-claim-verification
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.autosci-claim-verification.yaml
+    tags: [autosci, bridge, research]
+    owner: opensolar
+    default_operator_profile: autosci-claim-verify-worker
+  - capability_capsule_id: cap.autosci-experiment-design
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.autosci-experiment-design.yaml
+    tags: [autosci, bridge, research]
+    owner: opensolar
+    default_operator_profile: autosci-experiment-design-worker
+  - capability_capsule_id: cap.autosci-experiment-monitor
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.autosci-experiment-monitor.yaml
+    tags: [autosci, bridge, research]
+    owner: opensolar
+    default_operator_profile: autosci-experiment-monitor-worker
+  - capability_capsule_id: cap.autosci-experiment-run
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.autosci-experiment-run.yaml
+    tags: [autosci, bridge, research]
+    owner: opensolar
+    default_operator_profile: autosci-experiment-run-worker
+  - capability_capsule_id: cap.autosci-idea-evaluation
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.autosci-idea-evaluation.yaml
+    tags: [autosci, bridge, research]
+    owner: opensolar
+    default_operator_profile: autosci-idea-evaluate-worker
+  - capability_capsule_id: cap.autosci-idea-generation
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.autosci-idea-generation.yaml
+    tags: [autosci, bridge, research]
+    owner: opensolar
+    default_operator_profile: autosci-idea-worker
+  - capability_capsule_id: cap.autosci-report-delivery
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.autosci-report-delivery.yaml
+    tags: [autosci, bridge, research]
+    owner: opensolar
+    default_operator_profile: autosci-report-worker
+  - capability_capsule_id: cap.research-evidence-poc-experiment-run
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-evidence-poc-experiment-run.yaml
+    tags: [research, experiment, no-network]
+    owner: opensolar
+    default_operator_profile: autosci-research-poc-experiment-run-worker
+  - capability_capsule_id: cap.research-evidence-poc-claim-verification
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-evidence-poc-claim-verification.yaml
+    tags: [research, experiment, verification]
+    owner: opensolar
+    default_operator_profile: autosci-research-poc-claim-verification-worker
+  - capability_capsule_id: cap.research-evidence-poc-final-delivery
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.research-evidence-poc-final-delivery.yaml
+    tags: [research, evidence, delivery]
+    owner: opensolar
+    default_operator_profile: autosci-research-poc-final-delivery-worker
   - capability_capsule_id: cap.requirement-research-scout
     version: 0.1.0
     capsule_kind: capability

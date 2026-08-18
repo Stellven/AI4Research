@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import urllib.parse
+import re
 from typing import Any
 
 from .base import (
@@ -20,7 +21,7 @@ from .base import (
 )
 
 
-def _load_candidates(context: OperatorContext) -> list[dict[str, Any]]:
+def _load_candidates(context: OperatorContext) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     payload, _ref = load_artifact(
         context,
         schemas=("research_synthesis.source_discovery.v1",),
@@ -30,9 +31,9 @@ def _load_candidates(context: OperatorContext) -> list[dict[str, Any]]:
         expected_node_ids=("source_discovery",),
     )
     if payload:
-        return [item for item in payload.get("candidates", []) if isinstance(item, dict)]
+        return [item for item in payload.get("candidates", []) if isinstance(item, dict)], payload
     raw = context.payload.get("candidates") or context.payload.get("source_candidates")
-    return [item for item in raw if isinstance(item, dict)] if isinstance(raw, list) else []
+    return ([item for item in raw if isinstance(item, dict)] if isinstance(raw, list) else []), {}
 
 
 def _canonical_key(source: dict[str, Any]) -> str:
@@ -95,7 +96,27 @@ def _authority_class(source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _relevance_class(source: dict[str, Any]) -> dict[str, Any]:
+_QUERY_STOPWORDS = {
+    "about", "analysis", "analyze", "and", "for", "from", "into", "research", "report",
+    "study", "that", "the", "their", "this", "using", "what", "with",
+}
+
+
+def _query_terms(value: str) -> set[str]:
+    text = str(value or "").lower()
+    terms = {
+        token
+        for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_.+-]{2,}", text)
+        if token not in _QUERY_STOPWORDS
+    }
+    # CJK topics have no whitespace-delimited words. Overlapping two-character
+    # windows provide a bounded lexical relevance signal without model calls.
+    for run in re.findall(r"[\u3400-\u9fff]{2,}", text):
+        terms.update(run[index:index + 2] for index in range(len(run) - 1))
+    return terms
+
+
+def _relevance_class(source: dict[str, Any], query: str) -> dict[str, Any]:
     metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
     raw_score = source.get("relevance_score", metadata.get("relevance_score"))
     try:
@@ -106,6 +127,22 @@ def _relevance_class(source: dict[str, Any]) -> dict[str, Any]:
         str(source.get(key) or "")
         for key in ("title", "content_summary", "summary", "abstract")
     ).strip()
+    provenance = source.get("provenance") if isinstance(source.get("provenance"), dict) else {}
+    channel = str(source.get("acquisition_channel") or provenance.get("acquisition_channel") or "")
+    query_terms = _query_terms(query)
+    source_terms = _query_terms(text)
+    overlap = sorted(query_terms & source_terms)
+    overlap_score = (len(overlap) / len(query_terms)) if query_terms else 0.0
+    if channel == "live_search":
+        proof = {
+            "query_sha256": stable_json_sha256({"query": query}),
+            "query_terms": sorted(query_terms),
+            "matched_terms": overlap,
+            "overlap_score": round(overlap_score, 6),
+        }
+        if not query_terms or not overlap:
+            return {"class": "off_topic", "score": overlap_score, "proof": ["no task-query token overlap"], "query_binding": proof}
+        return {"class": "query_matched", "score": overlap_score, "proof": ["task-query token overlap present"], "query_binding": proof}
     if score >= 0.75:
         return {"class": "high", "score": score, "proof": ["declared relevance_score >= 0.75"]}
     if 0 <= score < 0.25:
@@ -133,7 +170,8 @@ def _source_failure_reasons(source: dict[str, Any]) -> list[str]:
 
 def execute(node_request: dict, context: OperatorContext) -> dict:
     require_node(context, "source_validation")
-    candidates = _load_candidates(context)
+    candidates, discovery = _load_candidates(context)
+    query = str(discovery.get("query") or (context.payload.get("task_contract") or {}).get("user_intent") or "")
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     seen: dict[str, str] = {}
@@ -153,11 +191,13 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             reasons.append(f"duplicate_of:{seen[key]}")
         reasons.extend(_source_failure_reasons(source))
         authority = _authority_class(source)
-        relevance = _relevance_class(source)
+        relevance = _relevance_class(source, query)
         if authority["class"] == "unattributed":
             reasons.append("authority: unattributed source")
         if relevance["class"] == "low":
             reasons.append("relevance: declared low relevance")
+        if relevance["class"] == "off_topic":
+            reasons.append("relevance: no task-query token overlap")
         if reasons:
             rejected.append(_rejection(source, reasons, index))
             continue
@@ -171,6 +211,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             "provenance": provenance or {"provider": str(source.get("provider") or "supplied"), "trace": str(source.get("trace") or "")},
             "metadata": metadata,
             "content_summary": str(source.get("content_summary") or source.get("summary") or source.get("abstract") or ""),
+            "acquisition_channel": str(source.get("acquisition_channel") or provenance.get("acquisition_channel") or "unknown"),
             "candidate_sha256": stable_json_sha256(source),
             "validation": {
                 "status": "accepted",
@@ -187,6 +228,17 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             },
         }
         accepted.append(normalized)
+    acquisition_mode = str(discovery.get("acquisition_mode") or "source_pack")
+    discovery_summary = discovery.get("acquisition_summary") if isinstance(discovery.get("acquisition_summary"), dict) else {}
+    minimum_live = int(discovery_summary.get("minimum_live_sources") or 0)
+    accepted_live = sum(1 for item in accepted if item.get("acquisition_channel") == "live_search")
+    validation_limitations = [str(item) for item in discovery.get("limitations") or [] if str(item).strip()]
+    live_requirement_met = accepted_live >= minimum_live if acquisition_mode in {"live_search", "hybrid"} else False
+    if acquisition_mode == "hybrid" and not live_requirement_met:
+        validation_limitations.append(
+            f"Only {accepted_live} live public source(s) passed task-query validation; "
+            "source-pack evidence remains usable but live coverage is not established."
+        )
     artifact_payload = {
         "schema": "research_synthesis.source_validation.v1",
         "node_id": "source_validation",
@@ -196,6 +248,15 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "accepted_count": len(accepted),
         "rejected_count": len(rejected),
         "source_policy_summary": {
+            "query": query,
+            "query_sha256": stable_json_sha256({"query": query}),
+            "acquisition_mode": acquisition_mode,
+            "accepted_live_count": accepted_live,
+            "accepted_source_pack_count": sum(1 for item in accepted if item.get("acquisition_channel") == "source_pack"),
+            "minimum_live_sources": minimum_live,
+            "live_requirement_met": live_requirement_met,
+            "live_claim_allowed": live_requirement_met,
+            "discovery_acquisition_summary": discovery_summary,
             "authority_classes": sorted({
                 str((item.get("validation") or {}).get("authority", {}).get("class"))
                 for item in accepted
@@ -219,7 +280,10 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
                 1 for item in rejected for reason in item.get("reasons", []) if str(reason).startswith("authority:")
             ),
         },
-        "limitations": ["Validation classifies authority, relevance, duplicates, and source failures; it does not assert source content truthfulness."],
+        "limitations": [
+            *validation_limitations,
+            "Validation classifies authority, task-query relevance, duplicates, and source failures; it does not assert source content truthfulness.",
+        ],
     }
     artifact, hash_record = write_artifact(
         context,
@@ -228,7 +292,13 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         artifact_id="source_validation",
         schema="research_synthesis.source_validation.v1",
     )
-    if not accepted:
+    if not accepted or (acquisition_mode == "live_search" and not live_requirement_met):
+        error_id = "source_validation.no_accepted_sources" if not accepted else "source_validation.minimum_live_sources_not_met"
+        message = (
+            "Source validation produced no accepted sources."
+            if not accepted
+            else f"Only {accepted_live} live source(s) passed validation; {minimum_live} required."
+        )
         return build_node_result(
             context,
             status="blocked",
@@ -236,9 +306,9 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             evidence=[evidence_ref("source_validation.review", "source_validation", f"0 accepted and {len(rejected)} rejected source(s).", artifact["artifact_id"])],
             hashes=[hash_record],
             errors=[{
-                "error_id": "source_validation.no_accepted_sources",
-                "error_type": "no_validated_sources",
-                "message": "Source validation produced no accepted sources.",
+                "error_id": error_id,
+                "error_type": "no_validated_sources" if not accepted else "insufficient_live_sources",
+                "message": message,
             }],
             limitations=artifact_payload["limitations"],
         )

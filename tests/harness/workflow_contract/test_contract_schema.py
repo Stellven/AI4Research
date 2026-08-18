@@ -24,6 +24,8 @@ def test_all_shipped_contracts_schema_valid(shipped_contracts):
         "code.cli_smoke",
         "code.cli_smoke_anthropic",
         "pm.generic.v1",
+        "research.autosci.v1",
+        "research.evidence_to_poc.v1",
     }
     for contract in shipped_contracts.values():
         assert wc.validate_contract_schema(contract) == []

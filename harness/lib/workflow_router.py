@@ -28,6 +28,7 @@ EXIT_MATCH = 0
 EXIT_NO_MATCH = 1
 EXIT_ERROR = 2
 EXIT_COMPILE_FAILED = 3
+FIXED_RESEARCH_WORKFLOW_ID = "research.evidence_to_poc.v1"
 
 
 def _workflows_dir(args: argparse.Namespace) -> Path:
@@ -87,6 +88,11 @@ def cmd_compile(args: argparse.Namespace) -> int:
 
 def cmd_instantiate(args: argparse.Namespace) -> int:
     contract = _load_target_contract(args)
+    if str(contract.get("workflow_id") or "") == FIXED_RESEARCH_WORKFLOW_ID:
+        raise wc.ContractInstantiationError(
+            "research.evidence_to_poc.v1 requires the typed workflow_intake boundary; "
+            "raw instantiation cannot authorize a source pack or specialize conditional Part B"
+        )
     inputs = {}
     for pair in args.input or []:
         key, sep, value = pair.partition("=")

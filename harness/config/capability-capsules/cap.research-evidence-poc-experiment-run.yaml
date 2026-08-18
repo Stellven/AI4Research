@@ -1,0 +1,72 @@
+capability_capsule_id: cap.research-evidence-poc-experiment-run
+capsule_kind: capability
+metadata:
+  name: Fixed Research Evidence PoC Experiment Run
+  description: Execute the exact human-approved evidence-lineage benchmark in a bounded no-network sandbox.
+applicability:
+  task_types: [verification]
+  positive_signals: [fixed evidence-lineage benchmark, approved no-network experiment]
+  negative_signals: [repository patch, arbitrary command execution]
+contract:
+  inputs:
+    required:
+      - {name: poc_handoff, type: json}
+      - {name: experiment_plan, type: json}
+      - {name: experiment_approval, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: experiment_result, type: json}
+      - {name: benchmark_raw, type: json}
+      - {name: stdout, type: text}
+      - {name: stderr, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [verification]}
+  postconditions:
+    - {check: output_present, field: experiment_result_json}
+    - {check: output_present, field: benchmark_raw_json}
+    - {check: output_present, field: stdout.txt}
+    - {check: output_present, field: stderr_json}
+  invariants:
+    - The controller-accepted B4 approval must bind the exact experiment plan digest and generation.
+    - Only the allowlisted evidence-lineage benchmark may execute.
+    - Execution must use a no-network user and network namespace and retain exit, timing, metrics, stdout, stderr, and raw-result hashes.
+    - This capsule has no repository or GitHub resource authority.
+composition:
+  consumes:
+    - {type: artifact.poc_handoff}
+    - {type: artifact.experiment_plan}
+    - {type: artifact.experiment_approval}
+  produces:
+    - {type: artifact.experiment_result}
+    - {type: artifact.benchmark_raw}
+    - {type: artifact.command_stdout}
+    - {type: artifact.command_stderr}
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-experiment-approval]
+effects:
+  read: [artifacts.poc_handoff, artifacts.experiment_plan, artifacts.experiment_approval]
+  write: [artifacts.experiment_result, artifacts.benchmark_raw, artifacts.command_stdout, artifacts.command_stderr]
+  execute: [harness/tools/fixed_research_benchmark.py]
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [experiment_evidence_tamper, approval_scope_mismatch]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-research-poc-experiment-run-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

@@ -24,6 +24,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Iterable
 
+import jsonschema
+
 HOME = Path.home()
 
 
@@ -333,6 +335,12 @@ def _manifest_anchor(
         workdir = SPRINTS_DIR / sid / "workdir"
         if workdir.is_dir():
             return workdir, graph_roots, None
+    if contract_id == FIXED_RESEARCH_WORKFLOW_CONTRACT_ID:
+        # This contract declares exact `sprints/<sid>/workdir/...` authority.
+        # Anchor at the configured sprints parent, not the installed HARNESS_DIR,
+        # so an isolated/controller-selected SPRINTS_DIR observes the bytes the
+        # physical adapter actually wrote.
+        return SPRINTS_DIR.parent, graph_roots, None
     if not _graph_is_certified_generic(graph):
         return HARNESS_DIR, graph_roots, None
     workdir = SPRINTS_DIR / sid / "workdir"
@@ -2003,6 +2011,13 @@ def _node_capabilities(node: dict[str, Any]) -> set[str]:
 
 def _node_requires_human_search(node: dict[str, Any]) -> bool:
     if node.get("human_search") is False or node.get("human_loop_search") is False:
+        return False
+    # An exactly-bound node performs its own acquisition through its command
+    # worker.  Its required_capabilities describe what that worker needs, not a
+    # request for a human researcher.  Only the fixed-contract compiler assigns
+    # required_operator_id, so this cannot divert a legacy planner node that
+    # genuinely depends on the human-in-the-loop search lane.
+    if str(node.get("required_operator_id") or "").strip():
         return False
     if _node_capabilities(node) & HUMAN_SEARCH_CAPABILITIES:
         return True
@@ -10614,6 +10629,871 @@ def _resolve_harness_artifact_path(raw: Any) -> Path:
     return HARNESS_DIR / path
 
 
+def _fixed_research_work_dir(sid: str) -> Path:
+    return (SPRINTS_DIR / sid / "workdir").resolve(strict=False)
+
+
+def _fixed_research_relative_path(raw: Any, sid: str, *, label: str) -> tuple[Path, str]:
+    """Normalize graph-prefixed or canonical workdir-relative fixed paths.
+
+    Graph scopes use ``sprints/<sid>/workdir/...`` while artifacts written
+    inside an approved experiment plan use the canonical workdir-relative
+    ``artifacts/...`` form.  Both identify the same controller-owned bytes.
+    Absolute paths and foreign sprint prefixes are never accepted as an
+    alternate authority root.
+    """
+    text = str(raw or "").strip()
+    if not text:
+        raise ValueError(f"{label} is empty")
+    work_dir = _fixed_research_work_dir(sid)
+    path = Path(text)
+    if path.is_absolute():
+        raise ValueError(f"{label} must be workdir-relative: {text}")
+    if any(part in {"", ".", ".."} for part in path.parts):
+        raise ValueError(f"{label} is not a contained workdir-relative path: {text}")
+    prefix = Path("sprints") / sid / "workdir"
+    if path.parts and path.parts[0] == "sprints":
+        try:
+            relative = path.relative_to(prefix)
+        except ValueError as exc:
+            raise ValueError(f"{label} has the wrong fixed sprint prefix: {text}") from exc
+    else:
+        relative = path
+    if not relative.parts:
+        raise ValueError(f"{label} is not a contained workdir-relative path: {text}")
+    resolved = (work_dir / relative).resolve(strict=False)
+    try:
+        relative = resolved.relative_to(work_dir)
+    except ValueError as exc:
+        raise ValueError(f"{label} escapes the fixed sprint workdir: {text}") from exc
+    if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
+        raise ValueError(f"{label} is not a contained workdir-relative path: {text}")
+    return resolved, str(relative).replace("\\", "/")
+
+
+def _fixed_research_primary_output(node: dict[str, Any], sid: str) -> tuple[Path, str]:
+    outputs = node.get("outputs") if isinstance(node.get("outputs"), list) else []
+    non_directories = [
+        item for item in outputs
+        if isinstance(item, dict) and str(item.get("type") or "") != "directory"
+    ]
+    if not non_directories:
+        raise ValueError(f"fixed research node has no primary output: {node.get('id')}")
+    return _fixed_research_relative_path(non_directories[0].get("path"), sid, label="primary output")
+
+
+def _fixed_research_output_artifact_binding(
+    *,
+    sid: str,
+    dependency_id: str,
+    dependency: dict[str, Any],
+    artifact_id: str,
+    path: Path,
+    relative: str,
+    schema: str,
+    persisted_manifest: dict[str, Any],
+    eval_snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    digest = _file_sha256(path)
+    output_entry = next(
+        (
+            item
+            for item in dependency.get("outputs") or []
+            if isinstance(item, dict)
+            and str(item.get("type") or "") != "directory"
+            and _fixed_research_relative_path(
+                item.get("path"), sid, label="dependency contract output"
+            )[1]
+            == relative
+        ),
+        None,
+    )
+    if not isinstance(output_entry, dict):
+        raise ValueError(f"fixed research dependency output is not contract-declared: {relative}")
+    declared_schema = str(output_entry.get("evidence_schema") or dependency.get("expected_schema") or "")
+    if not schema or declared_schema != schema:
+        raise ValueError(f"fixed research dependency output schema is not contract-bound: {relative}")
+    if schema != "text/plain":
+        try:
+            artifact_payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"fixed research dependency evidence is not valid JSON: {relative}") from exc
+        if not isinstance(artifact_payload, dict) or str(artifact_payload.get("schema") or "") != schema:
+            raise ValueError(f"fixed research dependency evidence schema mismatch: {relative}")
+
+    expected_declared = str(output_entry.get("path") or "")
+    manifest_rows = persisted_manifest.get("rows") if isinstance(persisted_manifest.get("rows"), list) else []
+    snapshot_rows = eval_snapshot.get("rows") if isinstance(eval_snapshot.get("rows"), list) else []
+
+    def exact_file_row(rows: list[Any], *, snapshot: bool) -> dict[str, Any] | None:
+        return next(
+            (
+                row
+                for row in rows
+                if isinstance(row, dict)
+                and str(row.get("declared") or "") == expected_declared
+                and Path(str(row.get("path") or "")).resolve(strict=False) == path.resolve(strict=False)
+                and row.get("exists") is True
+                and str(row.get("kind") or "") == "file"
+                and str(row.get("sha256") or "").lower() == digest
+                and (not snapshot or (str(row.get("scope") or "") == "write" and row.get("unsafe") is False))
+            ),
+            None,
+        )
+
+    def exact_directory_entry(rows: list[Any], *, snapshot: bool) -> dict[str, Any] | None:
+        for row in rows:
+            if not isinstance(row, dict) or str(row.get("kind") or "") != "directory":
+                continue
+            if snapshot and (str(row.get("scope") or "") != "write" or row.get("unsafe") is not False):
+                continue
+            try:
+                directory = Path(str(row.get("path") or "")).resolve(strict=False)
+                entry_relative = str(path.resolve(strict=False).relative_to(directory)).replace("\\", "/")
+            except ValueError:
+                continue
+            entry = next(
+                (
+                    item
+                    for item in row.get("entries") or []
+                    if isinstance(item, dict)
+                    and str(item.get("rel_path") or "") == entry_relative
+                    and str(item.get("kind") or "") == "file"
+                    and str(item.get("sha256") or "").lower() == digest
+                ),
+                None,
+            )
+            if isinstance(entry, dict):
+                return entry
+        return None
+
+    manifest_row = exact_file_row(manifest_rows, snapshot=False)
+    manifest_entry = exact_directory_entry(manifest_rows, snapshot=False)
+    snapshot_row = exact_file_row(snapshot_rows, snapshot=True)
+    snapshot_entry = exact_directory_entry(snapshot_rows, snapshot=True)
+    if not all(isinstance(item, dict) for item in (manifest_row, manifest_entry, snapshot_row, snapshot_entry)):
+        raise ValueError(
+            f"fixed research dependency evidence is not bound by accepted manifest/snapshot rows: {dependency_id}:{relative}"
+        )
+    return {
+        "artifact_id": artifact_id,
+        "path": relative,
+        "schema": schema,
+        "sha256": digest,
+        "manifest": {
+            "declared": str(manifest_row.get("declared") or ""),
+            "sha256": str(manifest_row.get("sha256") or ""),
+            "entry_sha256": str(manifest_entry.get("sha256") or ""),
+        },
+        "eval_snapshot": {
+            "declared": str(snapshot_row.get("declared") or ""),
+            "sha256": str(snapshot_row.get("sha256") or ""),
+            "entry_sha256": str(snapshot_entry.get("sha256") or ""),
+        },
+    }
+
+
+def _fixed_research_dependency_artifacts(
+    graph: dict[str, Any], sid: str, node: dict[str, Any]
+) -> list[dict[str, Any]]:
+    nodes = {
+        str(item.get("id") or ""): item
+        for item in graph.get("nodes") or []
+        if isinstance(item, dict)
+    }
+    dependencies: list[dict[str, Any]] = []
+    for dependency_id in node.get("depends_on") or []:
+        dependency = nodes.get(str(dependency_id))
+        if not isinstance(dependency, dict):
+            raise ValueError(f"fixed research dependency is missing: {dependency_id}")
+        if node_status(graph, str(dependency_id)) != "passed":
+            raise ValueError(f"fixed research dependency is not evaluator-passed: {dependency_id}")
+        expected_eval = _eval_json_file(sid, str(dependency_id)).absolute()
+        raw_eval = Path(str(dependency.get("eval_json") or expected_eval))
+        eval_path = raw_eval.absolute() if raw_eval.is_absolute() else Path()
+        symlink_component = SPRINTS_DIR.is_symlink()
+        cursor = SPRINTS_DIR.absolute()
+        try:
+            relative_eval = expected_eval.relative_to(cursor)
+        except ValueError:
+            relative_eval = Path("..")
+        for part in relative_eval.parts:
+            cursor = cursor / part
+            symlink_component = symlink_component or cursor.is_symlink()
+        if eval_path != expected_eval or symlink_component or not expected_eval.is_file():
+            raise ValueError(f"fixed research dependency has no controller evaluator receipt: {dependency_id}")
+        try:
+            eval_payload = json.loads(eval_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"fixed research dependency evaluator receipt is invalid: {dependency_id}") from exc
+        verdict = str(eval_payload.get("verdict") or eval_payload.get("status") or "").upper()
+        if verdict not in {"PASS", "PASSED", "OK", "SUCCESS", "SUCCEEDED"}:
+            raise ValueError(f"fixed research dependency evaluator did not pass: {dependency_id}")
+        snapshot_validation = _validate_eval_artifact_snapshot(sid, dependency, graph, eval_payload)
+        if not snapshot_validation.get("ok"):
+            raise ValueError(
+                f"fixed research dependency evaluator snapshot is not consumable: {dependency_id}: "
+                f"{snapshot_validation.get('reason') or 'invalid'}"
+            )
+        dependency_result = (graph.get("node_results") or {}).get(str(dependency_id))
+        closeout = dependency_result.get("closeout_receipt") if isinstance(dependency_result, dict) else {}
+        closeout_eval = closeout.get("eval") if isinstance(closeout, dict) else {}
+        closeout_snapshot = closeout_eval.get("artifact_snapshot") if isinstance(closeout_eval, dict) else {}
+        closeout_manifest = closeout.get("manifest") if isinstance(closeout, dict) else {}
+        closeout_proof = closeout.get("proof") if isinstance(closeout, dict) else {}
+        generation = _node_repair_attempts(dependency)
+        eval_record_id = str(closeout_eval.get("record_id") or "")
+        ledger_records = (
+            _gate_ledger.read_records(
+                SPRINTS_DIR,
+                sid,
+                node_id=str(dependency_id),
+                kind="eval_verdict",
+            )
+            if _gate_ledger is not None
+            else []
+        )
+        ledger_eval = next(
+            (row for row in ledger_records if str(row.get("record_id") or "") == eval_record_id),
+            None,
+        )
+        projected_status = (
+            _gate_ledger.project_node_status(SPRINTS_DIR, sid, str(dependency_id))
+            if _gate_ledger is not None
+            else ""
+        )
+        persisted_manifest = (
+            _artifact_manifest.read_manifest(SPRINTS_DIR, sid, str(dependency_id))
+            if _artifact_manifest is not None
+            else {}
+        )
+        persisted_manifest_path = (
+            _artifact_manifest.manifest_path(SPRINTS_DIR, sid, str(dependency_id))
+            if _artifact_manifest is not None
+            else Path()
+        )
+        persisted_manifest_digest = str(persisted_manifest.get("content_digest") or "")
+        manifest_digest_valid = bool(
+            _artifact_manifest is not None
+            and persisted_manifest_path.is_file()
+            and str(closeout_manifest.get("path") or "") == str(persisted_manifest_path)
+            and str(closeout_manifest.get("schema") or "") == "solar.artifact_manifest.v1"
+            and str(persisted_manifest.get("sid") or "") == sid
+            and str(persisted_manifest.get("node_id") or "") == str(dependency_id)
+            and persisted_manifest.get("generation") == generation
+            and persisted_manifest_digest
+            and persisted_manifest_digest == str(closeout_manifest.get("content_digest") or "")
+            and persisted_manifest_digest == _artifact_manifest.manifest_content_digest(persisted_manifest)
+        )
+        if not (
+            closeout.get("schema") == "solar.node_closeout.v1"
+            and str(closeout.get("sid") or "") == sid
+            and str(closeout.get("node_id") or "") == str(dependency_id)
+            and str(closeout.get("verdict") or "").lower() == "passed"
+            and closeout_eval.get("consumable") is True
+            and eval_record_id
+            and isinstance(ledger_eval, dict)
+            and str(ledger_eval.get("sid") or "") == sid
+            and str(ledger_eval.get("node_id") or "") == str(dependency_id)
+            and str(ledger_eval.get("verdict") or "").upper() == "PASS"
+            and ledger_eval.get("eval_generation") == generation
+            and str(ledger_eval.get("artifact_snapshot_digest") or "")
+            == str(eval_payload.get("artifact_snapshot_digest") or "")
+            and _gate_ledger is not None
+            and _gate_ledger.is_gate_consumable(ledger_eval, current_generation=generation)
+            and projected_status == "passed"
+            and Path(str(closeout_eval.get("path") or "")).absolute() == expected_eval
+            and closeout_snapshot.get("ok") is True
+            and str(closeout_snapshot.get("snapshot_digest") or "")
+            == str(eval_payload.get("artifact_snapshot_digest") or "")
+            and closeout_manifest.get("ok") is True
+            and manifest_digest_valid
+            and closeout_proof.get("ok") is True
+        ):
+            raise ValueError(f"fixed research dependency has no consumable controller closeout: {dependency_id}")
+        path, relative = _fixed_research_primary_output(dependency, sid)
+        if path.is_symlink() or not path.is_file() or path.stat().st_size <= 0:
+            raise ValueError(f"fixed research dependency artifact is missing: {relative}")
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"fixed research dependency is not valid JSON: {relative}") from exc
+        schema = str(payload.get("schema") or "") if isinstance(payload, dict) else ""
+        expected_schema = str(dependency.get("expected_schema") or "")
+        if not expected_schema or schema != expected_schema:
+            raise ValueError(
+                f"fixed research dependency schema mismatch: {relative}: {schema!r} != {expected_schema!r}"
+            )
+        controller_closeout = {
+            "eval_record_id": eval_record_id,
+            "eval_generation": generation,
+            "eval_path": str(expected_eval),
+            "artifact_snapshot_digest": str(eval_payload.get("artifact_snapshot_digest") or ""),
+            "manifest_path": str(persisted_manifest_path),
+            "manifest_content_digest": persisted_manifest_digest,
+            "gate_ledger_projected_status": projected_status,
+        }
+        snapshot_path = Path(str(closeout_snapshot.get("path") or ""))
+        if snapshot_path.is_symlink() or not snapshot_path.is_file():
+            raise ValueError(f"fixed research dependency evaluator snapshot is missing: {dependency_id}")
+        try:
+            eval_snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"fixed research dependency evaluator snapshot is invalid: {dependency_id}") from exc
+        primary_binding = _fixed_research_output_artifact_binding(
+            sid=sid,
+            dependency_id=str(dependency_id),
+            dependency=dependency,
+            artifact_id=str(dependency_id),
+            path=path,
+            relative=relative,
+            schema=schema,
+            persisted_manifest=persisted_manifest,
+            eval_snapshot=eval_snapshot,
+        )
+        dependencies.append({
+            "artifact_id": str(dependency_id),
+            "path": relative,
+            "schema": schema,
+            "sha256": _file_sha256(path),
+            "controller_closeout": {**controller_closeout, "artifact_binding": primary_binding},
+        })
+        for extra in dependency.get("outputs") or []:
+            if not isinstance(extra, dict) or not str(extra.get("evidence_schema") or ""):
+                continue
+            extra_path, extra_relative = _fixed_research_relative_path(
+                extra.get("path"), sid, label="dependency evidence output"
+            )
+            if extra_path.is_symlink() or not extra_path.is_file():
+                raise ValueError(f"fixed research dependency evidence is missing: {extra_relative}")
+            extra_artifact_id = f"{dependency_id}:{extra_path.name}"
+            extra_schema = str(extra.get("evidence_schema") or "")
+            extra_binding = _fixed_research_output_artifact_binding(
+                sid=sid,
+                dependency_id=str(dependency_id),
+                dependency=dependency,
+                artifact_id=extra_artifact_id,
+                path=extra_path,
+                relative=extra_relative,
+                schema=extra_schema,
+                persisted_manifest=persisted_manifest,
+                eval_snapshot=eval_snapshot,
+            )
+            dependencies.append({
+                "artifact_id": extra_artifact_id,
+                "path": extra_relative,
+                "schema": extra_schema,
+                "sha256": str(extra_binding["sha256"]),
+                "controller_closeout": {**controller_closeout, "artifact_binding": extra_binding},
+            })
+    if str(node.get("id") or "") == "experiment_run":
+        plan_ref = next((item for item in dependencies if item.get("artifact_id") == "experiment_design"), None)
+        handoff_ref = next((item for item in dependencies if item.get("artifact_id") == "poc_handoff"), None)
+        if not isinstance(plan_ref, dict) or not isinstance(handoff_ref, dict):
+            raise ValueError("fixed experiment run lacks accepted plan or handoff")
+        plan_payload = json.loads((_fixed_research_work_dir(sid) / str(plan_ref["path"])).read_text(encoding="utf-8"))
+        handoff_payload = json.loads((_fixed_research_work_dir(sid) / str(handoff_ref["path"])).read_text(encoding="utf-8"))
+        handoff_rows = {
+            str(item.get("path") or ""): item
+            for item in handoff_payload.get("artifacts") or []
+            if isinstance(item, dict)
+        }
+        for index, item in enumerate((plan_payload.get("benchmark") or {}).get("inputs") or [], start=1):
+            if not isinstance(item, dict):
+                raise ValueError("fixed experiment plan contains a non-object input")
+            raw_path = str(item.get("path") or "")
+            path, relative = _fixed_research_relative_path(raw_path, sid, label="benchmark input")
+            expected = str(item.get("sha256") or "").lower()
+            handoff_row = handoff_rows.get(relative) or {}
+            if (
+                path.is_symlink()
+                or not path.is_file()
+                or len(expected) != 64
+                or _file_sha256(path) != expected
+                or str(handoff_row.get("sha256") or "").lower() != expected
+            ):
+                raise ValueError(f"fixed experiment benchmark input is not handoff-bound: {relative}")
+            dependencies.append({
+                "artifact_id": f"benchmark-input-{index:03d}",
+                "path": relative,
+                "schema": str(item.get("schema") or handoff_row.get("schema") or ""),
+                "sha256": expected,
+                "controller_closeout": dict(handoff_ref.get("controller_closeout") or {}),
+            })
+    return dependencies
+
+
+def _fixed_research_approval_paths(sid: str) -> tuple[Path, Path, Path]:
+    stage = _fixed_research_work_dir(sid) / "artifacts" / "research_evidence_to_poc" / "poc" / "approval"
+    return stage, stage / "approval_request.json", stage / "human_approval.json"
+
+
+def _fixed_research_policy_path(sid: str) -> Path:
+    return _fixed_research_approval_paths(sid)[0] / "experiment_policy_authorization.json"
+
+
+def _canonical_payload_sha256(payload: dict[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _validate_fixed_research_approval_payload(payload: dict[str, Any]) -> None:
+    schema_path = HARNESS_DIR / "schemas" / "evidence" / "fixed_research_human_approval.v1.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator.check_schema(schema)
+    jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(payload)
+
+
+def _fixed_research_approval_controls(sid: str, graph: dict[str, Any]) -> dict[str, Any]:
+    _stage, request_path, approval_path = _fixed_research_approval_paths(sid)
+    controls: dict[str, Any] = {}
+    for key, path, schema in (
+        ("request", request_path, "solar.fixed_research.approval_request.v1"),
+        ("approval", approval_path, "solar.fixed_research.human_approval.v1"),
+    ):
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"fixed research approval {key} is missing or unsafe")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or str(payload.get("schema") or "") != schema:
+            raise ValueError(f"fixed research approval {key} has the wrong schema")
+        _validate_fixed_research_approval_payload(payload)
+        controls[key] = {
+            "artifact_id": f"approval-{key}",
+            "path": str(path.relative_to(_fixed_research_work_dir(sid))).replace("\\", "/"),
+            "schema": schema,
+            "sha256": _file_sha256(path),
+        }
+    policy_meta = graph.get("experiment_policy") if isinstance(graph.get("experiment_policy"), dict) else {}
+    if str(policy_meta.get("mode") or "") == "policy_preauthorized":
+        policy_path = _fixed_research_policy_path(sid)
+        if policy_path.is_symlink() or not policy_path.is_file():
+            raise ValueError("fixed research preauthorization policy is missing or unsafe")
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        _validate_fixed_research_approval_payload(policy)
+        if (
+            policy.get("schema") != "solar.fixed_research.experiment_policy_authorization.v1"
+            or str(policy_meta.get("path") or "") != str(policy_path.relative_to(_fixed_research_work_dir(sid))).replace("\\", "/")
+            or str(policy_meta.get("sha256") or "") != _file_sha256(policy_path)
+        ):
+            raise ValueError("fixed research preauthorization policy binding mismatch")
+        controls["policy"] = {
+            "artifact_id": "experiment-policy-authorization",
+            "path": str(policy_path.relative_to(_fixed_research_work_dir(sid))).replace("\\", "/"),
+            "schema": "solar.fixed_research.experiment_policy_authorization.v1",
+            "sha256": _file_sha256(policy_path),
+        }
+    return controls
+
+
+def _fixed_research_preauthorization(
+    graph: dict[str, Any], sid: str, plan: dict[str, Any], plan_path: Path
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    policy_meta = graph.get("experiment_policy") if isinstance(graph.get("experiment_policy"), dict) else {}
+    if str(policy_meta.get("mode") or "") != "policy_preauthorized":
+        raise ValueError("fixed experiment policy is not preauthorized")
+    policy_path = _fixed_research_policy_path(sid)
+    if policy_path.is_symlink() or not policy_path.is_file() or _file_sha256(policy_path) != str(policy_meta.get("sha256") or ""):
+        raise ValueError("fixed experiment preauthorization bytes changed")
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    _validate_fixed_research_approval_payload(policy)
+    seed = _node_by_id(graph, "seed_fetch") or {}
+    request_text = str((seed.get("operator_payload") or {}).get("request") or "")
+    source_manifest = graph.get("source_pack_authority") if isinstance(graph.get("source_pack_authority"), dict) else {}
+    benchmark_policy = policy.get("benchmark_policy") if isinstance(policy.get("benchmark_policy"), dict) else {}
+    runner_path = HARNESS_DIR / "tools" / "fixed_research_benchmark.py"
+    if runner_path.is_symlink() or not runner_path.is_file():
+        raise ValueError("fixed experiment runner is missing or unsafe")
+    synthetic = {"id": "experiment_policy_input_authority", "depends_on": ["poc_handoff"]}
+    handoff_refs = _fixed_research_dependency_artifacts(graph, sid, synthetic)
+    handoff_ref = next((item for item in handoff_refs if item.get("artifact_id") == "poc_handoff"), None)
+    if not isinstance(handoff_ref, dict):
+        raise ValueError("fixed experiment policy lacks controller-accepted Part-A handoff")
+    handoff_path = _fixed_research_work_dir(sid) / str(handoff_ref["path"])
+    handoff = json.loads(handoff_path.read_text(encoding="utf-8"))
+    checks = {
+        "policy_schema": policy.get("schema") == "solar.fixed_research.experiment_policy_authorization.v1",
+        "policy_id": policy.get("policy_id") == "evidence_lineage_integrity_v1",
+        "run": str(policy.get("sprint_id") or "") == sid,
+        "node": policy.get("node_id") == "experiment_approval",
+        "generation": int(policy.get("generation") or 0) == 1,
+        "human": str(policy.get("actor") or "").strip() and str(policy.get("statement") or "").strip(),
+        "request": str(policy.get("request_sha256") or "") == hashlib.sha256(request_text.encode("utf-8")).hexdigest(),
+        "source_pack": str(policy.get("source_pack_manifest_sha256") or "") == _canonical_payload_sha256(source_manifest),
+        "plan_current": _file_sha256(plan_path) == str(next((item.get("sha256") for item in _fixed_research_dependency_artifacts(graph, sid, _node_by_id(graph, "experiment_approval") or {}) if item.get("artifact_id") == "experiment_design"), "")),
+    }
+    checks.update(_fixed_research_policy_plan_checks(policy, plan, handoff, _file_sha256(runner_path)))
+    if not all(bool(value) for value in checks.values()):
+        raise ValueError(
+            "fixed experiment plan exceeds preauthorized policy: "
+            + ",".join(sorted(key for key, value in checks.items() if not value))
+        )
+    return policy, {
+        "policy_id": str(policy["policy_id"]),
+        "path": str(policy_path.relative_to(_fixed_research_work_dir(sid))).replace("\\", "/"),
+        "sha256": _file_sha256(policy_path),
+    }
+
+
+def _fixed_research_policy_plan_checks(
+    policy: dict[str, Any],
+    plan: dict[str, Any],
+    handoff: dict[str, Any],
+    runner_sha256: str,
+) -> dict[str, bool]:
+    """Return the exact, deterministic plan-within-policy predicates."""
+    benchmark_policy = policy.get("benchmark_policy") if isinstance(policy.get("benchmark_policy"), dict) else {}
+    benchmark = plan.get("benchmark") if isinstance(plan.get("benchmark"), dict) else {}
+    approval_scope = plan.get("approval_scope") if isinstance(plan.get("approval_scope"), dict) else {}
+    plan_inputs = benchmark.get("inputs") if isinstance(benchmark.get("inputs"), list) else []
+    handoff_inputs = handoff.get("artifacts") if isinstance(handoff.get("artifacts"), list) else []
+
+    def normalize(rows: list[Any]) -> list[tuple[str, str, str]]:
+        return sorted(
+            (
+                str(item.get("path") or ""),
+                str(item.get("sha256") or "").lower(),
+                str(item.get("schema") or ""),
+            )
+            for item in rows
+            if isinstance(item, dict)
+        )
+
+    return {
+        "benchmark_id": benchmark.get("benchmark_id") == benchmark_policy.get("benchmark_id") == "evidence-lineage-integrity-v1",
+        "runner": benchmark.get("runner") == benchmark_policy.get("runner") == "harness/tools/fixed_research_benchmark.py",
+        "runner_digest": str(benchmark_policy.get("runner_sha256") or "") == runner_sha256,
+        "sandbox": benchmark.get("sandbox") == benchmark_policy.get("sandbox") == "linux_user_and_network_namespace",
+        "network": benchmark.get("network") == "disabled" and benchmark_policy.get("network") == "none",
+        "timeout": 0 < int(benchmark.get("timeout_seconds") or 0) <= int(benchmark_policy.get("timeout_max_seconds") or 0) <= 60,
+        "capabilities": benchmark_policy.get("capabilities") == ["execute:fixed_evidence_lineage_benchmark", "network:none"],
+        "scope": approval_scope == {
+            "capabilities": ["execute:fixed_evidence_lineage_benchmark", "network:none"],
+            "benchmark_id": "evidence-lineage-integrity-v1",
+            "input_sha256": sorted(str(item.get("sha256") or "") for item in plan_inputs if isinstance(item, dict)),
+        },
+        "input_set": normalize(plan_inputs) == normalize(handoff_inputs) and bool(plan_inputs),
+    }
+
+
+def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    if path.is_symlink() or temporary.is_symlink():
+        raise ValueError("fixed research controller artifact path is a symlink")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
+def _prepare_fixed_research_experiment_approval(
+    graph: dict[str, Any],
+    graph_path: str,
+    sid: str,
+    *,
+    dry_run: bool,
+) -> dict[str, Any]:
+    if (
+        str(graph.get("workflow_contract_id") or "") != FIXED_RESEARCH_WORKFLOW_CONTRACT_ID
+        or str((graph.get("execution_profile") or {}).get("kind") or "") != "part_a_plus_poc"
+    ):
+        return {"status": "not_applicable"}
+    node = _node_by_id(graph, "experiment_approval")
+    if not isinstance(node, dict):
+        return {"status": "invalid", "reason": "experiment_approval_node_missing"}
+    current = str(node_status(graph, "experiment_approval") or "pending")
+    if current == "needs_human_review":
+        record = node.get("approval_request") if isinstance(node.get("approval_request"), dict) else {}
+        return {"status": "awaiting_human", **record}
+    if current not in {"pending", "queued"}:
+        return {"status": current}
+    _stage, request_path, approval_path = _fixed_research_approval_paths(sid)
+    node_result = (graph.get("node_results") or {}).get("experiment_approval")
+    resumed_review = (
+        (node_result.get("human_review") or {}).get("state")
+        if isinstance(node_result, dict)
+        else ""
+    )
+    preauthorized = str((graph.get("experiment_policy") or {}).get("mode") or "") == "policy_preauthorized"
+    if approval_path.is_file() and not approval_path.is_symlink() and (
+        str(resumed_review or "") == "resumed" or preauthorized
+    ):
+        _fixed_research_approval_controls(sid, graph)
+        return {"status": "approval_received", "approval_path": str(approval_path)}
+    design = _node_by_id(graph, "experiment_design")
+    if not isinstance(design, dict) or node_status(graph, "experiment_design") != "passed":
+        return {"status": "waiting_for_design"}
+    dependencies = _fixed_research_dependency_artifacts(graph, sid, node)
+    plan_ref = next((item for item in dependencies if item.get("artifact_id") == "experiment_design"), None)
+    if not isinstance(plan_ref, dict):
+        raise ValueError("fixed research approval has no accepted experiment plan")
+    plan_path = _fixed_research_work_dir(sid) / str(plan_ref["path"])
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    if not isinstance(plan, dict) or plan.get("schema") != "solar.fixed_research.experiment_plan.v1":
+        raise ValueError("fixed research approval plan schema mismatch")
+    prior_result = (graph.get("node_results") or {}).get("experiment_approval")
+    prior_generation = max(
+        int(((node.get("human_review") or {}).get("generation") or 0)),
+        int((((prior_result if isinstance(prior_result, dict) else {}).get("human_review") or {}).get("generation") or 0)),
+    )
+    generation = max(1, prior_generation + 1)
+    request_payload = {
+        "schema": "solar.fixed_research.approval_request.v1",
+        "sprint_id": sid,
+        "node_id": "experiment_approval",
+        "generation": generation,
+        "plan_path": str(plan_ref["path"]),
+        "plan_sha256": _file_sha256(plan_path),
+        "approved_scope": dict(plan.get("approval_scope") or {}),
+        "approved_capabilities": ["execute:fixed_evidence_lineage_benchmark", "network:none"],
+        "requested_at": _utc_now(),
+        "requested_by": "graph_node_dispatcher",
+    }
+    _validate_fixed_research_approval_payload(request_payload)
+    if dry_run:
+        return {"status": "would_preauthorize" if preauthorized else "would_enter_human_review", "request": request_payload}
+    stage, request_path, approval_path = _fixed_research_approval_paths(sid)
+    policy: dict[str, Any] | None = None
+    policy_ref: dict[str, Any] | None = None
+    if preauthorized:
+        # Validate the current plan against the controller-owned policy before
+        # publishing any approval-generation artifact.  A plan outside the
+        # policy must fail without leaving a plausible approval request behind.
+        policy, policy_ref = _fixed_research_preauthorization(graph, sid, plan, plan_path)
+    stage.mkdir(parents=True, exist_ok=True)
+    if approval_path.exists() or approval_path.is_symlink():
+        raise ValueError("stale human approval exists before a new approval generation")
+    _write_json_atomic(request_path, request_payload)
+    if preauthorized:
+        assert policy is not None and policy_ref is not None
+        approval_payload = {
+            "schema": "solar.fixed_research.human_approval.v1",
+            "decision": "approved",
+            "sprint_id": sid,
+            "node_id": "experiment_approval",
+            "generation": generation,
+            "actor": str(policy["actor"]),
+            "author": dict(policy["author"]),
+            "statement": str(policy["statement"]),
+            "plan_path": str(request_payload["plan_path"]),
+            "plan_sha256": str(request_payload["plan_sha256"]),
+            "approved_scope": dict(request_payload["approved_scope"]),
+            "approved_capabilities": list(request_payload["approved_capabilities"]),
+            "approval_request_sha256": _file_sha256(request_path),
+            "approval_mode": "policy_preauthorized",
+            "preauthorization": policy_ref,
+            "approved_at": _utc_now(),
+        }
+        _validate_fixed_research_approval_payload(approval_payload)
+        _write_json_atomic(approval_path, approval_payload)
+        node["approval_request"] = {
+            "path": str(request_path),
+            "sha256": _file_sha256(request_path),
+            "generation": generation,
+            "plan_sha256": request_payload["plan_sha256"],
+        }
+        result = graph.setdefault("node_results", {}).setdefault("experiment_approval", {})
+        result["approval_request"] = dict(node["approval_request"])
+        result["preauthorization"] = dict(policy_ref)
+        save_graph(graph_path, graph)
+        return {"status": "approval_received", "approval_path": str(approval_path), "preauthorization": policy_ref}
+    human_review = enter_node_human_review(
+        graph,
+        "experiment_approval",
+        reason="exact_experiment_plan_human_approval_required",
+        next_action=(
+            "Review the controller approval request and use approve-fixed-experiment with its exact "
+            "generation, plan SHA-256, scope, and capabilities."
+        ),
+        writer="_prepare_fixed_research_experiment_approval",
+        author_type="policy",
+    )
+    if int(human_review.get("generation") or 0) != generation:
+        raise ValueError("human-review generation does not match approval request")
+    node["approval_request"] = {
+        "path": str(request_path),
+        "sha256": _file_sha256(request_path),
+        "generation": generation,
+        "plan_sha256": request_payload["plan_sha256"],
+    }
+    result = graph.setdefault("node_results", {}).setdefault("experiment_approval", {})
+    result["approval_request"] = dict(node["approval_request"])
+    save_graph(graph_path, graph)
+    return {"status": "awaiting_human", **node["approval_request"]}
+
+
+def approve_fixed_experiment(
+    graph_path: str,
+    *,
+    expected_generation: int,
+    actor: str,
+    statement: str,
+    plan_sha256: str,
+    approved_scope: dict[str, Any],
+    approved_capabilities: list[str],
+) -> dict[str, Any]:
+    graph = load_graph(graph_path)
+    guard = _fixed_research_specialization_guard(graph)
+    if guard is not None:
+        return guard
+    sid = str(graph.get("sprint_id") or "")
+    node = _node_by_id(graph, "experiment_approval")
+    actor = str(actor or "").strip()
+    statement = str(statement or "").strip()
+    if not actor or actor.lower() in {"system", "policy", "operator", "worker", "solar", "automation"}:
+        return {"ok": False, "reason": "attributable_human_actor_required"}
+    if not statement:
+        return {"ok": False, "reason": "human_approval_statement_required"}
+    if not isinstance(node, dict) or node_status(graph, "experiment_approval") != "needs_human_review":
+        return {"ok": False, "reason": "node_not_waiting_for_human_review"}
+    _stage, request_path, approval_path = _fixed_research_approval_paths(sid)
+    if request_path.is_symlink() or not request_path.is_file() or approval_path.exists() or approval_path.is_symlink():
+        return {"ok": False, "reason": "approval_control_paths_invalid"}
+    request_payload = json.loads(request_path.read_text(encoding="utf-8"))
+    exact_capabilities = ["execute:fixed_evidence_lineage_benchmark", "network:none"]
+    result_record = (graph.get("node_results") or {}).get("experiment_approval")
+    graph_generation = max(
+        int(((node.get("human_review") or {}).get("generation") or 0)),
+        int((((result_record if isinstance(result_record, dict) else {}).get("human_review") or {}).get("generation") or 0)),
+    )
+    checks = {
+        "request_schema": request_payload.get("schema") == "solar.fixed_research.approval_request.v1",
+        "sprint_id": str(request_payload.get("sprint_id") or "") == sid,
+        "node_id": str(request_payload.get("node_id") or "") == "experiment_approval",
+        "request_generation": int(request_payload.get("generation") or 0) == int(expected_generation),
+        "graph_generation": graph_generation == int(expected_generation),
+        "plan_argument": str(request_payload.get("plan_sha256") or "") == str(plan_sha256 or "").lower(),
+        "approved_scope": request_payload.get("approved_scope") == approved_scope,
+        "approved_capabilities": request_payload.get("approved_capabilities") == approved_capabilities == exact_capabilities,
+    }
+    plan_path = _fixed_research_work_dir(sid) / str(request_payload.get("plan_path") or "")
+    checks["plan_path"] = bool(
+        not plan_path.is_symlink()
+        and plan_path.is_file()
+        and _file_sha256(plan_path) == str(plan_sha256 or "").lower()
+    )
+    if not all(checks.values()):
+        return {
+            "ok": False,
+            "reason": "approval_request_plan_generation_or_scope_mismatch",
+            "mismatches": sorted(key for key, passed in checks.items() if not passed),
+            "observed": {
+                "expected_generation": int(expected_generation),
+                "request_generation": int(request_payload.get("generation") or 0),
+                "graph_generation": graph_generation,
+                "node_result_generation": int((((graph.get("node_results") or {}).get("experiment_approval") or {}).get("human_review") or {}).get("generation") or 0),
+            },
+        }
+    approval_payload = {
+        "schema": "solar.fixed_research.human_approval.v1",
+        "decision": "approved",
+        "sprint_id": sid,
+        "node_id": "experiment_approval",
+        "generation": int(expected_generation),
+        "actor": actor,
+        "author": {"type": "human", "id": actor},
+        "statement": statement,
+        "plan_path": str(request_payload["plan_path"]),
+        "plan_sha256": str(plan_sha256).lower(),
+        "approved_scope": approved_scope,
+        "approved_capabilities": approved_capabilities,
+        "approval_request_sha256": _file_sha256(request_path),
+        "approved_at": _utc_now(),
+    }
+    _validate_fixed_research_approval_payload(approval_payload)
+    _write_json_atomic(approval_path, approval_payload)
+    resumed = resume_human_review(
+        graph_path,
+        "experiment_approval",
+        expected_generation=int(expected_generation),
+        actor=actor,
+        reason=(
+            f"Approved exact experiment plan {plan_sha256}; approval_evidence={approval_path.name}; "
+            f"scope={json.dumps(approved_scope, sort_keys=True, separators=(',', ':'))}"
+        ),
+    )
+    if not resumed.get("ok"):
+        approval_path.unlink(missing_ok=True)
+        return resumed
+    return {
+        "ok": True,
+        "status": "pending",
+        "node": "experiment_approval",
+        "generation": int(expected_generation),
+        "actor": actor,
+        "approval_path": str(approval_path),
+        "approval_sha256": _file_sha256(approval_path),
+        "resume": resumed,
+    }
+
+
+def _build_fixed_research_operator_envelope(
+    *,
+    sid: str,
+    node_id: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    graph_path: str,
+    operator_id: str,
+    dispatch_id: str,
+    instruction_file: Path,
+    ttl: int,
+) -> dict[str, Any]:
+    from fixed_research_workflow import PHYSICAL_OPERATOR_BY_NODE
+
+    if str(graph.get("workflow_contract_id") or "") != FIXED_RESEARCH_WORKFLOW_CONTRACT_ID:
+        raise ValueError("fixed research envelope requires the fixed workflow contract")
+    if operator_id != PHYSICAL_OPERATOR_BY_NODE.get(node_id):
+        raise ValueError("fixed research envelope operator identity mismatch")
+    work_dir = _fixed_research_work_dir(sid)
+    declared_outputs: list[dict[str, str]] = []
+    for item in node.get("outputs") or []:
+        if not isinstance(item, dict):
+            continue
+        _path, relative = _fixed_research_relative_path(item.get("path"), sid, label="declared output")
+        declared_outputs.append({"path": relative, "type": str(item.get("type") or "")})
+    primary, _primary_relative = _fixed_research_primary_output(node, sid)
+    stage_dir = next(
+        (
+            path
+            for item in node.get("outputs") or []
+            if isinstance(item, dict) and str(item.get("type") or "") == "directory"
+            for path, _relative in [_fixed_research_relative_path(item.get("path"), sid, label="stage directory")]
+        ),
+        None,
+    )
+    if stage_dir is None or primary.parent != stage_dir:
+        raise ValueError("fixed research primary output is not inside its declared stage directory")
+    inputs = {
+        "logical_operator": str(node.get("logical_operator") or ""),
+        "expected_schema": str(node.get("expected_schema") or ""),
+        "declared_outputs": declared_outputs,
+        "dependency_artifacts": _fixed_research_dependency_artifacts(graph, sid, node),
+        "source_pack_manifest": dict(graph.get("source_pack_authority") or {}),
+        "retrieval_policy": dict(graph.get("retrieval_policy") or {}),
+        "operator_payload": dict(node.get("operator_payload") or {}),
+    }
+    if node_id == "experiment_approval":
+        inputs["approval_controls"] = _fixed_research_approval_controls(sid, graph)
+    result_path = stage_dir / "research_node_result.json"
+    return {
+        "task_id": dispatch_id,
+        "sprint_id": sid,
+        "node_id": node_id,
+        "operator_id": operator_id,
+        "task_type": str(node.get("dispatch_task_type") or node.get("task_type") or "research"),
+        "objective": str(node.get("goal") or node.get("title") or node_id),
+        "mode": "runtime",
+        "runner_contract": FIXED_RESEARCH_WORKFLOW_CONTRACT_ID,
+        "graph_path": str(Path(graph_path).resolve(strict=False)),
+        "dispatch_file": str(instruction_file),
+        "handoff_path": str(_handoff_file(sid, node_id)),
+        "work_dir": str(work_dir),
+        "inputs": inputs,
+        "outputs": {"result_path": str(result_path)},
+        "lease_ttl_seconds": int(ttl),
+    }
+
+
 def _autosci_primary_output_path(sid: str, node: dict[str, Any]) -> Path:
     write_scope = node.get("write_scope") if isinstance(node.get("write_scope"), list) else []
     for raw in write_scope:
@@ -10923,6 +11803,166 @@ def _submit_autosci_node_to_operator(
     }, actorhost)
 
 
+def _submit_fixed_research_node_to_operator(
+    *,
+    item: dict[str, Any],
+    payload: dict[str, Any],
+    sid: str,
+    node: dict[str, Any],
+    node_id: str,
+    graph_path: str,
+    pane: str,
+    dispatch_id: str,
+    dry_run: bool,
+    ttl: int,
+) -> dict[str, Any]:
+    """Submit only a safely specialized fixed-research Part-A node."""
+    operator_id = _operator_id_from_pane(pane)
+    try:
+        graph = load_graph(graph_path)
+    except Exception as exc:
+        return {"ok": False, "reason": "fixed_research_graph_unreadable", "error": str(exc)}
+    guard = _fixed_research_specialization_guard(graph)
+    if guard is not None:
+        return {**guard, "node": node_id, "graph": graph_path}
+    try:
+        from fixed_research_workflow import DISPATCHABLE_NODE_IDS, PHYSICAL_OPERATOR_BY_NODE
+
+        if (
+            node_id not in DISPATCHABLE_NODE_IDS
+            or operator_id != PHYSICAL_OPERATOR_BY_NODE.get(node_id)
+        ):
+            raise ValueError("node/operator is not an exact fixed-workflow binding")
+        authoritative_node = _node_by_id(graph, node_id)
+        if authoritative_node is None:
+            raise ValueError("fixed research node is missing from the authoritative graph")
+        node = authoritative_node
+        if str(node.get("required_operator_id") or "") != operator_id:
+            raise ValueError("authoritative graph operator binding mismatch")
+        instruction_file = _dispatch_file(sid, node_id)
+        text_payload = dict(payload, dispatch_id=dispatch_id, sprint_id=sid)
+        text_payload["actual_operator_id"] = operator_id
+        text_payload["dispatch_mode"] = "fixed_research_operator_direct"
+        instruction_file.parent.mkdir(parents=True, exist_ok=True)
+        instruction_file.write_text(build_dispatch_text(text_payload, pane), encoding="utf-8")
+        if not dry_run:
+            _inject_dispatch_context(instruction_file, sid=sid, pane=pane, dispatch_id=dispatch_id)
+        envelope = _build_fixed_research_operator_envelope(
+            sid=sid,
+            node_id=node_id,
+            node=node,
+            graph=graph,
+            graph_path=graph_path,
+            operator_id=operator_id,
+            dispatch_id=dispatch_id,
+            instruction_file=instruction_file,
+            ttl=ttl,
+        )
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": "fixed_research_envelope_rejected",
+            "node": node_id,
+            "operator_id": operator_id,
+            "error": str(exc),
+        }
+    actorhost = _actorhost_bridge(
+        actor_id=operator_id,
+        operator_id=operator_id,
+        pane=pane,
+        required_capabilities=list(node.get("required_capabilities") or []),
+    )
+    if dry_run:
+        return _flatten_actorhost_bridge({
+            "ok": True,
+            "node": node_id,
+            "pane": pane,
+            "operator_id": operator_id,
+            "dispatch_id": dispatch_id,
+            "instruction_file": str(instruction_file),
+            "dispatch_mode": "fixed_research_operator_direct",
+            "operator_envelope": envelope,
+            "dry_run": True,
+            "graph_updated": False,
+        }, actorhost)
+    try:
+        import operator_runtime  # type: ignore
+
+        submit_result = operator_runtime.submit(envelope)
+    except Exception as exc:
+        _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
+        _append_dispatch_ledger(
+            "fixed_research_operator_submit_failed",
+            sid,
+            pane,
+            dispatch_id,
+            {"node": node_id, "operator_id": operator_id, "error": str(exc), "queue_item_id": item.get("id", "")},
+        )
+        return {
+            "ok": False,
+            "reason": "fixed_research_operator_submit_failed",
+            "node": node_id,
+            "pane": pane,
+            "operator_id": operator_id,
+            "error": str(exc),
+            "requeued": False,
+        }
+    _write_submit_ack(sid, node_id, pane, dispatch_id)
+    graph_updated = _mark_graph_node_compat(
+        graph_path, node_id, "dispatched", pane=pane, dispatch_id=dispatch_id
+    )
+    try:
+        saved = load_graph(graph_path)
+        graph_node = _node_by_id(saved, node_id)
+        if graph_node is not None:
+            graph_node["operator_id"] = operator_id
+            graph_node["dispatched_via"] = "operator_runtime"
+            graph_node["dispatch_mode"] = "fixed_research_operator_direct"
+            graph_node["updated_at"] = _utc_now()
+            save_graph(graph_path, saved)
+            graph_updated = True
+    except Exception:
+        pass
+    parsed = {
+        "task_id": str(submit_result.get("task_id") or dispatch_id),
+        "operator_id": str(submit_result.get("operator_id") or operator_id),
+        "lease_id": str(submit_result.get("lease_id") or ""),
+        "inbox_path": str(submit_result.get("inbox_path") or ""),
+        "submitted_at": str(submit_result.get("submitted_at") or ""),
+    }
+    _record_node_attribution(
+        sid,
+        node_id,
+        _operator_runstate_fields(
+            operator_id=operator_id,
+            role="builder",
+            dispatch_id=dispatch_id,
+            parsed=parsed,
+            instruction_file=instruction_file,
+            dispatch_mode="fixed_research_operator_direct",
+        ),
+    )
+    _append_dispatch_ledger(
+        "fixed_research_operator_dispatched",
+        sid,
+        pane,
+        dispatch_id,
+        {"node": node_id, "operator_id": operator_id, "submit": parsed},
+    )
+    return _flatten_actorhost_bridge({
+        "ok": True,
+        "node": node_id,
+        "pane": pane,
+        "operator_id": operator_id,
+        "dispatch_id": dispatch_id,
+        "instruction_file": str(instruction_file),
+        "dispatch_mode": "fixed_research_operator_direct",
+        "operator_submit": parsed,
+        "dry_run": False,
+        "graph_updated": graph_updated,
+    }, actorhost)
+
+
 def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 900) -> dict[str, Any]:
     payload = item.get("payload") or {}
     sid = payload.get("sprint_id") or item.get("sprint_id") or item.get("sid") or ""
@@ -10936,6 +11976,17 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
 
     if not sid or not node_id:
         return {"ok": False, "reason": "invalid_graph_queue_item", "item": item}
+    fixed_contract_queue = False
+    try:
+        fixed_graph = load_graph(graph_path)
+        fixed_contract_queue = (
+            str(fixed_graph.get("workflow_contract_id") or "") == FIXED_RESEARCH_WORKFLOW_CONTRACT_ID
+        )
+        fixed_guard = _fixed_research_specialization_guard(fixed_graph)
+    except Exception:
+        fixed_guard = None
+    if fixed_guard is not None:
+        return {**fixed_guard, "node": node_id, "graph": graph_path}
     runtime_state = _graph_node_runtime_state(graph_path, node_id)
     current_status = str(runtime_state.get("status") or "")
     current_dispatch_id = str(runtime_state.get("dispatch_id") or "")
@@ -11146,6 +12197,44 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
         }
 
     direct_operator_id = _operator_id_from_pane(str(pane))
+    try:
+        from fixed_research_workflow import PHYSICAL_OPERATOR_BY_NODE as FIXED_RESEARCH_OPERATOR_BY_NODE
+
+        fixed_operator_ids = set(FIXED_RESEARCH_OPERATOR_BY_NODE.values())
+        expected_fixed_operator_id = FIXED_RESEARCH_OPERATOR_BY_NODE.get(node_id, "")
+    except Exception:
+        fixed_operator_ids = set()
+        expected_fixed_operator_id = ""
+    if direct_operator_id in fixed_operator_ids and not fixed_contract_queue:
+        return {
+            "ok": False,
+            "reason": "fixed_research_operator_requires_exact_contract",
+            "node": node_id,
+            "operator_id": direct_operator_id,
+            "graph": graph_path,
+        }
+    if fixed_contract_queue and expected_fixed_operator_id and direct_operator_id != expected_fixed_operator_id:
+        return {
+            "ok": False,
+            "reason": "fixed_research_operator_identity_mismatch",
+            "node": node_id,
+            "expected_operator_id": expected_fixed_operator_id,
+            "operator_id": direct_operator_id,
+            "graph": graph_path,
+        }
+    if fixed_contract_queue and direct_operator_id == expected_fixed_operator_id:
+        return _submit_fixed_research_node_to_operator(
+            item=item,
+            payload=payload,
+            sid=sid,
+            node=node,
+            node_id=node_id,
+            graph_path=graph_path,
+            pane=str(pane),
+            dispatch_id=dispatch_id,
+            dry_run=dry_run,
+            ttl=ttl,
+        )
     if direct_operator_id.startswith("autosci-") and direct_operator_id != AUTOSCI_EVALUATOR_OPERATOR_ID:
         return _submit_autosci_node_to_operator(
             item=item,
@@ -11767,6 +12856,153 @@ def _first_available_evaluator(dry_run: bool = False) -> dict[str, Any] | None:
 AUTOSCI_WORKFLOW_CONTRACT_ID = "research.autosci.v1"
 AUTOSCI_EVALUATOR_OPERATOR_ID = "autosci-evaluator-worker"
 AUTOSCI_EVALUATOR_PANE = f"operator:{AUTOSCI_EVALUATOR_OPERATOR_ID}"
+FIXED_RESEARCH_WORKFLOW_CONTRACT_ID = "research.evidence_to_poc.v1"
+
+
+def _fixed_research_retrieval_policy_valid(graph: dict[str, Any]) -> bool:
+    mode = str((graph.get("acquisition_mode") or {}).get("kind") or "")
+    if mode == "source_pack":
+        return not str((graph.get("retrieval_policy") or {}).get("policy_id") or "")
+    if mode not in {"live_search", "hybrid"}:
+        return False
+    sid = str(graph.get("sprint_id") or "")
+    meta = graph.get("retrieval_policy") if isinstance(graph.get("retrieval_policy"), dict) else {}
+    relative = str(meta.get("path") or "")
+    if relative != "inputs/retrieval/public_bibliographic_no_key_v1.authorization.json":
+        return False
+    path = _fixed_research_work_dir(sid) / relative
+    if path.is_symlink() or not path.is_file() or _file_sha256(path) != str(meta.get("sha256") or ""):
+        return False
+    try:
+        policy = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    seed = _node_by_id(graph, "seed_fetch") or {}
+    request_text = str((seed.get("operator_payload") or {}).get("request") or "")
+    source_manifest = graph.get("source_pack_authority") if isinstance(graph.get("source_pack_authority"), dict) else {}
+    return bool(
+        policy.get("schema") == "solar.fixed_research.public_retrieval_authorization.v1"
+        and policy.get("policy_id") == "public_bibliographic_no_key_v1"
+        and policy.get("decision") == "authorized"
+        and policy.get("sprint_id") == sid
+        and policy.get("node_id") == "source_discovery"
+        and policy.get("request_sha256") == hashlib.sha256(request_text.encode("utf-8")).hexdigest()
+        and policy.get("source_pack_manifest_sha256") == _canonical_payload_sha256(source_manifest)
+        and policy.get("providers") == ["semantic_scholar", "openalex", "crossref"]
+        and policy.get("credential_mode") == "public_no_key"
+        and policy.get("secret_refs") == []
+        and policy.get("network_scope") == "https_public_bibliographic_apis_only"
+        and int(policy.get("minimum_live_sources") or 0) == 3
+        and 1 <= int(policy.get("max_attempts_per_provider") or 0) <= 2
+        and 0 < float(policy.get("max_total_wait_seconds") or 0) <= 12.0
+    )
+
+
+def _fixed_research_specialization_guard(graph: dict[str, Any]) -> dict[str, Any] | None:
+    if str(graph.get("workflow_contract_id") or "") != FIXED_RESEARCH_WORKFLOW_CONTRACT_ID:
+        return None
+    errors: list[str] = []
+    if graph.get("fixed_topology") is not True or graph.get("plan_compile_required") is not False:
+        errors.append("fixed_research_specialization_missing")
+    execution_profile = str((graph.get("execution_profile") or {}).get("kind") or "")
+    if execution_profile not in {"part_a_only", "part_a_plus_poc"}:
+        errors.append("fixed_research_execution_profile_not_available")
+    if str((graph.get("acquisition_mode") or {}).get("kind") or "") not in {"source_pack", "live_search", "hybrid"}:
+        errors.append("fixed_research_acquisition_mode_not_available")
+    elif not _fixed_research_retrieval_policy_valid(graph):
+        errors.append("fixed_research_retrieval_policy_invalid")
+    binding = graph.get("intent_binding") if isinstance(graph.get("intent_binding"), dict) else {}
+    if binding.get("required") is not True:
+        errors.append("fixed_research_intent_binding_required")
+    else:
+        if str(binding.get("status") or "") != "bound":
+            errors.append("fixed_research_intent_binding_incomplete")
+        else:
+            intent_id = str(binding.get("intent_id") or "")
+            gateway_root = Path(
+                os.environ.get("SOLAR_INTENT_GATEWAY_DIR")
+                or (Path.home() / ".solar" / "harness" / "intents")
+            ).absolute()
+            intent_path = Path(intent_id)
+            intent_id_safe = bool(
+                intent_id
+                and not intent_path.is_absolute()
+                and len(intent_path.parts) == 1
+                and all(part not in {"", ".", ".."} for part in intent_path.parts)
+            )
+            expected_manifest = gateway_root / (intent_id if intent_id_safe else "__invalid__") / "binding.json"
+            raw_manifest = Path(str(binding.get("manifest") or ""))
+            manifest = raw_manifest.absolute() if raw_manifest.is_absolute() else Path()
+            symlink_component = gateway_root.is_symlink()
+            cursor = gateway_root
+            for part in ((intent_path if intent_id_safe else Path("__invalid__")) / "binding.json").parts:
+                cursor = cursor / part
+                symlink_component = symlink_component or cursor.is_symlink()
+            resolved_contained = False
+            if intent_id_safe and not symlink_component:
+                try:
+                    expected_manifest.resolve(strict=False).relative_to(gateway_root.resolve(strict=False))
+                    resolved_contained = True
+                except ValueError:
+                    resolved_contained = False
+            try:
+                payload = json.loads(expected_manifest.read_text(encoding="utf-8"))
+            except Exception:
+                payload = {}
+            if (
+                not intent_id_safe
+                or manifest != expected_manifest
+                or symlink_component
+                or not resolved_contained
+                or not expected_manifest.is_file()
+                or str(payload.get("intent_id") or "") != intent_id
+                or str(payload.get("sprint_id") or "") != str(graph.get("sprint_id") or "")
+            ):
+                errors.append("fixed_research_intent_binding_evidence_invalid")
+    part_b_ids = {
+        "poc_handoff", "idea_evaluation", "experiment_design", "experiment_approval",
+        "experiment_run", "claim_verification", "final_delivery",
+    }
+    nodes = {str(item.get("id") or ""): item for item in graph.get("nodes") or [] if isinstance(item, dict)}
+    if not part_b_ids.issubset(nodes):
+        errors.append("fixed_research_part_b_visibility_missing")
+    for node_id in sorted(part_b_ids & set(nodes)):
+        node = nodes[node_id]
+        if execution_profile == "part_a_only":
+            if str(node.get("status") or "") != "skipped" or str(node.get("condition_status") or "") != "not_applicable":
+                errors.append(f"fixed_research_part_b_not_skipped:{node_id}")
+            if node.get("required_operator_id"):
+                errors.append(f"fixed_research_part_b_operator_present:{node_id}")
+    codex_execution = graph.get("codex_execution") if isinstance(graph.get("codex_execution"), dict) else {}
+    if (
+        str(graph.get("execution_mode") or "") != "single_threaded"
+        or str(codex_execution.get("mode") or "") != "fresh_context_per_node"
+        or codex_execution.get("structured_response") is not True
+        or codex_execution.get("ambient_api_keys_allowed") is not False
+        or codex_execution.get("max_parallel") != 1
+    ):
+        errors.append("fixed_research_codex_execution_boundary_invalid")
+    try:
+        from fixed_research_workflow import PART_A_NODE_IDS, PART_B_NODE_IDS, PHYSICAL_OPERATOR_BY_NODE
+
+        for node_id in PART_A_NODE_IDS:
+            node = nodes.get(node_id) or {}
+            if str(node.get("required_operator_id") or "") != PHYSICAL_OPERATOR_BY_NODE[node_id]:
+                errors.append(f"fixed_research_operator_binding_missing:{node_id}")
+            if str(node.get("status") or "") in {"skipped", "failed", "cancelled"}:
+                errors.append(f"fixed_research_part_a_node_terminal:{node_id}")
+        if execution_profile == "part_a_plus_poc":
+            for node_id in PART_B_NODE_IDS:
+                node = nodes.get(node_id) or {}
+                if str(node.get("required_operator_id") or "") != PHYSICAL_OPERATOR_BY_NODE[node_id]:
+                    errors.append(f"fixed_research_part_b_operator_binding_missing:{node_id}")
+                if str(node.get("condition_status") or "") != "enabled":
+                    errors.append(f"fixed_research_part_b_condition_invalid:{node_id}")
+    except Exception:
+        errors.append("fixed_research_operator_binding_unreadable")
+    if not errors:
+        return None
+    return {"ok": False, "reason": "fixed_research_specialization_guard_failed", "errors": errors}
 
 
 def _node_in_autosci_workflow(graph: dict[str, Any], node: dict[str, Any]) -> bool:
@@ -12010,6 +13246,78 @@ def _autosci_contract_operator_workers(graph: dict[str, Any]) -> list[dict[str, 
                 operator_id=operator_id,
                 pane=pane,
                 required_capabilities=required_capabilities,
+            ),
+        )
+        workers.append(worker)
+    return workers
+
+
+def _fixed_research_operator_workers(graph: dict[str, Any]) -> list[dict[str, Any]]:
+    if not _autosci_operator_dispatch_enabled():
+        return []
+    if _fixed_research_specialization_guard(graph) is not None:
+        return []
+    if str(graph.get("workflow_contract_id") or "") != FIXED_RESEARCH_WORKFLOW_CONTRACT_ID:
+        return []
+    from fixed_research_workflow import DISPATCHABLE_NODE_IDS, PHYSICAL_OPERATOR_BY_NODE
+
+    try:
+        candidates = ready_nodes(graph)
+    except Exception:
+        candidates = []
+    workers: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for node in candidates:
+        node_id = str(node.get("id") or "")
+        if node_id not in DISPATCHABLE_NODE_IDS:
+            continue
+        operator_id = PHYSICAL_OPERATOR_BY_NODE[node_id]
+        if str(node.get("required_operator_id") or "") != operator_id:
+            continue
+        spec = _physical_operator_spec(operator_id)
+        if not spec or bool(spec.get("deprecated")):
+            continue
+        if not bool(spec.get("enabled", False)) or not bool(spec.get("available", False)):
+            continue
+        pane = f"operator:{operator_id}"
+        if pane in seen:
+            continue
+        seen.add(pane)
+        runtime_state = _operator_runtime_state_for_graph(operator_id)
+        capabilities = [
+            operator_id,
+            str(node.get("logical_operator") or ""),
+            str(node.get("capability_capsule_id") or ""),
+            "autosci",
+            FIXED_RESEARCH_WORKFLOW_CONTRACT_ID,
+            "research-synthesis-runtime",
+            *[str(item) for item in node.get("required_capabilities") or [] if str(item)],
+        ]
+        worker = {
+            "pane": pane,
+            "models": ["autosci", "operator-runtime"],
+            "skills": ["autosci", "research-synthesis-runtime"],
+            "capabilities": [item for item in capabilities if item],
+            "role": "builder",
+            "dispatch_role": "builder",
+            "host_role": "builder",
+            "operator_role": str(spec.get("role") or ""),
+            "operator_id": operator_id,
+            "model_provider_neutral": True,
+            "busy": runtime_state not in {"", "idle"},
+            "title": str(spec.get("display_name") or operator_id),
+            "unavailable_reason": "" if runtime_state in {"", "idle"} else f"operator_runtime_{runtime_state}",
+            "current_command": str(spec.get("command") or ""),
+            "load": 0,
+            "dispatch_mode": "fixed_research_operator_direct",
+        }
+        _flatten_actorhost_bridge(
+            worker,
+            _actorhost_bridge(
+                actor_id=operator_id,
+                operator_id=operator_id,
+                pane=pane,
+                required_capabilities=list(node.get("required_capabilities") or []),
             ),
         )
         workers.append(worker)
@@ -12892,6 +14200,9 @@ def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
         return {"ok": False, "reason": "no_dispatch_flag", "graph": graph_path, "enqueue": {}, "drain": {}}
     graph = load_graph(graph_path)
     sid = graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", "")
+    fixed_guard = _fixed_research_specialization_guard(graph)
+    if fixed_guard is not None:
+        return {**fixed_guard, "graph": graph_path, "enqueue": {}, "drain": {}}
     guard = _workflow_contract_guard(graph)
     if guard is not None:
         _append_event(str(sid), {
@@ -12916,11 +14227,37 @@ def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
         reconciled = _reconcile_existing_dispatches(graph, graph_path)
         if reconciled:
             save_graph(graph_path, graph)
+    approval_gate: dict[str, Any] = {}
+    try:
+        approval_gate = _prepare_fixed_research_experiment_approval(
+            graph, graph_path, str(sid), dry_run=dry_run
+        )
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": "fixed_research_approval_gate_failed",
+            "error": f"{type(exc).__name__}: {exc}",
+            "graph": graph_path,
+            "reconciled": reconciled,
+            "enqueue": {},
+            "drain": {},
+        }
+    if approval_gate.get("status") == "awaiting_human":
+        return {
+            "ok": True,
+            "status": "needs_human_review",
+            "graph": graph_path,
+            "reconciled": reconciled,
+            "approval_gate": approval_gate,
+            "enqueue": {"ok": True, "enqueued": []},
+            "drain": {"ok": True, "processed": 0, "results": []},
+        }
     try:
         graph = auto_enrich_graph(graph, graph_path=graph_path)
     except Exception:
         pass
     workers = _discover_workers(dry_run)
+    workers.extend(_fixed_research_operator_workers(graph))
     workers.extend(_autosci_contract_operator_workers(graph))
     active_panes: set[str] = set()
     results = graph.get("node_results") if isinstance(graph.get("node_results"), dict) else {}
@@ -12994,6 +14331,7 @@ def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
     return {
         "ok": enqueue_result.get("ok") and drain_result.get("ok"),
         "reconciled": reconciled,
+        "approval_gate": approval_gate,
         "concurrency": {"graph_max_parallel": effective_max_parallel},
         "enqueue": enqueue_result,
         "drain": drain_result,
@@ -13901,6 +15239,15 @@ def main() -> int:
     p.add_argument("--actor", required=True)
     p.add_argument("--reason", required=True)
 
+    p = sub.add_parser("approve-fixed-experiment")
+    p.add_argument("--graph", required=True)
+    p.add_argument("--generation", required=True, type=int)
+    p.add_argument("--actor", required=True)
+    p.add_argument("--statement", required=True)
+    p.add_argument("--plan-sha256", required=True)
+    p.add_argument("--scope-json", required=True)
+    p.add_argument("--capability", action="append", required=True)
+
     args = ap.parse_args()
     if args.cmd == "drain-queue":
         result = drain_queue(args.sprint, args.dry_run, args.max_items, args.ttl)
@@ -13935,6 +15282,22 @@ def main() -> int:
             actor=args.actor,
             reason=args.reason,
         )
+    elif args.cmd == "approve-fixed-experiment":
+        try:
+            scope = json.loads(args.scope_json)
+            if not isinstance(scope, dict):
+                raise ValueError("scope must be a JSON object")
+            result = approve_fixed_experiment(
+                args.graph,
+                expected_generation=args.generation,
+                actor=args.actor,
+                statement=args.statement,
+                plan_sha256=args.plan_sha256,
+                approved_scope=scope,
+                approved_capabilities=list(args.capability or []),
+            )
+        except (ValueError, json.JSONDecodeError) as exc:
+            result = {"ok": False, "reason": "invalid_fixed_experiment_approval_arguments", "error": str(exc)}
     else:
         ap.print_help()
         return 1

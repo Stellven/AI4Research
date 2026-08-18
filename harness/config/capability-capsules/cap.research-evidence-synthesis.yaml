@@ -1,0 +1,58 @@
+capability_capsule_id: cap.research-evidence-synthesis
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Evidence Synthesis
+  description: Synthesize validated sources into evidence-linked claims with explicit uncertainty and limitations.
+applicability:
+  task_types: [research]
+  positive_signals: [evidence synthesis, claim grounding, source linkage]
+  negative_signals: [network retrieval, repository patch, report packaging]
+contract:
+  inputs:
+    required:
+      - {name: source_validation, type: json}
+      - {name: seed_snapshot, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: evidence_synthesis, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [research]}
+  postconditions:
+    - {check: output_present, field: evidence_synthesis_json}
+  invariants:
+    - Every claim carries evidence IDs that resolve to accepted validated sources.
+    - Unsupported or partially supported claims are uncertainty-labelled and retained as limitations rather than dropped.
+    - The operator performs no source acquisition; it consumes only controller-accepted validated evidence.
+composition:
+  consumes: [{type: artifact.source_validation}, {type: artifact.seed_snapshot}]
+  produces: [{type: artifact.evidence_synthesis}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-source-validation]
+effects:
+  read: [artifacts.source_validation, artifacts.seed_snapshot]
+  write: [artifacts.evidence_synthesis]
+  execute: []
+  network: [api.openai.com]
+  cost: [codex_subscription_quota]
+  risk: [unsupported_claim, evidence_link_drift]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [codex-research-evidence-synthesis-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

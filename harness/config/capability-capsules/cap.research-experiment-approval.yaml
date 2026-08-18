@@ -1,0 +1,89 @@
+capability_capsule_id: cap.research-experiment-approval
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Experiment Approval
+  description: Validate one controller-issued request and one attributable human approval for an exact experiment plan.
+applicability:
+  task_types:
+    - verification
+  positive_signals:
+    - human approval
+    - exact plan hash
+    - experiment approval
+  negative_signals:
+    - repository patch
+contract:
+  inputs:
+    required:
+      - name: approval_request
+        type: json
+      - name: human_approval
+        type: json
+      - name: experiment_plan
+        type: json
+    optional: []
+  outputs:
+    required:
+      - name: experiment_approval
+        type: json
+    optional: []
+  preconditions:
+    - check: task_type_in
+      values:
+        - verification
+  postconditions:
+    - check: output_present
+      field: experiment_approval_json
+  invariants:
+    - Approval must bind the exact sprint, node, generation, plan SHA-256, scope, capabilities, actor, and statement.
+    - This capsule has no repository or GitHub resource authority.
+composition:
+  consumes:
+    - type: artifact.approval_request
+    - type: artifact.human_approval
+    - type: artifact.experiment_plan
+  produces:
+    - type: artifact.experiment_approval
+  compatible_with:
+    - guard.secret-leak-guard
+  incompatible_with:
+    - resource.repo-workspace
+    - resource.github-readonly
+  requires_after:
+    - guard.secret-leak-guard
+effects:
+  read:
+    - artifacts.approval_request
+    - artifacts.human_approval
+    - artifacts.experiment_plan
+  write:
+    - artifacts.experiment_approval
+  execute: []
+  network: []
+  cost: []
+  risk:
+    - false_approval
+bindings:
+  skills:
+    required: []
+    optional: []
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules:
+    - guard.secret-leak-guard
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier:
+    required: false
+    preferred_capsules: []
+  pass_conditions: []
+operator_compatibility:
+  preferred:
+    - autosci-research-poc-experiment-approval-worker
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

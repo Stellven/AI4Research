@@ -1,0 +1,59 @@
+capability_capsule_id: cap.research-final-acceptance
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Final Acceptance
+  description: Deterministically accept or reject the Part A bundle against source linkage, review separation, and limitation preservation.
+applicability:
+  task_types: [verification]
+  positive_signals: [final acceptance, deterministic gate, evidence reconciliation]
+  negative_signals: [model authoring, network retrieval, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: report_revision, type: json}
+      - {name: independent_review, type: json}
+      - {name: evidence_synthesis, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: final_acceptance, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [verification]}
+  postconditions:
+    - {check: output_present, field: final_acceptance_json}
+  invariants:
+    - Acceptance is computed deterministically from retained artifacts and performs no model call.
+    - A revision that fails to render every recorded limitation is rejected.
+    - Acceptance records the exact artifact IDs, hashes, and evaluator receipts it relied on.
+composition:
+  consumes: [{type: artifact.report_revision}, {type: artifact.independent_review}, {type: artifact.evidence_synthesis}]
+  produces: [{type: artifact.final_acceptance}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-report-revision]
+effects:
+  read: [artifacts.report_revision, artifacts.independent_review, artifacts.evidence_synthesis]
+  write: [artifacts.final_acceptance]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [premature_acceptance, limitation_loss]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-research-synthesis-final-acceptance-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

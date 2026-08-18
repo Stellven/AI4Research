@@ -1,0 +1,60 @@
+capability_capsule_id: cap.autosci-experiment-run
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: AutoSci Experiment Run
+  description: Convert AutoSci experiment runtime records into typed result evidence via the bridge.
+  logical_operator: ScientificExperimentRunner
+applicability:
+  task_types: [verification]
+  positive_signals: [experiment runtime evidence, result collection, metrics]
+  negative_signals: [idea authoring, paper compilation, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: experiment_plan, type: json}
+      - {name: runtime_records, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: experiment_result, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [verification]}
+  postconditions:
+    - {check: output_present, field: experiment_result_json}
+  invariants:
+    - This stage verifies runtime evidence produced by the AutoSci skill run; it does not itself execute the experiment.
+    - A result is claimed only when the runtime exit is ok and results were actually collected.
+    - An experiment without approved runtime evidence fails closed and is never reported as supporting a claim.
+    - Evidence carries provenance operator_id, implementation_package, and timestamp.
+composition:
+  consumes: [{type: artifact.experiment_plan}, {type: artifact.runtime_records}]
+  produces: [{type: artifact.experiment_result}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.autosci-experiment-design]
+effects:
+  read: [artifacts.experiment_plan, artifacts.runtime_records]
+  write: [artifacts.experiment_result]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [unverified_result_claim, missing_runtime_evidence]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-experiment-run-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

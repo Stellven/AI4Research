@@ -1,0 +1,60 @@
+capability_capsule_id: cap.research-report-revision
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Bounded Revision
+  description: Apply bounded reviewer-driven revision while preserving accepted conclusions, methods, and all recorded limitations.
+applicability:
+  task_types: [report-writing]
+  positive_signals: [bounded revision, limitation preservation, reviewer response]
+  negative_signals: [network retrieval, repository patch, new source acquisition]
+contract:
+  inputs:
+    required:
+      - {name: report_draft, type: json}
+      - {name: independent_review, type: json}
+      - {name: evidence_synthesis, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: report_revision, type: json}
+      - {name: report, type: markdown}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [report-writing]}
+  postconditions:
+    - {check: output_present, field: report_revision_json}
+  invariants:
+    - Accepted conclusions and method text are preserved unless the review explicitly disputes them.
+    - Every accumulated provider and reviewer limitation is rendered in the revision; preservation is recomputed deterministically and not trusted from the model.
+    - The revision introduces no source text absent from accepted evidence.
+composition:
+  consumes: [{type: artifact.report_draft}, {type: artifact.independent_review}, {type: artifact.evidence_synthesis}]
+  produces: [{type: artifact.report_revision}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-independent-review]
+effects:
+  read: [artifacts.report_draft, artifacts.independent_review, artifacts.evidence_synthesis]
+  write: [artifacts.report_revision]
+  execute: []
+  network: [api.openai.com]
+  cost: [codex_subscription_quota]
+  risk: [limitation_loss, conclusion_drift]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [codex-research-report-revision-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

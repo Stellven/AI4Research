@@ -1,0 +1,58 @@
+capability_capsule_id: cap.autosci-idea-generation
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: AutoSci Idea Generation
+  description: Generate candidate research ideas from wiki-backed evidence via the AutoSci bridge.
+  logical_operator: ScientificIdeaGenerator
+applicability:
+  task_types: [research]
+  positive_signals: [idea generation, research direction, candidate ideation]
+  negative_signals: [experiment execution, paper compilation, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: research_context, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: idea_candidate, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [research]}
+  postconditions:
+    - {check: output_present, field: idea_candidate_json}
+  invariants:
+    - Every generated idea is traceable to wiki entities or supplied evidence; ideas are never invented free of evidence.
+    - The bridge converts AutoSci skill output into typed evidence and does not itself author ideas.
+    - Evidence carries provenance operator_id, implementation_package, and timestamp.
+composition:
+  consumes: [{type: artifact.research_context}]
+  produces: [{type: artifact.idea_candidate}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: []
+effects:
+  read: [artifacts.research_context, autosci.wiki]
+  write: [artifacts.idea_candidate]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [evidence_free_ideation]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-idea-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

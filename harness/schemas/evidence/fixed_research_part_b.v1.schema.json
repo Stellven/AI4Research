@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/fixed_research_part_b.v1.schema.json",
+  "title": "Solar fixed research Part-B artifact",
+  "oneOf": [
+    {"$ref": "#/$defs/handoff"},
+    {"$ref": "#/$defs/idea"},
+    {"$ref": "#/$defs/plan"},
+    {"$ref": "#/$defs/approval"},
+    {"$ref": "#/$defs/result"},
+    {"$ref": "#/$defs/verification"},
+    {"$ref": "#/$defs/delivery"}
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "path_digest": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "artifact_source": {
+      "type": "object",
+      "required": ["artifact_id", "path", "schema", "sha256"],
+      "properties": {
+        "artifact_id": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "schema": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "required": ["schema", "status", "part_a_final_acceptance", "artifacts", "limitations"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.poc_handoff.v1"},
+        "status": {"const": "accepted"},
+        "part_a_final_acceptance": {"$ref": "#/$defs/path_digest"},
+        "artifacts": {"type": "array", "minItems": 8},
+        "limitations": {"type": "array", "minItems": 1}
+      }
+    },
+    "idea": {
+      "type": "object",
+      "required": ["schema", "status", "selected_idea", "handoff", "benchmark_inputs", "limitations"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.idea_evaluation.v1"},
+        "status": {"const": "selected"},
+        "selected_idea": {"type": "object", "required": ["idea_id", "hypothesis", "falsification", "selection_basis"]},
+        "handoff": {"$ref": "#/$defs/path_digest"},
+        "benchmark_inputs": {"type": "array", "minItems": 1},
+        "limitations": {"type": "array", "minItems": 1}
+      }
+    },
+    "plan": {
+      "type": "object",
+      "required": ["schema", "status", "experiment_id", "idea", "benchmark", "approval_scope", "limitations"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.experiment_plan.v1"},
+        "status": {"const": "awaiting_human_approval"},
+        "experiment_id": {"const": "evidence-lineage-integrity-v1"},
+        "idea": {"$ref": "#/$defs/path_digest"},
+        "benchmark": {
+          "type": "object",
+          "required": ["benchmark_id", "runner", "sandbox", "network", "timeout_seconds", "inputs", "success_criteria"],
+          "properties": {
+            "benchmark_id": {"const": "evidence-lineage-integrity-v1"},
+            "runner": {"const": "harness/tools/fixed_research_benchmark.py"},
+            "sandbox": {"const": "linux_user_and_network_namespace"},
+            "network": {"const": "disabled"},
+            "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 60},
+            "inputs": {"type": "array", "minItems": 1},
+            "success_criteria": {"type": "object"}
+          }
+        },
+        "approval_scope": {"type": "object"},
+        "limitations": {"type": "array", "minItems": 1}
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": ["schema", "status", "experiment_id", "plan", "approval_request", "human_approval", "approved_scope", "approved_capabilities", "limitations"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.experiment_approval.v1"},
+        "status": {"const": "approved"},
+        "experiment_id": {"const": "evidence-lineage-integrity-v1"},
+        "plan": {"$ref": "#/$defs/path_digest"},
+        "approval_request": {"$ref": "#/$defs/path_digest"},
+        "human_approval": {"type": "object", "required": ["path", "sha256", "actor", "statement", "generation"]},
+        "approved_scope": {"type": "object"},
+        "approved_capabilities": {"type": "array", "minItems": 2, "uniqueItems": true},
+        "limitations": {"type": "array", "minItems": 1}
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["schema", "status", "experiment_id", "plan", "approval", "sandbox", "execution", "metrics", "raw_result_sha256", "limitations"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.experiment_result.v1"},
+        "status": {"enum": ["completed", "failed"]},
+        "experiment_id": {"const": "evidence-lineage-integrity-v1"},
+        "plan": {"$ref": "#/$defs/path_digest"},
+        "approval": {"$ref": "#/$defs/path_digest"},
+        "sandbox": {"type": "object", "required": ["kind", "network", "command_allowlisted"]},
+        "execution": {"type": "object", "required": ["command", "exit_code", "duration_ms", "stdout_path", "stderr_path", "raw_result_path"]},
+        "metrics": {"type": "object", "required": ["checks_total", "checks_passed", "integrity_rate", "duration_ms"]},
+        "raw_result_sha256": {"$ref": "#/$defs/digest"},
+        "limitations": {"type": "array", "minItems": 1}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["schema", "status", "claim", "plan", "experiment_result", "experiment_evidence", "metrics", "limitations"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.claim_verification.v1"},
+        "status": {"const": "verified"},
+        "claim": {"type": "string", "minLength": 1},
+        "plan": {"$ref": "#/$defs/path_digest"},
+        "experiment_result": {"type": "object", "required": ["path", "sha256", "raw_result_sha256"]},
+        "experiment_evidence": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {"$ref": "#/$defs/artifact_source"},
+              {"type": "object", "required": ["controller"], "properties": {"controller": {"type": "object", "required": ["eval_record_id", "artifact_snapshot_digest", "manifest_content_digest"]}}}
+            ]
+          }
+        },
+        "metrics": {"type": "object"},
+        "limitations": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "required": ["schema", "status", "bundle", "markdown", "claim_verdict", "limitations", "limitation_sources"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.final_delivery.v1"},
+        "status": {"const": "completed"},
+        "bundle": {"type": "array", "minItems": 5},
+        "markdown": {"$ref": "#/$defs/path_digest"},
+        "claim_verdict": {"const": "verified"},
+        "limitations": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "limitation_sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["limitation", "sources"],
+            "properties": {
+              "limitation": {"type": "string", "minLength": 1},
+              "sources": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/artifact_source"}}
+            }
+          }
+        }
+      }
+    }
+  }
+}

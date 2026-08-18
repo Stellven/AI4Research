@@ -31,6 +31,49 @@ def _write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def test_fixed_contract_worker_binding_is_not_projected_as_missing() -> None:
+    mod = _load_routes()
+    operator_id = "autosci-research-synthesis-seed-fetch-worker"
+    node = {
+        "id": "seed_fetch",
+        "goal": "Freeze the governed research request and source authority.",
+        "status": "dispatched",
+        "required_operator_id": operator_id,
+        "required_capabilities": ["workflow.planning", "test.tdd"],
+        "capability_capsule_id": "cap.research-seed-snapshot",
+        "physical_plan_ir": {
+            "selected_operator_id": operator_id,
+            "capability_capsule_id": "cap.research-seed-snapshot",
+            "execution_candidates": [{"operator_id": operator_id}],
+        },
+    }
+
+    card = mod._build_node_cards("sprint-fixed", [node], {}, [])[0]
+
+    assert card["selected_operator_id"] == operator_id
+    assert card["capability_capsule_id"] == "cap.research-seed-snapshot"
+    assert card["candidate_workers_seen"] is True
+    assert card["missing_capabilities"] == []
+    assert card["route_decision"] == "fixed_contract_binding"
+
+
+def test_required_operator_without_compiled_candidate_remains_unavailable() -> None:
+    mod = _load_routes()
+    node = {
+        "id": "seed_fetch",
+        "required_operator_id": "missing-worker",
+        "required_capabilities": ["workflow.planning"],
+        "capability_capsule_id": "cap.research-seed-snapshot",
+        "physical_plan_ir": {"execution_candidates": []},
+    }
+
+    card = mod._build_node_cards("sprint-fixed", [node], {}, [])[0]
+
+    assert card["candidate_workers_seen"] is False
+    assert card["missing_capabilities"] == ["workflow.planning"]
+    assert card["route_decision"] == "no_routing_record"
+
+
 def _fixture_tree(tmp_path: Path) -> dict[str, Path]:
     root = tmp_path / "harness"
     sprints = root / "sprints"
@@ -160,6 +203,7 @@ def _scenario_projection(
     routing: list[dict] | None = None,
     panes: list[dict] | None = None,
     operators: dict | None = None,
+    runtime_state: dict | None = None,
 ) -> tuple[dict, list[str]]:
     sid = f"sprint-{name}"
     tree = _scenario_tree(tmp_path, name)
@@ -173,6 +217,16 @@ def _scenario_projection(
         _write_json(tree["sprints"] / f"{sid}.status.json", payload)
     if graph is not None:
         _write_json(tree["sprints"] / f"{sid}.task_graph.json", {"sprint_id": sid, **graph})
+    if runtime_state is not None:
+        _write_json(
+            tree["sprints"] / f"{sid}.task_dag.state.json",
+            {
+                "schema_version": "solar.task_graph_state.v1",
+                "sprint_id": sid,
+                "node_results": runtime_state,
+                "gate_results": {},
+            },
+        )
     for suffix, text in (artifacts or {}).items():
         _write_text(tree["sprints"] / f"{sid}.{suffix}", text)
     if routing is not None:
@@ -182,6 +236,30 @@ def _scenario_projection(
     if operators is not None:
         _write_json(tree["config"] / "physical-operators.json", {"version": 1, "operators": operators})
     return mod.build_projection_payload(sid)
+
+
+def test_projection_overlays_authoritative_task_state_sidecar(tmp_path: Path) -> None:
+    mod = _load_routes()
+    payload, degraded = _scenario_projection(
+        mod,
+        tmp_path,
+        "fixed-state",
+        status={"status": "active", "phase": "implementation"},
+        graph={
+            "nodes": [
+                {
+                    "id": "seed_fetch",
+                    "goal": "Freeze the governed request.",
+                    "status": "pending",
+                }
+            ]
+        },
+        runtime_state={"seed_fetch": {"status": "dispatched"}},
+    )
+
+    assert degraded == []
+    assert payload["task_graph"]["nodes"][0]["workflow_status"] == "dispatched"
+    assert payload["task_graph"]["nodes"][0]["status"] == "active"
 
 
 def test_dashboard_payload_separates_actorhost_from_pane_carrier(tmp_path: Path) -> None:
