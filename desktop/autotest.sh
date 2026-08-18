@@ -55,6 +55,13 @@ else
   not_verified "playwright not installed; render gate did not run (run: npm ci && npx playwright install chromium)"
 fi
 
+echo; echo "-- gate: automated accessibility (WCAG 2 A/AA) --"
+if [ -d node_modules/playwright ] && [ -d node_modules/axe-core ]; then
+  run_gate node accessibility.test.js
+else
+  not_verified "playwright/axe-core not installed; accessibility audit did not run"
+fi
+
 echo; echo "-- gate: functional e2e (real backend: intake form, Settings persistence, SSE) --"
 if [ -d node_modules/playwright ]; then
   run_gate node ../tests/desktop/functional.test.cjs     # isolated temp HARNESS_DIR+SOLAR_DB; headless chromium

@@ -112,6 +112,7 @@ def stable_run_id(skill: str, args: argparse.Namespace) -> str:
             "venue": str(args.venue or ""),
             "year": str(args.year or ""),
             "limit": str(args.limit or ""),
+            "min_provider_families": str(args.min_provider_families or ""),
             "smoke": bool(args.smoke),
             "native_options": native_options(args),
             "skill_args": list(args.skill_args or []),
@@ -255,6 +256,9 @@ def native_options(args: argparse.Namespace) -> dict[str, Any]:
         "approval_ref": str(args.approval_ref or ""),
         "allowlist_evidence": list(args.allowlist_evidence or []),
         "runtime_evidence": list(args.runtime_evidence or []),
+        "experiment_contract": str(args.experiment_contract or ""),
+        "experiment_plan_evidence": str(args.experiment_plan_evidence or ""),
+        "lease_recovery_probe": bool(args.lease_recovery_probe),
         "remote_check_command": str(args.remote_check_command or ""),
         "remote_run_dir": str(args.remote_run_dir or ""),
         "lifecycle_summary": list(args.lifecycle_summary or []),
@@ -416,7 +420,22 @@ def prepare_scheduler_harness(harness_dir: Path) -> None:
         target = harness_dir / name
         if target.exists() or not source.exists():
             continue
-        target.symlink_to(source, target_is_directory=source.is_dir())
+        try:
+            target.symlink_to(source, target_is_directory=source.is_dir())
+        except OSError:
+            if os.name != "nt" or not source.is_dir():
+                raise
+            junction = subprocess.run(
+                ["cmd", "/d", "/c", "mklink", "/J", str(target), str(source)],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if junction.returncode != 0:
+                raise OSError(
+                    f"cannot expose scheduler resource {source}: "
+                    f"{junction.stderr or junction.stdout}"
+                )
     (harness_dir / "run").mkdir(parents=True, exist_ok=True)
     (harness_dir / "artifacts").mkdir(parents=True, exist_ok=True)
 
@@ -696,6 +715,12 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
         inputs["allowlist_evidence"] = list(args.allowlist_evidence)
     if args.runtime_evidence:
         inputs["runtime_evidence"] = list(args.runtime_evidence)
+    if args.experiment_contract:
+        inputs["experiment_contract"] = str(args.experiment_contract)
+    if args.experiment_plan_evidence:
+        inputs["experiment_plan_evidence"] = str(args.experiment_plan_evidence)
+    if args.lease_recovery_probe:
+        inputs["lease_recovery_probe"] = True
     if args.lifecycle_summary:
         inputs["lifecycle_summary"] = list(args.lifecycle_summary)
     if args.discovery_evidence:
@@ -762,6 +787,8 @@ def maybe_customize_envelope(envelope: dict[str, Any], action: str, args: argpar
                 inputs["year"] = int(args.year)
             if args.limit:
                 inputs["limit"] = int(args.limit)
+            if args.min_provider_families:
+                inputs["min_provider_families"] = int(args.min_provider_families)
             if args.wiki_root:
                 inputs["wiki_root"] = str(args.wiki_root)
             if args.no_citation_expand:
@@ -1392,7 +1419,9 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
         actions = ["review_artifact"]
     if skill == "paper-compile" and (args.checklist or args.fix or target_ref(args) or args.paper) and not args.smoke:
         actions = ["compile_paper"]
-    if skill == "exp-run" and args.full and not args.smoke:
+    if skill == "exp-run" and args.experiment_plan_evidence and not args.smoke:
+        actions = ["run_experiment"]
+    elif skill == "exp-run" and args.full and not args.smoke:
         actions = ["design_experiment", "run_experiment", "monitor_experiment"]
     elif skill == "exp-run" and args.collect and not args.smoke:
         actions = ["monitor_experiment"]
@@ -1796,10 +1825,10 @@ def write_exp_design_workspace_projection_proof(
     wiki_refs = [
         output_rel(path)
         for path in updated_paths
-        if "/wiki/experiments/" in str(path)
-        or "/wiki/outputs/" in str(path)
-        or str(path).endswith("/wiki/graph/context_brief.md")
-        or str(path).endswith("/wiki/index.md")
+        if "/wiki/experiments/" in str(path).replace("\\", "/")
+        or "/wiki/outputs/" in str(path).replace("\\", "/")
+        or str(path).replace("\\", "/").endswith("/wiki/graph/context_brief.md")
+        or str(path).replace("\\", "/").endswith("/wiki/index.md")
     ]
     if not wiki_refs:
         return None
@@ -2151,6 +2180,7 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--venue", help="Venue slug for venue/year discovery")
     skill.add_argument("--year", type=int, help="Venue year for venue discovery")
     skill.add_argument("--limit", type=int, help="Maximum discovery shortlist size")
+    skill.add_argument("--min-provider-families", type=int, help="Minimum distinct public provider families required for discovery")
     skill.add_argument("--wiki-root", help="Wiki root for discovery dedup and from-wiki mode")
     skill.add_argument("--discovery-evidence", action="append", help="Existing literature_discovery.v1 evidence for ideation")
     skill.add_argument("--novelty-evidence", action="append", help="Existing Web/Semantic Scholar/DeepXiv novelty evidence JSON")
@@ -2197,6 +2227,9 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--approval-ref", help="Human approval reference for gated side-effect execution")
     skill.add_argument("--allowlist-evidence", action="append", help="JSON/text artifact proving approved command/source allowlist")
     skill.add_argument("--runtime-evidence", action="append", help="Runtime log/result artifact from an approved side-effect execution")
+    skill.add_argument("--experiment-contract", help="JSON verification contract for exp-design dataset, variants, thresholds, seed, stop conditions, and exact command")
+    skill.add_argument("--experiment-plan-evidence", help="Existing experiment_plan.v1 JSON whose exact approved command and assets exp-run/status must reuse")
+    skill.add_argument("--lease-recovery-probe", action="store_true", help="Exercise the production lease stale-detection/recovery/audit path before the approved experiment run")
     skill.add_argument("--remote-check-command", help="Approved allowlisted command that returns autosci_remote_cli.v1 check status JSON")
     skill.add_argument("--remote-run-dir", help="Remote/local run directory to pass through approved status-check commands")
     skill.add_argument("--lifecycle-summary", action="append", help="Existing scientific_lifecycle.v1 scheduler runtime summary evidence")

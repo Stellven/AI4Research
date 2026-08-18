@@ -32,6 +32,16 @@ def _harness_artifact(harness_dir: Path, relative_path: str | None) -> Path:
     return harness_dir / relative_path.replace("\\", "/")
 
 
+def _jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    rows = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            rows.append(json.loads(line))
+    return rows
+
+
 def test_p22_j04_paper_ingestion(repo_root: Path, tmp_path: Path) -> None:
     rec = JourneyRecorder(repo_root, "P22-J04")
     sandbox = tmp_path / "p22-j04"
@@ -60,6 +70,11 @@ def test_p22_j04_paper_ingestion(repo_root: Path, tmp_path: Path) -> None:
     sections = _section_texts(first_payload)
     text_blob = " ".join([first_paper.get("abstract", ""), *sections]).lower()
     boundary = _boundary(first_payload)
+    registration = boundary.get("wiki_registration", {}) if isinstance(boundary, dict) else {}
+    wiki_paths = {
+        key: _harness_artifact(harness_dir, registration.get(key))
+        for key in ("paper_page", "graph_edges_path", "log_path", "index_path", "context_brief_path")
+    }
     sidecar_paths = [_harness_artifact(harness_dir, item) for item in boundary.get("sidecar_evidence_paths", [])]
     for sidecar in sidecar_paths:
         rec.add_artifact(sidecar, f"first_pdf_{sidecar.stem}")
@@ -96,6 +111,33 @@ def test_p22_j04_paper_ingestion(repo_root: Path, tmp_path: Path) -> None:
         "memory_and_graph_sidecars_recorded",
         bool(boundary.get("memory_sidecar_ready")) and bool(boundary.get("graph_sidecar_ready")) and all(path.exists() for path in sidecar_paths),
         {"sidecar_paths": [str(path) for path in sidecar_paths], "boundary": boundary},
+    )
+    for key, path in wiki_paths.items():
+        rec.add_artifact(path, f"first_pdf_wiki_{key}", required=True)
+    paper_page_text = wiki_paths["paper_page"].read_text(encoding="utf-8") if wiki_paths["paper_page"].exists() else ""
+    graph_edges = _jsonl(wiki_paths["graph_edges_path"])
+    log_text = wiki_paths["log_path"].read_text(encoding="utf-8") if wiki_paths["log_path"].exists() else ""
+    index_text = wiki_paths["index_path"].read_text(encoding="utf-8") if wiki_paths["index_path"].exists() else ""
+    context_text = wiki_paths["context_brief_path"].read_text(encoding="utf-8") if wiki_paths["context_brief_path"].exists() else ""
+    paper_id = str(first_paper.get("paper_id") or "")
+    rec.add_assertion(
+        "wiki_registration_artifacts_are_independently_usable",
+        all(path.exists() and path.stat().st_size > 0 for path in wiki_paths.values())
+        and paper_id in paper_page_text
+        and str(title) in paper_page_text
+        and any(str(edge.get("target_id") or "") == paper_id for edge in graph_edges)
+        and paper_id in log_text
+        and f"papers/{paper_id}.md" in index_text
+        and "wiki/graph/edges.jsonl" in context_text,
+        {
+            "wiki_paths": {key: str(path) for key, path in wiki_paths.items()},
+            "paper_page_has_id": paper_id in paper_page_text,
+            "paper_page_has_title": str(title) in paper_page_text,
+            "graph_target_ids": [edge.get("target_id") for edge in graph_edges],
+            "log_has_id": paper_id in log_text,
+            "index_has_page": f"papers/{paper_id}.md" in index_text,
+            "context_links_graph": "wiki/graph/edges.jsonl" in context_text,
+        },
     )
     rec.add_assertion("repeat_pdf_ingest_completed", second_payload.get("schema") == "research_paper.v1", second_payload.get("schema"))
     rec.add_assertion("markdown_ingest_completed", md_payload.get("schema") == "research_paper.v1", md_payload.get("schema"))

@@ -462,6 +462,180 @@ def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
     }
 
 
+_READINESS_ANSWER_FIELDS = {
+    "delivery_format",
+    "execution_network",
+    "mutation_policy",
+    "objective",
+    "target_choice",
+}
+
+
+def parse_clarification_answers(values: list[str] | None) -> dict[str, str]:
+    """Parse explicit ``FIELD=VALUE`` answers accepted by the capture CLI."""
+    answers: dict[str, str] = {}
+    for raw_value in values or []:
+        field, separator, value = str(raw_value).partition("=")
+        field = field.strip()
+        value = value.strip()
+        if not separator or field not in _READINESS_ANSWER_FIELDS or not value:
+            allowed = ", ".join(sorted(_READINESS_ANSWER_FIELDS))
+            raise SystemExit(
+                "--clarification-answer requires FIELD=VALUE with FIELD in: " + allowed
+            )
+        answers[field] = value
+    return answers
+
+
+def compile_ambiguity_readiness(
+    raw_text: str,
+    rewritten: dict[str, Any],
+    *,
+    requires_human_confirm: bool = False,
+    answers: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Return the minimum blocking questions needed before planning.
+
+    This is intentionally a bounded, deterministic preflight. It does not try
+    to turn every uncertainty into a conversation: only ambiguities that make
+    execution unsafe or select mutually exclusive routes block readiness.
+    Explicit ``answers`` resolve a named field and make the transition
+    machine-readable without relying on prose inference.
+    """
+    supplied_answers = {
+        str(field): str(value).strip()
+        for field, value in (answers or {}).items()
+        if str(field) in _READINESS_ANSWER_FIELDS and str(value).strip()
+    }
+    value = raw_text.strip()
+    lowered = value.lower()
+    blockers: list[dict[str, Any]] = []
+
+    def add_blocker(
+        *,
+        reason: str,
+        field: str,
+        question: str,
+        evidence_kind: str,
+        evidence_matches: list[str],
+    ) -> None:
+        if field in supplied_answers or any(row["field"] == field for row in blockers):
+            return
+        blockers.append(
+            {
+                "reason": reason,
+                "field": field,
+                "question_id": f"clarify-{field.replace('_', '-')}",
+                "question": question,
+                "evidence": {
+                    "kind": evidence_kind,
+                    "matches": evidence_matches,
+                },
+            }
+        )
+
+    objective = str(rewritten.get("objective") or "").strip()
+    if not objective:
+        add_blocker(
+            reason="missing_required_field",
+            field="objective",
+            question="What concrete outcome should this work produce?",
+            evidence_kind="normalized_field",
+            evidence_matches=["objective=empty"],
+        )
+
+    # Route choices expressed as "either X or Y" require one decision. The
+    # question asks for that single decision instead of separately asking
+    # about both alternatives.
+    choice_match = re.search(
+        r"\b(?:either|one\s+of)\s+([^.;\n]{1,80}?)\s+or\s+([^.;\n]{1,80})",
+        value,
+        re.IGNORECASE,
+    )
+    if choice_match:
+        choices = [re.sub(r"\s+", " ", item).strip(" ,") for item in choice_match.groups()]
+        add_blocker(
+            reason="ambiguous_route_choice",
+            field="target_choice",
+            question=f"Which target should planning use: {choices[0]} or {choices[1]}?",
+            evidence_kind="raw_request_span",
+            evidence_matches=choices,
+        )
+
+    contradiction_rules = (
+        (
+            "execution_network",
+            "conflicting_execution_constraints",
+            (
+                r"\b(?:offline|no\s+network|without\s+(?:the\s+)?internet)\b",
+                r"\b(?:live|online|browse\s+(?:the\s+)?internet|current\s+web)\b",
+            ),
+            "Should execution remain offline, or may it access the live network?",
+        ),
+        (
+            "mutation_policy",
+            "conflicting_mutation_constraints",
+            (
+                r"\b(?:read[- ]only|do\s+not\s+(?:modify|change)|no\s+changes)\b",
+                r"\b(?:implement|fix|patch|modify|change)\b",
+            ),
+            "May the implementation modify files, or must it remain read-only?",
+        ),
+        (
+            "delivery_format",
+            "conflicting_output_constraints",
+            (r"\bjson\s+only\b", r"\bmarkdown\s+only\b"),
+            "Which exclusive output format is required: JSON or Markdown?",
+        ),
+    )
+    for field, reason, patterns, question in contradiction_rules:
+        matches = []
+        for pattern in patterns:
+            match = re.search(pattern, lowered, re.IGNORECASE)
+            if match:
+                matches.append(match.group(0))
+        if len(matches) == len(patterns):
+            add_blocker(
+                reason=reason,
+                field=field,
+                question=question,
+                evidence_kind="conflicting_raw_request_spans",
+                evidence_matches=matches,
+            )
+
+    # A clarification string is not attributable approval evidence.  Keep the
+    # human gate closed until the dedicated approval workflow records it.
+    if requires_human_confirm:
+        add_blocker(
+            reason="required_approval_missing",
+            field="approval",
+            question="Do you approve dispatching this compiled intent to planning?",
+            evidence_kind="routing_hint",
+            evidence_matches=["requires_human_confirm=true"],
+        )
+
+    return {
+        "schema_version": "solar.intent_readiness.v1",
+        "status": "ready" if not blockers else "needs_clarification",
+        "ready": not blockers,
+        "blocking_count": len(blockers),
+        "unresolved": blockers,
+        "questions": [
+            {
+                "question_id": blocker["question_id"],
+                "field": blocker["field"],
+                "question": blocker["question"],
+                "reason": blocker["reason"],
+            }
+            for blocker in blockers
+        ],
+        "applied_answers": supplied_answers,
+        "planning_admitted": not blockers,
+        "next_action": "plan" if not blockers else "clarify",
+        "policy": "Only ambiguities that block safe route selection or execution are questions.",
+    }
+
+
 def model_rewrite(raw_intent: dict[str, Any], prompt_path: Path) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     cmd = os.environ.get("SOLAR_INTENT_REWRITE_CMD", "").strip()
     if not cmd:
@@ -522,6 +696,23 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
             "conversation_id": research.get("conversation_id", ""),
             "source_url": research.get("source_url", ""),
         }
+    routing_hints = (
+        raw_intent.get("routing_hints", {})
+        if isinstance(raw_intent.get("routing_hints"), dict)
+        else {}
+    )
+    clarifications = (
+        raw_intent.get("clarifications", {})
+        if isinstance(raw_intent.get("clarifications"), dict)
+        else {}
+    )
+    answers = clarifications.get("answers", {}) if isinstance(clarifications.get("answers"), dict) else {}
+    readiness = compile_ambiguity_readiness(
+        str(raw_block.get("text") or ""),
+        rewritten,
+        requires_human_confirm=bool(routing_hints.get("requires_human_confirm")),
+        answers=answers,
+    )
     return {
         "schema_version": "solar.requirement_ir.v1",
         "intent_id": intent_id,
@@ -536,7 +727,10 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
         "acceptance": rewritten.get("acceptance", []),
         "lane": rewritten.get("suggested_lane", "delivery"),
         "logical_operators": rewritten.get("suggested_logical_operators", []),
-        "compiler_next": "pm_planner_task_graph",
+        "readiness": readiness,
+        "compiler_next": (
+            "pm_planner_task_graph" if readiness["ready"] else "clarification_required"
+        ),
     }
 
 
@@ -546,6 +740,9 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
     digest = hashlib.sha1(f"{created}\n{raw_text}".encode("utf-8")).hexdigest()[:10]
     intent_id = args.intent_id or f"intent-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%d-%H%M%S')}-{digest}"
     research = extract_research_artifact(args)
+    clarification_answers = parse_clarification_answers(
+        getattr(args, "clarification_answer", None)
+    )
     raw_intent = {
         "schema_version": "solar.raw_intent.v1",
         "intent_id": intent_id,
@@ -581,6 +778,8 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
             "contains_secrets": "unknown",
         },
     }
+    if clarification_answers:
+        raw_intent["clarifications"] = {"answers": clarification_answers}
     if research:
         raw_intent["research"] = research
     base = INTENTS_DIR / intent_id
@@ -589,6 +788,13 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
     rewritten["intent_id"] = intent_id
     rewritten["model_rewrite"] = rewrite_meta
     requirement_ir = build_requirement_ir(intent_id, raw_intent, rewritten)
+    readiness = requirement_ir["readiness"]
+    if not readiness["ready"]:
+        # The consumer's normal planner handoff policy reads this routing hint.
+        # Capturing evidence remains allowed, but automatic planning is closed
+        # until every blocking field has an explicit answer.
+        raw_intent["routing_hints"]["allow_autodispatch"] = False
+        raw_intent["routing_hints"]["readiness_blocked"] = True
     trace = {
         "schema_version": "solar.requirement_trace.v1",
         "intent_id": intent_id,
@@ -601,7 +807,15 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         "stages": [
             {"stage": "raw_intent_capture", "status": "ok"},
             {"stage": "intent_rewrite", "status": "ok", "method": rewritten.get("rewrite_method")},
-            {"stage": "requirement_ir_compile", "status": "ok"},
+            {
+                "stage": "ambiguity_readiness",
+                "status": readiness["status"],
+                "blocking_count": readiness["blocking_count"],
+            },
+            {
+                "stage": "requirement_ir_compile",
+                "status": "ok" if readiness["ready"] else "blocked",
+            },
         ],
     }
     write_json(base / "raw_intent.json", raw_intent)
@@ -615,6 +829,9 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         "intent_id": intent_id,
         "title": rewritten.get("title"),
         "lane": requirement_ir.get("lane"),
+        "ready": requirement_ir["readiness"]["ready"],
+        "readiness_status": requirement_ir["readiness"]["status"],
+        "clarification_questions": requirement_ir["readiness"]["questions"],
         "rewrite_method": rewritten.get("rewrite_method"),
         "raw_intent": str(base / "raw_intent.json"),
         "rewritten_intent": str(base / "rewritten_intent.json"),
@@ -708,6 +925,13 @@ def main(argv: list[str] | None = None) -> int:
     cap.add_argument("--source-trust", default="user_direct")
     cap.add_argument("--no-autodispatch", action="store_true")
     cap.add_argument("--requires-human-confirm", action="store_true")
+    cap.add_argument(
+        "--clarification-answer",
+        action="append",
+        default=[],
+        metavar="FIELD=VALUE",
+        help="Resolve one readiness field; repeat for multiple answers.",
+    )
     cap.add_argument("--require-research-artifact", action="store_true")
     cap.add_argument("--research-artifact", default="")
     cap.add_argument("--research-project-name", default="")

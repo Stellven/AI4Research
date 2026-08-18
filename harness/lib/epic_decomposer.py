@@ -29,6 +29,9 @@ del _sys, _os
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
 SPRINTS_DIR = Path(os.environ.get("SPRINTS_DIR", HARNESS_DIR / "sprints"))
+DEFAULT_GLOBAL_ACTIVE_CHILD_LIMIT = int(os.environ.get("SOLAR_EPIC_ACTIVE_CHILD_LIMIT", "12"))
+ACTIVE_CHILD_STATUSES = {"active", "approved", "reviewing", "ready_for_review"}
+ACTIVE_CHILD_PHASES = {"prd_ready", "planning_complete", "graph_dispatch_active", "handoff_ready", "builder_in_progress"}
 
 DEFAULT_SLICES: list[dict[str, Any]] = [
     {
@@ -163,6 +166,62 @@ def child_sid(epic_id: str, slice_suffix: str, idx: int) -> str:
 
 def node_id_for(slice_suffix: str, idx: int) -> str:
     return f"S{idx:02d}_{slugify(slice_suffix).replace('-', '_')}"
+
+
+def slice_suffix_from_sid(sid: str) -> str:
+    match = re.search(r"-s\d{2}-([a-z0-9-]+)$", sid)
+    return match.group(1) if match else "unknown"
+
+
+def global_active_child_limit(value: int | None = None) -> int:
+    if value is None:
+        value = DEFAULT_GLOBAL_ACTIVE_CHILD_LIMIT
+    return max(0, int(value))
+
+
+def is_active_epic_child(status: dict[str, Any]) -> bool:
+    if not (status.get("epic_id") or status.get("dependency_policy") == "activated_by_epic_dag"):
+        return False
+    state = str(status.get("status") or "").lower()
+    phase = str(status.get("phase") or "").lower()
+    if state in {"passed", "completed", "eval_passed", "cancelled", "canceled", "closed", "superseded", "interrupted"}:
+        return False
+    return state in ACTIVE_CHILD_STATUSES or phase in ACTIVE_CHILD_PHASES
+
+
+def active_epic_child_inventory(exclude_sids: set[str] | None = None) -> list[dict[str, Any]]:
+    exclude_sids = exclude_sids or set()
+    active: list[dict[str, Any]] = []
+    for path in sorted(SPRINTS_DIR.glob("sprint-*.status.json")):
+        try:
+            status = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        sid = str(status.get("sprint_id") or status.get("id") or path.name.removesuffix(".status.json"))
+        if sid in exclude_sids or not is_active_epic_child(status):
+            continue
+        active.append(
+            {
+                "sid": sid,
+                "epic_id": str(status.get("epic_id") or ""),
+                "slice": str(status.get("slice") or slice_suffix_from_sid(sid)),
+                "status": str(status.get("status") or ""),
+                "phase": str(status.get("phase") or ""),
+            }
+        )
+    return active
+
+
+def epic_backpressure(limit: int, exclude_sids: set[str] | None = None) -> dict[str, Any]:
+    active = active_epic_child_inventory(exclude_sids=exclude_sids)
+    remaining = max(0, global_active_child_limit(limit) - len(active))
+    return {
+        "limit": global_active_child_limit(limit),
+        "active_count": len(active),
+        "remaining": remaining,
+        "active_sample": active[:12],
+        "backpressure": remaining <= 0,
+    }
 
 
 def write_atomic(path: Path, text: str) -> None:
@@ -400,6 +459,7 @@ def status_payload(epic_id: str, sid: str, item: dict[str, Any], priority: str, 
         "sprint_id": sid,
         "epic_id": epic_id,
         "title": item["title"],
+        "slice": item["suffix"],
         "status": "active" if active else "queued",
         "phase": "prd_ready" if active else "epic_waiting_dependency",
         "handoff_to": "planner" if active else "",
@@ -442,6 +502,7 @@ def build_graph(epic_id: str, title: str, children: list[dict[str, Any]]) -> dic
             "ready_child_status": "active/prd_ready/planner",
             "passed_child_statuses": ["passed", "completed", "eval_passed"],
             "max_activate_per_scan": 2,
+            "global_active_child_limit": DEFAULT_GLOBAL_ACTIVE_CHILD_LIMIT,
         },
     }
 
@@ -460,11 +521,15 @@ def create_epic(args: argparse.Namespace) -> dict[str, Any]:
     slices = DEFAULT_SLICES[: max(3, min(args.slices, len(DEFAULT_SLICES)))]
     children: list[dict[str, Any]] = []
     first_ready_suffixes = {s["suffix"] for s in slices if not s.get("depends_on")}
+    backpressure = epic_backpressure(args.global_active_limit)
+    initial_activation_remaining = backpressure["remaining"]
 
     for idx, item in enumerate(slices, start=1):
         sid = child_sid(epic_id, item["suffix"], idx)
         node_id = node_id_for(item["suffix"], idx)
-        active = bool(args.activate_ready and item["suffix"] in first_ready_suffixes)
+        active = bool(args.activate_ready and item["suffix"] in first_ready_suffixes and initial_activation_remaining > 0)
+        if active:
+            initial_activation_remaining -= 1
         children.append({"sid": sid, "node_id": node_id, "slice": item, "active": active})
         if args.dry_run:
             continue
@@ -491,6 +556,7 @@ def create_epic(args: argparse.Namespace) -> dict[str, Any]:
             for c in children
         ],
     }
+    any_child_active = any(c["active"] for c in children)
     epic_meta = {
         "schema_version": "solar.epic.v1",
         "epic_id": epic_id,
@@ -501,7 +567,11 @@ def create_epic(args: argparse.Namespace) -> dict[str, Any]:
         "child_sprints": [c["sid"] for c in children],
         "task_graph": f"{epic_id}.task_graph.json",
         "traceability": f"{epic_id}.traceability.json",
-        "status": "active" if args.activate_ready else "drafted",
+        "status": "active" if any_child_active else ("queued" if args.activate_ready else "drafted"),
+        "activation_backpressure": {
+            **backpressure,
+            "initial_children_activated": sum(1 for c in children if c["active"]),
+        },
     }
     epic_md = f"""# Epic: {title}
 
@@ -546,6 +616,7 @@ status: `{epic_meta['status']}`
             "traceability": str(SPRINTS_DIR / f"{epic_id}.traceability.json"),
         },
         "children": [{"sid": c["sid"], "node_id": c["node_id"], "active": c["active"]} for c in children],
+        "activation_backpressure": epic_meta["activation_backpressure"],
     }
 
 
@@ -795,6 +866,8 @@ def activate_ready(args: argparse.Namespace) -> dict[str, Any]:
     node_by_id = {str(n.get("id")): n for n in graph.get("nodes", []) if n.get("id")}
     activated: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
+    limit = global_active_child_limit(args.global_active_limit)
+    pressure = epic_backpressure(limit)
     for node_id in sorted(node_by_id):
         node = node_by_id[node_id]
         sid = str(node.get("child_sprint_id") or "")
@@ -819,6 +892,22 @@ def activate_ready(args: argparse.Namespace) -> dict[str, Any]:
             continue
         if len(activated) >= args.max:
             break
+        if pressure["remaining"] <= len(activated):
+            blocked.append(
+                {
+                    "sid": sid,
+                    "node_id": node_id,
+                    "blocked_by": [
+                        {
+                            "requirement": "global_epic_child_wip",
+                            "reason": "active_child_limit_reached",
+                            "limit": limit,
+                            "active_count": pressure["active_count"],
+                        }
+                    ],
+                }
+            )
+            break
         if not args.dry_run:
             activated.append(activate_child(sid, epic_id))
             node["status"] = "active"
@@ -828,7 +917,18 @@ def activate_ready(args: argparse.Namespace) -> dict[str, Any]:
             activated.append({"sid": sid, "after": "active", "dry_run": True})
     if graph_changed and not args.dry_run:
         write_json(graph_path, graph)
-    return {"ok": True, "epic_id": epic_id, "activated": activated, "blocked": blocked, "graph_synced": graph_changed}
+    backpressure = pressure["remaining"] <= 0 and not activated
+    return {
+        "ok": True,
+        "epic_id": epic_id,
+        "activated": activated,
+        "blocked": blocked,
+        "graph_synced": graph_changed,
+        "global_active_child_limit": limit,
+        "global_active_child_count": pressure["active_count"] + len(activated),
+        "backpressure": backpressure,
+        "backpressure_reason": "global_epic_child_wip_limit" if backpressure else "",
+    }
 
 
 def validate_epic(args: argparse.Namespace) -> dict[str, Any]:
@@ -887,6 +987,7 @@ def main(argv: list[str] | None = None) -> int:
     p_create.add_argument("--priority", default="P0")
     p_create.add_argument("--slices", type=int, default=len(DEFAULT_SLICES))
     p_create.add_argument("--activate-ready", action="store_true")
+    p_create.add_argument("--global-active-limit", type=int, default=DEFAULT_GLOBAL_ACTIVE_CHILD_LIMIT)
     p_create.add_argument("--dry-run", action="store_true")
     p_create.add_argument("--json", action="store_true")
 
@@ -897,6 +998,7 @@ def main(argv: list[str] | None = None) -> int:
     p_activate = sub.add_parser("activate-ready", help="activate dependency-ready child sprints")
     p_activate.add_argument("epic_id")
     p_activate.add_argument("--max", type=int, default=2)
+    p_activate.add_argument("--global-active-limit", type=int, default=DEFAULT_GLOBAL_ACTIVE_CHILD_LIMIT)
     p_activate.add_argument("--dry-run", action="store_true")
     p_activate.add_argument("--json", action="store_true")
 

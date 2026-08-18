@@ -519,7 +519,18 @@ def test_ready_for_planner_role_pool_failure_queues_without_wake(monkeypatch) ->
         },
     })
     monkeypatch.setattr(mod, "enqueue_action", lambda f, reason, detail=None: queued.append((f, reason, detail or {})))
-    monkeypatch.setattr(mod, "dispatch_role_handoff", lambda s, t: (False, {"role": "planner", "stderr": "no planner"}))
+    monkeypatch.setattr(
+        mod,
+        "dispatch_role_handoff",
+        lambda s, t: (
+            False,
+            {
+                "role": "planner",
+                "returncode": 1,
+                "stderr": "ERROR: no_dispatchable_operator_for_role: planner; provider unavailable",
+            },
+        ),
+    )
     wake_calls: list[str] = []
     monkeypatch.setattr(mod, "wake_sid", lambda s: wake_calls.append(s) or True)
 
@@ -531,6 +542,10 @@ def test_ready_for_planner_role_pool_failure_queues_without_wake(monkeypatch) ->
     assert actions[0]["reason"] == "role_pool_unavailable"
     assert saved_statuses[-1]["planner_dispatch_claim"]["state"] == "failed"
     assert saved_statuses[-1]["planner_dispatch_claim"]["released_at"]
+    assert saved_statuses[-1]["planner_dispatch_claim"]["failure_reason"] == (
+        "no_dispatchable_operator_for_role: planner"
+    )
+    assert saved_statuses[-1]["planner_dispatch_claim"]["returncode"] == 1
 
 
 def test_ready_for_planner_role_pool_success_marks_claim_submitted(monkeypatch) -> None:

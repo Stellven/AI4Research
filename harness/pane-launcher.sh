@@ -377,8 +377,20 @@ codex_pane_state_home() {
 
 cleanup_codex_pane_state() {
   local state_home root
-  state_home="$(readlink -m "$(codex_pane_state_home)")"
-  root="$(readlink -m "${state_home%/*}")"
+  state_home="$(python3 - "$(codex_pane_state_home)" <<'PY'
+import sys
+from pathlib import Path
+
+print(Path(sys.argv[1]).expanduser().resolve(strict=False))
+PY
+)"
+  root="$(python3 - "${state_home%/*}" <<'PY'
+import sys
+from pathlib import Path
+
+print(Path(sys.argv[1]).expanduser().resolve(strict=False))
+PY
+)"
   case "$state_home" in
     "$root"/*) rm -rf -- "$state_home" ;;
     *) echo "FATAL: refusing unsafe Codex pane state cleanup: $state_home" >&2; return 78 ;;
@@ -460,9 +472,13 @@ PY
 }
 
 run_codex_with_filesystem_scope() {
-  local mode="${SOLAR_CODEX_PANE_FS_ISOLATION:-landlock}"
+  local default_mode="landlock"
+  [[ "$(uname -s)" == "Linux" ]] || default_mode="codex"
+  local mode="${SOLAR_CODEX_PANE_FS_ISOLATION:-$default_mode}"
+  local use_codex_sandbox=0
   case "$mode" in
     landlock) ;;
+    codex|builtin|workspace-write) use_codex_sandbox=1 ;;
     0|off|disabled|none)
       if [[ "${SOLAR_CODEX_PANE_STRICT_FS_SCOPE:-1}" == "1" ]]; then
         echo "FATAL: strict Codex pane filesystem scope cannot disable Landlock" >&2
@@ -477,11 +493,6 @@ run_codex_with_filesystem_scope() {
       ;;
   esac
 
-  local wrapper="$HARNESS_DIR/tools/landlock_exec.py"
-  [[ -f "$wrapper" ]] || {
-    echo "FATAL: Codex pane Landlock wrapper missing: $wrapper" >&2
-    return 78
-  }
   local pane_safe="${TMUX_PANE:-standalone}"
   pane_safe="${pane_safe//[^A-Za-z0-9_.-]/_}"
   local pane_tmp_root="${SOLAR_CODEX_PANE_TMP_ROOT:-$HARNESS_DIR/run/pane-tmp}"
@@ -511,6 +522,23 @@ run_codex_with_filesystem_scope() {
   export TMP="$tmp_dir"
   export TEMP="$tmp_dir"
 
+  if (( use_codex_sandbox == 1 )); then
+    local -a sandboxed_args=()
+    local arg
+    for arg in "${CODEX_ARGS[@]}"; do
+      [[ "$arg" == "--dangerously-bypass-approvals-and-sandbox" ]] || sandboxed_args+=("$arg")
+    done
+    sandboxed_args+=(--sandbox workspace-write)
+    echo -e "  Filesystem boundary: ${G}Codex workspace-write (native)${N}"
+    "${sandboxed_args[@]}"
+    return $?
+  fi
+
+  local wrapper="$HARNESS_DIR/tools/landlock_exec.py"
+  [[ -f "$wrapper" ]] || {
+    echo "FATAL: Codex pane Landlock wrapper missing: $wrapper" >&2
+    return 78
+  }
   local codex_home="$CODEX_HOME"
   local codex_arg0_dir="$codex_home/tmp/arg0"
   mkdir -p "$codex_arg0_dir" || return 78

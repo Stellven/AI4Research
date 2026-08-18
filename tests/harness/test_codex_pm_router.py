@@ -448,6 +448,35 @@ Codex bridge should capture RawIntent and auto consume into sprint package.
     assert "RawIntent Consumer Request" not in prd
 
 
+def test_defect_repair_contract_preserves_declared_project_scope_and_test_command():
+    router = _load_router()
+    text = """# RawIntent Consumer Request - repair checkout discounts
+
+## Rewritten Objective
+
+Fix the checkout discount defect.
+
+## Raw User Intent
+
+Target repository path: /tmp/j16/discount_project
+Scope: repair only the checkout rule in discounts.py and update tests only if their intent is wrong.
+Constraints: stdlib only, no new dependencies, no network calls
+Acceptance: running `/opt/venv/bin/python -m pytest -q` passes. Trial users always receive 0 percent.
+"""
+
+    payload = router.build_pm_intake(text, sprint_id="sprint-j16-contract")
+    agent = payload["requirement_ir"]["contracts"]["agent_execution"]
+    contract = payload["compiled_artifacts"]["contract_markdown"]
+
+    assert agent["project_dir"] == "/tmp/j16/discount_project"
+    assert agent["allowed_paths"] == ["discounts.py", "tests/**"]
+    assert agent["commands"]["test"] == ["/opt/venv/bin/python -m pytest -q"]
+    assert agent["declared_constraints"] == ["stdlib only", "no new dependencies", "no network calls"]
+    assert "Project: /tmp/j16/discount_project" in contract
+    assert "apps/pm-pane/**" not in contract
+    assert "Trial users always receive 0 percent" in contract
+
+
 def test_validate_compiled_package_rejects_raw_metadata_pollution():
     router = _load_router()
     payload = router.build_pm_intake("正常需求：补齐 requirement compiler 的 closeout gate。", sprint_id="sprint-test")

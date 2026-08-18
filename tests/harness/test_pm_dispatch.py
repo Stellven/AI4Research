@@ -111,6 +111,104 @@ def test_scientific_research_rejects_spark_without_research_capability(monkeypat
     assert operator["model"] == "gpt-5.5"
 
 
+def test_low_cost_ceiling_uses_spark_planner_spillover(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_MAX_COST_TIER", "low")
+    monkeypatch.setenv("SOLAR_PM_ALLOW_ROLE_SPILLOVER_IN_PROVIDER_MODE", "1")
+    monkeypatch.setattr(pm_dispatch, "DEFAULT_OPERATOR_PROVIDERS", frozenset({"openai"}))
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "medium-planner": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["planner"],
+                    "provider": "openai",
+                    "cost_tier": "medium",
+                    "launch_cmd_kind": "print_once",
+                    "task_classes": ["planning"],
+                },
+                "spark-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "role": "builder",
+                    "provider": "openai",
+                    "model": "gpt-5.3-codex-spark",
+                    "cost_tier": "low",
+                    "launch_cmd_kind": "print_once",
+                    "task_classes": ["implementation", "tests", "code-edit"],
+                    "strengths": ["code-edit"],
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda op: (True, ""))
+    policy_mod = types.SimpleNamespace(
+        load_policy=lambda: {},
+        builder_pool_enabled=lambda policy: False,
+        pool_member_ids=lambda registry: [],
+        infer_builder_group=lambda operator: "codex-gpt-5.3-spark",
+    )
+    monkeypatch.setattr(pm_dispatch, "_load_concurrency_policy_module", lambda: policy_mod)
+    monkeypatch.setattr(
+        pm_dispatch,
+        "_role_spillover_spec",
+        lambda policy_module, policy, role: {
+            "enabled": True,
+            "max_active": 1,
+            "allowed_source_roles": ["builder"],
+            "preferred_groups": [],
+            "reason": "low-cost planner fallback",
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "_active_role_spillover_count", lambda role: 0)
+
+    operator_id, operator, reason = pm_dispatch.select_operator_by_role(
+        role="planner",
+        task_type="planning",
+    )
+
+    assert reason == ""
+    assert operator_id == "spark-builder"
+    assert operator["model"] == "gpt-5.3-codex-spark"
+    assert operator["borrowed_for_role"] == "planner"
+
+
+def test_preferred_operator_cannot_bypass_cost_ceiling(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_MAX_COST_TIER", "low")
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "expensive-planner": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["planner"],
+                    "provider": "openai",
+                    "cost_tier": "high",
+                }
+            },
+        },
+    )
+
+    operator_id, operator, reason = pm_dispatch.select_operator_by_role(
+        role="planner",
+        task_type="planning",
+        prefer_operator="expensive-planner",
+    )
+
+    assert operator_id == ""
+    assert operator == {}
+    assert "preferred_operator_cost_tier_exceeds_ceiling" in reason
+
+
 def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_path):
     pm_dispatch = _load_pm_dispatch()
     sprints = tmp_path / "sprints"
@@ -149,11 +247,12 @@ def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_p
             "read_scope": ["dispatch/envelope.json"],
             "write_scope": ["artifacts/scientific/literature.json"],
         },
+        additional_read_scope=[str(tmp_path / "published"), "dispatch/envelope.json"],
     )
 
     assert envelope["workflow_contract"] == "research.autosci.v1"
     assert envelope["strict_filesystem_boundaries"] is True
-    assert envelope["read_scope"] == ["dispatch/envelope.json"]
+    assert envelope["read_scope"] == ["dispatch/envelope.json", str(tmp_path / "published")]
     assert envelope["write_scope"] == ["artifacts/scientific/literature.json"]
     assert envelope["write_scope_root"] == str(sprints / sid / "workdir")
     assert envelope["write_scope_resolution"] == "relative_to_write_scope_root"
@@ -182,6 +281,7 @@ def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
                     "capability_native": True,
                     "capability_capsule_id": "cap.requirement-compiler-implementation",
                     "dispatch_task_type": "implementation",
+                    "required_skills": ["python_implementation"],
                     "capsule_plan": {
                         "capability_native": True,
                         "capability_capsule_id": "cap.requirement-compiler-implementation",
@@ -262,6 +362,7 @@ def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
         assert envelope["capability_capsule_id"] == "cap.requirement-compiler-implementation"
         assert envelope["logical_operator"] == "ImplementationWorker"
         assert envelope["task_type"] == "implementation"
+        assert envelope["selected_skills"] == ["python_implementation"]
 
 
 def test_cmd_submit_canonicalizes_analysis_audit_node_before_submit(monkeypatch):
@@ -647,6 +748,32 @@ def test_codex_operator_health_accepts_path_resolved_codex(monkeypatch):
     }
 
 
+def test_codex_operator_health_accepts_wsl_desktop_materialization(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    materialized = tmp_path / "run" / "codex-cli-runtime" / "fixture" / "codex"
+    monkeypatch.setattr(pm_dispatch.shutil, "which", lambda _cmd: None)
+    monkeypatch.setattr(
+        pm_dispatch,
+        "resolve_codex_cli",
+        lambda *_args, **_kwargs: (materialized, "windows_desktop_wsl_copy"),
+    )
+
+    ok, reason = pm_dispatch._command_path_available(
+        "/opt/homebrew/bin/codex",
+        {
+            "provider": "openai",
+            "model": "gpt-5.5",
+            "command_path": "/opt/homebrew/bin/codex",
+        },
+    )
+
+    assert ok is True
+    assert reason == (
+        "command_path_resolved_via_windows_desktop_wsl_copy:"
+        f"{materialized}"
+    )
+
+
 def _write_builder_ready_graph(sprints: Path, sprint_id: str) -> None:
     (sprints / f"{sprint_id}.status.json").write_text(
         json.dumps({"status": "active", "phase": "planning_complete"}),
@@ -821,7 +948,10 @@ def test_drain_builder_ready_submits_and_marks_graph(monkeypatch, tmp_path):
     )
 
     assert rc == 0
-    graph = json.loads((sprints / "sprint-drain.task_graph.json").read_text(encoding="utf-8"))
+    graph_scheduler = pm_dispatch._load_graph_scheduler_module()
+    assert graph_scheduler is not None
+    graph_scheduler.SPRINTS_DIR = sprints
+    graph = graph_scheduler.load_graph(sprints / "sprint-drain.task_graph.json")
     assert graph["nodes"][0]["status"] == "dispatched"
-    assert graph["nodes"][0]["dispatched_via"] == "pm_dispatch"
-    assert graph["nodes"][0]["pm_task_id"] == "pm-sprint-drain-B1-test"
+    assert graph["node_results"]["B1"]["dispatched_via"] == "pm_dispatch"
+    assert graph["node_results"]["B1"]["pm_task_id"] == "pm-sprint-drain-B1-test"

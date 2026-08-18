@@ -51,4 +51,4 @@ def test_named_tmux_target_resolves_immutable_pane_runtime_metadata(tmp_path, mo
     assert metadata["pane_runtime"] == "claude"
     assert metadata["provider"] == "anthropic"
     assert metadata["model"] == "claude-opus-4-8"
-    assert metadata["metadata_source"].endswith("run/pane-env/_2.json")
+    assert metadata["metadata_source"].endswith(str(Path("run/pane-env/_2.json")))

@@ -83,10 +83,10 @@ def test_lifecycle_run_and_workflow_evolve_are_distinct():
     assert "cap.research-workflow-evolve" in lifecycle_manifest["composition"]["incompatible_with"]
 
 
-def test_research_workflow_selection_has_exact_five_kinds():
+def test_research_workflow_selection_has_exact_five_active_kinds():
     payload = json.loads(SELECTION_PATH.read_text(encoding="utf-8"))
-    assert payload["status"] == "draft"
-    assert payload["active"] is False
+    assert payload["status"] == "active"
+    assert payload["active"] is True
     routes = payload["routes"]
 
     assert len(routes) == 5
@@ -145,7 +145,7 @@ def test_no_full_stable_overstatement_and_no_real_data_research_schema():
 
     assert lifecycle_manifest["capsule_kind"] == "capability"
     assert route_payload.get("active") is False
-    assert selection_payload["active"] is False
+    assert selection_payload["active"] is True
     for route in route_payload["routes"]:
         assert route["coverage"] not in {"full", "stable"}
         assert route["coverage"] == "skeleton/partial"

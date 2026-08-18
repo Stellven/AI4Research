@@ -153,20 +153,6 @@ def classification_for(
             "Path is under a generated runtime/test-output root or has a transient output extension.",
         )
     semantic_targets = semantic_test_targets(path, current, test_names)
-    if source_blob is None:
-        if semantic_targets:
-            return (
-                "PRESERVED_EXACT",
-                [],
-                "No write required; the source tip deliberately deletes this path and it remains absent.",
-                "The Stellven source-tip tree has no blob at this path, and the recovered tree likewise leaves the original path absent.",
-            )
-        return (
-            "INTENTIONALLY_EXCLUDED_OBSOLETE_DUPLICATE",
-            [],
-            "Do not restore a path removed by the Stellven source tip.",
-            "The path was changed during the source history but is absent from the source-tip tree, so restoring it would resurrect an obsolete intermediate state.",
-        )
     if semantic_targets:
         return (
             "PRESERVED_SEMANTICALLY",
@@ -185,6 +171,13 @@ def classification_for(
             [],
             "Keep the explicitly quarantined legacy test out of the active suite.",
             "The final tree records the legacy test family under tests/quarantine because it targets stale or removed APIs; restoring it as an active test would create a misleading regression gate.",
+        )
+    if source_blob is None:
+        return (
+            "INTENTIONALLY_EXCLUDED_OBSOLETE_DUPLICATE",
+            [],
+            "Do not restore a path removed by the Stellven source tip.",
+            "The path was changed during the source history but is absent from the source-tip tree, so restoring it would resurrect an obsolete intermediate state.",
         )
     if path in current:
         return (
@@ -310,15 +303,13 @@ def build() -> dict:
         "excluded_files": excluded,
         "superseded_files": superseded,
         "validation": {
-            "README.md": "AI4Research framing restored without replacing rc.9 installer commands or current limitations.",
+            "README.md": "Root README blob exactly matches the Stellven source-tip README.",
             "source_archive": "Manifest-backed archive was scanned for secrets and Windows-illegal names, then intentionally left excluded because .gitignore defines it as a local duplicate snapshot bundle.",
             "executed_checks": [
-                "pytest tests/repository/governance/test_overwritten_contribution_reconciliation.py -q: 4 passed",
-                "pytest --collect-only -q: 7033 tests collected",
-                "pytest reconciliation + Windows filenames + safe staging: 79 passed",
-                "bash scripts/check-release-coherence.sh: PASS after CRLF-neutral comparison repair",
-                "check-secret-scan.py: 4503 candidates scanned, no secrets found",
-                "git diff --check and git diff --cached --check: PASS",
+                "pytest reconciliation + migrated canonical contribution tests + compiled planner: 9 passed",
+                "node tests/desktop/src/selftest-verdict.test.cjs: 9/9 passed",
+                "pytest --collect-only -q: 7190 tests collected",
+                "git diff --check for repair text changes: PASS",
             ],
             "non_product_runner_limit": "The clone-based test_release_coherence_tracked_inputs.sh exceeded the 180-second command limit after the direct coherence gate passed; it is recorded as runner-duration evidence, not a product failure.",
         },
@@ -345,17 +336,17 @@ def markdown(ledger: dict) -> str:
         "",
         "## Recovery decisions",
         "",
-        "- `README.md` and every source-tip blob classified as preserved are restored verbatim at their original paths from `4d60f1e...`.",
-        "- `PRESERVED_EXACT` records direct source-tip equivalence at the original path. For a source-tip deletion, it records exact absence rather than recreating an obsolete intermediate file.",
-        "- Source-archive, runtime-artifact, test-run, lock, and cache material is retained only when its source-tip blob was explicitly part of the prior moved/semantic recovery set; all other excluded material remains excluded with its recorded reason.",
+        "- `README.md` is retained verbatim from `4d60f1e...` at its original path.",
+        "- `PRESERVED_EXACT` means the source-tip blob exists at the same current path; `PRESERVED_MOVED` records byte-identical content at its canonical moved path.",
+        "- Relocated or refactored tests remain under the canonical `tests/` tree and are recorded as `PRESERVED_SEMANTICALLY`; legacy duplicates are not recreated.",
+        "- Source archives, runtime artifacts, test-run outputs, locks, and caches remain excluded unless independently tracked by the current product tree.",
         "",
         "## Validation",
         "",
-        "- Reconciliation validator: 4 passed.",
-        "- Full pytest collection: 7,033 tests collected.",
-        "- Reconciliation, Windows-path, and staging-safety tests: 79 passed.",
-        "- `scripts/check-release-coherence.sh`: PASS after making its Python-output comparison CRLF-neutral on Windows.",
-        "- Secret scan: 4,503 candidates scanned with no findings; `git diff --check` passed.",
+        "- Reconciliation, migrated canonical contribution, and compiled-planner tests: 9 passed.",
+        "- Desktop self-test verdict cases: 9/9 passed.",
+        "- Full pytest collection: 7,190 tests collected.",
+        "- `git diff --check` passed for the repair's text changes.",
         "- The clone-based tracked-input release regression exceeded the 180-second command limit after the direct gate passed; this is retained as runner-duration evidence, not a product regression.",
         "",
         "Every candidate path and source commit is listed in the machine-readable companion: `overwritten-contribution-reconciliation.json`.",

@@ -152,6 +152,9 @@ fi
         mod.STATUS_SERVER_STATIC_DIR = mod.STATUS_SERVER_DIR / "static"
         mod.STATUS_SERVER_TEMPLATES_DIR = mod.STATUS_SERVER_DIR / "templates"
         mod.OPEN_ALLOWED_ROOTS = [harness]
+        # Keep this isolated Claude quota fixture independent of the owner's
+        # real runtime selection (for example runtime=codex in user config).
+        mod._read_user_config_runtime = lambda: ("claude", "test_fixture")
         os.environ["PATH"] = f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}"
         os.environ["HARNESS_DIR"] = str(harness)
 
@@ -206,8 +209,10 @@ fi
 
         settings = mod._settings_payload()
         assert settings["ok"] is True
-        assert settings["write_supported"] is False
-        assert settings["source"] == "status-server read-only config scan"
+        assert settings["write_supported"] is True
+        assert settings["source"] == "status-server settings scan"
+        assert settings["runtime"]["value"] == "claude"
+        assert settings["runtime"]["source"] == "test_fixture"
 
         deliverables = mod._sprint_deliverables_payload(sid)
         names = {item["name"] for item in deliverables["items"]}

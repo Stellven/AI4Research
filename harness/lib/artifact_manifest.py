@@ -791,7 +791,23 @@ def publish_workspace_outputs(
                 published.append({"from": str(source), "to": str(destination), "sha256": destination_sha})
             for destination, expected in directory_expectations.items():
                 actual = _path_snapshot(destination, root=workspace)
-                if actual.get("unsafe") or str(actual.get("sha256") or "") != str(expected.get("sha256") or ""):
+                # Existing destinations have same-directory rollback backups
+                # until the whole transaction verifies.  Those private files
+                # are not published output and must not poison the directory
+                # tree digest during an idempotent re-publish.
+                transaction_backups = {
+                    backup
+                    for backup in backups.values()
+                    if backup is not None
+                }
+                actual_entries = [
+                    entry
+                    for entry in (actual.get("entries") or [])
+                    if destination / Path(str(entry.get("rel_path") or ""))
+                    not in transaction_backups
+                ]
+                actual_digest = _canonical_sha256(actual_entries)
+                if actual.get("unsafe") or actual_digest != str(expected.get("sha256") or ""):
                     raise _ContentMismatchError(
                         f"published directory tree hash mismatch: {destination}"
                     )

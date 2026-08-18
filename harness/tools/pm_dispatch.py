@@ -48,6 +48,7 @@ if sys.path and sys.path[0] != _PM_LIB_DIR:
         sys.path.remove(_PM_LIB_DIR)
     sys.path.insert(0, _PM_LIB_DIR)
 
+from codex_cli_runtime import resolve_codex_cli
 from task_lifecycle import activate_execution_attempt
 
 HOME = Path.home()
@@ -100,6 +101,22 @@ DEFAULT_OPERATOR_PROVIDERS = frozenset(
     ).split(",")
     if p.strip()
 )
+
+COST_TIER_RANK = {"low": 0, "medium": 1, "high": 2}
+
+
+def _max_cost_tier() -> str:
+    return str(os.environ.get("SOLAR_PM_MAX_COST_TIER") or "").strip().lower()
+
+
+def _operator_matches_cost_policy(op: dict[str, Any]) -> bool:
+    ceiling = _max_cost_tier()
+    if not ceiling:
+        return True
+    if ceiling not in COST_TIER_RANK:
+        return False
+    tier = str(op.get("cost_tier") or "medium").strip().lower()
+    return COST_TIER_RANK.get(tier, COST_TIER_RANK["medium"]) <= COST_TIER_RANK[ceiling]
 
 
 def _operator_matches_provider_policy(op: dict[str, Any]) -> bool:
@@ -161,6 +178,7 @@ def _build_pm_operator_envelope(
     task_graph_node: dict[str, Any] | None = None,
     capsule_submit: dict[str, Any] | None = None,
     expected_artifacts: list[str] | None = None,
+    additional_read_scope: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build the canonical PM/operator envelope.
 
@@ -222,10 +240,18 @@ def _build_pm_operator_envelope(
         envelope["write_scope"] = list(task_graph_node.get("write_scope") or [])
         envelope["write_scope_root"] = envelope["work_dir"]
         envelope["write_scope_resolution"] = "relative_to_write_scope_root"
+    if additional_read_scope:
+        merged_read_scope = list(envelope.get("read_scope") or [])
+        for value in additional_read_scope:
+            normalized = str(value or "").strip()
+            if normalized and normalized not in merged_read_scope:
+                merged_read_scope.append(normalized)
+        envelope["read_scope"] = merged_read_scope
     if capsule_submit.get("capability_capsule_id"):
         envelope["capability_native"] = bool(capsule_submit.get("capability_native", True))
         envelope["capability_capsule_id"] = str(capsule_submit["capability_capsule_id"])
         envelope["capsule_plan"] = capsule_submit.get("capsule_plan", {})
+        envelope["selected_skills"] = list(capsule_submit.get("selected_skills") or [])
     if capsule_submit.get("capsule_override_reason"):
         envelope["capsule_override_reason"] = str(capsule_submit["capsule_override_reason"])
     return envelope
@@ -689,6 +715,16 @@ def _command_path_available(command_path: str, op: dict[str, Any]) -> tuple[bool
         resolved = shutil.which("codex")
         if resolved:
             return True, f"command_path_resolved_via_path:{resolved}"
+        try:
+            materialized, source = resolve_codex_cli(
+                HARNESS_DIR,
+                env=os.environ,
+                configured_path=command_path,
+            )
+        except OSError:
+            materialized, source = None, ""
+        if materialized:
+            return True, f"command_path_resolved_via_{source}:{materialized}"
     return False, f"command_path_missing:{command_path}"
 
 
@@ -875,6 +911,12 @@ def _capsule_submit_metadata(node: dict[str, Any] | None) -> dict[str, Any]:
         "dispatch_task_type": node.get("dispatch_task_type") or capsule_plan.get("dispatch_task_type"),
         "logical_operator": node.get("logical_operator", ""),
         "capsule_plan": capsule_plan,
+        "selected_skills": list(
+            capsule_plan.get("selected_skills")
+            or node.get("selected_skills")
+            or node.get("required_skills")
+            or []
+        ),
     }
 
 
@@ -1222,6 +1264,8 @@ def _role_spillover_candidates(
             continue
         if not _operator_matches_provider_policy(op):
             continue
+        if not _operator_matches_cost_policy(op):
+            continue
         op_roles = _operator_roles(op)
         if norm_role in op_roles:
             continue
@@ -1294,6 +1338,11 @@ def select_operator_by_role(
             if not _operator_matches_provider_policy(op):
                 provider = str(op.get("provider") or op.get("vendor") or "unknown")
                 return "", {}, f"preferred_operator_provider_mismatch: {prefer_operator}: {provider}"
+            if not _operator_matches_cost_policy(op):
+                return "", {}, (
+                    f"preferred_operator_cost_tier_exceeds_ceiling: {prefer_operator}: "
+                    f"operator={op.get('cost_tier') or 'medium'} ceiling={_max_cost_tier() or 'unset'}"
+                )
             task_reject_reason = _operator_reject_reason_for_task(op, norm_role, task_type)
             if task_reject_reason:
                 return "", {}, f"preferred_operator_rejected_for_task: {prefer_operator}: {task_reject_reason}"
@@ -1312,6 +1361,8 @@ def select_operator_by_role(
         if bool(op.get("deprecated")):
             continue
         if not _operator_matches_provider_policy(op):
+            continue
+        if not _operator_matches_cost_policy(op):
             continue
         ok, _ = is_dispatchable(op)
         if not ok:
@@ -2303,6 +2354,16 @@ def cmd_submit(args: argparse.Namespace) -> int:
         logical_operator=logical_operator,
     )
     task_type = _canonicalize_capsule_task_type(capsule_submit, task_type)
+    additional_read_scope = list(getattr(args, "read_scope", []) or [])
+    if additional_read_scope and (
+        task_type != "graph_eval"
+        or os.environ.get("SOLAR_PM_DISPATCH_SOURCE") != "graph_node_dispatcher"
+    ):
+        print(
+            "ERROR: --read-scope is reserved for graph-dispatch evaluator snapshots",
+            file=sys.stderr,
+        )
+        return 1
     if capsule_submit.get("capability_capsule_id"):
         capsule_submit["dispatch_task_type"] = task_type
         if isinstance(capsule_submit.get("capsule_plan"), dict):
@@ -2321,6 +2382,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
                     "task_type": task_type,
                     "objective": objective[:300],
                     "capability_capsule_id": capsule_submit["capability_capsule_id"],
+                    "selected_skills": list(capsule_submit.get("selected_skills") or []),
                 }
             )
         except Exception:
@@ -2461,6 +2523,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
         task_graph_node=task_graph_node,
         capsule_submit=capsule_submit,
         expected_artifacts=expected_artifacts,
+        additional_read_scope=additional_read_scope,
     )
 
     record: dict[str, Any] = {
@@ -3438,6 +3501,12 @@ def main() -> int:
         help="closeout 检查的精确产物路径；仅 graph_eval 可覆盖为受限 quorum sidecar pair",
     )
     s.add_argument("--context", default="", help="额外上下文（注入 dispatch 文件）")
+    s.add_argument(
+        "--read-scope",
+        action="append",
+        default=[],
+        help="追加精确只读路径；用于 graph evaluator 冻结快照授权",
+    )
     s.add_argument("--work-dir", default="", help="算子工作目录；默认 <sprint>/workdir")
     s.add_argument("--dry-run", action="store_true", help="预览，不实际提交")
 

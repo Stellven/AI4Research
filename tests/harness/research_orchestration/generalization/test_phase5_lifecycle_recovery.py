@@ -38,7 +38,7 @@ from harness.lib.research_orchestration.state_store import ResearchStateStore  #
 from harness.plugins.autosci.operators.scientific_lifecycle.registry import registration_entries  # noqa: E402
 
 
-FIXTURES = HARNESS_ROOT / "tests" / "research_orchestration" / "fixtures" / "phase5" / "lifecycle_recovery"
+FIXTURES = REPO_ROOT / "tests" / "harness" / "research_orchestration" / "fixtures" / "phase5" / "lifecycle_recovery"
 SAMPLE_PAPER = FIXTURES / "sample_paper.md"
 SAMPLE_REPO = FIXTURES / "sample_repo"
 IMPORTED_EVIDENCE = FIXTURES / "imported_evidence.json"

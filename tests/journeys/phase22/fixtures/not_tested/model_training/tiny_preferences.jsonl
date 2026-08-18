@@ -1,0 +1,2 @@
+{"id":"pref-001","prompt":"Rank an experiment verdict with missing provenance.","chosen":"Block promotion until provenance and regression evidence are present.","rejected":"Promote because the output file exists.","license":"synthetic-phase22-local","source":"phase22-not-tested-model-training"}
+{"id":"pref-002","prompt":"Rank a hard-case response.","chosen":"Route the failed case into repair/review with candidate, reason, and source path.","rejected":"Drop the case after logging a warning.","license":"synthetic-phase22-local","source":"phase22-not-tested-model-training"}

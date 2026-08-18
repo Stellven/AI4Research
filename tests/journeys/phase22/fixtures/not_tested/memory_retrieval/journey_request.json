@@ -1,0 +1,12 @@
+{
+  "journey_id": "NT-memory-retrieval",
+  "level_2": "Foundation :: Memory, Retrieval, and Evidence (Memory Learning / Self-RAG / Reranker Training)",
+  "task": "Persist sourced research evidence in one production run, retrieve it in a later production run, and verify retrieval relevance, provenance, and project isolation.",
+  "alpha_project": "nt-memory-alpha",
+  "beta_project": "nt-memory-beta",
+  "alpha_write_run_id": "nt-memory-alpha-write",
+  "alpha_query_run_id": "nt-memory-alpha-query",
+  "beta_write_run_id": "nt-memory-beta-write",
+  "query": "What evidence supports ALPHA_SENTINEL_COBALT_ZEOLITE cobalt zeolite ammonia selectivity?",
+  "irrelevant_private_sentinel": "BETA_PRIVATE_SENTINEL_GRAPHENE_BATTERY"
+}

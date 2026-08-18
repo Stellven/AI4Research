@@ -1,0 +1,15 @@
+{
+  "question": "What did the controlled wetland trial find about dissolved nitrogen removal and invertebrate richness?",
+  "required_claims": [
+    {
+      "claim_id": "nitrogen",
+      "text": "The planted cells removed more dissolved nitrogen than the unplanted controls.",
+      "required_exact_quote": "Across six weekly samples, planted wetland cells removed 31 percent more dissolved nitrogen than unplanted control cells."
+    },
+    {
+      "claim_id": "richness",
+      "text": "Macroinvertebrate richness did not differ detectably between the two arms.",
+      "required_exact_quote": "Macroinvertebrate richness showed no detectable difference between planted and control cells during the trial."
+    }
+  ]
+}

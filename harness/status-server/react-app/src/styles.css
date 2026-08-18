@@ -53,8 +53,10 @@
   --lotus-mid: #a60822;
   --lotus-back: #7a0a1d;
 
-  /* Semantic state — amber owns 'stalled' (hue-separated from brand red); done = quiet ink. */
-  --solar-success: #3a3b40;
+  /* Semantic state — amber owns stalled; green makes completed work distinct from pending gray. */
+  --solar-success: #177245;
+  --solar-success-wash: rgba(23, 114, 69, 0.08);
+  --solar-success-line: rgba(23, 114, 69, 0.34);
   --solar-warning: #b26a00;
   --solar-danger: #a60822;
   --solar-warning-fill: #fbefd0;
@@ -286,7 +288,10 @@ summary:focus-visible,
 .new-task-button,
 .primary-button {
   color: #ffffff;
-  background: linear-gradient(180deg, #2a2b2f 0%, var(--solar-control) 100%);
+  /* Keep the background deterministic for contrast tooling. The previous
+     near-black gradient was visually compliant, but automated WCAG audits
+     could not resolve the background behind nested button text. */
+  background: var(--solar-control);
   font-size: var(--solar-type-sm);
   font-weight: 680;
   box-shadow:
@@ -2532,6 +2537,9 @@ summary:focus-visible,
   border: 1px solid var(--solar-line);
   border-radius: 4px;
   color: var(--solar-muted);
+  /* An explicit surface lets contrast tools resolve this small text without
+     guessing through transparent ancestors. */
+  background: var(--solar-surface);
   font-family: var(--solar-font-mono);
   font-size: var(--solar-type-micro);
 }
@@ -4393,10 +4401,14 @@ summary:focus-visible,
   flex: 0 0 auto;
 }
 .run-stage-done {
-  color: var(--solar-ink);
+  color: var(--solar-success);
+  background: var(--solar-success-wash);
 }
 .run-stage-done .run-stage-dot {
   background: var(--solar-success);
+}
+.run-stage-done:not(:last-child)::after {
+  background: var(--solar-success-line);
 }
 .run-stage-active {
   background: var(--solar-accent-wash);
@@ -4549,6 +4561,13 @@ summary:focus-visible,
 }
 .plan-card.tone-complete .plan-card-dot {
   background: var(--solar-success);
+}
+.plan-card.tone-complete {
+  border-color: var(--solar-success-line);
+  background: var(--solar-success-wash);
+}
+.plan-card.tone-complete .plan-card-status {
+  color: var(--solar-success);
 }
 .plan-card.tone-working .plan-card-dot {
   background: var(--solar-accent);

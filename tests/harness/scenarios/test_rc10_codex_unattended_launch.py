@@ -7,10 +7,16 @@ import stat
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 HARNESS_ROOT = (Path(__file__).resolve().parents[3] / 'harness')
 LAUNCHER = HARNESS_ROOT / "pane-launcher.sh"
 HARNESS_ENTRY = HARNESS_ROOT / "solar-harness.sh"
+POSIX_LAUNCHER_ONLY = pytest.mark.skipif(
+    os.name == "nt",
+    reason="pane-launcher.sh executes inside the POSIX runtime; Windows command preservation has a native contract test",
+)
 
 
 def _run_launcher(
@@ -21,7 +27,14 @@ def _run_launcher(
 ) -> tuple[dict, Path]:
     harness = tmp_path / "installed-harness"
     home = tmp_path / "home"
-    workspace = tmp_path / 'project with spaces and "quotes"'
+    # Keep the shell-quoting coverage on POSIX while using a legal Windows
+    # filename. Spaces still exercise argument-boundary preservation there.
+    workspace_name = (
+        'project with spaces and "quotes"'
+        if os.name != "nt"
+        else "project with spaces"
+    )
+    workspace = tmp_path / workspace_name
     capture = tmp_path / "codex-argv.json"
     fake_codex = tmp_path / "codex"
 
@@ -32,6 +45,7 @@ def _run_launcher(
 
     for relative in (
         "lib/codex_trust_profiles.py",
+        "lib/file_lock_compat.py",
         "lib/persona-config.sh",
         "lib/capability-prefix.sh",
         "personas/pm.md",
@@ -79,9 +93,10 @@ def _run_launcher(
             "CODEX_HOME": str(home / ".codex"),
             "HARNESS_DIR": str(harness),
             "HOME": str(home),
-            "SHELL": "/bin/true",
+            "SHELL": shutil.which("true") or "/usr/bin/true",
             "SOLAR_CODEX_BIN": str(fake_codex),
             "SOLAR_CODEX_BYPASS": "1",
+            "SOLAR_CODEX_PANE_FS_ISOLATION": "codex",
             "SOLAR_CODEX_TRUST_WORKSPACE": trust_workspace,
             "SOLAR_HARNESS_DIR": str(harness),
             "SOLAR_PANE_RUNTIME": "codex",
@@ -104,14 +119,16 @@ def _run_launcher(
     return json.loads(capture.read_text(encoding="utf-8")), workspace.resolve()
 
 
-def test_managed_codex_bypass_trusts_the_exact_workspace_for_this_invocation(
+@POSIX_LAUNCHER_ONLY
+def test_managed_codex_workspace_sandbox_trusts_the_exact_workspace_for_this_invocation(
     tmp_path: Path,
 ) -> None:
     payload, workspace = _run_launcher(tmp_path)
     argv = payload["argv"]
 
     expected_section = f'[projects.{json.dumps(str(workspace))}]'
-    assert "--dangerously-bypass-approvals-and-sandbox" in argv
+    assert "--dangerously-bypass-approvals-and-sandbox" not in argv
+    assert argv[argv.index("--sandbox") + 1] == "workspace-write"
     assert "--profile" in argv
     assert payload["profile_name"].startswith("solar-managed-")
     assert expected_section in payload["profile_contents"]
@@ -119,6 +136,7 @@ def test_managed_codex_bypass_trusts_the_exact_workspace_for_this_invocation(
     assert not Path(payload["profile_path"]).exists()
 
 
+@POSIX_LAUNCHER_ONLY
 def test_codex_workspace_trust_can_be_explicitly_disabled(tmp_path: Path) -> None:
     payload, workspace = _run_launcher(tmp_path, trust_workspace="0")
     argv = payload["argv"]
@@ -142,6 +160,7 @@ def test_cockpit_propagates_the_workspace_trust_control_to_managed_panes() -> No
     assert "SOLAR_CODEX_TRUST_WORKSPACE" in tmux_block
 
 
+@POSIX_LAUNCHER_ONLY
 def test_codex_launch_preserves_dashboard_search_and_effort_flags(tmp_path: Path) -> None:
     payload, _workspace = _run_launcher(
         tmp_path,

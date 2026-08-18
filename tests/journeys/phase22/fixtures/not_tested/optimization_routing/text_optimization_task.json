@@ -1,0 +1,27 @@
+{
+  "task_id": "nt-optimization-routing-text-001",
+  "target_id": "skill.phase22.text-triage",
+  "benchmark_suite": "suite.phase22.text-triage-holdout",
+  "baseline_prompt": "Classify a short research note as supported, unsupported, or needs_evidence. Return only the label.",
+  "candidate_payload": {
+    "skill_md": "Classify each note with a label and one short evidence reason. Prefer needs_evidence when the note lacks a cited observation.",
+    "safety_notes": {
+      "secrets_access": "denied"
+    }
+  },
+  "holdout_cases": [
+    {
+      "input": "The pilot improved exact-match accuracy from 0.50 to 0.83 on the attached local CSV.",
+      "expected": "supported"
+    },
+    {
+      "input": "The method works for every external dataset without further validation.",
+      "expected": "unsupported"
+    },
+    {
+      "input": "The new rubric may reduce hallucinations, but no run evidence is attached.",
+      "expected": "needs_evidence"
+    }
+  ],
+  "seed": 22023
+}

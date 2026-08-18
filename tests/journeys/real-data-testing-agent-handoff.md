@@ -74,6 +74,95 @@ Use progressive disclosure:
 Do not assume that an old PASS proves the new data will work. Do not assume an
 old FAIL means the new task must fail.
 
+## First real-data run: validated golden path
+
+For the first real-data test, do not invent a new all-feature workflow. Start
+from one journey that already passed, then change only the user input.
+
+Choose the backbone that matches the task:
+
+| Real task | Validated backbone | Accepted boundary |
+|---|---|---|
+| Research material to readable report | `P22-J09` | `PASS_WITH_KNOWN_LIMITATIONS`; local-surrogate review and policy/HITL compile limitations remain |
+| PDF or Markdown ingestion only | `P22-J04` | `PASS_WITH_KNOWN_LIMITATIONS`; source registration and cross-carrier deduplication may remain limited |
+| Live literature discovery | `P22-J05` | `PASS_WITH_KNOWN_LIMITATIONS`; provider-backed topic and anchor search passed |
+| Local experiment execution | `P22-J07` | `PASS_WITH_KNOWN_LIMITATIONS`; do not require `exp-status` to prove a terminal state |
+| Provider routing and usage audit | `P22-J23` | `PASS`; route matching and token/cost evidence passed |
+| Real repository defect repair | `P22-J02` | `PASS_WITH_KNOWN_LIMITATIONS`; the legacy `eval.md` sidecar is optional |
+| Benchmarking process | `P22-J03` | `PASS`; a low benchmark score is a valid measured result, not a failure of the benchmarking process |
+
+For a research-to-report E2E run, use `P22-J09` as the main control. It already
+exercises ingestion, real local experiment evidence, a narrow claim verdict,
+report planning, drafting, review, and compile/checklist behavior. Add `P22-J05`
+only when the user's task requires live literature discovery. Add `P22-J23`
+only when the selected path requires a live model.
+
+Run the unchanged control first:
+
+```powershell
+.venv\Scripts\python.exe -m pytest tests/journeys/phase22/code/test_j09_report_delivery.py::test_p22_j09_report_delivery -vv --basetemp .codex-tmp/real-data-tests/golden-j09-basetemp -o cache_dir=.codex-tmp/real-data-tests/golden-j09-cache
+```
+
+Optional control selectors:
+
+```text
+tests/journeys/phase22/code/test_j04_paper_ingestion.py::test_p22_j04_paper_ingestion
+tests/journeys/phase22/code/test_j05_literature_discovery.py::test_p22_j05_literature_discovery
+tests/journeys/phase22/code/test_j07_experiment_lifecycle.py::test_p22_j07_experiment_lifecycle
+tests/journeys/phase22/code/test_j23_model_routing_audit.py::test_p22_j23_real_model_routing_and_usage_audit
+tests/journeys/phase22/code/test_j02_live_coding_task.py::test_p22_j02_live_coding_task
+tests/journeys/phase22/code/test_j03_platform_benchmark.py::test_p22_j03_platform_benchmark
+```
+
+Do not run all Phase 22 journeys as the control. Several journeys intentionally
+retain known product failures, platform constraints, or missing features.
+
+After the control reaches its previously accepted status, create a separate
+real-data run that preserves the same entrypoints, schemas, and minimum
+assertions. Change one dimension first: replace the fixture with the user's
+real input. Keep all stages in one sandbox and pass the actual upstream
+artifact paths into the next stage; separately executed journeys with unrelated
+fixtures are not one E2E run.
+
+For the research-to-report path, keep the first run within these verified
+boundaries:
+
+1. Submit one real `.pdf` or `.md` through AutoSci `ingest`; require a
+   parseable `research_paper.v1`, non-empty extracted content, source reference,
+   and paper ID.
+2. If requested, run online AutoSci `discover` using one topic and optional
+   anchors; require a completed `literature_discovery.v1` with non-fixture,
+   unique candidates and provider provenance.
+3. Use a narrow, measurable claim tied to actual experiment evidence. Do not
+   use universal claims such as “works on all inputs and environments.”
+4. Run the real local experiment and feed its runtime and result artifacts to
+   `exp-run`; treat an unknown `exp-status` terminal state as the already known
+   limitation, not as proof that execution failed.
+5. Feed the same ingestion, discovery, claim, code, and experiment evidence to
+   `paper-plan`, `paper-draft`, `review`, and `paper-compile`; require a readable
+   report containing summary, findings, evidence map, and limitations.
+
+Do not make these known-bad paths core requirements of the first E2E run:
+
+- strict verification-ready idea contracts from `P22-J06`;
+- broad-claim acceptance behavior exposed by `P22-J08`/`P22-J22`;
+- Windows local UI from `P22-J13`;
+- the failing TMUX harness start/restart/eval assertions from `P22-J16/J17`;
+- WeChat or other `NOT_AVAILABLE` entrypoints.
+
+Classify the outcome in two layers:
+
+- **Control fails:** current environment or product regression; do not blame
+  the real data yet.
+- **Control passes but real data fails:** real-input compatibility, robustness,
+  scale, or data-quality issue. Preserve both run IDs and identify the first
+  stage where outputs diverged.
+
+The real-data E2E may be `PASS_WITH_KNOWN_LIMITATIONS` when the useful report is
+produced and only the already documented non-core review, compile, or status
+limitations remain. Do not convert a missing or unusable core output into a
+limited pass.
+
 ## Define the test contract before execution
 
 Write `test-contract.md` before the first run. It must state:

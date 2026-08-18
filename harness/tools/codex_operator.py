@@ -14,14 +14,211 @@ import tempfile
 import time
 from pathlib import Path
 
+_HARNESS_LIB_DIR = str(Path(__file__).resolve().parents[1] / "lib")
+if _HARNESS_LIB_DIR not in sys.path:
+    sys.path.insert(0, _HARNESS_LIB_DIR)
+
+from codex_cli_runtime import resolve_codex_cli
+
+
+_SKILL_BRIDGE_CAPSULE_ID = "cap.skill-execution-bridge"
+_DEFAULT_SKILL_WORKFLOW_PHASES = [
+    "frame_objective_and_constraints",
+    "apply_skill_workflow",
+    "validate_against_acceptance",
+    "summarize_decisions_and_evidence",
+]
+
+
+def _read_operator_envelope() -> dict[str, object]:
+    raw = os.environ.get("SOLAR_OPERATOR_ENVELOPE_JSON") or ""
+    if not raw.strip():
+        return {}
+    candidate = Path(raw).expanduser()
+    if candidate.is_file():
+        try:
+            raw = candidate.read_text(encoding="utf-8")
+        except OSError:
+            return {}
+    try:
+        payload = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _selected_skills(envelope: dict[str, object]) -> list[str]:
+    candidates: list[object] = [envelope.get("selected_skills")]
+    for key in ("capsule_plan", "resolved_capability_capsule", "task_graph_node"):
+        nested = envelope.get(key)
+        if isinstance(nested, dict):
+            candidates.extend(
+                [
+                    nested.get("selected_skills"),
+                    nested.get("required_skills"),
+                ]
+            )
+    selected: list[str] = []
+    for candidate in candidates:
+        if not isinstance(candidate, list):
+            continue
+        for item in candidate:
+            skill_id = str(item or "").strip()
+            if skill_id and skill_id not in selected:
+                selected.append(skill_id)
+    return selected
+
+
+def _materialize_skill_bridge_evidence(task_dir: Path, dispatch: str) -> dict[str, object]:
+    envelope = _read_operator_envelope()
+    capsule = envelope.get("resolved_capability_capsule")
+    capsule_id = ""
+    if isinstance(capsule, dict):
+        capsule_id = str(capsule.get("id") or capsule.get("capsule_id") or "").strip()
+    if not capsule_id:
+        capsule_id = str(envelope.get("capability_capsule_id") or "").strip()
+    if capsule_id != _SKILL_BRIDGE_CAPSULE_ID:
+        return {}
+
+    selected_skills = _selected_skills(envelope)
+    try:
+        from skill_capsule_bridge import resolve_skill_records
+
+        records = resolve_skill_records(selected_skills)
+    except Exception as exc:
+        records = []
+        resolution_error = f"{type(exc).__name__}: {exc}"
+    else:
+        resolution_error = ""
+
+    resolved_skill_ids = [
+        str(record.get("skill_id") or "").strip()
+        for record in records
+        if isinstance(record, dict) and str(record.get("skill_id") or "").strip()
+    ]
+    primary = records[0] if records and isinstance(records[0], dict) else {}
+    workflow_phases = [
+        str(item).strip()
+        for item in primary.get("workflow_phases", [])
+        if str(item).strip()
+    ] or list(_DEFAULT_SKILL_WORKFLOW_PHASES)
+    selection_mode = "resolved_skill_record" if records else "direct_command_fallback"
+    fallback_reason = ""
+    if not records:
+        fallback_reason = resolution_error or "selected_skill_not_resolved"
+
+    evidence = {
+        "schema": "solar.skill_bridge.direct_command.v1",
+        "capsule_id": capsule_id,
+        "selected_skills": selected_skills,
+        "resolved_skill_ids": resolved_skill_ids,
+        "selection_mode": selection_mode,
+        "fallback_reason": fallback_reason,
+        "command_protocol": {
+            "mode": str(primary.get("template_profile") or "prompt_context_skill"),
+            "execution_surface": "direct_command_operator",
+            "record_exact_commands": True,
+        },
+        "workflow_contract": {
+            "phases": workflow_phases,
+            "delivery_expectation": str(
+                primary.get("delivery_expectation") or "phase_checklist_and_decision_log"
+            ),
+        },
+    }
+    task_dir.mkdir(parents=True, exist_ok=True)
+    prompt = (
+        "# Skill dispatch pane prompt\n\n"
+        f"- capsule: `{capsule_id}`\n"
+        f"- selected_skills: `{json.dumps(selected_skills, ensure_ascii=False)}`\n"
+        f"- selection_mode: `{selection_mode}`\n"
+        f"- fallback_reason: `{fallback_reason or 'none'}`\n"
+        "- execution_surface: `direct_command_operator`\n\n"
+        "## Dispatch\n\n"
+        f"{dispatch.rstrip()}\n"
+    )
+    (task_dir / "skill-dispatch-pane-prompt.md").write_text(prompt, encoding="utf-8")
+    (task_dir / "skill-dispatch-selection-proof.json").write_text(
+        json.dumps(
+            {
+                "schema": evidence["schema"],
+                "capsule_id": capsule_id,
+                "selected_skills": selected_skills,
+                "resolved_skill_ids": resolved_skill_ids,
+                "selection_mode": selection_mode,
+                "fallback_reason": fallback_reason,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (task_dir / "skill-dispatch-bridge-contract.json").write_text(
+        json.dumps(
+            {
+                "schema": evidence["schema"],
+                "capsule_id": capsule_id,
+                "command_protocol": evidence["command_protocol"],
+                "workflow_contract": evidence["workflow_contract"],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return evidence
+
+
+def _write_skill_bridge_result(task_dir: Path, evidence: dict[str, object], exit_code: int) -> None:
+    if not evidence:
+        return
+    payload = dict(evidence)
+    payload.update(
+        {
+            "status": "completed" if exit_code == 0 else "failed",
+            "exit_code": exit_code,
+        }
+    )
+    (task_dir / "skill-dispatch-result.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _declared_output_guidance() -> str:
+    try:
+        outputs = json.loads(os.environ.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
+    except (TypeError, ValueError):
+        return ""
+    paths = [str(item).strip() for item in outputs if isinstance(item, str) and item.strip()]
+    if not paths:
+        return ""
+    rendered = "\n".join(f"- `{path}`" for path in paths)
+    return (
+        "## Solar filesystem output contract\n\n"
+        "Solar may pre-create the exact declared output paths as zero-byte placeholders so "
+        "Landlock can grant file-level write access. A placeholder is not a completed artifact. "
+        "Write these files in place; do not delete and recreate them. When using apply_patch on "
+        "an existing placeholder, use Update File rather than Add File.\n\n"
+        "Declared writable outputs:\n"
+        f"{rendered}"
+    )
+
 
 def _read_dispatch() -> str:
     dispatch_file = os.environ.get("DISPATCH_FILE") or os.environ.get("SOLAR_MULTI_TASK_DISPATCH_FILE")
     if dispatch_file:
         path = Path(dispatch_file).expanduser()
         if path.exists():
-            return path.read_text(encoding="utf-8", errors="replace")
-    return sys.stdin.read()
+            dispatch = path.read_text(encoding="utf-8", errors="replace")
+        else:
+            dispatch = sys.stdin.read()
+    else:
+        dispatch = sys.stdin.read()
+    guidance = _declared_output_guidance()
+    return f"{dispatch.rstrip()}\n\n{guidance}\n" if guidance else dispatch
 
 
 def _write_pm_result(task_dir: Path, output_file: Path, output: str, exit_code: int) -> None:
@@ -134,7 +331,29 @@ def _codex_exec_env(task_dir: Path) -> dict[str, str]:
     env["SOLAR_HARNESS_CMD"] = str(shim_dir / "solar-harness")
     env["SOLAR_CODEX_SOURCE_HOME"] = str(source_codex_home)
     env["CODEX_SQLITE_HOME"] = str(state_home)
-    _prepend_env_path(env, "PATH", [shim_dir, harness_dir / "bin", harness_dir])
+    project_python_dirs: list[Path] = []
+    sid = str(env.get("SID") or "").strip()
+    if sid:
+        try:
+            import workspace_binding
+
+            workspace = workspace_binding.sprint_workspace_root(
+                sprints_dir,
+                sid,
+                harness_dir=harness_dir,
+            )
+        except Exception:
+            workspace = None
+        if workspace is not None:
+            for candidate in (workspace / ".venv" / "bin", workspace / "venv" / "bin"):
+                if (candidate / "python").is_file() or (candidate / "python3").is_file():
+                    project_python_dirs.append(candidate)
+                    break
+    _prepend_env_path(
+        env,
+        "PATH",
+        [shim_dir, *project_python_dirs, harness_dir / "bin", harness_dir],
+    )
     _prepend_env_path(env, "PYTHONPATH", [harness_dir / "lib", harness_dir / "tools"])
     return env
 
@@ -158,14 +377,28 @@ def _codex_live_search_requested() -> bool:
     return "--search" in tokens
 
 
-def _codex_exec_command(model: str, effort: str, cwd: str, output_file: Path) -> list[str]:
-    cmd = ["codex"]
+def _codex_model() -> str:
+    """Resolve the model while honoring the harness-wide Codex policy."""
+    policy_model = os.environ.get("SOLAR_CODEX_MODEL", "").strip()
+    configured_model = os.environ.get("CODEX_MODEL", "").strip()
+    return policy_model or configured_model or "gpt-5.5"
+
+
+def _codex_exec_command(
+    model: str,
+    effort: str,
+    cwd: str,
+    output_file: Path,
+    codex_binary: str = "codex",
+) -> list[str]:
+    cmd = [codex_binary]
     if _codex_live_search_requested():
         cmd.append("--search")
     cmd.append("exec")
     if _truthy_env("SOLAR_CODEX_OPERATOR_EPHEMERAL", "1"):
         cmd.append("--ephemeral")
     cmd.extend([
+        "--skip-git-repo-check",
         "--model",
         model,
         "--config",
@@ -194,6 +427,122 @@ def _existing_paths(values: list[Path]) -> list[Path]:
     return result
 
 
+def _codex_workspace_write_command(
+    command: list[str],
+    writable_dirs: list[Path] | None = None,
+) -> list[str]:
+    """Replace external bypass with Codex's native, bounded workspace sandbox."""
+    result = [
+        item
+        for item in command
+        if item != "--dangerously-bypass-approvals-and-sandbox"
+    ]
+    try:
+        insert_at = result.index("exec") + 1
+    except ValueError:
+        insert_at = 1 if result else 0
+    options: list[str] = []
+    if "--sandbox" not in result:
+        options.extend(["--sandbox", "workspace-write"])
+    seen: set[str] = set()
+    for raw in writable_dirs or []:
+        path = str(raw.expanduser().resolve(strict=False))
+        if path and path not in seen:
+            options.extend(["--add-dir", path])
+            seen.add(path)
+    result[insert_at:insert_at] = options
+    return result
+
+
+def _native_workspace_write_dirs(
+    *,
+    task_dir: Path,
+    cwd: Path,
+    env: dict[str, str],
+) -> list[Path]:
+    """Project operatord-validated output files into native directory grants.
+
+    Codex's native sandbox accepts additional writable directories, not exact
+    files. Operatord already validates every declared output against Solar's
+    runtime roots and pre-creates it; this second check prevents a standalone
+    wrapper invocation from turning an arbitrary environment value into a
+    write grant.
+    """
+    harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
+    authorized_roots = (
+        harness_dir,
+        task_dir.expanduser().resolve(strict=False),
+        cwd.expanduser().resolve(strict=False),
+    )
+    try:
+        declared = json.loads(env.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
+    except (TypeError, ValueError):
+        declared = []
+    result: list[Path] = []
+    seen: set[str] = set()
+    workspace = cwd.expanduser().resolve(strict=False)
+    for value in declared:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        output = Path(value).expanduser().resolve(strict=False)
+        if not any(output == root or output.is_relative_to(root) for root in authorized_roots):
+            continue
+        parent = output.parent
+        if parent == workspace or parent.is_relative_to(workspace):
+            continue
+        key = str(parent)
+        if key not in seen:
+            result.append(parent)
+            seen.add(key)
+    return result
+
+
+def _declared_read_scope_paths(env: dict[str, str], cwd: Path) -> list[Path]:
+    """Resolve the operator envelope's exact read grants.
+
+    Relative graph scopes are anchored to the sprint workdir. Evaluator
+    snapshots may add absolute published paths after their bytes and digest
+    have been frozen by graph dispatch.
+    """
+    try:
+        declared = json.loads(env.get("SOLAR_OPERATOR_READ_SCOPE_JSON") or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(declared, list):
+        return []
+    paths: list[Path] = []
+    for value in declared:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        path = Path(value).expanduser()
+        paths.append(path if path.is_absolute() else cwd / path)
+    return _existing_paths(paths)
+
+
+def _path_filesystem_type(path: Path) -> str:
+    """Return the Linux mount type containing path, using longest-prefix match."""
+    try:
+        resolved = path.expanduser().resolve(strict=False)
+        best: tuple[int, str] | None = None
+        for line in Path("/proc/self/mountinfo").read_text(encoding="utf-8").splitlines():
+            fields = line.split()
+            separator = fields.index("-")
+            mountpoint = Path(
+                fields[4]
+                .replace("\\040", " ")
+                .replace("\\011", "\t")
+                .replace("\\012", "\n")
+                .replace("\\134", "\\")
+            )
+            if resolved == mountpoint or resolved.is_relative_to(mountpoint):
+                candidate = (len(mountpoint.parts), fields[separator + 1].lower())
+                if best is None or candidate[0] > best[0]:
+                    best = candidate
+        return best[1] if best else ""
+    except (OSError, ValueError):
+        return ""
+
+
 def _filesystem_isolated_command(
     command: list[str],
     *,
@@ -204,14 +553,17 @@ def _filesystem_isolated_command(
     """Wrap a strict Solar operator in a kernel-enforced filesystem allowlist."""
     strict = _truthy_env("SOLAR_OPERATOR_STRICT_FS_SCOPE", "0")
     mode = env.get("SOLAR_CODEX_OPERATOR_FS_ISOLATION", "landlock").strip().lower()
+    if mode in {"codex", "builtin", "workspace-write"}:
+        writable_dirs = _native_workspace_write_dirs(task_dir=task_dir, cwd=cwd, env=env)
+        return _codex_workspace_write_command(command, writable_dirs), {
+            "mode": "codex_workspace_write",
+            "strict": False,
+            "read_write": [str(path) for path in writable_dirs],
+        }
     if mode in {"0", "off", "disabled", "none"}:
         if strict:
             raise RuntimeError("strict operator filesystem scope cannot disable Landlock")
         return command, {"mode": "disabled", "strict": False}
-    if sys.platform != "linux":
-        if strict:
-            raise RuntimeError("strict operator filesystem scope requires Linux Landlock")
-        return command, {"mode": "unsupported", "strict": False}
 
     harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
     state_root = Path(
@@ -223,6 +575,9 @@ def _filesystem_isolated_command(
     state_home = Path(tempfile.mkdtemp(prefix=f"{os.getpid()}-", dir=state_root))
     atexit.register(shutil.rmtree, state_home, ignore_errors=True)
     env["CODEX_SQLITE_HOME"] = str(state_home)
+    # Login shells spawned by Codex must not probe the operator user's real
+    # profile, which is intentionally outside the Landlock read boundary.
+    env["HOME"] = str(state_home)
     tmp_dir = task_dir / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
     env["TMPDIR"] = str(tmp_dir)
@@ -241,10 +596,33 @@ def _filesystem_isolated_command(
     config.write_text('cli_auth_credentials_store = "file"\n', encoding="utf-8")
     config.chmod(0o600)
     env["CODEX_HOME"] = str(codex_home)
+
+    if sys.platform != "linux":
+        if strict:
+            raise RuntimeError("strict operator filesystem scope requires Linux Landlock")
+        if sys.platform == "darwin":
+            writable_dirs = _native_workspace_write_dirs(task_dir=task_dir, cwd=cwd, env=env)
+            return _codex_workspace_write_command(command, writable_dirs), {
+                "mode": "codex_workspace_write",
+                "strict": False,
+                "read_write": [str(path) for path in writable_dirs],
+            }
+        # Preserve the Windows execution path that is already proven by the
+        # E2E run. Windows may run through native Codex or WSL; forcing the
+        # macOS workspace-write projection here changes that proven contract.
+        return command, {"mode": "unsupported", "strict": False}
+
     codex_arg0_dir = codex_home / "tmp" / "arg0"
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
-    codex_binary = Path(shutil.which("codex", path=env.get("PATH")) or "codex")
+    command_binary = Path(command[0]).expanduser() if command else Path("codex")
+    codex_binary = (
+        command_binary
+        if command_binary.is_file()
+        else Path(shutil.which("codex", path=env.get("PATH")) or "codex")
+    )
     resolved_binary = codex_binary.resolve(strict=False)
+    if command and Path(command[0]).name == codex_binary.name:
+        command = [str(resolved_binary), *command[1:]]
     # WSL resolves /etc/resolv.conf into /mnt/wsl. Landlock authorizes the
     # resolved inode, so /etc by itself is insufficient for DNS/token refresh.
     resolved_system_network_files = [
@@ -257,6 +635,7 @@ def _filesystem_isolated_command(
         )
         if path.exists()
     ]
+    declared_read_scope = _declared_read_scope_paths(env, cwd)
     read_only = _existing_paths(
         [
             Path("/usr"),
@@ -269,8 +648,12 @@ def _filesystem_isolated_command(
             resolved_binary.parent,
             *resolved_system_network_files,
             harness_dir,
+            harness_dir.parent / "AGENTS.md",
+            harness_dir.parent / ".agents",
+            *declared_read_scope,
         ]
     )
+    read_directories = _existing_paths([harness_dir.parent])
     try:
         declared_outputs = json.loads(env.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
     except (TypeError, ValueError):
@@ -296,15 +679,37 @@ def _filesystem_isolated_command(
     wrapper = Path(__file__).with_name("landlock_exec.py").resolve(strict=False)
     if not wrapper.is_file():
         raise RuntimeError(f"Landlock wrapper is missing: {wrapper}")
+    drvfs = _path_filesystem_type(harness_dir) in {"9p", "v9fs"}
     wrapped = [sys.executable, str(wrapper)]
+    if drvfs:
+        unshare = shutil.which("unshare", path=env.get("PATH"))
+        mount_wrapper = Path(__file__).with_name("mount_namespace_exec.py").resolve(strict=False)
+        if not unshare or not mount_wrapper.is_file():
+            raise RuntimeError("strict WSL operator scope requires unshare and mount_namespace_exec.py")
+        wrapped = [
+            unshare,
+            "--user",
+            "--map-root-user",
+            "--mount",
+            sys.executable,
+            str(mount_wrapper),
+        ]
+        for path in read_write:
+            if path == Path("/dev") or path.is_relative_to(Path("/dev")):
+                continue
+            wrapped.extend(["--read-write", str(path)])
+        wrapped.extend(["--", sys.executable, str(wrapper), "--read-scope-only"])
+    for path in read_directories:
+        wrapped.extend(["--read-directory", str(path)])
     for path in read_only:
         wrapped.extend(["--read-only", str(path)])
     for path in read_write:
         wrapped.extend(["--read-write", str(path)])
     wrapped.extend(["--", *command])
     return wrapped, {
-        "mode": "landlock",
+        "mode": "mount_namespace+landlock-read" if drvfs else "landlock",
         "strict": strict,
+        "read_directories": [str(path) for path in read_directories],
         "read_only": [str(path) for path in read_only],
         "read_write": [str(path) for path in read_write],
     }
@@ -381,8 +786,9 @@ def main() -> int:
 
     task_dir = Path(os.environ.get("TASK_DIR") or ".").expanduser()
     task_dir.mkdir(parents=True, exist_ok=True)
+    skill_bridge_evidence = _materialize_skill_bridge_evidence(task_dir, dispatch)
     output_file = task_dir / "codex-last-message.md"
-    model = os.environ.get("CODEX_MODEL", "gpt-5.5").strip() or "gpt-5.5"
+    model = _codex_model()
     effort = os.environ.get("CODEX_REASONING_EFFORT", "medium").strip() or "medium"
     cwd = str(Path(os.environ.get("CODEX_WORKDIR") or os.environ.get("WORK_DIR") or os.getcwd()).expanduser())
     if not Path(cwd).is_dir():
@@ -390,7 +796,15 @@ def main() -> int:
         return 72
 
     codex_env = _codex_exec_env(task_dir)
-    raw_cmd = _codex_exec_command(model, effort, cwd, output_file)
+    codex_binary, resolution = resolve_codex_cli(
+        Path(codex_env["HARNESS_DIR"]),
+        env=codex_env,
+        configured_path=os.environ.get("SOLAR_CODEX_BIN", ""),
+    )
+    if codex_binary is None:
+        print(f"ERROR: Codex CLI unavailable: {resolution}", file=sys.stderr)
+        return 69
+    raw_cmd = _codex_exec_command(model, effort, cwd, output_file, str(codex_binary))
     try:
         cmd, fs_scope = _filesystem_isolated_command(
             raw_cmd,
@@ -415,7 +829,12 @@ def main() -> int:
         f"mode={fs_scope.get('mode')} strict={str(bool(fs_scope.get('strict'))).lower()} "
         f"ro={len(fs_scope.get('read_only', []))} rw={len(fs_scope.get('read_write', []))}"
     )
-    print("codex_operator: invoking " + " ".join(shlex.quote(part) for part in cmd[:-1]) + " <dispatch>")
+    print(
+        "codex_operator: invoking "
+        + " ".join(shlex.quote(part) for part in cmd[:-1])
+        + " <dispatch>",
+        flush=True,
+    )
     cli_log = task_dir / "codex-cli-output.log"
     started = time.monotonic()
     started_wall = time.time()
@@ -467,6 +886,7 @@ def main() -> int:
                         except Exception:
                             proc.kill()
                         proc.wait(timeout=5)
+                    _write_skill_bridge_result(task_dir, skill_bridge_evidence, 0)
                     return 0
             if timeout_seconds > 0 and elapsed >= timeout_seconds:
                 _terminate_process_group(proc)
@@ -489,15 +909,18 @@ def main() -> int:
                 )
                 print(combined, file=sys.stderr)
                 _write_pm_result(task_dir, output_file, combined, 124)
+                _write_skill_bridge_result(task_dir, skill_bridge_evidence, 124)
                 return 124
             time.sleep(1)
 
     combined = cli_log.read_text(encoding="utf-8", errors="replace") if cli_log.exists() else ""
     if combined:
-        print(combined, end="" if combined.endswith("\n") else "\n")
+        print(combined, end="" if combined.endswith("\n") else "\n", flush=True)
     if proc.returncode == 0:
         _write_pm_result(task_dir, output_file, combined, int(proc.returncode))
-    return int(proc.returncode or 0)
+    exit_code = int(proc.returncode or 0)
+    _write_skill_bridge_result(task_dir, skill_bridge_evidence, exit_code)
+    return exit_code
 
 
 if __name__ == "__main__":

@@ -147,9 +147,10 @@ def test_p22_j06_idea_generation(repo_root: Path, tmp_path: Path) -> None:
         and any(item.get("idea_id") in selected_idea_ids for item in evaluations),
         {"selected_idea_ids": selected_idea_ids, "evaluated_idea_ids": [item.get("idea_id") for item in evaluations]},
     )
+    verification_ready_cards = [idea for idea in ideas if _has_verification_contract(idea)]
     rec.add_assertion(
         "at_least_one_verification_ready_card",
-        any(_has_verification_contract(idea) for idea in ideas),
+        bool(verification_ready_cards),
         [
             {
                 "idea_id": idea.get("idea_id"),
@@ -165,8 +166,21 @@ def test_p22_j06_idea_generation(repo_root: Path, tmp_path: Path) -> None:
     rec.add_l2("Workflow", "Opportunity Portfolio Prioritization", "local novelty/feasibility evaluation assigned recommendation and rank evidence", evaluation_ev or rec.run_dir, "partial")
     rec.add_l2("Workflow", "Research Question & Technical Claim Formation", "candidate hypotheses were generated from the ingested paper evidence", ideas_ev or rec.run_dir, "partial")
     rec.add_l2("Workflow", "Claim, Evidence, Data & Method Modeling", "candidate origin evidence IDs and method/paper evidence inputs were recorded", ideas_ev or rec.run_dir, "partial")
-    rec.add_l2("Workflow", "Falsifiability Screening & Hypothesis Contracting", "test asserts verification-ready fields; current candidates lack complete falsifiability contracts", ideas_ev or rec.run_dir, False)
-    rec.add_l2("Workflow", "Verification-Ready POC Design", "test asserts minimum-experiment fields; current candidates lack complete local POC design", ideas_ev or rec.run_dir, False)
+    verification_support = "partial" if verification_ready_cards else False
+    rec.add_l2(
+        "Workflow",
+        "Falsifiability Screening & Hypothesis Contracting",
+        "generated idea cards include falsifiability/testability contracts for the local evidence path",
+        ideas_ev or rec.run_dir,
+        verification_support,
+    )
+    rec.add_l2(
+        "Workflow",
+        "Verification-Ready POC Design",
+        "generated idea cards include minimum-experiment fields; executable POC assets are covered by J07",
+        ideas_ev or rec.run_dir,
+        verification_support,
+    )
     rec.add_l2("Foundation", "Capability Discovery, Scoring & Selection", "local evaluation scored novelty/feasibility and selected candidate ids", evaluation_ev or novelty_ev or rec.run_dir, "partial")
     limitations = [
         "Live literature discovery and provider-backed novelty were not run in this repair batch; offline local evidence only checks basic idea generation."

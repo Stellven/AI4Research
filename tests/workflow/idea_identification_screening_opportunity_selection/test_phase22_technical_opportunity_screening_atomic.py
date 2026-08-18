@@ -9,6 +9,7 @@ REPO = Path(__file__).resolve().parents[3]
 AUTOSCI_ROOT = REPO / "harness" / "plugins" / "autosci"
 sys.path.insert(0, str(AUTOSCI_ROOT))
 
+from backends import novelty_review  # noqa: E402
 from backends.novelty_review import evaluate_novelty_and_review  # noqa: E402
 
 
@@ -110,5 +111,48 @@ def test_atomic_technical_opportunity_screening__provider_unavailable(monkeypatc
     assert outputs["external_novelty"]["reason"] == "Online novelty fetch disabled: inputs.allow_network_fetch=false"
     assert outputs["external_novelty"]["provider_statuses"] == []
     assert outputs["external_novelty"]["provenance"]["status"] == "unavailable"
-    assert "External Web/Semantic Scholar/DeepXiv novelty evidence is unavailable or invalid." in outputs["risks"]
+    assert "External OpenAlex/Web/Semantic Scholar/DeepXiv novelty evidence is unavailable or invalid." in outputs["risks"]
     assert outputs["review_llm"]["status"] == "unavailable"
+
+
+def test_atomic_technical_opportunity_screening__openalex_live_shape_has_auditable_provenance(
+    monkeypatch, tmp_path: Path
+) -> None:
+    _disable_live_review(monkeypatch)
+
+    def fake_fetch(url: str, *, query: str, limit: int, **_kwargs) -> dict[str, object]:
+        assert "api.openalex.org" in url
+        assert query == "generated agent skills"
+        assert limit == 3
+        return {
+            "results": [
+                {
+                    "id": "https://openalex.org/W1234567890",
+                    "doi": "https://doi.org/10.1000/openalex-proof",
+                    "title": "Generated Agent Skills with Verifier Feedback",
+                }
+            ]
+        }
+
+    monkeypatch.setattr(novelty_review, "_fetch_json_url", fake_fetch)
+    result = evaluate_novelty_and_review(
+        _idea(),
+        {
+            "topic": "generated agent skills",
+            "online_novelty": True,
+            "novelty_providers": ["openalex"],
+            "max_external_sources": 3,
+            "novelty_payload_archive_dir": str(tmp_path / "archive"),
+        },
+        workspace_root=tmp_path,
+        repository_root=REPO,
+    )
+
+    external = result["external_novelty"]
+    assert external["status"] == "completed"
+    assert external["source_count"] == 1
+    assert external["provenance"]["status"] == "passed"
+    assert external["provenance"]["provider_schemas"] == ["openalex"]
+    assert result["closest_prior_work"][0]["source_id"] == "external:openalex:https://openalex.org/W1234567890"
+    provider = external["provider_statuses"][0]
+    assert provider["raw_payload_archive_status"] == "completed"

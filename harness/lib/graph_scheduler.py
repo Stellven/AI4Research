@@ -340,16 +340,15 @@ def _attach_runtime_planes(
     for node_id, result in node_results.items():
         if node_id not in ids or not isinstance(result, dict):
             continue
-        status = str(result.get("status") or "").strip().lower()
-        if status:
-            ids[node_id]["status"] = status
-        updated_at = str(result.get("updated_at") or "").strip()
-        if updated_at:
-            ids[node_id]["updated_at"] = updated_at
-        if result.get("assigned_to"):
-            ids[node_id]["assigned_to"] = result.get("assigned_to")
-        if result.get("dispatch_id"):
-            ids[node_id]["dispatch_id"] = result.get("dispatch_id")
+        # The spec plane deliberately strips every runtime field in
+        # RUNTIME_NODE_SPEC_FIELDS.  Rehydrate the same complete field set on
+        # load; restoring only status/lease metadata silently drops durable
+        # closeout authority such as closeout_receipt.  Downstream evaluators
+        # then reject a valid published ancestor because its digest chain
+        # appears incomplete after the first save/load round trip.
+        for field in RUNTIME_NODE_SPEC_FIELDS:
+            if field in result:
+                ids[node_id][field] = deepcopy(result[field])
 
 
 def _runtime_state_from_graph(graph: dict[str, Any], *, graph_path: Path | None = None) -> dict[str, Any]:
@@ -621,6 +620,17 @@ def sync_status_cache_from_graph(
     status UI, exports, and old monitors. Keeping this projection in the same
     write path as graph closeout prevents a passed DAG from looking active.
     """
+    # Once the split runtime plane exists, it is authoritative for node/gate
+    # status.  Some callers retain a specification-only graph object across a
+    # save, so calculating parent readiness from that stale object falsely
+    # projects every node and gate as open.  Rehydrate from disk at this
+    # compatibility boundary; callers without a persisted state plane retain
+    # the legacy in-memory behavior.
+    if graph_path:
+        persisted_graph_path = Path(graph_path).expanduser()
+        state_path = _state_path_for_graph(graph, persisted_graph_path)
+        if persisted_graph_path.exists() and state_path.exists():
+            graph = load_graph(persisted_graph_path)
     parent = parent_ready_check(graph)
     sid = _sprint_id_for_graph(graph, graph_path)
     status_path = _status_path_for_graph(graph, graph_path)
@@ -857,6 +867,9 @@ def sync_status_cache_from_graph(
         and already_closed
         and already_graph_passed
         and (current.get("graph_parent_ready") or {}).get("ready") is True
+        and not current.get("legacy_pass_blocked")
+        and not current.get("legacy_pass_block_reason")
+        and not current.get("legacy_pass_block_detail")
     ):
         result["reason"] = "already_synced"
         return result
@@ -875,9 +888,13 @@ def sync_status_cache_from_graph(
                 "status_fields": {
                     "phase": "completed",
                     "stage": "completed",
+                    "completed_at": str(current.get("completed_at") or _now()),
                     "active_node": None,
                     "graph_parent_ready": parent,
                     "task_graph_status": "passed",
+                    "legacy_pass_blocked": False,
+                    "legacy_pass_block_reason": None,
+                    "legacy_pass_block_detail": None,
                 },
             },
         )
@@ -1032,16 +1049,32 @@ def _human_review_is_blocking(node: dict[str, Any], result: dict[str, Any] | Non
 
 
 def human_review_generation(graph: dict[str, Any], node_id: str) -> int:
-    """Current block generation (legacy escalations are generation 1)."""
+    """Latest durable review generation (legacy escalations are generation 1).
+
+    A later terminal result can replace the current ``node_results`` mirror
+    without erasing ``human_review_history``. The history maximum remains the
+    generation floor so a fresh block never reuses an already resumed token.
+    """
     ids = _node_map(graph)
     if node_id not in ids:
         raise ValueError(f"unknown node: {node_id}")
     result = _node_results(graph).get(node_id)
     record = _human_review_record(ids[node_id], result)
-    try:
-        generation = max(0, int(record.get("generation") or 0))
-    except (TypeError, ValueError):
-        generation = 0
+    generation = 0
+    candidates: list[Any] = [record]
+    for owner in (ids[node_id], result if isinstance(result, dict) else {}):
+        history = owner.get("human_review_history") if isinstance(owner, dict) else None
+        if isinstance(history, list):
+            candidates.extend(history)
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        if str(candidate.get("schema_version") or "") != HUMAN_REVIEW_SCHEMA_VERSION:
+            continue
+        try:
+            generation = max(generation, max(0, int(candidate.get("generation") or 0)))
+        except (TypeError, ValueError):
+            continue
     if generation:
         return generation
     return 1 if _human_review_is_blocking(ids[node_id], result) else 0
@@ -3358,6 +3391,66 @@ def terminalize_dependency_blocked_nodes(graph: dict[str, Any]) -> list[dict[str
             }
         )
         changed.append({"node": node_id, "status": "skipped", "reason": "blocked_by_failed_dependency", "blocked_by": blockers})
+    return changed
+
+
+def reopen_recovered_dependency_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
+    """Reopen nodes auto-skipped solely because an internal dependency failed.
+
+    A dependency can recover after an explicit repair/human-review cycle.  The
+    old terminalization marker must not leave its downstream nodes permanently
+    skipped once every recorded blocker is healthy.  Only scheduler-authored
+    ``blocked_by_failed_dependency`` skips are eligible; user cancellations and
+    other terminal skips remain frozen.
+    """
+    ids = _node_map(graph)
+    results = _node_results(graph)
+    changed: list[dict[str, Any]] = []
+    for node_id, node in ids.items():
+        if node_status(graph, node_id) != "skipped":
+            continue
+        result = results.get(node_id) if isinstance(results.get(node_id), dict) else {}
+        skip_reason = str(node.get("skip_reason") or (result or {}).get("note") or "").strip()
+        if skip_reason != "blocked_by_failed_dependency":
+            continue
+        blockers = [
+            dep_id
+            for dep_id in _internal_depends_on(node)
+            if dep_id in ids and _dependency_blocks(graph, ids, dep_id)
+        ]
+        if blockers:
+            continue
+
+        now = _now()
+        _ledger_transition(
+            graph,
+            node_id,
+            "skipped",
+            "pending",
+            "reopen_recovered_dependency_nodes",
+            note="dependency_recovered",
+        )
+        node["status"] = "pending"
+        node["updated_at"] = now
+        node.pop("blocked_by_failed_dependency", None)
+        node.pop("skip_reason", None)
+        node.pop("assigned_to", None)
+        node.pop("dispatch_id", None)
+        results[node_id] = {
+            "status": "pending",
+            "updated_at": now,
+            "note": "reopened_after_dependency_recovered",
+        }
+        gate = str(node.get("gate") or "")
+        if gate and isinstance(graph.get("gate_results"), dict):
+            graph["gate_results"].pop(gate, None)
+        changed.append(
+            {
+                "node": node_id,
+                "status": "pending",
+                "reason": "dependency_recovered",
+            }
+        )
     return changed
 
 

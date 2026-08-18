@@ -45,6 +45,19 @@ def _candidate_channels(item: dict[str, Any]) -> list[str]:
     return [_normalize(channel).lower() for channel in (item.get("source_channels") or []) if _normalize(channel)]
 
 
+def _provider_family(channel: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "_", _normalize(channel).lower()).strip("_")
+    if normalized in {"search_s2", "s2_search", "references", "citations", "recommend", "s2_reference", "s2_citation", "s2_recommend", "semantic_scholar", "s2"}:
+        return "semantic_scholar"
+    if normalized.startswith("openalex"):
+        return "openalex"
+    if normalized.startswith("crossref"):
+        return "crossref"
+    if normalized in {"arxiv", "paper_copilot"}:
+        return normalized
+    return normalized
+
+
 def _contains_any(text: str, needles: list[str]) -> bool:
     low_text = _normalize(text).lower()
     return any(needle and needle.lower() in low_text for needle in needles)
@@ -99,11 +112,14 @@ def _run_discovery(
         run_id,
         "--limit",
         str(limit),
+        "--min-provider-families",
+        "2",
         "--online",
         *(item for anchor in anchors for item in ("--anchor", anchor)),
         *(item for neg in negative_ids for item in ("--negative", neg)),
     ]
-    summary, _ = run_autosci(rec, sandbox, "discover", args, timeout=240, allow_live=True)
+    timeout_seconds = max(1, int(os.environ.get("PHASE22_J05_DISCOVERY_TIMEOUT_SECONDS", "240")))
+    summary, _ = run_autosci(rec, sandbox, "discover", args, timeout=timeout_seconds, allow_live=True)
     # Failed provider-backed actions still print a structured skill-run summary.
     # Recover it from the runner's error wrapper so the referenced action
     # evidence can classify provider/network outages truthfully.
@@ -148,7 +164,9 @@ def _provider_blocker(summary: dict[str, Any], payload: dict[str, Any]) -> str:
     lower = " ".join([message.lower(), provider_status, final_status, *invalid_reasons])
     provider_unproven = provider_status in {"incomplete", "pending"} and not provider_channels
     provider_missing_reason = any("provider" in reason and "channel" in reason for reason in invalid_reasons)
-    if any(token in lower for token in ("provider", "network", "connection", "timeout", "dns", "unreachable", "requests", "429", "503", "blocked", "unavailable")):
+    if summary.get("_returncode") == 124:
+        return message or "Provider-backed discovery command timed out."
+    if any(token in lower for token in ("provider", "network", "connection", "timeout", "timed out", "dns", "unreachable", "requests", "429", "503", "blocked", "unavailable")):
         return message or f"Provider boundary was not available: {provider_status}"
     if provider_unproven and provider_missing_reason:
         return (
@@ -200,8 +218,12 @@ def test_p22_j05_literature_discovery(repo_root: Path, tmp_path: Path) -> None:
     negative_ids = [_normalize(str(item)) for item in request_spec.get("negative_ids", []) if _normalize(str(item))]
     limit = int(request_spec.get("limit", expectation_spec.get("limit", 5)))
     min_candidates = int(request_spec.get("min_candidates", expectation_spec.get("min_candidates", 3)))
-    required_channels = [_normalize(str(item)).lower() for item in request_spec.get("required_source_channels", []) if _normalize(str(item))]
-    source_provider = _normalize(str(request_spec.get("source_provider", expectation_spec.get("source_provider", ""))))
+    required_provider_families = {
+        _provider_family(str(item))
+        for item in request_spec.get("required_provider_families", expectation_spec.get("required_provider_families", []))
+        if _normalize(str(item))
+    }
+    min_provider_families = int(request_spec.get("min_provider_families", expectation_spec.get("min_provider_families", 2)))
 
     if not topic:
         rec.add_assertion("discovery_request_topic_present", False, request_spec)
@@ -287,7 +309,7 @@ def test_p22_j05_literature_discovery(repo_root: Path, tmp_path: Path) -> None:
     title_required = [bool(t) for t in titles]
     candidate_channels = [_candidate_channels(item) for item in candidates]
     observed_channels = set(channels)
-    expected_channels = set(required_channels)
+    observed_provider_families = {_provider_family(channel) for channel in observed_channels if _provider_family(channel)}
 
     rec.add_assertion("candidate_identity_present", all(has_identity), {"missing": [i for i, ok in enumerate(has_identity) if not ok]})
     rec.add_assertion(
@@ -302,9 +324,28 @@ def test_p22_j05_literature_discovery(repo_root: Path, tmp_path: Path) -> None:
     rec.add_assertion("candidate_year_required", all(year.isdigit() and 1900 <= int(year) <= 2100 for year in years), years)
     rec.add_assertion("candidate_source_channels_required", all(len(item) > 0 for item in candidate_channels), channels)
     rec.add_assertion(
-        "required_source_channels_present",
-        expected_channels.issubset(observed_channels),
-        {"required": sorted(expected_channels), "observed": sorted(observed_channels)},
+        "required_provider_families_present",
+        required_provider_families.issubset(observed_provider_families),
+        {"required": sorted(required_provider_families), "observed": sorted(observed_provider_families), "channels": sorted(observed_channels)},
+    )
+    rec.add_assertion(
+        "multi_source_provider_coverage",
+        len(observed_provider_families) >= min_provider_families,
+        {"minimum": min_provider_families, "observed": sorted(observed_provider_families)},
+    )
+    content_bearing = [
+        bool(_normalize(str(item.get("abstract") or item.get("tldr") or "")))
+        for item in candidates
+    ]
+    rec.add_assertion(
+        "candidate_content_or_provider_archive_present",
+        sum(content_bearing) >= min_candidates
+        or all(
+            any(artifact.get("type") == "public_provider_discovery_archive_json" for artifact in payload.get("artifacts") or [])
+            for payload in (topic_payload, anchor_payload)
+            if isinstance(payload, dict) and _normalize(str((payload.get("outputs") or {}).get("mode", ""))).startswith("topic")
+        ),
+        {"content_bearing_count": sum(content_bearing), "candidate_count": len(candidates)},
     )
 
     rec.add_assertion(
@@ -390,10 +431,13 @@ def test_p22_j05_literature_discovery(repo_root: Path, tmp_path: Path) -> None:
         all(status in {"completed", "ready", "active", "verified"} for status in provider_statuses),
         {"provider_statuses": provider_statuses, "provider_channels": provider_channels},
     )
-    if source_provider:
-        rec.add_assertion("provider_channel_target_met", source_provider in provider_channels, {"required": source_provider, "observed": provider_channels})
-    else:
-        rec.add_assertion("provider_channel_target_met", True, {"required": source_provider, "observed": provider_channels})
+    boundary_provider_families = {_provider_family(channel) for channel in provider_channels if _provider_family(channel)}
+    rec.add_assertion(
+        "provider_family_target_met",
+        required_provider_families.issubset(boundary_provider_families)
+        and len(boundary_provider_families) >= min_provider_families,
+        {"required": sorted(required_provider_families), "minimum": min_provider_families, "observed": sorted(boundary_provider_families)},
+    )
 
     modes = []
     for payload in (topic_payload, anchor_payload):
@@ -420,6 +464,34 @@ def test_p22_j05_literature_discovery(repo_root: Path, tmp_path: Path) -> None:
         "Workflow",
         "Search Strategy Formation",
         "separate topic and anchor discover_literature runs used the fixture query, anchors, negative IDs, limit, and online provider mode.",
+        rec.run_dir / "commands.json",
+        True,
+    )
+    rec.add_l2(
+        "Workflow",
+        "Multi-Source Signal Discovery",
+        f"topic and anchor discovery returned provider-backed candidates across {sorted(boundary_provider_families)}",
+        topic_path or rec.run_dir,
+        True,
+    )
+    rec.add_l2(
+        "Workflow",
+        "Source Qualification",
+        "candidates were checked for stable identity, title, publication year, provider channel, content/provider archive, uniqueness, and negative-ID exclusion",
+        topic_path or rec.run_dir,
+        True,
+    )
+    rec.add_l2(
+        "Workflow",
+        "Signal Organization",
+        "topic and anchor shortlists retained distinct run identity, deduplication, provider provenance, and anchor influence",
+        anchor_path or rec.run_dir,
+        True,
+    )
+    rec.add_l2(
+        "Workflow",
+        "Search Coverage Review",
+        "both topic and anchor provider boundaries completed and the combined coverage includes at least two public provider families",
         rec.run_dir / "commands.json",
         True,
     )

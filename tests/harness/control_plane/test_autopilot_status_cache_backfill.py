@@ -6,8 +6,12 @@ import json
 import sys
 from pathlib import Path
 
+HARNESS_ROOT = Path(__file__).resolve().parents[3] / "harness"
+sys.path.insert(0, str(HARNESS_ROOT / "lib"))
+import plan_validator
 
-MODULE_PATH = (Path(__file__).resolve().parents[3] / 'harness') / "tools" / "solar-autopilot-monitor.py"
+
+MODULE_PATH = HARNESS_ROOT / "tools" / "solar-autopilot-monitor.py"
 spec = importlib.util.spec_from_file_location("solar_autopilot_monitor", MODULE_PATH)
 mod = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
@@ -153,3 +157,78 @@ def test_load_state_refreshes_requirement_coverage_when_graph_replanned(tmp_path
     payload = json.loads((sprints / f"{sid}.requirement_trace.json").read_text())
     assert calls == [sid]
     assert payload["items"][0]["mapped_nodes"] == ["N1"]
+
+
+def test_dispatch_ready_graph_nodes_passes_configured_sprints_dir_to_plan_guard(
+    tmp_path, monkeypatch
+) -> None:
+    sprints = tmp_path / "sprints"
+    sprints.mkdir(parents=True)
+    sid = "sprint-plan-guard-path"
+    graph_path = sprints / f"{sid}.task_graph.json"
+    graph = {"sprint_id": sid, "nodes": []}
+    graph_path.write_text(json.dumps(graph) + "\n", encoding="utf-8")
+    seen = {}
+
+    def fake_plan_guard(candidate, *, sprints_dir, sid):
+        seen.update(graph=candidate, sprints_dir=sprints_dir, sid=sid)
+        return {"ok": True}
+
+    monkeypatch.setattr(mod, "SPRINTS", sprints)
+    monkeypatch.setattr(mod, "graph_path_for", lambda _sid: graph_path)
+    monkeypatch.setattr(mod, "load_graph", lambda _path: graph)
+    monkeypatch.setattr(mod, "validate_graph", lambda _graph: {"ok": True})
+    monkeypatch.setattr(
+        mod,
+        "graph_dispatch_node_evals",
+        lambda *_args, **_kwargs: {"ok": True, "skipped": []},
+    )
+    monkeypatch.setattr(mod, "graph_dispatch_ready", lambda *_args, **_kwargs: {"ok": True})
+    monkeypatch.setattr(plan_validator, "check_planner_graph_dispatchable", fake_plan_guard)
+
+    result = mod.dispatch_ready_graph_nodes(sid)
+
+    assert result["ok"] is True
+    assert seen == {"graph": graph, "sprints_dir": sprints, "sid": sid}
+
+
+def test_builder_transition_clears_stale_planner_dispatch_claim(tmp_path, monkeypatch) -> None:
+    sprints = tmp_path / "sprints"
+    sprints.mkdir(parents=True)
+    sid = "sprint-clear-planner-claim"
+    status = {
+        "sprint_id": sid,
+        "status": "active",
+        "phase": "planning_complete",
+        "handoff_to": "builder_main",
+        "target_role": "builder_main",
+        "plan_compile_required": True,
+        "planner_dispatch_claim": {
+            "owner": "operator_pool",
+            "state": "failed",
+            "failure_reason": "no_dispatchable_operator_for_role: planner",
+        },
+        "history": [],
+    }
+    saved = []
+    events = []
+    monkeypatch.setattr(mod, "SPRINTS", sprints)
+    monkeypatch.setattr(plan_validator, "compile_planner_graph", lambda *_args, **_kwargs: {"ok": True})
+    monkeypatch.setattr(mod, "save_json", lambda _path, payload: saved.append(dict(payload)))
+    monkeypatch.setattr(mod, "append_event", lambda *args: events.append(args))
+
+    changed = mod.normalize_status_to_workflow_route(
+        sid,
+        status,
+        {
+            "route_role": "builder_main",
+            "stage": "planning_complete",
+            "reason": "planner_artifacts_and_task_graph_ready",
+        },
+    )
+
+    assert changed is True
+    assert "planner_dispatch_claim" not in status
+    assert "plan_compile_required" not in status
+    assert saved[-1]["handoff_to"] == "builder_main"
+    assert events[-1][3]["planner_claim_cleared"] is True

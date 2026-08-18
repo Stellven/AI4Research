@@ -2,6 +2,7 @@
 node_modules/
 dist/
 renderer/
+.packaging/
 npm-debug.log*
 
 # Dev screenshots (kept out of git; build/icon.png IS tracked).

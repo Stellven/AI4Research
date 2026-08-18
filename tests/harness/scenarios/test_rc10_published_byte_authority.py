@@ -236,6 +236,39 @@ def test_multi_file_publish_rolls_back_when_a_later_replace_fails(
     assert not list(destination_root.glob(".*.solar-publish-*"))
 
 
+def test_directory_publish_replaces_existing_tree_without_hashing_transaction_backups(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Windows rejects fsync() on the read-only verification descriptor; the
+    # production path under test runs in WSL. Keep this regression focused on
+    # the directory transaction digest rather than that existing portability gap.
+    monkeypatch.setattr(am.os, "fsync", lambda _fd: None)
+    staging = tmp_path / "staging"
+    source = staging / "workspace" / "report" / "final.md"
+    destination_root = tmp_path / "product"
+    destination = destination_root / "report" / "final.md"
+    source.parent.mkdir(parents=True)
+    destination.parent.mkdir(parents=True)
+    source.write_text("verified report\n", encoding="utf-8")
+    destination.write_text("older report\n", encoding="utf-8")
+    manifest = am.write_manifest(
+        tmp_path / "sprints",
+        "sid",
+        {"id": "S1", "write_scope": ["workspace/report/"]},
+        generation=0,
+        base_dir=staging,
+        roots={"canonical": "workspace/"},
+    )
+    assert manifest is not None
+
+    result = am.publish_workspace_outputs(manifest, destination_root)
+
+    assert result["ok"] is True, result
+    assert destination.read_text(encoding="utf-8") == "verified report\n"
+    assert not list((destination_root / "report").glob(".*.solar-publish-*"))
+
+
 def test_failed_rollback_preserves_the_original_file_backup(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
