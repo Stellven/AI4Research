@@ -3,7 +3,12 @@
 # Tests: schema file, extract, query, coordinator hook, EXPERIENCE_HOOK=0
 
 set -uo pipefail
-cd "$(dirname "$0")/.."
+# These tests reference lib/, bin/ and tools/ relative to the working
+# directory, so they need to run from harness/. They used to live at
+# harness/tests/, where "$0/.." was harness/; after the move to
+# tests/harness/ the same expression lands in tests/ instead. Sibling tests
+# in this directory already resolve harness/ this way.
+cd "$(dirname "$0")/../../harness"
 HARNESS_DIR="$(pwd)"
 PASS=0; FAIL=0
 

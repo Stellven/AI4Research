@@ -157,8 +157,16 @@ if grep -qE '全部通过|verified-live|live [[:alpha:]]+ status: (verified|ok)(
 fi
 echo "solar-harness status auth/quota boundary: ok"
 
-HARNESS_DIR="$home_dir/.solar/harness" bash "$home_dir/.solar/tests/harness/test_dispatch_ledger.sh" >/dev/null
-echo "dispatch ledger/queue plumbing: ok"
+# GAP-001 (docs/testing/COVERAGE-GAPS.md).
+# A dispatch ledger/queue plumbing assertion used to run here. It invoked
+# "$home_dir/.solar/tests/harness/test_dispatch_ledger.sh", which could not work:
+# the installer does not ship tests/ into ~/.solar (this was the only reference
+# to that path in the tree), and the test itself was quarantined to
+# tests/quarantine/unsafe_home_shell/disabled_dispatch_ledger.sh for forcing a
+# real $HOME. The call therefore exited 127 rather than asserting anything.
+# Restoring the coverage needs three separate changes - un-quarantine the test,
+# make it sandbox-safe, and add tests/ to the installer payload - so it is
+# tracked as follow-up work rather than repaired here.
 
 envelope="$sandbox/no-llm-envelope.json"
 cat > "$envelope" <<'JSON'

@@ -41,14 +41,24 @@ jobs:
       - name: Install repository-safety test dependencies
         run: python -m pip install pytest jsonschema
 
+      # Every gate below runs to completion and reports, then the final step
+      # decides the verdict. Previously the first failure stopped the job, so a
+      # tracked-file violation hid an unrelated secret-scan failure entirely -
+      # nobody had ever seen it. Collecting first makes one run report every
+      # problem instead of only the earliest one.
       - name: Reject tracked local and generated state
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        id: hygiene
+        continue-on-error: true
         run: bash scripts/check-repo-hygiene.sh
 
       - name: Verify hygiene gate negative controls
+        id: negative_controls
+        continue-on-error: true
         run: bash tests/repository/governance/test_repo_hygiene.sh
 
       - name: Enforce safe staging on changed paths
+        id: safe_staging
+        continue-on-error: true
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -66,118 +76,75 @@ jobs:
           fi
 
       - name: Scan repository for secrets
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        id: secret_scan
+        continue-on-error: true
         run: python scripts/check-secret-scan.py
 
       - name: Enforce Windows filename gate
+        id: windows_filenames
+        continue-on-error: true
         run: python scripts/check-windows-filenames.py
 
-      - name: Verify repository safety fixtures
-        run: |
-          python -m pytest -q \
-            tests/repository/governance/test_safe_staging.py \
-            tests/repository/governance/test_windows_filenames.py \
-            tests/harness/research_orchestration/test_sandbox_fallback_matrix.py
-
-  python-smoke:
-    name: Python smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
-
       - name: Syntax check critical runtime files
+        id: runtime_syntax
+        continue-on-error: true
         run: |
           python -m py_compile \
             harness/lib/graph_node_dispatcher.py \
             harness/lib/symphony/status-server.py \
             harness/scripts/tech_hotspot_radar.py
 
-      - name: Run graph and dispatch smoke tests
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
-        env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
+      - name: Verify repository safety fixtures
+        id: safety_fixtures
+        continue-on-error: true
         run: |
           python -m pytest -q \
-            tests/harness/graph/test_pm_inbox_closeout_reconcile.py \
-            tests/harness/graph/test_graph_status_sync.py \
-            tests/harness/graph/test_parent_ready_closeout.py \
-            tests/harness/graph/test_task_graph_state_io.py \
-            tests/harness/graph/test_graph_dispatch_lease_busy.py \
-            tests/harness/graph/test_graph_dispatch_submit.py \
-            tests/harness/graph/test_worker_assignment_reasons.py \
-            tests/harness/test_eval_verdict_evidence_gate_wiring.py \
-            tests/harness/test_pm_dispatch.py
+            tests/repository/governance/test_safe_staging.py \
+            tests/repository/governance/test_windows_filenames.py \
+            tests/harness/research_orchestration/test_sandbox_fallback_matrix.py
 
-  hf-ai-influence-smoke:
-    name: HF and AI Influence smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
-
-      - name: Run HF and report center smoke tests
-        run: |
-          python -m pytest -q \
-            tests/harness/test_tech_hotspot_browser_agent_cmd.py \
-            tests/harness/test_hf_paper_insight_runtime.py \
-            tests/harness/test_hf_paper_insight_schema.py \
-            tests/harness/test_hf_paper_insight_scoring.py \
-            tests/harness/test_ai_influence_status_server.py
-          python tests/harness/test_status_server_ai_influence.py
-
-  harness-shell-smoke:
-    name: Harness shell smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
-
-      - name: Run shell smoke tests
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
+      - name: Repository hygiene verdict
+        shell: bash
         env:
-          SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
+          # Gates with a known open failure, excused on pull requests only.
+          # EMPTY, and it must stay that way for secret_scan in particular: an
+          # advisory secret scan does not stop a leak, it reports one. The five
+          # findings that used to be excused were fixtures for the secret
+          # scrubber itself, and are now pinned line by line in
+          # .secret-scan-allowlist by SHA-256, so a genuinely new secret fails
+          # this job instead of being waved through with them.
+          EXCUSED_ON_PULL_REQUEST: ""
+          R_HYGIENE: ${{ steps.hygiene.outcome }}
+          R_NEGATIVE_CONTROLS: ${{ steps.negative_controls.outcome }}
+          R_SAFE_STAGING: ${{ steps.safe_staging.outcome }}
+          R_SECRET_SCAN: ${{ steps.secret_scan.outcome }}
+          R_WINDOWS_FILENAMES: ${{ steps.windows_filenames.outcome }}
+          R_SAFETY_FIXTURES: ${{ steps.safety_fixtures.outcome }}
+          R_RUNTIME_SYNTAX: ${{ steps.runtime_syntax.outcome }}
         run: |
-          bash tests/harness/test_autopilot_prereq_dict.sh
-          bash tests/harness/test_coordinator_dispatch_template_escaping.sh
-          bash tests/harness/test_graph_dispatch_pane_role_guard.sh
-          bash tests/harness/test_multi_task_entrypoint.sh
-          bash tests/harness/test_pm_planner_html_artifacts.sh
-          bash scripts/check-harness-plumbing.sh
-          bash scripts/check-solar-ui-lite.sh
+          failed=0
+          for gate in hygiene negative_controls safe_staging secret_scan \
+                      windows_filenames safety_fixtures runtime_syntax; do
+            var="R_$(printf '%s' "$gate" | tr '[:lower:]' '[:upper:]')"
+            outcome="${!var}"
+            [ "$outcome" = "success" ] && continue
+
+            excused=0
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              case " $EXCUSED_ON_PULL_REQUEST " in
+                *" $gate "*) excused=1 ;;
+              esac
+            fi
+
+            if [ "$excused" -eq 1 ]; then
+              echo "::notice::$gate failed and is a known open failure on this branch; it does not block this pull request"
+            else
+              echo "::error::$gate failed"
+              failed=1
+            fi
+          done
+          [ "$failed" -eq 0 ] || { echo "repository hygiene: one or more gates failed"; exit 1; }
+          echo "repository hygiene: all gates passed"
 
   autosci-premerge-gate:
     name: AutoSci premerge gate
@@ -201,47 +168,19 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
 
+      # KNOWN OPEN FAILURE, awaiting an owner decision.
+      # test_autosci_review_demo.py expects `/review` without a Review LLM to
+      # report execution_status "partial"; the skill reports "failed". Every
+      # other assertion in that test passes - the artifact is written with
+      # review_available=false and review_mode=local_surrogate as expected - so
+      # the disagreement is over one value: whether a correctly executed
+      # credential-free review counts as partial or as failed. Public CI cannot
+      # supply a Review LLM, so this cannot be resolved by configuration.
+      # Remove this excuse once that contract is settled.
       - name: Run AutoSci premerge gate
         continue-on-error: ${{ github.event_name == 'pull_request' }}
         run: |
           bash tests/harness/test_autosci_premerge_gate.sh
-
-  verification-release-gate:
-    name: Verification release gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    env:
-      PYTHONPATH: harness
-      SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest requests pyyaml beautifulsoup4 jsonschema
-
-      - name: Run evaluator and closeout gate tests
-        run: |
-          python -m pytest -q \
-            tests/harness/graph/test_acceptance_closeout.py \
-            tests/harness/graph/test_node_proof_obligations.py \
-            tests/harness/graph/test_evaluation_plan_dispatch.py \
-            tests/harness/graph/test_evaluator_pool_discovery.py \
-            tests/harness/runtime/test_verification_gate.py \
-            tests/harness/test_compile_eval.py \
-            tests/harness/test_compiled_sprint_review_closeout.py \
-            tests/harness/test_hf_s05_verification_release_closeout.py \
-            tests/harness/test_thunderomlx_kvtc_s05_closeout.py \
-            tests/harness/research_unit/test_evaluator.py \
-            tests/harness/research_unit/test_cli.py \
-            tests/harness/research_survey/test_survey_evaluator.py
 
   release-packaging-smoke:
     name: Release packaging smoke
@@ -300,3 +239,221 @@ jobs:
           assert payload.get("ok") is True, payload
           PY
           python -m py_compile lib/plugin_loader.py lib/graph_scheduler.py lib/graph_node_dispatcher.py
+
+  # The suite had 885 test files and CI ran seven of them, so most of the
+  # repository was neither green nor red, just unobserved. These two jobs close
+  # that gap without pretending the suite is green: every file runs, and the
+  # pull request is judged on what it CHANGED rather than on an absolute pass
+  # rate that would force either a disabled gate or a disabled suite.
+  test-suite:
+    name: Test suite (${{ matrix.lane }} ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      # Every shard must report. Cancelling siblings on the first red shard
+      # would truncate the JUnit the gate reads, and a truncated run cannot be
+      # distinguished from a run with nothing to report.
+      fail-fast: false
+      matrix:
+        include:
+          - { lane: pytest, shard: 0, of: 6 }
+          - { lane: pytest, shard: 1, of: 6 }
+          - { lane: pytest, shard: 2, of: 6 }
+          - { lane: pytest, shard: 3, of: 6 }
+          - { lane: pytest, shard: 4, of: 6 }
+          - { lane: pytest, shard: 5, of: 6 }
+          - { lane: script, shard: 0, of: 1 }
+          - { lane: shell, shard: 0, of: 2 }
+          - { lane: shell, shard: 1, of: 2 }
+    env:
+      SOLAR_GRAPH_BUILDER_OPERATOR_POOL: "0"
+      PYTHONHASHSEED: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/ci.txt
+
+      # 16 shell tests fail for no reason other than the absence of an installed
+      # runtime under ~/.solar. Recording those as red would bake environment
+      # setup into the baseline as if it were product breakage. The install is
+      # deterministic and credential-free: --fake-keys writes placeholders and
+      # --skip-llm-cli keeps every provider CLI out. Same invocation as
+      # scripts/check-harness-plumbing.sh.
+      - name: Provision harness runtime
+        if: matrix.lane == 'shell'
+        run: |
+          bash install.sh --yes --components kernel,harness --fake-keys --skip-llm-cli
+
+      # Red tests are expected: tests/ci_baseline.json records which ones. The
+      # shard therefore reports rather than judges, and test-suite-gate decides.
+      # A shard that dies without writing JUnit is caught by the gate, which
+      # requires an artifact from every shard named in tests/ci_lanes.json. The
+      # shard name it matches on is written inside the JUnit document, so a lost
+      # or renamed artifact cannot stand in for one that ran.
+      - name: Run shard
+        continue-on-error: true
+        run: |
+          python scripts/run-test-shard.py \
+            --lane "${{ matrix.lane }}" \
+            --shard "${{ matrix.shard }}" \
+            --of "${{ matrix.of }}" \
+            --junit "junit/${{ matrix.lane }}-${{ matrix.shard }}.xml"
+
+      - name: Upload JUnit
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-${{ matrix.lane }}-${{ matrix.shard }}
+          path: junit/
+          if-no-files-found: warn
+          retention-days: 7
+
+  test-suite-gate:
+    name: Test suite gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: test-suite
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # The gate compares tests/ci_baseline.json against the same file on
+          # the base commit, so that commit has to be in the clone.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/ci.txt
+
+      # Without this the baseline is whatever the branch says it is, and a pull
+      # request can add its own new failure to it and pass. The comparison is
+      # what makes the baseline a ratchet rather than a suggestion.
+      - name: Extract base-branch baseline
+        id: base_baseline
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="$(git rev-parse --verify --quiet HEAD^ || true)"
+          fi
+          if [ -z "$base" ]; then
+            echo "::notice::no base commit; baseline addition check will be skipped"
+            echo "path=" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git show "$base:tests/ci_baseline.json" >base_ci_baseline.json 2>/dev/null; then
+            echo "path=base_ci_baseline.json" >>"$GITHUB_OUTPUT"
+          else
+            echo "::notice::base commit has no tests/ci_baseline.json yet"
+            echo "path=" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Download shard results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: junit-*
+          path: junit
+          merge-multiple: true
+
+      # Fails if any test file is neither collected by pytest nor given a lane
+      # and a reason in tests/ci_lanes.json. This is what stops the suite
+      # drifting back out of view one unnoticed file at a time.
+      - name: Test census
+        id: census
+        continue-on-error: true
+        run: |
+          python scripts/check-test-census.py --summary "$GITHUB_STEP_SUMMARY"
+
+      # Blocks on anything that makes a failure disappear without fixing it: a
+      # new red test, an entry this branch added to the baseline, a baseline
+      # entry whose test no longer runs, a baselined test that now passes and
+      # was left recorded as red, a missing or undeclared shard, one test
+      # reported twice, or unreadable results. tests/ci_baseline.json is a
+      # ratchet and this is what turns it.
+      - name: Regression gate
+        id: regression
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          files=(junit/*.xml)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::no JUnit artifacts were produced by any shard"
+            exit 1
+          fi
+          base="${{ steps.base_baseline.outputs.path }}"
+          if [ -n "$base" ]; then
+            set -- --base-baseline "$base"
+          else
+            # Only legitimate before the base branch has the file at all. It is
+            # printed so a reviewer sees the check was not applied.
+            echo "::warning::comparing without a base baseline"
+            set -- --allow-baseline-bootstrap
+          fi
+          python scripts/check-test-baseline.py "${files[@]}" "$@" \
+            --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Verdict
+        shell: bash
+        env:
+          # ENFORCING. This job fails the build on any of the eight verdicts in
+          # scripts/check-test-baseline.py.
+          #
+          # Turned on here rather than later because this same change removes
+          # four blocking jobs whose tests the nine shards already run. Leaving
+          # this advisory while deleting them would drop protection instead of
+          # moving it.
+          #
+          # Evidence: tests/ci_baseline.json is recorded from GitHub Actions,
+          # not from a laptop, which was the precondition (GAP-012 in
+          # docs/testing/COVERAGE-GAPS.md). Run 87 reported BLOCKED and named
+          # every discrepancy in the local list; run 88 reported clean against
+          # the corrected list, 7,222 cases and an exact set match.
+          #
+          # The one entry removed from the baseline in this change was removed
+          # because the test now passes - the 44 tracked files it objected to
+          # are gone - which the ratchet requires rather than permits.
+          #
+          # Green-side nondeterminism, if any survives, must be contained by a
+          # quarantine carrying an owner, an expiry, a reason and a linked
+          # defect. It cannot be absorbed by the baseline, which has no way to
+          # hold a test that passes some runs and fails others: leave it out and
+          # it blocks as a new failure, record it and it blocks as an unrecorded
+          # fix on the runs where it passes.
+          ENFORCING: "true"
+          R_CENSUS: ${{ steps.census.outcome }}
+          R_REGRESSION: ${{ steps.regression.outcome }}
+        run: |
+          failed=0
+          for check in CENSUS REGRESSION; do
+            var="R_$check"
+            if [ "${!var}" != "success" ]; then
+              echo "::error::$check failed"
+              failed=1
+            fi
+          done
+          if [ "$failed" -eq 0 ]; then
+            echo "test suite gate: no new failures, every test file accounted for"
+            exit 0
+          fi
+          if [ "$ENFORCING" != "true" ]; then
+            echo "::warning::test suite gate found problems but is not enforcing yet (GAP-008)"
+            exit 0
+          fi
+          echo "test suite gate: one or more checks failed"
+          exit 1

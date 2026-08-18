@@ -5,7 +5,7 @@ S05 Verification & Regression Tests for Knowledge Ingest V2.
 Tests V1–V8 from sprint s05-verification-release.
 
 Usage:
-    cd ~/Solar/harness
+    cd harness
     python3 -m pytest tests/test_knowledge_v2.py -v
     # or
     python3 tests/test_knowledge_v2.py
@@ -20,7 +20,8 @@ import unittest
 from pathlib import Path
 
 # Ensure lib is importable
-LIB_DIR = (Path(__file__).resolve().parents[2] / 'harness') / "lib"
+HARNESS_DIR = Path(__file__).resolve().parents[2] / "harness"
+LIB_DIR = HARNESS_DIR / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
@@ -75,14 +76,14 @@ class TestV1Schema(unittest.TestCase):
 
         r1 = subprocess.run(
             ["python3", "lib/knowledge_ingest_registry.py", "--json", "migrate"],
-            capture_output=True, text=True, cwd="~/Solar/harness",
+            capture_output=True, text=True, cwd=str(HARNESS_DIR),
         )
         self.assertEqual(r1.returncode, 0)
         d1 = json.loads(r1.stdout)
 
         r2 = subprocess.run(
             ["python3", "lib/knowledge_ingest_registry.py", "--json", "migrate"],
-            capture_output=True, text=True, cwd="~/Solar/harness",
+            capture_output=True, text=True, cwd=str(HARNESS_DIR),
         )
         self.assertEqual(r2.returncode, 0)
         d2 = json.loads(r2.stdout)
@@ -234,35 +235,35 @@ class TestV4AdapterCoverage(unittest.TestCase):
 
     def test_discover_youtube_exits_0(self):
         exit_code = os.system(
-            "cd ~/Solar/harness && "
+            f"cd {HARNESS_DIR} && "
             "python3 lib/knowledge_ingest_dispatcher.py --json discover-youtube --limit 1 > /dev/null 2>&1"
         )
         self.assertEqual(exit_code >> 8, 0, "discover-youtube --limit 1 should exit 0")
 
     def test_discover_github_exits_0(self):
         exit_code = os.system(
-            "cd ~/Solar/harness && "
+            f"cd {HARNESS_DIR} && "
             "python3 lib/knowledge_ingest_dispatcher.py --json discover-github --limit 1 > /dev/null 2>&1"
         )
         self.assertEqual(exit_code >> 8, 0, "discover-github --limit 1 should exit 0")
 
     def test_discover_pdf_exits_0(self):
         exit_code = os.system(
-            "cd ~/Solar/harness && "
+            f"cd {HARNESS_DIR} && "
             "python3 lib/knowledge_ingest_dispatcher.py --json discover-pdf --limit 1 > /dev/null 2>&1"
         )
         self.assertEqual(exit_code >> 8, 0, "discover-pdf --limit 1 should exit 0")
 
     def test_discover_accepted_exits_0(self):
         exit_code = os.system(
-            "cd ~/Solar/harness && "
+            f"cd {HARNESS_DIR} && "
             "python3 lib/knowledge_ingest_dispatcher.py --json discover-accepted --limit 1 > /dev/null 2>&1"
         )
         self.assertEqual(exit_code >> 8, 0, "discover-accepted --limit 1 should exit 0")
 
     def test_discover_solar_exits_0(self):
         exit_code = os.system(
-            "cd ~/Solar/harness && "
+            f"cd {HARNESS_DIR} && "
             "python3 lib/knowledge_ingest_dispatcher.py --json discover-solar --limit 1 > /dev/null 2>&1"
         )
         self.assertEqual(exit_code >> 8, 0, "discover-solar --limit 1 should exit 0")
@@ -274,7 +275,7 @@ class TestV4AdapterCoverage(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_dispatcher.py", "--json", "coverage-report"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         self.assertEqual(result.returncode, 0, f"coverage-report should exit 0: {result.stderr}")
         data = json.loads(result.stdout)
@@ -391,7 +392,7 @@ class TestV6Dashboard(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_dispatcher.py", "--json", "dashboard"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         self.assertEqual(result.returncode, 0, f"dashboard --json should exit 0: {result.stderr}")
         data = json.loads(result.stdout)
@@ -404,7 +405,7 @@ class TestV6Dashboard(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_dispatcher.py", "--json", "dashboard"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         data = json.loads(result.stdout)
         self.assertIn("watermarks", data)
@@ -419,7 +420,7 @@ class TestV6Dashboard(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_dispatcher.py", "--json", "dashboard"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         data = json.loads(result.stdout)
         self.assertIn("state_counts", data)
@@ -432,7 +433,7 @@ class TestV6Dashboard(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_dispatcher.py", "--json", "dashboard"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         data = json.loads(result.stdout)
         self.assertIn("source_coverage", data)
@@ -525,7 +526,7 @@ class TestV8BaselineRegression(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_dispatcher.py", "--json", "status"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         self.assertEqual(result.returncode, 0, f"status --json should exit 0: {result.stderr}")
 
@@ -536,7 +537,7 @@ class TestV8BaselineRegression(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_registry.py", "--json", "migrate"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         self.assertEqual(result1.returncode, 0, f"First migrate should exit 0: {result1.stderr}")
         data1 = json.loads(result1.stdout)
@@ -545,7 +546,7 @@ class TestV8BaselineRegression(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_registry.py", "--json", "migrate"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         self.assertEqual(result2.returncode, 0, f"Second migrate should exit 0: {result2.stderr}")
         data2 = json.loads(result2.stdout)
@@ -559,7 +560,7 @@ class TestV8BaselineRegression(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_dispatcher.py", "--json", "qmd-watermarks"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         self.assertEqual(result.returncode, 0, f"qmd-watermarks --json should exit 0: {result.stderr}")
 
@@ -570,7 +571,7 @@ class TestV8BaselineRegression(unittest.TestCase):
             ["python3", "lib/knowledge_ingest_health.py", "circuit-check"],
             capture_output=True,
             text=True,
-            cwd="~/Solar/harness",
+            cwd=str(HARNESS_DIR),
         )
         self.assertEqual(result.returncode, 0, f"circuit-check should exit 0: {result.stderr}")
         data = json.loads(result.stdout)

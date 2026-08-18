@@ -5,7 +5,9 @@ import sys
 from pathlib import Path
 
 
-SCRIPT = Path("~/Solar/harness/scripts/ai_influence_daily.py")
+# Was Path("~/Solar/harness/..."), a machine-local path from one developer's
+# checkout that Path never expands, so this module failed to load everywhere.
+SCRIPT = Path(__file__).resolve().parents[2] / "harness" / "scripts" / "ai_influence_daily.py"
 
 
 def _load_module():

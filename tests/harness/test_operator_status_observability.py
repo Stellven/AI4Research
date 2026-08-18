@@ -800,7 +800,9 @@ _SECRET_PATTERNS = [
 _NEW_SOURCE_FILES = [
     HARNESS_DIR / "lib" / "multi_task_status.py",
     HARNESS_DIR / "tools" / "monitor_bridge.py",
-    HARNESS_DIR / "tests" / "test_operator_status_observability.py",
+    # This file. It used to be named through harness/tests/, a stale copy of
+    # the tests tree, where it no longer exists, so the case silently skipped.
+    Path(__file__).resolve(),
 ]
 
 

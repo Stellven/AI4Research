@@ -1,0 +1,1287 @@
+{
+  "schema": "solar.tests.baseline.v1",
+  "note": "Tests that were already red. This list may only shrink: CI compares it against the same file on the base commit and blocks any entry this branch added. Regenerate with scripts/check-test-baseline.py --update after fixing tests, and review the removals in the diff.\n\nRecorded from GitHub Actions run 87 on this branch: 9 of 9 shards, 7,222 cases, 326 red. The previous revision of this file was generated locally from a working tree with 65 files staged for deletion, so every test that reads repository state saw a repository that does not exist. That produced 10 missing entries and 8 entries that were never red on CI. All 10 were confirmed red at the base commit 5cccc0b49 with a clean worktree, so none is a regression from this branch.",
+  "count": 320,
+  "known_failures": [
+    {
+      "test": "tests.foundation.capability_capsules.test_capability_capsule_definition_atomic::test_atomic_capability_capsule_definition_assembly__duplicate_identity_version",
+      "reason": "Failed: DID NOT RAISE CapsuleRegistryError"
+    },
+    {
+      "test": "tests.harness.benchmark.test_terminal_bench_adapter::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.config.test_spine_registry::test_enabled_operators_are_spine_providers_only",
+      "reason": "AssertionError: non-spine providers enabled in shipped registry: {'autosci-literature-discover-worker': None, 'autosci-paper-ingest-worker': None, 'autosci-paper-analyze-worker': None, 'autosci-memory"
+    },
+    {
+      "test": "tests.harness.config.test_spine_registry::test_exactly_the_spine_is_enabled",
+      "reason": "AssertionError: shipped enabled set drifted: extra={'autosci-code-evidence-map-worker', 'autosci-report-plan-worker', 'autosci-memory-update-worker', 'autosci-experiment-run-worker', 'autosci-report-w"
+    },
+    {
+      "test": "tests.harness.control_plane.test_dag_autopilot_planner::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.control_plane.test_deepresearch_quality_gate_repair_eval_dispatch::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.control_plane.test_graph_active_guard::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.control_plane.test_graph_node_dispatcher::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.control_plane.test_worker_capability_catalog::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mineru_canonical_sources.TestCanonicalPapersScan::test_manifest_exists",
+      "reason": "AssertionError: False is not true : manifest missing: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/Knowledge/_meta/source-manifest.jsonl"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mineru_canonical_sources.TestCanonicalPapersScan::test_original_fallback_resolution",
+      "reason": "AssertionError: 0 not greater than 0 : expected some papers to resolve via original_fallback"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mineru_canonical_sources.TestCanonicalPapersScan::test_scan_discovers_papers",
+      "reason": "AssertionError: False is not true : scan failed: {'ok': False, 'error': 'manifest not found: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/Knowledge/_meta/sou"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mineru_canonical_sources.TestCanonicalPapersScan::test_scan_reports_already_extracted",
+      "reason": "AssertionError: 'already_extracted' not found in {'ok': False, 'error': 'manifest not found: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/Knowledge/_meta/sou"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mineru_canonical_sources.TestNoForegroundBlocking::test_extract_single_pdf_without_background_flag",
+      "reason": "AssertionError: None != 'idle_background'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mineru_canonical_sources.TestOutputPathUnderReferences::test_references_dir_exists",
+      "reason": "AssertionError: False is not true : references dir missing: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/Knowledge/references"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mineru_canonical_sources.TestWorkerIdleBackground::test_queue_papers_is_background_only",
+      "reason": "AssertionError: False is not true : queue failed: {'ok': False, 'error': 'manifest not found: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/Knowledge/_meta/so"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mirage_sources_mount.TestMirageLogicalAccess::test_cat_through_knowledge",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: 'solar-harness'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mirage_sources_mount.TestMirageLogicalAccess::test_find_sources",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: 'solar-harness'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mirage_sources_mount.TestMirageLogicalAccess::test_host_path_blocked",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: 'solar-harness'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mirage_sources_mount.TestMirageLogicalAccess::test_ls_sources",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: 'solar-harness'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mirage_sources_mount.TestMirageSourcesMount::test_papers_physical_root",
+      "reason": "AssertionError: '~/Knowledge/_sources/papers' != '/home/ssubr/openjiuwen-solar-integration/[134 chars]pers' - ~/Knowledge/_sources/papers + /home/ssubr/openjiuwen-solar-integration/ci-improvement/evid"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mirage_sources_mount.TestMirageSourcesMount::test_sources_physical_root",
+      "reason": "AssertionError: '~/Knowledge/_sources' != '/home/ssubr/openjiuwen-solar-integration/[128 chars]rces' - ~/Knowledge/_sources + /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/"
+    },
+    {
+      "test": "tests.harness.data_plane.test_mirage_sources_mount.TestMirageSourcesMount::test_sources_subdirs_exist",
+      "reason": "AssertionError: False is not true : /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-2/tmp/pytest-of-ssubr/pytest-0/test_sources_subdirs_exist0/user-home/Knowledge"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDProvenanceTraceability::test_manifest_covers_all_source_categories",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-3/Knowledge/_meta/source-manifest.jsonl'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDProvenanceTraceability::test_manifest_has_all_required_fields",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-3/Knowledge/_meta/source-manifest.jsonl'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDProvenanceTraceability::test_source_manifest_exists",
+      "reason": "AssertionError: False is not true : source-manifest.jsonl should exist"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDReindexReportExists::test_qmd_index_is_current",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: 'qmd'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDReindexReportExists::test_reindex_report_file_exists",
+      "reason": "AssertionError: False is not true : Report should exist at /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-3/harness/reports/data-plane-storage-access-unification"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDReindexReportExists::test_reindex_report_has_required_sections",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-3/harness/reports/data-plane-storage-access-unification/q"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDSampleQueriesHitCanonical::test_recently_ingested_pages_in_index",
+      "reason": "AssertionError: False is not true : Re-ingested page '对谈田渊栋-ai走向何方-我们需要怎样的深度学习理论' should be in QMD index"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDSampleQueriesHitCanonical::test_reference_pages_count_in_index",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: 'qmd'"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDSampleQueriesHitCanonical::test_search_grokking_hits_reference",
+      "reason": "AssertionError: False is not true : 'grokking' search should return hits"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDSampleQueriesHitCanonical::test_search_manifold_hits_reference",
+      "reason": "AssertionError: False is not true : '流形假设' search should return hits"
+    },
+    {
+      "test": "tests.harness.data_plane.test_qmd_sources_reconcile.TestQMDSampleQueriesHitCanonical::test_search_scaling_law_hits_reference",
+      "reason": "AssertionError: False is not true : 'scaling law' search should return hits"
+    },
+    {
+      "test": "tests.harness.data_plane.test_source_manifest.TestScaffoldDirs::test_manifest_jsonl_exists",
+      "reason": "AssertionError: assert False + where False = exists() + where exists = PosixPath('/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-4/Knowledge/_meta/source-manifes"
+    },
+    {
+      "test": "tests.harness.data_plane.test_source_manifest.TestScaffoldDirs::test_meta_dir_exists",
+      "reason": "AssertionError: assert False + where False = exists() + where exists = ((PosixPath('/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-4/tmp/pytest-of-ssubr/pytest-0"
+    },
+    {
+      "test": "tests.harness.data_plane.test_source_manifest.TestScaffoldDirs::test_sources_categories_exist",
+      "reason": "AssertionError: Missing _sources/papers assert False + where False = exists() + where exists = (PosixPath('/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-4/tmp/p"
+    },
+    {
+      "test": "tests.harness.data_plane.test_source_manifest.TestScaffoldDirs::test_stats_json_exists",
+      "reason": "AssertionError: assert False + where False = exists() + where exists = PosixPath('/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-4/Knowledge/_meta/source-manifes"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_lifecycle_gate::test_compact_lifecycle_summary_without_runtime_maps_is_rejected",
+      "reason": "KeyError: 'evidence_policy'"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_lifecycle_gate::test_full_lifecycle_workflow_contract_passes",
+      "reason": "assert False is True + where False = GateResult(ok=False, status='failed', reasons=[\"lifecycle operator sequence mismatch: expected ['ScientificLiteratureD... must be ['publication_produce']\"], warnin"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_report_gate::test_publication_gate_accepts_file_linked_bundle",
+      "reason": "AssertionError: assert False is True + where False = GateResult(ok=False, status='failed', reasons=['files[0].path does not exist: artifacts/publication_report.md', 'files...tifacts/publication_rebutt"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_report_gate::test_report_gate_accepts_evidence_linked_report",
+      "reason": "AssertionError: assert False is True + where False = GateResult(ok=False, status='failed', reasons=['artifacts[0].path does not exist or declare unavailable: artifacts/scientific_report.txt'], warning"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_scientific_lifecycle_runtime_smoke::test_scientific_lifecycle_smoke_accepts_combined_full_external_evidence",
+      "reason": "AssertionError: { \"authorization_prompt\": \"\", \"authorization_requests\": [], \"authorization_required\": false, \"blocked_nodes\": {}, \"checks\": [ { \"check\": \"literature_discover_dispatched\", \"detail\": \"pa"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_scientific_lifecycle_runtime_smoke::test_scientific_lifecycle_smoke_blocks_configured_publication_tail_without_external_evidence",
+      "reason": "AssertionError: assert {'artifact_re...e_final', ...} == {'artifact_re...kflow_evolve'} Extra items in the left set: 'final_evaluation' 'material_ingest' 'evidence_import' 'experiment_approval_gate' U"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_scientific_lifecycle_runtime_smoke::test_scientific_lifecycle_smoke_can_resume_external_blocked_nodes",
+      "reason": "AssertionError: { \"authorization_prompt\": \"One or more legacy lifecycle gates are waiting for authorization or runtime evidence; supply the requested access patch and resume the lifecycle.\", \"authoriz"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_scientific_lifecycle_runtime_smoke::test_scientific_lifecycle_smoke_executes_approved_experiment_command",
+      "reason": "AssertionError: { \"authorization_prompt\": \"\", \"authorization_requests\": [], \"authorization_required\": false, \"blocked_nodes\": {}, \"checks\": [ { \"check\": \"literature_discover_dispatched\", \"detail\": \"pa"
+    },
+    {
+      "test": "tests.harness.evaluators.scientific.test_scientific_lifecycle_runtime_smoke::test_scientific_lifecycle_smoke_executes_approved_publication_compile",
+      "reason": "AssertionError: { \"authorization_prompt\": \"\", \"authorization_requests\": [], \"authorization_required\": false, \"blocked_nodes\": {}, \"checks\": [ { \"check\": \"literature_discover_dispatched\", \"detail\": \"pa"
+    },
+    {
+      "test": "tests.harness.evolution.test_deepresearch_quality_gate_restore_nonrequired::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.evolution.test_skill_healthcheck_evolution::shell",
+      "reason": "exit 2"
+    },
+    {
+      "test": "tests.harness.external-integrations.run-all::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.graph.test_autosci_eval_dispatch::test_autosci_operator_direct_dispatch_submits_to_operator_runtime",
+      "reason": "AssertionError: {'ok': False, 'reason': 'plan_compile_failed', 'compile': {'ok': False, 'stamped': False, 'skipped_reason': '', 'error...e-autosc-c8c9b468.plan.md'}], ...}, 'sprint_id': 'sprint-202608"
+    },
+    {
+      "test": "tests.harness.graph.test_autosci_eval_dispatch::test_normal_intake_autosci_dispatch_ready_uses_exact_autosci_operator",
+      "reason": "AssertionError: {'ok': False, 'reason': 'plan_compile_failed', 'compile': {'ok': False, 'stamped': False, 'skipped_reason': '', 'error...e-autosc-0a7e7a60.plan.md'}], ...}, 'sprint_id': 'sprint-202608"
+    },
+    {
+      "test": "tests.harness.graph.test_autosci_eval_dispatch::test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff",
+      "reason": "AssertionError: {'ok': False, 'reason': 'plan_compile_failed', 'compile': {'ok': False, 'stamped': False, 'skipped_reason': '', 'error...e-autosc-5487ad62.plan.md'}], ...}, 'sprint_id': 'sprint-202608"
+    },
+    {
+      "test": "tests.harness.graph.test_autosci_eval_dispatch::test_openai_policy_keeps_provider_neutral_autosci_operator",
+      "reason": "AssertionError: {'ok': False, 'reason': 'plan_compile_failed', 'compile': {'ok': False, 'stamped': False, 'skipped_reason': '', 'error...e-autosc-544d6448.plan.md'}], ...}, 'sprint_id': 'sprint-202608"
+    },
+    {
+      "test": "tests.harness.graph.test_multi_task_runner_success_status::test_quota_recovery_capped_sets_monitor_blocker",
+      "reason": "KeyError: 'status'"
+    },
+    {
+      "test": "tests.harness.graph.test_requirement_coverage_refresh::test_node_verdict_refreshes_requirement_coverage_artifacts",
+      "reason": "assert 0 == 1"
+    },
+    {
+      "test": "tests.harness.integration.test_autosci_review_demo::test_product_autosci_review_writes_artifact_review_evidence",
+      "reason": "AssertionError: { \"action_count\": 1, \"autosci_command\": \"/review\", \"evidence_path\": \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-2/tmp/pytest-of-ssubr/pytest-"
+    },
+    {
+      "test": "tests.harness.integrations.gepa_optimizer.test_promote::test_promotion_target_rejects_non_tmp_path",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.harness.integrations.test_capability_fusion_benchmark::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.integrations.test_capability_plane_e2e::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.integrations.test_expanded_capability_plane_e2e::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.integrations.test_platform_workflow_benchmark::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.legacy_shell.test_dispatch_modal::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.legacy_shell.vendor.autoresearch.tests.test_continue_diverged::shell",
+      "reason": "exit 128"
+    },
+    {
+      "test": "tests.harness.lib.social_browser_backend_x.test_lease_ratelimit.TestBrowserLeaseClientMockFallback::test_blocker_guard_ok_selects_real_backend",
+      "reason": "harness.lib.social_browser_backend_x.browser_lease_client.OperatorNotReady: OperatorNotReady: real browser backend import failed: ModuleNotFoundError: No module named 'playwright'"
+    },
+    {
+      "test": "tests.harness.lib.test_v2_autopilot_respawn_e2e::test_use_case_a_success",
+      "reason": "failed on setup with \"file /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/tests/harness/lib/test_v2_autopilot_respawn_e2e.py, line 280 def test_use_case_a_succ"
+    },
+    {
+      "test": "tests.harness.lib.test_v2_autopilot_respawn_e2e::test_use_case_b_kill_pane_fail",
+      "reason": "failed on setup with \"file /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/tests/harness/lib/test_v2_autopilot_respawn_e2e.py, line 458 def test_use_case_b_kill"
+    },
+    {
+      "test": "tests.harness.lib.test_v2_autopilot_respawn_e2e::test_use_case_c_split_fail",
+      "reason": "failed on setup with \"file /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/tests/harness/lib/test_v2_autopilot_respawn_e2e.py, line 552 def test_use_case_c_spli"
+    },
+    {
+      "test": "tests.harness.lib.test_v2_autopilot_respawn_e2e::test_use_case_d_marker_timeout",
+      "reason": "failed on setup with \"file /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/tests/harness/lib/test_v2_autopilot_respawn_e2e.py, line 601 def test_use_case_d_mark"
+    },
+    {
+      "test": "tests.harness.livework.test_events.TestNoMock::test_no_mock_patch_in_file",
+      "reason": "AssertionError: Mock usage found: ['0'] assert ['0'] == [] Left contains one more item: '0' Use -v to get more diff"
+    },
+    {
+      "test": "tests.harness.livework.test_heartbeat_hook.TestNoAutopilotChange::test_autopilot_sh_unchanged",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.harness.livework.test_heartbeat_hook.TestRunnerEmitRealEvents::test_actual_runner_writes_event_from_arbitrary_cwd",
+      "reason": "AssertionError: python3: can't open file '/tmp/~/.solar/harness/autopilot/hooks/livework_heartbeat_runner.py': [Errno 2] No such file or directory assert 2 == 0 + where 2 = CompletedProcess(args=['pyt"
+    },
+    {
+      "test": "tests.harness.remote.test_remote_dispatch_cli::test_dispatch_cli_invokes_verify_subcommand_before_wake",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/.solar/bin/solar-remote-dispatch'"
+    },
+    {
+      "test": "tests.harness.remote.test_remote_dispatch_cli::test_doctor_json_cli_is_valid_json_and_honors_host_override",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/.solar/bin/solar-remote-dispatch'"
+    },
+    {
+      "test": "tests.harness.remote.test_remote_dispatch_cli::test_doctor_json_cli_missing_config_is_actionable",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/.solar/bin/solar-remote-dispatch'"
+    },
+    {
+      "test": "tests.harness.research.deepdive.test_deepdive_dgraph_golden::test_lane1_remap_capsule_admissions",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-2/tests/config/physical-operators.j"
+    },
+    {
+      "test": "tests.harness.research.deepdive.test_deepdive_dgraph_golden::test_remap_is_load_bearing_scout_rejects_audit_inventory",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-2/tests/config/physical-operators.j"
+    },
+    {
+      "test": "tests.harness.research.deepdive.test_deepdive_dgraph_golden::test_shipped_contract_compiles_clean",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-2/tests/config/physical-operators.j"
+    },
+    {
+      "test": "tests.harness.research.deepdive.test_deepdive_dgraph_golden::test_shipped_contract_forbids_implementation_capsule_and_patch_obligations",
+      "reason": "failed on setup with \"workflow_contract.ContractSchemaError: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-2/tests/config/workflows/research.deepdive.rsi_demo.w"
+    },
+    {
+      "test": "tests.harness.research.deepdive.test_deepdive_dgraph_golden::test_shipped_stages_are_a_compression_of_the_native_dgraph",
+      "reason": "failed on setup with \"workflow_contract.ContractSchemaError: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-2/tests/config/workflows/research.deepdive.rsi_demo.w"
+    },
+    {
+      "test": "tests.harness.research.deepdive.test_eval_artifacts_gate::test_good_export_passes_the_research_cli_gate",
+      "reason": "AssertionError: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python: Error while finding module specification for 'research.cli' (ModuleNotFoundError: No module"
+    },
+    {
+      "test": "tests.harness.research.survey.activation_proof.test_activation_proof_verifier::test_activation_proof_all_rows_reference_artifacts",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-3/harness/runtime/survey-continue/sample-run-001/activati"
+    },
+    {
+      "test": "tests.harness.research.survey.activation_proof.test_activation_proof_verifier::test_activation_proof_has_all_six_expected_stages",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-3/harness/runtime/survey-continue/sample-run-001/activati"
+    },
+    {
+      "test": "tests.harness.research.survey.e2e.test_smoke_run::test_runtime_artifacts_exist_and_reproduce_without_diff",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/runtime/survey-continue/sample-run-001/source_q"
+    },
+    {
+      "test": "tests.harness.research.survey.explorer.test_exploration_run::test_run_without_log_path_does_not_write",
+      "reason": "AssertionError: assert not True + where True = any(<map object at 0x7fca4ab9bc10>) + where <map object at 0x7fca4ab9bc10> = iterdir() + where iterdir = PosixPath('/home/ssubr/openjiuwen-solar-integrat"
+    },
+    {
+      "test": "tests.harness.research_orchestration.generalization.test_phase5_seed_portability::test_external_experiment_fixture_matches_schema_identity_provenance_and_hash",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/tests/research_orchestration/fixtures/phase5/se"
+    },
+    {
+      "test": "tests.harness.research_orchestration.generalization.test_phase5_seed_portability::test_invalid_pdf_seed_fails_as_product_input_not_environment_block",
+      "reason": "research_orchestration.runtime.ResearchRuntimeError: local research source is missing or empty: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/tests/re"
+    },
+    {
+      "test": "tests.harness.research_orchestration.generalization.test_phase5_seed_portability::test_local_pdf_synthesis_uses_extracted_text_hashes_and_formal_gates",
+      "reason": "research_orchestration.runtime.ResearchRuntimeError: local research source is missing or empty: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/tests/re"
+    },
+    {
+      "test": "tests.harness.research_orchestration.generalization.test_phase5_seed_portability::test_resume_imports_external_experiment_evidence_and_continues_to_cited_report",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/tests/research_orchestration/fixtures/phase5/se"
+    },
+    {
+      "test": "tests.harness.research_orchestration.generalization.test_phase5_seed_portability::test_resume_rejects_evidence_identity_for_wrong_run",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/tests/research_orchestrat"
+    },
+    {
+      "test": "tests.harness.research_orchestration.generalization.test_phase5_seed_portability::test_resume_rejects_external_evidence_path_outside_node_write_scope",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/tests/research_orchestrat"
+    },
+    {
+      "test": "tests.harness.research_orchestration.generalization.test_phase5_seed_portability::test_resume_rejects_tampered_external_evidence_hash",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/tests/research_orchestrat"
+    },
+    {
+      "test": "tests.harness.research_orchestration.test_research_capability_registry::test_no_full_stable_overstatement_and_no_real_data_research_schema",
+      "reason": "assert True is False"
+    },
+    {
+      "test": "tests.harness.research_orchestration.test_research_capability_registry::test_research_workflow_selection_has_exact_five_kinds",
+      "reason": "AssertionError: assert 'active' == 'draft' - draft + active"
+    },
+    {
+      "test": "tests.harness.research_orchestration.test_research_control_plane_contract::test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity",
+      "reason": "KeyError: 'task_contract_path'"
+    },
+    {
+      "test": "tests.harness.research_orchestration.test_research_phase01_integration::test_phase1_route_files_remain_nonactive",
+      "reason": "AssertionError: assert 'active' == 'draft' - draft + active"
+    },
+    {
+      "test": "tests.harness.runtime.test_activity_runtime::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestCaptureForResearch::test_import_available",
+      "reason": "AttributeError: module 'chatgpt_conversation_ingest' has no attribute 'capture_for_research'"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestCollectResearchArtifact::test_artifact_has_empty_structured_fields",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestCollectResearchArtifact::test_collect_done_job_produces_artifact",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestCollectResearchArtifact::test_collect_non_terminal_raises",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestResolveMonthlyProjectName::test_default_uses_current_month",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'resolve_monthly_project_name'. Did you mean: 'resolve_chatgpt_monthly_project_name'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestResolveMonthlyProjectName::test_explicit_date",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'resolve_monthly_project_name'. Did you mean: 'resolve_chatgpt_monthly_project_name'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestResolveMonthlyProjectName::test_january",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'resolve_monthly_project_name'. Did you mean: 'resolve_chatgpt_monthly_project_name'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestResolveMonthlyProjectName::test_year_boundary",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'resolve_monthly_project_name'. Did you mean: 'resolve_chatgpt_monthly_project_name'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestSubmitResearchJob::test_creates_job_with_project_routing",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestSubmitResearchJob::test_custom_project_name",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestSubmitResearchJob::test_mock_sequence_research_job",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_research_job.TestSubmitResearchJob::test_secrets_scrubbed_from_envelope",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'submit_research_job'. Did you mean: 'submit_browser_job'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_session_pool::test_browser_session_pool_enforces_max_size",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'BrowserSessionPool'. Did you mean: 'BrowserSessionBroker'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_session_pool::test_browser_session_pool_reuses_released_slot",
+      "reason": "AttributeError: module 'browser_job_runtime' has no attribute 'BrowserSessionPool'. Did you mean: 'BrowserSessionBroker'?"
+    },
+    {
+      "test": "tests.harness.runtime.test_browser_session_pool::test_run_real_browser_probe_records_pool_lease",
+      "reason": "AssertionError: assert False + where False = exists() + where exists = PosixPath('/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-4/tmp/pytest-of-ssubr/pytest-0/t"
+    },
+    {
+      "test": "tests.harness.runtime.test_compat_mapping::test_all_operators_are_marked_deprecated",
+      "reason": "assert False + where False = all(<generator object test_all_operators_are_marked_deprecated.<locals>.<genexpr> at 0x7fca4779c110>)"
+    },
+    {
+      "test": "tests.harness.runtime.test_compat_mapping::test_all_operators_have_compat_alias_for",
+      "reason": "AssertionError: assert 69 == 45 + where 69 = len([{'display_name': 'Mac mini Claude Opus planner', 'plane': 'headless', 'owner_host': 'solar@example-host', 'pane': 'so...6 knowledge', 'plane': 'headle"
+    },
+    {
+      "test": "tests.harness.runtime.test_compat_mapping::test_compat_alias_values_are_canonical_host_types",
+      "reason": "KeyError: 'compat_alias_for'"
+    },
+    {
+      "test": "tests.harness.runtime.test_compat_mapping::test_compat_mapping_covers_required_carrier_hints",
+      "reason": "KeyError: 'carrier_hint'"
+    },
+    {
+      "test": "tests.harness.runtime.test_compat_mapping::test_compat_maps_to_host_type_matches_alias",
+      "reason": "KeyError: 'compat_alias_for'"
+    },
+    {
+      "test": "tests.harness.runtime.test_landlock_exec::test_landlock_allows_write_only_inside_declared_root",
+      "reason": "AssertionError: landlock_exec: active abi=3 ro=4 rw=1 Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-4/harness/tools/lan"
+    },
+    {
+      "test": "tests.harness.runtime.test_landlock_exec::test_landlock_denies_sibling_directory_read",
+      "reason": "AssertionError: landlock_exec: active abi=3 ro=4 rw=1 Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-4/harness/tools/lan"
+    },
+    {
+      "test": "tests.harness.runtime.test_mirage_context_access_plane::test_context_usage_verifier_fails_missing_required_source",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/.solar/harness/lib/verifier/context_usage.py'"
+    },
+    {
+      "test": "tests.harness.runtime.test_mirage_context_access_plane::test_context_usage_verifier_requires_code_source",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/.solar/harness/lib/verifier/context_usage.py'"
+    },
+    {
+      "test": "tests.harness.runtime.test_mirage_context_access_plane::test_mirage_search_registers_cocoindex_degraded_code_hits",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/.solar/harness/lib/mirage_search.py'"
+    },
+    {
+      "test": "tests.harness.runtime.test_mirage_context_access_plane::test_understanding_adapter_reads_real_artifact_store",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/.solar/harness/lib/understand_anything_adapter.py'"
+    },
+    {
+      "test": "tests.harness.runtime.test_multi_task_runner_backlog_autoscale::test_schedule_once_refuses_uncertified_generic_graph_when_validator_enabled",
+      "reason": "AssertionError: assert ['N1'] == [] Left contains one more item: 'N1' Use -v to get more diff"
+    },
+    {
+      "test": "tests.harness.runtime.test_projection_replay::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.runtime.test_runtime_adoption_bridge::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.runtime.test_runtime_status_transition::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.runtime.test_session_log_v2::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.runtime.test_wake_projection_routing::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.runtime.test_webwright_integration::test_webwright_smoke_run_verify_replay",
+      "reason": "subprocess.CalledProcessError: Command '['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidenc"
+    },
+    {
+      "test": "tests.harness.s05-negative-control::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.scenarios.test_collection_hygiene::test_full_suite_collect_only_exits_cleanly",
+      "reason": "AssertionError: full-suite collect-only failed returncode=2 stdout: harness/tests/config/test_autosci_research_capsule_registry.py::test_autosci_manifest_research_capsules_are_registered_and_resolvabl"
+    },
+    {
+      "test": "tests.harness.scenarios.test_collection_hygiene::test_quarantine_manifest_entries_exist_on_disk",
+      "reason": "AssertionError: remove deleted files from COLLECTION_QUARANTINE_MANIFEST: ['tests/benchmark/test_benchmark_registry.py', 'tests/benchmark/test_benchmark_report_schema.py', 'tests/benchmark/test_solar_"
+    },
+    {
+      "test": "tests.harness.scenarios.test_p3_run4_projection_convergence::test_projection_sync_is_idempotent_across_ticks",
+      "reason": "AssertionError: assert 'active' == 'passed' - passed + active"
+    },
+    {
+      "test": "tests.harness.scenarios.test_p5_g3_status_server_scoping::test_start_does_not_adopt_foreign_listener",
+      "reason": "AssertionError: assert 1 == 0 + where 1 = CompletedProcess(args=['bash', '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-...de=1, stdout='\\x1b[0;31m[Harness]\\x1b"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_attempt_authority::test_multi_task_launch_persists_canonical_legacy_attempt",
+      "reason": "KeyError: 'dispatch_id'"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_closeout_authority::test_both_pass_entry_paths_emit_the_same_closeout_receipt[node_verdict]",
+      "reason": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_codex_profile_lifecycle::test_product_reaper_removes_profile_after_launcher_sigkill",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/tmp/pytest-of-ssubr/pytest-0/test_product_reaper_remove"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_codex_profile_lifecycle::test_real_product_stop_reaps_registered_profile",
+      "reason": "AssertionError: #x1B[1;33m[Harness]#x1B[0m Codex trust profile cleanup was incomplete for session 'solar-product-stop': Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integratio"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_codex_unattended_launch::test_codex_launch_preserves_dashboard_search_and_effort_flags",
+      "reason": "AssertionError: #x1B[38;5;45m[harness-knowledge]#x1B[0m Mirage + QMD + Obsidian + Solar DB #x1B[38;5;208m[harness-intent]#x1B[0m intent engine / skill match #x1B[38;5;141m[harness-skills]#x1B[0m skill"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_codex_unattended_launch::test_codex_workspace_trust_can_be_explicitly_disabled",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-2/tmp/pytest-of-ssubr/pytest-0/test_codex_workspace_trust"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_codex_unattended_launch::test_managed_codex_bypass_trusts_the_exact_workspace_for_this_invocation",
+      "reason": "AssertionError: #x1B[38;5;45m[harness-knowledge]#x1B[0m Mirage + QMD + Obsidian + Solar DB #x1B[38;5;208m[harness-intent]#x1B[0m intent engine / skill match #x1B[38;5;141m[harness-skills]#x1B[0m skill"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_human_review_authority::test_real_cli_resume_archives_old_evidence_and_is_one_shot",
+      "reason": "KeyError: 'human_review'"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_human_review_authority::test_resume_never_archives_an_eval_path_outside_its_sprint_storage",
+      "reason": "KeyError: '_ignored_unsafe_sidecars'"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc10_human_review_authority::test_stale_dispatcher_save_preserves_complete_human_review_generation",
+      "reason": "KeyError: 'human_review'"
+    },
+    {
+      "test": "tests.harness.scenarios.test_rc9_installed_runtime_ownership::test_status_start_ignores_argv_decoy_that_only_mentions_server_path",
+      "reason": "AssertionError: assert 1 == 0 + where 1 = CompletedProcess(args=['bash', '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-...de=1, stdout='\\x1b[0;31m[Harness]\\x1b"
+    },
+    {
+      "test": "tests.harness.supervision.test_live_claude_e2e_sandbox_preflight::test_prepare_only_sandbox_env_passes_anthropic_contract_preflight",
+      "reason": "AssertionError: generated e2e.env must pin SOLAR_GATE_LEDGER=1 explicitly: export HOME=/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-2/tmp/pytest-of-ssubr/pytes"
+    },
+    {
+      "test": "tests.harness.test_agent_actor_schema.TestHostFixtureFields::test_all_hosts_have_heartbeat",
+      "reason": "AssertionError: stub_tmux_pane: missing heartbeat assert 'heartbeat' in {'host_id': 'stub_tmux_pane', 'host_type': 'tmux_pane', 'display_name': 'Stub tmux pane', 'lifecycle': {'state': 'offline', 'shu"
+    },
+    {
+      "test": "tests.harness.test_agent_actor_schema.TestHostFixtureFields::test_all_hosts_have_host_type",
+      "reason": "AssertionError: mini: unknown host_type='claude_code_session' assert 'claude_code_session' in {'browser_agent_session', 'browser_profile_host', 'cloud_container', 'local_workstation', 'localhost', 'ma"
+    },
+    {
+      "test": "tests.harness.test_agent_actor_schema.TestHostFixtureFields::test_all_hosts_have_probe",
+      "reason": "AssertionError: stub_tmux_pane: missing probe assert 'probe' in {'host_id': 'stub_tmux_pane', 'host_type': 'tmux_pane', 'display_name': 'Stub tmux pane', 'lifecycle': {'state': 'offline', 'shutdown_po"
+    },
+    {
+      "test": "tests.harness.test_agent_actor_schema.TestOperatorAliasMapping::test_all_actor_operator_aliases_match_physical_operators",
+      "reason": "AssertionError: mini-reasonix-deepseek-v4-pro-prd-evaluator: operator_alias='mini-reasonix-deepseek-v4-pro-prd-evaluator' not found in physical-operators.json assert 'mini-reasonix-deepseek-v4-pro-prd"
+    },
+    {
+      "test": "tests.harness.test_agent_actor_schema.TestOperatorAliasMapping::test_all_physical_operator_ids_appear_as_actor_aliases",
+      "reason": "AssertionError: physical operator 'mini-codex-gpt55-medium-evaluator-1' has no corresponding actor (operator_alias) assert 'mini-codex-gpt55-medium-evaluator-1' in {'mini-antigravity-gemini31-pro', 'm"
+    },
+    {
+      "test": "tests.harness.test_agent_actor_schema.TestSchemaValidation::test_actors_fixture_validates_against_schema",
+      "reason": "jsonschema.exceptions.ValidationError: 'high' is not one of ['light', 'medium', 'heavy'] Failed validating 'enum' in schema['properties']['actors']['additionalProperties']['properties']['cost_profile'"
+    },
+    {
+      "test": "tests.harness.test_agent_actor_schema.TestSchemaValidation::test_schema_accepts_valid_host",
+      "reason": "jsonschema.exceptions.ValidationError: 'localhost' is not one of ['tmux_pane', 'codex_worktree', 'codex_cloud', 'antigravity_managed_env', 'claude_code_session', 'local_mlx_process', 'ssh_devbox', 'do"
+    },
+    {
+      "test": "tests.harness.test_agent_rules_books_integration::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_ai_influence_digest::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_alerts::test_alert_severity_mapping_default",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '~/.gemini/antigravity-cli/scratch/test-github-config.yaml'\""
+    },
+    {
+      "test": "tests.harness.test_alerts::test_cross_source_resonance_escalation",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '~/.gemini/antigravity-cli/scratch/test-github-config.yaml'\""
+    },
+    {
+      "test": "tests.harness.test_alerts::test_duplicate_suppression_within_24h",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '~/.gemini/antigravity-cli/scratch/test-github-config.yaml'\""
+    },
+    {
+      "test": "tests.harness.test_alerts::test_tracked_repo_growth_alert_injected",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '~/.gemini/antigravity-cli/scratch/test-github-config.yaml'\""
+    },
+    {
+      "test": "tests.harness.test_alerts::test_tracked_repo_high_growth_alert",
+      "reason": "failed on setup with \"FileNotFoundError: [Errno 2] No such file or directory: '~/.gemini/antigravity-cli/scratch/test-github-config.yaml'\""
+    },
+    {
+      "test": "tests.harness.test_apple_notes_ingest::shell",
+      "reason": "exit 2"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestBrokerCoveragePass::test_builder_clean_coverage",
+      "reason": "ImportError: cannot import name 'ready_for_builder' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestBrokerCoveragePass::test_no_coverage_data_is_ready",
+      "reason": "ImportError: cannot import name 'ready_for_planner' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestBrokerCoveragePass::test_planner_clean_coverage",
+      "reason": "ImportError: cannot import name 'ready_for_planner' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestLegacyDiff::test_legacy_returns_same_with_or_without_coverage",
+      "reason": "ImportError: cannot import name 'ready_for_planner' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestLegacyMode::test_ready_for_builder_legacy",
+      "reason": "ImportError: cannot import name 'ready_for_builder' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestLegacyMode::test_ready_for_planner_legacy",
+      "reason": "ImportError: cannot import name 'ready_for_planner' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestUncontractedBlocks::test_builder_uncontracted_blocks",
+      "reason": "ImportError: cannot import name 'ready_for_builder' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestUncontractedBlocks::test_low_coverage_ratio_blocks_builder",
+      "reason": "ImportError: cannot import name 'ready_for_builder' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestUncontractedBlocks::test_planner_uncontracted_blocks",
+      "reason": "ImportError: cannot import name 'ready_for_planner' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_broker_gate.TestUncontractedBlocks::test_unscoped_write_count_blocks_planner",
+      "reason": "ImportError: cannot import name 'ready_for_planner' from 'harness.lib.autopilot' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/autopilot.py)"
+    },
+    {
+      "test": "tests.harness.test_autopilot_pane_role_guard::script",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_autosci_premerge_gate::shell",
+      "reason": "exit 127"
+    },
+    {
+      "test": "tests.harness.test_autosci_priority_a_contracts::test_autosci_product_entrypoint_writes_to_unified_artifact_root",
+      "reason": "AssertionError: { \"action_count\": 1, \"autosci_command\": \"/review\", \"evidence_path\": \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/tmp/pytest-of-ssubr/pytest-"
+    },
+    {
+      "test": "tests.harness.test_autosci_priority_b_demo_contracts::test_review_projects_human_diagnostics_summary",
+      "reason": "AssertionError: { \"action_count\": 1, \"autosci_command\": \"/review\", \"evidence_path\": \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/tmp/pytest-of-ssubr/pytest-"
+    },
+    {
+      "test": "tests.harness.test_capability_prefix_visibility::shell",
+      "reason": "exit 2"
+    },
+    {
+      "test": "tests.harness.test_codex_operator_landlock::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_codex_pm_router::test_code_understanding_request_rewrites_standard_graph_goals",
+      "reason": "AssertionError: assert 'design' == 'code-understanding' - code-understanding + design"
+    },
+    {
+      "test": "tests.harness.test_context_router_layer_ranking::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_coordinator_ts_pane_map::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_d2_watchdog_respawn_reliability::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_data_plane_audit_cleanup::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_definition_of_done_policy::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_dispatch_processing_markers::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_dispatcher_integration.TestActionContractsInjected::test_contracts_injected_between_rules_and_work_steps",
+      "reason": "ValueError: substring not found"
+    },
+    {
+      "test": "tests.harness.test_dispatcher_integration.TestActionContractsInjected::test_contracts_present_when_enabled",
+      "reason": "AssertionError: assert '<action_contracts>' in '<!-- SOLAR_STATE_READ_PREFLIGHT -->\\n## 必须先读状态 (防写入 hook 卡死)\\n\\n在任何 Write/Edit/handoff/eval/status 更新之前，必须先用 Claude/C...heduler mark`，不要直接修改\\n TaskGraph"
+    },
+    {
+      "test": "tests.harness.test_dispatcher_integration.TestDualRunComparison::test_contracts_reflect_node_metadata",
+      "reason": "AssertionError: assert '<path>r1.py</path>' in '<!-- SOLAR_STATE_READ_PREFLIGHT -->\\n## 必须先读状态 (防写入 hook 卡死)\\n\\n在任何 Write/Edit/handoff/eval/status 更新之前，必须先用 Claude/C...heduler mark`，不要直接修改\\n TaskGraph"
+    },
+    {
+      "test": "tests.harness.test_dispatcher_integration.TestDualRunComparison::test_empty_node_produces_valid_contracts",
+      "reason": "AssertionError: assert '<action_contracts>' in '<!-- SOLAR_STATE_READ_PREFLIGHT -->\\n## 必须先读状态 (防写入 hook 卡死)\\n\\n在任何 Write/Edit/handoff/eval/status 更新之前，必须先用 Claude/C...heduler mark`，不要直接修改\\n TaskGraph"
+    },
+    {
+      "test": "tests.harness.test_dispatcher_integration.TestDualRunComparison::test_only_difference_is_contracts_block",
+      "reason": "AssertionError: assert '<action_contracts>' in '<!-- SOLAR_STATE_READ_PREFLIGHT -->\\n## 必须先读状态 (防写入 hook 卡死)\\n\\n在任何 Write/Edit/handoff/eval/status 更新之前，必须先用 Claude/C...heduler mark`，不要直接修改\\n TaskGraph"
+    },
+    {
+      "test": "tests.harness.test_dispatcher_integration.TestGetBroker::test_get_broker_callable",
+      "reason": "ImportError: cannot import name 'get_broker' from 'harness.lib.graph_node_dispatcher' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/graph_node_di"
+    },
+    {
+      "test": "tests.harness.test_dispatcher_integration.TestGetBroker::test_get_broker_returns_class_when_available",
+      "reason": "ImportError: cannot import name 'get_broker' from 'harness.lib.graph_node_dispatcher' (/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-0/harness/lib/graph_node_di"
+    },
+    {
+      "test": "tests.harness.test_dispatcher_integration.TestSignatureUnchanged::test_build_eval_dispatch_text_signature",
+      "reason": "AssertionError: assert ['graph', 'gr...or_role', ...] == ['graph', 'gr...'dispatch_id'] Left contains 8 more items, first extra item: 'evaluator_role' Use -v to get more diff"
+    },
+    {
+      "test": "tests.harness.test_epic_decomposer::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_experience_memory::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_gemini_enhanced_search::test_gemini_adapter_enhanced_search_forwards",
+      "reason": "AttributeError: <module 'gemini_adapter' from '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-3/harness/lib/gemini_adapter.py'> has no attribute 'gemini_enhanced"
+    },
+    {
+      "test": "tests.harness.test_graph_dispatch_stale_scrollback::script",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_knowledge_context_grounding::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_knowledge_qmd_watermarks::shell",
+      "reason": "exit 2"
+    },
+    {
+      "test": "tests.harness.test_knowledge_semantic_extract_health::test_registry_doc_id_prefers_duplicate_path_with_completed_extract",
+      "reason": "AssertionError: assert 'raw:duplicate' == 'raw_chatgpt:canonical' - raw_chatgpt:canonical + raw:duplicate"
+    },
+    {
+      "test": "tests.harness.test_knowledge_semantic_extract_health::test_registry_query_indexes_created",
+      "reason": "AttributeError: module 'knowledge_semantic_extract' has no attribute 'ensure_registry_query_indexes'"
+    },
+    {
+      "test": "tests.harness.test_knowledge_semantic_extract_health::test_thunderomlx_health_resolves_legacy_mini_alias_to_loaded_qwen",
+      "reason": "AssertionError: assert False is True + where False = <function thunderomlx_healthy at 0x7c7687f57600>(Namespace(endpoint='http://127.0.0.1:8002', proxy_model='mini-thunderomlx-qwen36-knowledge', local"
+    },
+    {
+      "test": "tests.harness.test_knowledge_v2.TestV3Naming::test_semantic_md_files_exist",
+      "reason": "AssertionError: 0 not greater than 0 : *.semantic.md files should exist"
+    },
+    {
+      "test": "tests.harness.test_knowledge_v2.TestV4AdapterCoverage::test_coverage_report_lists_source_kinds",
+      "reason": "AssertionError: 0 not greater than or equal to 8 : coverage-report should list >=8 source kinds"
+    },
+    {
+      "test": "tests.harness.test_lane2_scenarios::test_scenario_green_passes[F-CLASS-09-auto-resolution-sticky.scenario.json]",
+      "reason": "AssertionError: GREEN run of F-CLASS-09-auto-resolution-sticky.scenario.json should PASS but did not. facts={ \"driver_rc\": 1, \"driver_stderr_tail\": \"ine 34, in <module>\\n gs.mark_node_result(graph, \\\""
+    },
+    {
+      "test": "tests.harness.test_lane2_scenarios::test_scenario_green_passes[F-CLASS-29-gate-consumes-verdict-content.scenario.json]",
+      "reason": "AssertionError: GREEN run of F-CLASS-29-gate-consumes-verdict-content.scenario.json should PASS but did not. facts={ \"driver_rc\": 1, \"driver_stderr_tail\": \"~~~~~~~~~~~~~~^\\n graph,\\n ^^^^^^\\n ...<2 li"
+    },
+    {
+      "test": "tests.harness.test_lane2_scenarios::test_scenario_green_passes[F-CLASS-30-verdict-provenance.scenario.json]",
+      "reason": "AssertionError: GREEN run of F-CLASS-30-verdict-provenance.scenario.json should PASS but did not. facts={ \"driver_rc\": 0, \"driver_stderr_tail\": \"\", \"self_graded_blocked\": false, \"provenance_recorded\":"
+    },
+    {
+      "test": "tests.harness.test_live_codex_epic_status_contract::test_contract_options_derive_artifacts_roots_terminal_states_and_validator",
+      "reason": "AssertionError: assert False + where False = <built-in method endswith of str object at 0x730a50afa850>('workspace/rsi-deep-research-report') + where <built-in method endswith of str object at 0x730a5"
+    },
+    {
+      "test": "tests.harness.test_logical_operator_schema.TestBindingFixture::test_all_binding_candidates_exist_in_actor_registry",
+      "reason": "AssertionError: ScientificLiteratureDiscoverer.candidates[0]: actor_id='autosci-literature-discover-worker' not found in agent-actors.json assert 'autosci-literature-discover-worker' in {'browser_agen"
+    },
+    {
+      "test": "tests.harness.test_logical_operator_schema.TestLogicalOperatorFixture::test_each_operator_has_primary_role",
+      "reason": "AssertionError: ScientificLiteratureDiscoverer: primary_role='scientific-literature-discoverer' not in {'auditor', 'router', 'builder', 'knowledge-extractor', 'planner', 'evaluator'} assert 'scientifi"
+    },
+    {
+      "test": "tests.harness.test_logical_operator_schema.TestLogicalOperatorFixtureSchemaValidation::test_fixture_validates_against_schema",
+      "reason": "jsonschema.exceptions.ValidationError: 'artifact_curation', 'scientific_evidence' do not match any of the regexes: '^(architecture_reasoning|code_impl|root_cause_debug|test_generation|test_execution|r"
+    },
+    {
+      "test": "tests.harness.test_migrate_intent::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_mirage_substrate::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_model_live_route_doctor::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_no_direct_tmux_send_keys::test_no_unexpected_send_keys_callsites",
+      "reason": "Failed: Found direct `tmux send-keys` calls outside the allowlist. New DAG-dispatch code must dispatch via operator_runtime.submit (file-inbox), not by injecting keystrokes into tmux. If this is inten"
+    },
+    {
+      "test": "tests.harness.test_pane_handoff_evidence.TestExtractRefs::test_extracts_absolute_path",
+      "reason": "assert 0 >= 1 + where 0 = len([])"
+    },
+    {
+      "test": "tests.harness.test_pane_handoff_evidence.TestOkWhenRefsPresent::test_ok_true_with_artifact_path",
+      "reason": "AssertionError: assert False is True + where False = ValidationResult(ok=False, refs={'event_ids': [], 'artifact_paths': [], 'action_ids': []}, claim_keywords=[], missing_refs=[], verified_event_ids=["
+    },
+    {
+      "test": "tests.harness.test_pane_handoff_evidence.TestOkWhenRefsPresent::test_refs_populated_with_path",
+      "reason": "assert 0 >= 1 + where 0 = len([])"
+    },
+    {
+      "test": "tests.harness.test_pane_handoff_evidence.TestRealEventsJsonlLookup::test_real_events_jsonl_exists_and_readable",
+      "reason": "AssertionError: events.jsonl not found at /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-5/harness/run/events.jsonl assert False + where False = exists() + where"
+    },
+    {
+      "test": "tests.harness.test_pane_lifecycle_jobs.TestCleanupHygieneArchives::test_keeps_recent",
+      "reason": "FileExistsError: [Errno 17] File exists: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/tmp/pytest-of-ssubr/pytest-0/test_keeps_recent0/archive'"
+    },
+    {
+      "test": "tests.harness.test_pane_lifecycle_jobs.TestCleanupHygieneArchives::test_removes_old_archives",
+      "reason": "FileExistsError: [Errno 17] File exists: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/tmp/pytest-of-ssubr/pytest-0/test_removes_old_archives0/archive'"
+    },
+    {
+      "test": "tests.harness.test_pane_lifecycle_jobs.TestCleanupLedgerArchives::test_removes_old",
+      "reason": "FileExistsError: [Errno 17] File exists: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-1/tmp/pytest-of-ssubr/pytest-0/test_removes_old0/archive'"
+    },
+    {
+      "test": "tests.harness.test_physical_operator_registry::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_physical_operator_schema.TestClaudeSurfaceFields::test_all_claude_cli_operators_have_billing_pool",
+      "reason": "AssertionError: mini-glm51-builder-1: missing billing_pool assert 'billing_pool' in {'display_name': 'Mac mini GLM-5.1 builder pool slot 1', 'plane': 'headless', 'owner_host': 'solar@example-host', 'p"
+    },
+    {
+      "test": "tests.harness.test_physical_operator_schema.TestClaudeSurfaceFields::test_all_claude_cli_operators_have_billing_surface",
+      "reason": "AssertionError: mini-glm51-builder-1: missing billing_surface assert 'billing_surface' in {'display_name': 'Mac mini GLM-5.1 builder pool slot 1', 'plane': 'headless', 'owner_host': 'solar@example-hos"
+    },
+    {
+      "test": "tests.harness.test_physical_operator_schema.TestClaudeSurfaceFields::test_billing_surface_values_are_valid",
+      "reason": "AssertionError: mini-glm51-builder-1: unexpected billing_surface=None assert None in {'anthropic_agent_sdk_credit', 'local_compute', 'subscription_interactive', 'unknown', 'usage_credit'}"
+    },
+    {
+      "test": "tests.harness.test_physical_operator_schema.TestConfigIntegrity::test_full_config_passes_schema",
+      "reason": "jsonschema.exceptions.ValidationError: 'billing_surface' is a required property Failed validating 'required' in schema['properties']['operators']['additionalProperties']['then']: {'required': ['surfac"
+    },
+    {
+      "test": "tests.harness.test_physical_operator_schema.TestPrintReservePolicy::test_print_operators_avoid_bulk_tasks",
+      "reason": "AssertionError: mini-claude-sonnet-builder-2: print reserve missing avoid_for entries: {'LOW_VALUE_SCAN', 'BULK_EDIT', 'TEST_RUN', 'FANOUT'} assert set() == {'BULK_EDIT',...', 'TEST_RUN'} Extra items "
+    },
+    {
+      "test": "tests.harness.test_physical_operator_schema.TestPrintReservePolicy::test_print_operators_have_compat_alias",
+      "reason": "AssertionError: mini-claude-opus-planner-print: compat_alias_for='tmux_pane' not found in operators assert 'tmux_pane' in {'mini-claude-opus-planner': {'display_name': 'Mac mini Claude Opus planner', "
+    },
+    {
+      "test": "tests.harness.test_physical_operator_schema.TestPrintReservePolicy::test_print_operators_have_quota_reserve_for",
+      "reason": "AssertionError: mini-claude-sonnet-builder-2: claude_print operator missing quota.reserve_for assert 'reserve_for' in {}"
+    },
+    {
+      "test": "tests.harness.test_physical_operator_schema.TestSurfaceTypeExamples::test_print_operators_use_agent_sdk_billing",
+      "reason": "AssertionError: mini-glm51-builder-1: print operator should use anthropic_agent_sdk_credit billing assert None == 'anthropic_agent_sdk_credit' + where None = <built-in method get of dict object at 0x7"
+    },
+    {
+      "test": "tests.harness.test_policy::test_row11_file_write_solar_repo_high",
+      "reason": "AssertionError: assert 10 == 11 + where 10 = RiskRule(rule_id=10, kind='file_write', description='write to sprint directory', risk_class='medium', approval_required=False, matcher_tag='sprint_dir_writ"
+    },
+    {
+      "test": "tests.harness.test_product_delivery_layout_guard::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_provider_actor_generation::test_actor_registry_validation_accepts_current_config",
+      "reason": "AssertionError: ['mini-claude-sonnet-evaluator-print: fallback_ladder[0] target=evaluator missing from actor registry', 'mini-codex-gp...ical operators', 'webapp_research_operator: fallback_ladder[0] "
+    },
+    {
+      "test": "tests.harness.test_provider_actor_generation::test_derived_actor_registry_validates_against_schema",
+      "reason": "jsonschema.exceptions.ValidationError: Additional properties are not allowed ('provenance' was unexpected) Failed validating 'additionalProperties' in schema: {'$schema': 'https://json-schema.org/draf"
+    },
+    {
+      "test": "tests.harness.test_provider_actor_generation::test_physical_operator_registry_passes_provider_adapter_validation",
+      "reason": "AssertionError: ['webapp_research_operator: unknown provider=browser', 'mini-youtube-transcript-extractor: unknown provider=browser', ...literature-discover-worker: backend=command not supported for p"
+    },
+    {
+      "test": "tests.harness.test_provider_actor_generation::test_provider_probe_hints_cover_google_glm_and_local_command_operators",
+      "reason": "KeyError: 'mini-browser-notebooklm'"
+    },
+    {
+      "test": "tests.harness.test_reasonix_advisory_routing::test_deepseek_v4_pro_prd_evaluator_registered_for_prd_and_eval_only",
+      "reason": "AssertionError: DeepSeek V4 Pro PRD/eval advisory operator must be registered assert None is not None"
+    },
+    {
+      "test": "tests.harness.test_reasonix_advisory_routing::test_pm_dispatch_allows_deepseek_v4_pro_prd_review_task",
+      "reason": "KeyError: 'mini-reasonix-deepseek-v4-pro-prd-evaluator'"
+    },
+    {
+      "test": "tests.harness.test_reasonix_advisory_routing::test_reasonix_physical_operators_are_advisory_only",
+      "reason": "AssertionError: mini-reasonix-deepseek-v4-flash-builder-1: Reasonix must not advertise builder role assert 'builder' not in {'builder'}"
+    },
+    {
+      "test": "tests.harness.test_s04_e2e.TestUpstreamNodeRegressions::test_n2_dispatcher_env_passthrough_still_passes",
+      "reason": "AssertionError: N2 tests regressed: no tests ran in 0.00s ERROR: file or directory not found: tests/test_dispatcher_env_passthrough.py assert 4 == 0 + where 4 = CompletedProcess(args=['/home/ssubr/ope"
+    },
+    {
+      "test": "tests.harness.test_s04_e2e.TestUpstreamNodeRegressions::test_n7_pane_handoff_evidence_still_passes",
+      "reason": "AssertionError: N7 tests regressed: .F....F....................F...F. [100%] =================================== FAILURES =================================== ____________ TestOkWhenRefsPresent.test_ok"
+    },
+    {
+      "test": "tests.harness.test_skills_readiness_certify::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_solar_harness_runtime_skill::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_solar_kb_obsidian_autouse::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_solar_kb_qmd_fallback::shell",
+      "reason": "exit 127"
+    },
+    {
+      "test": "tests.harness.test_solar_skills_selected_injection::test_build_skills_block_lists_selected_skills",
+      "reason": "TypeError: _build_skills_block() got an unexpected keyword argument 'selected_skills'"
+    },
+    {
+      "test": "tests.harness.test_solar_skills_selected_injection::test_extract_selected_skills_from_dispatch_section",
+      "reason": "AttributeError: module 'solar_skills' has no attribute '_extract_selected_skills_from_dispatch'"
+    },
+    {
+      "test": "tests.harness.test_status_server_p0_dashboard::script",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_strict_role_boundary_routing::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_tech_hotspot_baseline::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_tech_hotspot_radar::shell",
+      "reason": "exit 2"
+    },
+    {
+      "test": "tests.harness.test_tech_hotspot_radar_wiki_bridge::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.harness.test_youtube_acceptance_suite::test_build_closeout_eval_payloads_and_auto_closeout",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: PosixPath('~/Solar/harness')"
+    },
+    {
+      "test": "tests.harness.test_youtube_acceptance_suite::test_generate_reports_and_traceability",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: PosixPath('~/Solar/harness')"
+    },
+    {
+      "test": "tests.harness.test_youtube_acceptance_suite::test_run_pollution_report_uses_schema_aware_audit",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '~/Solar/harness/tests/fixtures/pollution_seed.sql'"
+    },
+    {
+      "test": "tests.harness.test_youtube_influence_digest::shell",
+      "reason": "exit 2"
+    },
+    {
+      "test": "tests.harness.test_youtube_subtitle_discovery::test_asr_tracks_found",
+      "reason": "assert 0 >= 2 + where 0 = len([])"
+    },
+    {
+      "test": "tests.harness.test_youtube_subtitle_discovery::test_discover_returns_tracks",
+      "reason": "assert 0 > 0 + where 0 = len([])"
+    },
+    {
+      "test": "tests.harness.test_youtube_subtitle_discovery::test_standard_tracks_found",
+      "reason": "assert 0 >= 2 + where 0 = len([])"
+    },
+    {
+      "test": "tests.harness.workflow_contract.test_contract_schema::test_all_shipped_contracts_schema_valid",
+      "reason": "AssertionError: assert {'code.cli_sm...ive.rsi_demo'} == {'code.cli_sm...ive.rsi_demo'} Extra items in the left set: 'research.autosci.v1' Use -v to get more diff"
+    },
+    {
+      "test": "tests.harness.workflow_contract.test_router_cli::test_list_shows_all_shipped_contracts",
+      "reason": "AssertionError: assert ['code.cli_sm...ive.rsi_demo'] == ['code.cli_sm...ive.rsi_demo'] At index 3 diff: 'research.autosci.v1' != 'research.deepdive.rsi_demo' Left contains one more item: 'research.de"
+    },
+    {
+      "test": "tests.integrations.gemini_deep_research.ui.test_status_view.TestEpicTreeReal::test_capabilities_surfaced",
+      "reason": "AssertionError: False is not true"
+    },
+    {
+      "test": "tests.integrations.gemini_deep_research.ui.test_status_view.TestEpicTreeReal::test_five_child_sprints",
+      "reason": "AssertionError: 0 not greater than or equal to 5"
+    },
+    {
+      "test": "tests.integrations.gemini_deep_research.ui.test_status_view.TestEpicTreeReal::test_render_text_contains_epic_and_tree",
+      "reason": "AssertionError: 's03-core-runtime' not found in 'EPIC epic-20260529-跑通-gemini-deep-research-我的具体要求是-1-从用户那里或者上游调用-上游算子那里获取问题输入-2'"
+    },
+    {
+      "test": "tests.integrations.gemini_deep_research.ui.test_status_view.TestEpicTreeReal::test_to_dict_shape",
+      "reason": "IndexError: list index out of range"
+    },
+    {
+      "test": "tests.journeys.phase22.code.test_j04_paper_ingestion::test_p22_j04_paper_ingestion",
+      "reason": "ModuleNotFoundError: No module named 'fitz'"
+    },
+    {
+      "test": "tests.journeys.phase22.code.test_j18_real_linux_status_lifecycle::test_p22_j18_real_linux_status_lifecycle",
+      "reason": "AttributeError: 'NoneType' object has no attribute 'get'"
+    },
+    {
+      "test": "tests.platform.phase22.test_phase22_workbook::test_phase22_workbook_formula_errors_and_opc_sanity",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.platform.phase22.test_phase22_workbook::test_phase22_workbook_has_expected_sheets_and_reimport_shape",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.platform.phase22.test_phase22_workbook::test_phase22_workbook_output_exists",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.platform.phase22.test_phase22_workbook::test_phase22_workbook_summary_matches_matrix_counts",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.platform.provider.test_provider_onboarding::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_control_routes_emit_approved_external_runtime_proofs[$setup-setup_status-setup]",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...: \"setup\",\\n \"status\": \"failed\",\\n \"w"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_exp_pilot_run_executes_approved_native_command_without_wiki_writeback",
+      "reason": "AssertionError: assert 'schema_only' == 'passed' - passed + schema_only"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_exp_pilot_run_parity_demo_auto_executes_local_command",
+      "reason": "AssertionError: assert 'inconclusive' == 'completed' - completed + inconclusive"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_exp_run_assimilates_remote_helper_runtime_evidence",
+      "reason": "AssertionError: assert False + where False = exists() + where exists = PosixPath('/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/tmp/pytest-of-ssubr/pytest-0/t"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_exp_run_executes_approved_native_command",
+      "reason": "AssertionError: assert 'schema_only' == 'passed' - passed + schema_only"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_exp_run_parity_demo_auto_executes_local_command",
+      "reason": "AssertionError: assert 'schema_only' == 'passed' - passed + schema_only"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_exp_run_rejects_remote_helper_stdout_without_runtime_evidence",
+      "reason": "KeyError: 'result_path'"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_exp_status_reads_persistent_session_registry",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: '/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-0/tmp/pytest-of-ssubr/pytest-0/test_autosci_skill_shim_ex"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_keeps_setup_gated",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...ired\",\\n \"skill\": \"setup\",\\n \"status\""
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_refine_runs_review_command_quality_gate",
+      "reason": "AssertionError: assert 'approved_aft...ifact_applied' == 'target_score_reached' - target_score_reached + approved_after_artifact_applied"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_research_scheduler_executes_approved_experiment_command",
+      "reason": "AssertionError: { \"action_count\": 1, \"authorization_request_count\": 1, \"authorization_required\": true, \"autosci_command\": \"/research\", \"evidence_path\": \"/home/ssubr/openjiuwen-solar-integration/ci-imp"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_review_invokes_openai_compatible_provider",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...l\": \"review\",\\n \"status\": \"failed\",\\n"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_review_missing_slug_does_not_use_repo_workspace_fallback",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...l\": \"review\",\\n \"status\": \"failed\",\\n"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_review_normalizes_flat_openai_payload_without_status",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...iew\",\\n \"status\": \"failed\",\\n \"work_d"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_review_resolves_harness_prefixed_workspace_path",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...\",\\n \"status\": \"failed\",\\n \"work_dir\""
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_review_uses_review_llm_command_bridge",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...ll\": \"review\",\\n \"status\": \"failed\",\\"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_review_uses_supplied_review_llm_evidence",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...l\": \"review\",\\n \"status\": \"failed\",\\n"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_runs_review_as_artifact_review",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...skill\": \"review\",\\n \"status\": \"failed"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_runs_wiki_and_control_proposal_actions",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...n \"skill\": \"setup\",\\n \"status\": \"fail"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_setup_autosci_native_writes_explicit_dotenv_without_secret_leakage",
+      "reason": "AssertionError: assert 2 == 0 + where 2 = CompletedProcess(args=['/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/full-suite-venv/bin/python', ...etup\",\\n \"status\": \"failed\",\\n \"work_"
+    },
+    {
+      "test": "tests.plugins.autosci.test_autosci_skill_shim::test_autosci_skill_shim_visualize_serve_emits_approved_runtime_proofs",
+      "reason": "assert 0 == 1"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase10_claim_method_and_code_actions_write_canonical_evidence",
+      "reason": "AssertionError: Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-1/harness/plugins/autosci/bin/autosci_bridge.py\", line 23"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase11_generate_and_evaluate_ideas_write_native_evidence",
+      "reason": "AssertionError: Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-1/harness/plugins/autosci/bin/autosci_bridge.py\", line 23"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase12_design_run_and_monitor_experiment_write_native_evidence",
+      "reason": "AssertionError: Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-1/harness/plugins/autosci/bin/autosci_bridge.py\", line 23"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase12_unapproved_external_experiment_is_failed_evidence",
+      "reason": "AssertionError: assert 'inconclusive' == 'failed' - failed + inconclusive"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase13_verify_claim_maps_experiment_outcomes_to_verdicts",
+      "reason": "AssertionError: Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-1/harness/plugins/autosci/bin/autosci_bridge.py\", line 23"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase14_write_report_outputs_report_and_publication_bundle",
+      "reason": "AssertionError: Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-1/harness/plugins/autosci/bin/autosci_bridge.py\", line 23"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase16_evolve_workflow_outputs_reviewable_proposal",
+      "reason": "AssertionError: Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-1/harness/plugins/autosci/bin/autosci_bridge.py\", line 23"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase9_analyze_paper_preserves_analysis",
+      "reason": "AssertionError: Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-1/harness/plugins/autosci/bin/autosci_bridge.py\", line 23"
+    },
+    {
+      "test": "tests.plugins.autosci.test_bridge_smoke::test_phase9_ingest_writes_foundation_sidecars",
+      "reason": "AssertionError: Traceback (most recent call last): File \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/work/pytest-1/harness/plugins/autosci/bin/autosci_bridge.py\", line 23"
+    },
+    {
+      "test": "tests.plugins.autosci.test_literature_discover::test_topic_discovery_exhausted_semantic_scholar_429_is_inconclusive",
+      "reason": "assert False + where False = any(<generator object test_topic_discovery_exhausted_semantic_scholar_429_is_inconclusive.<locals>.<genexpr> at 0x7dc70c5d8450>)"
+    },
+    {
+      "test": "tests.plugins.autosci.test_phase19_parity_bridge::test_inventory_attaches_runtime_proof_manifest_without_promoting_full",
+      "reason": "AssertionError: { \"evidence_status\": \"completed\", \"ok\": false, \"path\": \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-3/tmp/pytest-of-ssubr/pytest-0/test_invent"
+    },
+    {
+      "test": "tests.plugins.autosci.test_phase19_parity_bridge::test_inventory_routes_every_native_autosci_skill",
+      "reason": "AssertionError: { \"evidence_status\": \"completed\", \"ok\": false, \"path\": \"/home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-3/tmp/pytest-of-ssubr/pytest-0/test_invent"
+    },
+    {
+      "test": "tests.repository.governance.test_overwritten_contribution_reconciliation::test_readme_is_the_verbatim_stellven_source_tip_blob",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.repository.governance.test_overwritten_contribution_reconciliation::test_reconciliation_actions_have_current_evidence",
+      "reason": "AssertionError: assert 'Feature list stuff/Solar_Harness_All_Sources_2026-07-16/files/asi/autosci_consistency_inventory.stderr.txt' in {'.agents/skills/ask/SKILL.md', '.agents/skills/check/SKILL.md', "
+    },
+    {
+      "test": "tests.repository.governance.test_overwritten_contribution_reconciliation::test_reconciliation_is_complete_and_resolved",
+      "reason": "red on GitHub Actions run 87; also red at base 5cccc0b49"
+    },
+    {
+      "test": "tests.repository.release.test_release_cut_safety::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.repository.release.test_release_public_tree::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.vertical.installer_cli_webapp.test_cli_provider_onboarding_behavior::test_cli_doctor_reports_selected_codex_runtime",
+      "reason": "FileNotFoundError: [Errno 2] No such file or directory: 'C:\\\\Program Files\\\\Git\\\\bin\\\\bash.exe'"
+    },
+    {
+      "test": "tests.workflow.ingestion.request_capture_atomic_driver::shell",
+      "reason": "exit 1"
+    },
+    {
+      "test": "tests.workflow.ingestion.test_phase22_batch001_wf003_imports::test_wf003_04_html_import",
+      "reason": "AssertionError: assert '<html><body>.../body></html>' == 'paper' - paper + <html><body><h1>Title</h1><p>Body</p></body></html>"
+    },
+    {
+      "test": "tests.workflow.ingestion.test_phase22_batch001_wf003_imports::test_wf003_08_arxiv_import_requires_network_or_references",
+      "reason": "AssertionError: assert 'failed' == 'completed' - completed + failed"
+    },
+    {
+      "test": "tests.workflow.ingestion.test_phase22_batch001_wf004_binding::test_wf004_03_mismatched_binding",
+      "reason": "ValueError: harness directory does not exist: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-5/tmp/pytest-of-ssubr/pytest-0/test_wf004_03_mismatched_bindi0/harne"
+    },
+    {
+      "test": "tests.workflow.ingestion.test_phase22_batch001_wf004_binding::test_wf004_04_repo_context_capture",
+      "reason": "ValueError: harness directory does not exist: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-5/tmp/pytest-of-ssubr/pytest-0/test_wf004_04_repo_context_cap0/harne"
+    },
+    {
+      "test": "tests.workflow.ingestion.test_phase22_batch001_wf004_binding::test_wf004_05_explicit_prior_artifact_binding",
+      "reason": "ValueError: harness directory does not exist: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-5/tmp/pytest-of-ssubr/pytest-0/test_wf004_05_explicit_prior_a0/harne"
+    },
+    {
+      "test": "tests.workflow.ingestion.test_phase22_batch001_wf004_binding::test_wf004_06_cross_workspace_rejection",
+      "reason": "ValueError: harness directory does not exist: /home/ssubr/openjiuwen-solar-integration/ci-improvement/evidence/ci-local/home/pytest-5/tmp/pytest-of-ssubr/pytest-0/test_wf004_06_cross_workspace_0/harne"
+    },
+    {
+      "test": "tests.workflow.ingestion.test_phase22_batch001_wf005_dedup::test_wf005_02_same_id_replay_is_idempotent",
+      "reason": "assert 0 == 1 + where 0 = len([])"
+    }
+  ]
+}

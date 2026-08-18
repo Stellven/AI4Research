@@ -95,7 +95,7 @@ def test_gate_chain_produces_four_verdict_slots_and_cli_visibility() -> None:
     assert as_dict["partial_verdicts"] == ["exploration_log"]
 
 
-def test_exploration_log_has_elimination_record() -> None:
+def test_exploration_log_has_elimination_record(tmp_path: Path) -> None:
     matrix = SourceMatrix("sec-compression", ["paper", "code", "official", "benchmark"], [], 4, 4)
     candidates = [
         ExplorationDirection("dir-canonical", "canonical evidence", "papers code official benchmark", "active", matrix),
@@ -117,11 +117,14 @@ def test_exploration_log_has_elimination_record() -> None:
         "q-small-model-compression-2024-2026",
         candidates,
         source_provider=provider,
-        log_path=RUN_DIR / "elimination_log.jsonl",
+        # Was RUN_DIR, a tracked fixture under harness/runtime/. Every run
+        # appended another line to it, so the checkout came back dirty and the
+        # fixture grew without bound; `len(lines) >= 1` never noticed.
+        log_path=tmp_path / "elimination_log.jsonl",
         clock=lambda: "1970-01-01T00:00:00Z",
         source_matrix=matrix,
     )
-    lines = (RUN_DIR / "elimination_log.jsonl").read_text().splitlines()
+    lines = (tmp_path / "elimination_log.jsonl").read_text().splitlines()
     assert len(result.eliminated_directions) == 1
     assert len(lines) >= 1
     assert json.loads(lines[-1])["kill_reason"]

@@ -11,17 +11,14 @@ export SOLAR_INTENT_DB="$TMP/solar.db"
 export SOLAR_GEMINI_CLI_AUTH=auto
 
 cp solar-harness.sh "$TMP/solar-harness.sh"
-cp lib/run-state.sh "$TMP/lib/run-state.sh"
-cp lib/events.sh "$TMP/lib/events.sh"
-cp lib/graph_scheduler.py "$TMP/lib/graph_scheduler.py"
-cp lib/plan_validator.py "$TMP/lib/plan_validator.py"
-cp lib/prerequisite_resolver.py "$TMP/lib/prerequisite_resolver.py"
-cp lib/intent_engine_adapter.py "$TMP/lib/intent_engine_adapter.py"
-cp lib/multi_task_runner.py "$TMP/lib/multi_task_runner.py"
-cp lib/workflow_contract.py "$TMP/lib/workflow_contract.py"
-cp lib/tvs_render_cli.ts "$TMP/lib/tvs_render_cli.ts"
-cp lib/claude_surface.py "$TMP/lib/claude_surface.py"
-cp lib/gemini_adapter.py "$TMP/lib/gemini_adapter.py"
+# Copy lib/ wholesale rather than naming individual modules. The previous
+# hand-maintained list named 11 files, but the transitive import closure of
+# those 11 is 61 modules, so the list was silently incomplete and broke as soon
+# as a new intra-lib import was added (executable_node, in 523040fb2). A list
+# that has to be updated whenever an unrelated module grows an import is not
+# maintainable, and this test is about the multi-task entrypoint, not about
+# proving a minimal payload.
+cp -a lib/. "$TMP/lib/"
 cp config/multi-task-profiles.json "$TMP/config/multi-task-profiles.json"
 cp config/model-registry.json "$TMP/config/model-registry.json"
 cp personas/builder.md "$TMP/personas/builder.md"
@@ -144,9 +141,14 @@ grep -q "new-session" "$TMP/tmux-calls.log" || { echo "FAIL: tmux new-session no
 grep -q "Solar Harness Multi-Task" $TMP/solar-multi-task-test.out || { echo "FAIL: summary not rendered"; exit 1; }
 find "$TMP/run/multi-task" -name runner.sh -print0 | xargs -0 -n1 bash -n
 
-python3 - "$graph" <<'PY'
-import json, sys
-graph = json.load(open(sys.argv[1], encoding="utf-8"))
+# task_graph.json is a spec document. save_graph() splits the runtime plane out
+# into a sibling <sprint>.task_dag.state.json and load_graph() merges it back,
+# so json.load() on the graph path alone sees no status, assigned_to or
+# dispatch_id. Load through graph_scheduler to assert the real contract.
+PYTHONPATH="$TMP/lib" python3 - "$graph" <<'PY'
+import sys
+import graph_scheduler
+graph = graph_scheduler.load_graph(sys.argv[1])
 nodes = {n["id"]: n for n in graph["nodes"]}
 for node_id in ("A", "B"):
     n = nodes[node_id]

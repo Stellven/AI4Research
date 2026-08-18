@@ -168,8 +168,11 @@ jobs:
           tar xJf "$RUNNER_TEMP/sc.tar.xz" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/shellcheck-v0.10.0" >> "$GITHUB_PATH"
 
+      # Was excused on pull requests for a single SC2034 on an unused
+      # harness_python assignment in lib/installer/common.sh. That assignment
+      # was dead (nothing read it, and command_path is a pure lookup) and has
+      # been removed, so this blocks again.
       - name: shellcheck install.sh + get-solar.sh + lib/installer (warning severity)
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
         run: shellcheck -S warning install.sh get-solar.sh lib/installer/*.sh
 
   dry-run-check:

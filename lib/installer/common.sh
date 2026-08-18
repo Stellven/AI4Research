@@ -109,7 +109,6 @@ detect_python() {
         done
         requested="${requested:-python3}"
     fi
-    harness_python="$(command_path "$requested")"
     SOLAR_PYTHON_VERSION=""
 
     path="$(python_candidate_path "$requested")"

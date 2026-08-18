@@ -1,0 +1,154 @@
+{
+  "schema": "solar.tests.lanes.v1",
+  "note": "Which runner owns each test file under tests/. Files pytest collects need no entry. Everything else needs one, with a reason; scripts/check-test-census.py fails on any test file that is neither collected nor listed. First matching glob wins, so exclusions must precede the broad lane globs.",
+  "shards": {
+    "pytest": 6,
+    "script": 1,
+    "shell": 2
+  },
+  "shards_note": "How many parallel jobs each lane is split into. The workflow matrix and scripts/check-test-baseline.py both read this, so a matrix that grows or loses a shard without updating this file fails the gate instead of quietly changing what CI covers.",
+  "lanes": {
+    "shell": {
+      "runner": "bash",
+      "blocking": true,
+      "description": "Shell tests, run one process per file by scripts/run-test-shard.py --lane shell."
+    },
+    "script": {
+      "runner": "python",
+      "blocking": true,
+      "description": "Files named test_*.py that are programs with a main() and no pytest test functions. pytest collects nothing from them, so they were invisible to any pytest-based gate."
+    },
+    "excluded": {
+      "runner": null,
+      "blocking": false,
+      "description": "Not run in public CI. Every entry states what it needs that a public runner cannot give: network, an installed runtime, a terminal multiplexer, a model provider, or a non-Linux host."
+    }
+  },
+  "assignments": [
+    {
+      "glob": "tests/harness/integrations/test_agent_arena_benchmark.sh",
+      "lane": "excluded",
+      "reason": "network: harness/lib/agent_arena_benchmark.py git-clones https://github.com/nousresearch/hermes-agent.git (226 MB, unpinned) into harness/vendor/. Public CI must stay deterministic and credential-free, and the clone lands inside the working tree."
+    },
+    {
+      "glob": "tests/harness/test_mia_runtime_adapter.sh",
+      "lane": "excluded",
+      "reason": "local ML runtime: needs venvs/mia-memory-serve/ with torch, transformers and openai, a downloaded sentence-transformers BERT snapshot under ~/.cache/huggingface, vendor/MIA, and a server on fixed port 5197. A public runner has none of these, and the test spends its whole timeout retrying curl against a server that never starts."
+    },
+    {
+      "glob": "tests/harness/research_orchestration/generalization/test_phase5_content_diversity.py",
+      "lane": "excluded",
+      "reason": "live provider: runs autosci_bridge.py research with --allow-network and the approval ref phase5-content-diversity-user-authorized-network-provider, so it performs real web retrieval and real model calls. It also hangs rather than failing when no provider answers. Public CI must stay deterministic, credential-free and non-model-backed."
+    },
+    {
+      "glob": "tests/harness/research_orchestration/generalization/test_phase5_platform_provider_resilience.py",
+      "lane": "excluded",
+      "reason": "non-Linux host: shells out to wsl.exe -d Ubuntu, which only exists on a Windows host, and expects a prebuilt venv under .codex-tmp/phase5-platform-rerun-final-venv."
+    },
+    {
+      "glob": "tests/platform/windows/install.Tests.ps1",
+      "lane": "excluded",
+      "reason": "other workflow: Pester, run by .github/workflows/install-matrix.yml on windows-latest. The nine shards are Linux, so this cannot run there. Covered, but not by this gate - see GAP-011."
+    },
+    {
+      "glob": "tests/platform/windows/windows-evidence-doctor.Tests.ps1",
+      "lane": "excluded",
+      "reason": "NO RUNNER. Pester file that nothing executes: no workflow and no script references it. Kept because it is a Windows evidence-doctor contract, not because it runs. See GAP-013."
+    },
+    {
+      "glob": "tests/desktop/**",
+      "lane": "excluded",
+      "reason": "other workflow, conditionally: three of these nine are run by .github/workflows/desktop-build.yml, which triggers on pull requests to main under desktop/** paths only. This branch targets openJiuwen-Solar, so none of them run here. The other six are referenced by nothing. See GAP-013."
+    },
+    {
+      "glob": "tests/core/*.test.ts",
+      "lane": "excluded",
+      "reason": "NO RUNNER. `bun test` would discover these, and package.json defines `test = bun test`, but no workflow runs it - install-matrix.yml runs `bun install` only. Seventeen TypeScript test files execute nowhere. See GAP-013."
+    },
+    {
+      "glob": "tests/**/*.test.ts",
+      "lane": "excluded",
+      "reason": "NO RUNNER. Same as tests/core/*.test.ts: a bun target with no workflow behind it. See GAP-013."
+    },
+    {
+      "glob": "tests/**/*.mjs",
+      "lane": "excluded",
+      "reason": "NO RUNNER. Node test files referenced by no workflow, script or package.json entry. See GAP-013."
+    },
+    {
+      "glob": "tests/*.sh",
+      "lane": "shell",
+      "reason": "every bash test under tests/ at any depth; fnmatch '*' crosses path separators"
+    },
+    {
+      "glob": "tests/harness/control_plane/test_autopilot_permissions_prompt.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/control_plane/test_autopilot_safe_continue_prompt.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/control_plane/test_autopilot_survey_block.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/status_server/test_settings_concurrency.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_autopilot_pane_role_guard.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_github_trends_digest.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_graph_dispatch_stale_scrollback.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_status_server_ai_influence.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_status_server_assets.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_status_server_execution_plan_summary.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_status_server_knowledge_subscriptions.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_status_server_p0_dashboard.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_status_server_task_graph_gate_audit.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    },
+    {
+      "glob": "tests/harness/test_status_server_understand_anything_summary.py",
+      "lane": "script",
+      "reason": "program with main(); no pytest test functions"
+    }
+  ]
+}
