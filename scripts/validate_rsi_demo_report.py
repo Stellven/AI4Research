@@ -10,4 +10,8 @@ import sys
 import pathlib
 
 _CANONICAL = pathlib.Path(__file__).resolve().parents[1] / "harness" / "scripts" / "validate_rsi_demo_report.py"
-os.execv(sys.executable, [sys.executable, str(_CANONICAL), *sys.argv[1:]])
+if sys.platform == "win32":
+    import subprocess
+    sys.exit(subprocess.run([sys.executable, str(_CANONICAL)] + sys.argv[1:]).returncode)
+else:
+    os.execv(sys.executable, [sys.executable, str(_CANONICAL)] + sys.argv[1:])
