@@ -4,7 +4,9 @@
 
 - Source commits: 425
 - Candidate paths: 5438
-- Unresolved: 0
+- Unresolved (legacy): 0
+- Needs human decision: 0
+- Tracked target missing: 1685
 - Fixed overwrite proof: `tree(a4ba17ac9) == tree(4b5af7519)` is recorded in the JSON ledger.
 
 ## Classification counts
@@ -12,8 +14,8 @@
 - `INTENTIONALLY_EXCLUDED_GENERATED_STATE`: 1816
 - `INTENTIONALLY_EXCLUDED_OBSOLETE_DUPLICATE`: 2126
 - `INTENTIONALLY_EXCLUDED_SECRET_OR_LOCAL_STATE`: 1
-- `PRESERVED_EXACT`: 1358
-- `SUPERSEDED_BY_NEWER_IMPLEMENTATION`: 137
+- `PRESERVED_EXACT`: 1357
+- `SUPERSEDED_BY_NEWER_IMPLEMENTATION`: 138
 
 ## Recovery decisions
 
