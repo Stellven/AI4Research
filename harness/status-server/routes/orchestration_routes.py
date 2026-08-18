@@ -198,24 +198,9 @@ def _sprint_status_rows(limit: int = 80) -> list[dict]:
     rows: list[dict] = []
     for item in prelim:
         sid = item["sprint_id"]
-        nodes: list = []
-        runtime_state: dict = {}
-        tg_ok = False
-        for name in (
-            f"{sid}.task_graph.json",
-            f"{sid}.task_dag.state.json",
-            f"{sid}.task_graph.state.json",
-            f"{sid}.closure.json",
-        ):
-            tg_data, tg_read = _read_json(SPRINTS_DIR / name)
-            if tg_read and isinstance(tg_data, dict):
-                tg = _normalize_task_graph_payload(tg_data)
-                raw_nodes = tg.get("nodes")
-                if isinstance(raw_nodes, list):
-                    nodes = raw_nodes
-                    runtime_state = tg.get("runtime_state") or {}
-                    tg_ok = True
-                    break
+        tg, tg_ok = _load_task_graph(sid)
+        nodes = tg.get("nodes") if isinstance(tg.get("nodes"), list) else []
+        runtime_state = tg.get("runtime_state") or {}
         node_counts: dict[str, int] = {}
         for node in nodes:
             if not isinstance(node, dict):
@@ -333,11 +318,48 @@ def _existing_task_graph_path(sid: str) -> Path:
     return SPRINTS_DIR / f"{sid}.task_graph.json"
 
 
+def _split_runtime_state(sid: str) -> dict:
+    """Load the runtime node/gate plane stored beside a specification graph."""
+    for name in (
+        f"{sid}.task_dag.state.json",
+        f"{sid}.task_graph.state.json",
+    ):
+        data, ok = _read_json(SPRINTS_DIR / name)
+        if not ok or not isinstance(data, dict):
+            continue
+        runtime = data.get("runtime_state") if isinstance(data.get("runtime_state"), dict) else {}
+        nodes = data.get("node_results") if isinstance(data.get("node_results"), dict) else runtime.get("nodes")
+        gates = data.get("gate_results") if isinstance(data.get("gate_results"), dict) else runtime.get("gates")
+        if isinstance(nodes, dict) or isinstance(gates, dict):
+            return {
+                "nodes": nodes if isinstance(nodes, dict) else {},
+                "gates": gates if isinstance(gates, dict) else {},
+            }
+    return {}
+
+
+def _attach_split_runtime_state(sid: str, graph: dict) -> dict:
+    runtime = _split_runtime_state(sid)
+    if not runtime:
+        return graph
+    merged = dict(graph)
+    existing = graph.get("runtime_state") if isinstance(graph.get("runtime_state"), dict) else {}
+    merged_runtime = dict(existing)
+    for key in ("nodes", "gates"):
+        values = dict(existing.get(key) or {}) if isinstance(existing.get(key), dict) else {}
+        values.update(runtime.get(key) or {})
+        merged_runtime[key] = values
+    merged["runtime_state"] = merged_runtime
+    return merged
+
+
 def _load_task_graph(sid: str) -> tuple[dict, bool]:
     for path in _task_graph_candidate_paths(sid):
         data, ok = _read_json(path)
         if ok and isinstance(data, dict):
-            return _normalize_task_graph_payload(data), True
+            graph = _normalize_task_graph_payload(data)
+            if isinstance(graph.get("nodes"), list):
+                return _attach_split_runtime_state(sid, graph), True
     return {}, False
 
 
@@ -833,6 +855,22 @@ def _build_stall_summary(
             "title": "Sprint is blocked at a gate",
             "detail": "Solar reported a blocked gate. The dashboard is showing the stall rather than treating the sprint as complete.",
             "reasons": reasons,
+        }
+    planner_claim = status.get("planner_dispatch_claim")
+    if isinstance(planner_claim, dict) and str(planner_claim.get("state") or "").lower() == "failed":
+        failure_reason = str(planner_claim.get("failure_reason") or "planner_dispatch_failed").strip()
+        no_operator = "no_dispatchable_operator_for_role" in failure_reason
+        return {
+            "is_stalled": True,
+            "state": "planner_dispatch_failed",
+            "severity": "warn",
+            "title": "Planner could not start",
+            "detail": (
+                "No dispatchable Planner operator is available. Solar can retry after operator health recovers."
+                if no_operator
+                else "Solar could not hand the task to the Planner. Solar can retry after the dispatch failure clears."
+            ),
+            "reasons": [failure_reason],
         }
     governance_state = str((plan_governance or {}).get("state") or "").strip().lower()
     if (

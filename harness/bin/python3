@@ -3,4 +3,23 @@ set -eu
 
 HARNESS_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 REPO_DIR=$(CDPATH= cd -- "$HARNESS_DIR/.." && pwd)
-exec "$REPO_DIR/.venv/bin/python" "$@"
+
+# Prefer the repository environment when it exists, but keep the harness
+# usable when a Windows checkout is invoked through WSL (that checkout has
+# .venv/Scripts rather than .venv/bin).  The explicit system paths also avoid
+# resolving this wrapper again through PATH and recursing forever.
+for PYTHON_BIN in \
+  "${SOLAR_PYTHON:-}" \
+  "$REPO_DIR/.venv/bin/python" \
+  "$REPO_DIR/.venv/bin/python3" \
+  /usr/bin/python3 \
+  /usr/local/bin/python3 \
+  /opt/homebrew/bin/python3
+do
+  if [ -n "$PYTHON_BIN" ] && [ -x "$PYTHON_BIN" ]; then
+    exec "$PYTHON_BIN" "$@"
+  fi
+done
+
+echo "solar python wrapper: no usable Python 3 interpreter found" >&2
+exit 127

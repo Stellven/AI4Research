@@ -14,8 +14,9 @@ import pytest
 HARNESS = (Path(__file__).resolve().parents[3] / 'harness')
 LIB = HARNESS / "lib"
 ADAPTER = HARNESS / "plugins" / "autosci" / "bin" / "autosci_eval_adapter.py"
-PASS_EVIDENCE = HARNESS / "tests" / "evaluators" / "scientific" / "fixtures" / "pass" / "research_paper.json"
-FAIL_EVIDENCE = HARNESS / "tests" / "evaluators" / "scientific" / "fixtures" / "fail" / "research_paper.json"
+SCIENTIFIC_FIXTURES = Path(__file__).resolve().parents[1] / "evaluators" / "scientific" / "fixtures"
+PASS_EVIDENCE = SCIENTIFIC_FIXTURES / "pass" / "research_paper.json"
+FAIL_EVIDENCE = SCIENTIFIC_FIXTURES / "fail" / "research_paper.json"
 
 if str(LIB) not in sys.path:
     sys.path.insert(0, str(LIB))
@@ -647,6 +648,33 @@ def test_normal_intake_autosci_dispatch_ready_uses_exact_autosci_operator(
     assert dispatched["operator_envelope"]["outputs"]["evidence_payload_path"].endswith(
         "research_evidence_import.v1.json"
     )
+
+
+def test_autosci_operator_envelope_preserves_node_required_skills() -> None:
+    import graph_node_dispatcher as gnd
+    implementation = getattr(gnd, "_IMPL", gnd)
+
+    envelope = implementation._build_autosci_operator_envelope(
+        sid="sprint-skill-bridge",
+        node_id="R3",
+        node={
+            "id": "R3",
+            "goal": "Compile the grounded research report.",
+            "dispatch_task_type": "research",
+            "capability_capsule_id": "cap.skill-execution-bridge",
+            "required_skills": ["research_compilation"],
+            "write_scope": ["workspace/research/report/"],
+        },
+        graph={},
+        graph_path=str(HARNESS / "sprints" / "sprint-skill-bridge.task_graph.json"),
+        operator_id="mini-codex-gpt55-medium-builder-1",
+        dispatch_id="graph-sprint-skill-bridge-R3",
+        instruction_file=HARNESS / "sprints" / "sprint-skill-bridge.R3-dispatch.md",
+        payload={"capsule_plan_ir": {"selected_skills": []}},
+        ttl=30,
+    )
+
+    assert envelope["selected_skills"] == ["research_compilation"]
 
 
 def test_openai_policy_keeps_provider_neutral_autosci_operator(

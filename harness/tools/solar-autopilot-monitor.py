@@ -1609,11 +1609,24 @@ def _transition_planner_dispatch_claim(
         claim["submitted_at"] = now
         claim.pop("released_at", None)
         claim.pop("failure_reason", None)
+        claim.pop("returncode", None)
     elif state == "failed":
         claim["released_at"] = now
-        reason = str(detail.get("reason") or detail.get("error") or "role_pool_dispatch_failed")
+        reason = str(detail.get("reason") or detail.get("error") or "").strip()
+        if not reason:
+            output = f"{detail.get('stderr') or ''}\n{detail.get('stdout') or ''}"
+            no_operator = re.search(
+                r"no_dispatchable_operator_for_role\s*:\s*([a-z0-9_.-]+)",
+                output,
+                re.IGNORECASE,
+            )
+            if no_operator:
+                reason = f"no_dispatchable_operator_for_role: {no_operator.group(1).lower()}"
         if detail.get("returncode") is not None:
-            reason = f"{reason}_rc_{detail.get('returncode')}"
+            claim["returncode"] = detail.get("returncode")
+        else:
+            claim.pop("returncode", None)
+        reason = reason or "role_pool_dispatch_failed"
         claim["failure_reason"] = reason[-300:]
     status["planner_dispatch_claim"] = claim
     return before != json.dumps(claim, sort_keys=True, default=str)
@@ -2624,7 +2637,7 @@ def dispatch_ready_graph_nodes(sid: str, lease: bool = True) -> dict:
         import plan_validator  # type: ignore
 
         plan_guard = plan_validator.check_planner_graph_dispatchable(
-            graph, sprints_dir=SPRINTS_DIR, sid=sid
+            graph, sprints_dir=SPRINTS, sid=sid
         )
     except Exception as guard_exc:
         if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
@@ -2809,7 +2822,13 @@ def normalize_status_to_workflow_route(sid: str, status: dict, route: dict) -> b
                 )
                 return False
     new_status, new_phase, handoff, target_role = fields
-    changed = any(
+    planner_claim_cleared = False
+    if role != "planner":
+        for key in ("planner_dispatch_claim", "plan_compile_required"):
+            if key in status:
+                status.pop(key, None)
+                planner_claim_cleared = True
+    changed = planner_claim_cleared or any(
         str(status.get(k, "")) != v
         for k, v in {
             "status": new_status,
@@ -2843,7 +2862,12 @@ def normalize_status_to_workflow_route(sid: str, status: dict, route: dict) -> b
         sid,
         "autopilot_workflow_route_normalized",
         "info",
-        {"route_role": role, "stage": stage, "reason": route.get("reason", "")},
+        {
+            "route_role": role,
+            "stage": stage,
+            "reason": route.get("reason", ""),
+            "planner_claim_cleared": planner_claim_cleared,
+        },
     )
     return True
 

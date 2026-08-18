@@ -1263,7 +1263,7 @@ def _read_config_env(path: Path) -> dict:
 
 
 def _settings_payload() -> dict:
-    """Read-only model/lab settings surface for the P0 app shell."""
+    """Model/lab settings surface for the P0 app shell."""
     config_env = _read_config_env(HARNESS_DIR / "config.env")
     role_model_keys = {
         "pm": ("SOLAR_PM_MODEL", "PM_MODEL", "CLAUDE_PM_MODEL"),
@@ -2281,7 +2281,11 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                     parts = path.relative_to(workdir).parts
                 except ValueError:
                     continue
-                if len(parts) > 3:
+                # Governed research bundles place the user-facing report at
+                # workspace/research/report/final.md (four path segments).
+                # Keep traversal bounded, but do not discard that canonical
+                # output and then promote a larger PM transcript as the result.
+                if len(parts) > 6:
                     continue
                 if any(part in skip_dirs or part.startswith(".") for part in parts):
                     continue

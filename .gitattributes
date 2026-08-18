@@ -11,6 +11,7 @@ harness/status-server/static/p0-app/index.html text eol=lf
 bin/solar text eol=lf
 bin/solar-daemon text eol=lf
 harness/hooks/* text eol=lf
+harness/bin/* text eol=lf
 
 # Hashed Phase 22 evidence must retain the exact bytes recorded by trust pins.
 harness/config/research-trust-registries/** text eol=crlf

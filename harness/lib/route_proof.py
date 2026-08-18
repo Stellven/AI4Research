@@ -290,7 +290,7 @@ def build_route_proof(
     operators = _load_operator_registry(harness)
     stages: dict[str, dict[str, Any]] = {}
     runtime_values: set[str] = set()
-    provider_policy_values: set[str] = set()
+    sprint_provider_policy_values: set[str] = set()
 
     for path, data in _iter_pm_records(harness, sid):
         key = _stage_key(data, path)
@@ -299,7 +299,9 @@ def build_route_proof(
         runtime = str(data.get("runtime_mode") or "").strip().lower()
         if runtime:
             runtime_values.add(runtime)
-        provider_policy_values.update(_provider_policy_values(data.get("provider_policy")))
+        role = str(data.get("requested_role") or data.get("role") or "").strip().lower()
+        if role == "planner":
+            sprint_provider_policy_values.update(_provider_policy_values(data.get("provider_policy")))
 
     for path, data in _iter_operator_results(harness, sid):
         key = _stage_key(data, path)
@@ -329,19 +331,35 @@ def build_route_proof(
 
     runtime = str(selected_runtime or "").strip().lower()
     if not runtime and runtime_values:
-        runtime = sorted(runtime_values)[0]
-    allowed = set(provider_policy_values)
-    if not allowed and runtime in RUNTIME_DEFAULT_ALLOWED_PROVIDERS:
-        allowed = set(RUNTIME_DEFAULT_ALLOWED_PROVIDERS[runtime])
+        runtime = next(iter(runtime_values)) if len(runtime_values) == 1 else "mixed"
+
+    stage_allowed_providers: dict[str, set[str]] = {}
+    allowed: set[str] = set(sprint_provider_policy_values)
+    for stage in stages.values():
+        task_id = str(stage.get("task_id") or stage.get("node_id") or id(stage))
+        stage_allowed = set(sprint_provider_policy_values)
+        if not stage_allowed:
+            stage_allowed = _provider_policy_values(stage.get("provider_policy"))
+        if not stage_allowed:
+            stage_runtime = str(stage.get("runtime_mode") or "").strip().lower()
+            if selected_runtime and runtime in RUNTIME_DEFAULT_ALLOWED_PROVIDERS:
+                stage_runtime = runtime
+            if stage_runtime in RUNTIME_DEFAULT_ALLOWED_PROVIDERS:
+                stage_allowed = set(RUNTIME_DEFAULT_ALLOWED_PROVIDERS[stage_runtime])
+        stage_allowed_providers[task_id] = stage_allowed
+        allowed.update(stage_allowed)
 
     violations: list[dict[str, Any]] = []
     incomplete_stages: list[dict[str, Any]] = []
     enforce = bool(allowed)
+    unenforced_stages: list[dict[str, Any]] = []
     for stage in sorted(stages.values(), key=lambda item: str(item.get("task_id") or item.get("node_id") or "")):
         provider = _normalize_provider(stage.get("provider"))
         status = str(stage.get("status") or "").strip().lower()
         has_result = bool(stage.get("result_json"))
         has_succeeded_call = stage.get("runtime_evidence") == "model_call_succeeded"
+        task_id = str(stage.get("task_id") or stage.get("node_id") or id(stage))
+        stage_allowed = stage_allowed_providers.get(task_id, set())
         if enforce and status in ACTIVE_TASK_STATUSES and not has_result and not has_succeeded_call:
             incomplete_stages.append(
                 {
@@ -358,18 +376,28 @@ def build_route_proof(
         )
         if not should_check:
             continue
+        if not stage_allowed:
+            if provider:
+                unenforced_stages.append({
+                    "task_id": stage.get("task_id"),
+                    "node_id": stage.get("node_id"),
+                    "provider": provider,
+                    "runtime_mode": stage.get("runtime_mode"),
+                    "reason": "provider_policy_not_declared_for_mixed_stage",
+                })
+            continue
         if not provider:
             violations.append({
                 "task_id": stage.get("task_id"),
                 "node_id": stage.get("node_id"),
                 "reason": "missing_provider",
             })
-        elif provider not in allowed:
+        elif provider not in stage_allowed:
             violations.append({
                 "task_id": stage.get("task_id"),
                 "node_id": stage.get("node_id"),
                 "provider": provider,
-                "allowed_providers": sorted(allowed),
+                "allowed_providers": sorted(stage_allowed),
                 "reason": "provider_policy_violation",
             })
 
@@ -421,6 +449,7 @@ def build_route_proof(
         "incomplete_stages": incomplete_stages,
         "diagnostics": {
             "attribution_warnings": attribution_warnings,
+            "unenforced_stages": unenforced_stages,
         },
         "stage_count": len(stage_list),
         "stages": stage_list,
