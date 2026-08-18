@@ -500,6 +500,12 @@ class LiteratureDiscoveryService:
     limit: int = 8
     urlopen: Callable[..., Any] = urllib.request.urlopen
     clock: Callable[[], str] = _utc_now
+    sleep: Callable[[float], None] = time.sleep
+    monotonic: Callable[[], float] = time.monotonic
+    max_attempts_per_provider: int = 2
+    max_total_wait_seconds: float = 12.0
+    _attempts: list[dict[str, Any]] = field(default_factory=list, init=False, repr=False)
+    _attempt_paths: dict[str, list[str]] = field(default_factory=dict, init=False, repr=False)
 
     service_id: str = DISCOVERY_SERVICE_ID
     service_version: str = SERVICE_VERSION
@@ -507,25 +513,117 @@ class LiteratureDiscoveryService:
     def __post_init__(self) -> None:
         self.workspace_root = Path(self.workspace_root).resolve()
 
-    def _open_json(self, url: str) -> tuple[dict[str, Any], str]:
+    def _record_discovery_attempt(
+        self,
+        *,
+        provider: str,
+        url: str,
+        attempt: int,
+        status: str,
+        status_code: int,
+        body: bytes,
+        retry_wait_seconds: float,
+        error_type: str = "",
+        response_kind: str = "raw_http_body",
+    ) -> dict[str, Any]:
+        attempt_id = f"{len(self._attempts) + 1:03d}-{_safe_component(provider)}-attempt-{attempt}"
+        root = self.workspace_root / "service-evidence" / "discovery" / "attempts"
+        request_payload = {
+            "schema": "autosci_public_discovery_request.v1",
+            "provider": provider,
+            "method": "GET",
+            "url": url,
+            "attempt": attempt,
+            "credential_mode": "public_no_key",
+            "requested_at": self.clock(),
+        }
+        request_path = root / f"{attempt_id}-request.json"
+        request_sha = _write_json(request_path, request_payload)
+        response_path = root / f"{attempt_id}-response.bin"
+        _write_bytes(response_path, body)
+        response_sha = _sha256(body)
+        metadata = {
+            "schema": "autosci_public_discovery_attempt.v1",
+            "provider": provider,
+            "attempt": attempt,
+            "status": status,
+            "status_code": status_code,
+            "request_path": _display_path(request_path, self.workspace_root),
+            "request_sha256": request_sha,
+            "response_path": _display_path(response_path, self.workspace_root),
+            "response_sha256": response_sha,
+            "response_bytes": len(body),
+            "response_kind": response_kind,
+            "retry_wait_seconds": retry_wait_seconds,
+            "error_type": error_type,
+            "recorded_at": self.clock(),
+        }
+        metadata_path = root / f"{attempt_id}-metadata.json"
+        metadata_sha = _write_json(metadata_path, metadata)
+        metadata["metadata_path"] = _display_path(metadata_path, self.workspace_root)
+        metadata["metadata_sha256"] = metadata_sha
+        paths = [
+            _display_path(request_path, self.workspace_root),
+            _display_path(response_path, self.workspace_root),
+            _display_path(metadata_path, self.workspace_root),
+        ]
+        self._attempts.append(metadata)
+        self._attempt_paths.setdefault(provider, []).extend(paths)
+        return metadata
+
+    def _open_json(self, provider: str, url: str) -> tuple[dict[str, Any], str]:
         request = urllib.request.Request(
             url,
             headers={"Accept": "application/json", "User-Agent": "OpenSolar-AutoSci/1.0"},
             method="GET",
         )
-        try:
-            with self.urlopen(request, timeout=self.timeout_seconds) as response:
-                body = response.read(DEFAULT_PROVIDER_MAX_BYTES + 1)
-        except urllib.error.HTTPError as exc:
-            raise ResearchOperatorError(
-                f"Public discovery provider returned HTTP {exc.code}",
-                error_type="provider_rate_limited" if exc.code == 429 else "provider_http_error",
-            ) from exc
-        except (OSError, urllib.error.URLError, TimeoutError) as exc:
-            raise ResearchOperatorError(
-                f"Public discovery provider failed: {type(exc).__name__}: {exc}",
-                error_type="provider_unavailable",
-            ) from exc
+        waited = 0.0
+        body = b""
+        for attempt in range(1, max(1, min(int(self.max_attempts_per_provider), 2)) + 1):
+            try:
+                with self.urlopen(request, timeout=self.timeout_seconds) as response:
+                    body = response.read(DEFAULT_PROVIDER_MAX_BYTES + 1)
+                self._record_discovery_attempt(
+                    provider=provider, url=url, attempt=attempt, status="completed",
+                    status_code=int(getattr(response, "status", 200) or 200), body=body,
+                    retry_wait_seconds=0.0,
+                )
+                break
+            except urllib.error.HTTPError as exc:
+                error_body = exc.read(DEFAULT_PROVIDER_MAX_BYTES + 1) if hasattr(exc, "read") else b""
+                retryable = exc.code == 429 or 500 <= int(exc.code) <= 599
+                retry_after = str((exc.headers or {}).get("Retry-After") or "0")
+                try:
+                    requested_wait = max(0.0, float(retry_after))
+                except ValueError:
+                    requested_wait = 0.0
+                wait = min(5.0, requested_wait or float(attempt), max(0.0, self.max_total_wait_seconds - waited))
+                self._record_discovery_attempt(
+                    provider=provider, url=url, attempt=attempt, status="failed",
+                    status_code=int(exc.code), body=error_body, retry_wait_seconds=wait,
+                    error_type="provider_rate_limited" if exc.code == 429 else "provider_http_error",
+                )
+                if not retryable or attempt >= self.max_attempts_per_provider or wait <= 0:
+                    raise ResearchOperatorError(
+                        f"Public discovery provider returned HTTP {exc.code}",
+                        error_type="provider_rate_limited" if exc.code == 429 else "provider_http_error",
+                    ) from exc
+                self.sleep(wait)
+                waited += wait
+            except (OSError, urllib.error.URLError, TimeoutError) as exc:
+                wait = min(5.0, float(attempt), max(0.0, self.max_total_wait_seconds - waited))
+                self._record_discovery_attempt(
+                    provider=provider, url=url, attempt=attempt, status="failed",
+                    status_code=0, body=b"", retry_wait_seconds=wait,
+                    error_type="provider_unavailable",
+                )
+                if attempt >= self.max_attempts_per_provider or wait <= 0:
+                    raise ResearchOperatorError(
+                        f"Public discovery provider failed: {type(exc).__name__}: {exc}",
+                        error_type="provider_unavailable",
+                    ) from exc
+                self.sleep(wait)
+                waited += wait
         if len(body) > DEFAULT_PROVIDER_MAX_BYTES:
             raise ResearchOperatorError("Discovery response exceeds the size limit", error_type="provider_contract")
         try:
@@ -540,7 +638,7 @@ class LiteratureDiscoveryService:
         url = "https://api.openalex.org/works?" + urllib.parse.urlencode(
             {"search": query, "per-page": self.limit, "select": "id,doi,title,publication_year,primary_location,authorships,abstract_inverted_index"}
         )
-        payload, response_hash = self._open_json(url)
+        payload, response_hash = self._open_json("openalex", url)
         candidates: list[dict[str, Any]] = []
         for raw in payload.get("results") or []:
             if not isinstance(raw, dict) or not str(raw.get("title") or "").strip():
@@ -579,7 +677,7 @@ class LiteratureDiscoveryService:
                 "select": "DOI,title,URL,author,published,container-title,abstract,type",
             }
         )
-        payload, response_hash = self._open_json(url)
+        payload, response_hash = self._open_json("crossref", url)
         message = payload.get("message") if isinstance(payload.get("message"), dict) else {}
         candidates: list[dict[str, Any]] = []
         for raw in message.get("items") or []:
@@ -638,7 +736,7 @@ class LiteratureDiscoveryService:
                     "formatversion": 2,
                 }
             )
-            payload, response_hash = self._open_json(url)
+            payload, response_hash = self._open_json("wikipedia", url)
             response_hashes.append(response_hash)
             request_urls.append(url)
             raw_query = payload.get("query") if isinstance(payload.get("query"), dict) else {}
@@ -678,9 +776,27 @@ class LiteratureDiscoveryService:
             repository_root=self.workspace_root,
             allow_network_fetch=True,
             progress_path=progress,
+            max_retries=max(0, min(int(self.max_attempts_per_provider) - 1, 1)),
+            max_retry_wait_seconds=min(5.0, max(0.0, float(self.max_total_wait_seconds))),
         )
         if not isinstance(raw, dict):
             raise ResearchOperatorError("AutoSci discovery backend returned a non-object response", error_type="provider_contract")
+        semantic_url = "https://api.semanticscholar.org/graph/v1/paper/search?" + urllib.parse.urlencode(
+            {"query": query, "limit": self.limit}
+        )
+        normalized_body = json.dumps(raw, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        self._record_discovery_attempt(
+            provider="semantic_scholar",
+            url=semantic_url,
+            attempt=1,
+            status="completed" if str(raw.get("status") or "") == "completed" else str(raw.get("status") or "unknown"),
+            status_code=200,
+            body=normalized_body,
+            retry_wait_seconds=0.0,
+            response_kind="normalized_backend_payload",
+        )
+        if progress.exists():
+            self._attempt_paths.setdefault("semantic_scholar", []).append(_display_path(progress, self.workspace_root))
         candidates: list[dict[str, Any]] = []
         for item in raw.get("candidates") or []:
             if not isinstance(item, dict) or not str(item.get("title") or "").strip():
@@ -718,6 +834,8 @@ class LiteratureDiscoveryService:
         return candidates, trace, [str(item) for item in raw.get("limitations") or [] if str(item).strip()]
 
     def __call__(self, *, seed_snapshot: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+        self._attempts.clear()
+        self._attempt_paths.clear()
         query = _topic_from_snapshot(seed_snapshot, payload)
         if not query:
             raise ResearchOperatorError("Source discovery requires a non-empty query", error_type="invalid_input")
@@ -819,8 +937,19 @@ class LiteratureDiscoveryService:
             "request_sha256": request_hash,
             "query": query,
             "provider_traces": traces,
+            "provider_attempts": list(self._attempts),
             "candidate_count": len(deduped),
             "candidate_hashes": [str(item["candidate_sha256"]) for item in deduped],
+            "candidate_records": [
+                {
+                    "source_id": str(item.get("source_id") or ""),
+                    "canonical_id": str(item.get("canonical_id") or ""),
+                    "url": str(item.get("url") or ""),
+                    "provider": str(item.get("provider") or ""),
+                    "candidate_sha256": str(item.get("candidate_sha256") or ""),
+                }
+                for item in deduped
+            ],
             "created_at": self.clock(),
             "limitations": limitations,
         }
@@ -828,6 +957,7 @@ class LiteratureDiscoveryService:
         archive_path = self.workspace_root / "service-evidence" / "discovery" / f"{response_hash}.json"
         archive_hash = _write_json(archive_path, response_payload)
         providers = sorted({str(item.get("provider") or "unknown") for item in deduped})
+        attempted_providers = sorted(set(self._attempt_paths) | set(providers))
         return {
             "service_id": self.service_id,
             "service_version": self.service_version,
@@ -848,7 +978,11 @@ class LiteratureDiscoveryService:
                     "archive_path": _display_path(archive_path, self.workspace_root),
                     "archive_sha256": archive_hash,
                 }
-                for provider in providers
+                | {
+                    "status": "completed" if provider in providers else "failed",
+                    "evidence_paths": sorted(set(self._attempt_paths.get(provider) or [])),
+                }
+                for provider in attempted_providers
             ],
             "limitations": limitations,
         }
@@ -1057,6 +1191,7 @@ class ResearchModelService:
         elif node_id == "report_revision":
             synthesis = kwargs.get("evidence_synthesis") if isinstance(kwargs.get("evidence_synthesis"), dict) else {}
             review = kwargs.get("independent_review") if isinstance(kwargs.get("independent_review"), dict) else {}
+            preservation = kwargs.get("preservation_requirements") if isinstance(kwargs.get("preservation_requirements"), dict) else {}
             user = {
                 "node_id": node_id,
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
@@ -1065,8 +1200,13 @@ class ResearchModelService:
                 "original_report": kwargs.get("original_report") or {},
                 "independent_review_findings": review.get("findings") or [],
                 "basis_verdict": str(review.get("verdict_suggestion") or ""),
+                "required_preservation": preservation,
                 "revision_attempt": int(kwargs.get("revision_attempt") or 1),
                 "max_revision_attempts": int(kwargs.get("max_revision_attempts") or 1),
+                # Populated only on a retry: the exact deterministic rejection
+                # the previous attempt produced, so the reviser is told what it
+                # dropped instead of guessing.
+                "previous_attempt_rejected_because": str(kwargs.get("preservation_feedback") or ""),
                 "required_output": {
                     "report": {
                         "title": "specific revised report title",
@@ -1081,12 +1221,14 @@ class ResearchModelService:
                         ],
                     },
                     "limitations": [],
+                    "preservation": preservation,
                 },
                 "quality_requirements": [
                     "Repair only issues identified by the independent review or deterministic quality checks.",
                     "Use only supplied grounded_claims and preserve exact claim_id values in conclusion evidence_ids.",
                     "Do not invent sources, evidence ids, benchmarks, metrics, or methods that are not supported by grounded_claims.",
                     "Preserve uncertainty and limitation qualifiers from grounded_claims.",
+                    "Copy required_preservation exactly, preserve every listed conclusion unchanged, retain the accepted method text, and render every listed limitation verbatim under a substantive Limitations section.",
                     "The revised body must directly answer the complete user request in the requested language.",
                     "Include an explicit Method or Evidence Method section when the requested deliverable is a survey or technical report.",
                     "Replace the report body instead of appending duplicate section summaries from prior drafts.",

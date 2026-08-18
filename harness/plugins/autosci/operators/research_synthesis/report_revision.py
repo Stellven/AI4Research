@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from typing import Any
 
 from .base import (
@@ -31,6 +33,148 @@ from .report_draft import _deliverable_requirements, _normalize_report
 REPAIR_FINDING_SEVERITIES = {"medium", "high", "critical"}
 REPAIR_VERDICTS = {"revise", "revise_required", "reject"}
 MAX_REVISION_ATTEMPTS = 2
+
+
+def _normalized_text(value: Any) -> str:
+    return " ".join(str(value or "").split()).casefold()
+
+
+def _markdown_section(body: str, heading_pattern: str) -> str:
+    """Text of the first matching section that actually has content.
+
+    A writer may emit a matching heading with an empty body immediately
+    followed by another heading (observed: "## Method and evidence protocol"
+    directly above "## Evidence scope and processing", with the substantive
+    "## Evidence method" further down). Returning on the first heading match
+    made that empty heading mask the populated one, so A7 rejected a report
+    whose method section was present as lineage_incomplete.
+    """
+    headings = list(re.finditer(r"(?m)^(#{1,6})\s+(.+?)\s*$", str(body or "")))
+    for index, heading in enumerate(headings):
+        # The document title is a level-1 heading, not a section. Matching it
+        # captured everything up to the next level-<=1 heading -- i.e. the whole
+        # report -- whenever the title happened to contain the pattern word. A
+        # real A5 draft titled "...RAG Reliability Evaluation Methods and..."
+        # yielded a 17,189 character "method section" out of a 17,471 character
+        # body, so A7 then required the reviser to reproduce the entire report
+        # verbatim and could never pass. Sections start at level 2.
+        if len(heading.group(1)) < 2:
+            continue
+        if not re.search(heading_pattern, heading.group(2), flags=re.IGNORECASE):
+            continue
+        level = len(heading.group(1))
+        end = len(body)
+        for following in headings[index + 1:]:
+            if len(following.group(1)) <= level:
+                end = following.start()
+                break
+        section = _normalized_text(body[heading.end():end])
+        if section:
+            return section
+    return ""
+
+
+def revision_preservation_requirements(
+    original_report: dict[str, Any],
+    *,
+    required_limitations: list[str] | None = None,
+) -> dict[str, Any]:
+    report = original_report.get("report") if isinstance(original_report.get("report"), dict) else {}
+    conclusions = [item for item in report.get("conclusions") or [] if isinstance(item, dict)]
+    method = _markdown_section(
+        str(report.get("body") or ""),
+        r"methods?\b|evidence\s+method\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba",
+    )
+    if not conclusions or not method:
+        raise ResearchOperatorError(
+            "Original accepted report has no conclusions or substantive method section to preserve",
+            error_type="lineage_incomplete",
+        )
+    limitations = list(dict.fromkeys([
+        str(item).strip()
+        for item in [
+            *(original_report.get("limitations") or []),
+            *(required_limitations or []),
+        ]
+        if str(item).strip()
+    ]))
+    return {
+        "preserved_conclusion_ids": [str(item.get("conclusion_id") or "") for item in conclusions],
+        "preserved_method_sha256": hashlib.sha256(method.encode("utf-8")).hexdigest(),
+        "preserved_limitations": limitations,
+        "original_conclusions": conclusions,
+        "original_method": method,
+    }
+
+
+def verify_revision_response_preservation(
+    original_report: dict[str, Any],
+    response: dict[str, Any],
+    *,
+    required_limitations: list[str] | None = None,
+) -> dict[str, Any]:
+    required = revision_preservation_requirements(
+        original_report,
+        required_limitations=required_limitations,
+    )
+    declaration = response.get("preservation") if isinstance(response.get("preservation"), dict) else {}
+    declared = {
+        "preserved_conclusion_ids": declaration.get("preserved_conclusion_ids"),
+        "preserved_method_sha256": declaration.get("preserved_method_sha256"),
+        "preserved_limitations": declaration.get("preserved_limitations"),
+    }
+    expected = {
+        "preserved_conclusion_ids": required["preserved_conclusion_ids"],
+        "preserved_method_sha256": required["preserved_method_sha256"],
+        "preserved_limitations": required["preserved_limitations"],
+    }
+    if declared != expected:
+        raise ResearchOperatorError(
+            "Revision response did not declare the exact original conclusion, method, and limitation preservation set",
+            error_type="provider_contract",
+        )
+    report = response.get("report") if isinstance(response.get("report"), dict) else {}
+    revised_conclusions = {
+        str(item.get("conclusion_id") or ""): item
+        for item in report.get("conclusions") or []
+        if isinstance(item, dict)
+    }
+    for original in required["original_conclusions"]:
+        conclusion_id = str(original.get("conclusion_id") or "")
+        revised = revised_conclusions.get(conclusion_id)
+        if not isinstance(revised, dict) or (
+            _normalized_text(revised.get("text")) != _normalized_text(original.get("text"))
+            or [str(item) for item in revised.get("evidence_ids") or []]
+            != [str(item) for item in original.get("evidence_ids") or []]
+        ):
+            raise ResearchOperatorError(
+                f"Revision response changed or omitted accepted conclusion: {conclusion_id}",
+                error_type="provider_contract",
+            )
+    body = str(report.get("body") or "")
+    revised_method = _markdown_section(
+        body,
+        r"methods?\b|evidence\s+method\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba",
+    )
+    if required["original_method"] not in revised_method:
+        raise ResearchOperatorError(
+            "Revision response omitted or changed the accepted method section",
+            error_type="provider_contract",
+        )
+    limitations_section = _markdown_section(body, r"limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3")
+    response_limitations = [str(item).strip() for item in response.get("limitations") or [] if str(item).strip()]
+    for limitation in required["preserved_limitations"]:
+        normalized = _normalized_text(limitation)
+        if limitation not in response_limitations or normalized not in limitations_section:
+            raise ResearchOperatorError(
+                "Revision response omitted a provider-recorded limitation",
+                error_type="provider_contract",
+            )
+    return {
+        "verified": True,
+        "model_declaration": expected,
+        "original_report_sha256": stable_json_sha256(original_report),
+    }
 
 
 def _load_artifact_by_schema(
@@ -150,9 +294,14 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     repair_required, blocking_findings, first_verdict = _repair_required(review)
     writer_usage: list[dict[str, Any]] = []
     reviewer_usage: list[dict[str, Any]] = []
-    limitations: list[str] = []
+    limitations: list[str] = [
+        str(item).strip()
+        for item in original_report.get("limitations") or []
+        if str(item).strip()
+    ]
     revised_report = original_report.get("report") if isinstance(original_report.get("report"), dict) else {}
     revision_review: dict[str, Any] = {}
+    preservation: dict[str, Any] = {"verified": False, "reason": "revision_not_applied"}
 
     if repair_required:
         model_generate = context.services.get("model_generate")
@@ -168,7 +317,17 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         current_report_payload = original_report
         current_review = review
         current_blocking_findings = blocking_findings
+        # MAX_REVISION_ATTEMPTS exists for exactly this failure mode, but a
+        # raising preservation check consumed none of it: the operator made one
+        # call and aborted. A bounded retry that tells the reviser precisely
+        # what it dropped does not weaken preservation -- the same check must
+        # still pass -- it just uses the budget the contract already declares.
+        preservation_feedback = ""
         for attempt in range(1, MAX_REVISION_ATTEMPTS + 1):
+            preservation_requirements = revision_preservation_requirements(
+                original_report,
+                required_limitations=limitations,
+            )
             response = model_generate(
                 node_id="report_revision",
                 task_contract=task_contract,
@@ -179,9 +338,50 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
                 independent_review=current_review,
                 revision_attempt=attempt,
                 max_revision_attempts=MAX_REVISION_ATTEMPTS,
+                preservation_feedback=preservation_feedback,
+                # The reviser must reproduce the accepted method section
+                # closely enough that the original normalized text is still a
+                # substring of the revised one.  Handing it only
+                # preserved_method_sha256 states the requirement in a form no
+                # model can act on, so the exact text goes with the digest.
+                preservation_requirements={
+                    key: preservation_requirements[key]
+                    for key in (
+                        "preserved_conclusion_ids",
+                        "preserved_method_sha256",
+                        "preserved_limitations",
+                        "original_method",
+                        "original_conclusions",
+                    )
+                },
             )
             if not isinstance(response, dict):
                 raise ResearchOperatorError("model_generate service must return a JSON object", error_type="provider_contract")
+            # Accumulate the required limitations into the response the way
+            # report_draft already does for its upstream synthesis limitations.
+            # The substantive guarantee -- every recorded limitation is RENDERED
+            # in the revision's limitations section -- is still enforced below
+            # and is not weakened by this.  Requiring the model to additionally
+            # echo all of them back in its JSON array is a redundant obligation
+            # that A5 does not impose, and a reviser that rendered all ten
+            # correctly was still rejected for returning an empty array.
+            response = dict(response)
+            response["limitations"] = list(dict.fromkeys([
+                *[str(item).strip() for item in limitations if str(item).strip()],
+                *[str(item).strip() for item in response.get("limitations") or [] if str(item).strip()],
+            ]))
+            try:
+                preservation = verify_revision_response_preservation(
+                    original_report,
+                    response,
+                    required_limitations=limitations,
+                )
+            except ResearchOperatorError as exc:
+                if attempt >= MAX_REVISION_ATTEMPTS:
+                    raise
+                preservation_feedback = str(exc)
+                continue
+            preservation_feedback = ""
             revised_report = _normalize_report(response, claim_ids)
             attempt_writer_usage = provider_usage_from(response, usage_kind="llm")
             writer_usage.extend(attempt_writer_usage)
@@ -237,6 +437,23 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             limitations.extend(revision_review.get("limitations") or [])
             limitations.extend(_same_model_limitation(attempt_writer_usage, attempt_reviewer_usage))
             needs_more_revision, current_blocking_findings, _current_verdict = _repair_required(revision_review)
+            normalized_body = _normalized_text(revised_report.get("body"))
+            missing_rendered_limitations = [
+                item
+                for item in dict.fromkeys(str(value).strip() for value in limitations if str(value).strip())
+                if _normalized_text(item) not in normalized_body
+            ]
+            if missing_rendered_limitations:
+                preservation_finding = {
+                    "finding_id": "revision_review.preservation.limitations",
+                    "severity": "high",
+                    "category": "truthfulness",
+                    "message": "The revised report must render every provider-recorded limitation verbatim.",
+                }
+                revision_review.setdefault("findings", []).append(preservation_finding)
+                revision_review["verdict_suggestion"] = "revise"
+                current_blocking_findings = [*current_blocking_findings, preservation_finding]
+                needs_more_revision = True
             if not needs_more_revision:
                 break
             current_report_payload = revised_report_payload
@@ -270,6 +487,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         },
         "revised_report": revised_report,
         "revised_report_sha256": stable_json_sha256(revised_report),
+        "preservation": preservation,
         "claim_source_lineage": claim_source_lineage if isinstance(claim_source_lineage, dict) else {},
         "input_artifact_hashes": input_artifact_hashes if isinstance(input_artifact_hashes, dict) else {},
         "revision_review": revision_review,

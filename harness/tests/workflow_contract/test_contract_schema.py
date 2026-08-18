@@ -21,6 +21,8 @@ def test_module_imports_from_this_checkout():
 def test_all_shipped_contracts_schema_valid(shipped_contracts):
     assert set(shipped_contracts) == {
         "research.deepdive.rsi_demo",
+        "research.autosci.v1",
+        "research.evidence_to_poc.v1",
         "code.cli_smoke",
         "code.cli_smoke_anthropic",
         "pm.generic.v1",

@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/fixed_research_human_approval.v1.schema.json",
+  "title": "Solar fixed research human approval controls",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "policy_id", "decision", "sprint_id", "node_id", "generation", "actor", "author", "statement", "request_sha256", "source_pack_manifest_sha256", "benchmark_policy", "issued_at", "issued_by"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.experiment_policy_authorization.v1"},
+        "policy_id": {"const": "evidence_lineage_integrity_v1"},
+        "decision": {"const": "preauthorized"},
+        "sprint_id": {"type": "string", "minLength": 1},
+        "node_id": {"const": "experiment_approval"},
+        "generation": {"const": 1},
+        "actor": {"type": "string", "minLength": 1},
+        "author": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "id"],
+          "properties": {"type": {"const": "human"}, "id": {"type": "string", "minLength": 1}}
+        },
+        "statement": {"type": "string", "minLength": 1},
+        "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_pack_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "benchmark_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["benchmark_id", "runner", "runner_sha256", "sandbox", "network", "timeout_max_seconds", "capabilities"],
+          "properties": {
+            "benchmark_id": {"const": "evidence-lineage-integrity-v1"},
+            "runner": {"const": "harness/tools/fixed_research_benchmark.py"},
+            "runner_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "sandbox": {"const": "linux_user_and_network_namespace"},
+            "network": {"const": "none"},
+            "timeout_max_seconds": {"type": "integer", "minimum": 1, "maximum": 60},
+            "capabilities": {"const": ["execute:fixed_evidence_lineage_benchmark", "network:none"]}
+          }
+        },
+        "issued_at": {"type": "string", "format": "date-time"},
+        "issued_by": {"const": "workflow_intake"}
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "sprint_id", "node_id", "generation", "plan_path", "plan_sha256", "approved_scope", "approved_capabilities", "requested_at", "requested_by"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.approval_request.v1"},
+        "sprint_id": {"type": "string", "minLength": 1},
+        "node_id": {"const": "experiment_approval"},
+        "generation": {"type": "integer", "minimum": 1},
+        "plan_path": {"type": "string", "pattern": "^artifacts/research_evidence_to_poc/poc/design/experiment_plan\\.json$"},
+        "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "approved_scope": {"type": "object"},
+        "approved_capabilities": {"const": ["execute:fixed_evidence_lineage_benchmark", "network:none"]},
+        "requested_at": {"type": "string", "format": "date-time"},
+        "requested_by": {"const": "graph_node_dispatcher"}
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "decision", "sprint_id", "node_id", "generation", "actor", "author", "statement", "plan_path", "plan_sha256", "approved_scope", "approved_capabilities", "approval_request_sha256", "approved_at"],
+      "properties": {
+        "schema": {"const": "solar.fixed_research.human_approval.v1"},
+        "decision": {"const": "approved"},
+        "sprint_id": {"type": "string", "minLength": 1},
+        "node_id": {"const": "experiment_approval"},
+        "generation": {"type": "integer", "minimum": 1},
+        "actor": {"type": "string", "minLength": 1},
+        "author": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "id"],
+          "properties": {"type": {"const": "human"}, "id": {"type": "string", "minLength": 1}}
+        },
+        "statement": {"type": "string", "minLength": 1},
+        "plan_path": {"type": "string", "pattern": "^artifacts/research_evidence_to_poc/poc/design/experiment_plan\\.json$"},
+        "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "approved_scope": {"type": "object"},
+        "approved_capabilities": {"const": ["execute:fixed_evidence_lineage_benchmark", "network:none"]},
+        "approval_request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "approval_mode": {"enum": ["interactive_exact_plan", "policy_preauthorized"]},
+        "preauthorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy_id", "path", "sha256"],
+          "properties": {
+            "policy_id": {"const": "evidence_lineage_integrity_v1"},
+            "path": {"const": "artifacts/research_evidence_to_poc/poc/approval/experiment_policy_authorization.json"},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          }
+        },
+        "approved_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  ]
+}

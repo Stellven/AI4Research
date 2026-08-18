@@ -1,0 +1,59 @@
+capability_capsule_id: cap.autosci-report-delivery
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: AutoSci Report Delivery
+  description: Produce the AutoSci report and publication bundle via the bridge.
+  logical_operator: ScientificReportDrafter
+applicability:
+  task_types: [report-writing]
+  positive_signals: [report writing, publication bundle, deliverable packaging]
+  negative_signals: [experiment execution, idea authoring, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: claim_verification, type: json}
+      - {name: experiment_result, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: research_report, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [report-writing]}
+  postconditions:
+    - {check: output_present, field: research_report_json}
+  invariants:
+    - Every reported conclusion traces to a verified claim verdict and its experiment evidence.
+    - Recorded limitations are carried into the report and never dropped.
+    - Evidence carries provenance operator_id, implementation_package, and timestamp.
+composition:
+  consumes: [{type: artifact.claim_verification}, {type: artifact.experiment_result}]
+  produces: [{type: artifact.research_report}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.autosci-claim-verification]
+effects:
+  read: [artifacts.claim_verification, artifacts.experiment_result]
+  write: [artifacts.research_report]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [unsupported_conclusion, limitation_loss]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-report-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

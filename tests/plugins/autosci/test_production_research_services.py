@@ -228,6 +228,63 @@ def test_literature_discovery_archives_under_long_windows_workspace_path(tmp_pat
     assert result["provider_usage"][0]["archive_sha256"] == hashlib.sha256(body).hexdigest()
 
 
+def test_literature_discovery_retries_then_archives_raw_openalex_attempts(tmp_path: Path) -> None:
+    calls: list[str] = []
+    sleeps: list[float] = []
+    openalex = {
+        "results": [
+            {
+                "id": f"https://openalex.org/W{index}",
+                "doi": f"https://doi.org/10.1000/rag{index}",
+                "title": f"Retrieval augmented generation evaluation method {index}",
+                "publication_year": 2025,
+                "primary_location": {"landing_page_url": f"https://openalex.org/W{index}", "source": {}},
+                "authorships": [],
+                "abstract_inverted_index": {"retrieval": [0], "evaluation": [1], "method": [2]},
+            }
+            for index in range(1, 4)
+        ]
+    }
+
+    def urlopen(request, *, timeout):
+        calls.append(request.full_url)
+        if len(calls) == 1:
+            raise urllib.error.URLError("temporary provider failure")
+        return _Response(
+            json.dumps(openalex).encode("utf-8"),
+            url=request.full_url,
+            content_type="application/json",
+        )
+
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=lambda **_kwargs: {"status": "inconclusive", "candidates": [], "limitations": ["S2 unavailable"]},
+        urlopen=urlopen,
+        sleep=sleeps.append,
+        clock=lambda: "2026-08-18T12:00:00Z",
+        max_attempts_per_provider=2,
+        max_total_wait_seconds=2,
+    )
+    result = discovery(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "retrieval augmented generation evaluation"}]},
+        payload={"task_contract": {"user_intent": "Research retrieval augmented generation evaluation"}},
+    )
+
+    assert len(result["candidates"]) == 3
+    assert {item["provider"] for item in result["candidates"]} == {"openalex"}
+    assert sleeps == [1.0]
+    usage = {item["provider"]: item for item in result["provider_usage"]}
+    assert usage["semantic_scholar"]["status"] == "failed"
+    assert usage["openalex"]["status"] == "completed"
+    attempts = json.loads((tmp_path / usage["openalex"]["archive_path"]).read_text(encoding="utf-8"))["provider_attempts"]
+    openalex_attempts = [item for item in attempts if item["provider"] == "openalex"]
+    assert [item["status"] for item in openalex_attempts] == ["failed", "completed"]
+    for attempt in openalex_attempts:
+        assert (tmp_path / attempt["request_path"]).is_file()
+        assert (tmp_path / attempt["response_path"]).is_file()
+        assert len(attempt["request_sha256"]) == len(attempt["response_sha256"]) == 64
+
+
 def test_production_service_composition_supports_injected_fakes_without_secrets(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)

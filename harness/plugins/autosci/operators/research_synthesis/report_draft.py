@@ -222,6 +222,11 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     )
     if not isinstance(response, dict):
         raise ResearchOperatorError("model_generate service must return a JSON object", error_type="provider_contract")
+    response = dict(response)
+    response["limitations"] = list(dict.fromkeys([
+        *[str(item) for item in synthesis.get("limitations", []) if str(item).strip()],
+        *[str(item) for item in response.get("limitations", []) if str(item).strip()],
+    ]))
     claim_ids = {str(item.get("claim_id")) for item in claims if item.get("claim_id")}
     report = _normalize_report(response, claim_ids)
     usage = provider_usage_from(response, usage_kind="llm")

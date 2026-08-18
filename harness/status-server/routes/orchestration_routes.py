@@ -216,6 +216,7 @@ def _sprint_status_rows(limit: int = 80) -> list[dict]:
                     runtime_state = tg.get("runtime_state") or {}
                     tg_ok = True
                     break
+        runtime_state = _load_task_runtime_state(sid) or runtime_state
         node_counts: dict[str, int] = {}
         for node in nodes:
             if not isinstance(node, dict):
@@ -339,6 +340,27 @@ def _load_task_graph(sid: str) -> tuple[dict, bool]:
         if ok and isinstance(data, dict):
             return _normalize_task_graph_payload(data), True
     return {}, False
+
+
+def _load_task_runtime_state(sid: str) -> dict:
+    """Load scheduler-owned node state independently of the stable graph spec."""
+    candidates = [
+        SPRINTS_DIR / f"{sid}.task_dag.state.json",
+        SPRINTS_DIR / f"{sid}.task_graph.state.json",
+        SPRINTS_DIR / sid / "task_dag.state.json",
+        SPRINTS_DIR / sid / "task_graph.state.json",
+        SPRINTS_DIR / sid / "state" / "task_dag.state.json",
+        SPRINTS_DIR / sid / "state" / "task_graph.state.json",
+    ]
+    for path in _dedupe_paths(candidates):
+        data, ok = _read_json(path)
+        if not ok or not isinstance(data, dict):
+            continue
+        normalized = _normalize_task_graph_payload(data)
+        runtime_state = normalized.get("runtime_state")
+        if isinstance(runtime_state, dict):
+            return runtime_state
+    return {}
 
 
 def _display_path(path: Path) -> str:
@@ -600,6 +622,11 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
         physical_plan = node.get("physical_plan") if isinstance(node.get("physical_plan"), dict) else {}
         physical_plan_ir = node.get("physical_plan_ir") if isinstance(node.get("physical_plan_ir"), dict) else {}
         capsule_plan_ir = node.get("capsule_plan_ir") if isinstance(node.get("capsule_plan_ir"), dict) else {}
+        required_operator = str(
+            executable_node.get("required_operator_id")
+            or node.get("required_operator_id")
+            or ""
+        ).strip()
         selected_operator = (
             physical_plan.get("suggested_operator_id")
             or physical_plan.get("selected_operator_id")
@@ -607,8 +634,33 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
             or physical_plan_ir.get("selected_operator_id")
             or node.get("suggested_operator_id")
             or node.get("selected_operator_id")
+            or required_operator
             or ""
         )
+        capsule_id = str(
+            executable_node.get("capability_capsule_id")
+            or physical_plan_ir.get("capability_capsule_id")
+            or capsule_plan_ir.get("capability_capsule_id")
+            or node.get("capability_capsule_id")
+            or ""
+        ).strip()
+        execution_candidates = physical_plan_ir.get("execution_candidates") or []
+        compiled_candidate_ids = {
+            str(candidate.get("operator_id") or "").strip()
+            for candidate in execution_candidates
+            if isinstance(candidate, dict)
+        }
+        # Fixed contracted nodes do not use the legacy autopilot pane router.  Their
+        # compiler-owned physical plan is the worker-admission evidence, so absence
+        # from autopilot-state must not be projected as a missing worker/capability.
+        contract_bound_worker = bool(
+            required_operator
+            and selected_operator == required_operator
+            and required_operator in compiled_candidate_ids
+            and capsule_id
+        )
+        if contract_bound_worker:
+            missing = []
         requested_role = (
             executable_node.get("dispatch_role")
             or decision.get("required_role")
@@ -643,8 +695,12 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
             "logical_operator": executable_node.get("logical_operator") or node.get("logical_operator") or physical_plan_ir.get("logical_operator") or "",
             "preferred_model": node.get("preferred_model") or "",
             "selected_operator_id": selected_operator,
-            "capability_capsule_id": executable_node.get("capability_capsule_id") or physical_plan_ir.get("capability_capsule_id") or capsule_plan_ir.get("capability_capsule_id") or "",
-            "candidate_workers_seen": bool(decision.get("any_worker_seen") or decision.get("candidate_workers_seen")),
+            "capability_capsule_id": capsule_id,
+            "candidate_workers_seen": bool(
+                decision.get("any_worker_seen")
+                or decision.get("candidate_workers_seen")
+                or contract_bound_worker
+            ),
             "role_candidates_seen": bool(decision.get("role_candidates_seen")),
             "target_pane": target_pane,
             "pane_carrier": {"pane_id": target_pane, "source": "autopilot_routing"} if target_pane else {},
@@ -653,9 +709,9 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
             "host_id": actorhost.get("host_id", "N/A") if actorhost else "N/A",
             "host_type": actorhost.get("host_type", "unknown") if actorhost else "unknown",
             "lease_state": actorhost.get("lease_state", "unknown") if actorhost else "unknown",
-            "route_decision": decision.get("decision") or "no_routing_record",
+            "route_decision": decision.get("decision") or ("fixed_contract_binding" if contract_bound_worker else "no_routing_record"),
             "blocked_reason": decision.get("blocked_reason") or "",
-            "decision": decision.get("decision") or "no_routing_record",
+            "decision": decision.get("decision") or ("fixed_contract_binding" if contract_bound_worker else "no_routing_record"),
             "write_scope": identity.get("write_scope") or [],
             "read_scope": identity.get("read_scope") or [],
         })
@@ -2069,7 +2125,8 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
     all_routing = _load_routing_decisions()
     panes = _load_pane_state()
     registry = _capability_registry()
-    node_cards = _build_node_cards(sid, nodes, tg.get("runtime_state") or {}, routing)
+    runtime_state = _load_task_runtime_state(sid) or tg.get("runtime_state") or {}
+    node_cards = _build_node_cards(sid, nodes, runtime_state, routing)
     diagnostics = _build_blocker_diagnostics(sid, status, nodes, node_cards, tg_ok)
     plan_governance = _build_plan_governance(sid, status, tg)
     stall = _build_stall_summary(

@@ -1,0 +1,59 @@
+capability_capsule_id: cap.research-public-source-discovery
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Public Research Source Discovery
+  description: Acquire a provenance-complete source candidate set from a frozen pack and/or allowlisted no-key bibliographic APIs.
+applicability:
+  task_types: [research]
+  positive_signals: [public source discovery, Semantic Scholar, OpenAlex, Crossref, source pack]
+  negative_signals: [arbitrary web browsing, credentialed search, model synthesis, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: seed_snapshot, type: json}
+      - {name: acquisition_authority, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: source_discovery, type: json}
+    optional:
+      - {name: provider_attempts, type: directory}
+  preconditions:
+    - {check: task_type_in, values: [research]}
+  postconditions:
+    - {check: output_present, field: source_discovery_json}
+  invariants:
+    - Live retrieval may call only the controller-allowlisted public no-key providers Semantic Scholar, OpenAlex, and Crossref.
+    - Every live provider attempt retains request metadata, response bytes, timestamp, status, and SHA-256 under the stage output directory.
+    - Hybrid fallback records whether a candidate came from the frozen source pack or a live provider and never fabricates a live-source claim.
+composition:
+  consumes: [{type: artifact.seed_snapshot}, {type: artifact.acquisition_authority}]
+  produces: [{type: artifact.source_discovery}, {type: artifact.provider_attempts}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-seed-snapshot]
+effects:
+  read: [artifacts.seed_snapshot, controller.source_pack_snapshot, controller.retrieval_policy]
+  write: [artifacts.source_discovery, artifacts.provider_attempts]
+  execute: []
+  network: [api.semanticscholar.org, api.openalex.org, api.crossref.org]
+  cost: [bounded_public_api_requests]
+  risk: [provider_unavailable, off_topic_candidates, stale_source_inventory]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-research-synthesis-source-discovery-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

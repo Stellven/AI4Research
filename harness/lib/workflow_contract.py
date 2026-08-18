@@ -920,6 +920,8 @@ def instantiate(contract: Dict[str, Any], inputs: Optional[Dict[str, Any]] = Non
             entry = {"path": full_path, "type": output.get("type")}
             if output.get("demo_artifact"):
                 entry["demo_artifact"] = True
+            if output.get("evidence_schema"):
+                entry["evidence_schema"] = str(output["evidence_schema"])
             outputs.append(entry)
             write_scope.append(full_path)
         obligations = []
@@ -993,7 +995,7 @@ def _join_root(root: str, rel_path: str) -> str:
     return root.rstrip("/") + "/" + rel_path.lstrip("/")
 
 
-_VOLATILE_GRAPH_KEYS = {"sprint_id", "workflow_contract_hash", "node_results", "gate_results"}
+_VOLATILE_GRAPH_KEYS = {"sprint_id", "workflow_contract_hash", "node_results", "gate_results", "intent_binding"}
 _VOLATILE_NODE_KEYS = {
     # Scheduler/dispatch projection.
     "status",

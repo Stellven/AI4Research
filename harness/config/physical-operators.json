@@ -4713,6 +4713,114 @@
       },
       "deprecated": false
     },
+    "autosci-research-synthesis-seed-fetch-worker": {
+      "display_name": "Fixed research A1 seed fetch worker",
+      "owner_host": "local_command",
+      "role": "builder",
+      "persona": "builder",
+      "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-synthesis-source-discovery-worker": {
+      "display_name": "Fixed research A2 source discovery worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-synthesis-source-validation-worker": {
+      "display_name": "Fixed research A3 source validation worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "codex-research-evidence-synthesis-worker": {
+      "display_name": "Fixed research A4 fresh-context Codex synthesis worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "codex-research-report-draft-worker": {
+      "display_name": "Fixed research A5 fresh-context Codex report worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "codex-research-independent-review-worker": {
+      "display_name": "Fixed research A6 independent fresh-context Codex reviewer",
+      "owner_host": "local_command", "role": "builder", "persona": "evaluator", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "codex-research-report-revision-worker": {
+      "display_name": "Fixed research A7 bounded fresh-context Codex revision worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-synthesis-final-acceptance-worker": {
+      "display_name": "Fixed research A8 deterministic acceptance worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-poc-handoff-worker": {
+      "display_name": "Fixed research B1 accepted-evidence handoff worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-poc-idea-evaluation-worker": {
+      "display_name": "Fixed research B2 evidence-bound idea worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-poc-experiment-design-worker": {
+      "display_name": "Fixed research B3 bounded experiment design worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-poc-experiment-approval-worker": {
+      "display_name": "Fixed research B4 exact human approval validator",
+      "owner_host": "local_command", "role": "builder", "persona": "evaluator", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-poc-experiment-run-worker": {
+      "display_name": "Fixed research B5 no-network benchmark worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-poc-claim-verification-worker": {
+      "display_name": "Fixed research B6 deterministic claim verification worker",
+      "owner_host": "local_command", "role": "builder", "persona": "evaluator", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
+    "autosci-research-poc-final-delivery-worker": {
+      "display_name": "Fixed research B7 final evidence delivery worker",
+      "owner_host": "local_command", "role": "builder", "persona": "builder", "backend": "command",
+      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "enabled": true, "available": true, "health_status": "ok", "max_concurrency": 1,
+      "compat_maps_to": {"host_type": "local_command_worker"}, "deprecated": false
+    },
     "mini-codex-gpt55-medium-evaluator-2": {
       "display_name": "Mac mini Codex GPT 5.5 medium evaluator slot 2",
       "plane": "headless",

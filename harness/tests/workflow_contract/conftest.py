@@ -58,8 +58,16 @@ def operator_registry():
 @pytest.fixture(scope="session")
 def shipped_contracts():
     contracts = wc.load_all_contracts(WORKFLOWS_DIR)
-    assert len(contracts) == 4
-    return {contract["workflow_id"]: contract for contract in contracts}
+    indexed = {contract["workflow_id"]: contract for contract in contracts}
+    assert set(indexed) == {
+        "code.cli_smoke",
+        "code.cli_smoke_anthropic",
+        "pm.generic.v1",
+        "research.autosci.v1",
+        "research.evidence_to_poc.v1",
+        "research.deepdive.rsi_demo",
+    }
+    return indexed
 
 
 @pytest.fixture()

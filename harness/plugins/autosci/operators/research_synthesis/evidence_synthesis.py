@@ -92,7 +92,10 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     claims = _normalize_claims(response, accepted_ids)
     if not claims:
         raise ResearchOperatorError("model_generate returned no grounded claims", error_type="provider_contract")
-    limitations = [str(item) for item in response.get("limitations", []) if str(item).strip()]
+    limitations = list(dict.fromkeys([
+        *[str(item) for item in validation.get("limitations", []) if str(item).strip()],
+        *[str(item) for item in response.get("limitations", []) if str(item).strip()],
+    ]))
     artifact_payload = {
         "schema": "research_synthesis.evidence_synthesis.v1",
         "node_id": "evidence_synthesis",
@@ -104,6 +107,17 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             "seed_snapshot": "seed_snapshot" if seed_snapshot else "",
             "source_validation": "source_validation" if validation else "",
         },
+        "source_lineage": [
+            {
+                "source_id": str(item.get("source_id") or ""),
+                "url": str(item.get("url") or ""),
+                "provider": str((item.get("provenance") or {}).get("provider") or ""),
+                "acquisition_channel": str(item.get("acquisition_channel") or ""),
+                "candidate_sha256": str(item.get("candidate_sha256") or ""),
+            }
+            for item in accepted
+        ],
+        "source_policy_summary": dict(validation.get("source_policy_summary") or {}),
         "input_artifact_hashes": {
             "seed_snapshot": str((seed_ref or {}).get("sha256") or ""),
             "source_validation": str((validation_ref or {}).get("sha256") or ""),

@@ -15,7 +15,12 @@ def run_bridge(args: list[str], tmp_path: Path) -> subprocess.CompletedProcess[s
     env["HARNESS_DIR"] = str(tmp_path)
     return subprocess.run(
         [sys.executable, str(BRIDGE), *args],
-        cwd=HARNESS,
+        # Envelope arguments below are repo-root-relative
+        # (tests/plugins/autosci/fixtures/...). Commit 711bd5fba consolidated the
+        # suite under the root but left this cwd at harness/, so every fixture
+        # path resolved to harness/tests/... and the whole AutoSci bridge smoke
+        # suite has been failing since.
+        cwd=HARNESS.parent,
         env=env,
         text=True,
         stdout=subprocess.PIPE,

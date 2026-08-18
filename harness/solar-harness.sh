@@ -76,7 +76,7 @@ SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"
 LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"
 LEGACY_LAB_SESSION_NAME="solar-harness-strategy"
 BG_SESSION_NAME="${SOLAR_HARNESS_BG_SESSION:-solar-harness-bg}"
-SPRINTS_DIR="$HARNESS_DIR/sprints"
+SPRINTS_DIR="${HARNESS_SPRINTS_DIR:-$HARNESS_DIR/sprints}"
 BG_TASKS_DIR="$HARNESS_DIR/run/bg-tasks"
 EXPECTED_PRODUCT_DELIVERY_PANES=4
 export HARNESS_DIR SPRINTS_DIR SOLAR_PANE_RUNTIME
@@ -1856,7 +1856,7 @@ intake_request() {
   # contract compiler — fail-closed, never a silent fall-through to the generic
   # planner path (smoke 20260707T180639Z ran a 5-node planner DAG because this
   # seam did not exist and code.cli_smoke's trigger is explicit-workflow_id-only).
-  if [[ -n "${SOLAR_INTAKE_WORKFLOW_ID:-}" ]]; then
+  if [[ -n "${SOLAR_INTAKE_WORKFLOW_ID:-}" && "${SOLAR_INTAKE_WORKFLOW_ID}" != "research.evidence_to_poc.v1" ]]; then
     if [[ "${SOLAR_WORKFLOW_ROUTER:-0}" != "1" || ! -f "$HARNESS_DIR/lib/workflow_intake.py" ]]; then
       err "SOLAR_INTAKE_WORKFLOW_ID is set but the workflow router is unavailable (need SOLAR_WORKFLOW_ROUTER=1 and lib/workflow_intake.py) — refusing generic fallback"
       return 1
@@ -1876,10 +1876,12 @@ intake_request() {
     printf '%s\n' "$wf_out"
     return 0
   fi
-  local out rc raw_file autopilot_out autopilot_rc intent_out intent_rc intent_id sid_from_out consumer_out consumer_rc consumer_status planner_handoff_status
+  local out rc raw_file autopilot_out autopilot_rc intent_out intent_rc intent_id intent_lane sid_from_out consumer_out consumer_rc consumer_status planner_handoff_status fixed_route
   intent_out=""
   intent_rc=0
   intent_id=""
+  intent_lane=""
+  fixed_route=0
   consumer_out=""
   consumer_rc=0
   consumer_status=""
@@ -1897,22 +1899,104 @@ intake_request() {
     set -e
     if [[ "$intent_rc" == "0" ]]; then
       intent_id=$(python3 -c 'import json,sys; print((json.loads(sys.stdin.read()).get("intent_id") or ""))' <<<"$intent_out" 2>/dev/null || true)
+      intent_lane=$(python3 -c 'import json,sys; print((json.loads(sys.stdin.read()).get("lane") or ""))' <<<"$intent_out" 2>/dev/null || true)
     fi
   fi
-  if [[ "$intent_rc" == "0" && -n "$intent_id" && -f "$HARNESS_DIR/lib/intent_consumer.py" ]] && ! should_epic_decompose_request "$req"; then
+  if [[ "${SOLAR_INTAKE_WORKFLOW_ID:-}" == "research.evidence_to_poc.v1" && "$intent_lane" != "research" ]]; then
+    err "fixed research workflow was explicitly requested but Requirement IR lane was ${intent_lane:-unavailable}"
+    return 2
+  fi
+  # Ordinary research is selected from the persisted Requirement IR lane,
+  # before the generic epic/Planner fallback.  Topology and acquisition are
+  # typed inputs; prompt text never selects individual stages.
+  if [[ "$intent_rc" == "0" && -n "$intent_id" && "$intent_lane" == "research" ]]; then
+    local fixed_args fixed_out fixed_rc fixed_sid fixed_execution_profile fixed_acquisition_mode
+    fixed_execution_profile="${SOLAR_RESEARCH_EXECUTION_PROFILE:-part_a_only}"
+    fixed_acquisition_mode="${SOLAR_RESEARCH_ACQUISITION_MODE:-source_pack}"
+    case "$fixed_execution_profile" in
+      part_a_only|part_a_plus_poc) ;;
+      *)
+        err "fixed research intake rejected invalid SOLAR_RESEARCH_EXECUTION_PROFILE=$fixed_execution_profile"
+        return 2
+        ;;
+    esac
+    case "$fixed_acquisition_mode" in
+      source_pack|live_search|hybrid) ;;
+      *)
+        err "fixed research intake rejected invalid SOLAR_RESEARCH_ACQUISITION_MODE=$fixed_acquisition_mode"
+        return 2
+        ;;
+    esac
+    fixed_args=(
+      --workflow-id research.evidence_to_poc.v1
+      --request "$req"
+      --workspace-root "$intake_workspace_root"
+      --sprints-dir "$SPRINTS_DIR"
+      --intent-id "$intent_id"
+      --input "execution_profile=${fixed_execution_profile}"
+      --input "acquisition_mode=${fixed_acquisition_mode}"
+    )
+    if [[ "$fixed_acquisition_mode" == "live_search" || "$fixed_acquisition_mode" == "hybrid" ]]; then
+      [[ "${SOLAR_RESEARCH_RETRIEVAL_POLICY:-}" == "public_bibliographic_no_key_v1" ]] || {
+        err "fixed research live acquisition requires SOLAR_RESEARCH_RETRIEVAL_POLICY=public_bibliographic_no_key_v1"
+        return 2
+      }
+      fixed_args+=(--input "retrieval_policy=${SOLAR_RESEARCH_RETRIEVAL_POLICY}")
+    fi
+    if [[ -n "${SOLAR_RESEARCH_EXPERIMENT_POLICY:-}" ]]; then
+      [[ -n "${SOLAR_RESEARCH_EXPERIMENT_POLICY_ACTOR:-}" ]] || {
+        err "fixed research experiment policy requires SOLAR_RESEARCH_EXPERIMENT_POLICY_ACTOR"
+        return 2
+      }
+      [[ -n "${SOLAR_RESEARCH_EXPERIMENT_POLICY_STATEMENT:-}" ]] || {
+        err "fixed research experiment policy requires SOLAR_RESEARCH_EXPERIMENT_POLICY_STATEMENT"
+        return 2
+      }
+      fixed_args+=(
+        --input "experiment_policy=${SOLAR_RESEARCH_EXPERIMENT_POLICY}"
+        --input "experiment_policy_actor=${SOLAR_RESEARCH_EXPERIMENT_POLICY_ACTOR}"
+        --input "experiment_policy_statement=${SOLAR_RESEARCH_EXPERIMENT_POLICY_STATEMENT}"
+      )
+    fi
+    if [[ -n "${SOLAR_RESEARCH_SOURCE_PACK:-}" ]]; then
+      fixed_args+=(--input "source_pack_root=${SOLAR_RESEARCH_SOURCE_PACK}")
+    fi
     set +e
-    consumer_out=$(SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
-      SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT="$intake_workspace_root" \
-      python3 "$HARNESS_DIR/lib/intent_consumer.py" consume \
-      --intent-id "$intent_id" \
-      --json 2>&1)
-    consumer_rc=$?
+    fixed_out=$(HARNESS_SPRINTS_DIR="$SPRINTS_DIR" python3 "$HARNESS_DIR/lib/workflow_intake.py" "${fixed_args[@]}" 2>&1)
+    fixed_rc=$?
     set -e
-    if [[ "$consumer_rc" == "0" ]]; then
-      sid_from_out=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; print((results[0] or {}).get("sprint_id") or "")' <<<"$consumer_out" 2>/dev/null || true)
-      consumer_status=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; print((results[0] or {}).get("status") or "")' <<<"$consumer_out" 2>/dev/null || true)
-      planner_handoff_status=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; handoff=((results[0] or {}).get("planner_handoff") or {}); print(handoff.get("status") or handoff.get("reason") or "")' <<<"$consumer_out" 2>/dev/null || true)
-      out=$(python3 - "$sid_from_out" "$intent_id" "$consumer_status" "$planner_handoff_status" <<'PY'
+    if [[ "$fixed_rc" != "0" ]]; then
+      err "fixed research intake failed (rc=$fixed_rc): $fixed_out"
+      return "$fixed_rc"
+    fi
+    set +e
+    fixed_sid=$(python3 -c 'import re,sys; m=re.search(r"Sprint created:\s*(\S+)",sys.stdin.read()); print(m.group(1)) if m else sys.exit(2)' <<<"$fixed_out" 2>/dev/null)
+    local fixed_sid_rc=$?
+    set -e
+    if [[ "$fixed_sid_rc" != "0" || -z "$fixed_sid" ]]; then
+      err "fixed research intake attribution failed: sprint id was not present in workflow_intake output"
+      return 2
+    fi
+    out="$fixed_out"
+    rc=0
+    sid_from_out="$fixed_sid"
+    fixed_route=1
+  fi
+  if [[ "$fixed_route" != "1" ]]; then
+    if [[ "$intent_rc" == "0" && -n "$intent_id" && -f "$HARNESS_DIR/lib/intent_consumer.py" ]] && ! should_epic_decompose_request "$req"; then
+      set +e
+      consumer_out=$(SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
+        SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT="$intake_workspace_root" \
+        python3 "$HARNESS_DIR/lib/intent_consumer.py" consume \
+        --intent-id "$intent_id" \
+        --json 2>&1)
+      consumer_rc=$?
+      set -e
+      if [[ "$consumer_rc" == "0" ]]; then
+        sid_from_out=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; print((results[0] or {}).get("sprint_id") or "")' <<<"$consumer_out" 2>/dev/null || true)
+        consumer_status=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; print((results[0] or {}).get("status") or "")' <<<"$consumer_out" 2>/dev/null || true)
+        planner_handoff_status=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; handoff=((results[0] or {}).get("planner_handoff") or {}); print(handoff.get("status") or handoff.get("reason") or "")' <<<"$consumer_out" 2>/dev/null || true)
+        out=$(python3 - "$sid_from_out" "$intent_id" "$consumer_status" "$planner_handoff_status" <<'PY'
 import sys
 sid, intent_id, consumer_status, planner = sys.argv[1:5]
 planner = planner or "N/A"
@@ -1921,21 +2005,22 @@ print(f"RawIntent consumed: {intent_id} ({consumer_status or 'N/A'})")
 print(f"Planner handoff: {planner}")
 PY
 )
-      rc=0
+        rc=0
+      else
+        out="$consumer_out"
+        rc="$consumer_rc"
+      fi
     else
-      out="$consumer_out"
-      rc="$consumer_rc"
-    fi
-  else
-    set +e
-    out=$(new_sprint "$req" 2>&1)
-    rc=$?
-    set -e
-    sid_from_out=$(python3 -c 'import re,sys; text=re.sub(r"\x1b\[[0-9;]*m","",sys.stdin.read());
+      set +e
+      out=$(new_sprint "$req" 2>&1)
+      rc=$?
+      set -e
+      sid_from_out=$(python3 -c 'import re,sys; text=re.sub(r"\x1b\[[0-9;]*m","",sys.stdin.read());
 patterns=(r"Sprint created:\s*(\S+)", r"Epic:\s*(\S+)", r"\"epic_id\":\s*\"([^\"]+)\"");
 print(next((m.group(1) for p in patterns for m in [re.search(p,text)] if m), ""))' <<<"$out" 2>/dev/null || true)
-    if [[ "$rc" == "0" && -n "$intent_id" && -n "$sid_from_out" && -f "$HARNESS_DIR/lib/intent_gateway.py" ]]; then
-      SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" python3 "$HARNESS_DIR/lib/intent_gateway.py" bind --intent-id "$intent_id" --sprint-id "$sid_from_out" --json >/dev/null 2>&1 || true
+      if [[ "$rc" == "0" && -n "$intent_id" && -n "$sid_from_out" && -f "$HARNESS_DIR/lib/intent_gateway.py" ]]; then
+        SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" python3 "$HARNESS_DIR/lib/intent_gateway.py" bind --intent-id "$intent_id" --sprint-id "$sid_from_out" --json >/dev/null 2>&1 || true
+      fi
     fi
   fi
   raw_file="$(write_intake_raw_record "$req" "$out" 2>/dev/null || true)"
@@ -1946,7 +2031,21 @@ print(next((m.group(1) for p in patterns for m in [re.search(p,text)] if m), "")
 
   autopilot_out=""
   autopilot_rc=0
-  if [[ "$dispatch" == "1" && -f "$HARNESS_DIR/tools/solar-autopilot-monitor.py" ]]; then
+  if [[ "$dispatch" == "1" && "$fixed_route" == "1" ]]; then
+    if [[ ! -f "$HARNESS_DIR/lib/graph_node_dispatcher.py" ]]; then
+      autopilot_out="fixed research dispatcher is not installed: $HARNESS_DIR/lib/graph_node_dispatcher.py"
+      autopilot_rc=1
+    else
+      set +e
+      autopilot_out=$(HARNESS_SPRINTS_DIR="$SPRINTS_DIR" python3 "$HARNESS_DIR/lib/graph_node_dispatcher.py" \
+        dispatch-ready --graph "$SPRINTS_DIR/${sid_from_out}.task_graph.json" --max-parallel 1 2>&1)
+      autopilot_rc=$?
+      set -e
+    fi
+    if [[ "$autopilot_rc" != "0" ]]; then
+      rc="$autopilot_rc"
+    fi
+  elif [[ "$dispatch" == "1" && -f "$HARNESS_DIR/tools/solar-autopilot-monitor.py" ]]; then
     set +e
     autopilot_out=$(python3 "$HARNESS_DIR/tools/solar-autopilot-monitor.py" --apply --dispatch --max-iterations 1 --json 2>&1)
     autopilot_rc=$?
@@ -1978,13 +2077,18 @@ PY
     [[ -n "$raw_file" ]] && log "Raw intake: $raw_file"
     if [[ "$dispatch" == "1" ]]; then
       if [[ "$autopilot_rc" == "0" ]]; then
-        ok "Autopilot scan/dispatch triggered"
+        if [[ "$fixed_route" == "1" ]]; then
+          ok "Fixed research A1 dispatch triggered"
+        else
+          ok "Autopilot scan/dispatch triggered"
+        fi
       else
         warn "Autopilot dispatch trigger failed rc=${autopilot_rc}"
         echo "$autopilot_out" | tail -40
       fi
     fi
   fi
+  return "$rc"
 }
 
 new_sprint() {
@@ -5922,7 +6026,7 @@ PLIST
     fi
     _graph_dispatch_subcmd="${1:-help}"; shift || true
     case "$_graph_dispatch_subcmd" in
-      dispatch-ready|drain-queue|dispatch-evals|node-verdict|resume-human-review)
+      dispatch-ready|drain-queue|dispatch-evals|node-verdict|resume-human-review|approve-fixed-experiment)
         python3 "$_graph_dispatch_py" "$_graph_dispatch_subcmd" "$@"
         ;;
       help|--help|-h|"")
@@ -5933,6 +6037,7 @@ PLIST
         echo "  $0 graph-dispatch dispatch-evals --graph sprint.task_graph.json [--dry-run]"
         echo "  $0 graph-dispatch node-verdict --graph sprint.task_graph.json --node S1 --verdict pass|fail"
         echo "  $0 graph-dispatch resume-human-review --graph sprint.task_graph.json --node S1 --generation N --actor NAME --reason TEXT"
+        echo "  $0 graph-dispatch approve-fixed-experiment --graph sprint.task_graph.json --generation N --actor NAME --statement TEXT --plan-sha256 SHA --scope-json JSON --capability NAME"
         echo "  $0 graph-dispatch drain-queue    --sprint SID [--dry-run] [--max-items N]"
         ;;
       *)
