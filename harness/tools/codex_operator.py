@@ -21,6 +21,172 @@ if _HARNESS_LIB_DIR not in sys.path:
 from codex_cli_runtime import resolve_codex_cli
 
 
+_SKILL_BRIDGE_CAPSULE_ID = "cap.skill-execution-bridge"
+_DEFAULT_SKILL_WORKFLOW_PHASES = [
+    "frame_objective_and_constraints",
+    "apply_skill_workflow",
+    "validate_against_acceptance",
+    "summarize_decisions_and_evidence",
+]
+
+
+def _read_operator_envelope() -> dict[str, object]:
+    raw = os.environ.get("SOLAR_OPERATOR_ENVELOPE_JSON") or ""
+    if not raw.strip():
+        return {}
+    candidate = Path(raw).expanduser()
+    if candidate.is_file():
+        try:
+            raw = candidate.read_text(encoding="utf-8")
+        except OSError:
+            return {}
+    try:
+        payload = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _selected_skills(envelope: dict[str, object]) -> list[str]:
+    candidates: list[object] = [envelope.get("selected_skills")]
+    for key in ("capsule_plan", "resolved_capability_capsule", "task_graph_node"):
+        nested = envelope.get(key)
+        if isinstance(nested, dict):
+            candidates.extend(
+                [
+                    nested.get("selected_skills"),
+                    nested.get("required_skills"),
+                ]
+            )
+    selected: list[str] = []
+    for candidate in candidates:
+        if not isinstance(candidate, list):
+            continue
+        for item in candidate:
+            skill_id = str(item or "").strip()
+            if skill_id and skill_id not in selected:
+                selected.append(skill_id)
+    return selected
+
+
+def _materialize_skill_bridge_evidence(task_dir: Path, dispatch: str) -> dict[str, object]:
+    envelope = _read_operator_envelope()
+    capsule = envelope.get("resolved_capability_capsule")
+    capsule_id = ""
+    if isinstance(capsule, dict):
+        capsule_id = str(capsule.get("id") or capsule.get("capsule_id") or "").strip()
+    if not capsule_id:
+        capsule_id = str(envelope.get("capability_capsule_id") or "").strip()
+    if capsule_id != _SKILL_BRIDGE_CAPSULE_ID:
+        return {}
+
+    selected_skills = _selected_skills(envelope)
+    try:
+        from skill_capsule_bridge import resolve_skill_records
+
+        records = resolve_skill_records(selected_skills)
+    except Exception as exc:
+        records = []
+        resolution_error = f"{type(exc).__name__}: {exc}"
+    else:
+        resolution_error = ""
+
+    resolved_skill_ids = [
+        str(record.get("skill_id") or "").strip()
+        for record in records
+        if isinstance(record, dict) and str(record.get("skill_id") or "").strip()
+    ]
+    primary = records[0] if records and isinstance(records[0], dict) else {}
+    workflow_phases = [
+        str(item).strip()
+        for item in primary.get("workflow_phases", [])
+        if str(item).strip()
+    ] or list(_DEFAULT_SKILL_WORKFLOW_PHASES)
+    selection_mode = "resolved_skill_record" if records else "direct_command_fallback"
+    fallback_reason = ""
+    if not records:
+        fallback_reason = resolution_error or "selected_skill_not_resolved"
+
+    evidence = {
+        "schema": "solar.skill_bridge.direct_command.v1",
+        "capsule_id": capsule_id,
+        "selected_skills": selected_skills,
+        "resolved_skill_ids": resolved_skill_ids,
+        "selection_mode": selection_mode,
+        "fallback_reason": fallback_reason,
+        "command_protocol": {
+            "mode": str(primary.get("template_profile") or "prompt_context_skill"),
+            "execution_surface": "direct_command_operator",
+            "record_exact_commands": True,
+        },
+        "workflow_contract": {
+            "phases": workflow_phases,
+            "delivery_expectation": str(
+                primary.get("delivery_expectation") or "phase_checklist_and_decision_log"
+            ),
+        },
+    }
+    task_dir.mkdir(parents=True, exist_ok=True)
+    prompt = (
+        "# Skill dispatch pane prompt\n\n"
+        f"- capsule: `{capsule_id}`\n"
+        f"- selected_skills: `{json.dumps(selected_skills, ensure_ascii=False)}`\n"
+        f"- selection_mode: `{selection_mode}`\n"
+        f"- fallback_reason: `{fallback_reason or 'none'}`\n"
+        "- execution_surface: `direct_command_operator`\n\n"
+        "## Dispatch\n\n"
+        f"{dispatch.rstrip()}\n"
+    )
+    (task_dir / "skill-dispatch-pane-prompt.md").write_text(prompt, encoding="utf-8")
+    (task_dir / "skill-dispatch-selection-proof.json").write_text(
+        json.dumps(
+            {
+                "schema": evidence["schema"],
+                "capsule_id": capsule_id,
+                "selected_skills": selected_skills,
+                "resolved_skill_ids": resolved_skill_ids,
+                "selection_mode": selection_mode,
+                "fallback_reason": fallback_reason,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (task_dir / "skill-dispatch-bridge-contract.json").write_text(
+        json.dumps(
+            {
+                "schema": evidence["schema"],
+                "capsule_id": capsule_id,
+                "command_protocol": evidence["command_protocol"],
+                "workflow_contract": evidence["workflow_contract"],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return evidence
+
+
+def _write_skill_bridge_result(task_dir: Path, evidence: dict[str, object], exit_code: int) -> None:
+    if not evidence:
+        return
+    payload = dict(evidence)
+    payload.update(
+        {
+            "status": "completed" if exit_code == 0 else "failed",
+            "exit_code": exit_code,
+        }
+    )
+    (task_dir / "skill-dispatch-result.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 def _declared_output_guidance() -> str:
     try:
         outputs = json.loads(os.environ.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
@@ -296,7 +462,7 @@ def _native_workspace_write_dirs(
 ) -> list[Path]:
     """Project operatord-validated output files into native directory grants.
 
-    Codex's macOS sandbox accepts additional writable directories, not exact
+    Codex's native sandbox accepts additional writable directories, not exact
     files. Operatord already validates every declared output against Solar's
     runtime roots and pre-creates it; this second check prevents a standalone
     wrapper invocation from turning an arbitrary environment value into a
@@ -329,6 +495,28 @@ def _native_workspace_write_dirs(
             result.append(parent)
             seen.add(key)
     return result
+
+
+def _declared_read_scope_paths(env: dict[str, str], cwd: Path) -> list[Path]:
+    """Resolve the operator envelope's exact read grants.
+
+    Relative graph scopes are anchored to the sprint workdir. Evaluator
+    snapshots may add absolute published paths after their bytes and digest
+    have been frozen by graph dispatch.
+    """
+    try:
+        declared = json.loads(env.get("SOLAR_OPERATOR_READ_SCOPE_JSON") or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(declared, list):
+        return []
+    paths: list[Path] = []
+    for value in declared:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        path = Path(value).expanduser()
+        paths.append(path if path.is_absolute() else cwd / path)
+    return _existing_paths(paths)
 
 
 def _path_filesystem_type(path: Path) -> str:
@@ -375,12 +563,7 @@ def _filesystem_isolated_command(
     if mode in {"0", "off", "disabled", "none"}:
         if strict:
             raise RuntimeError("strict operator filesystem scope cannot disable Landlock")
-        writable_dirs = _native_workspace_write_dirs(task_dir=task_dir, cwd=cwd, env=env)
-        return _codex_workspace_write_command(command, writable_dirs), {
-            "mode": "codex_workspace_write",
-            "strict": False,
-            "read_write": [str(path) for path in writable_dirs],
-        }
+        return command, {"mode": "disabled", "strict": False}
 
     harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
     state_root = Path(
@@ -392,6 +575,9 @@ def _filesystem_isolated_command(
     state_home = Path(tempfile.mkdtemp(prefix=f"{os.getpid()}-", dir=state_root))
     atexit.register(shutil.rmtree, state_home, ignore_errors=True)
     env["CODEX_SQLITE_HOME"] = str(state_home)
+    # Login shells spawned by Codex must not probe the operator user's real
+    # profile, which is intentionally outside the Landlock read boundary.
+    env["HOME"] = str(state_home)
     tmp_dir = task_dir / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
     env["TMPDIR"] = str(tmp_dir)
@@ -414,12 +600,17 @@ def _filesystem_isolated_command(
     if sys.platform != "linux":
         if strict:
             raise RuntimeError("strict operator filesystem scope requires Linux Landlock")
-        writable_dirs = _native_workspace_write_dirs(task_dir=task_dir, cwd=cwd, env=env)
-        return _codex_workspace_write_command(command, writable_dirs), {
-            "mode": "codex_workspace_write",
-            "strict": False,
-            "read_write": [str(path) for path in writable_dirs],
-        }
+        if sys.platform == "darwin":
+            writable_dirs = _native_workspace_write_dirs(task_dir=task_dir, cwd=cwd, env=env)
+            return _codex_workspace_write_command(command, writable_dirs), {
+                "mode": "codex_workspace_write",
+                "strict": False,
+                "read_write": [str(path) for path in writable_dirs],
+            }
+        # Preserve the Windows execution path that is already proven by the
+        # E2E run. Windows may run through native Codex or WSL; forcing the
+        # macOS workspace-write projection here changes that proven contract.
+        return command, {"mode": "unsupported", "strict": False}
 
     codex_arg0_dir = codex_home / "tmp" / "arg0"
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
@@ -444,6 +635,7 @@ def _filesystem_isolated_command(
         )
         if path.exists()
     ]
+    declared_read_scope = _declared_read_scope_paths(env, cwd)
     read_only = _existing_paths(
         [
             Path("/usr"),
@@ -456,8 +648,12 @@ def _filesystem_isolated_command(
             resolved_binary.parent,
             *resolved_system_network_files,
             harness_dir,
+            harness_dir.parent / "AGENTS.md",
+            harness_dir.parent / ".agents",
+            *declared_read_scope,
         ]
     )
+    read_directories = _existing_paths([harness_dir.parent])
     try:
         declared_outputs = json.loads(env.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
     except (TypeError, ValueError):
@@ -503,6 +699,8 @@ def _filesystem_isolated_command(
                 continue
             wrapped.extend(["--read-write", str(path)])
         wrapped.extend(["--", sys.executable, str(wrapper), "--read-scope-only"])
+    for path in read_directories:
+        wrapped.extend(["--read-directory", str(path)])
     for path in read_only:
         wrapped.extend(["--read-only", str(path)])
     for path in read_write:
@@ -511,6 +709,7 @@ def _filesystem_isolated_command(
     return wrapped, {
         "mode": "mount_namespace+landlock-read" if drvfs else "landlock",
         "strict": strict,
+        "read_directories": [str(path) for path in read_directories],
         "read_only": [str(path) for path in read_only],
         "read_write": [str(path) for path in read_write],
     }
@@ -587,6 +786,7 @@ def main() -> int:
 
     task_dir = Path(os.environ.get("TASK_DIR") or ".").expanduser()
     task_dir.mkdir(parents=True, exist_ok=True)
+    skill_bridge_evidence = _materialize_skill_bridge_evidence(task_dir, dispatch)
     output_file = task_dir / "codex-last-message.md"
     model = _codex_model()
     effort = os.environ.get("CODEX_REASONING_EFFORT", "medium").strip() or "medium"
@@ -686,6 +886,7 @@ def main() -> int:
                         except Exception:
                             proc.kill()
                         proc.wait(timeout=5)
+                    _write_skill_bridge_result(task_dir, skill_bridge_evidence, 0)
                     return 0
             if timeout_seconds > 0 and elapsed >= timeout_seconds:
                 _terminate_process_group(proc)
@@ -708,6 +909,7 @@ def main() -> int:
                 )
                 print(combined, file=sys.stderr)
                 _write_pm_result(task_dir, output_file, combined, 124)
+                _write_skill_bridge_result(task_dir, skill_bridge_evidence, 124)
                 return 124
             time.sleep(1)
 
@@ -716,7 +918,9 @@ def main() -> int:
         print(combined, end="" if combined.endswith("\n") else "\n", flush=True)
     if proc.returncode == 0:
         _write_pm_result(task_dir, output_file, combined, int(proc.returncode))
-    return int(proc.returncode or 0)
+    exit_code = int(proc.returncode or 0)
+    _write_skill_bridge_result(task_dir, skill_bridge_evidence, exit_code)
+    return exit_code
 
 
 if __name__ == "__main__":

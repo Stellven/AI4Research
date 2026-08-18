@@ -101,6 +101,8 @@ def test_save_graph_keeps_node_runtime_fields_out_of_spec_plane(tmp_path, monkey
                 "status": "assigned",
                 "assigned_to": "pane-1",
                 "dispatch_id": "dispatch-1",
+                "closeout_receipt": {"schema": "solar.node_closeout.v1", "verdict": "passed"},
+                "eval_json": "sprint-runtime-spec-clean.N1-eval.json",
                 "updated_at": "2026-05-31T12:00:00Z",
             },
         ],
@@ -109,6 +111,8 @@ def test_save_graph_keeps_node_runtime_fields_out_of_spec_plane(tmp_path, monkey
                 "status": "assigned",
                 "assigned_to": "pane-1",
                 "dispatch_id": "dispatch-1",
+                "closeout_receipt": {"schema": "solar.node_closeout.v1", "verdict": "passed"},
+                "eval_json": "sprint-runtime-spec-clean.N1-eval.json",
                 "updated_at": "2026-05-31T12:00:00Z",
             }
         },
@@ -123,9 +127,17 @@ def test_save_graph_keeps_node_runtime_fields_out_of_spec_plane(tmp_path, monkey
     assert "status" not in node
     assert "assigned_to" not in node
     assert "dispatch_id" not in node
+    assert "closeout_receipt" not in node
+    assert "eval_json" not in node
     assert saved_state["node_results"]["N1"]["status"] == "assigned"
     assert saved_state["dispatch_ids"]["N1"] == "dispatch-1"
-    assert gs.node_status(gs.load_graph(graph_path), "N1") == "assigned"
+    loaded = gs.load_graph(graph_path)
+    assert gs.node_status(loaded, "N1") == "assigned"
+    assert loaded["nodes"][0]["closeout_receipt"] == {
+        "schema": "solar.node_closeout.v1",
+        "verdict": "passed",
+    }
+    assert loaded["nodes"][0]["eval_json"] == "sprint-runtime-spec-clean.N1-eval.json"
 
 
 def test_load_graph_rehydrates_closeout_receipt_from_state_plane(tmp_path, monkeypatch):

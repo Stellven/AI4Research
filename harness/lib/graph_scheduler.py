@@ -346,9 +346,9 @@ def _attach_runtime_planes(
         # closeout authority such as closeout_receipt.  Downstream evaluators
         # then reject a valid published ancestor because its digest chain
         # appears incomplete after the first save/load round trip.
-        for key in RUNTIME_NODE_SPEC_FIELDS:
-            if key in result:
-                ids[node_id][key] = deepcopy(result[key])
+        for field in RUNTIME_NODE_SPEC_FIELDS:
+            if field in result:
+                ids[node_id][field] = deepcopy(result[field])
 
 
 def _runtime_state_from_graph(graph: dict[str, Any], *, graph_path: Path | None = None) -> dict[str, Any]:
@@ -1049,16 +1049,32 @@ def _human_review_is_blocking(node: dict[str, Any], result: dict[str, Any] | Non
 
 
 def human_review_generation(graph: dict[str, Any], node_id: str) -> int:
-    """Current block generation (legacy escalations are generation 1)."""
+    """Latest durable review generation (legacy escalations are generation 1).
+
+    A later terminal result can replace the current ``node_results`` mirror
+    without erasing ``human_review_history``. The history maximum remains the
+    generation floor so a fresh block never reuses an already resumed token.
+    """
     ids = _node_map(graph)
     if node_id not in ids:
         raise ValueError(f"unknown node: {node_id}")
     result = _node_results(graph).get(node_id)
     record = _human_review_record(ids[node_id], result)
-    try:
-        generation = max(0, int(record.get("generation") or 0))
-    except (TypeError, ValueError):
-        generation = 0
+    generation = 0
+    candidates: list[Any] = [record]
+    for owner in (ids[node_id], result if isinstance(result, dict) else {}):
+        history = owner.get("human_review_history") if isinstance(owner, dict) else None
+        if isinstance(history, list):
+            candidates.extend(history)
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        if str(candidate.get("schema_version") or "") != HUMAN_REVIEW_SCHEMA_VERSION:
+            continue
+        try:
+            generation = max(generation, max(0, int(candidate.get("generation") or 0)))
+        except (TypeError, ValueError):
+            continue
     if generation:
         return generation
     return 1 if _human_review_is_blocking(ids[node_id], result) else 0

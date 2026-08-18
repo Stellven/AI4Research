@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "$(uname -s)" != "Linux" ]]; then
+  echo "SKIP: Landlock pane integration is Linux-only"
+  exit 0
+fi
+
 HARNESS_DIR="${HARNESS_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../harness" && pwd)}"
 LAUNCHER="$HARNESS_DIR/pane-launcher.sh"
 TMP_ROOT="$(mktemp -d /tmp/solar-pane-landlock-test.XXXXXX)"

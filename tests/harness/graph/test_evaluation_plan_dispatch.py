@@ -213,6 +213,11 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     node = {
         "id": "N3",
         "goal": "review with explicit plan",
+        "eval_artifact_snapshot": {
+            "schema": "solar.eval_artifact_snapshot.v1",
+            "path": "/tmp/sid-eval-text.N3-eval-snapshot.json",
+            "snapshot_digest": "a" * 64,
+        },
         "evaluation_plan": {
             "review_mode": "single",
             "required_evaluators": 1,
@@ -235,9 +240,15 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     assert "## Evaluation Plan" in text
     assert "Review Mode: `single`" in text
     assert '"evaluation_plan": {' in text
-    assert "It is **not** the SHA-256 of the entire JSON wrapper" in text
-    assert "never compare it with `shasum`/`sha256sum`" in text
+    assert "canonical content digest" in text
+    assert "intentionally not the SHA-256 of the complete JSON file bytes" in text
+    assert "Do not compare it with" in text
     assert "recomputing/validating the governed rows" in text
+    assert "Any change to the canonical snapshot material" in text
+    assert "post-verdict closeout transaction" in text
+    assert "stale sidecar records an earlier publication error" in text
+    assert "will block closeout deterministically" in text
+    assert "Any byte change after dispatch" not in text
 
 
 def _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid: str, node_id: str) -> None:
@@ -286,3 +297,62 @@ def test_build_eval_dispatch_text_requires_research_gate_for_deepresearch_node(m
     assert "solar-harness research eval-artifacts --eval-json" in text
     assert "Do not PASS unless `research_quality_gate.ok=true`" in text
     assert "DeepResearch deterministic artifact gate is **not required**" not in text
+
+
+def test_synthesis_only_node_does_not_inherit_grounded_report_bundle_proofs() -> None:
+    node = {
+        "id": "R2",
+        "write_scope": ["workspace/research/synthesis/synthesis_plan.json"],
+        "proof_obligations": [
+            {
+                "kind": "self_check",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "check.source_packs_verified",
+            },
+            {
+                "kind": "self_check",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "check.grounded_report_bundle_written",
+            },
+            {
+                "kind": "postcondition",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "output_present",
+                "field": "claims_jsonl",
+            },
+            {
+                "kind": "pass_condition",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "final.md citations resolve to evidence.jsonl",
+            },
+        ],
+    }
+
+    obligations = gnd._node_proof_obligations("sid-synthesis-only", node)
+
+    assert [item["requirement"] for item in obligations] == ["check.source_packs_verified"]
+
+
+def test_deepresearch_node_keeps_grounded_report_bundle_proofs() -> None:
+    node = {
+        "id": "R3",
+        "research_quality_gate_required": True,
+        "proof_obligations": [
+            {
+                "kind": "postcondition",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "output_present",
+                "field": "claims_jsonl",
+            },
+            {
+                "kind": "postcondition",
+                "source_capsule_id": "cap.requirement-research-synthesizer",
+                "requirement": "output_present",
+                "field": "research_eval_json",
+            },
+        ],
+    }
+
+    obligations = gnd._node_proof_obligations("sid-deepresearch", node)
+
+    assert [item["field"] for item in obligations] == ["claims_jsonl", "research_eval_json"]

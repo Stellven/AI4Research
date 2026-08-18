@@ -409,6 +409,49 @@ class TestSendToPaneLiteral:
             }
         ]
 
+    def test_reconcile_pass_reopens_mechanically_skipped_descendants(
+        self, tmp_harness, monkeypatch
+    ):
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph["nodes"][0]["status"] = "reviewing"
+        graph["nodes"][1].update(
+            {
+                "status": "skipped",
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["N1"],
+            }
+        )
+        graph["node_results"] = {
+            "N1": {"status": "reviewing"},
+            "N2": {"status": "skipped", "reason": "blocked_by_failed_dependency"},
+        }
+        (sprints / f"{sid}.N1-handoff.md").write_text("# handoff\n", encoding="utf-8")
+        (sprints / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
+        (sprints / f"{sid}.N1-eval.json").write_text(
+            json.dumps({"verdict": "PASS", "node_id": "N1"}) + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(
+            graph, sprints / f"{sid}.task_graph.json"
+        )
+
+        assert graph["node_results"]["N1"]["status"] == "passed"
+        assert graph["node_results"]["N2"]["status"] == "pending"
+        assert graph["nodes"][1]["status"] == "pending"
+        assert {
+            "node": "N2",
+            "status": "pending",
+            "reason": "dependency_recovered",
+        } in repaired
+        assert any(
+            item.get("node") == "N1" and item.get("status") == "passed"
+            for item in repaired
+        )
+
     def test_reconcile_blocks_self_graded_pass_eval_sidecar(self, tmp_harness, monkeypatch):
         """Eval-backfill guard on the reconcile path: a PASS eval.json sidecar the executing agent
         wrote itself, with NO independent eval report (no {sid}.N1-eval.md, no eval-dispatch sidecar),
@@ -744,6 +787,13 @@ class TestSendToPaneLiteral:
         assert '"repair_attempt": 2' in text
         assert '"eval_dispatch_id": "eval-after-repair"' in text
         assert '"repair_context_created_at": "2026-06-29T20:00:00Z"' in text
+        assert '"schema_version": "solar.eval.v1"' in text
+        assert f'"sprint_id": "{sid}"' in text
+        assert '"generated_by": "operator:mini-codex-evaluator"' in text
+        assert '"generation_mode": "assigned_evaluator"' in text
+        assert '"proof_level": "independent_verification"' in text
+        assert '"command_line": "operator_pool_eval:eval-after-repair"' in text
+        assert f'"workspace_root": "{gnd.HARNESS_DIR.parent}"' in text
 
     def test_direct_node_verdict_fail_requests_graph_node_repair_round(self, tmp_harness, monkeypatch):
         """Primary evaluator node-verdict FAIL uses the same repair path as sidecar reconcile."""
@@ -823,6 +873,69 @@ class TestSendToPaneLiteral:
         assert Path(archived["eval_md"]).exists()
         assert ("solar-harness-lab:0.2", "dispatch-N1", "node_failed_review") in release_calls
         assert ("solar-harness-lab:0.3", "eval-N1", "node_failed_review") in release_calls
+
+    def test_direct_node_verdict_pass_reopens_mechanically_skipped_descendants(
+        self, tmp_harness, monkeypatch
+    ):
+        """A corrected dependency PASS must make its mechanically skipped chain runnable again."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        graph_path = sprints / f"{sid}.task_graph.json"
+        graph["nodes"][0]["status"] = "reviewing"
+        graph["nodes"][1].update(
+            {
+                "status": "skipped",
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["N1"],
+            }
+        )
+        graph["nodes"].append(
+            {
+                "id": "N3",
+                "goal": "Third step",
+                "depends_on": ["N2"],
+                "write_scope": ["/tmp/test3"],
+                "acceptance": ["third acceptance"],
+                "status": "skipped",
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["N2"],
+            }
+        )
+        graph["node_results"] = {
+            "N1": {"status": "reviewing"},
+            "N2": {"status": "skipped", "reason": "blocked_by_failed_dependency"},
+            "N3": {"status": "skipped", "reason": "blocked_by_failed_dependency"},
+        }
+        graph_path.write_text(json.dumps(graph) + "\n", encoding="utf-8")
+        (sprints / f"{sid}.N1-handoff.md").write_text("# handoff\n", encoding="utf-8")
+        (sprints / f"{sid}.N1-eval.md").write_text("## Verdict\nPASS\n", encoding="utf-8")
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_json.write_text(
+            json.dumps({"verdict": "PASS", "node_id": "N1"}) + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        result = gnd.node_verdict(
+            str(graph_path),
+            "N1",
+            "pass",
+            eval_json=str(eval_json),
+            dispatch_downstream=False,
+        )
+        saved = gnd.load_graph(graph_path)
+        saved_nodes = {node["id"]: node for node in saved["nodes"]}
+
+        assert result["ok"] is True
+        assert result["reopened_descendants"] == ["N2", "N3"]
+        assert saved["node_results"]["N1"]["status"] == "passed"
+        assert saved["node_results"]["N2"]["status"] == "pending"
+        assert saved["node_results"]["N3"]["status"] == "pending"
+        assert saved_nodes["N2"]["status"] == "pending"
+        assert saved_nodes["N3"]["status"] == "pending"
+        assert "skip_reason" not in saved_nodes["N2"]
+        assert "blocked_by_failed_dependency" not in saved_nodes["N3"]
 
     def test_eval_reconcile_ignores_failed_result_from_older_pm_task(self, tmp_harness, monkeypatch):
         """A retrying eval assignment must not be closed by an older failed PM task result."""

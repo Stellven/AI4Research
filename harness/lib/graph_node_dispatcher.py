@@ -3510,6 +3510,177 @@ def resume_human_review(
     return result
 
 
+def _reopen_mechanically_skipped_descendants(
+    graph: dict[str, Any],
+    sid: str,
+    node_id: str,
+    *,
+    writer: str,
+    author_type: str,
+    note: str,
+) -> list[str]:
+    """Reopen descendants skipped only because ``node_id`` had failed.
+
+    A terminal dependency failure mechanically skips its downstream chain. If
+    that dependency later becomes executable again or receives a valid PASS,
+    those synthetic skips must not remain terminal work of their own.
+    """
+    reopened_descendants: list[str] = []
+    reopened = {node_id}
+    changed = True
+    while changed:
+        changed = False
+        for candidate in graph.get("nodes") or []:
+            candidate_id = str(candidate.get("id") or "")
+            if not candidate_id or candidate_id in reopened:
+                continue
+            if str(node_status(graph, candidate_id) or "").lower() != "skipped":
+                continue
+            if str(candidate.get("skip_reason") or "") != "blocked_by_failed_dependency":
+                continue
+            dependencies = {str(value) for value in (candidate.get("depends_on") or [])}
+            if not dependencies.intersection(reopened):
+                continue
+            prior = "skipped"
+            now = _utc_now()
+            candidate["status"] = "pending"
+            candidate["updated_at"] = now
+            candidate.pop("skip_reason", None)
+            candidate.pop("blocked_by_failed_dependency", None)
+            graph.setdefault("node_results", {})[candidate_id] = {
+                "status": "pending",
+                "updated_at": now,
+                "note": f"reopened_after_dependency_recovery:{node_id}",
+            }
+            _ledger_transition(
+                sid,
+                candidate_id,
+                prior,
+                "pending",
+                writer,
+                author_type=author_type,
+                note=note,
+                recovered_dependency=node_id,
+            )
+            reopened.add(candidate_id)
+            reopened_descendants.append(candidate_id)
+            changed = True
+    return reopened_descendants
+
+
+def escalate_terminal_failure_to_human_review(
+    graph_path: str | Path,
+    node_id: str,
+    *,
+    expected_repair_generation: int,
+    actor: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Open an explicit recovery generation for one terminal failed node.
+
+    Automatic scheduling remains unable to reopen terminal work. This seam is
+    generation-fenced, requires an identified human actor and reason, and only
+    reopens descendants that were mechanically skipped by this dependency.
+    The ordinary ``resume-human-review`` command remains the sole transition
+    from the resulting review block back to executable work.
+    """
+    actor = str(actor or "").strip()
+    reason = str(reason or "").strip()
+    if not actor:
+        return {"ok": False, "reason": "terminal_recovery_actor_required", "node": node_id}
+    if not reason:
+        return {"ok": False, "reason": "terminal_recovery_reason_required", "node": node_id}
+    try:
+        graph = load_graph(graph_path)
+        node = _node_by_id(graph, node_id)
+        if node is None:
+            return {"ok": False, "reason": f"unknown node: {node_id}", "node": node_id}
+        current = str(node_status(graph, node_id) or "").strip().lower()
+        if current != "failed":
+            return {
+                "ok": False,
+                "reason": f"node_not_terminal_failed:{current or 'pending'}",
+                "node": node_id,
+            }
+        repair_generation = _node_repair_attempts(node)
+        if int(expected_repair_generation) != repair_generation:
+            return {
+                "ok": False,
+                "reason": (
+                    "terminal_recovery_generation_mismatch:"
+                    f"expected={repair_generation}:received={expected_repair_generation}"
+                ),
+                "node": node_id,
+            }
+    except (TypeError, ValueError) as exc:
+        return {"ok": False, "reason": f"terminal_recovery_generation_invalid:{exc}", "node": node_id}
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": f"terminal_recovery_validation_error:{type(exc).__name__}:{exc}",
+            "node": node_id,
+        }
+
+    sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
+    record = enter_node_human_review(
+        graph,
+        node_id,
+        reason=f"terminal_failure_recovery:{reason}",
+        next_action="inspect the terminal evidence and explicitly resume this generation",
+        writer="escalate_terminal_failure_to_human_review",
+        author_type="human",
+    )
+
+    reopened_descendants = _reopen_mechanically_skipped_descendants(
+        graph,
+        sid,
+        node_id,
+        writer="escalate_terminal_failure_to_human_review",
+        author_type="human",
+        note=reason,
+    )
+
+    save_graph(graph_path, graph)
+    _record_node_runstate(
+        sid,
+        node_id,
+        {
+            "human_review_generation": int(record.get("generation") or 0),
+            "repair_attempt": repair_generation,
+            "last_eval_result": "TERMINAL_RECOVERY_REQUESTED",
+            "last_eval_reason": reason,
+            "next_action": "explicit_human_resume_required",
+            "status": "needs_human_review",
+        },
+    )
+    _append_event(
+        sid,
+        {
+            "event": "graph_node_terminal_failure_escalated",
+            "by": "human",
+            "severity": "warning",
+            "data": {
+                "node": node_id,
+                "actor": actor,
+                "reason": reason,
+                "repair_generation": repair_generation,
+                "human_review_generation": record.get("generation"),
+                "reopened_descendants": reopened_descendants,
+            },
+        },
+    )
+    return {
+        "ok": True,
+        "node": node_id,
+        "status": "needs_human_review",
+        "actor": actor,
+        "reason": reason,
+        "repair_generation": repair_generation,
+        "human_review_generation": int(record.get("generation") or 0),
+        "reopened_descendants": reopened_descendants,
+    }
+
+
 def _archive_stale_repair_eval_sidecars(
     sid: str,
     node: dict[str, Any],
@@ -4600,6 +4771,14 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             if eval_verdict == "PASS" and _node_eval_self_graded(sid, node_id):
                 node.pop("assigned_to", None)
                 node.pop("dispatch_id", None)
+                reopened_descendants = _reopen_mechanically_skipped_descendants(
+                    graph,
+                    sid,
+                    node_id,
+                    writer="_reconcile_existing_dispatches",
+                    author_type="policy",
+                    note=f"reconciled_from_eval_sidecar:{Path(eval_json_path).name}",
+                )
                 repaired.append(
                     {
                         "node": node_id,
@@ -4738,6 +4917,14 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     continue
                 node.pop("assigned_to", None)
                 node.pop("dispatch_id", None)
+                reopened_descendants = _reopen_mechanically_skipped_descendants(
+                    graph,
+                    sid,
+                    node_id,
+                    writer="_reconcile_existing_dispatches",
+                    author_type="policy",
+                    note=f"reconciled_from_eval_sidecar:{Path(eval_json_path).name}",
+                )
                 repaired.append(
                     {
                         "node": node_id,
@@ -4747,6 +4934,11 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                         "eval_json": eval_json_path,
                         "verdict": eval_verdict,
                         "closeout_receipt": closeout.get("closeout_receipt"),
+                        **(
+                            {"reopened_descendants": reopened_descendants}
+                            if reopened_descendants
+                            else {}
+                        ),
                     }
                 )
                 continue
@@ -4764,6 +4956,18 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             node["status"] = verdict_status
             node["updated_at"] = _utc_now()
             node["eval_json"] = eval_json_path
+            reopened_descendants = (
+                _reopen_mechanically_skipped_descendants(
+                    graph,
+                    sid,
+                    node_id,
+                    writer="_reconcile_existing_dispatches",
+                    author_type="policy",
+                    note=f"reconciled_from_eval_sidecar:{Path(eval_json_path).name}",
+                )
+                if verdict_status == "passed"
+                else []
+            )
             repaired.append(
                 {
                     "node": node_id,
@@ -4772,6 +4976,11 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                     "handoff": str(handoff_file),
                     "eval_json": eval_json_path,
                     "verdict": eval_verdict,
+                    **(
+                        {"reopened_descendants": reopened_descendants}
+                        if reopened_descendants
+                        else {}
+                    ),
                 }
             )
             continue
@@ -5482,6 +5691,34 @@ def _dedupe_proof_obligations(obligations: list[dict[str, Any]]) -> list[dict[st
     return deduped
 
 
+_GROUNDED_REPORT_BUNDLE_PROOF_FIELDS = {
+    "claims_jsonl",
+    "report_ast_json",
+    "final_md",
+    "research_eval_json",
+}
+
+
+def _is_grounded_report_bundle_proof(obligation: dict[str, Any]) -> bool:
+    if str(obligation.get("source_capsule_id") or "") != "cap.requirement-research-synthesizer":
+        return False
+    field = str(obligation.get("field") or "").strip()
+    if field in _GROUNDED_REPORT_BUNDLE_PROOF_FIELDS:
+        return True
+    requirement = str(obligation.get("requirement") or "").lower()
+    return any(
+        token in requirement
+        for token in (
+            "grounded_report_bundle",
+            "grounded report bundle",
+            "claims.jsonl",
+            "report_ast.json",
+            "final.md",
+            "research_eval.json",
+        )
+    )
+
+
 def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, Any]]:
     obligations: list[dict[str, Any]] = []
     inline = node.get("proof_obligations")
@@ -5502,7 +5739,15 @@ def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, An
             continue
         _append_proof_obligations(obligations, _read_json_file_safe(_artifact_path(path) or path))
 
-    return _dedupe_proof_obligations(obligations)
+    deduped = _dedupe_proof_obligations(obligations)
+    if not _node_requires_deepresearch_quality_gate(node):
+        # A claim-planning node may use the grounded-research capsule to emit only
+        # synthesis_plan.json. The full report-bundle postconditions belong to the
+        # later compile node, as reflected by the evaluator's DeepResearch gate
+        # instruction. Applying them here makes a valid synthesis plan fail for
+        # artifacts this node neither declares nor owns.
+        deduped = [item for item in deduped if not _is_grounded_report_bundle_proof(item)]
+    return deduped
 
 
 # --- Deterministic secret-leak guard + resource binding (general builder/operator path) ---
@@ -5981,6 +6226,25 @@ def _proof_support_artifacts_block(sid: str, node: dict[str, Any]) -> str:
     if _proof_obligations_require_field(sid, node, "patch_diff"):
         patch_diff = _existing_node_patch_diff(sid, node)
         entries.append(("patch_diff", patch_diff or _node_patch_diff_candidates(sid, node)[0]))
+    obligations = _node_proof_obligations(sid, node)
+    skill_proof_required = any(
+        "skill_dispatch" in str(obligation.get("requirement") or "")
+        for obligation in obligations
+        if isinstance(obligation, dict)
+    )
+    execution_attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
+    task_id = str(execution_attempt.get("task_id") or node.get("pm_task_id") or "").strip()
+    operator_id = str(execution_attempt.get("operator_id") or node.get("operator_id") or "").strip()
+    if skill_proof_required and task_id and operator_id:
+        result_dir = HARNESS_DIR / "run" / "operator-results" / operator_id / task_id
+        entries.extend(
+            [
+                ("skill_dispatch_result", result_dir / "skill-dispatch-result.json"),
+                ("skill_dispatch_prompt", result_dir / "skill-dispatch-pane-prompt.md"),
+                ("skill_dispatch_selection_proof", result_dir / "skill-dispatch-selection-proof.json"),
+                ("skill_dispatch_contract", result_dir / "skill-dispatch-bridge-contract.json"),
+            ]
+        )
     if not entries:
         return "- `N/A`"
     lines = []
@@ -5988,7 +6252,7 @@ def _proof_support_artifacts_block(sid: str, node: dict[str, Any]) -> str:
         state = "present" if path.exists() else "missing"
         lines.append(f"- `{kind}`: `{path}` ({state})")
     lines.append("")
-    lines.append("Read these sidecars before failing guard/resource/adapter proof obligations.")
+    lines.append("Read these sidecars before failing their corresponding proof obligations.")
     return "\n".join(lines)
 
 
@@ -6043,9 +6307,13 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
             presence[artifact_key] = candidate.exists()
     operator_results_root = HARNESS_DIR / "run" / "operator-results"
     if operator_results_root.exists():
+        execution_attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
+        current_task_id = str(execution_attempt.get("task_id") or node.get("pm_task_id") or "").strip()
         for result_json in operator_results_root.glob("*/*/result.json"):
             data = _read_json_file_safe(result_json)
             if str(data.get("sprint_id") or "") != sid or str(data.get("node_id") or "") != node_id:
+                continue
+            if current_task_id and str(data.get("task_id") or "").strip() != current_task_id:
                 continue
             result_dir = result_json.parent
             skill_dispatch_result = result_dir / "skill-dispatch-result.json"
@@ -7088,16 +7356,22 @@ Handoff: `{handoff}`
 - Snapshot Schema: `{artifact_snapshot_schema or "N/A"}`
 - Snapshot Path: `{artifact_snapshot_path or "N/A"}`
 - Snapshot Digest: `{artifact_snapshot_digest or "N/A"}`
+- `Snapshot Digest` is Solar's canonical content digest over the snapshot schema, sprint/node,
+  generation, and normalized rows. It is the `snapshot_digest` field inside the sidecar; it is
+  intentionally not the SHA-256 of the complete JSON file bytes. Do not compare it with
+  `sha256sum <snapshot-path>`.
 - Read the snapshot sidecar and inspect the exact paths listed there. For a row whose authority is
   `published`, those destination bytes are authoritative; do not substitute a mutable staging copy.
-- `Snapshot Digest` is Solar's canonical digest over the governed snapshot material and is stored
-  in the sidecar's `.snapshot_digest` field. It is **not** the SHA-256 of the entire JSON wrapper;
-  never compare it with `shasum`/`sha256sum` of the sidecar file.
 - Detect post-dispatch changes by checking the declared digest against `.snapshot_digest` and by
   recomputing/validating the governed rows (Solar repeats this in the node-verdict gate).
+- Publication of this node's current outputs is a post-verdict closeout transaction: Solar runs it
+  only after you return PASS. A publish sidecar from an earlier generation that is not referenced by
+  the current snapshot is historical evidence, not a current acceptance condition. Do not FAIL only
+  because such a stale sidecar records an earlier publication error; Solar will re-run publication
+  after PASS and will block closeout deterministically if the current publication fails.
 - The machine-readable JSON MUST copy `artifact_snapshot_schema`, `artifact_snapshot_path`, and
-  `artifact_snapshot_digest` exactly. Any byte change after dispatch invalidates PASS and requires a
-  fresh evaluation generation.
+  `artifact_snapshot_digest` exactly. Any change to the canonical snapshot material after dispatch
+  invalidates PASS and requires a fresh evaluation generation.
 
 ## Handoff Candidates
 
@@ -7204,9 +7478,16 @@ solar-harness session evaluate "{sid}" --json
    ```bash
    cat > "{eval_json}" <<'EOF'
    {{
+     "schema_version": "solar.eval.v1",
+     "sprint_id": "{sid}",
      "node_id": "{node_id}",
      "verdict": "PASS",
      "summary": "",
+     "generated_by": "{pane}",
+     "generation_mode": "assigned_evaluator",
+     "proof_level": "independent_verification",
+     "command_line": "operator_pool_eval:{dispatch_id}",
+     "workspace_root": "{HARNESS_DIR.parent}",
      "eval_generation": {eval_generation},
      "repair_attempt": {eval_generation},
      "eval_dispatch_id": "{dispatch_id}",
@@ -9139,7 +9420,14 @@ def _ensure_lease(pane: str, sid: str, dispatch_id: str, ttl: int, dry_run: bool
 def _builder_operator_pool_enabled() -> bool:
     configured = str(os.environ.get("SOLAR_GRAPH_BUILDER_OPERATOR_POOL") or "").strip().lower()
     if not configured:
-        return _product_mode_enabled()
+        # The PM operator switch governs the complete operator-backed
+        # lifecycle. Enabling it for Planner but silently disabling it for DAG
+        # builders strands the first ready node as ``no_matching_worker``.
+        pm_operator_enabled = any(
+            str(os.environ.get(name) or "").strip().lower() in {"1", "true", "on", "yes"}
+            for name in ("SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH", "SOLAR_PM_OPERATOR_DISPATCH")
+        )
+        return pm_operator_enabled or _product_mode_enabled()
     return configured not in {
         "0",
         "false",
@@ -9962,6 +10250,7 @@ def _submit_eval_to_operator_pool(
     dry_run: bool,
     eval_md_path: str = "",
     eval_json_path: str = "",
+    artifact_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dispatch_preview = instruction_file.read_text(encoding="utf-8")
     if len(dispatch_preview) > 60000:
@@ -10018,6 +10307,62 @@ def _submit_eval_to_operator_pool(
         "--context",
         context,
     ]
+    snapshot = artifact_snapshot if isinstance(artifact_snapshot, dict) else {}
+    snapshot_path = str(snapshot.get("path") or "")
+    snapshot_is_valid = (
+        snapshot.get("schema") == _EVAL_ARTIFACT_SNAPSHOT_SCHEMA
+        and snapshot.get("ok") is True
+        and str(snapshot.get("sid") or "") == sid
+        and str(snapshot.get("node_id") or "") == node_id
+        and not snapshot.get("violations")
+        and snapshot_path == str(_eval_snapshot_file(sid, node_id))
+        and str(snapshot.get("snapshot_digest") or "") == _eval_snapshot_digest(snapshot)
+    )
+    persisted_snapshot: dict[str, Any] = {}
+    if snapshot_is_valid:
+        try:
+            loaded_snapshot = json.loads(Path(snapshot_path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            loaded_snapshot = None
+        if isinstance(loaded_snapshot, dict):
+            persisted_snapshot = loaded_snapshot
+        snapshot_is_valid = (
+            persisted_snapshot.get("ok") is True
+            and str(persisted_snapshot.get("snapshot_digest") or "")
+            == str(snapshot.get("snapshot_digest") or "")
+            and str(persisted_snapshot.get("snapshot_digest") or "")
+            == _eval_snapshot_digest(persisted_snapshot)
+        )
+    if snapshot and not snapshot_is_valid:
+        return {
+            "ok": False,
+            "reason": "operator_pool_eval_snapshot_scope_invalid",
+            "instruction_file": str(instruction_file),
+        }
+    if snapshot_is_valid:
+        snapshot_rows = (
+            persisted_snapshot.get("rows")
+            if isinstance(persisted_snapshot.get("rows"), list)
+            else []
+        )
+        read_grants = [snapshot_path]
+        for row in snapshot_rows:
+            if not isinstance(row, dict):
+                return {
+                    "ok": False,
+                    "reason": "operator_pool_eval_snapshot_scope_invalid",
+                    "instruction_file": str(instruction_file),
+                }
+            row_path = str(row.get("path") or "").strip()
+            if not row_path or row.get("exists") is not True or row.get("unsafe"):
+                return {
+                    "ok": False,
+                    "reason": "operator_pool_eval_snapshot_scope_invalid",
+                    "instruction_file": str(instruction_file),
+                }
+            read_grants.append(row_path)
+        for path in dict.fromkeys(read_grants):
+            cmd.extend(["--read-scope", path])
     if dry_run:
         cmd.append("--dry-run")
     env = _broker_env(sid)
@@ -10162,6 +10507,17 @@ def _build_autosci_operator_envelope(
     output_dir = HARNESS_DIR / "artifacts" / "autosci" / "runs" / sid / node_id
     evidence_path = _autosci_primary_output_path(sid, node)
     expected_schema = _node_expected_schema(node)
+    capsule_plan_ir = (
+        payload.get("capsule_plan_ir")
+        if isinstance(payload.get("capsule_plan_ir"), dict)
+        else {}
+    )
+    selected_skills = list(
+        capsule_plan_ir.get("selected_skills")
+        or node.get("selected_skills")
+        or node.get("required_skills")
+        or []
+    )
     inputs = {
         "graph_path": graph_path,
         "node_id": node_id,
@@ -10198,8 +10554,9 @@ def _build_autosci_operator_envelope(
         "logical_operator": str(node.get("logical_operator") or ""),
         "capability_capsule_id": str(node.get("capability_capsule_id") or ""),
         "capability_native": bool(node.get("capability_native") or node.get("capability_capsule_id")),
+        "selected_skills": selected_skills,
         "write_scope": list(node.get("write_scope") or []),
-        "capsule_plan_ir": payload.get("capsule_plan_ir") if isinstance(payload.get("capsule_plan_ir"), dict) else {},
+        "capsule_plan_ir": capsule_plan_ir,
         "physical_plan_ir": payload.get("physical_plan_ir") if isinstance(payload.get("physical_plan_ir"), dict) else {},
         "plan_artifacts": payload.get("plan_artifacts") if isinstance(payload.get("plan_artifacts"), dict) else {},
         "lease_ttl_seconds": int(ttl),
@@ -12092,6 +12449,7 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                     dry_run=dry_run,
                     eval_md_path=str(assignment["eval_md_path"]),
                     eval_json_path=str(assignment["eval_json_path"]),
+                    artifact_snapshot=artifact_snapshot,
                 )
                 sent = bool(submit_result.get("ok"))
                 if sent:
@@ -13107,6 +13465,16 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
     if eval_json:
         note_parts.append(f"eval_json={eval_json}")
     eval_assignments = _node_eval_assignments(node)
+    reopened_descendants: list[str] = []
+    if status == "passed":
+        reopened_descendants = _reopen_mechanically_skipped_descendants(
+            graph,
+            sid,
+            node_id,
+            writer="node_verdict",
+            author_type="policy",
+            note=reason or "dependency_passed",
+        )
     if status == "failed":
         resolved_eval_json = str(eval_json or _eval_json_file(sid, node_id))
         eval_payload = _read_json_file_safe(resolved_eval_json)
@@ -13245,6 +13613,7 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
         "research_quality_gate": research_quality_gate,
         "workspace_publish": workspace_publish,
         "coverage_refresh": coverage_refresh,
+        "reopened_descendants": reopened_descendants,
     }
 
 
@@ -13288,6 +13657,13 @@ def main() -> int:
     p.add_argument("--actor", required=True)
     p.add_argument("--reason", required=True)
 
+    p = sub.add_parser("escalate-terminal-failure")
+    p.add_argument("--graph", required=True)
+    p.add_argument("--node", required=True)
+    p.add_argument("--generation", required=True, type=int)
+    p.add_argument("--actor", required=True)
+    p.add_argument("--reason", required=True)
+
     args = ap.parse_args()
     if args.cmd == "drain-queue":
         result = drain_queue(args.sprint, args.dry_run, args.max_items, args.ttl)
@@ -13311,6 +13687,14 @@ def main() -> int:
             args.graph,
             args.node,
             expected_generation=args.generation,
+            actor=args.actor,
+            reason=args.reason,
+        )
+    elif args.cmd == "escalate-terminal-failure":
+        result = escalate_terminal_failure_to_human_review(
+            args.graph,
+            args.node,
+            expected_repair_generation=args.generation,
             actor=args.actor,
             reason=args.reason,
         )

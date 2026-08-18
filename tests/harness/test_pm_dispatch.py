@@ -247,11 +247,12 @@ def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_p
             "read_scope": ["dispatch/envelope.json"],
             "write_scope": ["artifacts/scientific/literature.json"],
         },
+        additional_read_scope=[str(tmp_path / "published"), "dispatch/envelope.json"],
     )
 
     assert envelope["workflow_contract"] == "research.autosci.v1"
     assert envelope["strict_filesystem_boundaries"] is True
-    assert envelope["read_scope"] == ["dispatch/envelope.json"]
+    assert envelope["read_scope"] == ["dispatch/envelope.json", str(tmp_path / "published")]
     assert envelope["write_scope"] == ["artifacts/scientific/literature.json"]
     assert envelope["write_scope_root"] == str(sprints / sid / "workdir")
     assert envelope["write_scope_resolution"] == "relative_to_write_scope_root"
@@ -280,6 +281,7 @@ def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
                     "capability_native": True,
                     "capability_capsule_id": "cap.requirement-compiler-implementation",
                     "dispatch_task_type": "implementation",
+                    "required_skills": ["python_implementation"],
                     "capsule_plan": {
                         "capability_native": True,
                         "capability_capsule_id": "cap.requirement-compiler-implementation",
@@ -360,6 +362,7 @@ def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
         assert envelope["capability_capsule_id"] == "cap.requirement-compiler-implementation"
         assert envelope["logical_operator"] == "ImplementationWorker"
         assert envelope["task_type"] == "implementation"
+        assert envelope["selected_skills"] == ["python_implementation"]
 
 
 def test_cmd_submit_canonicalizes_analysis_audit_node_before_submit(monkeypatch):
@@ -945,7 +948,10 @@ def test_drain_builder_ready_submits_and_marks_graph(monkeypatch, tmp_path):
     )
 
     assert rc == 0
-    graph = json.loads((sprints / "sprint-drain.task_graph.json").read_text(encoding="utf-8"))
+    graph_scheduler = pm_dispatch._load_graph_scheduler_module()
+    assert graph_scheduler is not None
+    graph_scheduler.SPRINTS_DIR = sprints
+    graph = graph_scheduler.load_graph(sprints / "sprint-drain.task_graph.json")
     assert graph["nodes"][0]["status"] == "dispatched"
-    assert graph["nodes"][0]["dispatched_via"] == "pm_dispatch"
-    assert graph["nodes"][0]["pm_task_id"] == "pm-sprint-drain-B1-test"
+    assert graph["node_results"]["B1"]["dispatched_via"] == "pm_dispatch"
+    assert graph["node_results"]["B1"]["pm_task_id"] == "pm-sprint-drain-B1-test"

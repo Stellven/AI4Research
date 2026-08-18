@@ -90,6 +90,18 @@ capsules:
     - synthesis
     owner: opensolar
     default_operator_profile: mini-codex-gpt55-medium-builder-1
+  - capability_capsule_id: cap.skill-execution-bridge
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/cap.skill-execution-bridge.yaml
+    tags:
+    - skill
+    - dispatch
+    - bridge
+    owner: opensolar
+    default_operator_profile: mini-codex-gpt55-medium-builder-1
   - capability_capsule_id: cap.research-retrieval
     version: 0.1.0
     capsule_kind: capability

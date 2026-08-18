@@ -232,6 +232,51 @@ def test_codex_operator_explains_precreated_output_placeholders(tmp_path, monkey
     assert str(expected) in dispatch
 
 
+def test_codex_operator_materializes_direct_skill_bridge_evidence(tmp_path, monkeypatch):
+    codex_operator = _load_module(
+        "codex_operator_contract_skill_bridge",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    envelope_path = tmp_path / "envelope.json"
+    envelope_path.write_text(
+        json.dumps(
+            {
+                "capability_capsule_id": "cap.skill-execution-bridge",
+                "selected_skills": ["research_compilation"],
+                "resolved_capability_capsule": {
+                    "capability_capsule_id": "cap.skill-execution-bridge",
+                    "selected_skills": [],
+                },
+                "task_graph_node": {"required_skills": ["research_compilation"]},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SOLAR_OPERATOR_ENVELOPE_JSON", str(envelope_path))
+
+    evidence = codex_operator._materialize_skill_bridge_evidence(
+        tmp_path,
+        "Compile the grounded report.",
+    )
+    codex_operator._write_skill_bridge_result(tmp_path, evidence, 0)
+
+    expected = {
+        "skill-dispatch-result.json",
+        "skill-dispatch-pane-prompt.md",
+        "skill-dispatch-selection-proof.json",
+        "skill-dispatch-bridge-contract.json",
+    }
+    assert expected.issubset({path.name for path in tmp_path.iterdir()})
+    contract = json.loads((tmp_path / "skill-dispatch-bridge-contract.json").read_text(encoding="utf-8"))
+    assert contract["command_protocol"]["mode"]
+    assert contract["command_protocol"]["execution_surface"] == "direct_command_operator"
+    assert contract["workflow_contract"]["phases"]
+    assert contract["workflow_contract"]["delivery_expectation"]
+    result = json.loads((tmp_path / "skill-dispatch-result.json").read_text(encoding="utf-8"))
+    assert result["status"] == "completed"
+    assert result["selected_skills"] == ["research_compilation"]
+
+
 def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract", ROOT / "tools" / "codex_operator.py")
     harness_dir = tmp_path / "harness"
@@ -313,7 +358,7 @@ def test_codex_operator_uses_resolved_cross_platform_binary(tmp_path):
     assert "--skip-git-repo-check" in command
 
 
-def test_codex_operator_projects_auth_on_non_linux(tmp_path, monkeypatch):
+def test_codex_operator_projects_auth_on_macos(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_non_linux_auth", ROOT / "tools" / "codex_operator.py")
     harness_dir = tmp_path / "harness"
     task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
@@ -347,7 +392,7 @@ def test_codex_operator_projects_auth_on_non_linux(tmp_path, monkeypatch):
     )
 
 
-def test_codex_operator_grants_only_declared_output_parent_on_non_linux(tmp_path, monkeypatch):
+def test_codex_operator_grants_only_declared_output_parent_on_macos(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_non_linux_outputs", ROOT / "tools" / "codex_operator.py")
     harness_dir = tmp_path / "harness"
     task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
@@ -392,6 +437,31 @@ def test_codex_operator_grants_only_declared_output_parent_on_non_linux(tmp_path
     assert str(outside.parent) not in command
 
 
+def test_codex_operator_preserves_proven_windows_command(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_windows", ROOT / "tools" / "codex_operator.py")
+    harness_dir = tmp_path / "harness"
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    work_dir = harness_dir / "sprints" / "sprint-1" / "workdir"
+    source_codex_home = tmp_path / "source-codex-home"
+    task_dir.mkdir(parents=True)
+    work_dir.mkdir(parents=True)
+    source_codex_home.mkdir()
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.setenv("SOLAR_CODEX_SOURCE_HOME", str(source_codex_home))
+    monkeypatch.setenv("SOLAR_CODEX_OPERATOR_STATE_ROOT", str(tmp_path / "operator-state"))
+    monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "0")
+    monkeypatch.setattr(codex_operator.sys, "platform", "win32")
+    env = codex_operator._codex_exec_env(task_dir)
+    original = ["codex.exe", "exec", "--dangerously-bypass-approvals-and-sandbox", "-"]
+
+    command, proof = codex_operator._filesystem_isolated_command(
+        original, task_dir=task_dir, cwd=work_dir, env=env
+    )
+
+    assert command == original
+    assert proof == {"mode": "unsupported", "strict": False}
+
+
 @pytest.mark.skipif(sys.platform != "linux", reason="Landlock is Linux-only")
 def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     codex_operator = _load_module("codex_operator_contract_landlock", ROOT / "tools" / "codex_operator.py")
@@ -413,6 +483,15 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     exact_handoff.parent.mkdir(parents=True, exist_ok=True)
     exact_handoff.touch()
     env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"] = json.dumps([str(exact_handoff)])
+    published = tmp_path / "published" / "evidence.jsonl"
+    published.parent.mkdir()
+    published.write_text("evidence\n", encoding="utf-8")
+    relative_read = work_dir / "inputs" / "source.json"
+    relative_read.parent.mkdir()
+    relative_read.write_text("{}\n", encoding="utf-8")
+    env["SOLAR_OPERATOR_READ_SCOPE_JSON"] = json.dumps(
+        [str(published), "inputs/source.json"]
+    )
 
     command, proof = codex_operator._filesystem_isolated_command(
         ["codex", "exec", "-"], task_dir=task_dir, cwd=work_dir, env=env
@@ -430,9 +509,12 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert str(work_dir.resolve()) in proof["read_write"]
     assert str(task_dir.resolve()) in proof["read_write"]
     assert str(exact_handoff.resolve()) in proof["read_write"]
+    assert str(published.resolve()) in proof["read_only"]
+    assert str(relative_read.resolve()) in proof["read_only"]
     assert str(tmp_path.resolve()) not in proof["read_write"]
     assert str(Path("/etc/resolv.conf").resolve()) in proof["read_only"]
     sandbox_codex_home = Path(env["CODEX_HOME"])
+    assert Path(env["HOME"]) == sandbox_codex_home.parent
     assert sandbox_codex_home == Path(env["CODEX_SQLITE_HOME"]) / "home"
     assert (sandbox_codex_home / "auth.json").is_file()
     assert not (sandbox_codex_home / "auth.json").is_symlink()
@@ -467,6 +549,8 @@ def test_codex_operator_uses_mount_namespace_for_drvfs(tmp_path, monkeypatch):
     work_dir = harness_dir / "sprints" / "sprint-1" / "workdir"
     task_dir.mkdir(parents=True)
     work_dir.mkdir(parents=True)
+    (tmp_path / "AGENTS.md").write_text("# Test agent instructions\n", encoding="utf-8")
+    (tmp_path / ".agents").mkdir()
     source_codex_home = tmp_path / "source-codex-home"
     source_codex_home.mkdir()
     monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
@@ -485,6 +569,9 @@ def test_codex_operator_uses_mount_namespace_for_drvfs(tmp_path, monkeypatch):
     assert "landlock_exec.py" in command
     assert "--read-scope-only" in command
     assert proof["mode"] == "mount_namespace+landlock-read"
+    assert str(tmp_path.resolve()) in proof["read_directories"]
+    assert str((tmp_path / "AGENTS.md").resolve()) in proof["read_only"]
+    assert str((tmp_path / ".agents").resolve()) in proof["read_only"]
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="WSL mount isolation is Linux-only")
