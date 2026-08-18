@@ -232,6 +232,8 @@ def build() -> dict:
     restored: list[str] = []
     excluded: list[str] = []
     superseded: list[str] = []
+    needs_human: list[str] = []
+    missing_target: list[str] = []
     for path in sorted(all_touched):
         source_blob = source_tree.get(path)
         current_blob = current_tree.get(path)
@@ -245,6 +247,10 @@ def build() -> dict:
             excluded.append(path)
         elif classification == "SUPERSEDED_BY_NEWER_IMPLEMENTATION":
             superseded.append(path)
+        if classification == "NEEDS_HUMAN_DECISION":
+            needs_human.append(path)
+        if source_blob is not None and not targets:
+            missing_target.append(path)
         change_type = "A" if path not in base_tree and source_blob else "D" if source_blob is None else "M"
         paths.append(
             {
@@ -322,7 +328,16 @@ def build() -> dict:
             ],
             "non_product_runner_limit": "The clone-based test_release_coherence_tracked_inputs.sh exceeded the 180-second command limit after the direct coherence gate passed; it is recorded as runner-duration evidence, not a product failure.",
         },
+        # Legacy field preserved for backward compatibility.
+        # Definition: count of paths classified as NEEDS_HUMAN_DECISION.
         "unresolved_count": counts["NEEDS_HUMAN_DECISION"],
+        # Clarified metric: paths that still require a deliberate human
+        # classification decision (same value as unresolved_count).
+        "needs_human_decision_count": counts["NEEDS_HUMAN_DECISION"],
+        # Clarified metric: classified paths whose source blob exists
+        # but no current-tree target was identified. These are NOT
+        # necessarily "unresolved" -- they may be intentionally excluded.
+        "tracked_target_missing_count": len(missing_target),
     }
 
 
@@ -334,7 +349,9 @@ def markdown(ledger: dict) -> str:
         "",
         f"- Source commits: {ledger['source_commits_total']}",
         f"- Candidate paths: {ledger['candidate_paths_total']}",
-        f"- Unresolved: {ledger['unresolved_count']}",
+        f"- Unresolved (legacy): {ledger['unresolved_count']}",
+        f"- Needs human decision: {ledger['needs_human_decision_count']}",
+        f"- Tracked target missing: {ledger['tracked_target_missing_count']}",
         "- Fixed overwrite proof: `tree(a4ba17ac9) == tree(4b5af7519)` is recorded in the JSON ledger.",
         "",
         "## Classification counts",
