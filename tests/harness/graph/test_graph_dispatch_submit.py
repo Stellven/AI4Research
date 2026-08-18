@@ -1039,6 +1039,65 @@ class TestSendToPaneLiteral:
         assert parent["failed_nodes"] == []
         assert parent["open_nodes"] == ["S1", "S2"]
 
+    def test_recovered_dependency_reopens_only_scheduler_skipped_dependents(self, tmp_harness):
+        """A repaired upstream pass must make its auto-skipped child runnable again."""
+        _tmp_path, _sprints, _sid, graph = tmp_harness
+        from graph_scheduler import reopen_recovered_dependency_nodes
+
+        graph["nodes"] = [
+            {"id": "S1", "status": "passed", "depends_on": []},
+            {
+                "id": "S2",
+                "status": "skipped",
+                "depends_on": ["S1"],
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["S1"],
+            },
+            {"id": "S3", "status": "skipped", "depends_on": ["S1"], "skip_reason": "user_requested"},
+        ]
+        graph["node_results"] = {
+            "S1": {"status": "passed"},
+            "S2": {
+                "status": "skipped",
+                "note": "blocked_by_failed_dependency",
+                "blocked_by": ["S1"],
+            },
+            "S3": {"status": "skipped", "note": "user_requested"},
+        }
+
+        reopened = reopen_recovered_dependency_nodes(graph)
+
+        assert reopened == [{"node": "S2", "status": "pending", "reason": "dependency_recovered"}]
+        assert graph["nodes"][1]["status"] == "pending"
+        assert "skip_reason" not in graph["nodes"][1]
+        assert "blocked_by_failed_dependency" not in graph["nodes"][1]
+        assert graph["node_results"]["S2"]["status"] == "pending"
+        assert graph["nodes"][2]["status"] == "skipped"
+
+    def test_dependency_skip_stays_terminal_while_any_blocker_remains(self, tmp_harness):
+        """Recovery is fail-closed when another internal dependency still blocks."""
+        _tmp_path, _sprints, _sid, graph = tmp_harness
+        from graph_scheduler import reopen_recovered_dependency_nodes
+
+        graph["nodes"] = [
+            {"id": "S1", "status": "passed", "depends_on": []},
+            {"id": "S2", "status": "failed", "depends_on": []},
+            {
+                "id": "S3",
+                "status": "skipped",
+                "depends_on": ["S1", "S2"],
+                "skip_reason": "blocked_by_failed_dependency",
+            },
+        ]
+        graph["node_results"] = {
+            "S1": {"status": "passed"},
+            "S2": {"status": "failed"},
+            "S3": {"status": "skipped", "note": "blocked_by_failed_dependency"},
+        }
+
+        assert reopen_recovered_dependency_nodes(graph) == []
+        assert graph["nodes"][2]["status"] == "skipped"
+
     def test_repair_completed_handoff_schedules_fresh_evaluator_dispatch(self, tmp_harness, monkeypatch):
         """After repair output exists, the node returns to review and gets a new eval generation."""
         tmp_path, sprints, sid, graph = tmp_harness

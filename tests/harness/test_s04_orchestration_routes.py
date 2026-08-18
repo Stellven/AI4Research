@@ -219,6 +219,45 @@ def test_dashboard_payload_exposes_route_decision_and_blocked_reason(tmp_path: P
     assert nodes["N2"]["blocked_reason"] == "dependency_blocked"
 
 
+def test_projection_and_sprint_index_rehydrate_split_runtime_state(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "split-runtime-projection")
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {}
+    sid = "sprint-split-runtime-projection"
+    _write_json(tree["sprints"] / f"{sid}.status.json", {
+        "sprint_id": sid,
+        "title": "Split runtime projection",
+        "status": "passed",
+        "phase": "finalized",
+    })
+    _write_json(tree["sprints"] / f"{sid}.task_graph.json", {
+        "sprint_id": sid,
+        "required_gates": ["G1"],
+        "nodes": [{"id": "N1", "goal": "Complete work", "depends_on": [], "gate": "G1"}],
+    })
+    _write_json(tree["sprints"] / f"{sid}.task_dag.state.json", {
+        "schema_version": "solar.task_graph_state.v1",
+        "sprint_id": sid,
+        "graph_ref": f"{sid}.task_graph.json",
+        "node_results": {"N1": {"status": "passed"}},
+        "gate_results": {"G1": {"status": "passed", "node": "N1"}},
+    })
+
+    projection, degraded = mod.build_projection_payload(sid, mode="fast")
+
+    assert degraded == []
+    assert projection["status"] == "passed"
+    assert projection["phase"] == "finalized"
+    assert projection["summary"]["progress"]["passed_nodes"] == 1
+    assert projection["summary"]["progress"]["status_counts"] == {"passed": 1}
+    assert projection["task_graph"]["nodes"][0]["status"] == "passed"
+
+    index = mod._sprint_status_rows(limit=10)
+    row = next(item for item in index if item["sprint_id"] == sid)
+    assert row["node_status_counts"] == {"passed": 1}
+
+
 def test_dashboard_payload_preserves_compiler_owned_node_role_authority(tmp_path: Path) -> None:
     mod = _load_routes()
     tree = _fixture_tree(tmp_path)

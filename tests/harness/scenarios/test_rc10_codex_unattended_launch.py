@@ -32,6 +32,7 @@ def _run_launcher(
 
     for relative in (
         "lib/codex_trust_profiles.py",
+        "lib/file_lock_compat.py",
         "lib/persona-config.sh",
         "lib/capability-prefix.sh",
         "personas/pm.md",
@@ -79,9 +80,10 @@ def _run_launcher(
             "CODEX_HOME": str(home / ".codex"),
             "HARNESS_DIR": str(harness),
             "HOME": str(home),
-            "SHELL": "/bin/true",
+            "SHELL": shutil.which("true") or "/usr/bin/true",
             "SOLAR_CODEX_BIN": str(fake_codex),
             "SOLAR_CODEX_BYPASS": "1",
+            "SOLAR_CODEX_PANE_FS_ISOLATION": "codex",
             "SOLAR_CODEX_TRUST_WORKSPACE": trust_workspace,
             "SOLAR_HARNESS_DIR": str(harness),
             "SOLAR_PANE_RUNTIME": "codex",
@@ -104,14 +106,15 @@ def _run_launcher(
     return json.loads(capture.read_text(encoding="utf-8")), workspace.resolve()
 
 
-def test_managed_codex_bypass_trusts_the_exact_workspace_for_this_invocation(
+def test_managed_codex_workspace_sandbox_trusts_the_exact_workspace_for_this_invocation(
     tmp_path: Path,
 ) -> None:
     payload, workspace = _run_launcher(tmp_path)
     argv = payload["argv"]
 
     expected_section = f'[projects.{json.dumps(str(workspace))}]'
-    assert "--dangerously-bypass-approvals-and-sandbox" in argv
+    assert "--dangerously-bypass-approvals-and-sandbox" not in argv
+    assert argv[argv.index("--sandbox") + 1] == "workspace-write"
     assert "--profile" in argv
     assert payload["profile_name"].startswith("solar-managed-")
     assert expected_section in payload["profile_contents"]

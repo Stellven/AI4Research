@@ -63,6 +63,7 @@ output="$({
   SOLAR_PANE_RUNTIME=codex \
   SOLAR_CODEX_BIN="$FAKE_CODEX" \
   SOLAR_CODEX_BYPASS=0 \
+  SOLAR_CODEX_PANE_FS_ISOLATION=landlock \
   SOLAR_CODEX_TRUST_WORKSPACE=1 \
   SOLAR_HARNESS_SESSION=solar-pane-landlock-test \
   SHELL=/bin/true \

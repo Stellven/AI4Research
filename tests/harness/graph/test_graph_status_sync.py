@@ -98,6 +98,132 @@ def test_sync_status_cache_repairs_stale_task_graph_status_for_passed_parent(tmp
     assert updated["active_node"] is None
 
 
+def test_sync_status_cache_rehydrates_split_runtime_state_before_parent_projection(tmp_path, monkeypatch):
+    import graph_scheduler as gs
+
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
+
+    sid = "sprint-test-split-runtime-status-sync"
+    graph_path = sprints / f"{sid}.task_graph.json"
+    status_path = sprints / f"{sid}.status.json"
+    spec_graph = {
+        "sprint_id": sid,
+        "title": "Completed split-state graph",
+        "required_gates": ["G1"],
+        "nodes": [
+            {"id": "N1", "depends_on": [], "gate": "G1"},
+        ],
+    }
+    graph_path.write_text(json.dumps(spec_graph), encoding="utf-8")
+    (sprints / f"{sid}.task_dag.state.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "solar.task_graph_state.v1",
+                "sprint_id": sid,
+                "graph_ref": graph_path.name,
+                "node_results": {"N1": {"status": "passed"}},
+                "gate_results": {"G1": {"status": "passed", "node": "N1"}},
+                "leases": {},
+                "dispatch_ids": {},
+                "events": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    status_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "status": "active",
+                "phase": "graph_in_progress",
+                "stage": "graph_in_progress",
+                "active_node": "N1",
+                "open_nodes": ["N1"],
+                "graph_parent_ready": {"ready": False, "open_nodes": ["N1"]},
+                "task_graph_status": "active",
+                "legacy_pass_blocked": True,
+                "legacy_pass_block_reason": "graph_parent_not_ready",
+                "legacy_pass_block_detail": "stale split-state projection",
+                "history": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # Deliberately pass the unhydrated spec object retained by a legacy caller.
+    result = gs.sync_status_cache_from_graph(
+        spec_graph,
+        graph_path,
+        actor="test",
+        event="split_runtime_projection",
+    )
+
+    assert result["ok"] is True
+    assert result["updated"] is True
+    assert result["parent"]["ready"] is True
+    updated = json.loads(status_path.read_text(encoding="utf-8"))
+    assert updated["status"] == "passed"
+    assert updated["phase"] == "completed"
+    assert updated["stage"] == "completed"
+    assert updated["completed_at"]
+    assert updated["active_node"] is None
+    assert updated["graph_parent_ready"]["ready"] is True
+    assert updated["graph_parent_ready"]["open_nodes"] == []
+    assert updated["graph_parent_ready"]["missing_gates"] == []
+    assert updated["task_graph_status"] == "passed"
+    assert updated["legacy_pass_blocked"] is False
+    assert updated["legacy_pass_block_reason"] is None
+    assert updated["legacy_pass_block_detail"] is None
+
+
+def test_sync_status_cache_clears_stale_legacy_pass_block_on_closed_parent(tmp_path, monkeypatch):
+    import graph_scheduler as gs
+
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
+
+    sid = "sprint-test-stale-pass-block"
+    graph_path = sprints / f"{sid}.task_graph.json"
+    graph = {
+        "sprint_id": sid,
+        "required_gates": ["G1"],
+        "nodes": [{"id": "N1", "status": "passed", "depends_on": [], "gate": "G1"}],
+        "gate_results": {"G1": {"status": "passed", "node": "N1"}},
+    }
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    status_path = sprints / f"{sid}.status.json"
+    status_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "status": "passed",
+                "phase": "completed",
+                "stage": "completed",
+                "active_node": None,
+                "graph_parent_ready": {"ready": True, "open_nodes": [], "missing_gates": []},
+                "task_graph_status": "passed",
+                "legacy_pass_blocked": True,
+                "legacy_pass_block_reason": "graph_parent_not_ready",
+                "legacy_pass_block_detail": "stale",
+                "history": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = gs.sync_status_cache_from_graph(graph, graph_path, actor="test", event="clear_stale_block")
+
+    assert result["ok"] is True
+    assert result["updated"] is True
+    updated = json.loads(status_path.read_text(encoding="utf-8"))
+    assert updated["legacy_pass_blocked"] is False
+    assert updated["legacy_pass_block_reason"] is None
+    assert updated["legacy_pass_block_detail"] is None
+
+
 def test_sync_status_cache_revokes_passed_status_when_graph_parent_not_ready(tmp_path, monkeypatch):
     import graph_scheduler as gs
 

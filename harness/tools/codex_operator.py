@@ -165,7 +165,29 @@ def _codex_exec_env(task_dir: Path) -> dict[str, str]:
     env["SOLAR_HARNESS_CMD"] = str(shim_dir / "solar-harness")
     env["SOLAR_CODEX_SOURCE_HOME"] = str(source_codex_home)
     env["CODEX_SQLITE_HOME"] = str(state_home)
-    _prepend_env_path(env, "PATH", [shim_dir, harness_dir / "bin", harness_dir])
+    project_python_dirs: list[Path] = []
+    sid = str(env.get("SID") or "").strip()
+    if sid:
+        try:
+            import workspace_binding
+
+            workspace = workspace_binding.sprint_workspace_root(
+                sprints_dir,
+                sid,
+                harness_dir=harness_dir,
+            )
+        except Exception:
+            workspace = None
+        if workspace is not None:
+            for candidate in (workspace / ".venv" / "bin", workspace / "venv" / "bin"):
+                if (candidate / "python").is_file() or (candidate / "python3").is_file():
+                    project_python_dirs.append(candidate)
+                    break
+    _prepend_env_path(
+        env,
+        "PATH",
+        [shim_dir, *project_python_dirs, harness_dir / "bin", harness_dir],
+    )
     _prepend_env_path(env, "PYTHONPATH", [harness_dir / "lib", harness_dir / "tools"])
     return env
 
@@ -210,6 +232,7 @@ def _codex_exec_command(
     if _truthy_env("SOLAR_CODEX_OPERATOR_EPHEMERAL", "1"):
         cmd.append("--ephemeral")
     cmd.extend([
+        "--skip-git-repo-check",
         "--model",
         model,
         "--config",
@@ -234,6 +257,76 @@ def _existing_paths(values: list[Path]) -> list[Path]:
         key = str(resolved)
         if resolved.exists() and key not in seen:
             result.append(resolved)
+            seen.add(key)
+    return result
+
+
+def _codex_workspace_write_command(
+    command: list[str],
+    writable_dirs: list[Path] | None = None,
+) -> list[str]:
+    """Replace external bypass with Codex's native, bounded workspace sandbox."""
+    result = [
+        item
+        for item in command
+        if item != "--dangerously-bypass-approvals-and-sandbox"
+    ]
+    try:
+        insert_at = result.index("exec") + 1
+    except ValueError:
+        insert_at = 1 if result else 0
+    options: list[str] = []
+    if "--sandbox" not in result:
+        options.extend(["--sandbox", "workspace-write"])
+    seen: set[str] = set()
+    for raw in writable_dirs or []:
+        path = str(raw.expanduser().resolve(strict=False))
+        if path and path not in seen:
+            options.extend(["--add-dir", path])
+            seen.add(path)
+    result[insert_at:insert_at] = options
+    return result
+
+
+def _native_workspace_write_dirs(
+    *,
+    task_dir: Path,
+    cwd: Path,
+    env: dict[str, str],
+) -> list[Path]:
+    """Project operatord-validated output files into native directory grants.
+
+    Codex's macOS sandbox accepts additional writable directories, not exact
+    files. Operatord already validates every declared output against Solar's
+    runtime roots and pre-creates it; this second check prevents a standalone
+    wrapper invocation from turning an arbitrary environment value into a
+    write grant.
+    """
+    harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
+    authorized_roots = (
+        harness_dir,
+        task_dir.expanduser().resolve(strict=False),
+        cwd.expanduser().resolve(strict=False),
+    )
+    try:
+        declared = json.loads(env.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
+    except (TypeError, ValueError):
+        declared = []
+    result: list[Path] = []
+    seen: set[str] = set()
+    workspace = cwd.expanduser().resolve(strict=False)
+    for value in declared:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        output = Path(value).expanduser().resolve(strict=False)
+        if not any(output == root or output.is_relative_to(root) for root in authorized_roots):
+            continue
+        parent = output.parent
+        if parent == workspace or parent.is_relative_to(workspace):
+            continue
+        key = str(parent)
+        if key not in seen:
+            result.append(parent)
             seen.add(key)
     return result
 
@@ -272,10 +365,22 @@ def _filesystem_isolated_command(
     """Wrap a strict Solar operator in a kernel-enforced filesystem allowlist."""
     strict = _truthy_env("SOLAR_OPERATOR_STRICT_FS_SCOPE", "0")
     mode = env.get("SOLAR_CODEX_OPERATOR_FS_ISOLATION", "landlock").strip().lower()
+    if mode in {"codex", "builtin", "workspace-write"}:
+        writable_dirs = _native_workspace_write_dirs(task_dir=task_dir, cwd=cwd, env=env)
+        return _codex_workspace_write_command(command, writable_dirs), {
+            "mode": "codex_workspace_write",
+            "strict": False,
+            "read_write": [str(path) for path in writable_dirs],
+        }
     if mode in {"0", "off", "disabled", "none"}:
         if strict:
             raise RuntimeError("strict operator filesystem scope cannot disable Landlock")
-        return command, {"mode": "disabled", "strict": False}
+        writable_dirs = _native_workspace_write_dirs(task_dir=task_dir, cwd=cwd, env=env)
+        return _codex_workspace_write_command(command, writable_dirs), {
+            "mode": "codex_workspace_write",
+            "strict": False,
+            "read_write": [str(path) for path in writable_dirs],
+        }
 
     harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
     state_root = Path(
@@ -309,7 +414,12 @@ def _filesystem_isolated_command(
     if sys.platform != "linux":
         if strict:
             raise RuntimeError("strict operator filesystem scope requires Linux Landlock")
-        return command, {"mode": "unsupported", "strict": False}
+        writable_dirs = _native_workspace_write_dirs(task_dir=task_dir, cwd=cwd, env=env)
+        return _codex_workspace_write_command(command, writable_dirs), {
+            "mode": "codex_workspace_write",
+            "strict": False,
+            "read_write": [str(path) for path in writable_dirs],
+        }
 
     codex_arg0_dir = codex_home / "tmp" / "arg0"
     codex_arg0_dir.mkdir(parents=True, exist_ok=True)
@@ -519,7 +629,12 @@ def main() -> int:
         f"mode={fs_scope.get('mode')} strict={str(bool(fs_scope.get('strict'))).lower()} "
         f"ro={len(fs_scope.get('read_only', []))} rw={len(fs_scope.get('read_write', []))}"
     )
-    print("codex_operator: invoking " + " ".join(shlex.quote(part) for part in cmd[:-1]) + " <dispatch>")
+    print(
+        "codex_operator: invoking "
+        + " ".join(shlex.quote(part) for part in cmd[:-1])
+        + " <dispatch>",
+        flush=True,
+    )
     cli_log = task_dir / "codex-cli-output.log"
     started = time.monotonic()
     started_wall = time.time()
@@ -598,7 +713,7 @@ def main() -> int:
 
     combined = cli_log.read_text(encoding="utf-8", errors="replace") if cli_log.exists() else ""
     if combined:
-        print(combined, end="" if combined.endswith("\n") else "\n")
+        print(combined, end="" if combined.endswith("\n") else "\n", flush=True)
     if proc.returncode == 0:
         _write_pm_result(task_dir, output_file, combined, int(proc.returncode))
     return int(proc.returncode or 0)

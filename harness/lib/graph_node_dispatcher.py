@@ -1808,6 +1808,7 @@ from graph_scheduler import (  # noqa: E402
     ready_nodes,
     sync_status_cache_from_graph,
     terminalize_dependency_blocked_nodes,
+    reopen_recovered_dependency_nodes,
     node_dispatch_role,
 )
 from task_lifecycle import (  # noqa: E402
@@ -4347,6 +4348,23 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
     # file and reopens a closed sprint (Defect C).
     if (SPRINTS_DIR / f"{sid}.finalized").exists():
         return repaired
+    dependency_recovered = reopen_recovered_dependency_nodes(graph)
+    for item in dependency_recovered:
+        repaired.append(item)
+        node_id = str(item.get("node") or "")
+        _append_event(sid, {
+            "event": "graph_node_dependency_recovered_reopened",
+            "by": "graph-dispatch",
+            "severity": "info",
+            "data": item,
+        })
+        if node_id:
+            _record_node_runstate(sid, node_id, {
+                "last_eval_result": "PENDING",
+                "last_eval_reason": "dependency_recovered",
+                "next_action": "dispatch_when_ready",
+                "status": "pending",
+            })
     for node in graph.get("nodes", []):
         node_id = str(node.get("id") or "")
         if not node_id:
@@ -7072,6 +7090,11 @@ Handoff: `{handoff}`
 - Snapshot Digest: `{artifact_snapshot_digest or "N/A"}`
 - Read the snapshot sidecar and inspect the exact paths listed there. For a row whose authority is
   `published`, those destination bytes are authoritative; do not substitute a mutable staging copy.
+- `Snapshot Digest` is Solar's canonical digest over the governed snapshot material and is stored
+  in the sidecar's `.snapshot_digest` field. It is **not** the SHA-256 of the entire JSON wrapper;
+  never compare it with `shasum`/`sha256sum` of the sidecar file.
+- Detect post-dispatch changes by checking the declared digest against `.snapshot_digest` and by
+  recomputing/validating the governed rows (Solar repeats this in the node-verdict gate).
 - The machine-readable JSON MUST copy `artifact_snapshot_schema`, `artifact_snapshot_path`, and
   `artifact_snapshot_digest` exactly. Any byte change after dispatch invalidates PASS and requires a
   fresh evaluation generation.

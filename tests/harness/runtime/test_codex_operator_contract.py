@@ -253,9 +253,40 @@ def test_codex_operator_uses_writable_sqlite_home_and_ephemeral_flag(tmp_path, m
 
     cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), task_dir / "last.md")
     assert "--ephemeral" in cmd
+    assert "--skip-git-repo-check" in cmd
     assert 'cli_auth_credentials_store="file"' in cmd
     assert "--cd" in cmd
     assert str(tmp_path) in cmd
+
+
+def test_codex_operator_prefers_bound_workspace_virtualenv(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_bound_venv", ROOT / "tools" / "codex_operator.py")
+    workspace_binding = _load_module("workspace_binding_contract_bound_venv", ROOT / "lib" / "workspace_binding.py")
+    harness_dir = tmp_path / "harness"
+    sprints_dir = harness_dir / "sprints"
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    workspace = tmp_path / "workspace"
+    venv_bin = workspace / ".venv" / "bin"
+    sid = "sprint-bound-venv"
+    task_dir.mkdir(parents=True)
+    sprints_dir.mkdir(parents=True)
+    venv_bin.mkdir(parents=True)
+    (venv_bin / "python3").touch()
+    (sprints_dir / f"{sid}.raw_intent.json").write_text(
+        json.dumps({"context": {"repo": str(workspace)}}) + "\n",
+        encoding="utf-8",
+    )
+    workspace_binding.bind_active_workspace(harness_dir, workspace, source="test")
+    monkeypatch.setitem(sys.modules, "workspace_binding", workspace_binding)
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.setenv("SPRINTS_DIR", str(sprints_dir))
+    monkeypatch.setenv("SID", sid)
+
+    env = codex_operator._codex_exec_env(task_dir)
+
+    path_entries = env["PATH"].split(os.pathsep)
+    assert str(venv_bin) in path_entries
+    assert path_entries.index(str(venv_bin)) < path_entries.index(str(harness_dir))
 
 
 def test_codex_operator_prefers_harness_wide_model_policy(tmp_path, monkeypatch):
@@ -279,6 +310,7 @@ def test_codex_operator_uses_resolved_cross_platform_binary(tmp_path):
 
     assert command[0] == str(binary)
     assert command[1] == "exec"
+    assert "--skip-git-repo-check" in command
 
 
 def test_codex_operator_projects_auth_on_non_linux(tmp_path, monkeypatch):
@@ -302,8 +334,9 @@ def test_codex_operator_projects_auth_on_non_linux(tmp_path, monkeypatch):
         ["codex", "exec", "-"], task_dir=task_dir, cwd=work_dir, env=env
     )
 
-    assert command == ["codex", "exec", "-"]
-    assert proof == {"mode": "unsupported", "strict": False}
+    assert command == ["codex", "exec", "--sandbox", "workspace-write", "-"]
+    assert proof == {"mode": "codex_workspace_write", "strict": False, "read_write": []}
+    assert "--dangerously-bypass-approvals-and-sandbox" not in command
     sandbox_codex_home = Path(env["CODEX_HOME"])
     assert sandbox_codex_home.parent.parent == tmp_path / "operator-state"
     assert (sandbox_codex_home / "auth.json").read_text(encoding="utf-8") == '{"fixture": true}\n'
@@ -312,6 +345,51 @@ def test_codex_operator_projects_auth_on_non_linux(tmp_path, monkeypatch):
     assert (sandbox_codex_home / "config.toml").read_text(encoding="utf-8") == (
         'cli_auth_credentials_store = "file"\n'
     )
+
+
+def test_codex_operator_grants_only_declared_output_parent_on_non_linux(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_non_linux_outputs", ROOT / "tools" / "codex_operator.py")
+    harness_dir = tmp_path / "harness"
+    task_dir = harness_dir / "run" / "operator-results" / "op" / "task"
+    work_dir = harness_dir / "sprints" / "sprint-1" / "workdir"
+    output = harness_dir / "sprints" / "sprint-1.N0.pm-result.md"
+    outside = tmp_path / "outside" / "escape.md"
+    source_codex_home = tmp_path / "source-codex-home"
+    task_dir.mkdir(parents=True)
+    work_dir.mkdir(parents=True)
+    output.touch()
+    source_codex_home.mkdir()
+    (source_codex_home / "auth.json").write_text('{"fixture": true}\n', encoding="utf-8")
+    monkeypatch.setenv("HARNESS_DIR", str(harness_dir))
+    monkeypatch.setenv("SOLAR_CODEX_SOURCE_HOME", str(source_codex_home))
+    monkeypatch.setenv("SOLAR_CODEX_OPERATOR_STATE_ROOT", str(tmp_path / "operator-state"))
+    monkeypatch.setenv("SOLAR_OPERATOR_STRICT_FS_SCOPE", "0")
+    monkeypatch.setenv(
+        "SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON",
+        json.dumps([str(output), str(outside)]),
+    )
+    monkeypatch.setattr(codex_operator.sys, "platform", "darwin")
+    env = codex_operator._codex_exec_env(task_dir)
+
+    command, proof = codex_operator._filesystem_isolated_command(
+        ["codex", "exec", "-"], task_dir=task_dir, cwd=work_dir, env=env
+    )
+
+    assert command == [
+        "codex",
+        "exec",
+        "--sandbox",
+        "workspace-write",
+        "--add-dir",
+        str(harness_dir / "sprints"),
+        "-",
+    ]
+    assert proof == {
+        "mode": "codex_workspace_write",
+        "strict": False,
+        "read_write": [str(harness_dir / "sprints")],
+    }
+    assert str(outside.parent) not in command
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Landlock is Linux-only")

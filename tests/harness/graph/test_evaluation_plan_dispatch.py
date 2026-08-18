@@ -235,6 +235,9 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     assert "## Evaluation Plan" in text
     assert "Review Mode: `single`" in text
     assert '"evaluation_plan": {' in text
+    assert "It is **not** the SHA-256 of the entire JSON wrapper" in text
+    assert "never compare it with `shasum`/`sha256sum`" in text
+    assert "recomputing/validating the governed rows" in text
 
 
 def _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid: str, node_id: str) -> None:
