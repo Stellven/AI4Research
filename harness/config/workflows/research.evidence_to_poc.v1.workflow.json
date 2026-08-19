@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.workflow_contract.v1",
   "workflow_id": "research.evidence_to_poc.v1",
-  "version": "1.5",
+  "version": "1.6",
   "title": "Fixed research evidence-to-PoC workflow",
   "dag_variant": "research",
   "stages_mode": "fixed",
@@ -84,8 +84,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --node-complete seed_fetch",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A1 · Seed fetch",
       "timeouts": {
@@ -129,8 +136,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --node-complete source_discovery",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A2 · Source acquisition",
       "timeouts": {
@@ -175,7 +189,7 @@
       ],
       "evaluator_gate": {
         "kind": "deterministic_command",
-        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --sources-only",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --sources-only --node-complete source_validation",
         "on_fail": "fail",
         "on_human_review": "warn_and_continue",
         "verdict_kinds": [
@@ -229,7 +243,7 @@
       ],
       "evaluator_gate": {
         "kind": "deterministic_command",
-        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --claims-only",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --claims-only --node-complete evidence_synthesis",
         "on_fail": "fail",
         "on_human_review": "warn_and_continue",
         "verdict_kinds": [
@@ -285,8 +299,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --node-complete report_draft",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A5 · Report draft",
       "timeouts": {
@@ -332,8 +353,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --node-complete independent_review",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A6 · Separate evidence review",
       "timeouts": {
@@ -385,8 +413,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --node-complete report_revision",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A7 · Bounded revision",
       "timeouts": {
@@ -434,8 +469,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --node-complete final_acceptance",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A8 · Final acceptance",
       "timeouts": {
@@ -486,8 +528,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --node-complete poc_handoff",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "B1 · Evidence-to-PoC handoff (conditional)",
       "timeouts": {

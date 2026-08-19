@@ -28,7 +28,23 @@ part it is responsible for:
 
     --sources-only   accepted sources really are on topic, and traceable
     --claims-only    every report claim cites a source that was accepted
-    (no flag)        both
+    --node-complete  the named stage's own result says it completed
+    (no flag)        sources and claims
+
+``--node-complete`` exists because the hole above is not hypothetical. In the
+2026-08-19 Haiku run, ``report_revision`` and ``final_acceptance`` both recorded
+``"status": "failed"`` with ``status_is_terminal: true`` in their own
+``research_node_result.json``, and both were written up as
+``verdict PASS, gate_kind none, duration 0.0``. ``failed_nodes`` stayed empty and
+the DAG advanced past them.
+
+Their artifacts were on disk and looked healthy, because a failed dispatch
+leaves behind whatever it wrote before it raised -- ``revision/report.md`` was
+written one second before the operator failed. So a presence check cannot tell a
+failed stage from a successful one. Reading the operator's own recorded status
+can, and that is the one operator-authored field this script does trust: a stage
+declaring its own failure is not grading its own homework in the direction that
+needs guarding against.
 """
 from __future__ import annotations
 
@@ -52,6 +68,20 @@ SEED_SNAPSHOT = ARTIFACT_ROOT / "seed" / "seed_snapshot.json"
 EVIDENCE_SYNTHESIS = ARTIFACT_ROOT / "synthesis" / "evidence_synthesis.json"
 REPORT_DRAFT = ARTIFACT_ROOT / "report" / "report_draft.json"
 REPORT_MD = ARTIFACT_ROOT / "report" / "report.md"
+
+# Where each stage writes its node result. The adapter names this file, so it is
+# the same for every stage; only the directory differs.
+NODE_RESULT_DIR_BY_STAGE = {
+    "seed_fetch": "seed",
+    "source_discovery": "discovery",
+    "source_validation": "validation",
+    "evidence_synthesis": "synthesis",
+    "report_draft": "report",
+    "independent_review": "review",
+    "report_revision": "revision",
+    "final_acceptance": "final",
+    "poc_handoff": "poc",
+}
 
 # A claim reference in the report body, e.g. "claim-003" or "openalex-rag-01".
 _CLAIM_RE = re.compile(r"\bclaim-\d+\b")
@@ -273,27 +303,75 @@ def check_claims(workspace: Path) -> list[str]:
     return failures
 
 
+def check_node_complete(workspace: Path, stages: list[str]) -> list[str]:
+    """Fail when a stage's own result does not say it completed.
+
+    Absent is a failure, not a pass. A stage that never wrote a result is
+    indistinguishable from one whose result was lost, and treating silence as
+    success is how a stage that never ran gets recorded as one that did.
+    """
+    failures: list[str] = []
+    for stage in stages:
+        directory = NODE_RESULT_DIR_BY_STAGE.get(stage)
+        if directory is None:
+            failures.append(f"{stage}: not a stage of this workflow")
+            continue
+        path = workspace / ARTIFACT_ROOT / directory / "research_node_result.json"
+        payload = _load(path)
+        if payload is None:
+            failures.append(f"{stage}: no readable research_node_result.json at {path}")
+            continue
+        status = str(payload.get("status") or "")
+        if status != "completed":
+            errors = payload.get("errors") or []
+            first = ""
+            if isinstance(errors, list) and errors and isinstance(errors[0], dict):
+                first = str(errors[0].get("message") or "")[:200]
+            failures.append(
+                f"{stage}: operator recorded status={status or 'missing'}"
+                + (f" ({first})" if first else "")
+            )
+    return failures
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--sources-only", action="store_true")
     parser.add_argument("--claims-only", action="store_true")
+    parser.add_argument(
+        "--node-complete",
+        action="append",
+        default=[],
+        metavar="STAGE",
+        help="repeatable; fail unless that stage's own result says completed",
+    )
     args = parser.parse_args(argv)
 
     workspace = resolve_workspace(Path(args.workspace))
-    run_sources = args.sources_only or not args.claims_only
-    run_claims = args.claims_only or not args.sources_only
+    # A --node-complete run checks only that, so a stage can gate on its own
+    # completion without also re-running the source and claim checks that
+    # belong to earlier stages.
+    only_node = bool(args.node_complete) and not (args.sources_only or args.claims_only)
+    run_sources = (args.sources_only or not args.claims_only) and not only_node
+    run_claims = (args.claims_only or not args.sources_only) and not only_node
 
     failures: list[str] = []
     if run_sources:
         failures.extend(check_sources(workspace))
     if run_claims:
         failures.extend(check_claims(workspace))
+    if args.node_complete:
+        failures.extend(check_node_complete(workspace, list(args.node_complete)))
 
     verdict = {
         "schema": "solar.evidence_to_poc_gate.v1",
         "workspace": str(workspace),
-        "checked": {"sources": run_sources, "claims": run_claims},
+        "checked": {
+            "sources": run_sources,
+            "claims": run_claims,
+            "node_complete": list(args.node_complete),
+        },
         "ok": not failures,
         "failures": failures,
     }
