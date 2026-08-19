@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part B UI — design options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;660;770&family=Geist+Mono:wght@460&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1b1d; --canvas:#ffffff; --surface:#fafafb; --surface-quiet:#f4f4f6;
+  --muted:#54565c; --subtle:#6e7077; --faint:#d8d9dd;
+  --line:#e6e6ea; --line-soft:#efeff1; --line-strong:#d3d4d9;
+  --primary:#cf0a2c; --primary-ink:#a60822;
+  --blocked:#b26a00; --blocked-fill:#fbefd0;
+  --complete:#3a3b40;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Schibsted Grotesk",system-ui,-apple-system,Segoe UI,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);
+     font-weight:400;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:48px 32px 96px}
+h1{font-weight:770;letter-spacing:-0.014em;font-size:26px;margin:0 0 8px}
+h2{font-weight:660;letter-spacing:-0.014em;font-size:20px;margin:64px 0 4px}
+h3{font-weight:660;font-size:14px;margin:32px 0 12px;text-transform:uppercase;
+   letter-spacing:0.08em;color:var(--subtle)}
+p{color:var(--muted);margin:0 0 16px;max-width:70ch}
+.lede{font-size:16px}
+code,.mono{font-family:var(--mono);font-weight:460;font-variant-numeric:tabular-nums}
+.note{background:var(--surface-quiet);border-left:2px solid var(--faint);
+      padding:12px 16px;margin:16px 0;font-size:14px;color:var(--muted)}
+.note strong{color:var(--ink);font-weight:660}
+.rec{border-left-color:var(--primary)}
+
+/* ---------- shared panel chrome ---------- */
+.panel{border-top:1px solid var(--line);padding-top:20px;margin-top:8px}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;
+            gap:16px;margin-bottom:4px}
+.panel-title{font-weight:660;font-size:16px}
+.panel-meta{font-family:var(--mono);font-size:12px;color:var(--subtle)}
+.panel-sub{color:var(--subtle);font-size:13px;margin:0 0 20px}
+
+/* ---------- stage roster ---------- */
+.roster{display:grid;gap:0}
+.row{display:grid;grid-template-columns:132px 92px 1fr;gap:16px;align-items:start;
+     padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.row:last-child{border-bottom:0}
+.stage{font-weight:500;font-size:14px}
+.stage .code{display:block;font-family:var(--mono);font-size:11px;color:var(--subtle);font-weight:460}
+.state{font-family:var(--mono);font-size:12px;padding-top:1px}
+.s-done{color:var(--complete)}
+.s-done::before{content:"✓ ";}
+.s-active{color:var(--primary);font-weight:460}
+.s-active::before{content:"● ";}
+.s-block{color:var(--blocked)}
+.s-block::before{content:"▲ ";}
+.s-pend{color:var(--subtle)}
+.s-pend::before{content:"· ";}
+.facts{font-family:var(--mono);font-size:12px;color:var(--muted);
+       font-variant-numeric:tabular-nums}
+.facts span{display:block}
+.facts .dim{color:var(--subtle)}
+
+/* ---------- lineage table ---------- */
+.lin{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.lin th{text-align:left;font-family:var(--mono);font-weight:460;font-size:11px;
+        color:var(--subtle);text-transform:uppercase;letter-spacing:0.06em;
+        padding:0 12px 8px 0;border-bottom:1px solid var(--line)}
+.lin td{padding:9px 12px 9px 0;border-bottom:1px solid var(--line-soft);
+        font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;
+        vertical-align:top}
+.lin td.art{color:var(--ink);white-space:nowrap}
+.chain{display:inline-flex;align-items:center;gap:6px;color:var(--complete)}
+.dot{width:6px;height:6px;border-radius:999px;background:var(--complete);display:inline-block}
+.bar{width:22px;height:1px;background:var(--line-strong);display:inline-block}
+.ok{color:var(--complete)}
+.ok::before{content:"✓ "}
+.hashcell{color:var(--subtle)}
+
+.legend{display:flex;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;
+        color:var(--subtle);margin-top:14px}
+
+table.cmp{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 8px}
+table.cmp th,table.cmp td{text-align:left;padding:10px 14px 10px 0;
+  border-bottom:1px solid var(--line-soft);vertical-align:top;color:var(--muted)}
+table.cmp th{font-weight:660;color:var(--ink);border-bottom:1px solid var(--line)}
+table.cmp td:first-child{color:var(--ink);font-weight:500;white-space:nowrap}
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 9px;
+     border-radius:999px;background:var(--surface-quiet);color:var(--muted);
+     border:1px solid var(--line)}
+.tag.rec{background:#fdf0f2;border-color:#f3ccd4;color:var(--primary-ink)}
+hr{border:0;border-top:1px solid var(--line);margin:56px 0 0}
+.small{font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Part B UI — design options</h1>
+<p class="lede">Mockup for review. Not implemented. All values below are from the
+real run that reached B5 (<code>partb-uat-pause-20260818-capsulefix</code>) — no
+invented numbers.</p>
+
+<div class="note">
+<strong>The structural fact that decides this.</strong> Part B runs
+<strong>exactly one</strong> experiment — <code>evidence-lineage-integrity-v1</code> —
+by design (one-shot experiment policy, one exact allowlisted command). There is no
+fan-out of many experiments to visualise. What <em>does</em> have multiplicity is
+the <strong>8 integrity checks</strong> inside that one run, and each check is a
+real provenance chain over one Part A artifact.
+</div>
+
+<h2>Option A — lifecycle roster only</h2>
+<p>The 7 stages with their real state and inline facts. This is what I proposed
+first.</p>
+
+<div class="panel">
+  <div class="panel-head">
+    <span class="panel-title">Part B · Proof of concept</span>
+    <span class="panel-meta">conditional · gated on A8</span>
+  </div>
+  <p class="panel-sub">Runs only for execution_profile=part_a_plus_poc.</p>
+  <div class="roster">
+    <div class="row"><div class="stage">Handoff<span class="code">B1 · poc_handoff</span></div>
+      <div class="state s-done">accepted</div>
+      <div class="facts"><span>8 artifacts · 5 evidence records</span>
+      <span class="dim">manifest a2a730b7… · 178,791 B</span></div></div>
+    <div class="row"><div class="stage">Idea<span class="code">B2 · idea_evaluation</span></div>
+      <div class="state s-done">selected</div>
+      <div class="facts"><span>evidence-lineage integrity</span>
+      <span class="dim">evidence-bound selection · deterministic</span></div></div>
+    <div class="row"><div class="stage">Plan<span class="code">B3 · experiment_design</span></div>
+      <div class="state s-done">frozen</div>
+      <div class="facts"><span>plan 37dbfbc2…</span>
+      <span class="dim">unshare -Urn · network disabled · 8 checks</span></div></div>
+    <div class="row"><div class="stage">Approval<span class="code">B4 · experiment_approval</span></div>
+      <div class="state s-done">policy</div>
+      <div class="facts"><span>evidence_lineage_integrity_v1 · actor user</span>
+      <span class="dim">matched plan 37dbfbc2… · approval a8100ea4…</span></div></div>
+    <div class="row"><div class="stage">Benchmark<span class="code">B5 · experiment_run</span></div>
+      <div class="state s-done">exit 0</div>
+      <div class="facts"><span>8/8 checks · integrity rate 1.0</span>
+      <span class="dim">72.084 ms · isolated_by_unshare · stderr 0 B</span></div></div>
+    <div class="row"><div class="stage">Verification<span class="code">B6 · claim_verification</span></div>
+      <div class="state s-pend">pending</div>
+      <div class="facts"><span class="dim">—</span></div></div>
+    <div class="row"><div class="stage">Delivery<span class="code">B7 · final_delivery</span></div>
+      <div class="state s-pend">pending</div>
+      <div class="facts"><span class="dim">—</span></div></div>
+  </div>
+</div>
+
+<div class="note"><strong>What it does not answer.</strong> “8/8 checks” is a
+score. It never shows <em>what was checked</em>, so the central claim of the whole
+workflow — that Part A’s evidence reached the benchmark unaltered — stays invisible.</div>
+
+<h2>Option B — roster + evidence lineage <span class="tag rec">recommended</span></h2>
+<p>Same roster, plus the thing that actually earns the word “evidence-backed”.
+Each of the 8 checks compares one Part A artifact at three points:
+what Part A produced, what the handoff froze, and what the sandboxed benchmark
+read back with the network disabled.</p>
+
+<div class="panel">
+  <div class="panel-head">
+    <span class="panel-title">Evidence lineage · <span class="mono">evidence-lineage-integrity-v1</span></span>
+    <span class="panel-meta">8/8 intact · rate 1.0</span>
+  </div>
+  <p class="panel-sub">Verified inside <code>unshare -Urn</code>, network disabled.</p>
+  <table class="lin">
+    <thead><tr><th>Part A artifact</th><th>Produced</th><th>Handoff</th><th>Benchmark read</th><th>Chain</th></tr></thead>
+    <tbody>
+      <tr><td class="art">evidence_synthesis.json</td><td class="hashcell">917507c1…</td><td class="hashcell">917507c1…</td><td class="hashcell">917507c1…</td>
+        <td><span class="chain"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot"></span></span></td></tr>
+      <tr><td class="art">report_draft.json</td><td class="hashcell">f5dba3dd…</td><td class="hashcell">f5dba3dd…</td><td class="hashcell">f5dba3dd…</td>
+        <td><span class="chain"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot"></span></span></td></tr>
+      <tr><td class="art">independent_review.json</td><td class="hashcell">4df33bd8…</td><td class="hashcell">4df33bd8…</td><td class="hashcell">4df33bd8…</td>
+        <td><span class="chain"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot"></span></span></td></tr>
+      <tr><td class="art">report_revision.json</td><td class="hashcell">6214e584…</td><td class="hashcell">6214e584…</td><td class="hashcell">6214e584…</td>
+        <td><span class="chain"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot"></span></span></td></tr>
+      <tr><td class="art">final_acceptance.json</td><td class="hashcell">acfe00f7…</td><td class="hashcell">acfe00f7…</td><td class="hashcell">acfe00f7…</td>
+        <td><span class="chain"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot"></span></span></td></tr>
+      <tr><td class="art">source_validation.json</td><td class="hashcell">e28cefff…</td><td class="hashcell">e28cefff…</td><td class="hashcell">e28cefff…</td>
+        <td><span class="chain"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot"></span></span></td></tr>
+      <tr><td class="art">source_discovery.json</td><td class="hashcell">09b09ee6…</td><td class="hashcell">09b09ee6…</td><td class="hashcell">09b09ee6…</td>
+        <td><span class="chain"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot"></span></span></td></tr>
+      <tr><td class="art">seed_snapshot.json</td><td class="hashcell">88946bce…</td><td class="hashcell">88946bce…</td><td class="hashcell">88946bce…</td>
+        <td><span class="chain"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot"></span></span></td></tr>
+    </tbody>
+  </table>
+  <div class="legend">
+    <span>● ─ ● ─ ●  three hashes equal → lineage intact</span>
+    <span>a break renders the differing hash in amber, inline</span>
+  </div>
+</div>
+
+<div class="note rec"><strong>Why this is the right diagram.</strong> It is a real
+provenance chain with real hashes, not a drawn pipeline — so it does not violate
+<code>DESIGN.md</code>’s “no fake linear flow/arrows”. It is the only view that makes the
+Part A → Part B bridge visible, and it is exactly where a tamper or a silent
+substitution would show up.</div>
+
+<h2>Recommendation</h2>
+<table class="cmp">
+  <thead><tr><th>Approach</th><th>Verdict</th></tr></thead>
+  <tbody>
+    <tr><td>“All experiments” diagram</td><td>Would be dishonest — there is exactly one experiment by contract. Drawing a field of parallel experiments implies capability that does not exist.</td></tr>
+    <tr><td>AutoSci Cytoscape graph</td><td>Wrong instrument. It is a citation/knowledge graph over papers and concepts, and it loads from CDN, which breaks the network-disabled container UAT.</td></tr>
+    <tr><td>Lifecycle roster alone (A)</td><td>Necessary, not sufficient. Shows a score, never the substance.</td></tr>
+    <tr><td>Roster + lineage (B)</td><td><strong>Recommended.</strong> Adds the one view that proves the evidence claim, using data the run already writes.</td></tr>
+  </tbody>
+</table>
+
+<h3>If Part B ever gains real multiplicity</h3>
+<p class="small">If the contract later allows several experiments, the honest
+extension is to repeat the lineage panel per experiment under its own heading —
+not to draw a graph of experiments. Multiplicity should be shown by repetition of
+a truthful unit, not by a new abstraction.</p>
+
+<hr>
+<p class="small" style="margin-top:24px">Tokens are taken from <code>DESIGN.md</code>
+verbatim: no new colour, font, shadow, gradient, or progress bar. Done is quiet ink
+plus a check, never green. Red appears only as the active-stage signal.</p>
+
+</div>
+</body>
+</html>
