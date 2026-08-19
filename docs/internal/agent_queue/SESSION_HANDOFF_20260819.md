@@ -350,3 +350,38 @@ already does for single files.
 
 The same applies to `report/grounded/`: `compile_grounded_report` publishes
 around fifteen files, and every one of them must be declared by `report_draft`.
+
+## Correction 2026-08-19 19:05 -- trap 3 was overstated
+
+The earlier entry said `grounded_synthesis` hardcodes `unsupported_rate: 0.0`
+and `citation_accuracy: 1.0`, so binding `evaluate_artifacts` "gives a gate that
+cannot fail" and the metrics must be fixed first. The first half is true; the
+conclusion is not, and the ordering it implies is unnecessary.
+
+Those two fields are constants, so their two thresholds in `evaluate_artifacts`
+can indeed never fire. But the property they would measure is enforced earlier
+and far more harshly. `_compile_plan` refuses to publish anything unsupported --
+it raises and aborts the whole compile on:
+
+* `evidence_quote_missing` / `evidence_quote_too_short` / `_too_long`
+* `evidence_quote_not_exact` -- the quote is not a substring of the evidence text
+* `claim_not_grounded` -- no token overlap between claim and quote
+* `claim_support_missing` -- a claim with no surviving link
+* `claim_uncertainty_missing`
+
+So an unsupported claim cannot reach `research_eval.json` at all. `0.0` is true
+by construction rather than measured. It is still worth replacing with a real
+computation from `ledger.py`, because a constant stops being true the moment the
+compiler's enforcement changes, but that is hygiene, not a prerequisite.
+
+`evaluate_artifacts` is also nowhere near inert. Beyond those two thresholds it
+checks `eval_status`, all four counts, report AST sections, per-section
+coverage, source diversity, source-type validation, source authority, the
+profile gate, `final.md` presence and non-emptiness, evidence-citation presence,
+citation grounding, and metadata noise. `compile_grounded_report` already calls
+it with `strict_profile=True`, which promotes profile warnings to errors.
+
+Practical consequence for task 2: the thing likely to stop the first wired run
+is source diversity or authority under the strict profile, given how thin the
+RAG pack is -- not the citation metrics. Expect that failure and read its
+`errors` list rather than assuming the wiring is broken.
