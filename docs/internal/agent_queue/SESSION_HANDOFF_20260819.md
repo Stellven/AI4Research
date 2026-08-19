@@ -165,3 +165,88 @@ the real workflow rather than a direct service call.
 `<scratch>/gate-runs/evidence-p{1,2,3}` (three-prompt gate runs),
 `artifacts/adversarial-prompt-a{,-final}-20260818` (the original contrivance,
 before and after), `artifacts/dashboard-full-uat-r13/r14-20260818`.
+
+## Update 2026-08-19 17:35 -- the Haiku run failed, and it is a seam, not the model
+
+The live `claude-haiku-4-5` run of p1 (evidence root
+`<scratch>/gate-runs/evidence-p1`, sprint
+`sprint-20260819-212653-wf-research-evidence-to-poc-v1-f40de28fe29b`) was
+stopped by hand after failing four times on `evidence_synthesis`. It was
+retrying with a guaranteed failure and spending a real Haiku call each time.
+
+### What is confirmed, from artifacts
+
+* Every retry made a real, successful Haiku call: four `exchange.json` records,
+  all `status: completed`, `exit_code: 0`, 47.8s / 55.2s / 79.7s.
+* Every retry produced a good artifact: `synthesis/evidence_synthesis.json`
+  holds 5 claims across 4 distinct sources with 7 verified quotes. The model
+  did its job on every attempt.
+* Every retry was then rejected by the harness:
+  `result.json` -> `status: failed`, `exit_code: 2`,
+  `log_tail: {"ok": false, "error": "model stage used a non-Codex provider"}`.
+* `synthesis/research_node_result.json` was never written, while every earlier
+  stage has one. The node never reached its gate, so there is no
+  `evidence_synthesis-eval.json` -- the claims gate did not fail, it never ran.
+
+So the provider switch is sound at the service layer and blocked one layer up.
+
+### The guard
+
+`harness/plugins/autosci/bin/fixed_research_node_adapter.py:391`, in
+`_verify_model_usage`:
+
+    if any(str(item.get("provider") or "") != "codex_subscription" for item in usage):
+        raise AdapterError("model stage used a non-Codex provider")
+
+This is a real provenance check and must stay a check. Widen it to the provider
+the adapter actually selected -- an allowlist keyed off
+`SOLAR_RESEARCH_MODEL_PROVIDER` (`codex` -> `codex_subscription`,
+`claude` -> `claude_subscription`) -- so a service recording something other
+than what was requested still fails. Do not delete it, and do not make the
+Claude service label itself `codex_subscription` to slip past; that would make
+the recorded provenance a lie, which is the one thing this workflow exists to
+prevent. The two sibling checks below it (`session_mode == "ephemeral"`, status
+completed) need the same treatment.
+
+Note `operator_id` is still `codex-research-evidence-synthesis-worker`. The
+physical operator name is Codex-shaped even when the CLI is Claude; that is
+cosmetic next to the guard but it is why the failure reads as a Codex problem.
+
+### The open question -- do not guess this, read it
+
+`CodexResearchModelService.__call__` ends by setting
+`payload["provider"] = "codex_subscription"` and
+`payload["provider_usage"] = [usage]` (codex_research.py:542-544).
+`ClaudeResearchModelService.__call__` overrides `__call__` wholesale and sets
+neither. The adapter also merges usage from the service's invocation journal
+(`_record_invocation` writes `"provider": "codex_subscription"` at
+codex_research.py:290).
+
+Which of those two paths supplied the usage row that tripped the guard is NOT
+established. If it came from the journal the provider would have read
+`codex_subscription` and the guard would have passed -- so it did not, but the
+actual recorded value has not been read. Read the merged
+`model_provider_usage` out of a failing run before changing anything. The whole
+point of this session's telemetry work is not to fix on a theory.
+
+### Also found while reading, useful for task 2
+
+Both stages already declare their output directory in the contract:
+`evidence_synthesis` declares `artifacts/research_evidence_to_poc/synthesis/`
+and `report_draft` declares `.../report/`, each `type: directory`. So a source
+pack written to `synthesis/source_pack/` and a compiled report written to
+`report/grounded/` are already inside declared outputs. The "operator changed
+unreported files" problem the plan above anticipated may not arise at all --
+verify against the actual check rather than assuming either way.
+
+`compile_grounded_report` refuses a non-empty `output_dir` and refuses an
+`output_dir` overlapping any source pack, so those two must be siblings, not
+nested.
+
+### State
+
+Working tree clean apart from untracked run byproducts under `artifacts/` and
+`harness/artifacts/autosci/`, which are outputs, not work. No source change was
+made after the run started, deliberately: editing `report_draft` mid-run would
+have changed what the in-flight run executed and made its telemetry
+unattributable.
