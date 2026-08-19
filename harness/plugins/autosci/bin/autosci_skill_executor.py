@@ -127,6 +127,49 @@ def _skill_env() -> dict[str, str]:
     return env
 
 
+def _tail_text(path: Path, *, limit: int = 20000) -> str:
+    """The end of a streamed log, for the in-memory record.
+
+    The full log stays on disk; only a bounded tail travels in the JSON.
+    """
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    return text[-limit:]
+
+
+def autosci_progress(home: Path) -> dict[str, Any]:
+    """AutoSci's own per-stage progress, if its pipeline wrote any.
+
+    `$research` records every stage and gate to wiki/outputs/pipeline-progress.md
+    with a status and a duration, for its own cross-session resume. That file is
+    a better account of where Part B spends its time than anything we could
+    infer from outside, so read it rather than instrument their pipeline.
+    """
+    path = home / "wiki" / "outputs" / "pipeline-progress.md"
+    if not path.is_file():
+        return {"present": False}
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {"present": False, "unreadable": True}
+    rows: list[dict[str, str]] = []
+    for line in text.splitlines():
+        # "| Stage 1: Idea Discovery | completed | 12m |"
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 3 or not cells[0].lower().startswith(("stage", "gate")):
+            continue
+        # "| Stage | Status | Duration |" is the header, not a stage; its own
+        # first cell also starts with "stage".
+        if cells[1].lower() in {"status", "---"} or set(cells[1]) <= {"-", ":"}:
+            continue
+        rows.append({"stage": cells[0], "status": cells[1], "duration": cells[2]})
+    return {"present": True, "path": str(path), "stages": rows}
+
+
 def wiki_fingerprint(home: Path) -> dict[str, Any]:
     """Every wiki file the skills write, with a content hash.
 
@@ -286,31 +329,36 @@ def run_skill(
         argv += ["--model", model]
     argv.append(prompt)
 
-    started_at = _now()
-    started_monotonic = time.monotonic()
-    try:
-        proc = subprocess.run(
-            argv,
-            cwd=home,
-            env=_skill_env(),
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-            check=False,
-        )
-        exit_code, stdout, stderr = proc.returncode, proc.stdout, proc.stderr
-        timed_out = False
-    except subprocess.TimeoutExpired as exc:
-        exit_code = 124
-        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
-        stderr = (exc.stderr if isinstance(exc.stderr, str) else "") + f"\ntimed out after {timeout_seconds}s"
-        timed_out = True
-
     record_path.parent.mkdir(parents=True, exist_ok=True)
     stdout_path = record_path.with_suffix(".stdout.log")
     stderr_path = record_path.with_suffix(".stderr.log")
-    stdout_path.write_text(stdout or "", encoding="utf-8")
-    stderr_path.write_text(stderr or "", encoding="utf-8")
+
+    started_at = _now()
+    started_monotonic = time.monotonic()
+    # Stream to files rather than buffering in memory. capture_output=True keeps
+    # everything in the parent's pipes until the child exits, so a skill killed
+    # on timeout yielded NOTHING: the 40-minute experiment_design run left a
+    # 0-byte stdout log while the run that finished left 4 KB. That is exactly
+    # backwards -- the run you cannot explain is the one you need the log for.
+    with stdout_path.open("w", encoding="utf-8") as out, stderr_path.open("w", encoding="utf-8") as err:
+        proc = subprocess.Popen(argv, cwd=home, env=_skill_env(), stdout=out, stderr=err, text=True)
+        try:
+            exit_code = proc.wait(timeout=timeout_seconds)
+            timed_out = False
+        except subprocess.TimeoutExpired:
+            # Terminate first so the child can flush; kill only if it will not go.
+            proc.terminate()
+            try:
+                proc.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=15)
+            exit_code = 124
+            timed_out = True
+            err.write(f"\ntimed out after {timeout_seconds}s\n")
+
+    stdout = _tail_text(stdout_path)
+    stderr = _tail_text(stderr_path)
 
     record = {
         "schema": "solar.autosci_skill_runtime.v1",
@@ -476,6 +524,9 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
             "files_after": len(wiki_after),
             "delta": delta,
         },
+        # AutoSci's own account of where its time went, when its pipeline
+        # wrote one. Their instrumentation beats ours from outside the process.
+        "autosci_progress": autosci_progress(_autosci_home()),
         "bridge": {
             "envelope_path": str(augmented),
             "envelope_as_sent": _redacted_envelope(envelope),

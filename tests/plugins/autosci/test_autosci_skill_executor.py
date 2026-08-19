@@ -551,3 +551,68 @@ def test_a_stage_that_changed_nothing_is_recorded_as_such(
     assert payload["ok"] is True
     assert payload["changed_wiki"] is False
     assert payload["wiki_delta"] == {"added": [], "removed": [], "modified": []}
+
+
+def test_a_killed_skill_still_leaves_its_output_on_disk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The 40-minute experiment_design run left a 0-byte log. This is why.
+
+    capture_output=True holds everything in the parent's pipes until the child
+    exits, so a skill killed on timeout produced no log at all, while the run
+    that finished cleanly produced 4 KB. The run you cannot explain is exactly
+    the one whose output you need.
+    """
+    home = _home(tmp_path, monkeypatch)
+    _page(home / "wiki" / "ideas", "an-idea", slug="an-idea", status="proposed")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    # Emits progress, then hangs past the stage timeout.
+    (fake / "codex").write_text(
+        "#!/bin/sh\necho 'stage 1: reading idea page'\necho 'stage 2: drafting blocks'\nsleep 30\n",
+        encoding="utf-8",
+    )
+    (fake / "codex").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake}{os.pathsep}{os.environ['PATH']}")
+
+    record_path = tmp_path / "rec.json"
+    record = ex.run_skill(
+        stage="experiment_design", request="x", record_path=record_path, timeout_seconds=2
+    )
+
+    assert record["timed_out"] is True
+    assert record["exit_code"] == 124
+    streamed = Path(record["stdout_path"]).read_text(encoding="utf-8")
+    assert "stage 1: reading idea page" in streamed
+    assert "stage 2: drafting blocks" in streamed, "progress written before the kill must survive"
+    assert "timed out after 2s" in Path(record["stderr_path"]).read_text(encoding="utf-8")
+
+
+def test_autosci_progress_is_read_from_their_own_pipeline_file(tmp_path: Path) -> None:
+    """$research records every stage with a duration; read it rather than guess."""
+    home = tmp_path / "autosci"
+    outputs = home / "wiki" / "outputs"
+    outputs.mkdir(parents=True)
+    (outputs / "pipeline-progress.md").write_text(
+        "## Stage Summary\n"
+        "| Stage | Status | Duration |\n"
+        "|-------|--------|----------|\n"
+        "| Stage 1: Idea Discovery | completed | 12m |\n"
+        "| Gate 1: Idea Selection | passed | 0m |\n"
+        "| Stage 2: Experiment Design | running | 41m |\n"
+        "\n## Selected Idea\n- **Idea**: [[some-slug]]\n",
+        encoding="utf-8",
+    )
+
+    progress = ex.autosci_progress(home)
+
+    assert progress["present"] is True
+    assert progress["stages"] == [
+        {"stage": "Stage 1: Idea Discovery", "status": "completed", "duration": "12m"},
+        {"stage": "Gate 1: Idea Selection", "status": "passed", "duration": "0m"},
+        {"stage": "Stage 2: Experiment Design", "status": "running", "duration": "41m"},
+    ]
+
+
+def test_absent_autosci_progress_is_reported_not_invented(tmp_path: Path) -> None:
+    assert ex.autosci_progress(tmp_path)["present"] is False
