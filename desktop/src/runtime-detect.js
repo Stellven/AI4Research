@@ -31,31 +31,32 @@ function resetDistroCache() {
   _distroCache = null;
 }
 
-function wslDistro() {
-  const override = String(process.env.SOLAR_WSL_DISTRO || "").trim();
-  if (isSolarWslDistro(override)) return override;
-  if (_distroCache !== null) return _distroCache;
-  try {
-    const r = cp.spawnSync("wsl.exe", ["-l", "-q"], {
-      timeout: 5000,
-      encoding: "utf8",
-    });
-    const first = usableWslDistros(r.stdout)[0];
-    _distroCache = first || "Ubuntu-24.04";
-  } catch {
-    _distroCache = "Ubuntu-24.04";
-  }
-  return _distroCache;
+function splitWslOutput(raw) {
+  return String(raw || "")
+    .replace(/\x00/g, "")
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
-function wslExec(cmd, timeoutMs = 8000) {
+function defaultWslDistro() {
+  const status = cp.spawnSync("wsl.exe", ["--list"], {
+    timeout: 5000,
+    encoding: "utf8",
+  });
+  const lines = splitWslOutput(status.stdout);
+  const defaultLine = lines.find((line) => line.includes("(Default)"));
+  return defaultLine ? defaultLine.split(/[()\s]+/)[0] : "";
+}
+
+function wslExecInDistro(distro, cmd, timeoutMs = 8000) {
   const r = cp.spawnSync(
     "wsl.exe",
-    ["-d", wslDistro(), "--", "bash", "-lc", cmd],
+    ["-d", String(distro), "--", "bash", "-lc", cmd],
     {
       timeout: timeoutMs,
       encoding: "utf8",
-    },
+  },
   );
   return {
     ok: r.status === 0,
@@ -65,25 +66,96 @@ function wslExec(cmd, timeoutMs = 8000) {
   };
 }
 
-// Does WSL have at least one registered distro? `wsl.exe -l -q` lists them; on a PC with the
-// wsl.exe stub present but no distro this is empty — a case `wsl --status` alone misses.
+function wslStatusPortInDistro(distro) {
+  const r = wslExecInDistro(
+    distro,
+    "cat ~/.solar/harness/run/status-server.port 2>/dev/null | tr -d \"[:space:]\"",
+    5000,
+  );
+  const port = parseInt(r.stdout, 10);
+  return Number.isFinite(port) && port > 0 ? port : null;
+}
+
+function wslRuntimeHasFiles(distro) {
+  const r = wslExecInDistro(
+    distro,
+    "test -f ~/.solar/harness/lib/symphony/status-server.py && echo y || echo n",
+  );
+  return r.stdout.includes("y");
+}
+
+function wslRuntimeHealthy(distro) {
+  const port = wslStatusPortInDistro(distro);
+  if (!port) return false;
+  const r = wslExecInDistro(
+    distro,
+    `curl -fsS -m 2 http://127.0.0.1:${port}/healthz >/dev/null 2>&1 && echo y`,
+    5000,
+  );
+  return r.ok && r.stdout.includes("y");
+}
+
+function wslDistro() {
+  if (_distroCache !== null) return _distroCache;
+  const override = String(process.env.SOLAR_WSL_DISTRO || "").trim();
+  const forceOverride = process.env.SOLAR_WSL_DISTRO_FORCE === "1";
+
+  if (forceOverride && isSolarWslDistro(override)) {
+    _distroCache = override;
+    return _distroCache;
+  }
+
+  const distros = usableWslDistros(
+    cp.spawnSync("wsl.exe", ["-l", "-q"], { timeout: 5000, encoding: "utf8" })
+      .stdout,
+  );
+
+  for (const distro of distros) {
+    if (wslRuntimeHealthy(distro)) {
+      _distroCache = distro;
+      return distro;
+    }
+  }
+
+  for (const distro of distros) {
+    if (wslRuntimeHasFiles(distro)) {
+      _distroCache = distro;
+      return distro;
+    }
+  }
+
+  const fallback = defaultWslDistro() || distros[0] || "Ubuntu-24.04";
+  _distroCache = fallback;
+  return _distroCache;
+}
+
+function wslExec(cmd, timeoutMs = 8000) {
+  const r = wslExecInDistro(wslDistro(), cmd, timeoutMs);
+  return {
+    ok: r.status === 0,
+    status: r.status,
+    stdout: (r.stdout || "").trim(),
+    stderr: (r.stderr || "").trim(),
+  };
+}
+
 function wslHasDistro() {
   const r = cp.spawnSync("wsl.exe", ["-l", "-q"], {
     timeout: 5000,
     encoding: "utf8",
   });
   if (r.error || r.status !== 0) return false;
-  return usableWslDistros(r.stdout).length > 0;
+  return splitWslOutput(r.stdout).length > 0;
 }
 
-// 'missing' (WSL/distro not usable) | 'stopped' (installed, VM cold) | 'up'.
+// Preserve old behavior for existing callers: "missing" if no distro is registered.
 function wslState() {
   const status = cp.spawnSync("wsl.exe", ["--status"], {
     timeout: 6000,
     encoding: "utf8",
   });
-  if (status.error) return "missing"; // wsl.exe absent entirely
-  if (!wslHasDistro()) return "missing"; // stub present but no distro → needs install
+  if (status.error) return "missing";
+  if (!wslHasDistro()) return "missing";
   const probe = wslExec("echo solar-wsl-up", 10000);
   return probe.ok && probe.stdout.includes("solar-wsl-up") ? "up" : "stopped";
 }
