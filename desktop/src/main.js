@@ -314,6 +314,28 @@ function shQuote(s) {
   return "'" + String(s).replace(/'/g, "'\\''") + "'";
 }
 
+function shellTokenForWsl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "''";
+  // Keep shell variables (like $HOME) expandable for WSL paths; otherwise quote safely.
+  return raw.includes("$") ? `"${raw.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"` : shQuote(raw);
+}
+
+function isAbsolutePosixPath(p) {
+  const normalized = String(p || "").trim();
+  return normalized.startsWith("/");
+}
+
+function resolveWslHarnessPath() {
+  const raw = String(WSL_HARNESS || "").trim();
+  if (!raw) return "";
+  if (raw.indexOf("$HOME") === -1) return raw;
+  const home = wslExec(`printf %s "$HOME"`, 5000);
+  const homePath = String(home.stdout || "").trim();
+  if (!home.ok || !homePath) return "";
+  return raw.replaceAll("$HOME", homePath);
+}
+
 function packagedHarnessDir() {
   if (fileExists(path.join(PACKAGED_HARNESS_DIR, "lib", "symphony", "status-server.py")))
     return PACKAGED_HARNESS_DIR;
@@ -565,6 +587,87 @@ function runtimeInstalled() {
   return fs.existsSync(STATUS_SERVER);
 }
 
+function extractRequiredDependencyFailures(output) {
+  const text = String(output || "");
+  const misses = [];
+  const seen = new Set();
+  const failPatterns = [
+    /^\s*\[FAIL\]\s*([^:\n]+):\s*([^\n]*)$/gim,
+    /^\s*required fail:\s*([^:\n]+):?\s*([^\n]*)$/gim,
+  ];
+  for (const p of failPatterns) {
+    let match;
+    while ((match = p.exec(text)) !== null) {
+      const dep = String(match[1]).trim();
+      const reason = String(match[2]).toLowerCase();
+      const isMissing =
+        reason.includes("not found") ||
+        reason.includes("missing") ||
+        reason.includes("runtime cli missing") ||
+        reason.includes("not found on path");
+      if (!isMissing) continue;
+      if (!dep || seen.has(dep)) continue;
+      seen.add(dep);
+      misses.push(dep);
+    }
+  }
+  return misses;
+}
+
+async function ensureRuntimeRequiredDepsReady() {
+  // On a running runtime, verify required launch dependencies before opening dashboard
+  // so tasks don't sit forever in dispatch/state-transition limbo.
+  const wslHarnessHome = shellTokenForWsl(resolveWslHarnessPath());
+  if (!wslHarnessHome || wslHarnessHome === "''") {
+    return {
+      ok: false,
+      failures: ["runtime-harness-path"],
+      output: "runtime harness path is empty or unavailable in Windows session",
+    };
+  }
+  const nonWindowsFallback = IS_WIN
+    ? ""
+    : `if [ -x ${shQuote(path.join(HARNESS_DIR, "solar-harness.sh"))} ]; then ` +
+      `${shQuote(path.join(HARNESS_DIR, "solar-harness.sh"))} status --all 2>&1; ` +
+      `else echo missing solar-harness entrypoint: ${shQuote(path.join(HARNESS_DIR, "solar-harness.sh"))}; fi`;
+  const wslHarnessBase = resolveWslHarnessPath();
+  const wslSolarHarness = shellTokenForWsl(`${wslHarnessBase}/solar-harness`);
+  const wslSolarHarnessScript = shellTokenForWsl(`${wslHarnessBase}/solar-harness.sh`);
+  const wslSolarBinary = shellTokenForWsl(`${wslHarnessBase}/bin/solar`);
+  const cmd =
+    IS_WIN
+      ? `if [ -x ${wslSolarHarness} ]; then ${wslSolarHarness} status --all 2>&1; ` +
+        `elif [ -x ${wslSolarBinary} ]; then ${wslSolarBinary} harness status --all 2>&1; ` +
+        `elif [ -f ${wslSolarHarnessScript} ]; then bash ${wslSolarHarnessScript} status --all 2>&1; ` +
+        `else echo "missing solar-harness entrypoint in ${wslHarnessHome}"; fi`
+      : nonWindowsFallback;
+  const r = IS_WIN ? wslExec(cmd, 120000) : (() => {
+    try {
+      const pr = spawnSync("bash", ["-lc", cmd], {
+        timeout: 120000,
+        encoding: "utf8",
+      });
+      return {
+        ok: pr.status === 0,
+        stdout: String(pr.stdout || ""),
+        stderr: String(pr.stderr || ""),
+      };
+    } catch (error) {
+      return { ok: false, stdout: "", stderr: String(error) };
+    }
+  })();
+  const output = `${r.stdout || ""}\n${r.stderr || ""}`;
+  const failures = extractRequiredDependencyFailures(output);
+  if (failures.length === 0 && !r.ok) {
+    failures.push("runtime status command");
+  }
+  return {
+    ok: failures.length === 0,
+    output: output.trim().slice(0, 3000),
+    failures,
+  };
+}
+
 function stopRuntimeForBundledSync() {
   if (IS_WIN) {
     wslExec(
@@ -750,9 +853,19 @@ function syncBundledHarnessWindows(expectedVersion) {
   const bundled = packagedHarnessDir();
   if (!bundled) return false;
   const mapped = wslExec(`wslpath -a ${shQuote(bundled)}`, 7000).stdout.trim();
-  if (!mapped) return false;
+  if (!mapped) {
+    log("WSL bundled harness sync failed: unable to resolve harness source path");
+    return false;
+  }
+
+  const harnessDir = resolveWslHarnessPath();
+  if (!harnessDir || !isAbsolutePosixPath(harnessDir)) {
+    log("WSL bundled harness sync failed: runtime harness destination is not an absolute WSL path");
+    return false;
+  }
+  const harnessBase = shellTokenForWsl(harnessDir.replace(/\/+$/, ""));
   const cmd =
-    `set -e; src=${shQuote(mapped)}; dest=${WSL_HARNESS}; ` +
+    `set -e; src=${shQuote(mapped)}; dest=${harnessBase}; ` +
     `mkdir -p "$dest" "$HOME/.solar/bin"; ` +
     `cp -a "$src"/. "$dest"/; ` +
     `chmod +x "$dest"/*.sh "$dest"/lib/*.sh "$dest"/tests/*.sh "$dest"/tools/*.sh "$dest"/tools/*.py 2>/dev/null || true; ` +
@@ -991,6 +1104,20 @@ const SCREENS = {
       actions: [
         { id: "retry", label: "Retry", primary: true },
         { id: "install-help", label: "Setup help" },
+        DIAG,
+      ],
+    }),
+  "runtime-dependency-missing": (d) =>
+    screenHTML({
+      title: "Solar runtime dependency missing",
+      sub:
+        `Runtime started, but required dependency check failed before worker dispatch can begin. ` +
+        `Missing: ${esc((d?.failures || []).join(", ") || "required runtime dependency")}. ` +
+        `${d?.output ? `<pre style="text-align:left;margin:14px auto 0;max-width:520px;max-height:180px;overflow:auto;background:#111114;padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.45;opacity:.75;white-space:pre-wrap">${esc(d.output)}</pre>` : "Open the install guide to install the missing CLI/runtime dependency."}`,
+      tone: "#f0b429",
+      actions: [
+        { id: "install-help", label: "Open install guidance", primary: true },
+        { id: "retry", label: "Retry" },
         DIAG,
       ],
     }),
@@ -1356,6 +1483,23 @@ async function createWindow(reuse) {
   }
 
   if (state.mode === "ok" && state.baseUrl) {
+    const deps = await ensureRuntimeRequiredDepsReady();
+    if (!deps.ok) {
+      const depMode = { mode: "runtime-dependency-missing", detail: deps };
+      const depScreen = SCREENS[depMode.mode];
+      win.loadURL(
+        depScreen
+          ? depScreen(depMode.detail)
+          : SCREENS.error("Runtime dependency check failed."),
+      );
+      if (SELFTEST) {
+        finishSelftest(false, {
+          reason: "runtime_dependency_check_failed",
+          failures: deps.failures,
+        });
+      }
+      return;
+    }
     dashboardURL = state.baseUrl;
     return loadDashboard(state.baseUrl);
   }
