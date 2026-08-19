@@ -68,10 +68,32 @@ def _response_schema(node_id: str) -> dict[str, Any]:
                     "claim_id": {"type": "string", "minLength": 1},
                     "text": {"type": "string", "minLength": 1},
                     "evidence_ids": _string_array(),
+                    # The verbatim sentence behind each cited source. Without
+                    # it a claim records WHICH source supported it but never
+                    # WHICH TEXT, so support cannot be verified downstream --
+                    # only linkage. additionalProperties is False here, so a
+                    # field absent from this schema is not merely unrequested
+                    # but forbidden: the prompt asking for quotes achieves
+                    # nothing until the schema admits them.
+                    "evidence_quotes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "source_id": {"type": "string", "minLength": 1},
+                                "quote": {"type": "string", "minLength": 1},
+                            },
+                            "required": ["source_id", "quote"],
+                            "additionalProperties": False,
+                        },
+                    },
                     "uncertainty": {"enum": ["low", "medium", "high", "unknown"]},
                     "limitations": limitations,
                 },
-                "required": ["claim_id", "text", "evidence_ids", "uncertainty", "limitations"],
+                "required": [
+                    "claim_id", "text", "evidence_ids", "evidence_quotes",
+                    "uncertainty", "limitations",
+                ],
                 "additionalProperties": False,
             },
         }
