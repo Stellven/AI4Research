@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -43,9 +44,12 @@ HARNESS = Path(__file__).resolve().parents[1]
 if str(HARNESS / "plugins" / "autosci") not in sys.path:
     sys.path.insert(0, str(HARNESS / "plugins" / "autosci"))
 
+from operators.research_synthesis.base import subject_terms  # noqa: E402
+
 ARTIFACT_ROOT = Path("artifacts/research_evidence_to_poc")
 SOURCE_VALIDATION = ARTIFACT_ROOT / "validation" / "source_validation.json"
 SEED_SNAPSHOT = ARTIFACT_ROOT / "seed" / "seed_snapshot.json"
+EVIDENCE_SYNTHESIS = ARTIFACT_ROOT / "synthesis" / "evidence_synthesis.json"
 REPORT_DRAFT = ARTIFACT_ROOT / "report" / "report_draft.json"
 REPORT_MD = ARTIFACT_ROOT / "report" / "report.md"
 
@@ -68,7 +72,21 @@ def resolve_workspace(given: Path) -> Path:
     a real one, and with on_fail: fail it would block every run.
     """
     given = given.expanduser()
-    for candidate in (given, given / "workdir"):
+    candidates = [given, given / "workdir"]
+    # The gate executes with cwd set to the harness root, while <resolved_root>
+    # is relative to the SPRINTS root. Those are the same directory in a normal
+    # install and different under the UAT layout, where the harness lives in
+    # runtime-harness/ beside the sprints tree. A relative workspace then
+    # resolves under the harness, where no sprint exists.
+    if not given.is_absolute() or not (given / ARTIFACT_ROOT).is_dir():
+        sprints_root = os.environ.get("HARNESS_SPRINTS_DIR") or os.environ.get("SOLAR_HARNESS_SPRINTS_DIR")
+        rel = Path(*given.parts[1:]) if given.parts and given.parts[0] == "sprints" else given
+        if sprints_root:
+            base = Path(sprints_root).expanduser()
+            candidates += [base / rel, base / rel / "workdir"]
+        for anchor in (Path.cwd(), Path.cwd().parent):
+            candidates += [anchor / given, anchor / given / "workdir"]
+    for candidate in candidates:
         if (candidate / SOURCE_VALIDATION).is_file() or (candidate / ARTIFACT_ROOT).is_dir():
             return candidate
     return given
@@ -80,6 +98,15 @@ def _load(path: Path) -> dict[str, Any] | None:
     except (OSError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def _claims(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Claims live under `outputs` in evidence_synthesis, top-level elsewhere."""
+    for holder in (payload, payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}):
+        rows = holder.get("claims") if isinstance(holder, dict) else None
+        if isinstance(rows, list) and rows:
+            return [row for row in rows if isinstance(row, dict)]
+    return []
 
 
 def _request_text(workspace: Path) -> str:
@@ -121,11 +148,6 @@ def check_sources(workspace: Path) -> list[str]:
         # No request means relevance is uncheckable. Say so rather than passing.
         failures.append("request_text_missing:relevance_cannot_be_recomputed")
         return failures
-
-    try:
-        from operators.research_synthesis.base import subject_terms
-    except ImportError as exc:  # pragma: no cover - import wiring
-        return [f"relevance_module_unavailable:{exc}"]
 
     wanted = subject_terms(request)
     for index, source in enumerate(accepted):
@@ -175,12 +197,16 @@ def check_claims(workspace: Path) -> list[str]:
         if isinstance(item, dict)
     } - {""}
 
-    claims = draft.get("claims")
-    if not isinstance(claims, list):
-        outputs = draft.get("outputs") if isinstance(draft.get("outputs"), dict) else {}
-        claims = outputs.get("claims") if isinstance(outputs.get("claims"), list) else []
+    claims = _claims(draft) or _claims(_load(workspace / EVIDENCE_SYNTHESIS) or {})
     if not claims:
-        return ["report_has_no_claims:nothing_to_verify"]
+        return ["no_claims_found:nothing_to_verify"]
+
+    # Sources by id, so a claim can be checked against what it actually cites.
+    by_id = {
+        str(item.get("source_id") or "").strip(): item
+        for item in (validation.get("accepted") or [])
+        if isinstance(item, dict)
+    }
 
     for index, claim in enumerate(claims):
         if not isinstance(claim, dict):
@@ -195,11 +221,36 @@ def check_claims(workspace: Path) -> list[str]:
         if not cited:
             failures.append(f"claim_uncited:{claim_id}")
             continue
+        text = str(claim.get("text") or claim.get("statement") or "").strip()
+        if not text:
+            failures.append(f"claim_has_no_text:{claim_id}")
         for source_id in cited:
             if source_id in rejected_ids:
                 failures.append(f"claim_cites_rejected_source:{claim_id}->{source_id}")
             elif source_id not in accepted_ids:
                 failures.append(f"claim_cites_unknown_source:{claim_id}->{source_id}")
+        # Linkage is not support. A claim can cite a real, accepted, on-topic
+        # paper and misrepresent it entirely. Byte-level span verification is
+        # the right check, but these claims carry source ids rather than text
+        # spans, so the strongest available test is that the claim and at least
+        # one cited source talk about the same subject. That catches gross
+        # misattribution; it does not catch subtle misreading, and the gap is
+        # why claims need spans.
+        if text and cited:
+            subjects = subject_terms(text)
+            grounded = any(
+                subjects & subject_terms(
+                    " ".join(
+                        str((by_id.get(sid) or {}).get(key) or "")
+                        for key in ("title", "content_summary")
+                    )
+                )
+                for sid in cited
+            )
+            if subjects and not grounded:
+                failures.append(
+                    f"claim_not_grounded_in_cited_sources:{claim_id}:cites={cited}"
+                )
 
     # A report body that references claim ids the draft never defined is the
     # same failure one layer up.
