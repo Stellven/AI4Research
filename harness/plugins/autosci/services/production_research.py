@@ -1375,6 +1375,17 @@ class ResearchModelService:
                             "claim_id": "claim-001",
                             "text": "source-grounded finding",
                             "evidence_ids": ["one or more exact source_id values"],
+                            # The exact sentence the claim rests on, per cited
+                            # source. Without it a claim records WHICH source
+                            # supported it but never WHICH TEXT, so nothing
+                            # downstream can verify the support -- only the
+                            # linkage.
+                            "evidence_quotes": [
+                                {
+                                    "source_id": "exact source_id value",
+                                    "quote": "verbatim sentence copied from that source's content_summary",
+                                }
+                            ],
                             "uncertainty": "low|medium|high",
                             "limitations": [],
                         }
@@ -1388,6 +1399,11 @@ class ResearchModelService:
                     "When two or more validated sources are available, cite at least two distinct exact source_id values across the claims.",
                     "Every evidence_ids entry must be copied exactly from allowed_source_ids; do not abbreviate, hash, prefix, suffix, or repair source ids.",
                     "Produce at least four substantive claims when evidence supports them.",
+                    "Every claim must carry an evidence_quotes entry for each cited source_id.",
+                    "Each quote must be copied VERBATIM from that source's content_summary, "
+                    "long enough to stand alone (at least 40 characters), and must contain "
+                    "wording the claim itself relies on. Do not paraphrase, reflow, or repair "
+                    "a quote: it is checked as an exact substring of the source text.",
                 ],
             }
         elif node_id == "report_draft":

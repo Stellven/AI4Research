@@ -41,7 +41,50 @@ def _load_seed(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any]
     )
 
 
-def _normalize_claims(response: dict[str, Any], accepted_ids: set[str]) -> list[dict[str, Any]]:
+def _normalize_quotes(
+    item: dict[str, Any],
+    *,
+    claim_id: str,
+    evidence_ids: list[str],
+    source_text_by_id: dict[str, str],
+) -> list[dict[str, str]]:
+    """Keep only quotes that really appear in the source they claim to come from.
+
+    A claim recording which SOURCE backed it, but never which TEXT, cannot be
+    verified downstream -- only its linkage can. The model is asked for the
+    supporting sentence per cited source; this checks each one is an exact
+    substring of that source before it is stored, so a paraphrase or an
+    invented sentence is dropped here rather than travelling into a report
+    that looks quote-verified.
+
+    Dropping is deliberate: a quote that does not appear in its source is not
+    evidence, and repairing it would mean choosing the support ourselves.
+    """
+    quotes: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for raw in item.get("evidence_quotes") or []:
+        if not isinstance(raw, dict):
+            continue
+        source_id = str(raw.get("source_id") or "").strip()
+        quote = " ".join(str(raw.get("quote") or "").split())
+        if not source_id or not quote or source_id not in evidence_ids:
+            continue
+        haystack = " ".join(str(source_text_by_id.get(source_id) or "").split())
+        if not haystack or quote not in haystack:
+            continue
+        if source_id in seen:
+            continue
+        seen.add(source_id)
+        quotes.append({"source_id": source_id, "quote": quote})
+    return quotes
+
+
+def _normalize_claims(
+    response: dict[str, Any],
+    accepted_ids: set[str],
+    source_text_by_id: dict[str, str] | None = None,
+) -> list[dict[str, Any]]:
+    source_text_by_id = source_text_by_id or {}
     claims: list[dict[str, Any]] = []
     for index, item in enumerate(response.get("claims", []) if isinstance(response.get("claims"), list) else []):
         if not isinstance(item, dict):
@@ -58,6 +101,12 @@ def _normalize_claims(response: dict[str, Any], accepted_ids: set[str]) -> list[
                 "claim_id": str(item.get("claim_id") or f"claim-{index + 1:03d}"),
                 "text": str(item.get("text") or ""),
                 "evidence_ids": evidence_ids,
+                "evidence_quotes": _normalize_quotes(
+                    item,
+                    claim_id=str(item.get("claim_id") or f"claim-{index + 1:03d}"),
+                    evidence_ids=evidence_ids,
+                    source_text_by_id=source_text_by_id,
+                ),
                 "uncertainty": str(item.get("uncertainty") or "unknown"),
                 "limitations": [str(value) for value in item.get("limitations", []) if str(value).strip()],
             }
@@ -89,7 +138,14 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     if not isinstance(response, dict):
         raise ResearchOperatorError("model_generate service must return a JSON object", error_type="provider_contract")
     accepted_ids = {str(item.get("source_id")) for item in accepted if item.get("source_id")}
-    claims = _normalize_claims(response, accepted_ids)
+    # The text each quote is checked against is the same content the model was
+    # shown, so a verbatim quote verifies and a paraphrase does not.
+    source_text_by_id = {
+        str(item.get("source_id")): str(item.get("content_summary") or item.get("content") or "")
+        for item in accepted
+        if item.get("source_id")
+    }
+    claims = _normalize_claims(response, accepted_ids, source_text_by_id)
     if not claims:
         raise ResearchOperatorError("model_generate returned no grounded claims", error_type="provider_contract")
     limitations = list(dict.fromkeys([
