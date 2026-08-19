@@ -473,3 +473,47 @@ touching files the in-flight run was still using, so they were not made:
 
 Prompt the model to label claims by theme, not to write section prose. The
 compiler owns rendering; the model's job here is grouping.
+
+## Open finding 2026-08-19 19:50 -- report_revision preservation, first dispatch
+
+`report_revision` failed its first dispatch with:
+
+    {"ok": false, "error": "Revision response did not declare the exact original
+     conclusion, method, and limitation preservation set"}
+
+and PASSED on the second dispatch, so it is not blocking. Recorded because the
+evidence is suggestive and incomplete, and the next person should finish it
+rather than re-derive it.
+
+What the artifacts show, from the three `report_revision` writer exchanges:
+
+| attempt | required lims | returned lims | status | prompt vs response |
+|---|---|---|---|---|
+| 1 | 9 | 9 | completed | identical on all three preservation fields |
+| 1 | 9 | 0 | failed | provider-level call failure, empty response |
+| 2 | 12 | 12 | completed | identical on all three preservation fields |
+
+So every completed call echoed `required_preservation` from its prompt exactly
+-- same conclusion ids, same limitations, same method sha256, same order. Yet a
+dispatch was rejected for not declaring that set.
+
+The suspicion, NOT established: `verify_revision_response_preservation`
+recomputes its expectation with `revision_preservation_requirements(original_report,
+required_limitations=...)` rather than comparing against the
+`required_preservation` block the prompt actually stated. If those two disagree,
+the model is rejected for doing exactly what it was told, which is unfixable
+from the model side.
+
+Note the required limitation count GREW between attempts, 9 then 12, because the
+requirement is recomputed from the evolving report. That is the mechanism most
+likely to make prompt and verifier disagree.
+
+What is missing: the exchanges all live in one shared stage directory, so they
+cannot be attributed to dispatch 1 versus dispatch 2 by path. Do that by
+timestamp against the two `operator-results/*/…report_revision…/result.json`
+windows before concluding. Do not assume the completed att=1 call is the one the
+verifier rejected -- that is the assumption this entry exists to avoid.
+
+Also seen: one Claude CLI call failed outright and returned nothing
+(`failed_calls=1`), and the operator's retry recovered. Transient provider
+failure, handled correctly, worth knowing when reading call counts.
