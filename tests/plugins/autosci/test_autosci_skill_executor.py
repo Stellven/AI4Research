@@ -471,3 +471,83 @@ def test_a_timed_out_skill_is_never_reported_as_a_successful_stage(
     assert payload["bridge_ok"] is True, "the bridge really did return 0; that is the point"
     assert payload["skill_ok"] is False
     assert payload["ok"] is False, "a stage that produced nothing must not report success"
+
+
+def test_the_trace_records_what_the_stage_actually_changed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Three of four defects were found by hand-reading a file. This is the file.
+
+    A stage that succeeds and a stage that changes something are different
+    facts, and both defects this session lived in the gap. The trace records
+    the wiki delta, the resolved argument, and the envelope as the bridge
+    received it -- the three places the faults actually hid.
+    """
+    home = _home(tmp_path, monkeypatch)
+    _page(home / "wiki" / "ideas", "an-idea", slug="an-idea", status="proposed")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "codex").write_text(
+        "#!/usr/bin/env python3\n"
+        "import pathlib\n"
+        f"d = pathlib.Path({str(home / 'wiki' / 'experiments')!r})\n"
+        "d.mkdir(parents=True, exist_ok=True)\n"
+        "(d / 'new-exp.md').write_text('---\\nslug: \"new-exp\"\\nstatus: planned\\n---\\n')\n",
+        encoding="utf-8",
+    )
+    (fake / "codex").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr(
+        ex, "invoke_bridge",
+        lambda *, action, envelope_path: subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="{}", stderr=""),
+    )
+
+    envelope_path = tmp_path / "envelope.json"
+    envelope_path.write_text(json.dumps({"task_id": "t", "inputs": {"request": "x"}}), encoding="utf-8")
+    args = ex._parser().parse_args(
+        ["--stage", "experiment_design", "--envelope", str(envelope_path), "--work-dir", str(tmp_path)]
+    )
+    payload = ex.execute(args)
+
+    trace = json.loads(Path(payload["trace"]).read_text(encoding="utf-8"))
+    assert trace["schema"] == "solar.autosci_stage_trace.v1"
+    assert trace["wiki"]["delta"]["added"] == ["experiments/new-exp.md"]
+    assert trace["verdicts"]["changed_wiki"] is True
+    assert trace["argument_resolution"]["source"] == "wiki/ideas"
+    # The fixture-mode defect was visible only in what the bridge was handed.
+    assert trace["bridge"]["envelope_as_sent"]["mode"] != "fixture"
+    assert trace["bridge"]["envelope_as_sent"]["inputs"]["idea_id"] == "an-idea"
+    # Wall clock is unusable on this host; duration must come from a monotonic source.
+    assert isinstance(trace["skill"]["duration_seconds"], float)
+
+
+def test_a_stage_that_changed_nothing_is_recorded_as_such(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The timed-out experiment_design wrote no page. That must be legible."""
+    home = _home(tmp_path, monkeypatch)
+    _page(home / "wiki" / "ideas", "an-idea", slug="an-idea", status="proposed")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "codex").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (fake / "codex").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr(
+        ex, "invoke_bridge",
+        lambda *, action, envelope_path: subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="{}", stderr=""),
+    )
+
+    envelope_path = tmp_path / "envelope.json"
+    envelope_path.write_text(json.dumps({"task_id": "t", "inputs": {"request": "x"}}), encoding="utf-8")
+    args = ex._parser().parse_args(
+        ["--stage", "experiment_design", "--envelope", str(envelope_path), "--work-dir", str(tmp_path)]
+    )
+    payload = ex.execute(args)
+
+    # The skill exited clean and the bridge was happy, so ok is True -- and the
+    # stage still produced nothing. Both facts are recorded, separately.
+    assert payload["ok"] is True
+    assert payload["changed_wiki"] is False
+    assert payload["wiki_delta"] == {"added": [], "removed": [], "modified": []}

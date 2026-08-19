@@ -26,11 +26,13 @@ execution.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -123,6 +125,51 @@ def _skill_env() -> dict[str, str]:
     if codex_home:
         env["CODEX_HOME"] = codex_home
     return env
+
+
+def wiki_fingerprint(home: Path) -> dict[str, Any]:
+    """Every wiki file the skills write, with a content hash.
+
+    Taken before and after a stage, the difference is the only honest answer to
+    "what did this stage actually change". Two of this workflow's defects were
+    stages that reported success while changing nothing, and neither was
+    visible from an exit code.
+    """
+    root = home / "wiki"
+    files: dict[str, str] = {}
+    if root.is_dir():
+        for path in sorted(root.rglob("*")):
+            if not path.is_file() or path.name.startswith("."):
+                continue
+            try:
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+            except OSError:
+                digest = "unreadable"
+            files[str(path.relative_to(root))] = digest
+    return files
+
+
+def wiki_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, list[str]]:
+    return {
+        "added": sorted(set(after) - set(before)),
+        "removed": sorted(set(before) - set(after)),
+        "modified": sorted(k for k in set(before) & set(after) if before[k] != after[k]),
+    }
+
+
+def _redacted_envelope(envelope: dict[str, Any]) -> dict[str, Any]:
+    """The envelope as the bridge received it, with obvious secrets removed.
+
+    The envelope is retained because the fixture-mode defect was invisible
+    anywhere else: the bug was entirely in what the bridge was handed.
+    """
+    safe = json.loads(json.dumps(envelope, default=str))
+    inputs = safe.get("inputs")
+    if isinstance(inputs, dict):
+        for key in list(inputs):
+            if any(marker in key.lower() for marker in ("key", "token", "secret", "password")):
+                inputs[key] = "<redacted>"
+    return safe
 
 
 def _frontmatter(path: Path) -> dict[str, str]:
@@ -240,6 +287,7 @@ def run_skill(
     argv.append(prompt)
 
     started_at = _now()
+    started_monotonic = time.monotonic()
     try:
         proc = subprocess.run(
             argv,
@@ -278,6 +326,9 @@ def run_skill(
         "timed_out": timed_out,
         "started_at": started_at,
         "finished_at": _now(),
+        # Wall clock is unreliable on this host: a sleep across a WSL2 clock
+        # jump recorded a 40-minute run as 9h48m. Duration is monotonic.
+        "duration_seconds": round(time.monotonic() - started_monotonic, 3),
         "model": model or "codex-default",
         "stdout_path": str(stdout_path),
         "stderr_path": str(stderr_path),
@@ -345,12 +396,15 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
     record_path = work_dir / "autosci-runtime" / f"{stage}-{run_id}.runtime.json"
 
     request = str(args.request or (envelope.get("inputs") or {}).get("request") or "").strip()
+    wiki_before = wiki_fingerprint(_autosci_home())
     record = run_skill(
         stage=stage,
         request=request,
         record_path=record_path,
         timeout_seconds=args.timeout_seconds,
     )
+    wiki_after = wiki_fingerprint(_autosci_home())
+    delta = wiki_delta(wiki_before, wiki_after)
 
     # Point the bridge at the record we just produced. The bridge decides
     # whether the run counts; the executor never asserts success on its behalf.
@@ -386,15 +440,66 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
     # that had produced nothing. Anyone reading the top line would have been
     # told the stage succeeded. The skill's own exit is part of the verdict.
     skill_ok = int(record["exit_code"]) == 0 and not record["timed_out"]
+    # A stage that changed no wiki file produced nothing, whatever it returned.
+    # This is not part of the verdict -- some stages legitimately only read --
+    # but it is recorded so "succeeded" and "did something" stay distinguishable.
+    changed_anything = any(delta.values())
+
+    trace = {
+        "schema": "solar.autosci_stage_trace.v1",
+        "stage": stage,
+        "run_id": run_id,
+        "bridge_action": action,
+        "verdicts": {
+            "ok": bridged.returncode == 0 and skill_ok,
+            "skill_ok": skill_ok,
+            "bridge_ok": bridged.returncode == 0,
+            "changed_wiki": changed_anything,
+        },
+        "skill": {
+            "invocation": record.get("skill_invocation"),
+            "exit_code": record["exit_code"],
+            "timed_out": record["timed_out"],
+            "duration_seconds": record.get("duration_seconds"),
+            "model": record.get("model"),
+            "stdout_path": record.get("stdout_path"),
+            "stderr_path": record.get("stderr_path"),
+        },
+        "argument_resolution": {
+            "argument": record.get("stage_argument"),
+            "source": record.get("stage_argument_source"),
+            "candidates_considered": record.get("stage_argument_candidates"),
+        },
+        "wiki": {
+            "root": str(_autosci_home() / "wiki"),
+            "files_before": len(wiki_before),
+            "files_after": len(wiki_after),
+            "delta": delta,
+        },
+        "bridge": {
+            "envelope_path": str(augmented),
+            "envelope_as_sent": _redacted_envelope(envelope),
+            "returncode": bridged.returncode,
+            "stderr_tail": (bridged.stderr or "")[-2000:],
+        },
+        "recorded_at": _now(),
+    }
+    trace_path = work_dir / "autosci-runtime" / f"{stage}-{run_id}.trace.json"
+    trace_path.write_text(json.dumps(trace, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
     return {
         "ok": bridged.returncode == 0 and skill_ok,
         "skill_ok": skill_ok,
         "bridge_ok": bridged.returncode == 0,
+        "changed_wiki": changed_anything,
         "stage": stage,
         "bridge_action": action,
         "skill_exit_code": record["exit_code"],
         "timed_out": record["timed_out"],
+        "duration_seconds": record.get("duration_seconds"),
+        "wiki_delta": delta,
         "runtime_record": str(record_path),
+        "trace": str(trace_path),
         "envelope": str(augmented),
         "bridge_returncode": bridged.returncode,
         "bridge": bridge_payload,
