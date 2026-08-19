@@ -732,3 +732,36 @@ deterministic -- no model calls. `experiment_run` shells out to
 `harness/tools/fixed_research_benchmark.py` exists. `experiment_approval`
 supports `policy_preauthorized`, which the run script's `--policy-actor` and
 `--policy-statement` supply. So Part B has no known environmental blocker.
+
+## 2026-08-19 23:55 -- Part B verified before the run reaches it
+
+Rather than wait to be told, Part B's preconditions were checked directly
+against the previous run's completed `poc_handoff` artifact.
+
+* `unshare -Urn` works on this WSL2 host, and there is no
+  `unprivileged_userns_clone` knob to trip over.
+* The benchmark itself was executed in the real sandbox against real Part A
+  artifacts: `unshare -Urn python3 harness/tools/fixed_research_benchmark.py`
+  returned exit 0 with `{"checks_passed": 8, "checks_total": 8,
+  "integrity_rate": 1.0}`. Note the runner refuses an `--output` whose parent
+  does not resolve INSIDE `--work-dir`; a first attempt with a temp dir exited 2
+  with the reason on stdout, not stderr.
+* `experiment_approval` pins `benchmark_policy.runner_sha256` to the exact
+  bytes of `fixed_research_benchmark.py`. It matches the current script, so the
+  approval will not refuse. Anyone editing that script must expect this check to
+  fire, and that is correct behaviour, not a bug.
+* The pre-authorization artifact the UAT tool writes carries
+  `policy_id evidence_lineage_integrity_v1`, `decision preauthorized`,
+  `generation 1`, `actor Suraj`, `network none`, `timeout_max_seconds 60`, all
+  of which are what `_experiment_approval` requires in
+  `policy_preauthorized` mode.
+
+So Part B has no known blocker. Every one of its six stages is deterministic;
+none makes a model call.
+
+### One correction to an earlier entry
+
+The 21:30 entry said "Part B ... `experiment_run` shells out to `unshare -Urn`,
+which works on this WSL2 host". That was a bare `unshare -Urn true`. The
+stronger claim above -- the real benchmark, real artifacts, real sandbox,
+8/8 integrity checks -- is what actually justifies the conclusion.
