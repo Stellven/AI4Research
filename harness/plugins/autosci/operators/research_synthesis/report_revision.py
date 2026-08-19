@@ -112,8 +112,20 @@ def verify_revision_response_preservation(
     response: dict[str, Any],
     *,
     required_limitations: list[str] | None = None,
+    requirements: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    required = revision_preservation_requirements(
+    """Check the declaration against the requirement the model was GIVEN.
+
+    `requirements` is the object that went into the prompt. Passing it matters:
+    recomputing here judges the reviser against a set that has moved since it
+    was asked. In the 2026-08-19 run the reviewer appended three limitations of
+    its own between the prompt and this check, and the revision was rejected for
+    declaring exactly what it had been handed.
+
+    Recomputation is kept as the fallback for callers that have no prompt-time
+    object, but every caller that prompts a model should pass one.
+    """
+    required = requirements or revision_preservation_requirements(
         original_report,
         required_limitations=required_limitations,
     )
@@ -375,6 +387,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
                     original_report,
                     response,
                     required_limitations=limitations,
+                    requirements=preservation_requirements,
                 )
             except ResearchOperatorError as exc:
                 if attempt >= MAX_REVISION_ATTEMPTS:
@@ -385,7 +398,13 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             revised_report = _normalize_report(response, claim_ids)
             attempt_writer_usage = provider_usage_from(response, usage_kind="llm")
             writer_usage.extend(attempt_writer_usage)
-            limitations.extend(str(item) for item in response.get("limitations", []) if str(item).strip())
+            # dict.fromkeys, not extend: response["limitations"] already begins
+            # with everything in `limitations`, so a plain extend doubled the
+            # list every attempt (9 unique entries stored as 18).
+            limitations[:] = list(dict.fromkeys([
+                *limitations,
+                *(str(item).strip() for item in response.get("limitations", []) if str(item).strip()),
+            ]))
             revised_report_payload = {
                 **original_report,
                 "schema": "research_synthesis.report_draft.v1",
@@ -434,13 +453,24 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             }
             revision_review["revision_attempt"] = attempt
             revision_review["max_revision_attempts"] = MAX_REVISION_ATTEMPTS
-            limitations.extend(revision_review.get("limitations") or [])
-            limitations.extend(_same_model_limitation(attempt_writer_usage, attempt_reviewer_usage))
+            limitations[:] = list(dict.fromkeys([
+                *limitations,
+                *(str(item).strip() for item in revision_review.get("limitations") or [] if str(item).strip()),
+                *(str(item).strip() for item in _same_model_limitation(attempt_writer_usage, attempt_reviewer_usage) if str(item).strip()),
+            ]))
             needs_more_revision, current_blocking_findings, _current_verdict = _repair_required(revision_review)
             normalized_body = _normalized_text(revised_report.get("body"))
+            # Only what this attempt was ASKED to preserve. The accumulated list
+            # now also holds limitations the reviewer wrote about its own review
+            # after this report was generated; demanding those appear verbatim in
+            # the report is unsatisfiable by construction, and each review adds
+            # more, so the loop could never converge. They still travel into the
+            # next attempt's preservation requirement, where the reviser can act
+            # on them.
+            required_to_render = preservation_requirements.get("preserved_limitations") or []
             missing_rendered_limitations = [
                 item
-                for item in dict.fromkeys(str(value).strip() for value in limitations if str(value).strip())
+                for item in dict.fromkeys(str(value).strip() for value in required_to_render if str(value).strip())
                 if _normalized_text(item) not in normalized_body
             ]
             if missing_rendered_limitations:
