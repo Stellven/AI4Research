@@ -272,7 +272,13 @@ def _codex_services(
     service_cls = CodexResearchModelService
     default_model = "gpt-5.5"
     if provider == "claude":
-        from services.claude_research import DEFAULT_CLAUDE_MODEL, ClaudeResearchModelService
+        # Same absolute package path the Codex service is imported by above;
+        # the adapter runs as a bare module, so a relative `services.` import
+        # does not resolve and fails only at dispatch time.
+        from harness.plugins.autosci.services.claude_research import (
+            DEFAULT_CLAUDE_MODEL,
+            ClaudeResearchModelService,
+        )
 
         service_cls = ClaudeResearchModelService
         default_model = DEFAULT_CLAUDE_MODEL
