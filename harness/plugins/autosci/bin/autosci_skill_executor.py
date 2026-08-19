@@ -49,6 +49,42 @@ STAGES: dict[str, tuple[str, str]] = {
     "report_delivery": ("$paper-draft", "write_report"),
 }
 
+# Only the first stage takes the free-text request. Every later skill takes an
+# identifier the previous stage wrote into the AutoSci wiki:
+#
+#   $ideate      [topic]                    -> writes wiki/ideas/{slug}.md
+#   $exp-design  <idea-slug>                -> writes wiki/experiments/{slug}.md
+#   $exp-run     <experiment-slug>          -> moves that page planned -> running -> completed
+#   $exp-status  --pipeline <slug>
+#   $exp-eval    <experiment-slug>
+#   $paper-draft <paper-plan-path>          -> reads wiki/outputs/paper-plan-*.md
+#
+# Passing the original request to any of them, which is what this executor used
+# to do, cannot resolve to an idea or an experiment, so Part B could never get
+# past experiment_design. The wiki is AutoSci's own state store and is how its
+# skills chain to each other, so that is what the resolvers read.
+ARGUMENT_SOURCES: dict[str, dict[str, Any]] = {
+    "idea_generation": {"kind": "request"},
+    "idea_evaluation": {"kind": "request"},
+    "experiment_design": {"kind": "wiki_slug", "collection": "ideas", "statuses": ("proposed",)},
+    "experiment_run": {"kind": "wiki_slug", "collection": "experiments", "statuses": ("planned", "running")},
+    "experiment_monitor": {"kind": "wiki_slug", "collection": "experiments", "statuses": ("running", "planned")},
+    "claim_verification": {"kind": "wiki_slug", "collection": "experiments", "statuses": ("completed", "running")},
+    "report_delivery": {"kind": "paper_plan"},
+}
+
+# The user's contract for this workflow is that nothing pauses for approval, so
+# every skill that offers a non-interactive mode is told to use it. A skill that
+# stops to ask a question inside `codex exec` would hang until the timeout and
+# then be recorded as a real failure, which is correct but useless.
+STAGE_FLAGS: dict[str, tuple[str, ...]] = {
+    "idea_generation": ("--auto",),
+    "idea_evaluation": ("--auto",),
+    "experiment_run": ("--full",),
+    "experiment_monitor": ("--auto-advance",),
+    "claim_verification": ("--auto",),
+}
+
 # Never forward an inherited provider credential into the skill subprocess; the
 # Codex CLI authenticates from its own CODEX_HOME.
 SECRET_ENV_KEYS = {
@@ -89,6 +125,97 @@ def _skill_env() -> dict[str, str]:
     return env
 
 
+def _frontmatter(path: Path) -> dict[str, str]:
+    """The leading `---` block of a wiki page, as flat string fields.
+
+    Deliberately not a YAML parse: these pages are written by an agent and a
+    malformed body must not stop us reading the two fields we need.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    if not text.startswith("---"):
+        return {}
+    _, _, rest = text.partition("\n")
+    block, sep, _ = rest.partition("\n---")
+    if not sep:
+        return {}
+    fields: dict[str, str] = {}
+    for line in block.splitlines():
+        key, colon, value = line.partition(":")
+        if not colon or line.startswith((" ", "\t", "-")):
+            continue
+        fields[key.strip()] = value.strip().strip('"').strip("'")
+    return fields
+
+
+def _wiki_pages(home: Path, collection: str) -> list[Path]:
+    root = home / "wiki" / collection
+    if not root.is_dir():
+        return []
+    # Most recently written first, name as the tie-break so the choice is
+    # reproducible when two pages share an mtime.
+    return sorted(root.glob("*.md"), key=lambda p: (p.stat().st_mtime, p.name), reverse=True)
+
+
+def resolve_stage_argument(*, stage: str, request: str, home: Path) -> dict[str, Any]:
+    """Work out what to hand this stage's skill, and record how we decided.
+
+    An explicit override always wins, so a caller that already knows the slug
+    can pin it instead of relying on wiki inspection.
+    """
+    override = str(os.environ.get("SOLAR_AUTOSCI_STAGE_ARGUMENT") or "").strip()
+    if override:
+        return {"argument": override, "source": "explicit_override", "considered": []}
+
+    source = ARGUMENT_SOURCES.get(stage) or {"kind": "request"}
+    kind = str(source.get("kind"))
+
+    if kind == "request":
+        if not request:
+            raise ExecutorError(f"stage {stage} needs a research topic and none was supplied")
+        return {"argument": request, "source": "request", "considered": []}
+
+    if kind == "paper_plan":
+        plans = sorted(
+            (home / "wiki" / "outputs").glob("paper-plan-*.md"),
+            key=lambda p: (p.stat().st_mtime, p.name),
+            reverse=True,
+        ) if (home / "wiki" / "outputs").is_dir() else []
+        if not plans:
+            raise ExecutorError(
+                "no wiki/outputs/paper-plan-*.md exists; $paper-draft has nothing to draft from "
+                "and $paper-plan has not run"
+            )
+        chosen = plans[0]
+        return {
+            "argument": str(chosen.relative_to(home)),
+            "source": "wiki_paper_plan",
+            "considered": [str(p.relative_to(home)) for p in plans[:10]],
+        }
+
+    collection = str(source.get("collection") or "")
+    wanted = tuple(source.get("statuses") or ())
+    considered: list[dict[str, str]] = []
+    for page in _wiki_pages(home, collection):
+        fields = _frontmatter(page)
+        slug = fields.get("slug") or page.stem
+        status = fields.get("status", "")
+        considered.append({"slug": slug, "status": status, "page": page.name})
+        if status in wanted:
+            return {
+                "argument": slug,
+                "source": f"wiki/{collection}",
+                "matched_status": status,
+                "considered": considered[:10],
+            }
+    raise ExecutorError(
+        f"stage {stage} found no wiki/{collection} page with status in {list(wanted)}; "
+        f"the previous stage produced nothing usable (saw {considered[:10] or 'no pages'})"
+    )
+
+
 def run_skill(
     *,
     stage: str,
@@ -104,7 +231,9 @@ def run_skill(
         raise ExecutorError("Codex CLI is unavailable on PATH")
     model = str(os.environ.get("SOLAR_AUTOSCI_SKILL_MODEL") or "").strip()
 
-    prompt = f"{skill} {request}".strip()
+    resolved = resolve_stage_argument(stage=stage, request=request, home=home)
+    parts = [skill, str(resolved["argument"]), *STAGE_FLAGS.get(stage, ())]
+    prompt = " ".join(part for part in parts if part).strip()
     argv = [binary, "exec", "--skip-git-repo-check"]
     if model:
         argv += ["--model", model]
@@ -141,6 +270,10 @@ def run_skill(
         "skill": skill,
         "autosci_home": str(home),
         "command_run": " ".join(argv[:-1] + ["<prompt>"]),
+        "skill_invocation": prompt,
+        "stage_argument": resolved["argument"],
+        "stage_argument_source": resolved["source"],
+        "stage_argument_candidates": resolved.get("considered") or [],
         "exit_code": exit_code,
         "timed_out": timed_out,
         "started_at": started_at,
