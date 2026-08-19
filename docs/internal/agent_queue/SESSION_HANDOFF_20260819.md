@@ -320,3 +320,33 @@ Verification: after the change, a Haiku run's merged `model_provider_usage` must
 read `claude_subscription`, and pointing `SOLAR_RESEARCH_MODEL_PROVIDER` back at
 `codex` must still read `codex_subscription`. Checking only that the run goes
 green would pass on the broken version too.
+
+## Correction 2026-08-19 18:50 -- the unreported-files note above is wrong
+
+The 17:35 entry said the contract already declares `synthesis/` and `report/` as
+directory outputs, so writing a pack or a compiled report inside them "may not
+arise at all". That reasoning does not hold, and acting on it would waste a run.
+
+`fixed_research_node_adapter.py:696-702` builds the allowlist from the
+OPERATOR's own declared artifacts, not from the contract:
+
+    output_paths = {str(item.get("path") ...) for item in result.get("output_artifacts") ...}
+    allowed = output_paths | provider_archives | {result_rel}
+    unexpected = sorted(path for path in changed if path not in allowed)
+
+`_inventory` walks `work_dir` with `rglob("*")` and records one entry per FILE,
+and membership is an exact string match. A declared directory therefore covers
+none of its children. Every file `write_source_pack` emits -- `sources.jsonl`,
+`evidence.jsonl`, `manifest.json`, and each file under `extracts/` -- must
+appear individually in the operator's `output_artifacts`, or the node fails with
+"operator changed unreported files".
+
+That is a real constraint on task 2, not a formality, and it is the reason the
+original plan called for a contract change. The contract's directory
+declarations are still needed; they are just not what this particular check
+reads. Enumerate the pack files from the manifest `write_validated_pack`
+returns and declare each one with its sha256, the same way `write_artifact`
+already does for single files.
+
+The same applies to `report/grounded/`: `compile_grounded_report` publishes
+around fifteen files, and every one of them must be declared by `report_draft`.
