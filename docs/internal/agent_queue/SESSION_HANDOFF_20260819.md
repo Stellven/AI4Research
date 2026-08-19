@@ -398,3 +398,52 @@ directly to declare outputs. Each `extract_path` is recorded per row inside
 `sources.jsonl`. Simplest correct approach for the operator: `rglob` the pack
 directory after writing and declare what is actually there, which is the same
 thing `_inventory` walks and therefore cannot drift from it.
+
+## Task 2 de-risked 2026-08-19 19:20 -- the compile chain works on real artifacts
+
+Dry-run against the live run's own artifacts (script kept at
+`<scratch>/try_compile.py`), reading `source_validation.json` and
+`evidence_synthesis.json` from the sprint workdir and writing only to scratch.
+No operator code was changed and the in-flight run was not touched.
+
+    pack:  source_count 5, evidence_count 5, skipped 0, usable True
+    plan:  evidence_status sufficient, 1 section, 5 claims, 0 gaps
+    compile: ok, retrieval closeout pass, artifact preflight pass,
+             final closeout pass, 19 files published
+
+So `validated_pack.py` -> `synthesis_plan.py` -> `compile_grounded_report`
+already works end to end on this workflow's real output. What remains for task 2
+is operator wiring and output declaration, not new adapter logic.
+
+I predicted source diversity or authority would refuse this under
+`strict_profile=True`. That was wrong: it passed with
+`source_authority_average 0.35` and `source_high_authority_count 0` and no
+errors. Do not plan around that failure.
+
+### Exact file counts to declare
+
+* pack, 7 files: `sources.jsonl`, `evidence.jsonl`, and 5 `extracts/*.md`
+  (one per source, so the count follows the accepted source count)
+* grounded report, 19 files: `final.md`, `report_ast.json`,
+  `research_eval.json`, `claims.jsonl`, `claim_evidence.jsonl`,
+  `evidence.jsonl`, `sources.jsonl`, `sections.jsonl`, `section_checks.jsonl`,
+  `evidence_gaps.json`, `final.bibliography.json`, `synthesis_plan.json`,
+  `final_closeout.json`, `run.finalized`, and one `<source_id>-<hash>.md` per
+  source
+
+Both counts vary with source count, which is why the operator should rglob the
+directory after writing rather than hardcode a list.
+
+### The output is genuinely grounded, and it is one section long
+
+`final.md` is 2.3KB: a Findings list where each claim carries its own
+uncertainty, cites evidence by id, is marked **LIMITED SUPPORT** when it rests
+on a single source, followed by an explicit evidence-boundary statement and a
+DOI-bearing source list. That is a real grounded report, and it is what the
+owner asked for on claim-level verification.
+
+It is not yet a full deep research report, for one specific reason:
+`build_plan` in `synthesis_plan.py` puts every claim into a single hardcoded
+`"Findings"` section, so the compiler has exactly one section to render. Solar's
+report shape supports many. Grouping claims into themed sections is the next
+piece of work after task 2, and it belongs in `build_plan`, not in the compiler.
