@@ -24,6 +24,28 @@ from jsonschema import Draft202012Validator
 from .production_research import ResearchModelService, ResearchOperatorError
 
 
+class SharedInvocationJournal(list):
+    """A journal that survives the resolver's deepcopy of the services dict.
+
+    `default_production_resolver` hands operators `deepcopy(services)`, so the
+    service objects an operator calls are copies and their journals are copies
+    too. The adapter's `_merge_codex_invocation_usage` reads the ORIGINAL
+    services to recover calls the operator's failure hid, and was therefore
+    guaranteed to find nothing: on success the payload carries its own usage, so
+    the breakage only showed up on failure, which is the one case the merge
+    exists for. A failed provider call then left its service-evidence files
+    undeclared and the node died reporting "operator changed unreported files"
+    instead of the provider error.
+
+    Returning self from __deepcopy__ keeps this one object shared without
+    changing deepcopy semantics for anything else in the services dict.
+    """
+
+    def __deepcopy__(self, memo: dict) -> "SharedInvocationJournal":
+        memo[id(self)] = self
+        return self
+
+
 CODEX_RESEARCH_SERVICE_ID = "autosci-codex-research-model"
 CODEX_RESEARCH_SERVICE_VERSION = "1.0"
 MAX_CODEX_RESPONSE_BYTES = 4 * 1024 * 1024

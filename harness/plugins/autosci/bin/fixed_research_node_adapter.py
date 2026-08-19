@@ -33,7 +33,10 @@ from fixed_research_workflow import (  # noqa: E402
 from research_orchestration.dispatch import dispatch_research_node  # noqa: E402
 from research_orchestration.evaluator import evaluate_production_result  # noqa: E402
 from research_orchestration.runtime import default_production_resolver  # noqa: E402
-from harness.plugins.autosci.services.codex_research import CodexResearchModelService  # noqa: E402
+from harness.plugins.autosci.services.codex_research import (  # noqa: E402
+    CodexResearchModelService,
+    SharedInvocationJournal,
+)
 from harness.plugins.autosci.services.production_research import LiteratureDiscoveryService  # noqa: E402
 from harness.plugins.autosci.operators.fixed_research_poc import (  # noqa: E402
     execute_part_b,
@@ -286,7 +289,10 @@ def _codex_services(
     writer_model = str(os.environ.get("SOLAR_RESEARCH_MODEL") or os.environ.get("SOLAR_CODEX_RESEARCH_MODEL") or default_model).strip()
     reviewer_model = str(os.environ.get("SOLAR_CODEX_REVIEW_MODEL") or writer_model).strip()
     reasoning_effort = str(os.environ.get("SOLAR_CODEX_RESEARCH_REASONING_EFFORT") or "high").strip()
-    invocation_journal: list[dict[str, Any]] = []
+    # Shared deliberately: the resolver deepcopies the services dict, so a plain
+    # list would leave the adapter reading an empty journal and unable to
+    # recover calls hidden by an operator failure.
+    invocation_journal: list[dict[str, Any]] = SharedInvocationJournal()
     writer = service_cls(
         stage_dir,
         model=writer_model,
