@@ -12345,6 +12345,8 @@ def _fixed_research_retrieval_policy_valid(graph: dict[str, Any]) -> bool:
     seed = _node_by_id(graph, "seed_fetch") or {}
     request_text = str((seed.get("operator_payload") or {}).get("request") or "")
     source_manifest = graph.get("source_pack_authority") if isinstance(graph.get("source_pack_authority"), dict) else {}
+    from fixed_research_workflow import PUBLIC_RETRIEVAL_PROVIDERS
+
     return bool(
         policy.get("schema") == "solar.fixed_research.public_retrieval_authorization.v1"
         and policy.get("policy_id") == "public_bibliographic_no_key_v1"
@@ -12353,7 +12355,7 @@ def _fixed_research_retrieval_policy_valid(graph: dict[str, Any]) -> bool:
         and policy.get("node_id") == "source_discovery"
         and policy.get("request_sha256") == hashlib.sha256(request_text.encode("utf-8")).hexdigest()
         and policy.get("source_pack_manifest_sha256") == _canonical_payload_sha256(source_manifest)
-        and policy.get("providers") == ["semantic_scholar", "openalex", "crossref"]
+        and policy.get("providers") == list(PUBLIC_RETRIEVAL_PROVIDERS)
         and policy.get("credential_mode") == "public_no_key"
         and policy.get("secret_refs") == []
         and policy.get("network_scope") == "https_public_bibliographic_apis_only"

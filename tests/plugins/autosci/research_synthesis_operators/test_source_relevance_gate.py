@@ -158,3 +158,30 @@ def test_comparison_connectives_are_not_subject_terms() -> None:
     for filler in ("better", "than", "whether"):
         assert filler not in query
     assert "mamba" in query and "transformer" in query
+
+
+def test_hyphenated_deliverable_compounds_do_not_spend_a_query_slot() -> None:
+    """"evidence-linked" is one token, so listing its parts did not stop it.
+
+    The query budget is five terms. A compound made entirely of deliverable
+    words was consuming one of them, which is a fifth of the retrieval signal
+    spent on vocabulary shared by every request this workflow accepts.
+    """
+    request = (
+        "produce an evidence-linked research report on CRISPR off-target effects "
+        "in high-content screening and verify the claims"
+    )
+    query = distill_search_query(request).split()
+
+    assert "evidence-linked" not in query
+    assert query == ["crispr", "off-target", "effects", "high-content", "screening"]
+
+
+def test_subject_compounds_survive_the_stopword_rule() -> None:
+    """The rule drops a compound only when every part is deliverable vocabulary."""
+    # "off" and "target" are not deliverable words, so the compound is a topic.
+    assert "off-target" in research_query_terms("CRISPR off-target effects")
+    assert "retrieval-augmented" in research_query_terms("retrieval-augmented generation")
+    # Both halves are deliverable vocabulary, so the compound is not a topic.
+    assert "evidence-linked" not in research_query_terms("an evidence-linked report")
+    assert "source-linked" not in research_query_terms("a source-linked report")

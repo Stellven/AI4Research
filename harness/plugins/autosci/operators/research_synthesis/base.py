@@ -522,6 +522,14 @@ def normalize_id(value: str) -> str:
 # DELIVERABLE, never the subject. Words that can carry topic meaning --
 # methods, benchmarks, evaluation, detection, design, run -- are intentionally
 # absent, because stripping them would discard real signal for some requests.
+# Discovery providers that return scholarly records with a canonical
+# identifier. A source attributed to one of these is bibliographic even before
+# its identifier is inspected; anything else has to earn its authority class
+# from the evidence it carries.
+BIBLIOGRAPHIC_PROVIDERS = frozenset({
+    "semantic_scholar", "arxiv", "europe_pmc", "openalex", "crossref",
+})
+
 RESEARCH_INSTRUCTION_STOPWORDS = frozenset({
     "about", "analysis", "analyze", "and", "for", "from", "into", "research",
     "report", "study", "that", "the", "their", "this", "using", "what", "with",
@@ -572,6 +580,20 @@ _RESEARCH_TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]{2,}")
 _RESEARCH_CJK_RE = re.compile(r"[㐀-鿿]{2,}")
 
 
+def _is_stopword_compound(token: str) -> bool:
+    """True for a hyphenated compound built entirely from deliverable words.
+
+    "evidence-linked" is one token, so listing "evidence" and "linked" did not
+    stop it and it spent one of the five query slots on boilerplate. Deriving
+    the rule from the parts covers every phrasing the request happens to use,
+    rather than adding each compound to the stoplist as it is discovered.
+    """
+    if "-" not in token:
+        return False
+    parts = [part for part in token.split("-") if part]
+    return bool(parts) and all(part in RESEARCH_INSTRUCTION_STOPWORDS for part in parts)
+
+
 def research_query_terms(value: str) -> set[str]:
     """Topic terms for relevance, with deliverable instruction vocabulary removed."""
     text = str(value or "").lower()
@@ -581,7 +603,7 @@ def research_query_terms(value: str) -> set[str]:
         stripped = token.rstrip(".+-")
         if not stripped:
             continue
-        if stripped not in RESEARCH_INSTRUCTION_STOPWORDS:
+        if stripped not in RESEARCH_INSTRUCTION_STOPWORDS and not _is_stopword_compound(stripped):
             terms.add(stripped)
         # Identifiers and snake_case carry their words inside one token, so
         # FROZEN_SENTINEL_FACT_9821 would never match a query saying "frozen"

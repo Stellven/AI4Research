@@ -49,10 +49,18 @@ FIXED_RESEARCH_WORKFLOW_ID = "research.evidence_to_poc.v1"
 # Deliberately lexical and inspectable rather than model-judged: routing decides
 # which governance applies, so it must be reproducible and reviewable.
 
+# Every marker here must be vocabulary that an ordinary engineering request
+# would not use. Widening this list is not free: a false positive sends a
+# debugging task through the fifteen-node research contract, while a false
+# negative only costs the user a rephrase. That asymmetry is why bare words
+# like "investigate", "compare" and "evidence" are deliberately absent -- "add
+# evidence logging" and "investigate this crash" are not research requests.
 _RESEARCH_MARKERS = re.compile(
     r"\b(?:research|literature|scholarly|survey|systematic\s+review|prior\s+work|"
+    r"related\s+work|meta[-\s]analys[ei]s|preprints?|arxiv|bibliograph\w*|"
     r"state[-\s]of[-\s]the[-\s]art|papers?|publications?|citations?|cite|"
-    r"evidence[-\s]backed|source[-\s]linked|peer[-\s]reviewed)\b",
+    r"empirical\s+(?:study|studies|evidence|comparison)|"
+    r"evidence[-\s]backed|evidence[-\s]linked|source[-\s]linked|peer[-\s]reviewed)\b",
     re.IGNORECASE,
 )
 

@@ -1,4 +1,4 @@
-capability_capsule_id: cap.autosci-claim-verification
+capability_capsule_id: cap.research-external-claim-verification
 version: 0.1.0
 capsule_kind: capability
 metadata:
@@ -31,7 +31,7 @@ composition:
   produces: [{type: artifact.claim_verification}]
   compatible_with: [guard.secret-leak-guard]
   incompatible_with: [resource.repo-workspace, resource.github-readonly]
-  requires_after: [cap.autosci-experiment-run]
+  requires_after: [cap.research-external-experiment-run]
 effects:
   read: [artifacts.experiment_result]
   write: [artifacts.claim_verification]

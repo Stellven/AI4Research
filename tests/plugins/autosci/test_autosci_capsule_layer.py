@@ -29,20 +29,20 @@ def _logical() -> dict:
 def _autosci_capsules() -> list[dict]:
     return [
         yaml.safe_load(Path(p).read_text(encoding="utf-8"))
-        for p in sorted(glob.glob(str(CAPSULE_DIR / "cap.autosci-*.yaml")))
+        for p in sorted(glob.glob(str(CAPSULE_DIR / "cap.research-external-*.yaml")))
     ]
 
 
 def test_autosci_capsules_exist_for_the_part_b_bridge_stages() -> None:
     ids = {c["capability_capsule_id"] for c in _autosci_capsules()}
     for required in (
-        "cap.autosci-idea-generation",
-        "cap.autosci-idea-evaluation",
-        "cap.autosci-experiment-design",
-        "cap.autosci-experiment-run",
-        "cap.autosci-experiment-monitor",
-        "cap.autosci-claim-verification",
-        "cap.autosci-report-delivery",
+        "cap.research-external-idea-generation",
+        "cap.research-external-idea-evaluation",
+        "cap.research-external-experiment-design",
+        "cap.research-external-experiment-run",
+        "cap.research-external-experiment-monitor",
+        "cap.research-external-claim-verification",
+        "cap.research-external-report-delivery",
     ):
         assert required in ids, f"missing capsule {required}"
 

@@ -68,3 +68,32 @@ def test_classification_records_why_it_routed() -> None:
     assert result["research_markers"], "the decision must name the markers it saw"
     assert result["poc_markers"]
     assert result["reason"]
+
+
+def test_scholarly_vocabulary_widens_the_research_tier():
+    """Markers an ordinary engineering request would not use."""
+    for request, tier in [
+        ("do a meta-analysis of published results on sparse attention", "research_report"),
+        ("find arxiv preprints on retrieval augmented generation", "research_report"),
+        ("summarize the related work on sparse mixture of experts", "research_report"),
+        # "empirical" is also a build-or-run marker: an empirical comparison
+        # means something has to be measured, so Part B applies.
+        ("give me an empirical comparison of two schedulers", "research_poc"),
+    ]:
+        assert classify_research_request(request)["tier"] == tier, request
+
+
+def test_engineering_vocabulary_is_not_mistaken_for_research():
+    """A false positive costs a fifteen-node run; a false negative costs a rephrase.
+
+    That asymmetry is why bare "investigate", "compare" and "evidence" are not
+    research markers, even though each of them appears in real research asks.
+    """
+    for request in [
+        "investigate this crash in the parser",
+        "add evidence logging to the harness",
+        "compare the two config files",
+        "benchmark my sorting function",
+        "fix the failing test in source_validation.py",
+    ]:
+        assert classify_research_request(request)["tier"] == "simple", request

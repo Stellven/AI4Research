@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from .base import (
+    BIBLIOGRAPHIC_PROVIDERS,
     OperatorContext,
     ResearchOperatorError,
     build_node_result,
@@ -79,7 +80,7 @@ def _authority_class(source: dict[str, Any]) -> dict[str, Any]:
         score = 1.0
         authority_class = "authoritative"
         authority_proof.append(f"declared_authority:{authority}")
-    elif has_canonical or provider in {"semantic_scholar", "openalex", "crossref", "arxiv"} or provenance_provider in {"semantic_scholar", "openalex", "crossref", "arxiv"}:
+    elif has_canonical or provider in BIBLIOGRAPHIC_PROVIDERS or provenance_provider in BIBLIOGRAPHIC_PROVIDERS:
         score = 0.85
         authority_class = "bibliographic"
         authority_proof.append("canonical bibliographic identifier or provider present")
