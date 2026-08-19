@@ -2198,9 +2198,9 @@ def test_fixed_part_b_capsules_are_exact_and_have_no_repository_resource_authori
     # the AutoSci bridge instead of the Solar reimplementation. The
     # no-repository-resource requirement is unchanged and still asserted below.
     expected = {
-        "experiment_run": "cap.autosci-experiment-run",
-        "claim_verification": "cap.autosci-claim-verification",
-        "final_delivery": "cap.autosci-report-delivery",
+        "experiment_run": "cap.research-external-experiment-run",
+        "claim_verification": "cap.research-external-claim-verification",
+        "final_delivery": "cap.research-external-report-delivery",
     }
     for node_id, capsule_id in expected.items():
         node = next(item for item in graph["nodes"] if item["id"] == node_id)
@@ -2795,10 +2795,10 @@ def test_every_fixed_stage_binds_exactly_one_dedicated_capsule() -> None:
         capsules = stage.get("allowed_capsules") or []
         assert len(capsules) == 1, f"{stage['id']} must pin exactly one capsule, got {capsules}"
         capsule_id = capsules[0]
-        # cap.research-* are the Solar-owned stages; cap.autosci-* are the Part B
-        # science stages that run through the AutoSci bridge. Anything else is a
+        # Every stage capsule is research-named, per the phase-17 naming cleanup
+        # that test_phase17_naming_cleanup.py enforces. Anything else is a
         # generic requirement-compiler capsule, which this workflow forbids.
-        assert capsule_id.startswith(("cap.research-", "cap.autosci-")), (
+        assert capsule_id.startswith("cap.research-"), (
             f"{stage['id']} binds generic capsule {capsule_id}; the fixed workflow forbids generic fallback"
         )
 
@@ -2839,10 +2839,13 @@ def test_part_b_science_stages_are_bound_to_autosci() -> None:
     bound = {s["id"]: (s.get("allowed_capsules") or [None])[0] for s in _fixed_contract()["stages"]}
     for stage_id in ("idea_evaluation", "experiment_design", "experiment_run",
                      "claim_verification", "final_delivery"):
-        assert str(bound[stage_id]).startswith("cap.autosci-"), (
-            f"{stage_id} must bind an AutoSci capsule, got {bound[stage_id]}"
+        assert str(bound[stage_id]).startswith("cap.research-external-"), (
+            f"{stage_id} must bind an external science-agent capsule, got {bound[stage_id]}"
         )
-    # The boundary and the policy record stay Solar-owned.
+    # The boundary and the policy record stay Solar-owned, so they must NOT be
+    # the external family.
+    assert not bound["poc_handoff"].startswith("cap.research-external-")
+    assert not bound["experiment_approval"].startswith("cap.research-external-")
     assert bound["poc_handoff"].startswith("cap.research-")
     assert bound["experiment_approval"].startswith("cap.research-")
 

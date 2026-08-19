@@ -1,4 +1,4 @@
-capability_capsule_id: cap.autosci-report-delivery
+capability_capsule_id: cap.research-external-report-delivery
 version: 0.1.0
 capsule_kind: capability
 metadata:
@@ -33,7 +33,7 @@ composition:
   produces: [{type: artifact.final_delivery}]
   compatible_with: [guard.secret-leak-guard]
   incompatible_with: [resource.repo-workspace, resource.github-readonly]
-  requires_after: [cap.autosci-claim-verification]
+  requires_after: [cap.research-external-claim-verification]
 effects:
   read: [artifacts.claim_verification, artifacts.experiment_result]
   write: [artifacts.final_delivery]

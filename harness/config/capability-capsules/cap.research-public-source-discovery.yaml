@@ -37,7 +37,7 @@ effects:
   read: [artifacts.seed_snapshot, controller.source_pack_snapshot, controller.retrieval_policy]
   write: [artifacts.source_discovery, artifacts.provider_attempts]
   execute: []
-  network: [api.semanticscholar.org, api.openalex.org, api.crossref.org]
+  network: [api.semanticscholar.org, export.arxiv.org, www.ebi.ac.uk, api.openalex.org, api.crossref.org]
   cost: [bounded_public_api_requests]
   risk: [provider_unavailable, off_topic_candidates, stale_source_inventory]
 bindings:

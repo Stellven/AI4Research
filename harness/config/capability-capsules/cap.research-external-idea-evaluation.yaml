@@ -1,4 +1,4 @@
-capability_capsule_id: cap.autosci-idea-evaluation
+capability_capsule_id: cap.research-external-idea-evaluation
 version: 0.1.0
 capsule_kind: capability
 metadata:
@@ -32,7 +32,7 @@ composition:
   produces: [{type: artifact.idea_evaluation}]
   compatible_with: [guard.secret-leak-guard]
   incompatible_with: [resource.repo-workspace, resource.github-readonly]
-  requires_after: [cap.autosci-idea-generation]
+  requires_after: [cap.research-external-idea-generation]
 effects:
   read: [artifacts.idea_candidate, autosci.wiki]
   write: [artifacts.idea_evaluation, artifacts.research_memory_update]

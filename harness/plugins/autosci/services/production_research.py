@@ -18,6 +18,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from html.parser import HTMLParser
@@ -40,6 +41,12 @@ DEFAULT_FETCH_TIMEOUT_SECONDS = 30
 DEFAULT_FETCH_MAX_BYTES = 5 * 1024 * 1024
 DEFAULT_FETCH_MAX_REDIRECTS = 5
 DEFAULT_EXTRACTED_TEXT_CHARS = 120_000
+MIN_DISCOVERY_PROVIDERS = 2
+_XML_ENTITY_DECLARATION_RE = re.compile(rb"<!(?:DOCTYPE|ENTITY)\b", re.IGNORECASE)
+_ARXIV_NAMESPACES = {
+    "atom": "http://www.w3.org/2005/Atom",
+    "arxiv": "http://arxiv.org/schemas/atom",
+}
 DEFAULT_PROVIDER_TIMEOUT_SECONDS = 90
 DEFAULT_PROVIDER_MAX_BYTES = 5 * 1024 * 1024
 DEFAULT_PROVIDER_MAX_ATTEMPTS = 3
@@ -507,6 +514,68 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     return query[:500]
 
 
+def _candidate_key(candidate: dict[str, Any]) -> str:
+    return str(
+        candidate.get("canonical_id") or candidate.get("url") or candidate.get("title") or ""
+    ).strip().lower()
+
+
+def _candidate_title_key(candidate: dict[str, Any]) -> str:
+    """Normalized title, used to collapse the same work seen twice.
+
+    Identifier dedup alone is not enough: a preprint and its published version
+    carry different DOIs, and providers disagree on punctuation and case, so the
+    same paper was arriving twice and spending two slots of the budget.
+    """
+    return re.sub(r"[^a-z0-9]+", " ", str(candidate.get("title") or "").lower()).strip()
+
+
+def _select_candidates(
+    seeded: list[dict[str, Any]],
+    discovered: list[dict[str, Any]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Take seeded sources first, then round-robin across discovery providers.
+
+    Straight concatenation let whichever provider ran first fill the whole
+    candidate budget, so a broad-but-poorly-ranked provider could crowd out the
+    on-topic results a later provider had already returned. Round-robin gives
+    every provider that answered the same shot at the budget, and the relevance
+    gate downstream still decides what is admissible.
+    """
+    selected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    seen_titles: set[str] = set()
+
+    def take(candidate: dict[str, Any]) -> bool:
+        key = _candidate_key(candidate)
+        if not key or key in seen:
+            return False
+        title_key = _candidate_title_key(candidate)
+        if title_key and title_key in seen_titles:
+            return False
+        seen.add(key)
+        if title_key:
+            seen_titles.add(title_key)
+        selected.append(candidate)
+        return len(selected) >= limit
+
+    for candidate in seeded:
+        if take(candidate):
+            return selected
+
+    by_provider: dict[str, list[dict[str, Any]]] = {}
+    for candidate in discovered:
+        by_provider.setdefault(str(candidate.get("provider") or "unknown"), []).append(candidate)
+    queues = list(by_provider.values())
+    for index in range(max((len(queue) for queue in queues), default=0)):
+        for queue in queues:
+            if index < len(queue) and take(queue[index]):
+                return selected
+    return selected
+
+
 def _abstract_from_openalex(value: Any) -> str:
     if not isinstance(value, dict):
         return ""
@@ -630,10 +699,10 @@ class LiteratureDiscoveryService:
         self._attempt_paths.setdefault(provider, []).extend(paths)
         return metadata
 
-    def _open_json(self, provider: str, url: str) -> tuple[dict[str, Any], str]:
+    def _open_body(self, provider: str, url: str, *, accept: str = "application/json") -> tuple[bytes, str]:
         request = urllib.request.Request(
             url,
-            headers={"Accept": "application/json", "User-Agent": "OpenSolar-AutoSci/1.0"},
+            headers={"Accept": accept, "User-Agent": "OpenSolar-AutoSci/1.0"},
             method="GET",
         )
         waited = 0.0
@@ -685,13 +754,134 @@ class LiteratureDiscoveryService:
                 waited += wait
         if len(body) > DEFAULT_PROVIDER_MAX_BYTES:
             raise ResearchOperatorError("Discovery response exceeds the size limit", error_type="provider_contract")
+        return body, _sha256(body)
+
+    def _open_json(self, provider: str, url: str) -> tuple[dict[str, Any], str]:
+        body, response_hash = self._open_body(provider, url)
         try:
             payload = json.loads(body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ResearchOperatorError("Discovery provider returned invalid JSON", error_type="provider_contract") from exc
         if not isinstance(payload, dict):
             raise ResearchOperatorError("Discovery provider returned a non-object response", error_type="provider_contract")
-        return payload, _sha256(body)
+        return payload, response_hash
+
+    def _arxiv(self, query: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode(
+            {
+                "search_query": f"all:{query}",
+                "start": 0,
+                "max_results": self.limit,
+                "sortBy": "relevance",
+                "sortOrder": "descending",
+            }
+        )
+        body, response_hash = self._open_body("arxiv", url, accept="application/atom+xml")
+        # This is the only place the service parses XML from the network.
+        # ElementTree expands internal entities, so a declared entity is a
+        # memory-amplification vector even though the body itself is size
+        # capped. A legitimate Atom feed declares none, so refuse outright
+        # rather than relying on the parser to stay bounded.
+        if _XML_ENTITY_DECLARATION_RE.search(body[:8192]):
+            raise ResearchOperatorError(
+                "arXiv response declares an XML entity, which a feed never needs",
+                error_type="provider_contract",
+            )
+        try:
+            root = ElementTree.fromstring(body)
+        except ElementTree.ParseError as exc:
+            raise ResearchOperatorError(
+                "arXiv returned a response that is not parseable Atom",
+                error_type="provider_contract",
+            ) from exc
+        candidates: list[dict[str, Any]] = []
+        for entry in root.findall("atom:entry", _ARXIV_NAMESPACES):
+            title = re.sub(r"\s+", " ", entry.findtext("atom:title", "", _ARXIV_NAMESPACES)).strip()
+            abs_url = str(entry.findtext("atom:id", "", _ARXIV_NAMESPACES)).strip()
+            if not title or not abs_url:
+                continue
+            # arXiv states its entry id over http; downstream fetching only
+            # accepts https, so canonicalize here rather than leaking a scheme
+            # that the URL policy will reject.
+            if abs_url.startswith("http://"):
+                abs_url = "https://" + abs_url[len("http://") :]
+            doi = str(entry.findtext("arxiv:doi", "", _ARXIV_NAMESPACES)).strip()
+            published = str(entry.findtext("atom:published", "", _ARXIV_NAMESPACES)).strip()
+            primary = entry.find("arxiv:primary_category", _ARXIV_NAMESPACES)
+            category = str(primary.get("term") or "") if primary is not None else ""
+            authors = [
+                str(node.findtext("atom:name", "", _ARXIV_NAMESPACES)).strip()
+                for node in entry.findall("atom:author", _ARXIV_NAMESPACES)
+            ]
+            canonical = f"https://doi.org/{doi}" if doi else abs_url
+            candidates.append(
+                {
+                    "source_id": f"arxiv:{abs_url.rsplit('/', 1)[-1]}",
+                    "canonical_id": canonical,
+                    "title": title,
+                    "url": abs_url,
+                    "provider": "arxiv",
+                    "metadata": {
+                        "year": int(published[:4]) if published[:4].isdigit() else None,
+                        "venue": str(entry.findtext("arxiv:journal_ref", "", _ARXIV_NAMESPACES)).strip() or "arXiv preprint",
+                        "authors": [item for item in authors if item],
+                        "primary_category": category,
+                        "doi": doi,
+                    },
+                    "provenance": {"provider": "arxiv", "query": query, "discovered_at": self.clock()},
+                    "content_summary": re.sub(r"\s+", " ", entry.findtext("atom:summary", "", _ARXIV_NAMESPACES)).strip(),
+                }
+            )
+        return candidates, {"provider": "arxiv", "request_url": url, "response_sha256": response_hash}
+
+    def _europe_pmc(self, query: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + urllib.parse.urlencode(
+            {"query": query, "format": "json", "pageSize": self.limit, "resultType": "core"}
+        )
+        payload, response_hash = self._open_json("europe_pmc", url)
+        results = payload.get("resultList") if isinstance(payload.get("resultList"), dict) else {}
+        candidates: list[dict[str, Any]] = []
+        for raw in results.get("result") or []:
+            if not isinstance(raw, dict):
+                continue
+            title = re.sub(r"\s+", " ", str(raw.get("title") or "")).strip().rstrip(".")
+            if not title:
+                continue
+            doi = str(raw.get("doi") or "").strip()
+            record_id = str(raw.get("id") or "").strip()
+            source = str(raw.get("source") or "").strip()
+            if doi:
+                canonical = f"https://doi.org/{doi}"
+            elif source and record_id:
+                canonical = f"https://europepmc.org/article/{source}/{record_id}"
+            else:
+                continue
+            journal = raw.get("journalInfo") if isinstance(raw.get("journalInfo"), dict) else {}
+            journal_title = journal.get("journal") if isinstance(journal.get("journal"), dict) else {}
+            year = str(raw.get("pubYear") or "").strip()
+            candidates.append(
+                {
+                    "source_id": f"doi:{doi}" if doi else f"europepmc:{source}/{record_id}",
+                    "canonical_id": canonical,
+                    "title": title,
+                    "url": canonical,
+                    "provider": "europe_pmc",
+                    "metadata": {
+                        "year": int(year) if year.isdigit() else None,
+                        "venue": str(journal_title.get("title") or ""),
+                        "authors": [
+                            item.strip()
+                            for item in str(raw.get("authorString") or "").split(",")
+                            if item.strip()
+                        ],
+                        "doi": doi,
+                        "pmid": str(raw.get("pmid") or ""),
+                    },
+                    "provenance": {"provider": "europe_pmc", "query": query, "discovered_at": self.clock()},
+                    "content_summary": re.sub(r"<[^>]+>", " ", str(raw.get("abstractText") or "")).strip(),
+                }
+            )
+        return candidates, {"provider": "europe_pmc", "request_url": url, "response_sha256": response_hash}
 
     def _openalex(self, query: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         url = "https://api.openalex.org/works?" + urllib.parse.urlencode(
@@ -910,6 +1100,7 @@ class LiteratureDiscoveryService:
                 "seed_snapshot_sha256": stable_json_sha256(seed_snapshot),
             }
         )
+        seeded: list[dict[str, Any]] = []
         candidates: list[dict[str, Any]] = []
         limitations: list[str] = []
         traces: list[dict[str, Any]] = []
@@ -922,7 +1113,7 @@ class LiteratureDiscoveryService:
             if not isinstance(seed, dict) or str(seed.get("seed_kind") or "") != "url":
                 continue
             source_id = f"url:{str(seed.get('content_sha256') or seed.get('sha256') or '')[:24]}"
-            candidates.append(
+            seeded.append(
                 {
                     "source_id": source_id,
                     "canonical_id": str(seed.get("final_url") or seed.get("source") or source_id),
@@ -944,19 +1135,24 @@ class LiteratureDiscoveryService:
                     "content_summary": str(seed.get("content") or "")[:20_000],
                 }
             )
+        contributed: set[str] = set()
+        # What each provider actually did, so a provider that answered honestly
+        # with nothing on topic is not later reported as having failed.
+        answered: dict[str, str] = {}
         try:
             semantic, trace, warnings = self._semantic_scholar(query)
             candidates.extend(semantic)
             traces.append(trace)
             limitations.extend(warnings)
+            answered["semantic_scholar"] = "completed" if semantic else "empty"
+            if semantic:
+                contributed.add("semantic_scholar")
         except ResearchOperatorError as exc:
             limitations.append(f"Semantic Scholar fallback boundary: {exc.error_type}: {exc}")
             traces.append({"provider": "semantic_scholar", "status": "failed", "error_type": exc.error_type})
-        has_fetched_url = any(
-            isinstance(seed, dict) and str(seed.get("seed_kind") or "") == "url"
-            for seed in seed_snapshot.get("seeds") or []
-        )
-        if has_fetched_url and len(candidates) < 4:
+            answered["semantic_scholar"] = "failed"
+        has_fetched_url = bool(seeded)
+        if has_fetched_url and len(seeded) + len(candidates) < 4:
             try:
                 wikipedia, trace = self._wikipedia(_supplemental_queries(seed_snapshot, query))
                 candidates.extend(wikipedia)
@@ -964,53 +1160,43 @@ class LiteratureDiscoveryService:
             except ResearchOperatorError as exc:
                 limitations.append(f"Wikipedia fallback boundary: {exc.error_type}: {exc}")
                 traces.append({"provider": "wikipedia", "status": "failed", "error_type": exc.error_type})
-        provider_families = {str(item.get("provider") or "") for item in candidates if str(item.get("provider") or "")}
-        if len(candidates) < 3 or len(provider_families) < min_provider_families:
+        # Bibliographic providers are consulted as a chain rather than a
+        # single-shot fallback. The previous rule stopped as soon as any one
+        # provider returned three rows, which let one weakly-ranked provider be
+        # the sole basis for the evidence set; downstream relevance filtering
+        # then had nothing on-topic left to choose from. Keep going until at
+        # least two independent providers have contributed, or the chain is
+        # exhausted.
+        # arXiv covers computing, physics and mathematics; Europe PMC covers the
+        # life sciences. Neither alone spans the topics this workflow accepts,
+        # and OpenAlex ranks too loosely to be trusted on its own, so the chain
+        # deliberately mixes a domain-specific pair with the broad catalogues.
+        required_contributors = max(MIN_DISCOVERY_PROVIDERS, min_provider_families)
+        for provider, backend, boundary in (
+            ("arxiv", self._arxiv, "arXiv"),
+            ("europe_pmc", self._europe_pmc, "Europe PMC"),
+            ("openalex", self._openalex, "OpenAlex"),
+            ("crossref", self._crossref, "Crossref"),
+        ):
+            enough = len(seeded) + len(candidates) >= self.limit
+            if enough and len(contributed) >= required_contributors:
+                break
             try:
-                openalex, trace = self._openalex(query)
-                candidates.extend(openalex)
-                traces.append(trace)
+                found, trace = backend(query)
             except ResearchOperatorError as exc:
-                limitations.append(f"OpenAlex fallback boundary: {exc.error_type}: {exc}")
-                traces.append({"provider": "openalex", "status": "failed", "error_type": exc.error_type})
-        provider_families = {str(item.get("provider") or "") for item in candidates if str(item.get("provider") or "")}
-        if len(candidates) < 3 or len(provider_families) < min_provider_families:
-            try:
-                crossref, trace = self._crossref(query)
-                candidates.extend(crossref)
-                traces.append(trace)
-            except ResearchOperatorError as exc:
-                limitations.append(f"Crossref fallback boundary: {exc.error_type}: {exc}")
-                traces.append({"provider": "crossref", "status": "failed", "error_type": exc.error_type})
-        deduped_all: list[dict[str, Any]] = []
-        seen: set[str] = set()
-        for candidate in candidates:
-            key = str(candidate.get("canonical_id") or candidate.get("url") or candidate.get("title") or "").strip().lower()
-            if not key or key in seen:
+                limitations.append(f"{boundary} fallback boundary: {exc.error_type}: {exc}")
+                traces.append({"provider": provider, "status": "failed", "error_type": exc.error_type})
+                answered[provider] = "failed"
                 continue
-            seen.add(key)
+            candidates.extend(found)
+            traces.append(trace)
+            answered[provider] = "completed" if found else "empty"
+            if found:
+                contributed.add(provider)
+        deduped = _select_candidates(seeded, candidates, limit=self.limit + 1)
+        for candidate in deduped:
             candidate["candidate_sha256"] = stable_json_sha256(candidate)
             candidate["query"] = query
-            deduped_all.append(candidate)
-        deduped: list[dict[str, Any]] = []
-        if min_provider_families > 1:
-            selected_keys: set[str] = set()
-            for candidate in deduped_all:
-                provider = str(candidate.get("provider") or "")
-                if not provider or provider in selected_keys:
-                    continue
-                deduped.append(candidate)
-                selected_keys.add(provider)
-                if len(selected_keys) >= min_provider_families:
-                    break
-            for candidate in deduped_all:
-                if candidate in deduped:
-                    continue
-                deduped.append(candidate)
-                if len(deduped) >= self.limit:
-                    break
-        else:
-            deduped = deduped_all[: self.limit + 1]
         if not deduped:
             raise ResearchOperatorError(
                 "All configured public discovery providers returned no traceable sources",
@@ -1043,7 +1229,7 @@ class LiteratureDiscoveryService:
         archive_path = self.workspace_root / "service-evidence" / "discovery" / f"{response_hash}.json"
         archive_hash = _write_json(archive_path, response_payload)
         providers = sorted({str(item.get("provider") or "unknown") for item in deduped})
-        attempted_providers = sorted(set(self._attempt_paths) | set(providers))
+        attempted_providers = sorted(set(self._attempt_paths) | set(providers) | set(answered))
         return {
             "service_id": self.service_id,
             "service_version": self.service_version,
@@ -1065,7 +1251,7 @@ class LiteratureDiscoveryService:
                     "archive_sha256": archive_hash,
                 }
                 | {
-                    "status": "completed" if provider in providers else "failed",
+                    "status": answered.get(provider, "completed" if provider in providers else "failed"),
                     "evidence_paths": sorted(set(self._attempt_paths.get(provider) or [])),
                 }
                 for provider in attempted_providers

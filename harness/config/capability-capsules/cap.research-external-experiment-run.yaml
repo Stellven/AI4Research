@@ -1,4 +1,4 @@
-capability_capsule_id: cap.autosci-experiment-run
+capability_capsule_id: cap.research-external-experiment-run
 version: 0.1.0
 capsule_kind: capability
 metadata:
@@ -33,7 +33,7 @@ composition:
   produces: [{type: artifact.experiment_result}]
   compatible_with: [guard.secret-leak-guard]
   incompatible_with: [resource.repo-workspace, resource.github-readonly]
-  requires_after: [cap.autosci-experiment-design]
+  requires_after: [cap.research-external-experiment-design]
 effects:
   read: [artifacts.experiment_plan, artifacts.runtime_records]
   write: [artifacts.experiment_result]

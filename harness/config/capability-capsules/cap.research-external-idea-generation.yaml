@@ -1,4 +1,4 @@
-capability_capsule_id: cap.autosci-idea-generation
+capability_capsule_id: cap.research-external-idea-generation
 version: 0.1.0
 capsule_kind: capability
 metadata:

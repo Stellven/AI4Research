@@ -168,66 +168,66 @@ capsules:
     tags: [research, experiment, planning, deterministic]
     owner: opensolar
     default_operator_profile: autosci-research-poc-experiment-design-worker
-  - capability_capsule_id: cap.autosci-claim-verification
+  - capability_capsule_id: cap.research-external-claim-verification
     version: 0.1.0
     capsule_kind: capability
     status: stable
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
-    manifest_path: capability-capsules/cap.autosci-claim-verification.yaml
+    manifest_path: capability-capsules/cap.research-external-claim-verification.yaml
     tags: [autosci, bridge, research]
     owner: opensolar
     default_operator_profile: autosci-claim-verify-worker
-  - capability_capsule_id: cap.autosci-experiment-design
+  - capability_capsule_id: cap.research-external-experiment-design
     version: 0.1.0
     capsule_kind: capability
     status: stable
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
-    manifest_path: capability-capsules/cap.autosci-experiment-design.yaml
+    manifest_path: capability-capsules/cap.research-external-experiment-design.yaml
     tags: [autosci, bridge, research]
     owner: opensolar
     default_operator_profile: autosci-experiment-design-worker
-  - capability_capsule_id: cap.autosci-experiment-monitor
+  - capability_capsule_id: cap.research-external-experiment-monitor
     version: 0.1.0
     capsule_kind: capability
     status: stable
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
-    manifest_path: capability-capsules/cap.autosci-experiment-monitor.yaml
+    manifest_path: capability-capsules/cap.research-external-experiment-monitor.yaml
     tags: [autosci, bridge, research]
     owner: opensolar
     default_operator_profile: autosci-experiment-monitor-worker
-  - capability_capsule_id: cap.autosci-experiment-run
+  - capability_capsule_id: cap.research-external-experiment-run
     version: 0.1.0
     capsule_kind: capability
     status: stable
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
-    manifest_path: capability-capsules/cap.autosci-experiment-run.yaml
+    manifest_path: capability-capsules/cap.research-external-experiment-run.yaml
     tags: [autosci, bridge, research]
     owner: opensolar
     default_operator_profile: autosci-experiment-run-worker
-  - capability_capsule_id: cap.autosci-idea-evaluation
+  - capability_capsule_id: cap.research-external-idea-evaluation
     version: 0.1.0
     capsule_kind: capability
     status: stable
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
-    manifest_path: capability-capsules/cap.autosci-idea-evaluation.yaml
+    manifest_path: capability-capsules/cap.research-external-idea-evaluation.yaml
     tags: [autosci, bridge, research]
     owner: opensolar
     default_operator_profile: autosci-idea-evaluate-worker
-  - capability_capsule_id: cap.autosci-idea-generation
+  - capability_capsule_id: cap.research-external-idea-generation
     version: 0.1.0
     capsule_kind: capability
     status: stable
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
-    manifest_path: capability-capsules/cap.autosci-idea-generation.yaml
+    manifest_path: capability-capsules/cap.research-external-idea-generation.yaml
     tags: [autosci, bridge, research]
     owner: opensolar
     default_operator_profile: autosci-idea-worker
-  - capability_capsule_id: cap.autosci-report-delivery
+  - capability_capsule_id: cap.research-external-report-delivery
     version: 0.1.0
     capsule_kind: capability
     status: stable
     schema_ref: schemas/draft/capability-capsule.v1.draft.json
-    manifest_path: capability-capsules/cap.autosci-report-delivery.yaml
+    manifest_path: capability-capsules/cap.research-external-report-delivery.yaml
     tags: [autosci, bridge, research]
     owner: opensolar
     default_operator_profile: autosci-report-worker

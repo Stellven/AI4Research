@@ -490,7 +490,7 @@
       ],
       "task_type": "review",
       "allowed_capsules": [
-        "cap.autosci-idea-evaluation"
+        "cap.research-external-idea-evaluation"
       ],
       "allowed_operators": {
         "role": "builder",
@@ -535,7 +535,7 @@
       ],
       "task_type": "planning",
       "allowed_capsules": [
-        "cap.autosci-experiment-design"
+        "cap.research-external-experiment-design"
       ],
       "allowed_operators": {
         "role": "builder",
@@ -627,7 +627,7 @@
       ],
       "task_type": "verification",
       "allowed_capsules": [
-        "cap.autosci-experiment-run"
+        "cap.research-external-experiment-run"
       ],
       "allowed_operators": {
         "role": "builder",
@@ -688,7 +688,7 @@
       ],
       "task_type": "verification",
       "allowed_capsules": [
-        "cap.autosci-claim-verification"
+        "cap.research-external-claim-verification"
       ],
       "allowed_operators": {
         "role": "builder",
@@ -737,7 +737,7 @@
       ],
       "task_type": "report-writing",
       "allowed_capsules": [
-        "cap.autosci-report-delivery"
+        "cap.research-external-report-delivery"
       ],
       "allowed_operators": {
         "role": "builder",

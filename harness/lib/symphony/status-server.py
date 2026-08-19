@@ -1156,6 +1156,50 @@ def _task_with_intake_attachments(task: str, attachments: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _classify_intake_request(task: str, env: dict, *, explicit_workflow_id: str) -> dict:
+    """Decide which workflow a free-text prompt should enter, and say why.
+
+    The dashboard research profile used to pin SOLAR_INTAKE_WORKFLOW_ID for
+    every prompt, so "what is 2+2" and a full literature review both entered the
+    fifteen-node research contract. Routing was therefore not being exercised at
+    all: the demo only looked like it handled any prompt. An explicit
+    workflow_id from the caller still wins; this only replaces the blanket pin.
+    """
+    if explicit_workflow_id:
+        return {"applied": False, "reason": "caller supplied an explicit workflow_id"}
+    if str(env.get("SOLAR_INTAKE_WORKFLOW_ID") or "") != "research.evidence_to_poc.v1":
+        return {"applied": False, "reason": "no pinned research workflow to reconsider"}
+    try:
+        from workflow_router import classify_research_request
+    except ImportError as exc:
+        # Fail closed onto the pinned behaviour rather than silently routing a
+        # research request to the generic planner.
+        return {"applied": False, "reason": f"router unavailable: {exc}"}
+    verdict = classify_research_request(task)
+    tier = str(verdict.get("tier") or "")
+    if tier == "simple":
+        # Nothing in the prompt asks for research. Drop the pin and let the
+        # generic planner path handle it.
+        for key in (
+            "SOLAR_INTAKE_WORKFLOW_ID",
+            "SOLAR_RESEARCH_EXECUTION_PROFILE",
+            "SOLAR_RESEARCH_ACQUISITION_MODE",
+            "SOLAR_RESEARCH_RETRIEVAL_POLICY",
+            "SOLAR_RESEARCH_EXPERIMENT_POLICY",
+        ):
+            env.pop(key, None)
+    else:
+        env["SOLAR_RESEARCH_EXECUTION_PROFILE"] = str(verdict.get("execution_profile") or "")
+    return {
+        "applied": True,
+        "tier": tier,
+        "execution_profile": str(verdict.get("execution_profile") or ""),
+        "research_markers": list(verdict.get("research_markers") or []),
+        "poc_markers": list(verdict.get("poc_markers") or []),
+        "reason": str(verdict.get("reason") or ""),
+    }
+
+
 def _intake_payload(data: dict) -> dict:
     task = str(data.get("task") or data.get("request") or "").strip()
     request_id = re.sub(r"[^A-Za-z0-9_.:-]", "-", str(data.get("request_id") or "").strip())[:96]
@@ -1208,6 +1252,7 @@ def _intake_payload(data: dict) -> dict:
     env["SOLAR_INTAKE_REQUEST_ID"] = request_id
     if attachments:
         env["SOLAR_INTAKE_ATTACHMENTS_JSON"] = json.dumps(attachments, ensure_ascii=False)
+    routing = _classify_intake_request(task, env, explicit_workflow_id=workflow_id)
     if not workflow_id and str(env.get("SOLAR_INTAKE_WORKFLOW_ID") or "") == "research.evidence_to_poc.v1":
         resolved_profile = {
             "workflow_id": "research.evidence_to_poc.v1",
@@ -1294,6 +1339,7 @@ def _intake_payload(data: dict) -> dict:
         "command": " ".join(cmd[:3]),
         "stdout_tail": output[-4000:],
         "research_profile": resolved_profile,
+        "request_routing": routing,
     }
 
 

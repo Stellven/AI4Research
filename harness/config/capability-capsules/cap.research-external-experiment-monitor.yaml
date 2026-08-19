@@ -1,4 +1,4 @@
-capability_capsule_id: cap.autosci-experiment-monitor
+capability_capsule_id: cap.research-external-experiment-monitor
 version: 0.1.0
 capsule_kind: capability
 metadata:
@@ -30,7 +30,7 @@ composition:
   produces: [{type: artifact.experiment_status}]
   compatible_with: [guard.secret-leak-guard]
   incompatible_with: [resource.repo-workspace, resource.github-readonly]
-  requires_after: [cap.autosci-experiment-design]
+  requires_after: [cap.research-external-experiment-design]
 effects:
   read: [artifacts.experiment_plan]
   write: [artifacts.experiment_status]
