@@ -69,19 +69,44 @@ EVIDENCE_SYNTHESIS = ARTIFACT_ROOT / "synthesis" / "evidence_synthesis.json"
 REPORT_DRAFT = ARTIFACT_ROOT / "report" / "report_draft.json"
 REPORT_MD = ARTIFACT_ROOT / "report" / "report.md"
 
-# Where each stage writes its node result. The adapter names this file, so it is
-# the same for every stage; only the directory differs.
-NODE_RESULT_DIR_BY_STAGE = {
-    "seed_fetch": "seed",
-    "source_discovery": "discovery",
-    "source_validation": "validation",
-    "evidence_synthesis": "synthesis",
-    "report_draft": "report",
-    "independent_review": "review",
-    "report_revision": "revision",
-    "final_acceptance": "final",
-    "poc_handoff": "poc",
-}
+CONTRACT = (
+    HARNESS / "config" / "workflows" / "research.evidence_to_poc.v1.workflow.json"
+)
+
+
+def _node_result_dirs() -> dict[str, Path]:
+    """Where each stage writes its node result, read from the contract.
+
+    Hardcoding this was a mistake that cost a live run: `poc_handoff` writes to
+    `poc/handoff/`, not `poc/`, so the gate reported "no node result on disk"
+    for a stage that had completed perfectly and failed the node. The contract
+    already declares one directory output per stage, and the adapter writes
+    `research_node_result.json` into it, so deriving the map cannot drift from
+    what the workflow actually does.
+    """
+    try:
+        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    mapping: dict[str, Path] = {}
+    for stage in contract.get("stages") or []:
+        if not isinstance(stage, dict):
+            continue
+        stage_id = str(stage.get("id") or "")
+        directory = next(
+            (
+                str(item.get("path") or "")
+                for item in stage.get("outputs") or []
+                if isinstance(item, dict) and str(item.get("type") or "") == "directory"
+            ),
+            "",
+        )
+        if stage_id and directory:
+            mapping[stage_id] = Path(directory)
+    return mapping
+
+
+NODE_RESULT_DIR_BY_STAGE = _node_result_dirs()
 
 # A claim reference in the report body, e.g. "claim-003" or "openalex-rag-01".
 _CLAIM_RE = re.compile(r"\bclaim-\d+\b")
@@ -316,7 +341,7 @@ def check_node_complete(workspace: Path, stages: list[str]) -> list[str]:
         if directory is None:
             failures.append(f"{stage}: not a stage of this workflow")
             continue
-        path = workspace / ARTIFACT_ROOT / directory / "research_node_result.json"
+        path = workspace / directory / "research_node_result.json"
         payload = _load(path)
         if payload is None:
             failures.append(f"{stage}: no readable research_node_result.json at {path}")
