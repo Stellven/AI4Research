@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.workflow_contract.v1",
   "workflow_id": "research.evidence_to_poc.v1",
-  "version": "1.3",
+  "version": "1.4",
   "title": "Fixed research evidence-to-PoC workflow",
   "dag_variant": "research",
   "stages_mode": "fixed",
@@ -490,7 +490,7 @@
       ],
       "task_type": "review",
       "allowed_capsules": [
-        "cap.research-poc-idea-evaluation"
+        "cap.autosci-idea-evaluation"
       ],
       "allowed_operators": {
         "role": "builder",
@@ -535,7 +535,7 @@
       ],
       "task_type": "planning",
       "allowed_capsules": [
-        "cap.research-poc-experiment-design"
+        "cap.autosci-experiment-design"
       ],
       "allowed_operators": {
         "role": "builder",
@@ -627,7 +627,7 @@
       ],
       "task_type": "verification",
       "allowed_capsules": [
-        "cap.research-evidence-poc-experiment-run"
+        "cap.autosci-experiment-run"
       ],
       "allowed_operators": {
         "role": "builder",
@@ -688,7 +688,7 @@
       ],
       "task_type": "verification",
       "allowed_capsules": [
-        "cap.research-evidence-poc-claim-verification"
+        "cap.autosci-claim-verification"
       ],
       "allowed_operators": {
         "role": "builder",
@@ -737,7 +737,7 @@
       ],
       "task_type": "report-writing",
       "allowed_capsules": [
-        "cap.research-evidence-poc-final-delivery"
+        "cap.autosci-report-delivery"
       ],
       "allowed_operators": {
         "role": "builder",

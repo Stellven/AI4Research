@@ -17,25 +17,26 @@ contract:
     optional: []
   outputs:
     required:
-      - {name: research_report, type: json}
+      - {name: final_delivery, type: json}
+      - {name: final_delivery, type: markdown}
     optional: []
   preconditions:
     - {check: task_type_in, values: [report-writing]}
   postconditions:
-    - {check: output_present, field: research_report_json}
+    - {check: output_present, field: final_delivery_json}
   invariants:
     - Every reported conclusion traces to a verified claim verdict and its experiment evidence.
     - Recorded limitations are carried into the report and never dropped.
     - Evidence carries provenance operator_id, implementation_package, and timestamp.
 composition:
   consumes: [{type: artifact.claim_verification}, {type: artifact.experiment_result}]
-  produces: [{type: artifact.research_report}]
+  produces: [{type: artifact.final_delivery}]
   compatible_with: [guard.secret-leak-guard]
   incompatible_with: [resource.repo-workspace, resource.github-readonly]
   requires_after: [cap.autosci-claim-verification]
 effects:
   read: [artifacts.claim_verification, artifacts.experiment_result]
-  write: [artifacts.research_report]
+  write: [artifacts.final_delivery]
   execute: []
   network: [none]
   cost: [bounded_local_cpu]
@@ -52,7 +53,7 @@ verification:
   external_verifier: {required: false, preferred_capsules: []}
   pass_conditions: []
 operator_compatibility:
-  preferred: [autosci-report-worker]
+  preferred: [autosci-exec-report-delivery-worker, autosci-report-worker]
   forbidden: []
 provenance:
   owner: opensolar

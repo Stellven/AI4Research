@@ -52,7 +52,7 @@ verification:
   external_verifier: {required: false, preferred_capsules: []}
   pass_conditions: []
 operator_compatibility:
-  preferred: [autosci-idea-evaluate-worker]
+  preferred: [autosci-exec-idea-evaluation-worker, autosci-idea-evaluate-worker]
   forbidden: []
 provenance:
   owner: opensolar

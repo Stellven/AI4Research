@@ -51,7 +51,7 @@ verification:
   external_verifier: {required: false, preferred_capsules: []}
   pass_conditions: []
 operator_compatibility:
-  preferred: [autosci-claim-verify-worker]
+  preferred: [autosci-exec-claim-verification-worker, autosci-claim-verify-worker]
   forbidden: []
 provenance:
   owner: opensolar

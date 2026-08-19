@@ -2194,10 +2194,13 @@ def test_fixed_part_b_capsules_are_exact_and_have_no_repository_resource_authori
         execution_profile="part_a_plus_poc",
         sid="fixed-part-b-capsule-authority",
     )
+    # Part B's science stages now bind the AutoSci capsules so they run through
+    # the AutoSci bridge instead of the Solar reimplementation. The
+    # no-repository-resource requirement is unchanged and still asserted below.
     expected = {
-        "experiment_run": "cap.research-evidence-poc-experiment-run",
-        "claim_verification": "cap.research-evidence-poc-claim-verification",
-        "final_delivery": "cap.research-evidence-poc-final-delivery",
+        "experiment_run": "cap.autosci-experiment-run",
+        "claim_verification": "cap.autosci-claim-verification",
+        "final_delivery": "cap.autosci-report-delivery",
     }
     for node_id, capsule_id in expected.items():
         node = next(item for item in graph["nodes"] if item["id"] == node_id)
@@ -2792,7 +2795,10 @@ def test_every_fixed_stage_binds_exactly_one_dedicated_capsule() -> None:
         capsules = stage.get("allowed_capsules") or []
         assert len(capsules) == 1, f"{stage['id']} must pin exactly one capsule, got {capsules}"
         capsule_id = capsules[0]
-        assert capsule_id.startswith("cap.research-"), (
+        # cap.research-* are the Solar-owned stages; cap.autosci-* are the Part B
+        # science stages that run through the AutoSci bridge. Anything else is a
+        # generic requirement-compiler capsule, which this workflow forbids.
+        assert capsule_id.startswith(("cap.research-", "cap.autosci-")), (
             f"{stage['id']} binds generic capsule {capsule_id}; the fixed workflow forbids generic fallback"
         )
 
@@ -2821,6 +2827,24 @@ def test_each_stage_capsule_postcondition_matches_its_declared_output() -> None:
                 f"{stage['id']}: capsule {capsule['capability_capsule_id']} requires "
                 f"{field!r} (tried {sorted(candidates)}) but the stage declares {sorted(declared)}"
             )
+
+
+def test_part_b_science_stages_are_bound_to_autosci() -> None:
+    """The Part B science stages must run AutoSci, not a Solar reimplementation.
+
+    autosci_bridge.py and its operators already existed; only the capsule layer
+    was missing, so the contract had been pointing at autosci-research-poc-*
+    command operators that reimplemented the lifecycle instead.
+    """
+    bound = {s["id"]: (s.get("allowed_capsules") or [None])[0] for s in _fixed_contract()["stages"]}
+    for stage_id in ("idea_evaluation", "experiment_design", "experiment_run",
+                     "claim_verification", "final_delivery"):
+        assert str(bound[stage_id]).startswith("cap.autosci-"), (
+            f"{stage_id} must bind an AutoSci capsule, got {bound[stage_id]}"
+        )
+    # The boundary and the policy record stay Solar-owned.
+    assert bound["poc_handoff"].startswith("cap.research-")
+    assert bound["experiment_approval"].startswith("cap.research-")
 
 
 def test_fixed_stage_capsules_declare_no_repository_resource() -> None:

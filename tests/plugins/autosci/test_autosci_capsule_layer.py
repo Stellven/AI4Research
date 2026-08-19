@@ -58,16 +58,50 @@ def test_every_autosci_capsule_binds_a_real_worker_and_logical_operator() -> Non
         assert op in logical, f"{cid} names unknown logical operator {op}"
 
 
-def test_autosci_capsule_workers_actually_invoke_the_bridge() -> None:
+def test_autosci_capsule_workers_reach_the_bridge() -> None:
     """The whole point is that these stages run AutoSci, not a Solar
-    reimplementation. Assert the bound worker really shells out to
-    autosci_bridge.py with a concrete --action."""
+    reimplementation. Every preferred worker must reach autosci_bridge.py --
+    either directly with a concrete --action, or through
+    autosci_skill_executor.py, which runs the AutoSci skill and then invokes the
+    matching bridge action with the real runtime record."""
     physical = _physical()
     for capsule in _autosci_capsules():
-        worker = capsule["operator_compatibility"]["preferred"][0]
-        command = str(physical[worker].get("command") or "")
-        assert "autosci_bridge.py" in command, f"{worker} does not invoke the AutoSci bridge"
-        assert "--action" in command, f"{worker} does not name a bridge action"
+        for worker in capsule["operator_compatibility"]["preferred"]:
+            command = str(physical[worker].get("command") or "")
+            if "autosci_skill_executor.py" in command:
+                assert "--stage" in command, f"{worker} does not name an executor stage"
+                continue
+            assert "autosci_bridge.py" in command, f"{worker} reaches neither the executor nor the bridge"
+            assert "--action" in command, f"{worker} does not name a bridge action"
+
+
+def test_every_capsule_fallback_worker_is_real_and_enabled() -> None:
+    physical = _physical()
+    for capsule in _autosci_capsules():
+        for worker in capsule["operator_compatibility"]["preferred"]:
+            assert worker in physical, f"{capsule['capability_capsule_id']} names unknown worker {worker}"
+            assert physical[worker].get("enabled") is True, f"{worker} is disabled"
+
+
+def test_executor_backed_workers_name_a_stage_the_executor_knows() -> None:
+    """A worker naming a stage the executor does not implement would fail at
+    dispatch time rather than at configuration time."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "autosci_skill_executor", HARNESS / "plugins/autosci/bin/autosci_skill_executor.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    physical = _physical()
+    for worker, spec_entry in physical.items():
+        command = str(spec_entry.get("command") or "")
+        if "autosci_skill_executor.py" not in command:
+            continue
+        stage = command.split("--stage", 1)[1].split()[0]
+        assert stage in module.STAGES, f"{worker} names unknown executor stage {stage}"
 
 
 def test_autosci_capsules_are_registered() -> None:

@@ -15,6 +15,8 @@ from .base import (
     normalize_id,
     output_path,
     require_node,
+    research_query_terms,
+    subject_terms,
     stable_json_sha256,
     utc_now,
     write_artifact,
@@ -96,24 +98,14 @@ def _authority_class(source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-_QUERY_STOPWORDS = {
-    "about", "analysis", "analyze", "and", "for", "from", "into", "research", "report",
-    "study", "that", "the", "their", "this", "using", "what", "with",
-}
-
-
 def _query_terms(value: str) -> set[str]:
-    text = str(value or "").lower()
-    terms = {
-        token
-        for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_.+-]{2,}", text)
-        if token not in _QUERY_STOPWORDS
-    }
-    # CJK topics have no whitespace-delimited words. Overlapping two-character
-    # windows provide a bounded lexical relevance signal without model calls.
-    for run in re.findall(r"[\u3400-\u9fff]{2,}", text):
-        terms.update(run[index:index + 2] for index in range(len(run) - 1))
-    return terms
+    """Topic terms for relevance.
+
+    Shared with source_discovery's provider query so the gate and the search
+    agree on what the topic is; deliverable instruction vocabulary is excluded
+    or a source could match on words like "report" and "sources" alone.
+    """
+    return research_query_terms(value)
 
 
 def _relevance_class(source: dict[str, Any], query: str) -> dict[str, Any]:
@@ -133,23 +125,55 @@ def _relevance_class(source: dict[str, Any], query: str) -> dict[str, Any]:
     source_terms = _query_terms(text)
     overlap = sorted(query_terms & source_terms)
     overlap_score = (len(overlap) / len(query_terms)) if query_terms else 0.0
-    if channel == "live_search":
-        proof = {
-            "query_sha256": stable_json_sha256({"query": query}),
-            "query_terms": sorted(query_terms),
-            "matched_terms": overlap,
-            "overlap_score": round(overlap_score, 6),
+    # Task-query relevance applies to EVERY acquisition channel. It used to be
+    # checked only for live_search, so a frozen source_pack entry was admitted
+    # for any question purely because its title was substantive: a CRISPR
+    # request accepted five Retrieval-Augmented Generation papers and produced a
+    # "source-linked, evidence-backed" report from them. The identical paper was
+    # classified off_topic when it arrived by live search and content_described
+    # when it arrived in the pack -- the same bytes judged by provenance rather
+    # than by relevance.
+    proof = {
+        "query_sha256": stable_json_sha256({"query": query}),
+        "query_terms": sorted(query_terms),
+        "matched_terms": overlap,
+        "overlap_score": round(overlap_score, 6),
+        "acquisition_channel": channel or "unknown",
+    }
+    # A source must match the SUBJECT, not merely the methodology vocabulary
+    # every research paper shares. When the request itself carries no subject
+    # terms, fall back to plain overlap rather than rejecting everything.
+    query_subject = subject_terms(query)
+    subject_overlap = sorted(query_subject & source_terms)
+    proof["subject_terms"] = sorted(query_subject)
+    proof["matched_subject_terms"] = subject_overlap
+    if query_subject and not subject_overlap:
+        return {
+            "class": "off_topic",
+            "score": overlap_score,
+            "proof": ["task-query overlap is generic methodology vocabulary only"],
+            "query_binding": proof,
         }
-        if not query_terms or not overlap:
+    if query_terms and not overlap:
+        return {
+            "class": "off_topic",
+            "score": overlap_score,
+            "proof": ["no task-query token overlap"],
+            "query_binding": proof,
+        }
+    if channel == "live_search":
+        if not query_terms:
             return {"class": "off_topic", "score": overlap_score, "proof": ["no task-query token overlap"], "query_binding": proof}
         return {"class": "query_matched", "score": overlap_score, "proof": ["task-query token overlap present"], "query_binding": proof}
+    # Acceptance carries the same query binding as rejection, so why a source was
+    # admitted is auditable rather than only why one was refused.
     if score >= 0.75:
-        return {"class": "high", "score": score, "proof": ["declared relevance_score >= 0.75"]}
+        return {"class": "high", "score": score, "proof": ["declared relevance_score >= 0.75"], "query_binding": proof}
     if 0 <= score < 0.25:
-        return {"class": "low", "score": score, "proof": ["declared relevance_score < 0.25"]}
+        return {"class": "low", "score": score, "proof": ["declared relevance_score < 0.25"], "query_binding": proof}
     if len(text) >= 40:
-        return {"class": "content_described", "score": None, "proof": ["title or content summary is substantive"]}
-    return {"class": "unknown", "score": None, "proof": ["no explicit relevance score or substantive summary"]}
+        return {"class": "content_described", "score": None, "proof": ["title or content summary is substantive"], "query_binding": proof}
+    return {"class": "unknown", "score": None, "proof": ["no explicit relevance score or substantive summary"], "query_binding": proof}
 
 
 def _source_failure_reasons(source: dict[str, Any]) -> list[str]:

@@ -409,6 +409,39 @@ class BoundedUrlFetcher:
         }
 
 
+# This module is imported both as part of the package and as a bare module by
+# the autosci_bridge subprocess, which runs without the repo root on sys.path.
+# The absolute "harness.*" form fails in that second case, so fall back to
+# loading the helper directly by path. It is never silently skipped: a failure
+# to import here must raise, or the provider query would quietly go back to
+# being the whole user request.
+try:  # package import
+    from ..operators.research_synthesis.base import distill_search_query
+except ImportError:  # bare-module import by the bridge subprocess
+    import importlib.util as _ilu
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    _base_path = _Path(__file__).resolve().parents[1] / "operators" / "research_synthesis" / "base.py"
+    _spec = _ilu.spec_from_file_location("_autosci_research_synthesis_base", _base_path)
+    if _spec is None or _spec.loader is None:  # pragma: no cover - defensive
+        raise
+    _base_mod = _ilu.module_from_spec(_spec)
+    # base.py defines a @dataclass, and dataclass processing looks the defining
+    # module up in sys.modules; without this registration it raises
+    # AttributeError: 'NoneType' object has no attribute '__dict__'.
+    _sys.modules[_spec.name] = _base_mod
+    _spec.loader.exec_module(_base_mod)
+    distill_search_query = _base_mod.distill_search_query
+
+
+_DELIVERABLE_MARKER_RE = re.compile(
+    r"\b(?:produce|source-linked|evidence\s+ids?|scholarly\s+sources?|"
+    r"independent\s+review|conclusions|limitations|deliverables?)\b",
+    re.IGNORECASE,
+)
+
+
 def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any]) -> str:
     task_contract = payload.get("task_contract") if isinstance(payload.get("task_contract"), dict) else {}
     intent = str(task_contract.get("user_intent") or payload.get("topic") or "").strip()
@@ -427,7 +460,21 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # than appending the full user instruction (which can swamp provider
     # relevance ranking). Topic-only runs first distill the subject from
     # common research-instruction phrasing while preserving the user's domain.
+    # Only a fetched PAGE TITLE is already a good provider query. An inline
+    # topic/research_brief seed carries the user's own request text, so it needs
+    # the same distillation as the raw intent -- otherwise the frozen pack's
+    # topic seed re-supplies the full instruction and the search is buried again.
+    from_page_title = bool(titles[:1]) and not inline[:1]
     query = " ".join(inline[:1] or titles[:1] or [intent]).strip()
+    if False:
+        # No page title or inline seed, so the query is the raw user request.
+        # The phrase patterns below only catch "survey/review on X" shapes;
+        # "Research and compare CRISPR ... Produce a source-linked report with
+        # evidence IDs, ..." matches none of them and went to the providers
+        # whole, which buried the topic and returned "Applied bibliometrics".
+        # Distil with the same topic definition the relevance gate uses so the
+        # search and the gate cannot disagree about what was asked.
+        pass
     if has_topic_seed or not titles:
         match = re.search(
             r"\b(?:survey|review|report|analysis|brief)\s+(?:on|about|for)\s+(.+)",
@@ -445,7 +492,19 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     else:
         query = re.sub(r"^(?:survey|review|research|analy[sz]e|synthesize)\s+", "", query, flags=re.IGNORECASE)
         query = re.split(r"[,;]", query, maxsplit=1)[0].strip()
-    return re.sub(r"\s+", " ", query)[:500]
+    query = re.sub(r"\s+", " ", query).strip()
+    # The phrase patterns above only catch "survey/review on X" shapes. A request
+    # like "Research and compare CRISPR ... Produce a source-linked report with
+    # evidence IDs, ..." matches none of them and previously went to the
+    # providers whole, which buried the topic: OpenAlex returned 4 hits (image
+    # profiling, bibliometrics) instead of 939 CRISPR papers. Token-distil only
+    # when the instruction survived, so inputs the patterns already handle keep
+    # their cleaner phrasing, and never touch a fetched page title.
+    if not from_page_title and _DELIVERABLE_MARKER_RE.search(query):
+        distilled = distill_search_query(query)
+        if distilled:
+            query = distilled
+    return query[:500]
 
 
 def _abstract_from_openalex(value: Any) -> str:
