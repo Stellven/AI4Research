@@ -288,6 +288,38 @@ def run_skill(
     return record
 
 
+# Which envelope input names the thing this stage acted on, by wiki collection.
+_SUBJECT_KEY_BY_COLLECTION = {"ideas": "idea_id", "experiments": "experiment_id"}
+
+
+def _bridge_subject_inputs(*, stage: str, record: dict[str, Any]) -> dict[str, str]:
+    """Tell the bridge which wiki, and which entity in it, this run was about.
+
+    The bridge can read the AutoSci wiki, but `_should_resolve_wiki_state`
+    only turns that on when the envelope carries one of wiki_root, from_wiki,
+    target, topic, query, idea_id or experiment_id. An envelope holding only
+    `request` matched none of them, so the bridge silently fell back to
+    `convert_idea_candidate({})` and emitted typed evidence about the fixture
+    `idea-001` while the skill had really just written
+    `wiki/ideas/jepa-augmented-transmamba-long-context-abstraction.md`.
+
+    Evidence that passes its gates while describing something other than the
+    run it claims to describe is the failure mode this whole workflow exists to
+    prevent, so the executor now always states the subject.
+    """
+    subject: dict[str, str] = {"wiki_root": str(Path(record["autosci_home"]) / "wiki")}
+    argument = str(record.get("stage_argument") or "").strip()
+    source = ARGUMENT_SOURCES.get(stage) or {}
+    key = _SUBJECT_KEY_BY_COLLECTION.get(str(source.get("collection") or ""))
+    if key and argument:
+        subject[key] = argument
+    elif str(source.get("kind")) == "request" and argument:
+        # $ideate is given a topic rather than an entity id; the bridge accepts
+        # `topic` as a wiki-resolution trigger in its own right.
+        subject["topic"] = argument
+    return subject
+
+
 def invoke_bridge(*, action: str, envelope_path: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(BRIDGE), "run", "--action", action, "--envelope", str(envelope_path)],
@@ -327,7 +359,16 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
     entries = list(existing) if isinstance(existing, list) else []
     entries.append({"path": str(record_path), "exists": record_path.is_file()})
     inputs["runtime_evidence"] = entries
+    inputs.update(_bridge_subject_inputs(stage=stage, record=record))
     envelope["inputs"] = inputs
+    # adapters/solar_envelope_to_autosci.normalize_envelope defaults an
+    # unstated mode to "fixture", and the bridge treats a fixture envelope as
+    # licence to skip wiki resolution and synthesise evidence from
+    # convert_idea_candidate({}). A real skill just ran, so declaring "fixture"
+    # by omission is simply false: the first live Part B run produced typed
+    # evidence about `idea-001` while $ideate had written a real idea page.
+    # State the mode we are actually in and let the bridge read the wiki.
+    envelope["mode"] = str(envelope.get("mode") or "solar_native")
 
     augmented = work_dir / "autosci-runtime" / f"{stage}-{run_id}.envelope.json"
     augmented.parent.mkdir(parents=True, exist_ok=True)

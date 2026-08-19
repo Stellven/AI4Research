@@ -302,3 +302,126 @@ def test_the_part_b_chain_threads_identifiers_from_one_stage_to_the_next(
     # claim_verification wants a finished experiment, and $exp-run is what
     # moved that page from planned to completed.
     assert records[-1]["stage_argument_source"] == "wiki/experiments"
+
+
+def test_the_envelope_tells_the_bridge_which_wiki_entity_the_run_was_about() -> None:
+    """Evidence must describe the run it claims to describe.
+
+    autosci_bridge._should_resolve_wiki_state only reads the wiki when the
+    envelope carries wiki_root/idea_id/experiment_id/topic and friends. A first
+    real Part B run passed an envelope holding only `request`, so the bridge
+    matched none of them, fell back to its fixture converter, and emitted typed
+    evidence about `idea-001` while $ideate had actually written
+    wiki/ideas/jepa-augmented-transmamba-long-context-abstraction.md.
+    """
+    record = {
+        "autosci_home": "/srv/autosci",
+        "stage_argument": "jepa-augmented-transmamba-long-context-abstraction",
+    }
+
+    design = ex._bridge_subject_inputs(stage="experiment_design", record=record)
+    assert design["wiki_root"] == "/srv/autosci/wiki"
+    assert design["idea_id"] == "jepa-augmented-transmamba-long-context-abstraction"
+
+    run = ex._bridge_subject_inputs(
+        stage="experiment_run", record={**record, "stage_argument": "mamba-main"}
+    )
+    assert run["experiment_id"] == "mamba-main"
+    assert "idea_id" not in run
+
+    # $ideate takes a topic, not an entity id, so name it as a topic.
+    ideate = ex._bridge_subject_inputs(
+        stage="idea_evaluation", record={**record, "stage_argument": "mamba versus transformers"}
+    )
+    assert ideate["topic"] == "mamba versus transformers"
+    assert "idea_id" not in ideate
+
+
+def test_every_stage_hands_the_bridge_a_wiki_resolution_trigger() -> None:
+    """No stage may reach the bridge without one, or it silently uses fixtures."""
+    triggers = {"wiki_root", "from_wiki", "target", "topic", "query", "idea_id", "experiment_id"}
+    for stage in ex.STAGES:
+        subject = ex._bridge_subject_inputs(
+            stage=stage, record={"autosci_home": "/srv/autosci", "stage_argument": "some-slug"}
+        )
+        assert triggers & set(subject), f"{stage} would fall back to fixture evidence"
+
+
+def test_the_envelope_never_claims_fixture_mode_after_a_real_skill_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An unstated mode is normalized to "fixture", which fabricates evidence.
+
+    adapters/solar_envelope_to_autosci.normalize_envelope defaults a missing
+    `mode` to "fixture", and the bridge reads that as licence to skip wiki
+    resolution and synthesise evaluations from convert_idea_candidate({}). The
+    first live Part B run hit exactly this: $ideate wrote a real idea page and
+    the typed evidence described `idea-001`.
+
+    Supplying wiki_root and idea_id was NOT enough on its own; the fixture
+    default overrode them. The executor has to state the mode as well.
+    """
+    home = _home(tmp_path, monkeypatch)
+    _page(home / "wiki" / "ideas", "real-idea", slug="real-idea", status="proposed")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    # Succeed, and record nothing; only the envelope handed to the bridge matters.
+    (fake / "codex").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (fake / "codex").chmod(0o755)
+    (fake / "bridge-stub").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    monkeypatch.setenv("PATH", f"{fake}{os.pathsep}{os.environ['PATH']}")
+
+    envelope_path = tmp_path / "envelope.json"
+    envelope_path.write_text(json.dumps({"task_id": "t", "inputs": {"request": "a topic"}}), encoding="utf-8")
+
+    captured: dict = {}
+
+    def fake_bridge(*, action: str, envelope_path: Path):
+        captured.update(json.loads(Path(envelope_path).read_text(encoding="utf-8")))
+        return subprocess.CompletedProcess(args=[], returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(ex, "invoke_bridge", fake_bridge)
+
+    args = ex._parser().parse_args(
+        ["--stage", "experiment_design", "--envelope", str(envelope_path), "--work-dir", str(tmp_path)]
+    )
+    ex.execute(args)
+
+    assert captured["mode"] != "fixture", "fixture mode makes the bridge fabricate the evidence"
+    assert captured["inputs"]["idea_id"] == "real-idea"
+    assert captured["inputs"]["wiki_root"] == str(home / "wiki")
+
+
+def test_an_explicitly_declared_mode_is_preserved(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A caller that really does want a fixture run keeps it."""
+    home = _home(tmp_path, monkeypatch)
+    _page(home / "wiki" / "ideas", "real-idea", slug="real-idea", status="proposed")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "codex").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (fake / "codex").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake}{os.pathsep}{os.environ['PATH']}")
+
+    envelope_path = tmp_path / "envelope.json"
+    envelope_path.write_text(
+        json.dumps({"task_id": "t", "mode": "fixture", "inputs": {"request": "a topic"}}),
+        encoding="utf-8",
+    )
+    captured: dict = {}
+    monkeypatch.setattr(
+        ex,
+        "invoke_bridge",
+        lambda *, action, envelope_path: (
+            captured.update(json.loads(Path(envelope_path).read_text(encoding="utf-8")))
+            or subprocess.CompletedProcess(args=[], returncode=0, stdout="{}", stderr="")
+        ),
+    )
+
+    args = ex._parser().parse_args(
+        ["--stage", "experiment_design", "--envelope", str(envelope_path), "--work-dir", str(tmp_path)]
+    )
+    ex.execute(args)
+
+    assert captured["mode"] == "fixture"
