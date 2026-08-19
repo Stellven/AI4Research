@@ -115,14 +115,103 @@ def collect(evidence_root: Path, *, repo: Path | None = None) -> dict[str, Any]:
     }
 
 
+def live(evidence_root: Path) -> dict[str, Any]:
+    """What is happening right now, from the signals a run emits as it goes.
+
+    The snapshot collector above answers "what did this run do" after the fact.
+    This answers "what is it doing", which is the question that was being
+    answered all session by `ls` and `tail` -- the method that let a timed-out
+    stage read as a success and a stale server's output read as the current
+    run's.
+
+    Everything here is read from disk. Nothing is inferred from elapsed time,
+    because a stage that is slow and a stage that is wedged look identical from
+    the outside and must not be reported as the same thing.
+    """
+    sprints = evidence_root / "sprints"
+    if not sprints.is_dir():
+        return {"state": "no_sprints_dir", "evidence_root": str(evidence_root)}
+    sids = sorted({p.name.split(".")[0] for p in sprints.glob("*wf-research-evidence-to-poc-v1-*")})
+    sid = sids[-1] if sids else ""
+    if not sid:
+        return {"state": "no_sprint_yet", "evidence_root": str(evidence_root)}
+
+    # Node state lives in the sprint status file, not on the graph nodes and
+    # not in the per-node runstate sidecar (which records attribution only).
+    status = _load(sprints / f"{sid}.status.json") or {}
+    active = str(status.get("active_node") or "")
+    open_nodes = {str(item) for item in (status.get("open_nodes") or [])}
+    failed_nodes = {str(item) for item in (status.get("failed_nodes") or [])}
+    review_nodes = {str(item) for item in (status.get("human_review_nodes") or [])}
+
+    def _state(stage: str, has_gate: bool) -> str:
+        if stage in failed_nodes:
+            return "failed"
+        if stage in review_nodes:
+            return "needs_human_review"
+        if stage == active:
+            return "active"
+        if stage in open_nodes:
+            return "open"
+        return "done" if has_gate else "pending"
+
+    status_by_node: dict[str, str] = {}
+
+    stages: list[dict[str, Any]] = []
+    for stage in STAGE_ORDER:
+        runstate = _load(sprints / f"{sid}.{stage}-runstate.json")
+        sidecar = _load(sprints / f"{sid}.{stage}-eval.json")
+        if runstate is None and sidecar is None and stage not in (open_nodes | failed_nodes | {active}):
+            continue
+        stages.append({
+            "stage": stage,
+            "status": _state(stage, sidecar is not None),
+            "gate": (sidecar or {}).get("verdict"),
+            "gate_kind": (sidecar or {}).get("gate_kind"),
+            "gate_seconds": (sidecar or {}).get("duration_seconds"),
+        })
+
+    # Every model call the run has made, with the provider actually used.
+    workdir = sprints / sid / "workdir"
+    calls: list[dict[str, Any]] = []
+    for exchange in sorted(evidence_root.rglob("service-evidence/*/*/exchange.json")):
+        payload = _load(exchange) or {}
+        calls.append({
+            "node": payload.get("node_id"),
+            "provider": exchange.parent.parent.name,
+            "model": payload.get("model"),
+            "status": payload.get("status") or ("failed" if payload.get("error") else "completed"),
+            "elapsed_ms": payload.get("elapsed_ms"),
+            "exit_code": payload.get("exit_code"),
+            "error": str(payload.get("error") or "")[:160] or None,
+        })
+
+    return {
+        "schema": "solar.fixed_research_live.v1",
+        "sprint_id": sid,
+        "phase": status.get("phase"),
+        "active_node": active or None,
+        "stages_seen": len(stages),
+        "current": stages[-1] if stages else None,
+        "stages": stages,
+        "model_calls": calls,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--evidence-root", required=True, action="append",
                         help="repeatable; one record per run")
     parser.add_argument("--repo", default=".")
     parser.add_argument("--out", default="")
+    parser.add_argument("--live", action="store_true", help="what is happening now, not what happened")
     args = parser.parse_args(argv)
 
+    if args.live:
+        payload = {"schema": "solar.fixed_research_live_set.v1",
+                   "runs": [live(Path(root).expanduser()) for root in args.evidence_root]}
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
     records = [collect(Path(root).expanduser(), repo=Path(args.repo)) for root in args.evidence_root]
     payload = {"schema": "solar.fixed_research_run_telemetry_set.v1", "runs": records}
     text = json.dumps(payload, indent=2, sort_keys=True)
