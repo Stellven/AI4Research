@@ -51,6 +51,7 @@ except ImportError:  # direct-module execution paths used by the bridge/adapter
         )
 
 CLAUDE_RESEARCH_SERVICE_ID = "autosci-claude-research-model"
+CLAUDE_USAGE_PROVIDER = "claude_subscription"
 DEFAULT_CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
 # Never forward a provider credential into the CLI subprocess: the Claude CLI
@@ -72,6 +73,10 @@ class ClaudeResearchModelService(CodexResearchModelService):
     """Codex-shaped research model service backed by the Claude CLI."""
 
     service_id = CLAUDE_RESEARCH_SERVICE_ID
+    # Never codex_subscription. A Haiku call recorded under the Codex label
+    # passes the adapter's provenance guard while the evidence names the wrong
+    # provider, which is worse than the guard refusing the run.
+    usage_provider = CLAUDE_USAGE_PROVIDER
 
     def __init__(self, *args: Any, claude_binary: str = "claude", **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -209,11 +214,14 @@ class ClaudeResearchModelService(CodexResearchModelService):
             )
 
         _write_json(response_path, payload)
-        self._record_invocation(
-                invocation_id=invocation_id, node_id=node_id, started=started,
-                request_sha256=request_sha256, prompt_payload=prompt_payload,
-                request_path=request_path, schema_path=schema_path,
-                response_path=response_path, events_path=events_path,
+        usage = self._record_invocation(
+            invocation_id=invocation_id, node_id=node_id, started=started,
+            request_sha256=request_sha256, prompt_payload=prompt_payload,
+            request_path=request_path, schema_path=schema_path,
+            response_path=response_path, events_path=events_path,
             status="completed", response_payload=payload, exit_code=proc.returncode,
         )
-        return payload
+        # Recording the invocation is not the same as reporting it: the operator
+        # reads provenance off the returned payload. Omitting this was the whole
+        # defect -- four good Haiku calls rejected as an unattested provider.
+        return self._attach_provider_usage(payload, usage)

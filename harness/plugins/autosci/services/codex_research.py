@@ -197,6 +197,12 @@ class CodexResearchModelService(ResearchModelService):
 
     service_id = CODEX_RESEARCH_SERVICE_ID
     service_version = CODEX_RESEARCH_SERVICE_VERSION
+    # The provenance label recorded for every invocation. An attribute rather
+    # than a literal because a subclass driving a different CLI must not be able
+    # to inherit this one's identity: a Claude call recorded as
+    # codex_subscription is a false provenance record, and checkable provenance
+    # is the point of this workflow.
+    usage_provider = "codex_subscription"
 
     def __init__(
         self,
@@ -223,6 +229,23 @@ class CodexResearchModelService(ResearchModelService):
                 "Codex research service requires an exact model and writer/reviewer role",
                 error_type="provider_configuration",
             )
+
+    def _attach_provider_usage(
+        self, payload: dict[str, Any], usage: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Stamp the returned payload with the provenance the operator reads.
+
+        Every `__call__` implementation must end here. `provider_usage_from`
+        synthesises a row labelled "injected" when these keys are absent, so a
+        service that forgets them does not fail loudly -- it reports
+        plausible-looking provenance for a call that recorded none. Keeping the
+        three assignments in one place is what stops a new provider inheriting
+        that omission.
+        """
+        payload["provider"] = self.usage_provider
+        payload["model"] = self.model
+        payload["provider_usage"] = [usage]
+        return payload
 
     def _record_invocation(
         self,
@@ -287,7 +310,7 @@ class CodexResearchModelService(ResearchModelService):
             for path in evidence_paths
         }
         usage = {
-            "provider": "codex_subscription",
+            "provider": self.usage_provider,
             "model": self.model,
             "usage_kind": "llm",
             "principal_role": self.role,
@@ -539,7 +562,4 @@ class CodexResearchModelService(ResearchModelService):
             response_payload=response_payload,
             exit_code=int(process.returncode),
         )
-        payload["provider"] = "codex_subscription"
-        payload["model"] = self.model
-        payload["provider_usage"] = [usage]
-        return payload
+        return self._attach_provider_usage(payload, usage)
