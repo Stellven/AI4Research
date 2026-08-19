@@ -264,18 +264,31 @@ def _codex_services(
 ) -> dict[str, Any]:
     if node_id == "final_acceptance":
         return {}
-    writer_model = str(os.environ.get("SOLAR_CODEX_RESEARCH_MODEL") or "gpt-5.5").strip()
+    # The research operators name no provider: this adapter chose one CLI, so a
+    # Codex quota exhaustion stopped every stage past source_validation. The
+    # provider is now selectable, and the model default follows it so a Codex
+    # model id cannot leak into a Claude run.
+    provider = str(os.environ.get("SOLAR_RESEARCH_MODEL_PROVIDER") or "codex").strip().lower()
+    service_cls = CodexResearchModelService
+    default_model = "gpt-5.5"
+    if provider == "claude":
+        from services.claude_research import DEFAULT_CLAUDE_MODEL, ClaudeResearchModelService
+
+        service_cls = ClaudeResearchModelService
+        default_model = DEFAULT_CLAUDE_MODEL
+
+    writer_model = str(os.environ.get("SOLAR_RESEARCH_MODEL") or os.environ.get("SOLAR_CODEX_RESEARCH_MODEL") or default_model).strip()
     reviewer_model = str(os.environ.get("SOLAR_CODEX_REVIEW_MODEL") or writer_model).strip()
     reasoning_effort = str(os.environ.get("SOLAR_CODEX_RESEARCH_REASONING_EFFORT") or "high").strip()
     invocation_journal: list[dict[str, Any]] = []
-    writer = CodexResearchModelService(
+    writer = service_cls(
         stage_dir,
         model=writer_model,
         role="writer",
         reasoning_effort=reasoning_effort,
         invocation_journal=invocation_journal,
     )
-    reviewer = CodexResearchModelService(
+    reviewer = service_cls(
         stage_dir,
         model=reviewer_model,
         role="reviewer",
