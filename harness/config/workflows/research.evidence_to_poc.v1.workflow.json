@@ -228,8 +228,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --claims-only",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A4 · Evidence synthesis",
       "timeouts": {
@@ -278,15 +285,8 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "deterministic_command",
-        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --claims-only",
-        "on_fail": "fail",
-        "on_human_review": "warn_and_continue",
-        "verdict_kinds": [
-          "content",
-          "mechanical",
-          "infrastructure"
-        ]
+        "kind": "none",
+        "on_fail": "fail"
       },
       "dashboard_label": "A5 · Report draft",
       "timeouts": {
