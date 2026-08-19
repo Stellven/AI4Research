@@ -42,8 +42,13 @@ from .codex_research import (  # noqa: F401  (schema/helpers shared deliberately
 
 try:
     from ..operators.research_synthesis.base import ResearchOperatorError
-except ImportError:  # direct-module execution path used by the bridge
-    from operators.research_synthesis.base import ResearchOperatorError
+except ImportError:  # direct-module execution paths used by the bridge/adapter
+    try:
+        from operators.research_synthesis.base import ResearchOperatorError
+    except ImportError:
+        from harness.plugins.autosci.operators.research_synthesis.base import (
+            ResearchOperatorError,
+        )
 
 CLAUDE_RESEARCH_SERVICE_ID = "autosci-claude-research-model"
 DEFAULT_CLAUDE_MODEL = "claude-haiku-4-5-20251001"
