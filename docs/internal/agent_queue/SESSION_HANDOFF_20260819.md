@@ -447,3 +447,29 @@ It is not yet a full deep research report, for one specific reason:
 `"Findings"` section, so the compiler has exactly one section to render. Solar's
 report shape supports many. Grouping claims into themed sections is the next
 piece of work after task 2, and it belongs in `build_plan`, not in the compiler.
+
+## Sectioning landed 2026-08-19 19:35, and what still has to follow it
+
+`build_plan` now groups claims by a per-claim `theme` (also accepting
+`section` / `section_title` / `topic`), in first-appearance order, with slugged
+unique section ids. Verified against the live run's real artifacts: unthemed
+input still compiles to one section with 5 claims; the same claims carrying 4
+distinct themes compile to 4 sections whose headings render in `final.md`.
+
+Grouping deliberately runs AFTER validation. A claim can still be dropped for
+citing absent evidence or carrying no verified quote, and grouping first would
+publish a heading with nothing beneath it.
+
+This is inert until the synthesis operator emits a label. Two edits, both
+touching files the in-flight run was still using, so they were not made:
+
+1. `codex_research.py` `_response_schema("evidence_synthesis")` -- add an
+   optional `theme` string to each claim. Note `additionalProperties: False` on
+   that schema: an unlisted field is not ignored, it is refused. That is exactly
+   how `evidence_quotes` came back empty for a whole day.
+2. `evidence_synthesis.py` `_normalize_claims` -- carry `theme` through onto the
+   stored claim. Do not invent one when the model omits it; the single-section
+   fallback exists for that case.
+
+Prompt the model to label claims by theme, not to write section prose. The
+compiler owns rendering; the model's job here is grouping.
