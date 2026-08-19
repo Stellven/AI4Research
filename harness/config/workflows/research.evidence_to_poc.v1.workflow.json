@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.workflow_contract.v1",
   "workflow_id": "research.evidence_to_poc.v1",
-  "version": "1.4",
+  "version": "1.5",
   "title": "Fixed research evidence-to-PoC workflow",
   "dag_variant": "research",
   "stages_mode": "fixed",
@@ -174,8 +174,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --sources-only",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A3 · Source validation",
       "timeouts": {
@@ -271,8 +278,15 @@
         }
       ],
       "evaluator_gate": {
-        "kind": "none",
-        "on_fail": "fail"
+        "kind": "deterministic_command",
+        "command": "python3 scripts/validate_evidence_to_poc.py --workspace <resolved_root> --claims-only",
+        "on_fail": "fail",
+        "on_human_review": "warn_and_continue",
+        "verdict_kinds": [
+          "content",
+          "mechanical",
+          "infrastructure"
+        ]
       },
       "dashboard_label": "A5 · Report draft",
       "timeouts": {
