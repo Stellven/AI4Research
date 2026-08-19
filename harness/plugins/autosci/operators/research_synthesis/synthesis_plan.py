@@ -26,6 +26,7 @@ claim with no recorded uncertainty is reported, not given a placeholder.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 SCHEMA = "solar.grounded_synthesis_plan.v2"
@@ -61,6 +62,34 @@ def evidence_index(evidence_rows: list[dict[str, Any]]) -> dict[str, list[str]]:
     return index
 
 
+_SAFE_SECTION_ID_RE = re.compile(r"[^A-Za-z0-9_.-]+")
+
+
+def _section_id(title: str, taken: set[str]) -> str:
+    """A section id the compiler will accept, derived from the theme.
+
+    `grounded_synthesis` requires `^[A-Za-z0-9_.-]+$` and refuses duplicates, so
+    an unslugged theme would abort the whole compile rather than degrade.
+    """
+    base = _SAFE_SECTION_ID_RE.sub("-", str(title or "").strip().lower()).strip("-")
+    base = base or "section"
+    candidate = base
+    suffix = 2
+    while candidate in taken:
+        candidate = f"{base}-{suffix}"
+        suffix += 1
+    taken.add(candidate)
+    return candidate
+
+
+def _claim_theme(claim: dict[str, Any]) -> str:
+    for key in ("theme", "section", "section_title", "topic"):
+        value = " ".join(str(claim.get(key) or "").split())
+        if value:
+            return value
+    return ""
+
+
 def build_plan(
     *,
     claims: list[dict[str, Any]],
@@ -77,7 +106,10 @@ def build_plan(
     """
     sections: list[dict[str, Any]] = []
     gaps: list[dict[str, Any]] = []
-    usable: list[dict[str, Any]] = []
+    # (theme, claim). The theme is whatever the synthesis operator labelled the
+    # claim with; grouping happens after validation so a dropped claim cannot
+    # leave an empty section behind.
+    usable: list[tuple[str, dict[str, Any]]] = []
 
     for index, claim in enumerate(claims, start=1):
         if not isinstance(claim, dict):
@@ -145,7 +177,7 @@ def build_plan(
             })
             continue
 
-        usable.append({
+        usable.append((_claim_theme(claim), {
             "text": text,
             "uncertainty": uncertainty,
             "evidence_links": [
@@ -155,14 +187,22 @@ def build_plan(
                 {"evidence_id": eid, "relation": "supports", "quote": quote}
                 for eid, quote in present
             ],
-        })
+        }))
 
-    if usable:
-        sections.append({
-            "section_id": "findings",
-            "title": section_title,
-            "claims": usable,
-        })
+    # One section per theme, in the order the themes first appear, so the report
+    # follows the synthesis rather than a re-sort nobody asked for. A run whose
+    # claims carry no theme collapses to the single section this produced
+    # before, which is why an unlabelled synthesis still compiles.
+    taken: set[str] = set()
+    grouped: dict[str, dict[str, Any]] = {}
+    for theme, claim_payload in usable:
+        title = theme or section_title
+        bucket = grouped.get(title)
+        if bucket is None:
+            bucket = {"section_id": _section_id(title, taken), "title": title, "claims": []}
+            grouped[title] = bucket
+        bucket["claims"].append(claim_payload)
+    sections.extend(grouped.values())
 
     status = "sufficient" if sections else "insufficient"
     if status == "insufficient" and not gaps:
