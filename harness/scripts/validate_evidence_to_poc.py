@@ -53,6 +53,27 @@ REPORT_MD = ARTIFACT_ROOT / "report" / "report.md"
 _CLAIM_RE = re.compile(r"\bclaim-\d+\b")
 
 
+def resolve_workspace(given: Path) -> Path:
+    """Find the directory that actually contains the artifact root.
+
+    `<resolved_root>` substitutes to the PARENT of the contract's canonical
+    root. rsi_demo's canonical is `sprints/<sid>/workdir/<report-dir>/`, so its
+    parent is the workdir and its validator's assumption holds. This contract's
+    canonical is already `sprints/<sid>/workdir/`, so the parent overshoots by
+    one level and the artifacts sit in a child.
+
+    Rather than encode either assumption, look for the artifact root at the
+    given path and one level down. A gate that reports "file missing" because
+    it was handed the wrong directory is a false failure indistinguishable from
+    a real one, and with on_fail: fail it would block every run.
+    """
+    given = given.expanduser()
+    for candidate in (given, given / "workdir"):
+        if (candidate / SOURCE_VALIDATION).is_file() or (candidate / ARTIFACT_ROOT).is_dir():
+            return candidate
+    return given
+
+
 def _load(path: Path) -> dict[str, Any] | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -206,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--claims-only", action="store_true")
     args = parser.parse_args(argv)
 
-    workspace = Path(args.workspace).expanduser()
+    workspace = resolve_workspace(Path(args.workspace))
     run_sources = args.sources_only or not args.claims_only
     run_claims = args.claims_only or not args.sources_only
 
