@@ -673,3 +673,62 @@ Note before wiring: `report_draft` is in the adapter's model-stage set, so a
 purely deterministic compile there would trip "completed model stage emitted no
 provider usage". Either keep a model call at that node or move it out of the
 model-stage set deliberately, with the guard updated to match.
+
+## 2026-08-19 21:30 -- goal: green end to end, and the four fixes that were blocking it
+
+Goal restated by the owner: stop stopping, drive the workflow to a green
+end-to-end run, monitor it, and fix what fails.
+
+### Telemetry first
+
+The owner pointed out an existing Docker UAT telemetry pipeline at
+`internal/codex-docker-uat/`. Its `entrypoint.sh` takes a full forensic snapshot
+every N seconds -- process table, sprint sidecars, runtime control-plane
+directories, typed file inventory -- rather than answering one question at a
+time. That is why failures kept being found hours late: the old collector only
+reported what it had been told to look for.
+
+`harness/tools/fixed_research_forensics.py` ports that pattern to native runs.
+Run against the previously failed run it reported, unprompted, two failed nodes,
+both report_revision dispatch errors, the failed provider call, and EIGHT
+poc_handoff retries against "A8 did not record an accepted PASS outcome" that
+manual digging never found. It also showed the run's phase was `needs_human`,
+not merely timed out.
+
+### The causal chain, finally visible
+
+report_revision never completed -> final_acceptance rejected -> poc_handoff
+refused eight times -> run exhausted its budget. One root cause, three symptoms.
+
+### Four fixes, all the same shape
+
+The operator imposed a condition on the model that the operator itself made
+unsatisfiable.
+
+1. `verify_revision_response_preservation` recomputed its expectation from a
+   `limitations` list the loop mutates, instead of comparing against the object
+   handed to the model. It now takes that object.
+2. The render check demanded every accumulated limitation appear verbatim in the
+   report, including ones the reviewer wrote AFTER the report was generated. No
+   attempt can render what did not exist when it was prompted, and each review
+   adds more, so it could never converge. It now checks only what that attempt
+   was asked to preserve.
+3. `report_revision.json` published the running accumulator as `limitations`.
+   Two consumers rebuild a requirement from that field -- the adapter's
+   `_verify_report_revision_artifact` and `final_acceptance` -- so both rejected
+   a revision that did everything asked. It now publishes the accepted attempt's
+   preserved set; the rest is recorded under `review_recorded_limitations`.
+4. `_normalize_report` appended "## Limitations" unconditionally, after the
+   heading-dedupe pass, so a model that wrote its own section got a second one.
+   That duplicate was the reviewer's CRITICAL blocking finding, and since the
+   append ran again every attempt the operator recreated it each time. Recorded
+   limitations are now merged into an existing section.
+
+### Part B preconditions, checked before reaching them
+
+Part B is fully implemented in `fixed_research_poc.py` (`execute_part_b`) and is
+deterministic -- no model calls. `experiment_run` shells out to
+`unshare -Urn`, which works on this WSL2 host, and
+`harness/tools/fixed_research_benchmark.py` exists. `experiment_approval`
+supports `policy_preauthorized`, which the run script's `--policy-actor` and
+`--policy-statement` supply. So Part B has no known environmental blocker.
