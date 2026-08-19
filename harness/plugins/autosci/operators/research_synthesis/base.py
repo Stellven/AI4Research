@@ -572,6 +572,35 @@ RESEARCH_GENERIC_TERMS = frozenset({
 })
 
 
+# A term that discriminates on its own. Compounds like "retrieval-augmented",
+# "off-target" or "high-content" name a specific subject; a bare common word
+# like "design", "generation" or "analysis" appears in most academic titles and
+# is only meaningful alongside another match.
+def is_discriminating_term(term: str) -> bool:
+    """True when a single match on this term is enough to show relevance."""
+    return "-" in term or "_" in term
+
+
+def subject_match_is_sufficient(matched: set[str]) -> bool:
+    """Whether a source's subject overlap is strong enough to admit it.
+
+    Measured against three recorded runs. Admitting on ANY single match let
+    four off-topic sources into a RAG report -- "Research Design" and
+    "Multiple Least Squares Regression Analysis" among them -- each on the
+    single word "design", which leaked into the request's subject terms from
+    the PoC half of the prompt.
+
+    Requiring two matches instead removed all four, but also dropped "Query
+    Rewriting in Retrieval-Augmented Large Language Models", which matches only
+    `retrieval-augmented`. A flat count cannot tell those apart: both match
+    exactly one term. What separates them is WHICH term, so that is what this
+    measures. Result across the same runs: 5 on-topic kept, 0 off-topic.
+    """
+    if not matched:
+        return False
+    return len(matched) >= 2 or any(is_discriminating_term(term) for term in matched)
+
+
 def subject_terms(value: str) -> set[str]:
     """Query terms that carry subject meaning, i.e. not generic methodology."""
     return research_query_terms(value) - RESEARCH_GENERIC_TERMS

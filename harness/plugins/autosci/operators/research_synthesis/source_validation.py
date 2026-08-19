@@ -17,6 +17,7 @@ from .base import (
     output_path,
     require_node,
     research_query_terms,
+    subject_match_is_sufficient,
     subject_terms,
     stable_json_sha256,
     utc_now,
@@ -148,11 +149,21 @@ def _relevance_class(source: dict[str, Any], query: str) -> dict[str, Any]:
     subject_overlap = sorted(query_subject & source_terms)
     proof["subject_terms"] = sorted(query_subject)
     proof["matched_subject_terms"] = subject_overlap
-    if query_subject and not subject_overlap:
+    proof["subject_match_sufficient"] = subject_match_is_sufficient(set(subject_overlap))
+    if query_subject and not proof["subject_match_sufficient"]:
+        # A single common word is not evidence of relevance. Measured on the
+        # r13 run: admitting on any one match let in "Research Design" and
+        # "Multiple Least Squares Regression Analysis" on the word "design"
+        # alone, which reached the request's subject terms from its PoC half.
+        reason = (
+            "task-query overlap is generic methodology vocabulary only"
+            if not subject_overlap
+            else "single non-discriminating subject term is insufficient"
+        )
         return {
             "class": "off_topic",
             "score": overlap_score,
-            "proof": ["task-query overlap is generic methodology vocabulary only"],
+            "proof": [reason],
             "query_binding": proof,
         }
     if query_terms and not overlap:

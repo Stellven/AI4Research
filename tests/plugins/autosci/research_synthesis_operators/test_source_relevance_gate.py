@@ -185,3 +185,70 @@ def test_subject_compounds_survive_the_stopword_rule() -> None:
     # Both halves are deliverable vocabulary, so the compound is not a topic.
     assert "evidence-linked" not in research_query_terms("an evidence-linked report")
     assert "source-linked" not in research_query_terms("a source-linked report")
+
+
+def test_a_single_common_word_does_not_admit_a_source() -> None:
+    """Found in the r13 run, after the channel fix was already in place.
+
+    The request carried subject terms from BOTH halves of the prompt -- the
+    research topic and the PoC deliverable -- so "design" became a subject
+    term. Four off-topic sources were then admitted on that one word, among
+    them "Research Design" and "Multiple Least Squares Regression Analysis",
+    in a report about retrieval-augmented generation.
+    """
+    request = (
+        "Research and compare retrieval-augmented generation evaluation methods "
+        "and reliability benchmarks, then run its fixed no-network "
+        "evidence-lineage benchmark PoC design"
+    )
+    junk = {
+        "source_id": "doi:junk",
+        "title": "Research Design",
+        "canonical_id": "doi:10.1201/9781315180212-16",
+        "content_summary": "A textbook chapter on research design.",
+        "provider": "crossref",
+    }
+
+    verdict = _relevance_class(junk, request)
+
+    assert verdict["class"] == "off_topic", verdict
+    assert "single non-discriminating subject term" in verdict["proof"][0]
+
+
+def test_one_discriminating_term_is_enough() -> None:
+    """A flat "require two matches" rule would have dropped this real paper.
+
+    It matches only `retrieval-augmented`. What separates it from the junk
+    above is not how many terms matched but which one: a compound names a
+    specific subject, a bare common word does not.
+    """
+    request = (
+        "Research and compare retrieval-augmented generation evaluation methods "
+        "and reliability benchmarks, then run its fixed no-network "
+        "evidence-lineage benchmark PoC design"
+    )
+    genuine = {
+        "source_id": "doi:real",
+        "title": "Query Rewriting in Retrieval-Augmented Large Language Models",
+        "canonical_id": "doi:10.18653/v1/2023.emnlp-main.322",
+        "content_summary": "Rewrite-Retrieve-Read for open-domain QA.",
+        "provider": "openalex",
+    }
+
+    verdict = _relevance_class(genuine, request)
+
+    assert verdict["class"] != "off_topic", verdict
+    assert verdict["query_binding"]["matched_subject_terms"] == ["retrieval-augmented"]
+    assert verdict["query_binding"]["subject_match_sufficient"] is True
+
+
+def test_two_ordinary_terms_together_are_enough() -> None:
+    """Specificity OR corroboration -- either admits, neither alone is required."""
+    from harness.plugins.autosci.operators.research_synthesis.base import (
+        subject_match_is_sufficient,
+    )
+
+    assert subject_match_is_sufficient({"design"}) is False
+    assert subject_match_is_sufficient({"design", "generation"}) is True
+    assert subject_match_is_sufficient({"retrieval-augmented"}) is True
+    assert subject_match_is_sufficient(set()) is False
