@@ -576,3 +576,48 @@ workflow treats `kind: none`, which is what the owner asked for.
 The deeper question -- whether `kind: none` should ever auto-write PASS over a
 terminal node failure, for any workflow -- is a Solar-wide governance question
 and should be raised separately, not fixed by editing shared code in this task.
+
+## Finding 2026-08-19 20:15 -- a failed provider call masks its own cause
+
+Dispatch 2 of `report_revision` failed with a DIFFERENT error from dispatch 1,
+and the second error is an artifact of the first failure rather than a new
+problem:
+
+    operator changed unreported files: [
+      '.../revision/service-evidence/claude/report_revision-4418890b.../events.jsonl',
+      '.../exchange.json', '.../request.json', '.../response.json']
+
+Those four files are the recorded evidence of the Claude call that FAILED
+(`exit=1`) during that dispatch. The real cause is the provider failure; what
+the operator reports is an undeclared-files violation, which points at the wrong
+thing entirely.
+
+The mechanism is that provider evidence is allowed only through
+`model_provider_usage`: `_normalize_provider_archives` whitelists each usage
+row's `archive_path` plus every path in its `evidence_paths`. The failed
+dispatch's result carried `model_provider_usage: []`, so none of the four files
+was allowed.
+
+`error_result` in `base.py:445` builds the failure result via
+`build_node_result(status="failed", ...)` with no `model_provider_usage`, which
+explains the empty list at the operator boundary.
+
+What does NOT add up, and is the thing to reproduce:
+`_merge_codex_invocation_usage` in the adapter exists for exactly this case --
+its docstring reads "Bind every attempted Codex call, including calls hidden by
+operator failure" -- and it runs unconditionally for model stages, reading
+`invocation_journal` off the writer and reviewer services. The Claude service
+does call `_record_invocation(status="failed", ...)` before raising, so the
+journal should hold that row and the merge should have restored it.
+
+It did not. Reproduce with a forced non-zero exit from the CLI and find out
+whether the merge runs on this path, whether `services` still holds the service
+objects at that point, or whether the journal is empty for another reason. Do
+not fix it by widening the allowlist to any file under `service-evidence/`: that
+would silence the symptom and give up the guarantee that provider evidence is
+declared.
+
+Practical impact: a transient provider failure costs two dispatches and reports
+a misleading cause on the second. It is also what let the preservation failure
+in dispatch 1 go uninvestigated, since dispatch 2's error looked like a
+different, more alarming problem.
