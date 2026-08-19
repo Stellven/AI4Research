@@ -517,3 +517,62 @@ verifier rejected -- that is the assumption this entry exists to avoid.
 Also seen: one Claude CLI call failed outright and returned nothing
 (`failed_calls=1`), and the operator's retry recovered. Transient provider
 failure, handled correctly, worth knowing when reading call counts.
+
+## Finding 2026-08-19 20:05 -- a failed node was gated PASS and the DAG continued
+
+This supersedes the "open finding" entry above, which guessed at the wrong
+thing. The preservation mismatch is real but it is not the important part.
+
+`report_revision` in sprint `...dbe3550dd426`:
+
+* dispatch 1, 22:46:43 -> 22:50:00, FAILED:
+  "Revision response did not declare the exact original conclusion, method, and
+  limitation preservation set"
+* dispatch 2, 22:50:09 -> 23:04:14, FAILED with a DIFFERENT error:
+  "operator changed unreported files: ['artifacts/research_...']"
+* no third dispatch exists
+* `revision/research_node_result.json` records
+  `"status": "failed"`, `"status_is_terminal": true`,
+  `"output_artifacts": []`, error "Claude research agent failed ... exit=1"
+
+And yet:
+
+* `report_revision-eval.json` -> `verdict PASS`, `gate_kind "none"`,
+  `exit_code 0`, `duration_seconds 0.0`
+* `status.json` -> `failed_nodes: []`, report_revision not in `open_nodes`
+* the DAG advanced to `final_acceptance` (also PASS, also `kind: none`,
+  also 0.0s) and then `poc_handoff`
+
+So a node whose operator failed twice, and whose own recorded result says
+`failed`, was marked PASS and the workflow carried on. The contract declares
+`"evaluator_gate": {"kind": "none", "on_fail": "fail"}` for both nodes, and
+`on_fail: fail` never got the chance to mean anything because nothing evaluated.
+
+`PASS / gate_kind none / duration 0.0` is the exact signature flagged earlier in
+this session as a gate that did not run. It is not merely uninformative. Here it
+actively overrode a terminal operator failure.
+
+### Why the artifacts look fine
+
+`revision/report.md` (15KB) and `revision/report_revision.json` are dated
+18:49:59 local -- written by dispatch 1, one second before it failed. A failed
+dispatch leaves its outputs on disk, so any downstream check that tests file
+presence passes. `required_artifacts` in the contract lists exactly
+`revision/report.md`, so final_acceptance had its file and passed.
+
+That is the same failure mode as the source relevance work: a citation to
+something absent reads like a citation to something present, and here an
+artifact from a failed run reads like an artifact from a successful one.
+
+### Fix, scoped to this workflow
+
+Give `report_revision` a `deterministic_command` gate calling
+`validate_evidence_to_poc.py`, with a new `--revision-only` mode that reads
+`revision/research_node_result.json` and fails when `status != "completed"`, in
+addition to checking the report exists and is non-empty. Same for
+`final_acceptance`. That closes the hole here without touching how any other
+workflow treats `kind: none`, which is what the owner asked for.
+
+The deeper question -- whether `kind: none` should ever auto-write PASS over a
+terminal node failure, for any workflow -- is a Solar-wide governance question
+and should be raised separately, not fixed by editing shared code in this task.
