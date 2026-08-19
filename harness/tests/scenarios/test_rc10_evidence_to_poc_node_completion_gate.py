@@ -36,7 +36,8 @@ CONTRACT = HARNESS / "config" / "workflows" / "research.evidence_to_poc.v1.workf
 
 
 def _write_result(workspace: Path, stage: str, payload: dict[str, Any] | None) -> None:
-    directory = workspace / gate.ARTIFACT_ROOT / gate.NODE_RESULT_DIR_BY_STAGE[stage]
+    # Contract-declared paths already include the artifact root.
+    directory = workspace / gate.NODE_RESULT_DIR_BY_STAGE[stage]
     directory.mkdir(parents=True, exist_ok=True)
     if payload is not None:
         (directory / "research_node_result.json").write_text(
@@ -106,3 +107,35 @@ def test_every_stage_with_a_known_result_dir_is_actually_gated(stage: str) -> No
     assert evaluator_gate["kind"] == "deterministic_command", stage
     assert f"--node-complete {stage}" in evaluator_gate["command"], stage
     assert evaluator_gate["on_fail"] == "fail", stage
+
+
+def test_the_result_dir_map_is_derived_from_the_contract_not_hardcoded() -> None:
+    """Every stage, and the exact directory the contract declares.
+
+    A hardcoded map cost a live run: `poc_handoff` writes to `poc/handoff/`, not
+    `poc/`, so the gate reported "no node result on disk" for a stage that had
+    completed perfectly, and failed the node. Part B nests all of its
+    directories the same way.
+    """
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    declared = {}
+    for stage in contract["stages"]:
+        directory = next(
+            (item["path"] for item in stage["outputs"] if item.get("type") == "directory"),
+            None,
+        )
+        assert directory, stage["id"]
+        declared[stage["id"]] = Path(directory)
+    assert gate.NODE_RESULT_DIR_BY_STAGE == declared
+    assert len(declared) == 15
+
+
+def test_every_stage_in_the_contract_is_gated() -> None:
+    """All fifteen, not just the ones that were easy to map."""
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    ungated = [
+        stage["id"]
+        for stage in contract["stages"]
+        if (stage.get("evaluator_gate") or {}).get("kind") != "deterministic_command"
+    ]
+    assert ungated == [], ungated

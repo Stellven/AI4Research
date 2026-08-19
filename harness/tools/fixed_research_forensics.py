@@ -46,13 +46,43 @@ STAGES = (
     "poc_handoff", "idea_evaluation", "experiment_design", "experiment_approval",
     "experiment_run", "claim_verification", "final_delivery",
 )
-# Where each stage writes its node result, relative to the artifact root.
-RESULT_DIR = {
-    "seed_fetch": "seed", "source_discovery": "discovery", "source_validation": "validation",
-    "evidence_synthesis": "synthesis", "report_draft": "report", "independent_review": "review",
-    "report_revision": "revision", "final_acceptance": "final", "poc_handoff": "poc",
-}
 ARTIFACTS = "artifacts/research_evidence_to_poc"
+CONTRACT = (
+    Path(__file__).resolve().parents[1]
+    / "config" / "workflows" / "research.evidence_to_poc.v1.workflow.json"
+)
+
+
+def _result_dirs() -> dict[str, str]:
+    """Where each stage writes its node result, read from the contract.
+
+    Hardcoding this was wrong and cost a run: poc_handoff writes to
+    `poc/handoff/`, not `poc/`, and Part B nests every directory. The contract
+    declares one directory output per stage, so reading it cannot drift.
+    """
+    try:
+        import json as _json
+        contract = _json.loads(CONTRACT.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    dirs: dict[str, str] = {}
+    for stage in contract.get("stages") or []:
+        if not isinstance(stage, dict):
+            continue
+        directory = next(
+            (
+                str(item.get("path") or "")
+                for item in stage.get("outputs") or []
+                if isinstance(item, dict) and str(item.get("type") or "") == "directory"
+            ),
+            "",
+        )
+        if stage.get("id") and directory:
+            dirs[str(stage["id"])] = directory
+    return dirs
+
+
+RESULT_DIR = _result_dirs()
 
 
 def _load(path: Path) -> Any:
@@ -145,7 +175,7 @@ def digest(evidence_root: Path) -> dict[str, Any]:
             row["gate_seconds"] = sidecar.get("duration_seconds")
         directory = RESULT_DIR.get(stage)
         if directory:
-            result = _load(workdir / ARTIFACTS / directory / "research_node_result.json")
+            result = _load(workdir / directory / "research_node_result.json")
             if isinstance(result, dict):
                 row["node_status"] = result.get("status")
                 errors = result.get("errors") or []
