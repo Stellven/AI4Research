@@ -250,3 +250,73 @@ Working tree clean apart from untracked run byproducts under `artifacts/` and
 made after the run started, deliberately: editing `report_draft` mid-run would
 have changed what the in-flight run executed and made its telemetry
 unattributable.
+
+## Update 2026-08-19 17:42 -- the open question above is answered
+
+Answered by reading the code path, not by re-running. The envelopes on disk are
+the request side only; the usage list is built in-process and discarded when the
+node fails, so there is nothing to read from the failed run itself. The path is
+deterministic, so it does not need one.
+
+### What tripped the guard
+
+`ClaudeResearchModelService.__call__` returns the model's payload directly. The
+Codex parent ends its `__call__` by setting three keys the Claude override never
+sets (codex_research.py:542-544):
+
+    payload["provider"] = "codex_subscription"
+    payload["model"] = self.model
+    payload["provider_usage"] = [usage]
+
+The operator then calls `provider_usage_from(response, usage_kind="llm")`
+(base.py). With none of `provider_usage` / `model_provider_usage` / `usage`
+present, it falls to its final branch:
+
+    return [{"provider": str(response.get("provider") or "injected"), ...}]
+
+so the row reads `provider: "injected"`. That is what the guard rejected. It was
+never the journal.
+
+Worth flagging on its own: that fallback turns "the service reported no usage"
+into a plausible-looking usage row rather than an error. A silent `"injected"`
+is how a stage with no provenance at all passes for a stage with some.
+
+### The more serious half, which fixing the crash would hide
+
+`_record_invocation` is inherited unchanged and hardcodes
+`"provider": "codex_subscription"` (codex_research.py:290) into the dict it
+appends to both `self.invocation_usage` and `self.invocation_journal`
+(codex_research.py:309-310). Every Haiku call in the killed run was therefore
+journalled as a Codex subscription call.
+
+So the adapter merges journal rows that claim Codex. Repair the crash naively --
+set `payload["provider"] = "codex_subscription"` in the Claude service, or lean
+on the journal rows -- and the run goes green while its recorded evidence says
+Codex ran when Haiku ran. That is a worse outcome than the crash, because the
+crash is loud. The guard firing was correct behaviour on a real mislabelling; it
+just named the wrong cause.
+
+### The fix, in one shape
+
+1. Make the label an attribute rather than a literal:
+   `usage_provider = "codex_subscription"` on the Codex service,
+   `"claude_subscription"` on the Claude subclass, and have
+   `_record_invocation` write `self.usage_provider`.
+2. Have `ClaudeResearchModelService.__call__` set `provider` / `model` /
+   `provider_usage` on the returned payload exactly as the parent does. Better,
+   lift those three lines into a small shared helper so a future third provider
+   cannot forget them -- this defect is precisely that omission.
+3. Widen `_verify_model_usage` to an allowlist keyed off
+   `SOLAR_RESEARCH_MODEL_PROVIDER` (`codex` -> `codex_subscription`,
+   `claude` -> `claude_subscription`) so a service recording a provider other
+   than the one requested still fails. Same for the `session_mode` sibling
+   check, which "ephemeral" happens to satisfy for both CLIs today but only by
+   coincidence.
+4. Consider making `provider_usage_from`'s `"injected"` fallback raise for these
+   nodes instead. A stage that reports no provenance should fail, not synthesise
+   a row.
+
+Verification: after the change, a Haiku run's merged `model_provider_usage` must
+read `claude_subscription`, and pointing `SOLAR_RESEARCH_MODEL_PROVIDER` back at
+`codex` must still read `codex_subscription`. Checking only that the run goes
+green would pass on the broken version too.
