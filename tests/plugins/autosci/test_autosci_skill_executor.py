@@ -425,3 +425,49 @@ def test_an_explicitly_declared_mode_is_preserved(
     ex.execute(args)
 
     assert captured["mode"] == "fixture"
+
+
+def test_a_timed_out_skill_is_never_reported_as_a_successful_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Found live: experiment_design timed out and the stage said ok=True.
+
+    $exp-design hit its 40-minute timeout at exit 124 and wrote no experiment
+    page. The bridge still returned 0, and `ok` was computed from the bridge
+    alone, so the top line of the result announced success for a stage that had
+    produced nothing. Only the runtime record showed the truth.
+    """
+    home = _home(tmp_path, monkeypatch)
+    _page(home / "wiki" / "ideas", "an-idea", slug="an-idea", status="proposed")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    # A skill that hangs past the stage timeout.
+    (fake / "codex").write_text("#!/bin/sh\nsleep 30\n", encoding="utf-8")
+    (fake / "codex").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake}{os.pathsep}{os.environ['PATH']}")
+    # A bridge that is perfectly happy regardless.
+    monkeypatch.setattr(
+        ex,
+        "invoke_bridge",
+        lambda *, action, envelope_path: subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="{}", stderr=""
+        ),
+    )
+
+    envelope_path = tmp_path / "envelope.json"
+    envelope_path.write_text(json.dumps({"task_id": "t", "inputs": {"request": "x"}}), encoding="utf-8")
+    args = ex._parser().parse_args(
+        [
+            "--stage", "experiment_design",
+            "--envelope", str(envelope_path),
+            "--work-dir", str(tmp_path),
+            "--timeout-seconds", "1",
+        ]
+    )
+    payload = ex.execute(args)
+
+    assert payload["timed_out"] is True
+    assert payload["skill_exit_code"] == 124
+    assert payload["bridge_ok"] is True, "the bridge really did return 0; that is the point"
+    assert payload["skill_ok"] is False
+    assert payload["ok"] is False, "a stage that produced nothing must not report success"
