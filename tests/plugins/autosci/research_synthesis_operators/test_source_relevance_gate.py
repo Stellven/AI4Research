@@ -252,3 +252,36 @@ def test_two_ordinary_terms_together_are_enough() -> None:
     assert subject_match_is_sufficient({"design", "generation"}) is True
     assert subject_match_is_sufficient({"retrieval-augmented"}) is True
     assert subject_match_is_sufficient(set()) is False
+
+
+def test_gate_finds_artifacts_from_either_workspace_level(tmp_path) -> None:
+    """`<resolved_root>` is the PARENT of the contract's canonical root.
+
+    rsi_demo's canonical is `sprints/<sid>/workdir/<report-dir>/`, so its parent
+    is the workdir and `--workspace <resolved_root>` lands correctly. This
+    contract's canonical is already `sprints/<sid>/workdir/`, so the parent
+    overshoots by one level. Handed that, a validator hardcoding either
+    assumption reports "file missing" -- a false failure indistinguishable from
+    a real one, which with on_fail: fail would block every run.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "gate", Path(__file__).resolve().parents[4] / "harness/scripts/validate_evidence_to_poc.py"
+    )
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+
+    workdir = tmp_path / "sprints" / "sid-1" / "workdir"
+    (workdir / "artifacts/research_evidence_to_poc/validation").mkdir(parents=True)
+    (workdir / "artifacts/research_evidence_to_poc/validation/source_validation.json").write_text(
+        '{"accepted": [], "rejected": []}', encoding="utf-8"
+    )
+
+    # handed the workdir itself
+    assert gate.resolve_workspace(workdir) == workdir
+    # handed its parent, which is what <resolved_root> actually substitutes to
+    assert gate.resolve_workspace(workdir.parent) == workdir
+    # handed something unrelated, it does not invent a location
+    assert gate.resolve_workspace(tmp_path / "nowhere") == tmp_path / "nowhere"
