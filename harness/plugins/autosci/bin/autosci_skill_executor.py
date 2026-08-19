@@ -380,11 +380,20 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
     except json.JSONDecodeError:
         bridge_payload = {"ok": False, "reason": "bridge_output_not_json", "stdout": bridged.stdout[-2000:]}
 
+    # A clean bridge return is not on its own a successful stage. The first
+    # live experiment_design run timed out at 124, wrote no experiment page,
+    # and the bridge still returned 0 -- so this reported ok=True for a stage
+    # that had produced nothing. Anyone reading the top line would have been
+    # told the stage succeeded. The skill's own exit is part of the verdict.
+    skill_ok = int(record["exit_code"]) == 0 and not record["timed_out"]
     return {
-        "ok": bridged.returncode == 0,
+        "ok": bridged.returncode == 0 and skill_ok,
+        "skill_ok": skill_ok,
+        "bridge_ok": bridged.returncode == 0,
         "stage": stage,
         "bridge_action": action,
         "skill_exit_code": record["exit_code"],
+        "timed_out": record["timed_out"],
         "runtime_record": str(record_path),
         "envelope": str(augmented),
         "bridge_returncode": bridged.returncode,
