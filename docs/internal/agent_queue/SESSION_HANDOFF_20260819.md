@@ -621,3 +621,55 @@ Practical impact: a transient provider failure costs two dispatches and reports
 a misleading cause on the second. It is also what let the preservation failure
 in dispatch 1 go uninvestigated, since dispatch 2's error looked like a
 different, more alarming problem.
+
+## Run outcome and state 2026-08-19 20:40
+
+The Haiku run of p1 ended in TIMEOUT, not success:
+`{"ok": false, "error": "timed out waiting for final boundary after 1200s"}`,
+exit 2, having reached `poc_handoff`. Part B never ran.
+
+What it established, which was the point of running it:
+
+* the provider fix holds end to end. `evidence_synthesis`, `report_draft` and
+  `independent_review` each passed on the FIRST attempt, against four
+  consecutive failures before. Every usage row reads
+  `claude_subscription` / `claude-haiku-4-5-20251001`, one row per call, no
+  leftover `injected` row.
+* both roles work: writer on synthesis/draft/revision, reviewer on
+  independent_review and the revision reviews.
+* the two content gates fired for real on Haiku output.
+
+What it exposed, which is worth more than the pass:
+
+* two stages failed and were recorded PASS (see the 20:05 finding)
+* a failed provider call masks its own cause on retry (see the 20:15 finding)
+* the revision preservation mismatch (see the 19:50 finding, still open)
+
+### Fixed since
+
+Contract is now v1.6. `validate_evidence_to_poc.py` gained `--node-complete
+STAGE`, reading the operator's own recorded status and failing on anything but
+`completed`; a missing result is a failure, not a pass. Gated stages went from
+2 of 15 to 9 of 15. Part B's six are deliberately still ungated: there is no
+result-dir mapping for them, so `NODE_RESULT_DIR_BY_STAGE` in the gate script
+needs extending before they can be gated, and that is the next governance step.
+
+Verified against the run that exposed the hole: `report_revision` and
+`final_acceptance` are both caught with their real reasons, the three genuinely
+completed stages pass. 143 related tests pass. The five failures in
+`test_rc10_codex_{profile_lifecycle,unattended_launch}` remain pre-existing and
+unrelated.
+
+### What has NOT been done
+
+Task 2 itself -- wiring `evidence_synthesis` to write the pack and plan, and
+`report_draft` to compile from them -- is still not wired into the operators,
+though every piece it needs is now proven to work on real artifacts (see the
+19:20 entry) and sectioning is in. That is the next implementation step, and it
+now has to declare every pack and report file individually per the 18:50
+correction.
+
+Note before wiring: `report_draft` is in the adapter's model-stage set, so a
+purely deterministic compile there would trip "completed model stage emitted no
+provider usage". Either keep a model call at that node or move it out of the
+model-stage set deliberately, with the guard updated to match.
