@@ -385,3 +385,16 @@ Practical consequence for task 2: the thing likely to stop the first wired run
 is source diversity or authority under the strict profile, given how thin the
 RAG pack is -- not the citation metrics. Expect that failure and read its
 `errors` list rather than assuming the wiring is broken.
+
+### Detail fix to the 18:50 entry
+
+That entry listed `manifest.json` among the pack files. `write_source_pack`
+writes no such file. It writes exactly `sources.jsonl`, `evidence.jsonl`, and
+one `extracts/<source>.txt` per source, and RETURNS a manifest dict in memory
+holding `sources_path`, `evidence_path`, `extracts_dir` and `provider_evidence`.
+
+The returned dict does not enumerate the extract files, so it cannot be used
+directly to declare outputs. Each `extract_path` is recorded per row inside
+`sources.jsonl`. Simplest correct approach for the operator: `rglob` the pack
+directory after writing and declare what is actually there, which is the same
+thing `_inventory` walks and therefore cannot drift from it.
