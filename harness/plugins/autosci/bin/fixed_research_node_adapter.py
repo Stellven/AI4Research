@@ -268,7 +268,7 @@ def _codex_services(
     # Codex quota exhaustion stopped every stage past source_validation. The
     # provider is now selectable, and the model default follows it so a Codex
     # model id cannot leak into a Claude run.
-    provider = str(os.environ.get("SOLAR_RESEARCH_MODEL_PROVIDER") or "codex").strip().lower()
+    provider = _selected_provider()
     service_cls = CodexResearchModelService
     default_model = "gpt-5.5"
     if provider == "claude":
@@ -364,6 +364,30 @@ def _merge_codex_invocation_usage(
     return merged
 
 
+# Each selectable CLI records its own provenance label. The guard below checks
+# the usage against the label for the provider that was actually selected, so
+# swapping providers stays legal while a service recording something other than
+# what was requested still fails. Widening this must never become removing it.
+_USAGE_PROVIDER_BY_SELECTION = {
+    "codex": "codex_subscription",
+    "claude": "claude_subscription",
+}
+
+
+def _selected_provider() -> str:
+    return str(os.environ.get("SOLAR_RESEARCH_MODEL_PROVIDER") or "codex").strip().lower()
+
+
+def _expected_usage_provider() -> str:
+    selection = _selected_provider()
+    expected = _USAGE_PROVIDER_BY_SELECTION.get(selection)
+    if not expected:
+        # An unrecognised provider must stop the run rather than fall back to a
+        # default that would attribute the call to the wrong CLI.
+        raise AdapterError(f"unknown research model provider selection: {selection!r}")
+    return expected
+
+
 def _verify_model_usage(
     *,
     node_id: str,
@@ -387,14 +411,23 @@ def _verify_model_usage(
     if not usage:
         raise AdapterError("completed model stage emitted no provider usage")
     actual_roles = {str(item.get("principal_role") or "") for item in usage}
-    if any(str(item.get("provider") or "") != "codex_subscription" for item in usage):
-        raise AdapterError("model stage used a non-Codex provider")
+    expected_provider = _expected_usage_provider()
+    actual_providers = {str(item.get("provider") or "") for item in usage}
+    if actual_providers != {expected_provider}:
+        # Naming both sides matters: the previous message said only "non-Codex
+        # provider", which sent the reader after the CLI when the real cause was
+        # a service that reported no provenance at all and was labelled
+        # "injected" by the operator's fallback.
+        raise AdapterError(
+            "model stage recorded a provider other than the one selected: expected "
+            f"{expected_provider}, recorded {sorted(actual_providers) or ['<none>']}"
+        )
     if any(str(item.get("session_mode") or "") != "ephemeral" for item in usage):
-        raise AdapterError("model stage did not use a fresh Codex context")
+        raise AdapterError("model stage did not use a fresh provider context")
     if any(str(item.get("status") or "completed") != "completed" for item in usage):
-        raise AdapterError("completed model stage includes a failed Codex invocation")
+        raise AdapterError("completed model stage includes a failed provider invocation")
     if not actual_roles.issubset(expected_roles) or not expected_roles.intersection(actual_roles):
-        raise AdapterError("Codex worker role does not match the fixed node")
+        raise AdapterError("provider worker role does not match the fixed node")
     if node_id == "report_revision" and usage:
         role_counts = {
             role: sum(1 for item in usage if str(item.get("principal_role") or "") == role)
