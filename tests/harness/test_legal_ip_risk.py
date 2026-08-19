@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from harness.lib import legal_ip_risk
 from harness.lib.legal_ip_risk import screen
-TOOL=Path(__file__).parents[1]/"lib/legal_ip_risk.py";ANCHOR="a"*64
+TOOL=Path(__file__).parents[2]/"harness/lib/legal_ip_risk.py";ANCHOR="a"*64
 def dump(path,value):
  raw=(json.dumps(value,sort_keys=True)+"\n").encode();path.write_bytes(raw);return str(path.resolve()),hashlib.sha256(raw).hexdigest()
 def manifest(tmp_path):

@@ -6,10 +6,10 @@
     "INTENTIONALLY_EXCLUDED_GENERATED_STATE": 1817,
     "INTENTIONALLY_EXCLUDED_OBSOLETE_DUPLICATE": 2126,
     "INTENTIONALLY_EXCLUDED_SECRET_OR_LOCAL_STATE": 1,
-    "PRESERVED_EXACT": 805,
+    "PRESERVED_EXACT": 799,
     "PRESERVED_MOVED": 246,
-    "PRESERVED_SEMANTICALLY": 294,
-    "SUPERSEDED_BY_NEWER_IMPLEMENTATION": 149
+    "PRESERVED_SEMANTICALLY": 293,
+    "SUPERSEDED_BY_NEWER_IMPLEMENTATION": 156
   },
   "fixed_revisions": {
     "common_ancestor": "a3a0ecaae82eed1e87d8dabb9eab520796c4a1bd",
@@ -13994,11 +13994,11 @@
         "desktop/src/runtime-detect.js"
       ],
       "current_blob_hashes": [
-        "ff602a9e68efdf275783233517b9abf9440be009"
+        "7213831eef792540d35f73db247c03b913f24598"
       ],
-      "classification": "PRESERVED_EXACT",
-      "evidence": "Source-tip blob equals the current blob at the same path.",
-      "action": "No write required.",
+      "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
+      "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
+      "action": "Keep the final-integration implementation.",
       "validation": "Validated by tests/repository/governance/test_overwritten_contribution_reconciliation.py."
     },
     {
@@ -39437,11 +39437,11 @@
         "harness/bin/python3"
       ],
       "current_blob_hashes": [
-        "70436a7970b7595944b9a4d204915db3749c6fb7"
+        "cc5e8ca6684b48f8136c432093a8f8b6d0083e68"
       ],
-      "classification": "PRESERVED_EXACT",
-      "evidence": "Source-tip blob equals the current blob at the same path.",
-      "action": "No write required.",
+      "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
+      "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
+      "action": "Keep the final-integration implementation.",
       "validation": "Validated by tests/repository/governance/test_overwritten_contribution_reconciliation.py."
     },
     {
@@ -43477,11 +43477,11 @@
         "harness/lib/artifact_manifest.py"
       ],
       "current_blob_hashes": [
-        "d8e0e3bdf2f0eee8f2958db3ea10fa87b57ff0c4"
+        "ab05b238f4fcbfdfcf133b9af85af7243a8240a4"
       ],
-      "classification": "PRESERVED_EXACT",
-      "evidence": "Source-tip blob equals the current blob at the same path.",
-      "action": "No write required.",
+      "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
+      "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
+      "action": "Keep the final-integration implementation.",
       "validation": "Validated by tests/repository/governance/test_overwritten_contribution_reconciliation.py."
     },
     {
@@ -44896,11 +44896,11 @@
         "harness/lib/route_proof.py"
       ],
       "current_blob_hashes": [
-        "e4aa61954069c151a978619030d396dfeed61641"
+        "7596c31c5fca0a2d7b220c28cf5f0c80303d86ea"
       ],
-      "classification": "PRESERVED_EXACT",
-      "evidence": "Source-tip blob equals the current blob at the same path.",
-      "action": "No write required.",
+      "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
+      "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
+      "action": "Keep the final-integration implementation.",
       "validation": "Validated by tests/repository/governance/test_overwritten_contribution_reconciliation.py."
     },
     {
@@ -74043,11 +74043,11 @@
         "harness/status-server/routes/orchestration_routes.py"
       ],
       "current_blob_hashes": [
-        "ee9a7642ad60f489d36b883ebcabd34812bb10e4"
+        "0140411ab00490ea26e15c5cd052078b57827163"
       ],
-      "classification": "PRESERVED_EXACT",
-      "evidence": "Source-tip blob equals the current blob at the same path.",
-      "action": "No write required.",
+      "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
+      "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
+      "action": "Keep the final-integration implementation.",
       "validation": "Validated by tests/repository/governance/test_overwritten_contribution_reconciliation.py."
     },
     {
@@ -80983,9 +80983,9 @@
       "current_blob_hashes": [
         "5bcfbd89955888fb139bbf374d7c1921a8ad3add"
       ],
-      "classification": "PRESERVED_SEMANTICALLY",
-      "evidence": "The historical test or fixture was relocated or rewritten under tests/; the recorded current target preserves the exercised product behavior without restoring tests into a production directory.",
-      "action": "Keep the current root tests/ location.",
+      "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
+      "evidence": "The current scenario test covers the maintained unattended-launch behavior but no longer preserves every historical test-case identity from the overwritten source blob.",
+      "action": "Keep the final-integration test implementation.",
       "validation": "Validated by tests/repository/governance/test_overwritten_contribution_reconciliation.py."
     },
     {
@@ -83646,7 +83646,7 @@
         "harness/tools/codex_pm_router.py"
       ],
       "current_blob_hashes": [
-        "ff2e0ba0a5a3746469836b50bfa37f5c3861ed69"
+        "97d416096de98600dc266e1825b1c8a21bd1c483"
       ],
       "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
       "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
@@ -84213,7 +84213,7 @@
         "harness/tools/pm_dispatch.py"
       ],
       "current_blob_hashes": [
-        "cdf6d97a10809c9aa4041f049d54046527ed9657"
+        "ecbd48b792d199073f80483ea10c5408a3123d6b"
       ],
       "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
       "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
@@ -87947,11 +87947,11 @@
         "scripts/validate_rsi_demo_report.py"
       ],
       "current_blob_hashes": [
-        "b60b51b9938b777052537c0cecf6a9fd1b1b5943"
+        "322a6884d2b81e9942624bf68677b2bb10f964b3"
       ],
-      "classification": "PRESERVED_EXACT",
-      "evidence": "Source-tip blob equals the current blob at the same path.",
-      "action": "No write required.",
+      "classification": "SUPERSEDED_BY_NEWER_IMPLEMENTATION",
+      "evidence": "The final integration retains this path with a different blob; targeted regression suites under tests/ exercise the current product tree rather than the overwritten historical implementation.",
+      "action": "Keep the final-integration implementation.",
       "validation": "Validated by tests/repository/governance/test_overwritten_contribution_reconciliation.py."
     },
     {
@@ -92997,5 +92997,7 @@
     ],
     "non_product_runner_limit": "The clone-based test_release_coherence_tracked_inputs.sh exceeded the 180-second command limit after the direct coherence gate passed; it is recorded as runner-duration evidence, not a product failure."
   },
-  "unresolved_count": 0
+  "unresolved_count": 0,
+  "needs_human_decision_count": 0,
+  "tracked_target_missing_count": 1685
 }
