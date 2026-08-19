@@ -504,3 +504,131 @@ def provider_usage_from(response: dict[str, Any], *, usage_kind: str) -> list[di
 def normalize_id(value: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "-", str(value or "").lower()).strip("-")
     return normalized or "item"
+
+
+# --- research query distillation -------------------------------------------
+#
+# The request that reaches these operators carries the deliverable instruction
+# as well as the topic: "... using at least three real public scholarly sources.
+# Produce a source-linked report with evidence IDs, methods, conclusions,
+# limitations, and independent review."
+#
+# Sending that whole string to a bibliographic provider buries the topic terms,
+# and using it for relevance lets a source match on instruction vocabulary
+# alone. Both effects were observed: a CRISPR request returned "Applied
+# bibliometrics" and "image-based profiling" from live search.
+#
+# This stoplist is deliberately limited to vocabulary that describes the
+# DELIVERABLE, never the subject. Words that can carry topic meaning --
+# methods, benchmarks, evaluation, detection, design, run -- are intentionally
+# absent, because stripping them would discard real signal for some requests.
+RESEARCH_INSTRUCTION_STOPWORDS = frozenset({
+    "about", "analysis", "analyze", "and", "for", "from", "into", "research",
+    "report", "study", "that", "the", "their", "this", "using", "what", "with",
+    # deliverable verbs
+    "compare", "produce", "provide", "deliver", "write", "create", "generate",
+    "package", "verify", "use", "used", "then",
+    # "synthesize supplied research evidence" is a pure instruction with no
+    # topic; without these a request that defers to the supplied pack would
+    # reject that very pack as off-topic. "synthesis" is deliberately NOT here:
+    # it is topical in chemistry and biology.
+    "synthesize", "synthesise", "summarize", "summarise", "supplied",
+    "provided", "given", "existing", "available",
+    # deliverable nouns and qualifiers
+    "least", "three", "real", "public", "scholarly", "source", "sources",
+    "linked", "deep", "evidence", "ids", "conclusions", "limitations",
+    "independent", "review", "reviews", "reviewer", "deliverable",
+    "deliverables", "final", "part", "accepted", "raw", "results",
+    "source-linked", "evidence-backed", "give", "poc", "concept",
+    # comparison connectives carry no subject meaning
+    "better", "than", "versus", "worse", "whether",
+})
+
+# Methodology vocabulary shared by nearly every research paper. These terms are
+# real query terms -- they are NOT stripped, because "detection methods" is part
+# of what was asked -- but a source that overlaps ONLY here has shown no subject
+# relevance. A CRISPR request accepted "Searching for Best Practices in
+# Retrieval-Augmented Generation" on the strength of "methods" and "benchmarks"
+# alone, and "Progress and new challenges in image-based profiling" on "methods"
+# and "reliability".
+RESEARCH_GENERIC_TERMS = frozenset({
+    "method", "methods", "methodology", "methodological",
+    "benchmark", "benchmarks", "benchmarking",
+    "evaluation", "evaluations", "evaluate", "evaluating",
+    "reliability", "reliable", "performance", "accuracy",
+    "analysis", "analyses", "framework", "frameworks",
+    "approach", "approaches", "technique", "techniques",
+    "metric", "metrics", "comparison", "comparisons",
+    "studies", "experiment", "experiments", "experimental",
+    "verification", "verify", "validation", "validate", "assessment",
+})
+
+
+def subject_terms(value: str) -> set[str]:
+    """Query terms that carry subject meaning, i.e. not generic methodology."""
+    return research_query_terms(value) - RESEARCH_GENERIC_TERMS
+
+_RESEARCH_TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]{2,}")
+_RESEARCH_CJK_RE = re.compile(r"[㐀-鿿]{2,}")
+
+
+def research_query_terms(value: str) -> set[str]:
+    """Topic terms for relevance, with deliverable instruction vocabulary removed."""
+    text = str(value or "").lower()
+    terms: set[str] = set()
+    for token in _RESEARCH_TOKEN_RE.findall(text):
+        # trailing sentence punctuation would hide "sources." from the stoplist
+        stripped = token.rstrip(".+-")
+        if not stripped:
+            continue
+        if stripped not in RESEARCH_INSTRUCTION_STOPWORDS:
+            terms.add(stripped)
+        # Identifiers and snake_case carry their words inside one token, so
+        # FROZEN_SENTINEL_FACT_9821 would never match a query saying "frozen"
+        # or "fact". Index the parts as well as the whole.
+        if "_" in stripped:
+            terms.update(
+                part
+                for part in stripped.split("_")
+                if len(part) > 2 and part not in RESEARCH_INSTRUCTION_STOPWORDS
+            )
+    # CJK topics have no whitespace-delimited words; overlapping two-character
+    # windows give a bounded lexical signal without a model call.
+    for run in _RESEARCH_CJK_RE.findall(text):
+        terms.update(run[index:index + 2] for index in range(len(run) - 1))
+    return terms
+
+
+def distill_search_query(request: str, *, max_terms: int = 5) -> str:
+    """A provider search query built from topic terms, in first-appearance order.
+
+    Falls back to the raw request when nothing survives distillation, so a
+    request written entirely in deliverable vocabulary still searches for
+    something rather than for the empty string.
+    """
+    text = str(request or "")
+    keep = research_query_terms(text)
+    # Subject terms lead; generic methodology words trail. A bibliographic
+    # provider ranks lexically, so "verification benchmarking mamba transformer"
+    # buries the topic behind words shared by every paper, while
+    # "mamba transformer jepa ... benchmarking" puts the discriminating terms
+    # first.
+    # Bibliographic providers match lexically, and every extra term NARROWS the
+    # result set rather than enriching it. Measured against OpenAlex for
+    # "...mamba architecture better than transformer or JEPA":
+    #   7 terms ->     39 hits, generic AI surveys
+    #   4 terms ->    118 hits
+    #   3 terms -> 11,673 hits, top result the canonical Mamba paper
+    # So the search query carries only subject terms, capped. Generic
+    # methodology words stay in research_query_terms for relevance scoring --
+    # they are simply useless for retrieval.
+    subject: list[str] = []
+    for raw in _RESEARCH_TOKEN_RE.findall(text.lower()):
+        token = raw.rstrip(".+-")
+        if token in keep and token not in subject and token not in RESEARCH_GENERIC_TERMS:
+            subject.append(token)
+    for run in _RESEARCH_CJK_RE.findall(text):
+        if run not in subject:
+            subject.append(run)
+    ordered = subject[:max_terms]
+    return " ".join(ordered) if ordered else text.strip()

@@ -53,7 +53,7 @@ verification:
   external_verifier: {required: false, preferred_capsules: []}
   pass_conditions: []
 operator_compatibility:
-  preferred: [autosci-experiment-run-worker]
+  preferred: [autosci-exec-experiment-run-worker, autosci-experiment-run-worker]
   forbidden: []
 provenance:
   owner: opensolar

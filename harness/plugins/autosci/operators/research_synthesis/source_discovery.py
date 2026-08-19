@@ -13,6 +13,7 @@ from .base import (
     no_provider_result,
     output_path,
     require_node,
+    distill_search_query,
     utc_now,
     write_artifact,
 )
@@ -54,7 +55,13 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     provider_usage: list[dict[str, Any]] = []
     limitations: list[str] = []
     discovery_trace = "source_pack"
-    discovery_query = str((context.payload.get("task_contract") or {}).get("user_intent") or "")
+    # Providers receive the topic, not the deliverable instruction. Sending the
+    # whole request buried the topic terms: a CRISPR request returned "Applied
+    # bibliometrics" and "image-based profiling" because the boilerplate
+    # ("produce a source-linked report with evidence IDs, ...") dominated the
+    # query. The full request is still retained below as requested_intent.
+    requested_intent = str((context.payload.get("task_contract") or {}).get("user_intent") or "")
+    discovery_query = distill_search_query(requested_intent)
     live_candidates: list[dict[str, Any]] = []
     # Preserve the pre-existing research_synthesis ABI: callers that do not
     # declare the new typed acquisition mode still use their injected discovery
@@ -140,6 +147,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "created_at": utc_now(),
         "discovery_trace": discovery_trace,
         "query": discovery_query,
+        "requested_intent": requested_intent,
         "acquisition_mode": mode,
         "acquisition_summary": {
             "source_pack_count": sum(1 for item in candidates if item.get("acquisition_channel") == "source_pack"),
