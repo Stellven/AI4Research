@@ -9,6 +9,7 @@ provenance rather than by relevance.
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -285,3 +286,42 @@ def test_gate_finds_artifacts_from_either_workspace_level(tmp_path) -> None:
     assert gate.resolve_workspace(workdir.parent) == workdir
     # handed something unrelated, it does not invent a location
     assert gate.resolve_workspace(tmp_path / "nowhere") == tmp_path / "nowhere"
+
+
+def test_claims_gate_does_not_require_a_later_stage_artifact(tmp_path) -> None:
+    """The claims gate runs at evidence_synthesis. report_draft comes later.
+
+    Requiring report_draft.json there fails every run on a file the workflow has
+    not written yet -- a failure indistinguishable from the claims being wrong.
+    Found live: p1's claims gate returned FAIL with
+    `report_draft_unreadable`, on a run whose claims were fine.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "gate", Path(__file__).resolve().parents[4] / "harness/scripts/validate_evidence_to_poc.py"
+    )
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+
+    root = tmp_path / "artifacts/research_evidence_to_poc"
+    (root / "validation").mkdir(parents=True)
+    (root / "synthesis").mkdir(parents=True)
+    (root / "validation/source_validation.json").write_text(json.dumps({
+        "accepted": [{"source_id": "s1", "title": "Retrieval-Augmented Generation survey",
+                      "content_summary": "retrieval augmented generation evaluation"}],
+        "rejected": [],
+    }), encoding="utf-8")
+    (root / "synthesis/evidence_synthesis.json").write_text(json.dumps({
+        "outputs": {"claims": [{
+            "claim_id": "claim-001",
+            "text": "Retrieval-augmented generation improves factuality.",
+            "evidence_ids": ["s1"],
+        }]}
+    }), encoding="utf-8")
+    # report_draft.json deliberately absent: that is the state at this stage.
+
+    failures = gate.check_claims(tmp_path)
+
+    assert failures == [], failures

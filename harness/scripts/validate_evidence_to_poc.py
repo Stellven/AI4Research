@@ -180,11 +180,13 @@ def check_claims(workspace: Path) -> list[str]:
     """
     failures: list[str] = []
     validation = _load(workspace / SOURCE_VALIDATION)
-    draft = _load(workspace / REPORT_DRAFT)
     if validation is None:
         return [f"source_validation_unreadable:{SOURCE_VALIDATION}"]
-    if draft is None:
-        return [f"report_draft_unreadable:{REPORT_DRAFT}"]
+    # This gate runs at evidence_synthesis, which is where claims are produced.
+    # report_draft is a LATER stage, so requiring it here fails every run on a
+    # file that does not exist yet. It is read when present, for the report-body
+    # cross-check only.
+    draft = _load(workspace / REPORT_DRAFT) or {}
 
     accepted_ids = {
         str(item.get("source_id") or "").strip()
