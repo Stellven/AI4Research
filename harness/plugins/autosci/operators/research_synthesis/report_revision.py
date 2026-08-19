@@ -335,6 +335,12 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         # what it dropped does not weaken preservation -- the same check must
         # still pass -- it just uses the budget the contract already declares.
         preservation_feedback = ""
+        # The set the accepted attempt was told to preserve. It is what the
+        # model declared, what it rendered, and therefore the only set the
+        # published artifact can honestly claim -- see the artifact assembly
+        # below for why recording the accumulated list instead breaks two
+        # downstream checks.
+        accepted_preserved_limitations: list[str] = []
         for attempt in range(1, MAX_REVISION_ATTEMPTS + 1):
             preservation_requirements = revision_preservation_requirements(
                 original_report,
@@ -395,6 +401,9 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
                 preservation_feedback = str(exc)
                 continue
             preservation_feedback = ""
+            accepted_preserved_limitations = list(
+                preservation_requirements.get("preserved_limitations") or []
+            )
             revised_report = _normalize_report(response, claim_ids)
             attempt_writer_usage = provider_usage_from(response, usage_kind="llm")
             writer_usage.extend(attempt_writer_usage)
@@ -530,7 +539,38 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         ],
         "writer_usage": writer_usage,
         "reviewer_usage": reviewer_usage,
-        "limitations": list(dict.fromkeys(str(item) for item in limitations if str(item).strip())),
+        # What this revision preserved, declared and rendered -- not the running
+        # accumulator. Two downstream checks recompute against this field:
+        # _verify_report_revision_artifact in the adapter compares the model's
+        # declaration against a requirement rebuilt from it, and final_acceptance
+        # requires every entry to be rendered verbatim in the report body. The
+        # reviewer speaks after the reviser has written, so publishing the
+        # accumulated list here asserts the report renders limitations that did
+        # not exist when it was generated, and both checks fail on a revision
+        # that did everything asked of it.
+        "limitations": list(dict.fromkeys(
+            str(item).strip()
+            for item in (
+                accepted_preserved_limitations
+                if repair_required and "accepted_preserved_limitations" in locals()
+                and accepted_preserved_limitations
+                else limitations
+            )
+            if str(item).strip()
+        )),
+        # Nothing is dropped: limitations the review added after the accepted
+        # revision are recorded here rather than asserted of the report.
+        "review_recorded_limitations": [
+            str(item).strip()
+            for item in limitations
+            if str(item).strip()
+            and str(item).strip() not in set(
+                accepted_preserved_limitations
+                if repair_required and "accepted_preserved_limitations" in locals()
+                else []
+            )
+        ] if repair_required and "accepted_preserved_limitations" in locals()
+        and accepted_preserved_limitations else [],
     }
     artifact, hash_record = write_artifact(
         context,

@@ -152,3 +152,54 @@ def test_preservation_still_rejects_a_dropped_method_section() -> None:
     response["report"]["body"] = "# Title\n\n## Limitations\n\n- " + LIMITATION_A + "\n"
     with pytest.raises(ResearchOperatorError):
         verify_revision_response_preservation(original, response, requirements=required)
+
+
+def test_the_adapter_recompute_reproduces_the_operator_proof() -> None:
+    """The published artifact must survive being re-verified downstream.
+
+    `_verify_report_revision_artifact` in the adapter rebuilds the requirement
+    from the artifact's own `limitations` field and refuses the node when the
+    result differs from the stored proof. Publishing the running accumulator
+    there, rather than the set the accepted attempt preserved, makes that
+    recompute disagree with the proof on a revision that did everything asked.
+
+    This reproduces the adapter's exact call, so a regression in what the
+    operator publishes fails here instead of during a live run.
+    """
+    original = _original()
+    accumulated = [LIMITATION_A, LIMITATION_B]
+    prompt_requirements = revision_preservation_requirements(
+        original, required_limitations=accumulated
+    )
+    response = _response(prompt_requirements,
+                         limitations=prompt_requirements["preserved_limitations"])
+    proof = verify_revision_response_preservation(
+        original, response, requirements=prompt_requirements
+    )
+
+    # The reviewer speaks afterwards; the accumulator grows.
+    accumulated.append(REVIEWER_LIMITATION)
+
+    published_limitations = list(prompt_requirements["preserved_limitations"])
+    recomputed = verify_revision_response_preservation(
+        original,
+        {
+            "report": response["report"],
+            "limitations": published_limitations,
+            "preservation": proof["model_declaration"],
+        },
+        required_limitations=published_limitations,
+    )
+    assert recomputed == proof
+
+    # And the failure mode being guarded against: publishing the accumulator.
+    with pytest.raises(ResearchOperatorError):
+        verify_revision_response_preservation(
+            original,
+            {
+                "report": response["report"],
+                "limitations": accumulated,
+                "preservation": proof["model_declaration"],
+            },
+            required_limitations=accumulated,
+        )
