@@ -246,7 +246,22 @@ def check_codex_landlock_write_scope(
         os.close(fd)
         probe = Path(raw_probe).resolve(strict=False)
         command = [sys.executable, str(wrapper)]
-        for readable in (Path("/usr"), Path("/bin"), Path("/lib"), Path("/lib64"), Path("/etc")):
+        readable_roots = [Path("/usr"), Path("/bin"), Path("/lib"), Path("/lib64"), Path("/etc")]
+        # The probe execs this same interpreter, so its own prefix has to be
+        # readable or Landlock denies the exec before the write is ever
+        # attempted. A Python outside /usr -- conda, pyenv, a virtualenv in
+        # $HOME -- is not covered by the roots above, and the check then fails
+        # with EACCES on the interpreter and reports it as a filesystem that
+        # cannot honour write grants, which sends the reader after the wrong
+        # problem entirely.
+        interpreter = Path(sys.executable).resolve(strict=False)
+        prefix = Path(sys.prefix).resolve(strict=False)
+        for extra in (interpreter.parent, prefix):
+            if extra.exists() and not any(
+                extra == root or root in extra.parents for root in readable_roots
+            ):
+                readable_roots.append(extra)
+        for readable in readable_roots:
             if readable.exists():
                 command.extend(["--read-only", str(readable)])
         command.extend(
@@ -297,9 +312,13 @@ def check_codex_landlock_write_scope(
         wrote,
         detail,
         (
-            "the active Harness filesystem cannot honor Landlock write grants; "
-            "on WSL install SOLAR_HOME/HARNESS_DIR inside the Linux ext4 filesystem "
-            "(for example /home/<user>/.solar), not under /mnt/c, then rerun preflight"
+            "Landlock could not complete the write probe. If error_tail shows "
+            "PermissionError on an executable, the interpreter or a helper binary "
+            "sits outside the read-only grants and the exec was denied before any "
+            "write was attempted. Otherwise the Harness filesystem cannot honor "
+            "write grants: on WSL install SOLAR_HOME/HARNESS_DIR inside the Linux "
+            "ext4 filesystem (for example /home/<user>/.solar), not under /mnt/c, "
+            "then rerun preflight"
         ),
     )
 

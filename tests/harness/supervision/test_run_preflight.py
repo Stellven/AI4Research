@@ -681,3 +681,96 @@ def test_cli_exit_codes_and_report(tmp_path):
     assert green.returncode == 0, green.stdout + green.stderr
     report = json.loads((tmp_path / "sprints" / f"{SID}.preflight.json").read_text())
     assert report["ok"] is True
+
+
+def test_landlock_probe_grants_read_on_an_interpreter_outside_usr(tmp_path, monkeypatch):
+    """The probe execs sys.executable, so its own prefix must be readable.
+
+    The grants were a fixed list -- /usr, /bin, /lib, /lib64, /etc -- and the
+    probe then executed the running interpreter. Under conda, pyenv or a
+    virtualenv in $HOME that binary is outside every grant, so Landlock denied
+    the exec with EACCES before any write was attempted, and preflight reported
+    a filesystem that "cannot honor write grants". Measured on this machine:
+
+        landlock_exec: active abi=3 ro=5 rw=1
+        PermissionError: [Errno 13] Permission denied:
+            '/home/ssubr/miniconda3/bin/python3'
+    """
+    harness = _landlock_harness(tmp_path)
+    fake_prefix = tmp_path / "opt" / "conda"
+    (fake_prefix / "bin").mkdir(parents=True)
+    fake_python = fake_prefix / "bin" / "python3"
+    fake_python.write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.setattr(rp.sys, "executable", str(fake_python))
+    monkeypatch.setattr(rp.sys, "prefix", str(fake_prefix))
+
+    seen: dict = {}
+
+    def _run(command, **_kwargs):
+        seen["command"] = list(command)
+        Path(command[-1]).write_bytes(b"landlock-ok")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(rp.subprocess, "run", _run)
+    result = rp.check_codex_landlock_write_scope(
+        harness_dir=harness,
+        env={"SOLAR_PANE_RUNTIME": "codex"},
+        platform_name="linux",
+    )
+
+    assert result["ok"] is True
+    granted = [
+        seen["command"][i + 1]
+        for i, part in enumerate(seen["command"])
+        if part == "--read-only"
+    ]
+    assert str(fake_python.parent) in granted, granted
+
+
+def test_landlock_probe_does_not_duplicate_a_system_interpreter_grant(tmp_path, monkeypatch):
+    """An interpreter already under /usr needs no extra grant."""
+    harness = _landlock_harness(tmp_path)
+    monkeypatch.setattr(rp.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(rp.sys, "prefix", "/usr")
+    seen: dict = {}
+
+    def _run(command, **_kwargs):
+        seen["command"] = list(command)
+        Path(command[-1]).write_bytes(b"landlock-ok")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(rp.subprocess, "run", _run)
+    rp.check_codex_landlock_write_scope(
+        harness_dir=harness, env={"SOLAR_PANE_RUNTIME": "codex"}, platform_name="linux"
+    )
+
+    granted = [
+        seen["command"][i + 1]
+        for i, part in enumerate(seen["command"])
+        if part == "--read-only"
+    ]
+    assert granted.count("/usr") == 1, granted
+    assert "/usr/bin" not in granted
+
+
+def test_landlock_remediation_distinguishes_denied_exec_from_bad_filesystem(tmp_path, monkeypatch):
+    """The old text named one cause with total confidence, and was wrong.
+
+    It sent the reader to check filesystems while the real fault was a binary
+    outside the grant set, which cost three failed runs to notice.
+    """
+    harness = _landlock_harness(tmp_path)
+
+    def _run(command, **_kwargs):
+        return subprocess.CompletedProcess(command, 1, "", "PermissionError: Permission denied")
+
+    monkeypatch.setattr(rp.subprocess, "run", _run)
+    result = rp.check_codex_landlock_write_scope(
+        harness_dir=harness, env={"SOLAR_PANE_RUNTIME": "codex"}, platform_name="linux"
+    )
+
+    assert result["ok"] is False
+    # Both causes are offered, with the discriminator the reader can check.
+    assert "error_tail" in result["remediation"]
+    assert "outside the read-only grants" in result["remediation"]
+    assert "/mnt/c" in result["remediation"]
