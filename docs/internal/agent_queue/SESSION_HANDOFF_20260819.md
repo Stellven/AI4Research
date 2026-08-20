@@ -821,3 +821,70 @@ Six fixes, five of them the same shape: the operator imposing a condition on the
 model that the operator itself made unsatisfiable. The sixth was a `deepcopy`
 that made a recovery path structurally incapable of recovering anything. None
 were model failures. Haiku did its job on every call in every run today.
+
+## 2026-08-20 -- claim grounding enforced at the cause
+
+### What the search found first
+
+Before writing anything, the existing work was searched, per the owner's
+standing instruction. Three findings changed the design:
+
+1. `research.deepdive.rsi_demo.workflow.json` is Solar's own DeepResearch
+   workflow (D1 brief, D2 sources, D3 claims, D4 contradictions, D5 report,
+   D6 publish). Its report stage is LLM-authored and gated by `llm_eval` plus a
+   deterministic validator. It does NOT call `compile_grounded_report`. So the
+   "Solar way" is not simply to swap in the compiler.
+2. `research/claim_compiler.py` has `AlignmentStatus`
+   (SUPPORTED/CONTRADICTED/MIXED/UNVERIFIED) and `NaiveClaimCompiler`, which
+   requires a populated sqlite run. But it delegates the actual judgement to
+   `claim_support_assessment` in `research/evidence/review_proof.py`, a pure
+   importable function, explicitly to block "the historical false positive where
+   a claim inherited `supports` merely from a database link".
+3. `evaluator.py` already sets the policy: `DEFAULT_MAX_UNSUPPORTED_RATE = 0.05`.
+
+So the reusable piece is `claim_support_assessment`, and Solar's aggregation
+rule is: assess a claim against the FULL evidence text, and count it supported
+when ANY linked evidence supports it.
+
+### What that check said about our green run
+
+    claim-001  UNVERIFIED  coverage 0.29 / 0.43 across its two sources
+    claim-002  SUPPORTED   coverage 0.62
+    claim-003  SUPPORTED   coverage 0.56  -- but ZERO verified quotes
+    claim-004  SUPPORTED   coverage 0.63
+    claim-005  UNVERIFIED  coverage 0.12 / 0.25 / 0.25
+
+Real `unsupported_rate` 0.40 against Solar's limit of 0.05, while
+`research_eval.json` reports 0.0.
+
+Byte-level quote verification and actual support are different properties. A
+quote can be genuinely verbatim while the claim built on it is about something
+else, which is exactly claims 001 and 005. Conversely claim-003 passes the
+lexical support check but has no verbatim quote, and
+`compile_grounded_report` would refuse it outright.
+
+### The decision, and it was the owner's
+
+Presented as four options; the owner chose **fix the cause**, not move the bar.
+
+`evidence_synthesis` now refuses to publish a claim unless it carries at least
+one verbatim quote AND at least one cited source that passes
+`claim_support_assessment`, handing each rejection back to the model with its
+reason, bounded to three attempts, keeping the strongest attempt so a worse
+retry cannot lose ground. Refused claims are recorded in the artifact.
+
+Two of the failures were claims true only by COMBINING sources, which per-source
+assessment cannot carry by construction. The prompt now states that constraint
+directly, along with vocabulary overlap, number provenance, and the ban on
+absolute wording, so the model can satisfy the test rather than discover it.
+
+Because nothing ungrounded is published, `unsupported_rate: 0.0` becomes true by
+construction rather than asserted. The gate therefore recomputes both conditions
+itself and never reads the operator's `support_assessment` field, which is the
+thing under test.
+
+### Still to do
+
+The grounded compile itself (`compile_grounded_report`) is still not wired.
+That was the original task 2 and it now rests on grounded claims actually being
+produced, which the live run at this commit is testing.
