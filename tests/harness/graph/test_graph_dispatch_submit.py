@@ -608,6 +608,46 @@ class TestSendToPaneLiteral:
         } in repaired
         assert any(item.get("reason") == "parent_projection_after_dependency_block" for item in repaired)
 
+    def test_human_resume_generation_does_not_consume_eval_repair_budget(
+        self, tmp_harness, monkeypatch
+    ):
+        """Execution recovery generations remain fenced but do not disable first content repair."""
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node.update(
+            {
+                "status": "reviewing",
+                "repair_attempts": 2,
+                "max_repair_attempts": 1,
+                "repair_context": {
+                    "attempt": 2,
+                    "verdict": "HUMAN_RESUME",
+                    "trigger": "explicit_human_resume",
+                },
+            }
+        )
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        handoff = sprints / f"{sid}.N1-handoff.md"
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        handoff.write_text("# handoff\n", encoding="utf-8")
+        eval_json.write_text(
+            json.dumps({"verdict": "FAIL", "node_id": "N1", "summary": "repair me"}) + "\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(gnd, "release_lease", lambda *a, **k: {"released": True})
+
+        repaired = gnd._reconcile_existing_dispatches(
+            graph, sprints / f"{sid}.task_graph.json"
+        )
+
+        assert node["status"] == "failed_review"
+        assert node["repair_attempts"] == 3
+        assert node["eval_repair_attempts"] == 1
+        assert node["repair_context"]["eval_repair_attempt"] == 1
+        assert repaired[0]["reason"] == "eval_sidecar_failed_repair_requested"
+
     def test_repair_handoff_newer_than_eval_sidecar_gets_fresh_review(self, tmp_harness, monkeypatch):
         """A repaired handoff must not terminal-fail from the previous round's eval sidecar."""
         tmp_path, sprints, sid, graph = tmp_harness

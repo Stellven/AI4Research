@@ -3267,6 +3267,48 @@ def _node_repair_attempts(node: dict[str, Any]) -> int:
         return 0
 
 
+def _node_eval_repair_attempts(node: dict[str, Any]) -> int:
+    """Return content-repair attempts without charging execution recovery generations.
+
+    ``repair_attempts`` is also the evidence-generation fence used by explicit
+    human resume.  Treating those resumes as evaluator repair rounds can exhaust
+    the content repair budget before the first real evaluator FAIL is seen.
+    New nodes persist the independent counter; legacy nodes are inferred from
+    FAIL repair history/context so existing repair limits remain effective.
+    """
+    raw = node.get("eval_repair_attempts")
+    if raw not in (None, ""):
+        try:
+            return max(0, int(raw or 0))
+        except Exception:
+            return 0
+
+    history = node.get("repair_history")
+    if isinstance(history, list):
+        failed_rounds = sum(
+            1
+            for item in history
+            if isinstance(item, dict)
+            and str(item.get("verdict") or "").upper() == "FAIL"
+            and str(item.get("trigger") or "") != "explicit_human_resume"
+        )
+        if failed_rounds:
+            return failed_rounds
+
+    context = node.get("repair_context")
+    if (
+        isinstance(context, dict)
+        and str(context.get("verdict") or "").upper() == "FAIL"
+        and str(context.get("trigger") or "") != "explicit_human_resume"
+    ):
+        return _node_repair_attempts(node)
+    if not isinstance(context, dict):
+        # Legacy graphs only persisted the shared counter. With no typed
+        # context available, preserve their historical repair-limit behavior.
+        return _node_repair_attempts(node)
+    return 0
+
+
 def _node_repair_max_attempts(graph: dict[str, Any], node: dict[str, Any]) -> int:
     candidates: list[Any] = [
         node.get("max_repair_attempts"),
@@ -3998,15 +4040,16 @@ def _start_node_repair_from_eval_fail(
     eval_payload: dict[str, Any],
 ) -> dict[str, Any] | None:
     max_attempts = _node_repair_max_attempts(graph, node)
-    prior_attempts = _node_repair_attempts(node)
-    if prior_attempts >= max_attempts:
+    prior_eval_attempts = _node_eval_repair_attempts(node)
+    if prior_eval_attempts >= max_attempts:
         # Repair budget exhausted: the reconcile caller falls through and marks this node terminal
         # `failed`. Record the (otherwise silent) exhaustion so the terminal cause is provable from disk.
         _ledger_record(sid, node_id=node_id, kind="repair_exhausted",
-                       author={"type": "policy"}, repair_attempt=prior_attempts,
+                       author={"type": "policy"}, repair_attempt=_node_repair_attempts(node),
                        note="repair_budget_exhausted")
         _record_node_runstate(sid, node_id, {
-            "repair_attempt": prior_attempts,
+            "repair_attempt": _node_repair_attempts(node),
+            "eval_repair_attempt": prior_eval_attempts,
             "max_repair_attempts": max_attempts,
             "last_eval_result": "FAIL",
             "last_eval_reason": "repair_budget_exhausted",
@@ -4015,7 +4058,8 @@ def _start_node_repair_from_eval_fail(
         })
         return None
 
-    attempt = prior_attempts + 1
+    attempt = _node_repair_attempts(node) + 1
+    eval_repair_attempt = prior_eval_attempts + 1
     archived = _archive_node_review_sidecars(sid, node_id, handoff_file, eval_json_path, attempt)
     now = _utc_now()
     failed_conditions = eval_payload.get("failed_conditions")
@@ -4023,6 +4067,7 @@ def _start_node_repair_from_eval_fail(
         failed_conditions = []
     repair_context = {
         "attempt": attempt,
+        "eval_repair_attempt": eval_repair_attempt,
         "max_attempts": max_attempts,
         "verdict": "FAIL",
         "summary": str(eval_payload.get("summary") or "").strip()[:2000],
@@ -4059,6 +4104,7 @@ def _start_node_repair_from_eval_fail(
                        "_start_node_repair_from_eval_fail")
     node["status"] = "failed_review"
     node["repair_attempts"] = attempt
+    node["eval_repair_attempts"] = eval_repair_attempt
     node["repair_context"] = repair_context
     node.setdefault("repair_history", []).append(repair_context)
     node["updated_at"] = now
@@ -4072,6 +4118,7 @@ def _start_node_repair_from_eval_fail(
     }
     _record_node_runstate(sid, node_id, {
         "repair_attempt": attempt,
+        "eval_repair_attempt": eval_repair_attempt,
         "max_repair_attempts": max_attempts,
         "last_eval_result": "FAIL",
         "last_eval_reason": repair_context.get("summary") or "eval_failed",
