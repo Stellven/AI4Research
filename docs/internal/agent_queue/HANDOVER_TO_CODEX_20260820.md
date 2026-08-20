@@ -118,11 +118,29 @@ replay. The operator states its own limit -- "Part B tests evidence-lineage
 integrity; it does not independently establish external scientific validity."
 It is a provenance check, not a scientific replication.
 
-**Current HEAD is AHEAD of that green run.** Since then, claim grounding was
-added and the preservation checks were rewritten. The last run at the newer code
-(`evidence-e2e3`) reached 6/15 and died at `report_revision`; that failure is
-diagnosed and fixed in `723148627` but **has not yet been re-run**. First job:
-re-run and confirm 15/15 at HEAD (section 7).
+**HEAD is confirmed green too.** After the green run above, claim grounding was
+added, the preservation checks were rewritten, and the per-stage call ceiling was
+fixed. A second full run at `d45fcc158` (`evidence-e2e5`) completed **15/15**:
+
+```
+stages not (completed + PASS):  []
+gate kinds:                     {deterministic_command}   all 15
+gate durations:                 0.061s - 0.079s, none 0.0
+failures / dispatch failures:   [] / []
+evidence_synthesis:             6 claims, 0 rejected, 1 attempt
+experiment_run:                 8/8 checks, integrity_rate 1.0
+claim_verification:             verified
+```
+
+So both the pre-grounding and post-grounding code paths have completed end to
+end. Contract is now **v1.8**.
+
+One thing that run did NOT exercise: `independent_review` returned `accept` with
+zero findings, so `report_revision` short-circuited and the rewritten
+preservation checks never ran live. They are verified by replaying the real
+failing exchanges (attempt 2 passes, attempt 1 fails for a genuinely unrendered
+limitation) and by seven unit tests. **A live revision is still unproven.** If
+you want it exercised, run a prompt whose draft the reviewer will reject.
 
 ---
 
@@ -330,9 +348,8 @@ before diagnosing a stall.
 
 ## 7. What to do next, in order
 
-**1. Re-run at HEAD and confirm 15/15.** This is the one thing that must happen
-before anything else. HEAD carries claim grounding and the rewritten
-preservation checks and has never completed a full run.
+**1. Done -- HEAD is confirmed green at 15/15 (see section 1).** Re-run only if
+you change operator code. The command is below for convenience.
 
 ```bash
 bash <scratch>/gate-runs/run_e2e.sh <name>     # or the equivalent below
