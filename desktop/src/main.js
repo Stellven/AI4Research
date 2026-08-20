@@ -71,6 +71,9 @@ const {
   buildWindowsRuntimeReadinessProbe,
   prewarmSucceeded,
 } = require("./runtime-prewarm");
+const {
+  buildWindowsBundledHarnessSyncCommand,
+} = require("./runtime-sync");
 // Test hook: force the classifier to return a given mode (deterministic screenshots).
 const SIMULATE = process.env.SOLAR_SIMULATE || "";
 
@@ -927,14 +930,11 @@ function syncBundledHarnessWindows(expectedVersion) {
     log("WSL bundled harness sync failed: runtime harness destination is not an absolute WSL path");
     return false;
   }
-  const harnessBase = shellTokenForWsl(harnessDir.replace(/\/+$/, ""));
-  const cmd =
-    `set -e; src=${shQuote(mapped)}; dest=${harnessBase}; ` +
-    `mkdir -p "$dest" "$HOME/.solar/bin"; ` +
-    `cp -a "$src"/. "$dest"/; ` +
-    `chmod +x "$dest"/*.sh "$dest"/lib/*.sh "$dest"/tests/*.sh "$dest"/tools/*.sh "$dest"/tools/*.py 2>/dev/null || true; ` +
-    `if [ -f "$dest/solar-harness.sh" ]; then ln -sf "$dest/solar-harness.sh" "$HOME/.solar/bin/solar-harness"; fi; ` +
-    `printf '%s\\n' ${shQuote(expectedVersion)} > "$dest/.desktop-runtime-version"`;
+  const cmd = buildWindowsBundledHarnessSyncCommand(
+    mapped,
+    harnessDir,
+    expectedVersion,
+  );
   const r = wslExec(cmd, 120000);
   if (!r.ok) {
     log("WSL bundled harness sync failed:", (r.stderr || r.stdout || "").slice(0, 500));
