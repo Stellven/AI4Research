@@ -98,9 +98,8 @@ function wslRuntimeHealthy(distro) {
 function wslDistro() {
   if (_distroCache !== null) return _distroCache;
   const override = String(process.env.SOLAR_WSL_DISTRO || "").trim();
-  const forceOverride = process.env.SOLAR_WSL_DISTRO_FORCE === "1";
 
-  if (forceOverride && isSolarWslDistro(override)) {
+  if (isSolarWslDistro(override)) {
     _distroCache = override;
     return _distroCache;
   }
