@@ -232,32 +232,55 @@ def _record_s2_retry_event(
     retry_number: int,
     max_retries: int,
     delay_seconds: float,
+    retry_after_seconds: float | None = None,
+    max_retry_wait_seconds: float | None = None,
+    budget_exceeded: bool = False,
 ) -> None:
-    _S2_RETRY_EVENTS.append(
-        {
-            "method": method,
-            "endpoint": _s2_endpoint_label(url),
-            "status_code": status_code,
-            "retry_number": retry_number,
-            "max_retries": max_retries,
-            "delay_seconds": round(delay_seconds, 3),
-        }
-    )
+    event = {
+        "method": method,
+        "endpoint": _s2_endpoint_label(url),
+        "status_code": status_code,
+        "retry_number": retry_number,
+        "max_retries": max_retries,
+        "delay_seconds": round(delay_seconds, 3),
+        "actual_wait_seconds": 0.0 if budget_exceeded else round(delay_seconds, 3),
+        "budget_exceeded": budget_exceeded,
+    }
+    if retry_after_seconds is not None:
+        event["provider_retry_after_seconds"] = round(retry_after_seconds, 3)
+    if max_retry_wait_seconds is not None:
+        event["max_retry_wait_seconds"] = round(max_retry_wait_seconds, 3)
+    _S2_RETRY_EVENTS.append(event)
     _emit_s2_retry_progress(_S2_RETRY_EVENTS[-1])
 
 
 def _s2_retry_warnings() -> list[str]:
-    return [
-        (
-            "Semantic Scholar rate-limit retry "
-            f"{event['retry_number']}/{event['max_retries']} after HTTP {event['status_code']} "
-            f"on {event['method']} {event['endpoint']}; waited {event['delay_seconds']:g}s."
-        )
-        for event in _S2_RETRY_EVENTS
-    ]
+    warnings: list[str] = []
+    for event in _S2_RETRY_EVENTS:
+        if event.get("budget_exceeded"):
+            warnings.append(
+                "Semantic Scholar provider Retry-After "
+                f"{event.get('provider_retry_after_seconds', event['delay_seconds']):g}s exceeded "
+                f"the {event.get('max_retry_wait_seconds', 0):g}s retry budget after HTTP {event['status_code']} "
+                f"on {event['method']} {event['endpoint']}; no early retry was attempted."
+            )
+        else:
+            warnings.append(
+                "Semantic Scholar rate-limit retry "
+                f"{event['retry_number']}/{event['max_retries']} after HTTP {event['status_code']} "
+                f"on {event['method']} {event['endpoint']}; waited {event['actual_wait_seconds']:g}s."
+            )
+    return warnings
 
 
 def _s2_retry_message(event: dict[str, Any]) -> str:
+    if event.get("budget_exceeded"):
+        return (
+            "Semantic Scholar transient provider failure "
+            f"{event['method']} {event['endpoint']} with HTTP {event['status_code']}; "
+            f"provider Retry-After {event.get('provider_retry_after_seconds', event['delay_seconds']):g}s "
+            f"exceeds retry budget {event.get('max_retry_wait_seconds', 0):g}s, so no early retry will be attempted."
+        )
     return (
         "Semantic Scholar transient provider failure "
         f"{event['method']} {event['endpoint']} with HTTP {event['status_code']}; "
@@ -272,7 +295,7 @@ def _emit_s2_retry_progress(event: dict[str, Any]) -> None:
         return
     payload = {
         "schema": "autosci_s2_retry_progress.v1",
-        "status": "waiting_for_rate_limit",
+        "status": "retry_budget_exceeded" if event.get("budget_exceeded") else "waiting_for_rate_limit",
         "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "current_event": event,
         "events": list(_S2_RETRY_EVENTS),
@@ -298,13 +321,21 @@ def _attach_s2_progress_artifact(
         artifacts.append({"type": "semantic_scholar_retry_progress_json", "path": path})
 
 
-def _s2_request(method: str, url: str, *, params: dict[str, Any] | None = None, json_body: dict[str, Any] | None = None) -> Any:
+def _s2_request(
+    method: str,
+    url: str,
+    *,
+    params: dict[str, Any] | None = None,
+    json_body: dict[str, Any] | None = None,
+    max_retries: int | None = None,
+    max_retry_wait_seconds: float | None = None,
+) -> Any:
     if not HAS_REQUESTS:
         raise RuntimeError("requests unavailable")
     throttle_seconds = _s2_rate_limit_delay_seconds()
     if throttle_seconds > 0:
         time.sleep(throttle_seconds)
-    max_retries = _s2_max_retries()
+    max_retries = _s2_max_retries() if max_retries is None else max(0, min(int(max_retries), S2_MAX_CONFIGURED_RETRIES))
     retry_delay = _s2_retry_delay_seconds()
     attempt = 0
     while True:
@@ -321,7 +352,17 @@ def _s2_request(method: str, url: str, *, params: dict[str, Any] | None = None, 
             if attempt >= max_retries:
                 raise RuntimeError(f"Semantic Scholar request failed after {attempt + 1} attempt(s): {type(exc).__name__}") from exc
             delay = retry_delay * (attempt + 1)
-            _record_s2_retry_event(method=method, url=url, status_code=0, retry_number=attempt + 1, max_retries=max_retries, delay_seconds=delay)
+            if max_retry_wait_seconds is not None:
+                delay = min(delay, max(0.0, float(max_retry_wait_seconds)))
+            _record_s2_retry_event(
+                method=method,
+                url=url,
+                status_code=0,
+                retry_number=attempt + 1,
+                max_retries=max_retries,
+                delay_seconds=delay,
+                max_retry_wait_seconds=max_retry_wait_seconds,
+            )
             if delay > 0:
                 time.sleep(delay)
             attempt += 1
@@ -329,14 +370,38 @@ def _s2_request(method: str, url: str, *, params: dict[str, Any] | None = None, 
         status_code = int(getattr(response, "status_code", 0) or 0)
         if status_code == 429 or 500 <= status_code <= 599:
             if attempt >= max_retries:
+                failure = (
+                    "Semantic Scholar API rate limited"
+                    if status_code == 429
+                    else f"Semantic Scholar API failed with HTTP {status_code}"
+                )
                 try:
                     response.raise_for_status()
                 except Exception as exc:
-                    raise RuntimeError(f"Semantic Scholar API failed with HTTP {status_code} after {attempt + 1} attempt(s)") from exc
-                raise RuntimeError(f"Semantic Scholar API failed with HTTP {status_code} after {attempt + 1} attempt(s)")
+                    raise RuntimeError(f"{failure} after {attempt + 1} attempt(s)") from exc
+                raise RuntimeError(f"{failure} after {attempt + 1} attempt(s)")
             headers = getattr(response, "headers", {}) or {}
             retry_after = _retry_after_seconds(headers.get("Retry-After"))
             delay = retry_after if retry_after is not None else retry_delay * (attempt + 1)
+            retry_budget = max(0.0, float(max_retry_wait_seconds)) if max_retry_wait_seconds is not None else None
+            if retry_after is not None and retry_budget is not None and retry_after > retry_budget:
+                _record_s2_retry_event(
+                    method=method,
+                    url=url,
+                    status_code=status_code,
+                    retry_number=attempt + 1,
+                    max_retries=max_retries,
+                    delay_seconds=retry_after,
+                    retry_after_seconds=retry_after,
+                    max_retry_wait_seconds=retry_budget,
+                    budget_exceeded=True,
+                )
+                raise RuntimeError(
+                    "Semantic Scholar API rate limited; provider Retry-After "
+                    f"{retry_after:g}s exceeds retry budget {retry_budget:g}s"
+                )
+            if retry_budget is not None:
+                delay = min(delay, retry_budget)
             _record_s2_retry_event(
                 method=method,
                 url=url,
@@ -344,6 +409,8 @@ def _s2_request(method: str, url: str, *, params: dict[str, Any] | None = None, 
                 retry_number=attempt + 1,
                 max_retries=max_retries,
                 delay_seconds=delay,
+                retry_after_seconds=retry_after,
+                max_retry_wait_seconds=retry_budget,
             )
             if delay > 0:
                 time.sleep(delay)
@@ -357,20 +424,36 @@ def _bare_arxiv_id(value: str) -> str:
     return normalize_arxiv_id(value)
 
 
-def _s2_search(query: str, limit: int) -> list[dict[str, Any]]:
+def _s2_search(
+    query: str,
+    limit: int,
+    *,
+    max_retries: int | None = None,
+    max_retry_wait_seconds: float | None = None,
+) -> list[dict[str, Any]]:
     data = _s2_request(
         "GET",
         f"{S2_BASE_URL}/paper/search",
         params={"query": query, "limit": max(limit, 1), "fields": S2_FIELDS},
+        max_retries=max_retries,
+        max_retry_wait_seconds=max_retry_wait_seconds,
     )
     return list(data.get("data") or [])
 
 
-def _s2_citations(arxiv_id: str, limit: int) -> list[dict[str, Any]]:
+def _s2_citations(
+    arxiv_id: str,
+    limit: int,
+    *,
+    max_retries: int | None = None,
+    max_retry_wait_seconds: float | None = None,
+) -> list[dict[str, Any]]:
     data = _s2_request(
         "GET",
         f"{S2_BASE_URL}/paper/ARXIV:{_bare_arxiv_id(arxiv_id)}/citations",
         params={"limit": max(limit, 1), "fields": f"isInfluential,{S2_FLAT_FIELDS}"},
+        max_retries=max_retries,
+        max_retry_wait_seconds=max_retry_wait_seconds,
     )
     out: list[dict[str, Any]] = []
     for item in data.get("data") or []:
@@ -381,11 +464,19 @@ def _s2_citations(arxiv_id: str, limit: int) -> list[dict[str, Any]]:
     return out
 
 
-def _s2_references(arxiv_id: str, limit: int) -> list[dict[str, Any]]:
+def _s2_references(
+    arxiv_id: str,
+    limit: int,
+    *,
+    max_retries: int | None = None,
+    max_retry_wait_seconds: float | None = None,
+) -> list[dict[str, Any]]:
     data = _s2_request(
         "GET",
         f"{S2_BASE_URL}/paper/ARXIV:{_bare_arxiv_id(arxiv_id)}/references",
         params={"limit": max(limit, 1), "fields": f"isInfluential,{S2_FLAT_FIELDS}"},
+        max_retries=max_retries,
+        max_retry_wait_seconds=max_retry_wait_seconds,
     )
     out: list[dict[str, Any]] = []
     for item in data.get("data") or []:
@@ -405,7 +496,14 @@ def _normalize_s2_id(value: str) -> str:
     return value
 
 
-def _s2_recommend(positive_ids: list[str], negative_ids: list[str], limit: int) -> list[dict[str, Any]]:
+def _s2_recommend(
+    positive_ids: list[str],
+    negative_ids: list[str],
+    limit: int,
+    *,
+    max_retries: int | None = None,
+    max_retry_wait_seconds: float | None = None,
+) -> list[dict[str, Any]]:
     positive = [_normalize_s2_id(item) for item in positive_ids if item]
     negative = [_normalize_s2_id(item) for item in negative_ids if item]
     if not positive:
@@ -415,6 +513,8 @@ def _s2_recommend(positive_ids: list[str], negative_ids: list[str], limit: int) 
             "GET",
             f"{S2_RECOMMENDATIONS_URL}/papers/forpaper/{positive[0]}",
             params={"limit": max(limit, 1), "fields": S2_FLAT_FIELDS},
+            max_retries=max_retries,
+            max_retry_wait_seconds=max_retry_wait_seconds,
         )
     else:
         data = _s2_request(
@@ -422,6 +522,8 @@ def _s2_recommend(positive_ids: list[str], negative_ids: list[str], limit: int) 
             f"{S2_RECOMMENDATIONS_URL}/papers",
             params={"limit": max(limit, 1), "fields": S2_FLAT_FIELDS},
             json_body={"positivePaperIds": positive, "negativePaperIds": negative},
+            max_retries=max_retries,
+            max_retry_wait_seconds=max_retry_wait_seconds,
         )
     return list(data.get("recommendedPapers") or [])
 
@@ -614,6 +716,8 @@ def discover_literature(
     no_citation_expand: bool = False,
     fixture_fallback: bool = False,
     progress_path: Path | None = None,
+    max_retries: int | None = None,
+    max_retry_wait_seconds: float | None = None,
 ) -> dict[str, Any]:
     global _S2_PROGRESS_PATH
     limit = max(1, min(int(limit or 10), 50))
@@ -625,6 +729,11 @@ def discover_literature(
     artifacts: list[dict[str, str]] = []
     candidate_raw: list[dict[str, Any]] = []
     _S2_RETRY_EVENTS.clear()
+    retry_kwargs: dict[str, Any] = {}
+    if max_retries is not None:
+        retry_kwargs["max_retries"] = max_retries
+    if max_retry_wait_seconds is not None:
+        retry_kwargs["max_retry_wait_seconds"] = max_retry_wait_seconds
 
     if fixture_fallback and not mode:
         return {
@@ -715,19 +824,32 @@ def discover_literature(
 
     try:
         if mode == "topic":
-            for raw in _s2_search(query, max(limit * 2, limit)):
+            for raw in _s2_search(
+                query,
+                max(limit * 2, limit),
+                **retry_kwargs,
+            ):
                 candidate_raw.append(_candidate_from_raw(raw, source="search_s2"))
         elif mode in {"anchors", "wiki"}:
             for anchor in anchors:
                 try:
-                    for raw in _s2_recommend([anchor], negative_ids, max(limit * 2, limit)):
+                    for raw in _s2_recommend(
+                        [anchor],
+                        negative_ids,
+                        max(limit * 2, limit),
+                        **retry_kwargs,
+                    ):
                         candidate_raw.append(_candidate_from_raw(raw, source="recommend", anchor=anchor))
                 except Exception as exc:
                     warnings.append(f"recommend failed for {anchor}: {exc}")
                 if not no_citation_expand:
                     for channel, fetcher in (("references", _s2_references), ("citations", _s2_citations)):
                         try:
-                            for raw in fetcher(anchor, max(limit, 10)):
+                            for raw in fetcher(
+                                anchor,
+                                max(limit, 10),
+                                **retry_kwargs,
+                            ):
                                 candidate_raw.append(_candidate_from_raw(raw, source=channel, anchor=anchor))
                         except Exception as exc:
                             warnings.append(f"{channel} failed for {anchor}: {exc}")

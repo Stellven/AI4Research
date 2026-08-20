@@ -1,0 +1,17 @@
+{
+  "run_id_prefix": "nt-literature",
+  "topic": "retrieval augmented generation evaluation methods",
+  "anchor": "2005.11401",
+  "limit": 5,
+  "min_real_sources": 3,
+  "min_signal_types": 2,
+  "required_signal_types": [
+    "method",
+    "technical_claim",
+    "experiment_or_evidence"
+  ],
+  "min_trends": 1,
+  "min_gaps": 1,
+  "run_research_probe": true,
+  "research_seed_url": "https://arxiv.org/abs/2005.11401"
+}

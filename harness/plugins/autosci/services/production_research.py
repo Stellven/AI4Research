@@ -678,6 +678,11 @@ class LiteratureDiscoveryService:
             repository_root=self.workspace_root,
             allow_network_fetch=True,
             progress_path=progress,
+            # The lifecycle owns a bounded total runtime and has independent
+            # public-provider fallbacks.  Do not let one provider's long
+            # Retry-After sequence consume the whole lifecycle budget.
+            max_retries=1,
+            max_retry_wait_seconds=5.0,
         )
         if not isinstance(raw, dict):
             raise ResearchOperatorError("AutoSci discovery backend returned a non-object response", error_type="provider_contract")
