@@ -39,6 +39,9 @@ run_gate() {
 echo; echo "-- gate: bootstrap logic --"
 run_gate node ../tests/desktop/src/runtime-detect.test.cjs
 
+echo; echo "-- gate: Windows runtime prewarm contract --"
+run_gate node ../tests/desktop/src/runtime-prewarm.test.cjs
+
 echo; echo "-- gate: bootstrap/package contract --"
 run_gate node ../tests/desktop/bootstrap-contract.test.cjs
 

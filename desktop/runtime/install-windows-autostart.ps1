@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 <#
-  Register a per-user logon task that brings WSL2 up and starts the Solar status-server
+  Register a per-user logon task that brings WSL2 up and prewarms the complete Solar runtime
   at every login. WSL2 does not auto-start until first invoked, so this is the Windows
   half of "the runtime is already running locally" - it pairs with the in-WSL systemd
   user unit + `loginctl enable-linger` (install-linux-service.sh, run inside WSL).
@@ -32,8 +32,8 @@ $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interac
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
   -Settings $settings -Principal $principal `
-  -Description "Brings WSL2 up and starts the Solar runtime at logon." | Out-Null
+  -Description "Brings WSL2 up and prewarms the complete Solar runtime at logon." | Out-Null
 
 Write-Host "[install] registered logon task '$TaskName' (distro=$Distro)"
 Write-Host "[install] verify:  Get-ScheduledTask -TaskName $TaskName"
-Write-Host "[install] action:  wscript start-solar-wsl.vbs -> wsl -d $Distro -- systemctl --user start solar-status-server.service"
+Write-Host "[install] action:  wscript start-solar-wsl.vbs -> status-server + harness + coordinator"

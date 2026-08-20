@@ -166,6 +166,13 @@ assert(
 );
 
 assert(
+  "desktop autotest locks down complete Windows runtime prewarm",
+  autotest.includes("node ../tests/desktop/src/runtime-prewarm.test.cjs") &&
+    main.includes("buildWindowsRuntimePrewarmCommand") &&
+    main.includes("Windows runtime prewarm ready"),
+);
+
+assert(
   "desktop artifacts wait for the gate before building",
   /\n  build:\n    needs: gate\n/.test(desktopWorkflow),
 );

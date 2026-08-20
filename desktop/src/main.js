@@ -66,6 +66,10 @@ const WSL_HARNESS = process.env.SOLAR_WSL_HARNESS || "$HOME/.solar/harness";
 const PRESET_URL = process.env.SOLAR_BACKEND_URL || "";
 const SELFTEST = process.env.SOLAR_DESKTOP_SELFTEST === "1";
 const { assessSelftestSnapshot } = require("./selftest-verdict");
+const {
+  buildWindowsRuntimePrewarmCommand,
+  prewarmSucceeded,
+} = require("./runtime-prewarm");
 // Test hook: force the classifier to return a given mode (deterministic screenshots).
 const SIMULATE = process.env.SOLAR_SIMULATE || "";
 
@@ -631,6 +635,29 @@ async function ensureRuntimeRequiredDepsReady() {
       `${shQuote(path.join(HARNESS_DIR, "solar-harness.sh"))} status --all 2>&1; ` +
       `else echo missing solar-harness entrypoint: ${shQuote(path.join(HARNESS_DIR, "solar-harness.sh"))}; fi`;
   const wslHarnessBase = resolveWslHarnessPath();
+  if (IS_WIN) {
+    let prewarmCommand;
+    try {
+      prewarmCommand = buildWindowsRuntimePrewarmCommand(wslHarnessBase);
+    } catch (error) {
+      return {
+        ok: false,
+        failures: ["runtime-prewarm"],
+        output: String(error),
+      };
+    }
+    const prewarm = wslExec(prewarmCommand, 120000);
+    if (!prewarmSucceeded(prewarm)) {
+      const prewarmOutput = `${prewarm.stdout || ""}\n${prewarm.stderr || ""}`.trim();
+      log("Windows runtime prewarm failed:", prewarmOutput.slice(0, 1000));
+      return {
+        ok: false,
+        failures: ["runtime-prewarm"],
+        output: prewarmOutput.slice(0, 3000),
+      };
+    }
+    log("Windows runtime prewarm ready");
+  }
   const wslSolarHarness = shellTokenForWsl(`${wslHarnessBase}/solar-harness`);
   const wslSolarHarnessScript = shellTokenForWsl(`${wslHarnessBase}/solar-harness.sh`);
   const wslSolarBinary = shellTokenForWsl(`${wslHarnessBase}/bin/solar`);
