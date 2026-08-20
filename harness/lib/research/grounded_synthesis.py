@@ -589,6 +589,38 @@ def _compile_plan(
     title = " ".join(str(plan.get("title") or question).split())
     if not title:
         raise GroundedSynthesisError("synthesis_title_missing")
+    language = str(plan.get("language") or "").strip().lower()
+    chinese_report = language.startswith("zh") or bool(
+        re.search(r"[\u4e00-\u9fff]", f"{title} {question}")
+    )
+    labels = (
+        {
+            "mixed_evidence": "证据不一致",
+            "limited_support": "有限支持",
+            "uncertainty": "不确定性",
+            "unverified": "尚未验证",
+            "gaps_heading": "证据缺口与不确定性",
+            "question": "研究问题",
+            "boundary_heading": "证据边界",
+            "boundary_text": "本报告仅依据下列已验证的来源摘录与证据链接；缺失的证据不会被视为支持。",
+            "sources_heading": "来源",
+        }
+        if chinese_report
+        else {
+            "mixed_evidence": "MIXED EVIDENCE",
+            "limited_support": "LIMITED SUPPORT",
+            "uncertainty": "Uncertainty",
+            "unverified": "UNVERIFIED",
+            "gaps_heading": "Evidence gaps and uncertainty",
+            "question": "Research question",
+            "boundary_heading": "Evidence boundary",
+            "boundary_text": (
+                "This report is limited to the verified source extracts and evidence links "
+                "listed below. It does not treat missing evidence as support."
+            ),
+            "sources_heading": "Sources",
+        }
+    )
 
     claim_rows: list[dict[str, Any]] = []
     link_rows: list[dict[str, Any]] = []
@@ -651,12 +683,12 @@ def _compile_plan(
             if contradiction_ids:
                 support_rating = "weak"
                 confidence_ceiling = 0.60
-                claim_label = "MIXED EVIDENCE"
+                claim_label = labels["mixed_evidence"]
                 contradiction_count += len(contradiction_ids)
             elif qualifying_ids or len(supporting_sources) < 2:
                 support_rating = "moderate"
                 confidence_ceiling = 0.80
-                claim_label = "LIMITED SUPPORT"
+                claim_label = labels["limited_support"]
                 qualified_claim_count += 1
             else:
                 support_rating = "strong"
@@ -724,8 +756,12 @@ def _compile_plan(
             citations = " ".join(
                 f"[cite:{link['evidence_id']}]" for link in evidence_links
             )
-            label = f"**{claim_label}:** " if claim_label else ""
-            uncertainty_note = f" — *Uncertainty:* {uncertainty}" if uncertainty else ""
+            label = (
+                f"**{claim_label}{'：' if chinese_report else ':'}** " if claim_label else ""
+            )
+            uncertainty_note = (
+                f" — *{labels['uncertainty']}:* {uncertainty}" if uncertainty else ""
+            )
             lines.append(f"- {label}{claim_text}{uncertainty_note} {citations}")
             claim_counter += 1
 
@@ -773,7 +809,7 @@ def _compile_plan(
         for row in merged["sources"]
     ]
     gap_lines = [
-        "- **UNVERIFIED:** "
+        f"- **{labels['unverified']}{'：' if chinese_report else ':'}** "
         + gap["text"]
         + (
             " " + " ".join(f"[cite:{evidence_id}]" for evidence_id in gap["evidence_ids"])
@@ -783,7 +819,7 @@ def _compile_plan(
         for gap in evidence_gaps
     ]
     gap_block = (
-        ["## Evidence gaps and uncertainty", "", *gap_lines, ""]
+        [f"## {labels['gaps_heading']}", "", *gap_lines, ""]
         if gap_lines
         else []
     )
@@ -791,17 +827,16 @@ def _compile_plan(
         [
             f"# {title}",
             "",
-            f"**Research question:** {question}",
+            f"**{labels['question']}{'：' if chinese_report else ':'}** {question}",
             "",
             *rendered_sections,
             "",
             *gap_block,
-            "## Evidence boundary",
+            f"## {labels['boundary_heading']}",
             "",
-            "This report is limited to the verified source extracts and evidence links listed below. "
-            "It does not treat missing evidence as support.",
+            labels["boundary_text"],
             "",
-            "## Sources",
+            f"## {labels['sources_heading']}",
             "",
             *source_lines,
             "",

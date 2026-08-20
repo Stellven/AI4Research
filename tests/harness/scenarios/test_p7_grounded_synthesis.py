@@ -240,6 +240,27 @@ def test_runtime_wire_plan_and_source_packs_compile_through_canonical_checks(tmp
     assert (output / "final.md").stat().st_size > 0
 
 
+def test_chinese_request_localizes_compiler_owned_report_labels(tmp_path):
+    packs, plan = _fixture(tmp_path)
+    plan["title"] = "相关技术趋势深度分析"
+    plan["language"] = "zh-CN"
+    output = tmp_path / "chinese-report"
+
+    compile_grounded_report(
+        source_packs=packs,
+        synthesis_plan=plan,
+        output_dir=output,
+        question="请生成相关技术趋势的中文深度分析报告。",
+    )
+
+    report = (output / "final.md").read_text(encoding="utf-8")
+    assert "**研究问题：**" in report
+    assert "## 证据边界" in report
+    assert "## 来源" in report
+    assert "LIMITED SUPPORT" not in report
+    assert "Research question" not in report
+
+
 def test_chinese_grounding_and_cross_script_context_are_supported():
     assert "计算" in grounded_synthesis._tokens("计算材料学与可编程结构")
     checks = research_evaluator._grounding_checks(
