@@ -19,6 +19,7 @@ if str(_LIB) not in sys.path:
 # eval artifact with exact quote spans -- all recomputable from bytes.
 from research.grounded_synthesis import GroundedSynthesisError, compile_grounded_report  # noqa: E402
 
+from .plan_admission import admit_plan  # noqa: E402
 from .synthesis_plan import build_plan, evidence_index as build_evidence_index  # noqa: E402
 from .validated_pack import write_validated_pack  # noqa: E402
 
@@ -54,8 +55,42 @@ def _load_validation(context: OperatorContext) -> tuple[dict[str, Any], dict[str
     )
 
 
+# Policy, not a compiler rule: how much of the synthesis must survive grounding
+# before the result is still a report. Set from observed healthy runs, which
+# retain every claim; a run losing more than a third of them has a problem
+# upstream that a smaller report would hide.
+MIN_CLAIM_RETENTION = 0.67
+
+
+def _written_file_artifacts(
+    context: OperatorContext, roots: tuple[Path, ...]
+) -> list[dict[str, Any]]:
+    """Declare every file under `roots`, one record per file.
+
+    The dispatch layer's unreported-files check matches the operator's declared
+    artifacts against changed files exactly, so a declared directory covers none
+    of its children. The pack is 30+ files, so it is enumerated.
+    """
+    records: list[dict[str, Any]] = []
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in sorted(item for item in root.rglob("*") if item.is_file()):
+            rendered = display_path(path, context.workspace_root)
+            records.append(
+                {
+                    "artifact_id": rendered,
+                    "path": rendered,
+                    "schema": "research_synthesis.source_pack_file.v1",
+                    "sha256": sha256_bytes(_read_bytes(path)),
+                }
+            )
+    return records
+
+
 def compile_grounded_companion(
     *,
+    context: OperatorContext,
     stage_root: Path,
     validation: dict[str, Any],
     claims: list[dict[str, Any]],
@@ -87,6 +122,27 @@ def compile_grounded_companion(
         if line.strip()
     ]
     plan = build_plan(claims=claims, evidence_index=build_evidence_index(evidence_rows))
+    # Drop what the compiler would abort on, and record it, so ordinary
+    # research attrition degrades the report instead of ending the run.
+    plan, admission = admit_plan(plan=plan, evidence_rows=evidence_rows)
+    if not admission["sections_out"]:
+        raise ResearchOperatorError(
+            "no claim survived grounding: "
+            f"{admission['claims_in']} claim(s) in, none with a compilable "
+            "supporting quote",
+            error_type="grounded_evidence_exhausted",
+            output_artifacts=_written_file_artifacts(context, (pack_dir,)),
+        )
+    if admission.claim_retention < MIN_CLAIM_RETENTION:
+        # The floor. Without it every failure becomes a green run carrying one
+        # claim, which is worse than failing because it looks like a result.
+        raise ResearchOperatorError(
+            "too little evidence survived grounding to publish a report: "
+            f"{admission['claims_out']}/{admission['claims_in']} claims retained "
+            f"({admission.claim_retention:.0%} < {MIN_CLAIM_RETENTION:.0%})",
+            error_type="grounded_evidence_too_thin",
+            output_artifacts=_written_file_artifacts(context, (pack_dir,)),
+        )
     try:
         compiled = compile_grounded_report(
             source_packs=[pack_dir],
@@ -95,11 +151,16 @@ def compile_grounded_companion(
             question=question,
         )
     except GroundedSynthesisError as exc:
+        # The pack is already on disk at this point. Hand it to the failure so
+        # the node reports the compile error rather than the dispatch layer
+        # reporting unreported files and hiding it.
         raise ResearchOperatorError(
             f"grounded report compile failed: {exc}",
             error_type="grounded_compile_failed",
+            output_artifacts=_written_file_artifacts(context, (pack_dir, grounded_dir)),
         ) from exc
     return {
+        "admission": dict(admission),
         "pack_dir": pack_dir,
         "grounded_dir": grounded_dir,
         "pack_manifest": {key: manifest[key] for key in ("source_count", "evidence_count", "skipped")},
@@ -407,6 +468,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             )
         ).parent
         grounded = compile_grounded_companion(
+            context=context,
             stage_root=stage_root,
             validation=validation,
             claims=claims,

@@ -20,9 +20,21 @@ NODE_STATUSES = TERMINAL_STATUSES | NONTERMINAL_STATUSES
 class ResearchOperatorError(Exception):
     """Raised when a bounded operator cannot safely fulfill its node request."""
 
-    def __init__(self, message: str, *, error_type: str = "operator_error") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        error_type: str = "operator_error",
+        output_artifacts: list[dict[str, Any]] | None = None,
+    ) -> None:
         super().__init__(message)
         self.error_type = error_type
+        # Files the operator had already written when it failed. A stage that
+        # writes before it validates leaves them behind either way; declaring
+        # them is what keeps the failure honest, and keeps the dispatch layer's
+        # unreported-files check from raising a second error that hides the
+        # first. See error_result.
+        self.output_artifacts = list(output_artifacts or [])
 
 
 @dataclass(frozen=True)
@@ -443,11 +455,37 @@ def build_node_result(
 
 
 def error_result(context: OperatorContext, exc: ResearchOperatorError) -> dict[str, Any]:
+    """Report a failure together with whatever it had already written.
+
+    The limitation used to read "stopped before writing an output artifact"
+    unconditionally. For a stage that writes before it validates that is simply
+    false: the live CRISPR run failed the grounded compile after report_draft
+    had written a 32-file source pack, and shipped that sentence anyway.
+
+    Declaring the partial output also stops the cascade. The dispatch layer
+    compares changed files against the operator's own declared artifacts, so an
+    empty declaration turned one real error -- a quote that was not byte-exact
+    -- into "operator changed unreported files", which is what the operator
+    reported first and says nothing about the cause.
+
+    The files are kept rather than cleaned up because they are the evidence the
+    failure has to be diagnosed from.
+    """
+    partial = list(exc.output_artifacts)
+    limitation = (
+        "The operator stopped before writing an output artifact."
+        if not partial
+        else (
+            f"The operator failed after writing {len(partial)} artifact(s); "
+            "they are declared above and retained as failure evidence."
+        )
+    )
     return build_node_result(
         context,
         status="failed",
+        output_artifacts=partial,
         errors=[{"error_id": "operator.error", "error_type": exc.error_type, "message": str(exc)[:500]}],
-        limitations=["The operator stopped before writing an output artifact."],
+        limitations=[limitation],
     )
 
 

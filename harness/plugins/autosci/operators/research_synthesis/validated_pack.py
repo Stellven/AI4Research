@@ -33,6 +33,33 @@ from research.source_pack import write_source_pack  # noqa: E402
 from research.sources.base import FetchResult  # noqa: E402
 
 
+def canonical_text(value: Any) -> str:
+    """Collapse whitespace the way `evidence_synthesis` already does.
+
+    `evidence_synthesis._normalize_quotes` verifies a quote by collapsing both
+    the quote and the source text with `" ".join(x.split())`, and it stores the
+    COLLAPSED quote. `grounded_synthesis` then checks `quote in evidence_text`
+    byte-exactly against the pack. Those two only agree if the pack carries the
+    same collapsed form, so the rule is copied here verbatim rather than
+    re-derived -- a second, subtly different normalizer is precisely the seam
+    this fixes.
+
+    The live CRISPR run failed on it. Publisher text strips italic markup and
+    leaves doubled spaces around the Latin phrases biomedical style italicises:
+
+        "Benchmarking 13  in silico  prediction tools identified Cas-OFFinder"
+
+    The model quoted it with single spaces, which is what the source reads as.
+    The quote was present, normalized; absent, byte-exact; and the compile
+    aborted. arXiv line-wrapped abstracts fail the same way for the same
+    reason.
+
+    Only whitespace is touched, so no word, number or character of the source
+    is altered.
+    """
+    return " ".join(str(value or "").split())
+
+
 def _text_of(source: dict[str, Any]) -> str:
     """The strongest text this source carries, without inventing any."""
     for key in ("content", "extracted_text", "content_summary", "abstract"):
@@ -55,7 +82,10 @@ def fetch_results_from_accepted(accepted: list[dict[str, Any]]) -> list[FetchRes
         if not isinstance(source, dict):
             continue
         source_id = str(source.get("source_id") or f"source-{index + 1:03d}").strip()
-        text = _text_of(source)
+        # Canonicalised here, at the one place text enters the pack, so that
+        # content, content_hash, span_end and the extract file all derive from
+        # the same string write_source_pack is handed.
+        text = canonical_text(_text_of(source))
         provenance = source.get("provenance") if isinstance(source.get("provenance"), dict) else {}
         metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
         results.append(
