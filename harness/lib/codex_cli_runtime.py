@@ -125,6 +125,15 @@ def resolve_codex_cli(
         if _is_runnable(candidate):
             return candidate.resolve(strict=False), "path"
 
+    # User services do not inherit the interactive login-shell PATH.  The
+    # desktop installer places Codex in ~/.local/bin on WSL, so resolve that
+    # deterministic location before falling back to the WindowsApps copy.
+    runtime_home = str(runtime_env.get("HOME") or "").strip()
+    if runtime_home:
+        user_local_candidate = Path(runtime_home).expanduser() / ".local" / "bin" / "codex"
+        if _is_runnable(user_local_candidate):
+            return user_local_candidate.resolve(strict=False), "user_local_bin"
+
     if _is_wsl():
         runtime_root = Path(
             str(runtime_env.get("SOLAR_CODEX_RUNTIME_DIR") or "")

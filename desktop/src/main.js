@@ -968,7 +968,8 @@ function syncBundledHarnessIfNeeded() {
 function startBackendWindows() {
   const r = wslExec(
     `systemctl --user start solar-status-server.service 2>/dev/null || ` +
-      `( setsid env HARNESS_DIR=${WSL_HARNESS} PYTHONPATH=${WSL_HARNESS}/lib ` +
+      `( setsid env PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin" ` +
+      `HARNESS_DIR=${WSL_HARNESS} PYTHONPATH=${WSL_HARNESS}/lib ` +
       `python3 ${WSL_HARNESS}/lib/symphony/status-server.py ` +
       `>/dev/null 2>&1 < /dev/null & )`,
     15000,

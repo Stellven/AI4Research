@@ -14,7 +14,8 @@ const probe = buildWindowsRuntimeReadinessProbe("/home/solar/.solar/harness/");
 
 assert(
   "prewarm starts the managed status server",
-  command.includes("systemctl --user start solar-status-server.service"),
+  command.includes("systemctl --user start solar-status-server.service") &&
+    command.includes('PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"'),
 );
 assert(
   "prewarm starts the product runtime in Codex/OpenAI mode",

@@ -33,6 +33,24 @@ def test_resolve_codex_cli_prefers_runnable_configured_path(tmp_path):
     assert reason == "configured_path"
 
 
+def test_resolve_codex_cli_finds_user_local_bin_without_login_shell_path(tmp_path):
+    runtime = _load_runtime()
+    home = tmp_path / "home"
+    user_local = home / ".local" / "bin" / "codex"
+    user_local.parent.mkdir(parents=True)
+    user_local.write_bytes(b"\x7fELFfixture")
+    user_local.chmod(0o700)
+
+    resolved, reason = runtime.resolve_codex_cli(
+        tmp_path / "harness",
+        env={"PATH": "", "HOME": str(home)},
+        configured_path="/opt/homebrew/bin/codex",
+    )
+
+    assert resolved == user_local.resolve()
+    assert reason == "user_local_bin"
+
+
 def test_resolve_codex_cli_materializes_windows_desktop_binary_for_wsl(tmp_path, monkeypatch):
     runtime = _load_runtime()
     source = tmp_path / "WindowsApps" / "OpenAI.Codex_1" / "app" / "resources" / "codex"

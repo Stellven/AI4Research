@@ -14,7 +14,8 @@ function buildWindowsRuntimePrewarmCommand(harnessDir) {
   return (
     `set -e; mkdir -p "$HOME/.solar/workspace" "$HOME/.solar/logs"; ` +
     `systemctl --user start solar-status-server.service 2>/dev/null || ` +
-    `( setsid env HARNESS_DIR=${harness} PYTHONPATH=${shQuote(`${normalized}/lib`)} ` +
+    `( setsid env PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin" ` +
+    `HARNESS_DIR=${harness} PYTHONPATH=${shQuote(`${normalized}/lib`)} ` +
     `python3 ${shQuote(`${normalized}/lib/symphony/status-server.py`)} ` +
     `>>"$HOME/.solar/logs/status-server.log" 2>&1 < /dev/null & ); ` +
     `env SOLAR_PRODUCT_MODE=1 SOLAR_PANE_RUNTIME=codex ` +
