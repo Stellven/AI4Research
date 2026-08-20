@@ -145,7 +145,7 @@ function wslHasDistro() {
     encoding: "utf8",
   });
   if (r.error || r.status !== 0) return false;
-  return splitWslOutput(r.stdout).length > 0;
+  return usableWslDistros(r.stdout).length > 0;
 }
 
 // Preserve old behavior for existing callers: "missing" if no distro is registered.
