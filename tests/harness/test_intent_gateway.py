@@ -149,6 +149,46 @@ def test_capture_embeds_research_artifact_into_requirement_ir(tmp_path):
     assert ir["source_inputs"]["research_artifact"]["conversation_id"] == "conv-frontdoor-001"
 
 
+def test_capture_preserves_dashboard_uploads_as_structured_source_inputs(tmp_path):
+    attachment = tmp_path / "uploaded-report.txt"
+    attachment.write_text("source evidence", encoding="utf-8")
+    env = dict(os.environ)
+    env["SOLAR_INTENT_GATEWAY_DIR"] = str(tmp_path / "intents")
+    env["SOLAR_HARNESS_SPRINTS_DIR"] = str(tmp_path / "sprints")
+    env["SOLAR_INTAKE_ATTACHMENTS_JSON"] = json.dumps(
+        [
+            {
+                "name": attachment.name,
+                "path": str(attachment),
+                "mime_type": "text/plain",
+                "size": attachment.stat().st_size,
+                "sha256": "a" * 64,
+            }
+        ]
+    )
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "capture",
+            "--text",
+            "Summarize the uploaded report.",
+            "--json",
+        ],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    payload = json.loads(proc.stdout)
+    base = tmp_path / "intents" / payload["intent_id"]
+    raw = json.loads((base / "raw_intent.json").read_text())
+    ir = json.loads((base / "requirement_ir.json").read_text())
+
+    assert raw["raw"]["attachments"][0]["path"] == str(attachment)
+    assert ir["source_inputs"]["attachments"][0]["sha256"] == "a" * 64
+
+
 @pytest.mark.parametrize(
     "prompt",
     [

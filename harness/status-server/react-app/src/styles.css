@@ -1711,6 +1711,88 @@ summary:focus-visible,
   background: var(--solar-surface);
 }
 
+.intake-attachments {
+  display: flex;
+  align-items: center;
+  gap: var(--solar-space-2);
+  flex-wrap: wrap;
+  margin-top: var(--solar-space-3);
+}
+
+.intake-file-input {
+  display: none;
+}
+
+.intake-attach-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+  color: var(--solar-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--solar-type-xs);
+}
+
+.intake-attach-button:hover:not(:disabled) {
+  border-color: var(--solar-line-strong);
+  color: var(--solar-ink);
+}
+
+.intake-attach-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.intake-file-list {
+  display: flex;
+  gap: var(--solar-space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.intake-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-pill);
+  color: var(--solar-ink);
+  background: var(--solar-surface-quiet);
+  font-size: var(--solar-type-xs);
+}
+
+.intake-file-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intake-file-chip small {
+  flex: none;
+  color: var(--solar-subtle);
+}
+
+.intake-file-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  color: var(--solar-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -2517,6 +2599,11 @@ summary:focus-visible,
   gap: var(--solar-space-3);
   padding: var(--solar-space-2) var(--solar-space-3) var(--solar-space-3)
     var(--solar-space-4);
+}
+
+.home-prompt > .intake-attachments {
+  margin: 0;
+  padding: 0 var(--solar-space-4) var(--solar-space-2);
 }
 
 .home-caption {

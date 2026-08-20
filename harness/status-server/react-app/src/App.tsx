@@ -23,6 +23,7 @@ import {
   MessageSquarePlus,
   Minus,
   PanelRight,
+  Paperclip,
   PauseCircle,
   Play,
   Plus,
@@ -759,21 +760,23 @@ function NewTaskDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [task, setTask] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     const cleanTask = task.trim();
-    if (!cleanTask) return;
+    if (!cleanTask && files.length === 0) return;
     setSubmitting(true);
     setError("");
     try {
-      const response = await submitIntake(cleanTask);
+      const response = await submitIntake(cleanTask, files);
       if (!response.ok || !response.sprint_id) {
         throw new Error(intakeErrorMessage(response));
       }
       setTask("");
+      setFiles([]);
       setOpen(false);
       await onCreated(response.sprint_id, response.request_id || "");
     } catch (err) {
@@ -810,6 +813,12 @@ function NewTaskDialog({
               autoFocus
               rows={7}
             />
+            <IntakeAttachments
+              files={files}
+              onChange={setFiles}
+              onError={setError}
+              disabled={submitting}
+            />
             {error && <div className="form-error">{error}</div>}
             <div className="dialog-actions">
               <Dialog.Close asChild>
@@ -824,7 +833,7 @@ function NewTaskDialog({
               <button
                 type="submit"
                 className="primary-button"
-                disabled={!task.trim() || submitting}
+                disabled={(!task.trim() && files.length === 0) || submitting}
               >
                 {submitting ? (
                   <Loader2 className="spin" size={16} />
@@ -838,6 +847,93 @@ function NewTaskDialog({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+const MAX_INTAKE_FILES = 8;
+const MAX_INTAKE_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_INTAKE_TOTAL_BYTES = 10 * 1024 * 1024;
+
+function readableFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function IntakeAttachments({
+  files,
+  onChange,
+  onError,
+  disabled = false,
+}: {
+  files: File[];
+  onChange: (files: File[]) => void;
+  onError: (message: string) => void;
+  disabled?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function addFiles(selected: File[]) {
+    const combined = [...files, ...selected];
+    if (combined.length > MAX_INTAKE_FILES) {
+      onError(`Attach up to ${MAX_INTAKE_FILES} files per task.`);
+      return;
+    }
+    const oversized = selected.find((file) => file.size > MAX_INTAKE_FILE_BYTES);
+    if (oversized) {
+      onError(`${oversized.name} is larger than 5 MB.`);
+      return;
+    }
+    const total = combined.reduce((sum, file) => sum + file.size, 0);
+    if (total > MAX_INTAKE_TOTAL_BYTES) {
+      onError("Attachments may total up to 10 MB per task.");
+      return;
+    }
+    onError("");
+    onChange(combined);
+  }
+
+  return (
+    <div className="intake-attachments">
+      <input
+        ref={inputRef}
+        className="intake-file-input"
+        type="file"
+        multiple
+        disabled={disabled}
+        onChange={(event) => {
+          addFiles(Array.from(event.target.files || []));
+          event.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        className="intake-attach-button"
+        onClick={() => inputRef.current?.click()}
+        disabled={disabled}
+      >
+        <Paperclip size={14} aria-hidden="true" />
+        <span>Attach files</span>
+      </button>
+      {files.length > 0 && (
+        <div className="intake-file-list" aria-label="Attached files">
+          {files.map((file, index) => (
+            <span className="intake-file-chip" key={`${file.name}-${file.lastModified}-${index}`}>
+              <span title={file.name}>{file.name}</span>
+              <small>{readableFileSize(file.size)}</small>
+              <button
+                type="button"
+                aria-label={`Remove ${file.name}`}
+                onClick={() => onChange(files.filter((_, fileIndex) => fileIndex !== index))}
+                disabled={disabled}
+              >
+                <X size={12} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -4772,20 +4868,22 @@ function HomeLanding({
 }) {
   const crew = useCrew();
   const [task, setTask] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   async function start() {
     const clean = task.trim();
-    if (!clean || submitting) return;
+    if ((!clean && files.length === 0) || submitting) return;
     setSubmitting(true);
     setError("");
     try {
-      const response = await submitIntake(clean);
+      const response = await submitIntake(clean, files);
       if (!response.ok || !response.sprint_id) {
         throw new Error(intakeErrorMessage(response));
       }
       setTask("");
+      setFiles([]);
       await onCreated(response.sprint_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start work");
@@ -4826,6 +4924,12 @@ function HomeLanding({
               }
             }}
           />
+          <IntakeAttachments
+            files={files}
+            onChange={setFiles}
+            onError={setError}
+            disabled={submitting}
+          />
           <div className="home-prompt-foot">
             <Popover.Root open={crew.open} onOpenChange={crew.setOpen}>
               <Popover.Trigger asChild>
@@ -4862,7 +4966,7 @@ function HomeLanding({
             <button
               type="submit"
               className="primary-button"
-              disabled={!task.trim() || submitting}
+              disabled={(!task.trim() && files.length === 0) || submitting}
             >
               {submitting ? (
                 <Loader2 className="spin" size={16} />

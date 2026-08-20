@@ -412,6 +412,13 @@ export type IntakeResponse = {
   error?: string;
   stdout_tail?: string;
   returncode?: number;
+  attachments?: Array<{
+    name: string;
+    path: string;
+    mime_type?: string;
+    size?: number;
+    sha256?: string;
+  }>;
 };
 
 export type SettingsPayload = {

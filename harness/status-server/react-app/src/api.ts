@@ -272,12 +272,36 @@ export function parseIntakeDirectives(raw: string): {
   };
 }
 
-export function submitIntake(rawTask: string): Promise<IntakeResponse> {
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
+export async function submitIntake(
+  rawTask: string,
+  files: File[] = [],
+): Promise<IntakeResponse> {
   const { task, workflowId, workflowInputs } = parseIntakeDirectives(rawTask);
   const body: Record<string, unknown> = {
     task,
     request_id: newRequestId("webapp-intake"),
   };
+  if (files.length) {
+    body.attachments = await Promise.all(
+      files.map(async (file) => ({
+        name: file.name,
+        mime_type: file.type || "application/octet-stream",
+        size: file.size,
+        last_modified: file.lastModified,
+        content_base64: await fileToBase64(file),
+      })),
+    );
+  }
   if (workflowId) {
     body.workflow_id = workflowId;
     if (workflowInputs) {

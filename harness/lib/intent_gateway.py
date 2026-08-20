@@ -71,6 +71,33 @@ def extract_research_artifact(args: argparse.Namespace) -> dict[str, Any] | None
     }
 
 
+def intake_attachments_from_env() -> list[dict[str, Any]]:
+    raw = str(os.environ.get("SOLAR_INTAKE_ATTACHMENTS_JSON") or "").strip()
+    if not raw:
+        return []
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    attachments: list[dict[str, Any]] = []
+    for item in payload[:8]:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path") or "").strip()
+        if not path or not Path(path).is_file():
+            continue
+        attachments.append({
+            "name": str(item.get("name") or Path(path).name)[:140],
+            "path": path,
+            "mime_type": str(item.get("mime_type") or "application/octet-stream")[:160],
+            "size": int(item.get("size") or Path(path).stat().st_size),
+            "sha256": str(item.get("sha256") or "")[:64],
+        })
+    return attachments
+
+
 def _contains_marker(value: str, marker: str) -> bool:
     marker = marker.strip().lower()
     if not marker:
@@ -696,6 +723,9 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
             "conversation_id": research.get("conversation_id", ""),
             "source_url": research.get("source_url", ""),
         }
+    attachments = raw_block.get("attachments") if isinstance(raw_block.get("attachments"), list) else []
+    if attachments:
+        source_inputs["attachments"] = attachments
     routing_hints = (
         raw_intent.get("routing_hints", {})
         if isinstance(raw_intent.get("routing_hints"), dict)
@@ -740,6 +770,7 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
     digest = hashlib.sha1(f"{created}\n{raw_text}".encode("utf-8")).hexdigest()[:10]
     intent_id = args.intent_id or f"intent-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%d-%H%M%S')}-{digest}"
     research = extract_research_artifact(args)
+    attachments = intake_attachments_from_env()
     clarification_answers = parse_clarification_answers(
         getattr(args, "clarification_answer", None)
     )
@@ -755,7 +786,7 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         },
         "raw": {
             "text": raw_text,
-            "attachments": [],
+            "attachments": attachments,
             "quoted_context": [],
             "received_at": created,
         },
@@ -893,7 +924,7 @@ def bind_intent_artifacts(intent_id: str, sprint_id: str) -> dict[str, Any]:
                         compiled_inputs = {}
                     gateway_inputs = gateway_payload.get("source_inputs")
                     if isinstance(gateway_inputs, dict):
-                        for key in ("raw_request", "repo_context", "research_artifact"):
+                        for key in ("raw_request", "repo_context", "research_artifact", "attachments"):
                             if not compiled_inputs.get(key) and gateway_inputs.get(key):
                                 compiled_inputs[key] = gateway_inputs[key]
                     payload["source_inputs"] = compiled_inputs
