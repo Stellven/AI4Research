@@ -3479,6 +3479,12 @@ def resume_human_review(
         }
 
     result["retired_execution_attempt"] = retired_attempt or {}
+    result["status_sync"] = sync_status_cache_from_graph(
+        graph,
+        graph_path,
+        actor="human-review-resume",
+        event="graph_parent_reopened_after_human_resume",
+    )
     _append_event(
         sid,
         {

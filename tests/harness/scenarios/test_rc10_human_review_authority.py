@@ -309,6 +309,11 @@ def test_reescalation_uses_a_new_generation_and_rejects_old_resume(sandbox) -> N
         reason="first issue corrected",
     )
     assert first_resume["ok"] is True
+    assert first_resume["status_sync"]["ok"] is True
+    assert first_resume["status_sync"]["status"]["status"] == "active"
+    projected = json.loads((sprints / f"{SID}.status.json").read_text(encoding="utf-8"))
+    assert projected["status"] == "active"
+    assert projected["active_node"] == NODE_ID
 
     resumed = gs.load_graph(graph_path)
     second_block = gs.enter_node_human_review(
