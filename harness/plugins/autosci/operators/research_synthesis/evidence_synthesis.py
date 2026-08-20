@@ -114,6 +114,7 @@ def _normalize_claims(
     response: dict[str, Any],
     accepted_ids: set[str],
     source_text_by_id: dict[str, str] | None = None,
+    invalid_claims: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     source_text_by_id = source_text_by_id or {}
     claims: list[dict[str, Any]] = []
@@ -123,6 +124,23 @@ def _normalize_claims(
         evidence_ids = [str(value) for value in item.get("evidence_ids", []) if str(value).strip()]
         invalid = sorted(set(evidence_ids) - accepted_ids)
         if invalid:
+            # A claim citing an id outside the validated set is refused, never
+            # published -- but refusal is a REJECTION the bounded repair loop
+            # can feed back, not an abort. Raising here killed a live run over
+            # one mistyped character (a colon for a dot in an arXiv id) while
+            # the retry budget built for exactly this sat unused.
+            rejection = {
+                "claim_id": str(item.get("claim_id") or f"claim-{index + 1:03d}"),
+                "text": str(item.get("text") or ""),
+                "reasons": [
+                    "cites source ids outside the validated set: "
+                    + ", ".join(invalid)
+                    + "; copy every evidence_id EXACTLY from allowed_source_ids"
+                ],
+            }
+            if invalid_claims is not None:
+                invalid_claims.append(rejection)
+                continue
             raise ResearchOperatorError(
                 f"Model returned evidence ids outside validated source set: {', '.join(invalid)}",
                 error_type="unvalidated_evidence",
@@ -273,8 +291,10 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         )
         if not isinstance(response, dict):
             raise ResearchOperatorError("model_generate service must return a JSON object", error_type="provider_contract")
-        normalized = _normalize_claims(response, accepted_ids, source_text_by_id)
+        invalid_claims: list[dict[str, Any]] = []
+        normalized = _normalize_claims(response, accepted_ids, source_text_by_id, invalid_claims)
         kept, rejected = assess_claim_grounding(normalized, source_text_by_id)
+        rejected = [*invalid_claims, *rejected]
         # Keep the strongest attempt, so a worse retry cannot lose ground that a
         # previous attempt already established.
         if len(kept) > len(best_claims):

@@ -1704,3 +1704,76 @@ def test_mixed_method_and_limitations_heading_never_receives_the_merge() -> None
     )
     assert "evidence limited to abstracts" in limitations_section
     assert "method prose" not in limitations_section
+
+
+def test_mistyped_source_id_is_repair_feedback_not_an_abort(tmp_path: Path, monkeypatch) -> None:
+    """One bad character must consume the retry budget, not the whole stage.
+
+    A live synthesis died with unvalidated_evidence because the model wrote a
+    colon for a dot in one arXiv id. The bounded repair loop exists for
+    exactly this: the invalid claim is refused and fed back, and a corrected
+    retry publishes.
+    """
+    monkeypatch.chdir(tmp_path)
+    validation = {
+        "schema": "research_synthesis.source_validation.v1",
+        "node_id": "source_validation",
+        "task_id": "task-research-synthesis",
+        "run_id": "run-research-synthesis",
+        "workflow_id": "research_synthesis_v1",
+        "accepted": [{
+            "source_id": "arxiv:1234.56789",
+            "title": "Source",
+            "content_summary": "Retrieval quality improves with reranking in benchmark studies.",
+        }],
+    }
+    path = tmp_path / "inputs/source_validation.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(validation), encoding="utf-8")
+    refs = [{
+        "artifact_id": "source_validation",
+        "path": str(path.relative_to(tmp_path)),
+        "schema": validation["schema"],
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }]
+    calls = {"count": 0}
+
+    def model(**kwargs) -> dict:
+        calls["count"] += 1
+        first = calls["count"] == 1
+        if calls["count"] == 2:
+            feedback = kwargs.get("grounding_feedback") or []
+            assert any("outside the validated set" in r for f in feedback for r in f.get("reasons") or []), feedback
+        return {
+            "provider": "writer",
+            "model": "writer-model",
+            "claims": [{
+                "claim_id": "claim-001",
+                "text": "Retrieval quality improves with reranking in benchmark studies.",
+                # Attempt 1 mistypes the id (colon for dot); attempt 2 corrects it.
+                "evidence_ids": ["arxiv:1234:56789" if first else "arxiv:1234.56789"],
+                "evidence_quotes": [{
+                    "source_id": "arxiv:1234:56789" if first else "arxiv:1234.56789",
+                    "quote": "Retrieval quality improves with reranking in benchmark studies.",
+                }],
+                "uncertainty": "low",
+                "limitations": [],
+            }],
+            "contradictions": [],
+            "limitations": [],
+        }
+
+    result = execute_operator(
+        _request(
+            tmp_path,
+            "evidence_synthesis",
+            payload={"task_contract": _task_contract(), "seed_snapshot": {"schema": "research_synthesis.seed_snapshot.v1", "seeds": []}},
+            refs=refs,
+        ),
+        services={"model_generate": model},
+    )
+    assert result["status"] == "completed", result.get("errors")
+    assert calls["count"] == 2
+    artifact = _read_artifact(tmp_path, result)
+    assert [c["claim_id"] for c in artifact["claims"]] == ["claim-001"]
+    assert artifact["claims"][0]["evidence_ids"] == ["arxiv:1234.56789"]
