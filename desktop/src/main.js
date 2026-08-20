@@ -371,6 +371,16 @@ function markerVersionPath() {
   return path.join(HARNESS_DIR, ".desktop-runtime-version");
 }
 
+function packagedRuntimeFingerprint() {
+  return readText(
+    path.join(packagedHarnessDir(), ".desktop-runtime-fingerprint"),
+  );
+}
+
+function markerFingerprintPath() {
+  return path.join(HARNESS_DIR, ".desktop-runtime-fingerprint");
+}
+
 function runtimeSymlinkIssue() {
   if (IS_WIN || process.env.SOLAR_DESKTOP_ALLOW_SYMLINK_RUNTIME === "1")
     return null;
@@ -405,8 +415,21 @@ function installedRuntimeVersionWindows() {
   return (wslExec(cmd, 7000).stdout || "").trim();
 }
 
+function installedRuntimeFingerprint() {
+  if (IS_WIN) {
+    return (
+      wslExec(
+        `cat ${WSL_HARNESS}/.desktop-runtime-fingerprint 2>/dev/null || true`,
+        7000,
+      ).stdout || ""
+    ).trim();
+  }
+  return readText(markerFingerprintPath());
+}
+
 function runtimeNeedsBundledSync() {
   const expected = packagedRuntimeVersion();
+  const expectedFingerprint = packagedRuntimeFingerprint();
   const bundled = packagedHarnessDir();
   if (!expected || !bundled || runtimeSymlinkIssue()) return false;
   if (IS_WIN && wslState() === "missing") return false;
@@ -414,7 +437,11 @@ function runtimeNeedsBundledSync() {
     return app.isPackaged || process.env.SOLAR_DESKTOP_ALLOW_DEV_RUNTIME_SYNC === "1";
   }
   const current = IS_WIN ? installedRuntimeVersionWindows() : installedRuntimeVersion();
-  return current !== expected;
+  if (current !== expected) return true;
+  return (
+    Boolean(expectedFingerprint) &&
+    installedRuntimeFingerprint() !== expectedFingerprint
+  );
 }
 
 // macOS/Linux first-run bootstrap: install the runtime with the bundled standalone
@@ -921,7 +948,16 @@ function syncBundledHarnessIfNeeded() {
   if (!runtimeNeedsBundledSync()) return true;
   const expected = packagedRuntimeVersion();
   const current = IS_WIN ? installedRuntimeVersionWindows() : installedRuntimeVersion();
-  log("runtime version mismatch; syncing bundled harness", current || "unknown", "->", expected);
+  const expectedFingerprint = packagedRuntimeFingerprint();
+  const currentFingerprint = installedRuntimeFingerprint();
+  log(
+    "runtime release mismatch; syncing bundled harness",
+    current || "unknown",
+    currentFingerprint.slice(0, 12) || "no-fingerprint",
+    "->",
+    expected,
+    expectedFingerprint.slice(0, 12) || "no-fingerprint",
+  );
   stopRuntimeForBundledSync();
   return IS_WIN
     ? syncBundledHarnessWindows(expected)

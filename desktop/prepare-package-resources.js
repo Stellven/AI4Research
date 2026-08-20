@@ -7,6 +7,7 @@
 // risk packaging local credentials.
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const root = path.resolve(__dirname, "..");
 const source = path.join(root, "harness");
@@ -43,6 +44,29 @@ function copyTree(from, to, relative = "") {
   }
 }
 
+function treeFingerprint(rootDir) {
+  const hash = crypto.createHash("sha256");
+  function visit(current, relative = "") {
+    for (const entry of fs
+      .readdirSync(current, { withFileTypes: true })
+      .sort((a, b) => a.name.localeCompare(b.name, "en"))) {
+      const entryRelative = relative ? `${relative}/${entry.name}` : entry.name;
+      if (entryRelative === ".desktop-runtime-fingerprint") continue;
+      const absolute = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        hash.update(`dir\0${entryRelative}\0`);
+        visit(absolute, entryRelative);
+      } else if (entry.isFile()) {
+        hash.update(`file\0${entryRelative}\0`);
+        hash.update(fs.readFileSync(absolute));
+        hash.update("\0");
+      }
+    }
+  }
+  visit(rootDir);
+  return hash.digest("hex");
+}
+
 fs.rmSync(stagingRoot, { recursive: true, force: true });
 copyTree(source, destination);
 const forbidden = ["run", "state", "logs", "cache", "venvs", "vendor", "quarantine"];
@@ -51,4 +75,11 @@ for (const name of forbidden) {
     throw new Error(`forbidden runtime directory entered package staging: ${name}`);
   }
 }
-console.log(`[prepare-package-resources] OK -> ${destination}`);
+const fingerprint = treeFingerprint(destination);
+fs.writeFileSync(
+  path.join(destination, ".desktop-runtime-fingerprint"),
+  `${fingerprint}\n`,
+);
+console.log(
+  `[prepare-package-resources] OK -> ${destination} (${fingerprint.slice(0, 12)})`,
+);

@@ -166,6 +166,15 @@ assert(
 );
 
 assert(
+  "same-version harness changes trigger runtime synchronization",
+  prepareResources.includes("treeFingerprint") &&
+    prepareResources.includes(".desktop-runtime-fingerprint") &&
+    main.includes("packagedRuntimeFingerprint") &&
+    main.includes("installedRuntimeFingerprint") &&
+    main.includes("installedRuntimeFingerprint() !== expectedFingerprint"),
+);
+
+assert(
   "desktop autotest locks down complete Windows runtime prewarm",
   autotest.includes("node ../tests/desktop/src/runtime-prewarm.test.cjs") &&
     main.includes("buildWindowsRuntimePrewarmCommand") &&
