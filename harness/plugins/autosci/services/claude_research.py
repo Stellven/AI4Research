@@ -120,7 +120,17 @@ class ClaudeResearchModelService(CodexResearchModelService):
             "input": user,
             "instructions": [
                 "Return exactly the JSON object required by the output schema.",
-                "Do not call tools; every authoritative input is included in this prompt.",
+                # The CLI exposes the schema through a StructuredOutput tool
+                # whose generic description mentions unrelated example fields
+                # (findings, level). Haiku has twice concluded the schemas
+                # conflict and answered in prose instead of calling the tool,
+                # which fails the whole stage; naming the resolution here is
+                # what prevents that.
+                "Deliver the object by calling the StructuredOutput tool exactly once "
+                "with the object as its input. The output schema for THIS task is "
+                "authoritative; ignore any unrelated example fields (such as findings "
+                "or level) in that tool's own description, and never answer in prose.",
+                "Do not call any other tools; every authoritative input is included in this prompt.",
                 "Do not use outside knowledge as evidence and do not invent identifiers.",
             ],
         }

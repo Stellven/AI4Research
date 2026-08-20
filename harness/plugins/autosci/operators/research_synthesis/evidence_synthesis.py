@@ -292,11 +292,19 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
                 grounding_feedback=grounding_feedback,
             )
         except ResearchOperatorError as exc:
-            # A provider failure on a REPAIR attempt must not discard grounded
-            # claims an earlier attempt already established: attempt 3 of a
-            # live run answered in prose, and the raise threw away twelve
-            # grounded claims from attempts 1 and 2. With nothing banked the
-            # failure is still terminal.
+            # A provider failure must not discard grounded claims an earlier
+            # attempt banked (attempt 3 of a live run answered in prose and
+            # the raise threw away twelve grounded claims), and a failure with
+            # attempts remaining consumes the declared budget with a fresh
+            # call rather than aborting the stage (a later live run died on a
+            # first-call prose reply the second attempt would likely have
+            # fixed). Only a failure with nothing banked and no budget left is
+            # terminal.
+            if attempt < MAX_SYNTHESIS_ATTEMPTS:
+                provider_fallback_note = (
+                    f"Synthesis attempt {attempt} failed ({exc.error_type}); retried within the declared budget."
+                )
+                continue
             if best_claims:
                 provider_fallback_note = (
                     f"Synthesis repair attempt {attempt} failed "
