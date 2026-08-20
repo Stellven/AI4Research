@@ -1418,9 +1418,12 @@ class ResearchModelService:
                     # full source text with a lexical support test, and claims that
                     # fail are refused and sent back. These four rules are that test,
                     # stated so the model can satisfy it directly.
-                    "Each claim must be supported by at least one cited source ON ITS OWN. "
-                    "A claim that is only true by combining several sources fails, because "
-                    "support is assessed per source: split it into separate claims instead.",
+                    "Cite EVERY validated source that genuinely supports a claim, not just "
+                    "one. A claim resting on two sources must list both.",
+                    "At least one of a claim's cited sources must support it ON ITS OWN, "
+                    "because support is assessed per source. Only split a claim when NO "
+                    "single source carries it; do not drop a corroborating source merely to "
+                    "keep one citation per claim.",
                     "Write each claim in the source's own vocabulary. At least 45 percent of "
                     "the claim's substantive words must also appear in that source's text, so "
                     "reuse the source's terms rather than substituting synonyms.",
