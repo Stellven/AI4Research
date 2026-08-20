@@ -238,6 +238,9 @@ def test_runtime_wire_plan_and_source_packs_compile_through_canonical_checks(tmp
     assert all(item["normalized"] is True for item in result["input_closeouts"])
     assert result["evidence_gap_count"] == 1
     assert (output / "final.md").stat().st_size > 0
+    compiled_plan = json.loads((output / "synthesis_plan.json").read_text(encoding="utf-8"))
+    assert compiled_plan["evidence_status"] == "insufficient"
+    assert compiled_plan["bounded_partial_coverage"] is True
 
 
 def test_chinese_request_localizes_compiler_owned_report_labels(tmp_path):

@@ -174,12 +174,11 @@ def _normalize_extended_plan(plan: dict[str, Any]) -> dict[str, Any]:
     normalized["sections"] = sections
     normalized["evidence_gaps"] = normalized_gaps
     # In this richer wire shape, ``publishable_claims`` is an explicit
-    # declaration that the listed subset is sufficiently supported even when
-    # overall topic coverage is incomplete.  Canonical plans without that
-    # declaration retain the strict insufficient => no publication behavior.
+    # declaration that a bounded subset can be published even when overall
+    # topic coverage is insufficient. Preserve that upstream status verbatim;
+    # this flag only permits the declared subset to render together with its
+    # mandatory gaps. Canonical insufficient plans retain no-publication.
     if sections and str(plan.get("evidence_status") or "").strip().lower() == "insufficient":
-        normalized["source_evidence_status"] = "insufficient"
-        normalized["evidence_status"] = "sufficient"
         normalized["bounded_partial_coverage"] = True
     return normalized
 
@@ -943,7 +942,10 @@ def compile_grounded_report(
             raise GroundedSynthesisError(f"output_overlaps_source_pack:{pack}")
 
     plan = _load_plan(synthesis_plan)
-    if str(plan.get("evidence_status") or "").strip().lower() == "insufficient":
+    if (
+        str(plan.get("evidence_status") or "").strip().lower() == "insufficient"
+        and not plan.get("bounded_partial_coverage")
+    ):
         gaps = plan.get("evidence_gaps") or []
         first_gap = " ".join(str((gaps[0] or {}).get("text") or "").split()) if gaps else ""
         if not first_gap:
