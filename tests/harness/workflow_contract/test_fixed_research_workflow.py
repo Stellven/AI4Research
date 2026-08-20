@@ -170,6 +170,39 @@ def _seed_controller_accepted_part_a_precondition(
                     "node_id": node_id,
                     "limitations": ["Deterministic Part-A authority precondition for a Part-B runtime test."],
                 }
+                if node_id == "source_validation":
+                    payload["accepted"] = [{
+                        "source_id": "seed-src-1",
+                        "title": "Deterministic precondition source",
+                        "url": "https://example.test/seed-src-1",
+                        "content_summary": (
+                            "Deterministic replay preserves accepted artifact lineage digests "
+                            "across the fixed research workflow."
+                        ),
+                    }]
+                if node_id == "evidence_synthesis":
+                    # A grounded claim the benchmark's claim-replication half can
+                    # genuinely re-test: verbatim quote, lexical support, and a
+                    # contradiction-free record against the seeded source.
+                    payload["claims"] = [{
+                        "claim_id": "claim-001",
+                        "text": (
+                            "Deterministic replay preserves accepted artifact lineage digests "
+                            "across the fixed research workflow."
+                        ),
+                        "evidence_ids": ["seed-src-1"],
+                        "evidence_quotes": [{
+                            "source_id": "seed-src-1",
+                            "quote": (
+                                "Deterministic replay preserves accepted artifact lineage digests "
+                                "across the fixed research workflow."
+                            ),
+                        }],
+                        "theme": "",
+                        "contradicted_by": [],
+                        "uncertainty": "low",
+                        "limitations": [],
+                    }]
                 if node_id == "independent_review":
                     # Review-process commentary. Part B must record it as a
                     # review scope note and never ship it as a limitation of
@@ -1449,6 +1482,24 @@ def test_non_dry_fixed_part_b_b1_to_b7_with_seeded_controller_accepted_part_a_pr
     assert result["metrics"]["integrity_rate"] == 1.0
     assert raw["passed"] is True
     assert len(raw["checks"]) == len(fr.PART_A_NODE_IDS)
+    # B5 executed through AutoSci's registered ScientificExperimentRunner with
+    # a real sandboxed executor, and the claim-replication half actually
+    # tested the seeded published claim.
+    autosci = result["autosci_experiment"]
+    assert autosci["operator"] == "experiment_run_worker"
+    assert autosci["outcome"] == "supports"
+    assert autosci["criteria_results"]["no_claim_refuted"] is True
+    assert autosci["criteria_results"]["claim-001:grounding_replicated"] is True
+    assert result["metrics"]["claims_total"] == 1
+    assert result["metrics"]["claims_refuted"] == 0
+    assert raw["claim_checks"][0]["outcome"] == "supported"
+    autosci_result_doc = json.loads((work_dir / autosci["result_path"]).read_text(encoding="utf-8"))
+    assert autosci_result_doc["schema"] == "experiment_result.v1"
+    assert autosci_result_doc["outputs"]["result"]["outcome"] == "supports"
+    # B6 ran ScientificClaimVerifier's implementation over the replicated
+    # claims and every verdict is supported.
+    assert verification["claim_verdicts"], verification
+    assert all(item["verdict"] == "supported" for item in verification["claim_verdicts"])
     assert {item["artifact_id"] for item in verification["experiment_evidence"]} == b5_ids
     assert delivery["status"] == "completed"
     assert delivery["claim_verdict"] == "verified"
@@ -2192,14 +2243,21 @@ def test_fixed_experiment_approval_worker_validates_separate_request_and_human_a
     envelope["inputs"]["approval_controls"]["request"]["sha256"] = _sha(request_path.read_bytes())
     request_tamper = _invoke_adapter(envelope, tmp_path)
     assert request_tamper.returncode == 2
-    assert "does not match" in json.loads(request_tamper.stdout)["error"]
+    # Part B now fails the same way Part A does: the operator's typed error is
+    # recorded in a failed node result instead of an adapter crash, so the
+    # forensics read one place for every stage.
+    tamper_payload = json.loads(request_tamper.stdout)
+    assert tamper_payload["ok"] is False
+    assert tamper_payload["result"]["status"] == "failed"
+    assert "does not match" in tamper_payload["result"]["errors"][0]["message"]
     assert (stage / "experiment_approval.json").read_bytes() == artifact_before
-    assert handoff_path.read_bytes() == handoff_before
     assert {
         str(path.relative_to(stage)): path.read_bytes()
         for path in stage.rglob("*")
-        if path.is_file() and path != request_path
-    } == stage_before
+        if path.is_file() and path != request_path and path.name != "research_node_result.json"
+    } == {
+        name: body for name, body in stage_before.items() if name != "research_node_result.json"
+    }
 
     request_path.write_bytes(request_before)
     envelope["inputs"]["approval_controls"]["request"]["sha256"] = _sha(request_before)
@@ -2208,7 +2266,9 @@ def test_fixed_experiment_approval_worker_validates_separate_request_and_human_a
     envelope["inputs"]["approval_controls"]["approval"]["sha256"] = _sha(approval_path.read_bytes())
     rejected = _invoke_adapter(envelope, tmp_path)
     assert rejected.returncode == 2
-    assert "does not match" in json.loads(rejected.stdout)["error"]
+    rejected_payload = json.loads(rejected.stdout)
+    assert rejected_payload["ok"] is False
+    assert "does not match" in rejected_payload["result"]["errors"][0]["message"]
     assert (stage / "experiment_approval.json").read_bytes() == artifact_before
 
 
@@ -2346,19 +2406,67 @@ def test_direct_adapter_runs_real_fixed_no_network_benchmark_without_controller_
         "gate_outcome": "pass",
     }) + "\n", encoding="utf-8")
     accepted_sha = _sha(accepted.read_bytes())
+    # The benchmark's claim-replication half needs the published claims and
+    # the retained source texts among the pinned inputs.
+    validation_path = work_dir / "artifacts/research_evidence_to_poc/validation/source_validation.json"
+    validation_path.parent.mkdir(parents=True)
+    validation_path.write_text(json.dumps({
+        "schema": "research_synthesis.source_validation.v1",
+        "accepted": [{
+            "source_id": "bench-src-1",
+            "title": "Benchmark source",
+            "url": "https://example.test/bench-src-1",
+            "content_summary": "Deterministic replay preserves accepted artifact lineage digests.",
+        }],
+    }) + "\n", encoding="utf-8")
+    synthesis_path = work_dir / "artifacts/research_evidence_to_poc/synthesis/evidence_synthesis.json"
+    synthesis_path.parent.mkdir(parents=True)
+    synthesis_path.write_text(json.dumps({
+        "schema": "research_synthesis.evidence_synthesis.v1",
+        "claims": [{
+            "claim_id": "claim-001",
+            "text": "Deterministic replay preserves accepted artifact lineage digests.",
+            "evidence_ids": ["bench-src-1"],
+            "evidence_quotes": [{
+                "source_id": "bench-src-1",
+                "quote": "Deterministic replay preserves accepted artifact lineage digests.",
+            }],
+            "contradicted_by": [],
+            "uncertainty": "low",
+        }],
+    }) + "\n", encoding="utf-8")
     handoff_path = work_dir / "artifacts/research_evidence_to_poc/poc/handoff/poc_handoff.json"
     handoff_path.parent.mkdir(parents=True)
-    handoff = {
-        "schema": "solar.fixed_research.poc_handoff.v1",
-        "status": "accepted",
-        "artifacts": [{
+    handoff_rows = [
+        {
             "node_id": "final_acceptance",
             "artifact_id": "final_acceptance",
             "path": str(accepted.relative_to(work_dir)),
             "schema": "research_synthesis.final_acceptance.v1",
             "sha256": accepted_sha,
             "bytes": accepted.stat().st_size,
-        }],
+        },
+        {
+            "node_id": "source_validation",
+            "artifact_id": "source_validation",
+            "path": str(validation_path.relative_to(work_dir)),
+            "schema": "research_synthesis.source_validation.v1",
+            "sha256": _sha(validation_path.read_bytes()),
+            "bytes": validation_path.stat().st_size,
+        },
+        {
+            "node_id": "evidence_synthesis",
+            "artifact_id": "evidence_synthesis",
+            "path": str(synthesis_path.relative_to(work_dir)),
+            "schema": "research_synthesis.evidence_synthesis.v1",
+            "sha256": _sha(synthesis_path.read_bytes()),
+            "bytes": synthesis_path.stat().st_size,
+        },
+    ]
+    handoff = {
+        "schema": "solar.fixed_research.poc_handoff.v1",
+        "status": "accepted",
+        "artifacts": handoff_rows,
     }
     handoff_path.write_text(json.dumps(handoff) + "\n", encoding="utf-8")
     plan_path = work_dir / "artifacts/research_evidence_to_poc/poc/design/experiment_plan.json"
@@ -2373,8 +2481,11 @@ def test_direct_adapter_runs_real_fixed_no_network_benchmark_without_controller_
             "sandbox": "linux_user_and_network_namespace",
             "network": "disabled",
             "timeout_seconds": 60,
-            "inputs": [{"path": str(accepted.relative_to(work_dir)), "sha256": accepted_sha, "schema": "research_synthesis.final_acceptance.v1"}],
-            "success_criteria": {"integrity_rate": 1.0, "exit_code": 0},
+            "inputs": [
+                {"path": str(row["path"]), "sha256": str(row["sha256"]), "schema": str(row["schema"])}
+                for row in handoff_rows
+            ],
+            "success_criteria": {"integrity_rate": 1.0, "exit_code": 0, "claims_refuted": 0},
         },
     }
     plan_path.write_text(json.dumps(plan) + "\n", encoding="utf-8")
@@ -2427,8 +2538,12 @@ def test_direct_adapter_runs_real_fixed_no_network_benchmark_without_controller_
     assert result["sandbox"] == {"kind": "linux_user_and_network_namespace", "network": "disabled", "command_allowlisted": True}
     assert result["execution"]["exit_code"] == 0
     assert result["metrics"]["integrity_rate"] == 1.0
+    assert result["metrics"]["claims_total"] == 1
+    assert result["metrics"]["claims_refuted"] == 0
+    assert result["autosci_experiment"]["outcome"] == "supports"
     assert result["raw_result_sha256"] == _sha(raw_path.read_bytes())
     assert raw["network_namespace"] == "isolated_by_unshare"
+    assert raw["claim_checks"][0]["outcome"] == "supported"
     assert (run_stage / "stdout.txt").is_file()
     stderr_record = json.loads((run_stage / "stderr.json").read_text(encoding="utf-8"))
     assert stderr_record["stream"] == "stderr"

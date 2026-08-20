@@ -19,9 +19,11 @@ from harness.plugins.autosci.operators.research_synthesis.base import (
     build_node_result,
     evidence_ref,
     sha256_bytes,
+    stable_json_sha256,
     validate_scoped_path,
     write_artifact,
 )
+from harness.plugins.autosci.services.experiment_executor import SandboxedBenchmarkExecutor
 
 
 SCHEMA_PATH = Path(__file__).resolve().parents[3] / "schemas" / "evidence" / "fixed_research_part_b.v1.schema.json"
@@ -343,7 +345,9 @@ def _poc_handoff(
         "artifacts": artifacts,
         "limitations": list(dict.fromkeys([
             *upstream_limitations,
-            "Part B tests evidence-lineage integrity; it does not independently establish external scientific validity.",
+            "Part B replays evidence-lineage digests and each published claim's "
+            "grounding from retained bytes; it does not independently establish "
+            "external scientific validity.",
         ])),
         # Preserved for audit, never merged into limitations: these sentences
         # describe how the review was conducted, not what the evidence shows.
@@ -370,19 +374,21 @@ def _idea_evaluation(context: OperatorContext, primary_rel: str, dependencies: l
     testable = [item for item in report_claims if str(item.get("testability") or "") == "testable"]
 
     limitations = [
-        "Selection is deterministic and bounded to evidence integrity, not scientific effect replication.",
+        "Selection is deterministic and bounded to what this environment can execute: "
+        "evidence integrity and claim-grounding replication, not scientific effect replication.",
     ]
     if report_claims:
         limitations.append(
             f"AutoSci extracted {len(report_claims)} claim(s) from the accepted report, "
-            f"{len(testable)} of them testable; none is executed here because no "
-            "experiment executor is bound for domain claims. Only the lineage "
-            "benchmark below is actually run."
+            f"{len(testable)} of them testable as domain experiments; none is executed "
+            "as a domain experiment because that would require external data and methods. "
+            "The benchmark below re-hashes the retained lineage and replays every "
+            "published claim's grounding from retained source texts."
         )
     else:
         limitations.append(
             "No claim was extracted from the accepted report, so Part B rests on the "
-            "lineage benchmark alone."
+            "lineage and grounding-replication benchmark alone."
         )
 
     payload = {
@@ -390,9 +396,16 @@ def _idea_evaluation(context: OperatorContext, primary_rel: str, dependencies: l
         "status": "selected",
         "selected_idea": {
             "idea_id": BENCHMARK_ID,
-            "title": "Verify accepted research artifact lineage under deterministic replay",
-            "hypothesis": "Every artifact accepted into the Part-A handoff still matches its controller-bound SHA-256 digest.",
-            "falsification": "Any missing artifact or digest mismatch falsifies the PoC claim.",
+            "title": "Verify accepted artifact lineage and replay published claim grounding under deterministic replay",
+            "hypothesis": (
+                "Every artifact accepted into the Part-A handoff still matches its "
+                "controller-bound SHA-256 digest, and every published claim's grounding "
+                "replays from the retained source texts."
+            ),
+            "falsification": (
+                "Any missing artifact, digest mismatch, non-verbatim recorded quote, "
+                "unsupported claim, or non-verbatim contradiction quote falsifies the PoC claim."
+            ),
             "selection_basis": (
                 "The accepted A1-A8 handoff exposes an exact, bounded integrity claim that can be "
                 "tested without network access. It is selected because it is the only claim this "
@@ -450,14 +463,19 @@ def _experiment_design(context: OperatorContext, primary_rel: str, dependencies:
             "network": "disabled",
             "timeout_seconds": 60,
             "inputs": inputs,
-            "success_criteria": {"integrity_rate": 1.0, "exit_code": 0},
+            "success_criteria": {"integrity_rate": 1.0, "exit_code": 0, "claims_refuted": 0},
         },
         "approval_scope": {
             "capabilities": APPROVED_CAPABILITIES,
             "benchmark_id": BENCHMARK_ID,
             "input_sha256": sorted(str(item.get("sha256") or "") for item in inputs),
         },
-        "limitations": ["The benchmark validates retained evidence integrity only."],
+        "limitations": [
+            "The benchmark tests retained-artifact digest lineage and replays every "
+            "published claim's grounding (verbatim quotes, lexical support, contradiction "
+            "quotes) against retained source texts; it does not reproduce the claims' "
+            "subject matter experimentally.",
+        ],
     }
     return _write(context, primary_rel, payload, artifact_id="experiment-plan", schema=payload["schema"], limitations=payload["limitations"])
 
@@ -575,6 +593,163 @@ def _experiment_approval(
     return _write(context, primary_rel, payload, artifact_id="experiment-approval", schema=payload["schema"], limitations=payload["limitations"])
 
 
+def _lifecycle_document(
+    context: OperatorContext,
+    *,
+    schema: str,
+    node_id: str,
+    outputs: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": schema,
+        "task_id": str(context.node_request.get("task_id") or ""),
+        "run_id": str(context.node_request.get("run_id") or ""),
+        "sprint_id": str(context.node_request.get("run_id") or ""),
+        "workflow_id": str(context.node_request.get("workflow_id") or ""),
+        "node_id": node_id,
+        "status": "completed",
+        "outputs": outputs,
+        "limitations": [],
+    }
+
+
+def _write_lifecycle_input(
+    context: OperatorContext,
+    directory: Path,
+    name: str,
+    document: dict[str, Any],
+) -> dict[str, Any]:
+    path = directory / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = (json.dumps(document, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    path.write_bytes(body)
+    return {
+        "artifact_id": Path(name).stem,
+        "path": str(path.relative_to(context.workspace_root)).replace("\\", "/"),
+        "schema": str(document.get("schema") or ""),
+        "sha256": hashlib.sha256(body).hexdigest(),
+    }
+
+
+def _run_autosci_experiment(
+    context: OperatorContext,
+    *,
+    stage_dir: Path,
+    stage_rel: str,
+    executor: SandboxedBenchmarkExecutor,
+    hypothesis: str,
+) -> tuple[dict[str, Any], Path, list[dict[str, Any]]]:
+    """Execute B5 through AutoSci's registered ScientificExperimentRunner.
+
+    The contract's logical operator for this stage binds to
+    `experiment_run_worker`, whose implementation is
+    scientific_lifecycle.action.experiment.run_experiment. That operator
+    demands a hash-bound approval for the exact lifecycle plan and a real
+    `experiment_executor` service; both are supplied here, so the operator the
+    DAG declares is the operator that executes. The executor runs the pinned
+    benchmark under unshare -Urn -- execute, then convert; the result is never
+    invented by an adapter.
+    """
+    from .scientific_lifecycle.action import registry as action_registry
+
+    autosci_dir = stage_dir / "autosci"
+    autosci_rel = stage_rel.rstrip("/") + "/autosci/"
+    lifecycle_plan = {
+        "experiment_id": BENCHMARK_ID,
+        "objective": "Replay the accepted evidence lineage and the published claims' grounding from retained bytes.",
+        "hypothesis": hypothesis,
+        "variables": ["retained_artifact_bytes", "published_claim_grounding"],
+        "metrics": ["integrity_rate", "claims_refuted"],
+        "procedure": [
+            "Re-hash every Part-A artifact in the accepted handoff against its controller-bound digest.",
+            "Re-test every published claim's verbatim quotes, lexical support, and contradiction quotes against retained source texts.",
+        ],
+        "approval_required": True,
+        "expected_artifacts": ["experiment_result.v1.json"],
+        "success_criteria": ["integrity_rate is 1.0", "no published claim is refuted"],
+        "safety_checks": ["no network access", "writes remain in declared scope"],
+        "sandbox": {"mode": "isolated", "network": False, "write_scope": [autosci_rel]},
+        "resource_limits": {"timeout_seconds": 60, "max_output_bytes": 1_000_000},
+        "source_idea_id": BENCHMARK_ID,
+        "origin_evidence_ids": [],
+    }
+    plan_sha = stable_json_sha256(lifecycle_plan)
+    fixed_approval_ref = _dependency(list(context.node_request.get("input_artifact_refs") or []), "experiment_approval")
+    approval_ref_token = f"{fixed_approval_ref['path']}#{fixed_approval_ref['sha256']}"
+    lifecycle_approval = {
+        "experiment_id": BENCHMARK_ID,
+        "decision": "approved",
+        "approval_ref": approval_ref_token,
+        "plan_sha256": plan_sha,
+        "approved_capabilities": sorted({"execute_experiment", "research_poc"}),
+        "sandbox": dict(lifecycle_plan["sandbox"]),
+        "reasons": [],
+    }
+    plan_doc_ref = _write_lifecycle_input(
+        context,
+        autosci_dir,
+        "experiment_plan.v1.json",
+        _lifecycle_document(context, schema="experiment_plan.v1", node_id="experiment_design", outputs={"experiment_plan": lifecycle_plan}),
+    )
+    approval_doc_ref = _write_lifecycle_input(
+        context,
+        autosci_dir,
+        "experiment_approval.v1.json",
+        _lifecycle_document(context, schema="experiment_approval.v1", node_id="experiment_approval_gate", outputs={"approval": lifecycle_approval}),
+    )
+    sub_request = {
+        "schema": "research_node_request.v1",
+        "task_id": str(context.node_request.get("task_id") or ""),
+        "run_id": str(context.node_request.get("run_id") or ""),
+        "workflow_id": str(context.node_request.get("workflow_id") or ""),
+        "node_id": "experiment_run",
+        "logical_operator": {
+            "operator_id": "ScientificExperimentRunner",
+            "operator_kind": "logical",
+            "capabilities": ["research_poc", "execute_experiment"],
+        },
+        "physical_operator": {
+            "operator_id": "experiment_run_worker",
+            "operator_kind": "physical",
+            "capabilities": ["research_poc", "execute_experiment"],
+        },
+        "typed_inputs": {"input_schema": "experiment_run.fixed_research.v1", "payload": {}},
+        "input_artifact_refs": [plan_doc_ref, approval_doc_ref],
+        "authorization": {
+            "scope_id": f"{context.node_request.get('run_id')}:experiment_run:autosci",
+            "approved_capabilities": ["research_poc", "execute_experiment"],
+            "approval_ref": approval_ref_token,
+            "allow_network": False,
+            "allow_live_provider": False,
+            "secret_refs": [],
+        },
+        "read_scope": [plan_doc_ref["path"], approval_doc_ref["path"]],
+        "write_scope": [autosci_rel],
+        "timeout_retry_policy": {"timeout_seconds": 90, "max_attempts": 1, "retry_on": []},
+    }
+    sub_result = action_registry.execute_operator(
+        sub_request,
+        services={"experiment_executor": executor},
+        workspace_root=context.workspace_root,
+    )
+    if str(sub_result.get("status") or "") != "completed":
+        errors = sub_result.get("errors") or []
+        message = str((errors[0] or {}).get("message") or "") if errors else ""
+        raise ResearchOperatorError(
+            f"AutoSci experiment run did not complete: {message}"[:300],
+            error_type="experiment_failed",
+        )
+    result_path = autosci_dir / "experiment_result.v1.json"
+    if not result_path.is_file():
+        raise ResearchOperatorError("AutoSci experiment run wrote no result document.", error_type="experiment_failed")
+    document = json.loads(result_path.read_text(encoding="utf-8"))
+    lifecycle_result = (document.get("outputs") or {}).get("result") or {}
+    if str(lifecycle_result.get("plan_sha256") or "") != plan_sha:
+        raise ResearchOperatorError("AutoSci experiment result is not bound to the executed plan.", error_type="approval_mismatch")
+    doc_refs = [plan_doc_ref, approval_doc_ref]
+    return {"result": lifecycle_result, "document": document, "limitations": [str(item) for item in document.get("limitations") or []]}, result_path, doc_refs
+
+
 def _experiment_run(
     context: OperatorContext,
     primary_rel: str,
@@ -599,43 +774,41 @@ def _experiment_run(
     stdout_path = stage_dir / "stdout.txt"
     stderr_path = stage_dir / "stderr.json"
     handoff_path = context.workspace_root / str(handoff_ref["path"])
-    command = [
-        "unshare", "-Urn", sys.executable, str(BENCHMARK_SCRIPT),
-        "--work-dir", str(context.workspace_root),
-        "--handoff", str(handoff_path),
-        "--plan", str(plan_path),
-        "--output", str(raw_path),
-    ]
-    env = {
-        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-        "PYTHONIOENCODING": "utf-8",
-        "PYTHONDONTWRITEBYTECODE": "1",
-        "HOME": str(stage_dir / "sandbox-home"),
-    }
-    (stage_dir / "sandbox-home").mkdir(parents=True, exist_ok=True)
-    started_ns = time.monotonic_ns()
-    completed = subprocess.run(command, cwd=stage_dir, env=env, capture_output=True, text=True, timeout=60, check=False)
-    ended_ns = time.monotonic_ns()
-    stdout_path.write_text(completed.stdout, encoding="utf-8")
-    stderr_path.write_text(
-        json.dumps(
-            {
-                "schema": "solar.fixed_research.command_stream.v1",
-                "stream": "stderr",
-                "encoding": "utf-8",
-                "bytes": len(completed.stderr.encode("utf-8")),
-                "content": completed.stderr,
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
+    stage_rel = str(stage_dir.relative_to(context.workspace_root)).replace("\\", "/") + "/"
+    executor = SandboxedBenchmarkExecutor(
+        work_dir=context.workspace_root,
+        runner=BENCHMARK_SCRIPT,
+        runner_sha256=_sha(BENCHMARK_SCRIPT),
+        handoff_path=handoff_path,
+        plan_path=plan_path,
+        raw_output_path=raw_path,
+        stdout_path=stdout_path,
+        stderr_path=stderr_path,
+        sandbox_home=stage_dir / "sandbox-home",
+        environment_path=os.environ.get("PATH", "/usr/bin:/bin"),
     )
+    autosci, autosci_result_path, autosci_doc_refs = _run_autosci_experiment(
+        context,
+        stage_dir=stage_dir,
+        stage_rel=stage_rel,
+        executor=executor,
+        hypothesis=(
+            "Every artifact accepted into the Part-A handoff still matches its "
+            "controller-bound SHA-256 digest, and every published claim's grounding "
+            "replays from the retained source texts."
+        ),
+    )
+    lifecycle_result = autosci["result"]
+    execution = dict(executor.last_execution)
     if not raw_path.is_file():
         raise ResearchOperatorError("Benchmark did not produce raw evidence.", error_type="experiment_failed")
     raw = json.loads(raw_path.read_text(encoding="utf-8"))
-    passed = completed.returncode == 0 and raw.get("passed") is True
+    outcome = str(lifecycle_result.get("outcome") or "")
+    passed = (
+        int(execution.get("exit_code", 1)) == 0
+        and raw.get("passed") is True
+        and outcome == "supports"
+    )
     payload = {
         "schema": "solar.fixed_research.experiment_result.v1",
         "status": "completed" if passed else "failed",
@@ -644,16 +817,34 @@ def _experiment_run(
         "approval": {"path": approval_ref["path"], "sha256": approval_ref["sha256"]},
         "sandbox": {"kind": "linux_user_and_network_namespace", "network": "disabled", "command_allowlisted": True},
         "execution": {
-            "command": command,
-            "exit_code": completed.returncode,
-            "duration_ms": round((ended_ns - started_ns) / 1_000_000, 3),
+            "command": list(execution.get("command") or []),
+            "exit_code": int(execution.get("exit_code", 1)),
+            "duration_ms": float(execution.get("duration_ms") or 0.0),
             "stdout_path": str(stdout_path.relative_to(context.workspace_root)).replace("\\", "/"),
             "stderr_path": str(stderr_path.relative_to(context.workspace_root)).replace("\\", "/"),
             "raw_result_path": str(raw_path.relative_to(context.workspace_root)).replace("\\", "/"),
         },
         "metrics": raw.get("metrics") or {},
         "raw_result_sha256": _sha(raw_path),
-        "limitations": ["The benchmark verifies retained artifact integrity, not the report's external scientific conclusions."],
+        # The registered AutoSci runner's own verdict, bound by plan digest and
+        # approval reference. The outer status above must agree with it.
+        "autosci_experiment": {
+            "operator": "experiment_run_worker",
+            "implementation": "scientific_lifecycle.action.experiment.run_experiment",
+            "result_path": str(autosci_result_path.relative_to(context.workspace_root)).replace("\\", "/"),
+            "result_sha256": _sha(autosci_result_path),
+            "outcome": outcome,
+            "criteria_results": dict(lifecycle_result.get("criteria_results") or {}),
+            "evidence_ids": [str(item) for item in lifecycle_result.get("evidence_ids") or []],
+            "plan_sha256": str(lifecycle_result.get("plan_sha256") or ""),
+            "approval_ref": str(lifecycle_result.get("approval_ref") or ""),
+        },
+        "tested": str(raw.get("tested") or ""),
+        "not_tested": str(raw.get("not_tested") or ""),
+        "limitations": [
+            f"Tested: {raw.get('tested') or 'retained-artifact digest lineage'}.",
+            f"Not tested: {raw.get('not_tested') or 'external scientific validity of the sources or experimental reproduction of the claims'}.",
+        ],
     }
     extra_artifacts: list[dict[str, Any]] = []
     extra_hashes: list[dict[str, Any]] = []
@@ -661,10 +852,14 @@ def _experiment_run(
         (raw_path, "benchmark-raw", "solar.fixed_research.benchmark_raw.v1"),
         (stdout_path, "benchmark-stdout", "text/plain"),
         (stderr_path, "benchmark-stderr", "solar.fixed_research.command_stream.v1"),
+        (autosci_result_path, "autosci-experiment-result", "experiment_result.v1"),
     ):
         artifact, digest = _file_artifact(path, context, artifact_id, schema)
         extra_artifacts.append(artifact)
         extra_hashes.append(digest)
+    for reference in autosci_doc_refs:
+        extra_artifacts.append(dict(reference))
+        extra_hashes.append({"hash_id": str(reference["artifact_id"]), "algorithm": "sha256", "value": str(reference["sha256"])})
     result = _write(
         context,
         primary_rel,
@@ -678,7 +873,11 @@ def _experiment_run(
     if not passed:
         result["status"] = "failed"
         result["status_is_terminal"] = True
-        result["errors"] = [{"error_id": "experiment.failed", "error_type": "experiment_failed", "message": "The fixed benchmark did not pass."}]
+        result["errors"] = [{
+            "error_id": "experiment.failed",
+            "error_type": "experiment_failed",
+            "message": f"The fixed benchmark did not pass (autosci outcome: {outcome or 'missing'}).",
+        }]
     return result
 
 
@@ -723,6 +922,126 @@ def _verified_controller_artifact(
     return path
 
 
+def _run_autosci_claim_verifier(
+    context: OperatorContext,
+    *,
+    stage_dir: Path,
+    stage_rel: str,
+    claim_checks: list[dict[str, Any]],
+    raw_metrics: dict[str, Any],
+    autosci_record: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Run ScientificClaimVerifier's implementation over the replicated claims.
+
+    The contract declares ScientificClaimVerifier for B6; its registered
+    implementation is scientific_lifecycle.action.delivery.verify_claim. The
+    claims come from the raw benchmark's per-claim replication rows and the
+    experiment evidence from the fixed result's AutoSci record, both of which
+    B6 already holds as controller-accepted dependencies -- nothing outside
+    B6's read scope is touched.
+    """
+    from .scientific_lifecycle.action import registry as action_registry
+
+    autosci_dir = stage_dir / "autosci"
+    autosci_rel = stage_rel.rstrip("/") + "/autosci/"
+    claims_doc = _lifecycle_document(
+        context,
+        schema="research_claims.v1",
+        node_id="claim_extract",
+        outputs={
+            "claims": [
+                {
+                    "claim_id": str(item.get("claim_id") or ""),
+                    "text": str(item.get("text") or ""),
+                    "acceptance_criteria": [f"{item.get('claim_id')}:grounding_replicated"],
+                    "evidence_ids": ["benchmark-raw"],
+                }
+                for item in claim_checks
+                if str(item.get("claim_id") or "")
+            ]
+        },
+    )
+    result_doc = _lifecycle_document(
+        context,
+        schema="experiment_result.v1",
+        node_id="experiment_run",
+        outputs={
+            "result": {
+                "experiment_id": BENCHMARK_ID,
+                "outcome": str(autosci_record.get("outcome") or ""),
+                "metrics": [
+                    {"name": str(key), "value": raw_metrics.get(key)} for key in sorted(raw_metrics)
+                ],
+                "evidence_ids": [str(item) for item in autosci_record.get("evidence_ids") or []] or ["benchmark-raw"],
+                "criteria_results": {
+                    str(key): value
+                    for key, value in (autosci_record.get("criteria_results") or {}).items()
+                    if isinstance(value, bool)
+                },
+                "approval_ref": str(autosci_record.get("approval_ref") or ""),
+                "plan_sha256": str(autosci_record.get("plan_sha256") or ""),
+                "sandbox_enforced": True,
+            }
+        },
+    )
+    claims_ref = _write_lifecycle_input(context, autosci_dir, "research_claims.v1.json", claims_doc)
+    result_ref = _write_lifecycle_input(context, autosci_dir, "experiment_result.v1.json", result_doc)
+    sub_request = {
+        "schema": "research_node_request.v1",
+        "task_id": str(context.node_request.get("task_id") or ""),
+        "run_id": str(context.node_request.get("run_id") or ""),
+        "workflow_id": str(context.node_request.get("workflow_id") or ""),
+        "node_id": "claim_verify",
+        "logical_operator": {
+            "operator_id": "ScientificClaimVerifier",
+            "operator_kind": "logical",
+            "capabilities": ["research_poc"],
+        },
+        "physical_operator": {
+            "operator_id": "claim_verify_worker",
+            "operator_kind": "physical",
+            "capabilities": ["research_poc"],
+        },
+        "typed_inputs": {"input_schema": "claim_verify.fixed_research.v1", "payload": {}},
+        "input_artifact_refs": [claims_ref, result_ref],
+        "authorization": {
+            "scope_id": f"{context.node_request.get('run_id')}:claim_verification:autosci",
+            "approved_capabilities": ["research_poc"],
+            "allow_network": False,
+            "allow_live_provider": False,
+            "secret_refs": [],
+        },
+        "read_scope": [claims_ref["path"], result_ref["path"]],
+        "write_scope": [autosci_rel],
+        "timeout_retry_policy": {"timeout_seconds": 60, "max_attempts": 1, "retry_on": []},
+    }
+    sub_result = action_registry.execute_operator(sub_request, services={}, workspace_root=context.workspace_root)
+    if str(sub_result.get("status") or "") != "completed":
+        errors = sub_result.get("errors") or []
+        message = str((errors[0] or {}).get("message") or "") if errors else ""
+        raise ResearchOperatorError(
+            f"ScientificClaimVerifier did not complete: {message}"[:300],
+            error_type="claim_not_verified",
+        )
+    verdict_path = autosci_dir / "claim_verdict.v1.json"
+    if not verdict_path.is_file():
+        raise ResearchOperatorError("ScientificClaimVerifier wrote no verdict document.", error_type="claim_not_verified")
+    verdict_doc = json.loads(verdict_path.read_text(encoding="utf-8"))
+    verdicts = [
+        item for item in ((verdict_doc.get("outputs") or {}).get("verdicts") or [])
+        if isinstance(item, dict)
+    ]
+    artifacts: list[dict[str, Any]] = []
+    hashes: list[dict[str, Any]] = []
+    for reference in (claims_ref, result_ref):
+        artifacts.append(dict(reference))
+        hashes.append({"hash_id": str(reference["artifact_id"]), "algorithm": "sha256", "value": str(reference["sha256"])})
+    verdict_artifact, verdict_hash = _file_artifact(verdict_path, context, "claim-verdict-autosci", "claim_verdict.v1")
+    artifacts.append(verdict_artifact)
+    hashes.append(verdict_hash)
+    return verdicts, artifacts, hashes
+
+
 def _claim_verification(context: OperatorContext, primary_rel: str, dependencies: list[dict[str, Any]]) -> dict[str, Any]:
     plan_ref = _dependency(dependencies, "experiment_design")
     result_ref = _dependency(dependencies, "experiment_run")
@@ -763,6 +1082,8 @@ def _claim_verification(context: OperatorContext, primary_rel: str, dependencies
     actual_exit_code = (result.get("execution") or {}).get("exit_code")
     expected_exit_code = criteria.get("exit_code")
     execution = result.get("execution") if isinstance(result.get("execution"), dict) else {}
+    autosci_record = result.get("autosci_experiment") if isinstance(result.get("autosci_experiment"), dict) else {}
+    claim_checks = [item for item in raw.get("claim_checks") or [] if isinstance(item, dict)]
     verified = (
         str(result.get("status") or "") == "completed"
         and raw.get("passed") is True
@@ -777,9 +1098,40 @@ def _claim_verification(context: OperatorContext, primary_rel: str, dependencies
         and isinstance(actual_exit_code, int)
         and actual_exit_code == int(expected_exit_code if expected_exit_code is not None else 0)
         and float(metrics.get("integrity_rate") or 0.0) >= float(criteria.get("integrity_rate") or 1.0)
+        # The claim-replication half of the benchmark: at least one published
+        # claim was actually tested and none was refuted, reconciled against
+        # the raw per-claim rows rather than trusted from the summary.
+        and int(metrics.get("claims_total") or 0) >= 1
+        and int(metrics.get("claims_refuted") or 0) <= int(criteria.get("claims_refuted") or 0)
+        and int(metrics.get("claims_total") or 0) == len(claim_checks)
+        and int(metrics.get("claims_refuted") or 0)
+        == sum(1 for item in claim_checks if str(item.get("outcome") or "") != "supported")
+        # The registered AutoSci runner's verdict must agree with the raw
+        # evidence -- a "supports" outcome over failed checks, or vice versa,
+        # is a seam and must not verify.
+        and str(autosci_record.get("outcome") or "") == "supports"
     )
     if not verified:
         raise ResearchOperatorError("Raw experiment evidence does not satisfy the fixed plan.", error_type="claim_not_verified")
+    stage_dir = (context.workspace_root / primary_rel).parent
+    stage_rel = str(stage_dir.relative_to(context.workspace_root)).replace("\\", "/") + "/"
+    claim_verdicts, verdict_artifacts, verdict_hashes = _run_autosci_claim_verifier(
+        context,
+        stage_dir=stage_dir,
+        stage_rel=stage_rel,
+        claim_checks=claim_checks,
+        raw_metrics=metrics,
+        autosci_record=autosci_record,
+    )
+    unsupported_verdicts = [
+        item for item in claim_verdicts if str(item.get("verdict") or "") != "supported"
+    ]
+    if unsupported_verdicts:
+        raise ResearchOperatorError(
+            "ScientificClaimVerifier did not support every replicated claim: "
+            + ", ".join(sorted(str(item.get("claim_id") or "?") for item in unsupported_verdicts)),
+            error_type="claim_not_verified",
+        )
     evidence_refs = []
     for item in (result_ref, raw_ref, stdout_ref, stderr_ref):
         closeout = item.get("controller_closeout") if isinstance(item.get("controller_closeout"), dict) else {}
@@ -799,7 +1151,11 @@ def _claim_verification(context: OperatorContext, primary_rel: str, dependencies
     payload = {
         "schema": "solar.fixed_research.claim_verification.v1",
         "status": "verified",
-        "claim": "Every retained Part-A artifact in the accepted handoff matched its controller-bound SHA-256 digest during replay.",
+        "claim": (
+            "Every retained Part-A artifact in the accepted handoff matched its "
+            "controller-bound SHA-256 digest during replay, and every published "
+            "claim's grounding replayed from the retained source texts."
+        ),
         "plan": {"path": plan_ref["path"], "sha256": plan_ref["sha256"]},
         "experiment_result": {
             "path": result_ref["path"],
@@ -809,9 +1165,36 @@ def _claim_verification(context: OperatorContext, primary_rel: str, dependencies
         },
         "experiment_evidence": evidence_refs,
         "metrics": metrics,
-        "limitations": ["This verdict is limited to evidence integrity and does not prove the research claims scientifically."],
+        # Per-claim verdicts from ScientificClaimVerifier's registered
+        # implementation, reconciled above against the raw replication rows.
+        "claim_verdicts": [
+            {
+                "claim_id": str(item.get("claim_id") or ""),
+                "verdict": str(item.get("verdict") or ""),
+                "support_classification": str(item.get("support_classification") or ""),
+                "basis": str(item.get("basis") or ""),
+                "acceptance_criteria_checked": [str(value) for value in item.get("acceptance_criteria_checked") or []],
+            }
+            for item in claim_verdicts
+        ],
+        "limitations": [
+            "Verified: retained-artifact digest lineage and per-claim grounding "
+            "replication from retained source texts, with ScientificClaimVerifier "
+            "verdicts per claim.",
+            "Not verified: the external scientific validity of the sources' own "
+            "findings; no experiment reproduced the claims' subject matter.",
+        ],
     }
-    return _write(context, primary_rel, payload, artifact_id="claim-verification", schema=payload["schema"], limitations=payload["limitations"])
+    return _write(
+        context,
+        primary_rel,
+        payload,
+        artifact_id="claim-verification",
+        schema=payload["schema"],
+        extra_artifacts=verdict_artifacts,
+        extra_hashes=verdict_hashes,
+        limitations=payload["limitations"],
+    )
 
 
 def _delivery_lineage(
@@ -873,8 +1256,8 @@ def _render_final_delivery_markdown(
 ) -> str:
     return (
         "# Research evidence-to-PoC delivery\n\n"
-        "## Outcome\n\nThe Part-A report was accepted and its retained artifact lineage passed the fixed no-network integrity benchmark.\n\n"
-        "## Boundary\n\nThis PoC validates evidence retention and hash lineage. It does not independently reproduce or validate the report's external scientific claims.\n\n"
+        "## Outcome\n\nThe Part-A report was accepted; its retained artifact lineage and each published claim's grounding passed the fixed no-network benchmark.\n\n"
+        "## Boundary\n\nThis PoC validates evidence retention, hash lineage, and grounding replication from retained bytes. It does not independently reproduce or validate the report's external scientific claims.\n\n"
         "## Included evidence\n\n"
         + "\n".join(f"- `{item['artifact_id']}` — `{item['path']}` — `{item['sha256']}`" for item in bundle)
         + "\n\n## Limitations\n\n"
@@ -944,6 +1327,50 @@ def verify_final_delivery_artifact(
             "Final delivery does not preserve the exact accepted upstream bundle and limitations.",
             error_type="lineage_incomplete",
         )
+
+
+def execute_operator(
+    node_request: dict[str, Any],
+    *,
+    services: dict[str, Any] | None = None,
+    workspace_root: Path | None = None,
+) -> dict[str, Any]:
+    """Resolver-facing entry: run one fixed Part-B node from its request.
+
+    This is what the `<node_id>_operator` bindings in the unified registry
+    call, so the physical operator id the fixed contract's graph declares is
+    the physical operator that executes -- previously the adapter bypassed the
+    resolver for every Part-B stage and the declared identity never ran.
+
+    The adapter's controller-verified dependency references (with their
+    closeout bindings) and approval controls travel inside
+    typed_inputs.payload.fixed_research, because they carry more than the
+    4-key input_artifact_refs the request schema standardizes.
+    """
+    del services  # Part-B handlers execute deterministically or via sub-operators.
+    root = Path(workspace_root or Path.cwd()).resolve()
+    node_id = str(node_request.get("node_id") or "")
+    typed_inputs = node_request.get("typed_inputs") if isinstance(node_request.get("typed_inputs"), dict) else {}
+    payload = typed_inputs.get("payload") if isinstance(typed_inputs.get("payload"), dict) else {}
+    fixed = payload.get("fixed_research") if isinstance(payload.get("fixed_research"), dict) else {}
+    primary_rel = str(fixed.get("primary_rel") or "")
+    if not primary_rel:
+        raise ResearchOperatorError(
+            f"fixed Part-B request is missing its primary output binding: {node_id}",
+            error_type="invalid_input",
+        )
+    stage_dir = (root / primary_rel).parent
+    dependencies = [item for item in fixed.get("dependencies") or [] if isinstance(item, dict)]
+    approval_controls = fixed.get("approval_controls") if isinstance(fixed.get("approval_controls"), dict) else {}
+    return execute_part_b(
+        request=node_request,
+        node_id=node_id,
+        primary_rel=primary_rel,
+        stage_dir=stage_dir,
+        work_dir=root,
+        dependencies=dependencies,
+        approval_controls=approval_controls,
+    )
 
 
 def execute_part_b(

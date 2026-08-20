@@ -22,6 +22,20 @@ _SYNTHESIS_NODES = (
     "final_acceptance",
 )
 
+# The fixed evidence-to-PoC workflow's Part-B stages. Registered here so the
+# `<node_id>_operator` identities its graph declares resolve to executable
+# bindings exactly like Part A's, instead of the adapter bypassing the
+# resolver for these seven stages.
+_FIXED_POC_NODES = (
+    "poc_handoff",
+    "idea_evaluation",
+    "experiment_design",
+    "experiment_approval",
+    "experiment_run",
+    "claim_verification",
+    "final_delivery",
+)
+
 
 def registration_entries() -> tuple[dict[str, str], ...]:
     """Return every workflow-facing binding once in deterministic order."""
@@ -36,6 +50,16 @@ def registration_entries() -> tuple[dict[str, str], ...]:
         }
         for node_id in _SYNTHESIS_NODES
     ]
+    entries.extend(
+        {
+            "node_id": node_id,
+            "physical_operator_id": f"{node_id}_operator",
+            "implementation_operator_id": f"fixed-research-poc-{node_id}",
+            "operator_version": "fixed_research_poc.v1.8",
+            "operator_family": "fixed_research_poc",
+        }
+        for node_id in _FIXED_POC_NODES
+    )
     entries.extend(
         {
             "node_id": str(item["node_id"]),
@@ -101,10 +125,23 @@ def production_bindings(
             workspace_root=root,
         )
 
+    def run_fixed_poc(request: dict) -> dict:
+        # Imported lazily: fixed_research_poc reaches back into the action and
+        # evidence registries for its sub-operators, so a module-level import
+        # here would be a cycle.
+        from ..fixed_research_poc import execute_operator as fixed_poc_execute
+
+        return fixed_poc_execute(
+            request,
+            services=injected,
+            workspace_root=root,
+        )
+
     runners = {
         "research_synthesis": run_synthesis,
         "scientific_lifecycle_evidence": run_evidence,
         "scientific_lifecycle_action": run_action,
+        "fixed_research_poc": run_fixed_poc,
     }
     return [
         binding_factory(

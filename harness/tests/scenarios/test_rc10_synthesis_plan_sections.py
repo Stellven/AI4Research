@@ -33,7 +33,9 @@ def _claim(claim_id: str, source: str, **extra: Any) -> dict[str, Any]:
         "text": f"Claim {claim_id} about retrieval quality.",
         "uncertainty": "low",
         "evidence_ids": [source],
-        "evidence_quotes": [{"source_id": source, "quote": f"quote for {claim_id}"}],
+        # Long enough for the compiler's quote bounds and sharing the
+        # claim's vocabulary, as every compilable link must.
+        "evidence_quotes": [{"source_id": source, "quote": f"quote for {claim_id} about retrieval quality"}],
         **extra,
     }
 

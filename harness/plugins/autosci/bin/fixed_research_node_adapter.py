@@ -45,7 +45,6 @@ from harness.plugins.autosci.operators.research_synthesis.evidence_synthesis imp
     MAX_SYNTHESIS_ATTEMPTS,
 )
 from harness.plugins.autosci.operators.fixed_research_poc import (  # noqa: E402
-    execute_part_b,
     verify_final_delivery_artifact,
 )
 from harness.plugins.autosci.operators.research_synthesis.base import ResearchOperatorError  # noqa: E402
@@ -616,6 +615,20 @@ def execute(envelope: dict[str, Any]) -> dict[str, Any]:
             retrieval_policy_payload.get("minimum_live_sources") or PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES
         ) if retrieval_policy_payload else 3
     part_b_stage = node_id in PART_B_EXECUTABLE_NODE_IDS
+    if part_b_stage:
+        # The controller-verified dependency set (with closeout bindings) and
+        # the approval controls carry more than the standardized 4-key
+        # input_artifact_refs, so they travel in the typed payload for the
+        # registered Part-B operator to consume.
+        typed_payload["fixed_research"] = {
+            "primary_rel": primary_rel,
+            "dependencies": dependencies,
+            "approval_controls": (
+                inputs.get("approval_controls")
+                if isinstance(inputs.get("approval_controls"), dict)
+                else {}
+            ),
+        }
     model_stage = node_id in {"evidence_synthesis", "report_draft", "independent_review", "report_revision"}
     deterministic_acceptance = node_id == "final_acceptance"
     approved = ["research_poc" if part_b_stage else "research_synthesis"] + (["research_model_generate"] if model_stage else [])
@@ -687,28 +700,18 @@ def execute(envelope: dict[str, Any]) -> dict[str, Any]:
         provider_archives.update(_normalize_provider_archives(inner_result, work_dir, stage_dir))
         return inner_result
 
-    if part_b_stage:
-        result = execute_part_b(
-            request=request,
-            node_id=node_id,
-            primary_rel=primary_rel,
-            stage_dir=stage_dir,
-            work_dir=work_dir,
-            dependencies=dependencies,
-            approval_controls=(inputs.get("approval_controls") if isinstance(inputs.get("approval_controls"), dict) else {}),
-        )
-        jsonschema.Draft202012Validator(
-            json.loads(RESULT_SCHEMA.read_text(encoding="utf-8"))
-        ).validate(result)
-    else:
-        result = dispatch_research_node(
-            request,
-            runner=run,
-            request_schema_path=REQUEST_SCHEMA,
-            result_schema_path=RESULT_SCHEMA,
-            artifact_root=work_dir,
-            operator_resolver=resolver.resolve,
-        )
+    # Part A and Part B dispatch identically: the request's declared physical
+    # operator resolves in the unified registry and its binding executes. The
+    # Part-B bypass that ran a duplicate implementation outside the resolver is
+    # gone -- the DAG's declared identity is the one that runs.
+    result = dispatch_research_node(
+        request,
+        runner=run,
+        request_schema_path=REQUEST_SCHEMA,
+        result_schema_path=RESULT_SCHEMA,
+        artifact_root=work_dir,
+        operator_resolver=resolver.resolve,
+    )
     if model_stage:
         _merge_codex_invocation_usage(result, services)
         provider_archives.update(_normalize_provider_archives(result, work_dir, stage_dir))
