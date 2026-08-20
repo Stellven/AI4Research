@@ -248,6 +248,9 @@ def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path
     assert "post-verdict closeout transaction" in text
     assert "stale sidecar records an earlier publication error" in text
     assert "will block closeout deterministically" in text
+    assert "Evaluation is read-only over every path listed in the snapshot" in text
+    assert "do not run `solar-harness research\n  closeout`" in text
+    assert "rewrites `final_closeout.json`" in text
     assert "Any byte change after dispatch" not in text
 
 

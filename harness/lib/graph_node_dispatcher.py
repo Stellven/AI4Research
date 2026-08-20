@@ -7459,6 +7459,12 @@ Handoff: `{handoff}`
 - The machine-readable JSON MUST copy `artifact_snapshot_schema`, `artifact_snapshot_path`, and
   `artifact_snapshot_digest` exactly. Any change to the canonical snapshot material after dispatch
   invalidates PASS and requires a fresh evaluation generation.
+- Evaluation is read-only over every path listed in the snapshot. Do not run artifact-producing or
+  finalization commands against those paths. In particular, do not run `solar-harness research
+  closeout` on a snapshotted report: that command rewrites `final_closeout.json` and
+  `run.finalized`, invalidating the bytes being evaluated. Use `solar-harness research
+  eval-artifacts --eval-json <research_eval.json> --json` or the dispatcher-owned deterministic
+  gate instead, and write only the authorized evaluator sidecars.
 
 ## Handoff Candidates
 
