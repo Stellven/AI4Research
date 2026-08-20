@@ -324,23 +324,36 @@ before diagnosing a stall.
 ## 6. Traps that will cost you a run
 
 1. **`kill` by PID, never `pkill -f` / broad `pgrep -f`.** The pattern matches
-   the invoking shell and the monitors. It killed a monitor here (exit 144).
+   the invoking shell and the monitors. This happened THREE times in one session
+   (exit 144). The third time it killed the shell before a queued patch ran, so
+   the edit silently did not apply and the next command reported the file
+   unchanged. Use `ps -eo pid,cmd | grep X | grep -v grep | awk '{print $1}'`.
+1b. **The UAT process does not exit when the DAG completes.** After 15/15 it
+   keeps polling until its own `--timeout-seconds`. Kill it by PID once
+   `phase: completed`, or a later run will overlap with it.
 2. **Never edit operator code while a run is in flight.** Dispatches import
    fresh, so the run silently spans two commits and its telemetry becomes
    unattributable. If you must, write atomically (temp file + `os.replace`).
 3. **Orphaned status servers cross-talk.** A server from a dead run will be
    talked to by a new one. Check `ps` for `status-server.py` before launching.
-4. **`additionalProperties: False` on the response schema means an unlisted
+4. **Two id spaces share the field name `evidence_ids`.** On a CLAIM it lists
+   the SOURCES the claim rests on (`openalex-rag-01`). On a CONCLUSION it lists
+   the CLAIMS the conclusion rests on (`claim-001`). A writer that confuses them
+   fails `report_draft` with "references unknown synthesis evidence". The same
+   conflation is documented in `synthesis_plan.evidence_index` for
+   content-addressed evidence ids versus source ids. Whenever you add a field
+   that carries ids, say which space it is in.
+5. **`additionalProperties: False` on the response schema means an unlisted
    field is refused, not ignored.** That is how `evidence_quotes` came back empty
    for a whole day. Add the field to `_response_schema` before asking for it.
-5. **The "operator changed unreported files" check reads the OPERATOR's declared
+6. **The "operator changed unreported files" check reads the OPERATOR's declared
    `output_artifacts`, file by file, exact string match.** A declared directory
    covers none of its children. `_inventory` walks with `rglob`.
-6. **`compile_grounded_report` refuses a non-empty `output_dir` and any dir
+7. **`compile_grounded_report` refuses a non-empty `output_dir` and any dir
    overlapping a source pack.** They must be siblings.
-7. **`fixed_research_benchmark.py` refuses an `--output` whose parent does not
+8. **`fixed_research_benchmark.py` refuses an `--output` whose parent does not
    resolve inside `--work-dir`,** and reports the reason on stdout, not stderr.
-8. **`experiment_approval` pins `benchmark_policy.runner_sha256` to the exact
+9. **`experiment_approval` pins `benchmark_policy.runner_sha256` to the exact
    bytes of `fixed_research_benchmark.py`.** Editing that script will fire the
    approval check. That is correct behaviour, not a bug.
 
