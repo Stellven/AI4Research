@@ -72,3 +72,53 @@ def test_nested_governed_final_report_outranks_pm_transcript(tmp_path, monkeypat
     assert selected[0]["source"] == "output"
     assert selected[0]["producer_task_type"] == "report-writing"
     assert selected[0]["supporting"] is False
+
+
+def test_final_report_outranks_larger_research_context_html(tmp_path, monkeypatch) -> None:
+    """Research source captures are evidence, not the user-facing report."""
+    mod = _load_status_server()
+    harness = tmp_path / "harness"
+    sprints = harness / "sprints"
+    reports = harness / "reports"
+    sid = "sprint-research-context-result"
+    workdir = sprints / sid / "workdir"
+    context = workdir / "workspace" / "research" / "source-pack-context" / "raw" / "ctx.html"
+    final_report = workdir / "workspace" / "research" / "report" / "final.md"
+    context.parent.mkdir(parents=True)
+    final_report.parent.mkdir(parents=True)
+    context.write_text("<html>" + ("source capture" * 1000) + "</html>", encoding="utf-8")
+    final_report.write_text("# 中文技术趋势报告\n\n结论。\n", encoding="utf-8")
+    (sprints / f"{sid}.task_graph.json").write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "nodes": [
+                    {
+                        "id": "R2",
+                        "task_type": "research",
+                        "write_scope": ["workspace/research/source-pack-context/"],
+                    },
+                    {
+                        "id": "R4",
+                        "task_type": "research",
+                        "depends_on": ["R2"],
+                        "write_scope": ["workspace/research/report/"],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(mod, "HARNESS_DIR", harness)
+    monkeypatch.setattr(mod, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(mod, "REPORTS_DIR", reports)
+
+    rows = mod._discover_sprint_deliverables(sid)
+    selected = [row for row in rows if row.get("result")]
+    context_row = next(row for row in rows if row["name"] == "ctx.html")
+
+    assert context.stat().st_size > final_report.stat().st_size
+    assert len(selected) == 1
+    assert selected[0]["name"] == "final.md"
+    assert context_row["supporting"] is True

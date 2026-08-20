@@ -2030,7 +2030,15 @@ _SUPPORTING_OUTPUT_TASK_TYPES = {
     "tests",
     "verification",
 }
-_SUPPORTING_OUTPUT_DIRS = {"evidence", "test", "tests"}
+_SUPPORTING_OUTPUT_DIRS = {
+    "evidence",
+    "source-pack-context",
+    "source-pack-primary",
+    "synthesis",
+    "test",
+    "tests",
+    "verification",
+}
 
 
 def _deliverable_stage(name: str, rel_path: str, source: str) -> str:
