@@ -117,6 +117,24 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
             "result_path": str(result_path),
         }
 
+    inbox_status = str(inbox.get("status") or "").strip().lower()
+    if inbox_status.startswith("failed") or inbox_status == "cancelled":
+        # Selection/submit failures happen before an operatord process exists,
+        # so there will never be a durable operator result to release the
+        # claim. Treat the durable PM inbox terminal state as immediate retry
+        # authority instead of waiting for the full claim TTL.
+        return {
+            "state": "failed",
+            "ready_for_compile": False,
+            "sid": sid,
+            "node_id": node_id,
+            "task_id": task_id,
+            "reason": "planner_submission_failed_before_lease",
+            "inbox_status": inbox_status,
+            "inbox_path": str(inbox_path),
+            "result_path": "",
+        }
+
     runtime_state = ""
     heartbeat_at = ""
     for path in (harness / "run" / "operator-status").glob("*.json"):
@@ -167,7 +185,7 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
         ),
         "runtime_state": runtime_state,
         "heartbeat_age_seconds": age_seconds,
-        "inbox_status": str(inbox.get("status") or ""),
+        "inbox_status": inbox_status,
         "inbox_path": str(inbox_path),
         "result_path": "",
     }

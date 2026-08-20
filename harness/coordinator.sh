@@ -5648,6 +5648,14 @@ with open('$patches_file','w') as f:
         log "startup recovery: replaying DAG-ready builder handoff for $rsid (status=${rst}, phase=${rphase})"
         handle_active "$rsid" "$rsf"
       fi
+    elif [[ "$rst" == "drafting" ]]; then
+      local recovery_planner_state
+      recovery_planner_state="$(planner_operator_compile_state "$rsid")"
+      if [[ "$recovery_planner_state" == "failed" || "$recovery_planner_state" == "abandoned" ]]; then
+        ((planning_recovery_count+=1))
+        log "startup recovery: replaying failed Planner dispatch for $rsid"
+        handle_drafting "$rsid" "$rsf"
+      fi
     fi
   done
   if [[ "$planning_recovery_count" -gt 0 ]]; then
@@ -5837,6 +5845,15 @@ with open('$patches_file','w') as f:
           elif [[ "$st" == "active" ]] && { eval_passed_needs_progress "$sf" || [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; }; then
             log "${Y}[state-recovery] ${sid} has task_graph or eval_passed; driving handle_active to ensure progress${N}"
             handle_active "$sid" "$sf"
+          elif [[ "$st" == "drafting" ]]; then
+            local drafting_planner_state
+            drafting_planner_state="$(planner_operator_compile_state "$sid")"
+            if [[ "$drafting_planner_state" == "failed" || "$drafting_planner_state" == "abandoned" ]]; then
+              if ! drafting_retry_blocked "$sid" "planner_operator_retry"; then
+                log "${Y}[state-recovery] ${sid} Planner dispatch is ${drafting_planner_state}; retrying without a status-fingerprint change${N}"
+                handle_drafting "$sid" "$sf"
+              fi
+            fi
           fi
         fi
       done

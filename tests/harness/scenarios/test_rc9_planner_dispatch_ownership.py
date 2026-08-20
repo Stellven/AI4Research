@@ -376,6 +376,68 @@ def test_expired_operator_pool_claim_allows_legacy_recovery(tmp_path: Path) -> N
     assert result.stdout.strip() == "expired"
 
 
+def test_failed_submission_releases_planner_claim_without_waiting_for_ttl(tmp_path: Path) -> None:
+    harness = _minimal_harness(tmp_path)
+    (harness / "lib").mkdir(exist_ok=True)
+    shutil.copy2(_HARNESS / "lib" / "planner_operator_gate.py", harness / "lib")
+    sid = "sprint-no-capacity"
+    task_id = f"pm-{sid}-N0-acde0001"
+    (harness / "sprints" / f"{sid}.status.json").write_text(
+        json.dumps(
+            {
+                "id": sid,
+                "status": "drafting",
+                "planner_dispatch_claim": {
+                    "owner": "operator_pool",
+                    "state": "failed",
+                    "task_id": task_id,
+                    "expires_at": _iso_after(180),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (harness / "run" / "pm-inbox" / f"{task_id}.json").write_text(
+        json.dumps(
+            {
+                "task_id": task_id,
+                "requested_role": "planner",
+                "status": "failed_no_dispatchable_operator",
+                "failure_reason": "no_dispatchable_operator_for_role: planner",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(harness / "lib" / "planner_operator_gate.py"),
+            "state",
+            sid,
+            "--harness-dir",
+            str(harness),
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "failed"
+    assert payload["reason"] == "planner_submission_failed_before_lease"
+
+
+def test_coordinator_retries_failed_drafting_without_fingerprint_change() -> None:
+    source = _COORDINATOR.read_text(encoding="utf-8")
+
+    assert "startup recovery: replaying failed Planner dispatch" in source
+    assert "retrying without a status-fingerprint change" in source
+    assert 'drafting_retry_blocked "$sid" "planner_operator_retry"' in source
+
+
 def test_active_gate_waits_for_planner_result_without_certifying_or_rolling_back(
     tmp_path: Path,
 ) -> None:
