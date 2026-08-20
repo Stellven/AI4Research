@@ -122,3 +122,46 @@ def test_final_report_outranks_larger_research_context_html(tmp_path, monkeypatc
     assert len(selected) == 1
     assert selected[0]["name"] == "final.md"
     assert context_row["supporting"] is True
+
+
+def test_final_report_outranks_larger_nested_report_extract(tmp_path, monkeypatch) -> None:
+    mod = _load_status_server()
+    harness = tmp_path / "harness"
+    sprints = harness / "sprints"
+    reports = harness / "reports"
+    sid = "sprint-report-extract-result"
+    workdir = sprints / sid / "workdir"
+    extract = workdir / "workspace" / "research" / "report" / "extracts" / "source.md"
+    final_report = workdir / "workspace" / "research" / "report" / "final.md"
+    extract.parent.mkdir(parents=True)
+    final_report.parent.mkdir(parents=True, exist_ok=True)
+    extract.write_text("# Source capture\n\n" + ("raw text\n" * 1000), encoding="utf-8")
+    final_report.write_text("# 中文技术趋势报告\n\n结论。\n", encoding="utf-8")
+    (sprints / f"{sid}.task_graph.json").write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "nodes": [
+                    {
+                        "id": "R4",
+                        "task_type": "research",
+                        "write_scope": ["workspace/research/report/"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(mod, "HARNESS_DIR", harness)
+    monkeypatch.setattr(mod, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(mod, "REPORTS_DIR", reports)
+
+    rows = mod._discover_sprint_deliverables(sid)
+    selected = [row for row in rows if row.get("result")]
+    extract_row = next(row for row in rows if row["name"] == "source.md")
+
+    assert extract.stat().st_size > final_report.stat().st_size
+    assert len(selected) == 1
+    assert selected[0]["name"] == "final.md"
+    assert extract_row["supporting"] is True

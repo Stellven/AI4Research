@@ -2032,6 +2032,7 @@ _SUPPORTING_OUTPUT_TASK_TYPES = {
 }
 _SUPPORTING_OUTPUT_DIRS = {
     "evidence",
+    "extracts",
     "source-pack-context",
     "source-pack-primary",
     "synthesis",
