@@ -26,12 +26,35 @@ const excluded = new Set([
   "vendor",
   "quarantine",
 ]);
+const privateRuntimeRoots = new Set([
+  "artifacts",
+  "events",
+  "sessions",
+  "sprints",
+  "tmp",
+]);
+const privateRuntimeFiles = new Set([
+  ".coordinator-state",
+  ".coordinator.log",
+  ".planner-last-notice",
+  ".planner-last-notice.read",
+]);
+
+function isPrivateEnvFile(name) {
+  return name === ".env" || (name.startsWith(".env.") && name !== ".env.example");
+}
 
 function copyTree(from, to, relative = "") {
   fs.mkdirSync(to, { recursive: true });
   for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
     const entryRelative = relative ? `${relative}/${entry.name}` : entry.name;
-    if (excluded.has(entry.name) || excluded.has(entryRelative)) continue;
+    if (
+      excluded.has(entry.name) ||
+      excluded.has(entryRelative) ||
+      (!relative && privateRuntimeRoots.has(entry.name)) ||
+      (!relative && privateRuntimeFiles.has(entry.name)) ||
+      isPrivateEnvFile(entry.name)
+    ) continue;
     if (entry.name.endsWith(".pyc")) continue;
     const input = path.join(from, entry.name);
     const output = path.join(to, entry.name);
@@ -70,7 +93,7 @@ function treeFingerprint(rootDir) {
 fs.rmSync(stagingRoot, { recursive: true, force: true });
 copyTree(source, destination);
 const forbidden = ["run", "state", "logs", "cache", "venvs", "vendor", "quarantine"];
-for (const name of forbidden) {
+for (const name of [...forbidden, ...privateRuntimeRoots, ...privateRuntimeFiles, ".env"]) {
   if (fs.existsSync(path.join(destination, name))) {
     throw new Error(`forbidden runtime directory entered package staging: ${name}`);
   }
