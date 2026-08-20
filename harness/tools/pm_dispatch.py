@@ -119,11 +119,17 @@ def _operator_matches_cost_policy(op: dict[str, Any]) -> bool:
     return COST_TIER_RANK.get(tier, COST_TIER_RANK["medium"]) <= COST_TIER_RANK[ceiling]
 
 
-def _operator_matches_provider_policy(op: dict[str, Any]) -> bool:
-    if not DEFAULT_OPERATOR_PROVIDERS:
+def _operator_matches_provider_policy(
+    op: dict[str, Any],
+    providers: set[str] | frozenset[str] | None = None,
+) -> bool:
+    provider_policy = DEFAULT_OPERATOR_PROVIDERS if providers is None else frozenset(
+        str(item).strip().lower() for item in providers if str(item).strip()
+    )
+    if not provider_policy:
         return True
     provider = str(op.get("provider") or op.get("vendor") or "").strip().lower()
-    return bool(provider and provider in DEFAULT_OPERATOR_PROVIDERS)
+    return bool(provider and provider in provider_policy)
 
 
 def _provider_policy_label() -> str:
@@ -1237,6 +1243,7 @@ def _role_spillover_candidates(
     policy_mod: Any | None,
     policy: dict[str, Any],
     spillover_spec: dict[str, Any],
+    provider_policy: frozenset[str],
 ) -> tuple[list[tuple[int, str, dict[str, Any]]], str]:
     max_active = int(spillover_spec.get("max_active", 0) or 0)
     if max_active <= 0:
@@ -1262,7 +1269,7 @@ def _role_spillover_candidates(
             continue
         if bool(op.get("deprecated")):
             continue
-        if not _operator_matches_provider_policy(op):
+        if not _operator_matches_provider_policy(op, provider_policy):
             continue
         if not _operator_matches_cost_policy(op):
             continue
@@ -1311,6 +1318,7 @@ def select_operator_by_role(
     prefer_operator: str = "",
     resolved_capsule: dict[str, Any] | None = None,
     logical_operator: str = "",
+    allowed_providers: set[str] | frozenset[str] | None = None,
 ) -> tuple[str, dict[str, Any], str]:
     """选择最合适的可调度算子。
 
@@ -1329,13 +1337,16 @@ def select_operator_by_role(
     preferred_ops = set(capsule_constraints.get("preferred", []) or [])
     forbidden_ops = set(capsule_constraints.get("forbidden", []) or [])
     default_profile = str(capsule_constraints.get("default_operator_profile") or "")
+    provider_policy = DEFAULT_OPERATOR_PROVIDERS if allowed_providers is None else frozenset(
+        str(item).strip().lower() for item in allowed_providers if str(item).strip()
+    )
 
     # 1. 指定 operator 优先
     if prefer_operator:
         if prefer_operator in operators:
             op = dict(operators[prefer_operator])
             op["operator_id"] = prefer_operator
-            if not _operator_matches_provider_policy(op):
+            if not _operator_matches_provider_policy(op, provider_policy):
                 provider = str(op.get("provider") or op.get("vendor") or "unknown")
                 return "", {}, f"preferred_operator_provider_mismatch: {prefer_operator}: {provider}"
             if not _operator_matches_cost_policy(op):
@@ -1360,7 +1371,7 @@ def select_operator_by_role(
         op["operator_id"] = op_id
         if bool(op.get("deprecated")):
             continue
-        if not _operator_matches_provider_policy(op):
+        if not _operator_matches_provider_policy(op, provider_policy):
             continue
         if not _operator_matches_cost_policy(op):
             continue
@@ -1407,7 +1418,7 @@ def select_operator_by_role(
             "on",
             "yes",
         }
-        if DEFAULT_OPERATOR_PROVIDERS and not provider_mode_spillover:
+        if provider_policy and not provider_mode_spillover:
             if pool_mode:
                 return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
             return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; provider_mode_role_spillover_disabled"
@@ -1424,6 +1435,7 @@ def select_operator_by_role(
                 policy_mod=policy_mod,
                 policy=policy,
                 spillover_spec=spillover_spec,
+                provider_policy=provider_policy,
             )
             if spillover_candidates:
                 spillover_candidates.sort(key=lambda x: -x[0])
@@ -3440,7 +3452,12 @@ def cmd_route_preflight(args: argparse.Namespace) -> int:
     ok = True
     for role in roles:
         task_type = _preflight_task_type_for_role(role)
-        operator_id, operator, reason = select_operator_by_role(role, task_type=task_type)
+        provider_constraint = {expected_provider} if expected_provider else None
+        operator_id, operator, reason = select_operator_by_role(
+            role,
+            task_type=task_type,
+            allowed_providers=provider_constraint,
+        )
         provider = str(operator.get("provider") or operator.get("vendor") or "").strip().lower() if operator else ""
         route_ok = bool(operator_id)
         if expected_provider:

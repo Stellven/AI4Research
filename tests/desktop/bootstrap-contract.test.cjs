@@ -173,6 +173,13 @@ assert(
 );
 
 assert(
+  "Windows dashboard opens only after Codex auth and role dispatch readiness pass",
+  main.includes("codex login status") &&
+    main.includes("route-preflight --runtime codex") &&
+    main.includes("--expect-provider openai --roles planner,builder,evaluator"),
+);
+
+assert(
   "desktop artifacts wait for the gate before building",
   /\n  build:\n    needs: gate\n/.test(desktopWorkflow),
 );

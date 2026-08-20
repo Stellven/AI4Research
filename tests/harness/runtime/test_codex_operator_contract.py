@@ -135,6 +135,50 @@ def test_pm_route_preflight_fails_closed_on_provider_mismatch(tmp_path, monkeypa
     assert "builder" in payload
 
 
+def test_pm_route_preflight_constrains_selection_to_requested_provider(monkeypatch, capsys):
+    monkeypatch.delenv("SOLAR_PM_DEFAULT_PROVIDERS", raising=False)
+    monkeypatch.delenv("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS", raising=False)
+    pm_dispatch = _load_module("pm_dispatch_route_provider_contract", ROOT / "tools" / "pm_dispatch.py")
+    registry = {
+        "operators": {
+            "claude-planner": {
+                "role": "planner",
+                "roles": ["planner"],
+                "provider": "anthropic",
+                "backend": "command",
+                "model": "opus",
+                "enabled": True,
+                "available": True,
+                "priority": 100,
+            },
+            "codex-planner": {
+                "role": "planner",
+                "roles": ["planner"],
+                "provider": "openai",
+                "backend": "command",
+                "model": "gpt-5.5",
+                "enabled": True,
+                "available": True,
+            },
+        }
+    }
+    monkeypatch.setattr(pm_dispatch, "load_registry", lambda: registry)
+    monkeypatch.setattr(pm_dispatch, "get_operator_runtime_state", lambda _op_id: "idle")
+    monkeypatch.setattr(pm_dispatch, "_operator_external_health", lambda _op: (True, ""))
+    args = type("Args", (), {
+        "runtime": "codex",
+        "expect_provider": "openai",
+        "roles": "planner",
+        "pretty": False,
+    })()
+
+    assert pm_dispatch.cmd_route_preflight(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["roles"][0]["operator_id"] == "codex-planner"
+    assert payload["roles"][0]["provider"] == "openai"
+
+
 def test_operatord_materializes_work_dir_for_codex(tmp_path, monkeypatch):
     operatord = _load_module("operatord_contract", ROOT / "tools" / "operatord.py")
     monkeypatch.setattr(operatord, "HARNESS_DIR", tmp_path / "harness")

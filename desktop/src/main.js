@@ -661,12 +661,18 @@ async function ensureRuntimeRequiredDepsReady() {
   const wslSolarHarness = shellTokenForWsl(`${wslHarnessBase}/solar-harness`);
   const wslSolarHarnessScript = shellTokenForWsl(`${wslHarnessBase}/solar-harness.sh`);
   const wslSolarBinary = shellTokenForWsl(`${wslHarnessBase}/bin/solar`);
+  const wslPmDispatch = shellTokenForWsl(`${wslHarnessBase}/tools/pm_dispatch.py`);
+  const windowsDispatchReadiness =
+    ` && codex login status 2>&1` +
+    ` && python3 ${wslPmDispatch} route-preflight --runtime codex ` +
+    `--expect-provider openai --roles planner,builder,evaluator --pretty 2>&1`;
   const cmd =
     IS_WIN
-      ? `if [ -x ${wslSolarHarness} ]; then ${wslSolarHarness} status --all 2>&1; ` +
+      ? `( if [ -x ${wslSolarHarness} ]; then ${wslSolarHarness} status --all 2>&1; ` +
         `elif [ -x ${wslSolarBinary} ]; then ${wslSolarBinary} harness status --all 2>&1; ` +
         `elif [ -f ${wslSolarHarnessScript} ]; then bash ${wslSolarHarnessScript} status --all 2>&1; ` +
-        `else echo "missing solar-harness entrypoint in ${wslHarnessHome}"; fi`
+        `else echo "missing solar-harness entrypoint in ${wslHarnessHome}"; exit 127; fi )` +
+        windowsDispatchReadiness
       : nonWindowsFallback;
   const r = IS_WIN ? wslExec(cmd, 120000) : (() => {
     try {
