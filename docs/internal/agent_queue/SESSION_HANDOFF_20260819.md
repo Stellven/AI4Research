@@ -888,3 +888,29 @@ thing under test.
 The grounded compile itself (`compile_grounded_report`) is still not wired.
 That was the original task 2 and it now rests on grounded claims actually being
 produced, which the live run at this commit is testing.
+
+### Result: the prompt did the work, the retry loop was never needed
+
+First run at the grounding commit, `evidence_synthesis`:
+
+    claims 6, rejected 0, attempts_used 1 of 3
+    claim-001  quotes 2  supported_by rag-01  coverage 0.929
+    claim-002  quotes 1  supported_by rag-02  coverage 0.926
+    claim-003  quotes 1  supported_by rag-02  coverage 0.957
+    claim-004  quotes 1  supported_by rag-03  coverage 0.808
+    claim-005  quotes 1  supported_by rag-05  coverage 0.700
+    claim-006  quotes 2  supported_by rag-05  coverage 0.500
+
+Recomputed independently: unsupported 0 of 6 = 0.00 against Solar's 0.05 limit,
+4 distinct sources, and the workflow gate passes on its own recomputation.
+
+Before: 5 claims, term coverage 0.12-0.43, two unsupported, one with no quote.
+After: 6 claims, coverage 0.50-0.96, none unsupported, all quoted.
+
+The bounded repair loop cost nothing because it never fired. Telling the model
+what the test actually is was sufficient. That is the same lesson as every other
+defect today: the model was not the problem, it was being judged against a test
+nobody had told it about, exactly like the revision preservation set.
+
+So `unsupported_rate: 0.0` in research_eval.json is now true by construction AND
+verified by measurement, rather than a constant nobody had checked.
