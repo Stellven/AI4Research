@@ -1443,13 +1443,23 @@ class ResearchModelService:
                             {
                                 "conclusion_id": "conclusion-001",
                                 "text": "bounded conclusion",
-                                "evidence_ids": ["one or more exact claim_id values"],
+                                # CLAIM ids, not source ids. Each grounded_claim
+                                # carries its OWN `evidence_ids` holding source
+                                # ids, so the same field name means two different
+                                # id spaces one level apart. Showing the shape
+                                # here is what stops the writer citing the wrong.
+                                "evidence_ids": ["claim-001", "claim-002"],
                             }
                         ],
                     },
                     "limitations": [],
                 },
                 "quality_requirements": [
+                    "Every conclusion's evidence_ids must be claim_id values taken from "
+                    "grounded_claims, such as claim-001. Never put a source id there, such "
+                    "as openalex-rag-01. Each grounded_claim has its own evidence_ids field "
+                    "listing the SOURCES it rests on; that is a different id space and a "
+                    "conclusion citing it is rejected.",
                     "The body must be non-empty, clearly structured Markdown and directly answer the whole request.",
                     "Include an explicit Method or Evidence Method section that explains how supplied sources were used.",
                     "When grounded claims cite two or more distinct source ids, the report must preserve at least two distinct cited sources.",
@@ -1516,7 +1526,12 @@ class ResearchModelService:
                             {
                                 "conclusion_id": "conclusion-001",
                                 "text": "bounded revised conclusion",
-                                "evidence_ids": ["one or more exact claim_id values"],
+                                # CLAIM ids, not source ids. Each grounded_claim
+                                # carries its OWN `evidence_ids` holding source
+                                # ids, so the same field name means two different
+                                # id spaces one level apart. Showing the shape
+                                # here is what stops the writer citing the wrong.
+                                "evidence_ids": ["claim-001", "claim-002"],
                             }
                         ],
                     },

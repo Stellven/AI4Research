@@ -166,7 +166,15 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
             raise ResearchOperatorError("Every major report conclusion must include evidence_ids", error_type="unsupported_report_claim")
         invalid = sorted(set(evidence_ids) - claim_ids)
         if invalid:
-            raise ResearchOperatorError(f"Report conclusion references unknown synthesis evidence: {', '.join(invalid)}", error_type="unsupported_report_claim")
+            # Name what was expected. The usual cause is a SOURCE id cited where
+            # a CLAIM id belongs, because grounded_claims carry their own
+            # `evidence_ids` of source ids under the same field name.
+            raise ResearchOperatorError(
+                "Report conclusion references unknown synthesis evidence: "
+                f"{', '.join(invalid)}. Conclusions must cite claim_id values from "
+                f"evidence_synthesis, one of: {', '.join(sorted(claim_ids)) or '<none>'}",
+                error_type="unsupported_report_claim",
+            )
         normalized_conclusions.append({
             "conclusion_id": str(item.get("conclusion_id") or f"conclusion-{index + 1:03d}"),
             "text": str(item.get("text") or ""),
