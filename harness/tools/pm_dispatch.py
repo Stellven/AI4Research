@@ -908,10 +908,11 @@ def _capsule_submit_metadata(node: dict[str, Any] | None) -> dict[str, Any]:
         or node.get("capability_capsule_id")
         or node.get("execution_capsule_id")
         or node.get("capsule_plan")
+        or node.get("capsule_plan_ir")
     ):
         return {}
-    capsule_plan = dict(node.get("capsule_plan") or {})
-    return {
+    capsule_plan = dict(node.get("capsule_plan") or node.get("capsule_plan_ir") or {})
+    metadata = {
         "capability_native": bool(node.get("capability_native", True)),
         "capability_capsule_id": node.get("capability_capsule_id") or capsule_plan.get("capability_capsule_id"),
         "dispatch_task_type": node.get("dispatch_task_type") or capsule_plan.get("dispatch_task_type"),
@@ -924,6 +925,42 @@ def _capsule_submit_metadata(node: dict[str, Any] | None) -> dict[str, Any]:
             or []
         ),
     }
+    if (
+        metadata["capability_capsule_id"] == "cap.skill-execution-bridge"
+        and not metadata["selected_skills"]
+    ):
+        # Persisted graphs can outlive the planner/compiler version that
+        # created them. An empty generic skill bridge is not admissible, so
+        # repair it at the final dispatch boundary using the logical
+        # operator's stable governed capsule.
+        try:
+            from capability_capsules import default_capability_plan_for_logical_operator
+
+            fallback = default_capability_plan_for_logical_operator(
+                str(metadata.get("logical_operator") or ""),
+                request_type=str(metadata.get("dispatch_task_type") or ""),
+                node=node,
+                goal_text=str(node.get("goal") or ""),
+            )
+        except Exception:
+            fallback = {}
+        fallback_capsule = str(fallback.get("capability_capsule_id") or "")
+        if fallback_capsule and fallback_capsule != "cap.skill-execution-bridge":
+            metadata.update(
+                {
+                    "capability_native": bool(fallback.get("capability_native", True)),
+                    "capability_capsule_id": fallback_capsule,
+                    "dispatch_task_type": str(
+                        fallback.get("dispatch_task_type")
+                        or metadata.get("dispatch_task_type")
+                        or ""
+                    ),
+                    "selected_skills": list(fallback.get("selected_skills") or []),
+                    "capsule_override_reason": "invalid_empty_skill_bridge_recovered",
+                }
+            )
+            metadata["capsule_plan"] = {**capsule_plan, **fallback}
+    return metadata
 
 
 EVALUATOR_VERIFICATION_TASK_TYPES = {

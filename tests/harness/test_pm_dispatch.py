@@ -365,6 +365,28 @@ def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
         assert envelope["selected_skills"] == ["python_implementation"]
 
 
+def test_capsule_submit_repairs_persisted_empty_grounded_compiler_bridge():
+    pm_dispatch = _load_pm_dispatch()
+
+    metadata = pm_dispatch._capsule_submit_metadata(
+        {
+            "id": "R4",
+            "goal": "Compile the grounded synthesis into a governed Chinese report.",
+            "logical_operator": "GroundedResearchCompiler",
+            "dispatch_task_type": "research",
+            "capability_capsule_id": "cap.skill-execution-bridge",
+            "capsule_plan_ir": {
+                "capability_capsule_id": "cap.skill-execution-bridge",
+                "selected_skills": [],
+            },
+        }
+    )
+
+    assert metadata["capability_capsule_id"] == "cap.requirement-research-synthesizer"
+    assert metadata["dispatch_task_type"] == "research"
+    assert metadata["capsule_override_reason"] == "invalid_empty_skill_bridge_recovered"
+
+
 def test_cmd_submit_canonicalizes_analysis_audit_node_before_submit(monkeypatch):
     pm_dispatch = _load_pm_dispatch()
     with tempfile.TemporaryDirectory() as td:

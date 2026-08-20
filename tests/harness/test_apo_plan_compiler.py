@@ -87,6 +87,37 @@ def test_read_only_audit_plan_does_not_require_patch_diff():
     assert "handoff_md exists" in requirements
 
 
+def test_empty_skill_bridge_falls_back_to_grounded_research_capsule():
+    node = {
+        "id": "R4",
+        "goal": "Compile the grounded synthesis through the deterministic research compiler boundary.",
+        "logical_operator": "GroundedResearchCompiler",
+        "type": "research",
+        "capability_capsule_id": "cap.skill-execution-bridge",
+        "dispatch_task_type": "research",
+        "selected_skills": [],
+        "write_scope": ["workspace/research/report/"],
+    }
+
+    plan = apo.build_capsule_plan_node(
+        node,
+        request_type="research",
+        lane_hint="research",
+        registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
+    )
+
+    assert plan["capability_capsule_id"] == "cap.requirement-research-synthesizer"
+    assert plan["dispatch_task_type"] == "research"
+    assert plan["selected_skills"] == []
+    capability_stages = [
+        stage for stage in plan["stages"] if stage["stage_kind"] == "capability"
+    ]
+    assert len(capability_stages) == 1
+    assert capability_stages[0]["capability_capsule_id"] == (
+        "cap.requirement-research-synthesizer"
+    )
+
+
 def test_build_physical_plan_for_capsule_node_prefers_capsule_operator():
     capsule_plan_node = {
         "node_id": "S2",

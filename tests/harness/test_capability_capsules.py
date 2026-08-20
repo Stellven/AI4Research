@@ -16,6 +16,19 @@ sys.path.insert(0, str(ROOT / "lib"))
 import capability_capsules as caps
 
 
+def test_grounded_research_compiler_uses_governed_synthesis_capsule():
+    plan = caps.default_capability_plan_for_logical_operator(
+        "GroundedResearchCompiler",
+        request_type="research",
+        node={"goal": "Compile a grounded Chinese research report."},
+        registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
+    )
+
+    assert plan["capability_capsule_id"] == "cap.requirement-research-synthesizer"
+    assert plan["dispatch_task_type"] == "research"
+    assert plan["selected_skills"] == []
+
+
 def _write_yaml(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")

@@ -60,6 +60,7 @@ DEFAULT_CAPSULE_BY_LOGICAL_OPERATOR = {
     "Critic": "cap.requirement-compiler-verification",
     "ResearchScout": "cap.research-retrieval",
     "ResearchSynthesizer": "cap.requirement-research-synthesizer",
+    "GroundedResearchCompiler": "cap.requirement-research-synthesizer",
     "ArtifactCurator": "cap.requirement-research-synthesizer",
     "ScientificLiteratureDiscoverer": "cap.research-literature-discover",
     "ScientificPaperIngestor": "cap.research-paper-ingest",
@@ -91,6 +92,7 @@ DEFAULT_TASK_TYPE_BY_LOGICAL_OPERATOR = {
     "Critic": "review",
     "ResearchScout": "knowledge-extraction",
     "ResearchSynthesizer": "research",
+    "GroundedResearchCompiler": "research",
     "ArtifactCurator": "evidence",
     "ScientificLiteratureDiscoverer": "scientific-research",
     "ScientificPaperIngestor": "scientific-research",
@@ -1059,6 +1061,7 @@ def default_capability_plan_for_logical_operator(
     elif str(logical_operator or "") in {
         "ResearchScout",
         "ResearchSynthesizer",
+        "GroundedResearchCompiler",
         "ArtifactCurator",
     }:
         # Named research operators have explicit, governed artifact contracts.

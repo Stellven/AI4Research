@@ -532,19 +532,28 @@ def build_capsule_plan_node(
         else ARTIFACT_ADAPTER_REGISTRY_PATH
     )
     base_plan = dict(node.get("capsule_plan") or {})
-    if not base_plan and str(node.get("capability_capsule_id") or "").strip():
+    declared_capsule_id = str(node.get("capability_capsule_id") or "").strip()
+    declared_skills = list(node.get("selected_skills") or node.get("required_skills") or [])
+    invalid_empty_skill_bridge = (
+        declared_capsule_id == "cap.skill-execution-bridge" and not declared_skills
+    )
+    if not base_plan and declared_capsule_id and not invalid_empty_skill_bridge:
         # A certified planner node has already selected its admitted capsule
         # and task type.  Re-classifying the goal here can silently replace
-        # that identity with a different default capsule.
+        # that identity with a different default capsule.  The generic skill
+        # bridge is the exception: its contract requires at least one selected
+        # skill, so an empty declaration is not executable and must fall back
+        # to the logical operator's governed capsule instead of reaching the
+        # runtime admission gate in a permanently retrying state.
         base_plan = {
-            "capability_capsule_id": str(node.get("capability_capsule_id") or "").strip(),
+            "capability_capsule_id": declared_capsule_id,
             "dispatch_task_type": str(
                 node.get("dispatch_task_type")
                 or node.get("task_type")
                 or node.get("type")
                 or ""
             ).strip(),
-            "selected_skills": list(node.get("selected_skills") or []),
+            "selected_skills": declared_skills,
             "selection_mode": "planner_declared",
         }
     if not base_plan:
