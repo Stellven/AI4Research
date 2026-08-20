@@ -2601,6 +2601,20 @@ annotate_requirement_matrix_for_planning() {
   fi
 }
 
+refresh_terminal_requirement_coverage() {
+  local sid="$1"
+  local coverage_tool="$HARNESS_DIR/lib/requirement_coverage.py"
+  [[ -f "$SPRINTS_DIR/${sid}.requirement_ir.json" ]] || return 0
+  [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]] || return 0
+  [[ -f "$coverage_tool" ]] || return 0
+  python3 "$coverage_tool" evaluate \
+    --sid "$sid" \
+    --sprints-dir "$SPRINTS_DIR" \
+    --requested-verdict pass \
+    --write \
+    --require-pass >/dev/null
+}
+
 # D4: 从 eval.json 提取失败项 (短路)
 extract_fail_info() {
   local sid="$1"
@@ -5389,6 +5403,15 @@ else:
       log "${Y}[handle_passed] consumed ${consumed_count} stale queue item(s) for terminal sprint ${sid}${N}"
       emit_event "$sid" "terminal_queue_consumed" "coordinator" "{\"count\":${consumed_count}}"
     fi
+  fi
+
+  # The graph closeout is authoritative only after closure.json is committed.
+  # The node-verdict refresh can run one instant earlier and leave the durable
+  # acceptance verdict stuck at IN_PROGRESS. Refresh again here so exports,
+  # parent runs, and the desktop all observe the same terminal PASS contract.
+  if ! refresh_terminal_requirement_coverage "$sid"; then
+    log "${R}[coverage-closeout] BLOCK finalize: $sid — terminal acceptance coverage did not pass${N}"
+    return 1
   fi
 
   # P0 knowledge closure gate: finalized sprint must have accepted.md,
