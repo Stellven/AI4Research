@@ -31,6 +31,14 @@ from typing import Any
 
 SCHEMA = "solar.grounded_synthesis_plan.v2"
 
+# The compiler's own grounding-token rule (grounded_synthesis._TOKEN_RE),
+# applied here so a link this module emits can never fail that check there.
+_GROUNDING_TOKEN_RE = re.compile(r"[A-Za-z0-9_\-]{3,}|[一-鿿]{2,}")
+
+
+def _grounding_tokens(text: str) -> set[str]:
+    return {token.lower() for token in _GROUNDING_TOKEN_RE.findall(str(text or ""))}
+
 
 class SynthesisPlanError(Exception):
     """The claims cannot be expressed as a valid plan, and nothing was faked."""
@@ -159,7 +167,11 @@ def build_plan(
                     f"{claim_id} cites evidence absent from the source pack: "
                     + ", ".join(sorted(missing))
                 ),
-                "evidence_ids": sorted(missing),
+                # The ids stay in the text only: a gap's evidence_ids are
+                # resolved against the pack by the compiler, and an id that is
+                # absent from the pack -- the very thing this gap reports --
+                # aborts the whole compile as evidence_id_unknown.
+                "evidence_ids": [],
             })
         if not present:
             continue
@@ -177,16 +189,37 @@ def build_plan(
             })
             continue
 
+        links: list[dict[str, Any]] = [
+            {"evidence_id": eid, "relation": "supports", "quote": quote}
+            for eid, quote in present
+        ]
+        # Disagreeing sources, labelled as such. The synthesis operator only
+        # records a contradicted_by row whose quote is verbatim in a validated
+        # source, so nothing here is guessed; rows whose source is absent from
+        # the pack, already linked, or whose quote falls outside the compiler's
+        # bounds are dropped rather than allowed to abort the compile.
+        linked_ids = {eid for eid, _quote in present}
+        claim_tokens = _grounding_tokens(text)
+        for row in claim.get("contradicted_by") or []:
+            if not isinstance(row, dict):
+                continue
+            quote = " ".join(str(row.get("quote") or "").split())
+            if not 20 <= len(quote) <= 2000:
+                continue
+            # The compiler refuses any link whose quote shares no vocabulary
+            # with the claim; a disagreement that distant is dropped here with
+            # the same rule rather than aborting the compile there.
+            if not claim_tokens & _grounding_tokens(quote):
+                continue
+            for eid in evidence_index.get(str(row.get("source_id") or "").strip()) or []:
+                if eid in linked_ids:
+                    continue
+                linked_ids.add(eid)
+                links.append({"evidence_id": eid, "relation": "contradicts", "quote": quote})
         usable.append((_claim_theme(claim), {
             "text": text,
             "uncertainty": uncertainty,
-            "evidence_links": [
-                # Only supporting links are asserted: the upstream claim model
-                # records supporting ids only. contradicts/qualifies belong
-                # here and are left to claim_compiler rather than guessed.
-                {"evidence_id": eid, "relation": "supports", "quote": quote}
-                for eid, quote in present
-            ],
+            "evidence_links": links,
         }))
 
     # One section per theme, in the order the themes first appear, so the report

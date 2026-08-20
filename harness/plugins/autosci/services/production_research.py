@@ -1392,8 +1392,24 @@ class ResearchModelService:
                                     "quote": "verbatim sentence copied from that source's content_summary",
                                 }
                             ],
+                            "theme": "short topical section heading, shared by related claims",
+                            # Which validated sources DISAGREE with the claim,
+                            # quoted verbatim. Empty is a finding: no validated
+                            # source contradicts it.
+                            "contradicted_by": [
+                                {
+                                    "source_id": "exact source_id of a DISAGREEING validated source",
+                                    "quote": "verbatim sentence from that source that conflicts with this claim",
+                                }
+                            ],
                             "uncertainty": "low|medium|high",
                             "limitations": [],
+                        }
+                    ],
+                    "contradictions": [
+                        {
+                            "claim_ids": ["claim-001", "claim-002"],
+                            "description": "how these claims conflict with each other, if any do",
                         }
                     ],
                     "limitations": [],
@@ -1428,6 +1444,17 @@ class ResearchModelService:
                     "cited source. Do not compute, round, or infer figures.",
                     "Do not use absolute wording such as all, always, never, every, none, "
                     "proves, guarantees, or cures: a claim scoped that broadly is refused.",
+                    "Give each claim a short theme naming the topic it belongs to, and use "
+                    "the SAME theme string for claims that belong in one report section.",
+                    "Actively check every claim against every OTHER validated source for "
+                    "disagreement. When a validated source conflicts with a claim, record it "
+                    "in contradicted_by with the verbatim conflicting sentence copied from "
+                    "that source's content_summary; leave contradicted_by empty only when no "
+                    "validated source disagrees.",
+                    "Check the claims against each other: record any pair that cannot both "
+                    "be true, or that report conflicting figures for the same quantity, in "
+                    "the top-level contradictions array. An empty array asserts the claims "
+                    "are mutually consistent.",
                 ],
                 # Populated only on a repair attempt, listing the claims that were
                 # refused and exactly why, so the retry is targeted rather than a
@@ -1478,6 +1505,9 @@ class ResearchModelService:
                     "Any recommendation, benchmark design, operational practice, or industry implication that is synthesized beyond a source's direct wording must be explicitly labeled as synthesis, proposed practice, or conditional inference.",
                     "Preserve the uncertainty and limitation qualifiers from grounded_claims; do not expand a source-specific finding into a general guarantee.",
                     "State evidence limitations without inventing methods or conclusions.",
+                    "Where a grounded_claim records contradicted_by sources, present that "
+                    "disagreement explicitly in the report body, naming the disagreeing "
+                    "source id, instead of omitting or averaging it away.",
                 ],
             }
         elif node_id == "independent_review":

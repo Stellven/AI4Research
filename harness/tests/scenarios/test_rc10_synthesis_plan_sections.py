@@ -110,3 +110,41 @@ def test_alternate_label_keys_are_accepted() -> None:
         evidence_index=INDEX,
     )
     assert _titles(plan) == ["Retrieval", "Generation"]
+
+
+def test_contradicted_by_becomes_a_labelled_contradicts_link() -> None:
+    """Disagreement travels as a first-class relation, not a lost annotation."""
+    claim = _claim(
+        "c1",
+        "s1",
+        contradicted_by=[
+            {"source_id": "s2", "quote": "Retrieval quality does not improve under this claim's conditions."},
+            # Absent from the pack: dropped, never allowed to abort the compile.
+            {"source_id": "missing-source", "quote": "Retrieval quality is disputed by this absent source."},
+            # Too short for the compiler's quote bounds: dropped for the same reason.
+            {"source_id": "s3", "quote": "No."},
+        ],
+    )
+    plan = build_plan(claims=[claim], evidence_index=INDEX)
+    links = plan["sections"][0]["claims"][0]["evidence_links"]
+    relations = {(link["evidence_id"], link["relation"]) for link in links}
+    assert ("ev_1", "supports") in relations
+    assert ("ev_2", "contradicts") in relations
+    assert not any(link["evidence_id"] == "ev_3" for link in links)
+    assert len(links) == 2
+
+
+def test_missing_citation_gap_names_ids_in_text_only() -> None:
+    """A gap about an absent id must not itself cite the absent id.
+
+    The compiler resolves every gap evidence_id against the pack and raises
+    evidence_id_unknown for one it does not contain -- which is exactly what a
+    missing-citation gap reports, so carrying the id in the ids field aborts
+    the whole compile.
+    """
+    claim = _claim("c1", "s1")
+    claim["evidence_ids"] = ["s1", "absent-source"]
+    plan = build_plan(claims=[claim], evidence_index=INDEX)
+    gap = next(item for item in plan["evidence_gaps"] if "absent" in item["text"])
+    assert gap["evidence_ids"] == []
+    assert "absent-source" in gap["text"]

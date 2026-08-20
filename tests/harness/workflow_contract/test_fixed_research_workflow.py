@@ -536,9 +536,12 @@ def test_codex_research_service_uses_fresh_schema_bound_context_and_scrubs_api_k
                     "text": "Bounded result",
                     "evidence_ids": ["e1"],
                     "evidence_quotes": [{"source_id": "e1", "quote": "Evidence e1."}],
+                    "theme": "",
+                    "contradicted_by": [],
                     "uncertainty": "low",
                     "limitations": [],
                 }],
+                "contradictions": [],
             }) + "\n", encoding="utf-8")
             return '{"type":"turn.completed"}\n', None
 

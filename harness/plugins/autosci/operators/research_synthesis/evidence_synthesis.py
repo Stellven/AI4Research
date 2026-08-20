@@ -78,14 +78,27 @@ def _normalize_quotes(
     Dropping is deliberate: a quote that does not appear in its source is not
     evidence, and repairing it would mean choosing the support ourselves.
     """
+    return _verified_source_quotes(
+        item.get("evidence_quotes"),
+        allowed_ids=set(evidence_ids),
+        source_text_by_id=source_text_by_id,
+    )
+
+
+def _verified_source_quotes(
+    rows: Any,
+    *,
+    allowed_ids: set[str],
+    source_text_by_id: dict[str, str],
+) -> list[dict[str, str]]:
     quotes: list[dict[str, str]] = []
     seen: set[str] = set()
-    for raw in item.get("evidence_quotes") or []:
+    for raw in rows or []:
         if not isinstance(raw, dict):
             continue
         source_id = str(raw.get("source_id") or "").strip()
         quote = " ".join(str(raw.get("quote") or "").split())
-        if not source_id or not quote or source_id not in evidence_ids:
+        if not source_id or not quote or source_id not in allowed_ids:
             continue
         haystack = " ".join(str(source_text_by_id.get(source_id) or "").split())
         if not haystack or quote not in haystack:
@@ -123,6 +136,18 @@ def _normalize_claims(
                     item,
                     claim_id=str(item.get("claim_id") or f"claim-{index + 1:03d}"),
                     evidence_ids=evidence_ids,
+                    source_text_by_id=source_text_by_id,
+                ),
+                # The section this claim belongs to; empty collapses to the
+                # single findings section downstream rather than inventing one.
+                "theme": " ".join(str(item.get("theme") or "").split()),
+                # A source that disagrees with the claim, kept only when the
+                # disagreeing sentence is genuinely verbatim in a VALIDATED
+                # source -- the same discipline as supporting quotes, so a
+                # contradiction cannot be invented any more than support can.
+                "contradicted_by": _verified_source_quotes(
+                    item.get("contradicted_by"),
+                    allowed_ids=accepted_ids,
                     source_text_by_id=source_text_by_id,
                 ),
                 "uncertainty": str(item.get("uncertainty") or "unknown"),
@@ -232,6 +257,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     grounding_feedback: list[dict[str, Any]] = []
     best_claims: list[dict[str, Any]] = []
     best_rejected: list[dict[str, Any]] = []
+    best_response: dict[str, Any] = {}
     response: dict[str, Any] = {}
     attempts_used = 0
     for attempt in range(1, MAX_SYNTHESIS_ATTEMPTS + 1):
@@ -252,14 +278,30 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         # Keep the strongest attempt, so a worse retry cannot lose ground that a
         # previous attempt already established.
         if len(kept) > len(best_claims):
-            best_claims, best_rejected = kept, rejected
+            best_claims, best_rejected, best_response = kept, rejected, response
         if kept and not rejected:
-            best_claims, best_rejected = kept, rejected
+            best_claims, best_rejected, best_response = kept, rejected, response
             break
         grounding_feedback = rejected
 
     claims = best_claims
     rejected_claims = best_rejected
+    # Claim-pair contradictions from the SAME attempt the published claims came
+    # from; pairs naming an unpublished claim are dropped rather than shipped
+    # pointing at nothing.
+    published_ids = {str(item.get("claim_id") or "") for item in claims}
+    claim_contradictions = [
+        {
+            "claim_ids": [str(value) for value in item.get("claim_ids") or []],
+            "description": str(item.get("description") or "").strip(),
+        }
+        for item in (best_response.get("contradictions") or [])
+        if isinstance(item, dict)
+        and str(item.get("description") or "").strip()
+        and len([str(value) for value in item.get("claim_ids") or []]) >= 2
+        and set(str(value) for value in item.get("claim_ids") or []) <= published_ids
+    ]
+    source_disagreement_count = sum(len(item.get("contradicted_by") or []) for item in claims)
     if not claims:
         raise ResearchOperatorError(
             "model_generate returned no claim that both quotes its source verbatim and is supported by it",
@@ -279,6 +321,15 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         # What was refused and why. A synthesis that quietly dropped weak claims
         # would look identical to one that never made any.
         "rejected_claims": rejected_claims,
+        # The answer to "do the claims contradict", stated rather than assumed.
+        # Source disagreements carry verbatim quotes verified above; claim-pair
+        # entries are the model's own consistency check over the published set,
+        # and an empty list is its assertion of mutual consistency.
+        "contradiction_analysis": {
+            "checked": True,
+            "source_disagreement_count": source_disagreement_count,
+            "claim_pair_contradictions": claim_contradictions,
+        },
         "grounding_policy": {
             "requires_verbatim_quote": True,
             "requires_claim_support_assessment": True,

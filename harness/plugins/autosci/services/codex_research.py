@@ -109,17 +109,55 @@ def _response_schema(node_id: str) -> dict[str, Any]:
                             "additionalProperties": False,
                         },
                     },
+                    # A short topical heading grouping related claims into one
+                    # report section. Empty means unthemed; the report then
+                    # falls back to a single findings section rather than a
+                    # section the model never named.
+                    "theme": {"type": "string"},
+                    # Validated sources that DISAGREE with this claim, each
+                    # with the verbatim disagreeing sentence. Empty when no
+                    # validated source contradicts the claim -- which is an
+                    # answer, not an omission. additionalProperties is False
+                    # on this schema, so asking for disagreement in the prompt
+                    # does nothing until the field exists here.
+                    "contradicted_by": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "source_id": {"type": "string", "minLength": 1},
+                                "quote": {"type": "string", "minLength": 1},
+                            },
+                            "required": ["source_id", "quote"],
+                            "additionalProperties": False,
+                        },
+                    },
                     "uncertainty": {"enum": ["low", "medium", "high", "unknown"]},
                     "limitations": limitations,
                 },
                 "required": [
                     "claim_id", "text", "evidence_ids", "evidence_quotes",
+                    "theme", "contradicted_by",
                     "uncertainty", "limitations",
                 ],
                 "additionalProperties": False,
             },
         }
-        required.append("claims")
+        # Claim-pair inconsistencies within this synthesis. Empty means the
+        # model checked and found none.
+        properties["contradictions"] = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "claim_ids": _string_array(),
+                    "description": {"type": "string", "minLength": 1},
+                },
+                "required": ["claim_ids", "description"],
+                "additionalProperties": False,
+            },
+        }
+        required.extend(["claims", "contradictions"])
     elif node_id in {"report_draft", "report_revision"}:
         properties["report"] = {
             "type": "object",

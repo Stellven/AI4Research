@@ -239,7 +239,7 @@ def _fake_services() -> dict:
                     "url": "https://example.test/alpha",
                     "provider": "fixture",
                     "metadata": {"kind": "paper"},
-                    "summary": "English content.",
+                    "summary": "Alpha evidence supports the synthesis.",
                 },
                 {
                     "source_id": "source-beta",
@@ -247,7 +247,7 @@ def _fake_services() -> dict:
                     "canonical_id": "doi:10.0000/beta",
                     "provider": "fixture",
                     "metadata": {"kind": "report"},
-                    "summary": "中文内容.",
+                    "summary": "Beta evidence preserves 中文 content faithfully.",
                 },
             ],
             "provider_usage": [{"provider": "fake-search", "model": "none", "usage_kind": "provider_api"}],
@@ -263,12 +263,14 @@ def _fake_services() -> dict:
                         "claim_id": "claim-alpha",
                         "text": "Alpha evidence supports the synthesis.",
                         "evidence_ids": ["source-alpha"],
+                        "evidence_quotes": [{"source_id": "source-alpha", "quote": "Alpha evidence supports the synthesis."}],
                         "uncertainty": "low",
                     },
                     {
                         "claim_id": "claim-beta",
-                        "text": "中文证据 is preserved.",
+                        "text": "Beta evidence preserves 中文 content faithfully.",
                         "evidence_ids": ["source-beta"],
+                        "evidence_quotes": [{"source_id": "source-beta", "quote": "Beta evidence preserves 中文 content faithfully."}],
                         "uncertainty": "medium",
                     },
                 ],
@@ -1534,3 +1536,79 @@ def test_reviewer_process_commentary_never_ships_as_a_report_limitation(tmp_path
     # used to deadlock this loop.
     assert len(seen_preservation_requirements) == 2
     assert all(review_note not in required for required in seen_preservation_requirements)
+
+
+def test_synthesis_verifies_contradictions_and_carries_themes(tmp_path: Path, monkeypatch) -> None:
+    """Disagreement is verified with the same discipline as support.
+
+    A contradicted_by row survives only when its quote is verbatim in a
+    validated source; claim-pair contradictions survive only when every named
+    claim was actually published. Nothing a model asserts about disagreement
+    ships unverified.
+    """
+    monkeypatch.chdir(tmp_path)
+    validation = {
+        "schema": "research_synthesis.source_validation.v1",
+        "node_id": "source_validation",
+        "task_id": "task-research-synthesis",
+        "run_id": "run-research-synthesis",
+        "workflow_id": "research_synthesis_v1",
+        "accepted": [
+            {"source_id": "src-a", "title": "A", "content_summary": "Retrieval quality improves with reranking in benchmark studies."},
+            {"source_id": "src-b", "title": "B", "content_summary": "Reranking does not improve retrieval quality on long-tail queries."},
+        ],
+    }
+    path = tmp_path / "inputs/source_validation.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(validation), encoding="utf-8")
+    refs = [{
+        "artifact_id": "source_validation",
+        "path": str(path.relative_to(tmp_path)),
+        "schema": validation["schema"],
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }]
+
+    def model(**kwargs) -> dict:
+        return {
+            "provider": "writer",
+            "model": "writer-model",
+            "claims": [{
+                "claim_id": "claim-001",
+                "text": "Retrieval quality improves with reranking in benchmark studies.",
+                "evidence_ids": ["src-a"],
+                "evidence_quotes": [{"source_id": "src-a", "quote": "Retrieval quality improves with reranking in benchmark studies."}],
+                "theme": "Reranking effects",
+                "contradicted_by": [
+                    {"source_id": "src-b", "quote": "Reranking does not improve retrieval quality on long-tail queries."},
+                    # Not verbatim anywhere: must be dropped, not published.
+                    {"source_id": "src-b", "quote": "Reranking is entirely useless."},
+                ],
+                "uncertainty": "medium",
+                "limitations": [],
+            }],
+            "contradictions": [
+                {"claim_ids": ["claim-001", "claim-001b"], "description": "names an unpublished claim; must be dropped"},
+            ],
+            "limitations": [],
+        }
+
+    result = execute_operator(
+        _request(
+            tmp_path,
+            "evidence_synthesis",
+            payload={"task_contract": _task_contract(), "seed_snapshot": {"schema": "research_synthesis.seed_snapshot.v1", "seeds": []}},
+            refs=refs,
+        ),
+        services={"model_generate": model},
+    )
+    assert result["status"] == "completed", result.get("errors")
+    artifact = _read_artifact(tmp_path, result)
+    claim = artifact["claims"][0]
+    assert claim["theme"] == "Reranking effects"
+    assert claim["contradicted_by"] == [
+        {"source_id": "src-b", "quote": "Reranking does not improve retrieval quality on long-tail queries."}
+    ]
+    analysis = artifact["contradiction_analysis"]
+    assert analysis["checked"] is True
+    assert analysis["source_disagreement_count"] == 1
+    assert analysis["claim_pair_contradictions"] == []
