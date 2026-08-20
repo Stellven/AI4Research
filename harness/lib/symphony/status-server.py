@@ -2140,6 +2140,19 @@ def _select_result_index(rows: list[dict]) -> int:
     if not rows:
         return -1
 
+    # Operator envelopes create empty result placeholders before execution and
+    # planner closeout writes ``*.pm-result.*`` process transcripts. Neither is
+    # the user's deliverable. Promoting either one makes an active PRD/planning
+    # run look complete and exposes a 0-byte "Open result" button.
+    eligible = [
+        index
+        for index, row in enumerate(rows)
+        if int(row.get("size") or 0) > 0
+        and ".pm-result." not in str(row.get("name") or "").lower()
+    ]
+    if not eligible:
+        return -1
+
     def kind(row: dict) -> str:
         return str(row.get("kind") or "").lower()
 
@@ -2167,11 +2180,9 @@ def _select_result_index(rows: list[dict]) -> int:
         lambda r: produced(r),
         lambda r: r.get("stage") == "report" and kind(r) in {"html", "htm"},
         lambda r: r.get("stage") == "report" and renderable(r),
-        lambda r: bool(r.get("primary")),
-        lambda r: True,
     )
     for predicate in tiers:
-        matched = [i for i, row in enumerate(rows) if predicate(row)]
+        matched = [i for i in eligible if predicate(rows[i])]
         if matched:
             # A real result is the most substantial / most recent of its tier.
             return max(

@@ -119,6 +119,31 @@ def test_workdir_report_outranks_larger_planner_report(tmp_path: Path) -> None:
     assert selected[0]["source"] == "output"
 
 
+def test_planner_placeholder_is_never_promoted_to_user_result(tmp_path: Path) -> None:
+    module, _harness, sprints = _load_status_server(tmp_path)
+    sid = "sprint-active-planner"
+    _write(sprints / f"{sid}.prd.md", "# PRD\n\nThe run is still active.\n")
+    _write(sprints / f"{sid}.N0.pm-result.md", "")
+
+    items = module._discover_sprint_deliverables(sid)
+
+    assert not any(item["result"] for item in items)
+
+
+def test_nonempty_planner_transcript_is_process_evidence_not_user_result(tmp_path: Path) -> None:
+    module, _harness, sprints = _load_status_server(tmp_path)
+    sid = "sprint-planner-transcript"
+    _write(sprints / f"{sid}.prd.md", "# PRD\n\nThe run is still active.\n")
+    _write(
+        sprints / f"{sid}.N0.pm-result.md",
+        "# Planner transcript\n\nInternal plan closeout only.\n",
+    )
+
+    items = module._discover_sprint_deliverables(sid)
+
+    assert not any(item["result"] for item in items)
+
+
 def test_user_deliverable_outranks_larger_supporting_evidence(tmp_path: Path) -> None:
     """A verification artifact must not replace the requested user output.
 
