@@ -528,6 +528,7 @@ def test_codex_research_service_uses_fresh_schema_bound_context_and_scrubs_api_k
                     "claim_id": "claim-1",
                     "text": "Bounded result",
                     "evidence_ids": ["e1"],
+                    "evidence_quotes": [{"source_id": "e1", "quote": "Evidence e1."}],
                     "uncertainty": "low",
                     "limitations": [],
                 }],
@@ -899,6 +900,11 @@ def test_composed_fixed_dispatch_envelope_adapter_and_solar_a1_closeout_boundary
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     graph, graph_path, _sprints = _graph(tmp_path, monkeypatch)
+    # The deterministic gate runs as a subprocess and locates the sprint tree
+    # through this variable, exactly as the UAT runtime env does; without it
+    # the gate resolves `sprints/<sid>` under the harness and fails a healthy
+    # node.
+    monkeypatch.setenv("HARNESS_SPRINTS_DIR", str(_sprints))
     node = next(item for item in graph["nodes"] if item["id"] == "seed_fetch")
     operator_id = fr.PHYSICAL_OPERATOR_BY_NODE["seed_fetch"]
     item = {

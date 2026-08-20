@@ -416,7 +416,7 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
     elif first_scope and not Path(first_scope).suffix:
         compiled_ref, compiled_hash = write_scoped_text(
             context,
-            relative_path=f"{first_scope.rstrip('/\\')}/publication.md",
+            relative_path=first_scope.rstrip("/\\") + "/publication.md",
             content=markdown,
             artifact_id="publication_markdown",
             schema="text/markdown",

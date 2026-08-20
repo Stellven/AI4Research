@@ -65,7 +65,7 @@ def output_target(context: OperatorContext, filename: str) -> Path:
         raise ResearchOperatorError("No write scope declared", error_type="scope_violation")
     raw = context.write_scope[0]
     candidate = Path(raw)
-    path_text = raw if candidate.suffix.lower() == ".json" else f"{raw.rstrip('/\\')}/{filename}"
+    path_text = raw if candidate.suffix.lower() == ".json" else raw.rstrip("/\\") + f"/{filename}"
     return validate_scoped_path(path_text, context.write_scope, workspace_root=context.workspace_root)
 
 
