@@ -7,7 +7,7 @@
 **Base of this session:** `caa20200f` -> **HEAD `723148627`**, 27 commits, tree clean
 
 Read this before touching anything. The single most useful thing in it is the
-pattern in section 3, because it accounts for nine of the twelve defects fixed.
+pattern in section 3, because it accounts for ten of the thirteen defects fixed.
 
 ---
 
@@ -147,8 +147,8 @@ availability, do not trust a note about it** -- including this one.
 
 ## 3. The pattern. Read this part twice.
 
-**Twelve defects fixed. Zero were model failures. Zero were component failures.
-Every one was a seam, and nine were the same shape:**
+**Thirteen defects fixed. Zero were model failures. Zero were component
+failures. Every one was a seam, and ten were the same shape:**
 
 > **The operator imposed a condition on the model that the operator itself made
 > unsatisfiable.**
@@ -166,11 +166,18 @@ Concretely:
   every retry
 - the synthesis model was scored on a lexical support test nobody had told it
   about
+- the adapter capped `evidence_synthesis` at one model call while the operator
+  was designed to retry up to three times, so a stage doing exactly what it was
+  built to do was refused (I introduced this one myself, in the middle of
+  writing this document about the pattern)
 
 When you see a stage failing repeatedly with a model that is otherwise
 competent, **check what the operator is asking of it before you touch the model
-or the prompt.** In this codebase that has been the answer nine times out of
-twelve.
+or the prompt.** In this codebase that has been the answer ten times out of
+thirteen. I walked into it myself once, which is the best evidence that knowing
+about the pattern is not sufficient protection against it -- when you add a
+bound, a retry, or a requirement in one component, go and look for the other
+component that already restates it.
 
 The corollary, proven repeatedly: **unit tests did not catch a single one of
 these.** Each needs two real components joined. Prefer a live run over another
@@ -234,6 +241,13 @@ ids stay exact; the method must survive by word retention against a 0.8 floor
 rather than be byte-identical. Method changes are recorded as `method_change`
 with before/after digests **beside** `preservation`, never inside it -- the
 adapter recomputes that object and refuses the node if it differs.
+
+### The per-stage call ceiling (`d45fcc158`)
+`max_calls = MAX_REVISION_ATTEMPTS * 2 if node_id == "report_revision" else 1`.
+Adding a bounded grounding-repair loop to `evidence_synthesis` immediately
+tripped it. The ceiling is now a table read from the operators' own constants,
+so an attempt bound raised in one place cannot leave the other behind. Stages
+absent from the table still get exactly one call.
 
 ### Claim grounding, at the cause (`d952df36f`)
 Solar's own `claim_support_assessment` rated 2 of the 5 published claims
