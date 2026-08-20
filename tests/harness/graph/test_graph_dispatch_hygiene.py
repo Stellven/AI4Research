@@ -123,3 +123,24 @@ def test_dispatch_ready_marks_graph_active_panes_busy(tmp_path, monkeypatch):
     assert workers_by_pane["pane-a"]["busy"] is True
     assert workers_by_pane["pane-a"]["unavailable_reason"] == "graph_active_assignment"
     assert workers_by_pane["pane-b"]["busy"] is False
+
+
+def test_stale_queue_cleanup_does_not_consume_dispatch_budget(monkeypatch):
+    items = iter([{"id": "old"}, {"id": "current"}, None])
+    calls = []
+    monkeypatch.setattr(gnd, "_pop_graph_queue_item", lambda _sid: next(items))
+
+    def fake_dispatch(item, **_kwargs):
+        calls.append(item["id"])
+        if item["id"] == "old":
+            return {"ok": True, "reason": "stale_graph_item_superseded"}
+        return {"ok": True, "reason": "operator_pool_dispatched"}
+
+    monkeypatch.setattr(gnd, "dispatch_queue_item", fake_dispatch)
+
+    result = gnd.drain_queue("sprint-queue-catchup", max_items=1)
+
+    assert calls == ["old", "current"]
+    assert result["processed"] == 2
+    assert result["stale_processed"] == 1
+    assert result["dispatch_attempts"] == 1

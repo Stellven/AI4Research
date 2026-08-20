@@ -11116,21 +11116,39 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
     }
 
 
+STALE_GRAPH_QUEUE_REASONS = {
+    "stale_graph_item_node_not_dispatchable",
+    "stale_graph_item_superseded",
+}
+
+
 def drain_queue(sprint_id: str, dry_run: bool = False, max_items: int = 0, ttl: int = 900) -> dict[str, Any]:
     results: list[dict[str, Any]] = []
     processed = 0
+    dispatch_attempts = 0
+    stale_processed = 0
     while True:
-        if max_items and processed >= max_items:
+        if max_items and dispatch_attempts >= max_items:
             break
         item = _pop_graph_queue_item(sprint_id)
         if item is None:
             break
-        results.append(dispatch_queue_item(item, dry_run=dry_run, ttl=ttl))
+        result = dispatch_queue_item(item, dry_run=dry_run, ttl=ttl)
+        results.append(result)
         processed += 1
+        if str(result.get("reason") or "") in STALE_GRAPH_QUEUE_REASONS:
+            # Superseded queue rows are cleanup, not a dispatch attempt.  If
+            # they consume max_items, a scheduler that enqueues one fresh row
+            # per tick can remain permanently one row behind its own queue.
+            stale_processed += 1
+            continue
+        dispatch_attempts += 1
     return {
         "ok": all(r.get("ok") for r in results) if results else True,
         "sprint_id": sprint_id,
         "processed": processed,
+        "dispatch_attempts": dispatch_attempts,
+        "stale_processed": stale_processed,
         "results": results,
     }
 
