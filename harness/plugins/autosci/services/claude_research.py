@@ -193,8 +193,16 @@ class ClaudeResearchModelService(CodexResearchModelService):
 
         try:
             envelope = json.loads(proc.stdout or "{}")
-            body = envelope.get("result")
-            payload = json.loads(body) if isinstance(body, str) else body
+            # structured_output is the object the CLI itself validated against
+            # the schema. Preferring it matters: a model that answers with
+            # prose plus a fenced JSON block leaves `result` unparseable, and
+            # a model that answers clean JSON leaves both -- so this path is
+            # never worse and survives the prose case when the CLI still
+            # captured a validated object.
+            payload = envelope.get("structured_output")
+            if not isinstance(payload, dict):
+                body = envelope.get("result")
+                payload = json.loads(body) if isinstance(body, str) else body
         except (json.JSONDecodeError, AttributeError) as exc:
             self._record_invocation(
                 invocation_id=invocation_id, node_id=node_id, started=started,

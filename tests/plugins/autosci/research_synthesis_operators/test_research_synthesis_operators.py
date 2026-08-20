@@ -1777,3 +1777,83 @@ def test_mistyped_source_id_is_repair_feedback_not_an_abort(tmp_path: Path, monk
     artifact = _read_artifact(tmp_path, result)
     assert [c["claim_id"] for c in artifact["claims"]] == ["claim-001"]
     assert artifact["claims"][0]["evidence_ids"] == ["arxiv:1234.56789"]
+
+
+def test_provider_failure_on_a_repair_attempt_publishes_the_banked_best(tmp_path: Path, monkeypatch) -> None:
+    """A failed retry must not discard grounded claims an earlier attempt banked.
+
+    Live run: attempt 3 of the synthesis repair loop answered in prose (no
+    structured output) and the provider error threw away twelve grounded
+    claims from attempts 1 and 2.
+    """
+    monkeypatch.chdir(tmp_path)
+    from harness.plugins.autosci.operators.research_synthesis.base import ResearchOperatorError as OpError
+
+    validation = {
+        "schema": "research_synthesis.source_validation.v1",
+        "node_id": "source_validation",
+        "task_id": "task-research-synthesis",
+        "run_id": "run-research-synthesis",
+        "workflow_id": "research_synthesis_v1",
+        "accepted": [
+            {"source_id": "s1", "title": "One", "content_summary": "Reranking improves retrieval quality in benchmarks."},
+            {"source_id": "s2", "title": "Two", "content_summary": "Chunk size affects retrieval recall in benchmarks."},
+        ],
+    }
+    path = tmp_path / "inputs/source_validation.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(validation), encoding="utf-8")
+    refs = [{
+        "artifact_id": "source_validation",
+        "path": str(path.relative_to(tmp_path)),
+        "schema": validation["schema"],
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }]
+    calls = {"count": 0}
+
+    def model(**kwargs) -> dict:
+        calls["count"] += 1
+        if calls["count"] >= 2:
+            raise OpError("prose instead of structured output", error_type="provider_contract")
+        return {
+            "provider": "writer",
+            "model": "writer-model",
+            "claims": [
+                {
+                    "claim_id": "claim-001",
+                    "text": "Reranking improves retrieval quality in benchmarks.",
+                    "evidence_ids": ["s1"],
+                    "evidence_quotes": [{"source_id": "s1", "quote": "Reranking improves retrieval quality in benchmarks."}],
+                    "uncertainty": "low",
+                    "limitations": [],
+                },
+                {
+                    # Ungrounded: keeps the loop retrying so the failure lands
+                    # on a repair attempt, not the first call.
+                    "claim_id": "claim-002",
+                    "text": "Vector databases guarantee flawless production deployments everywhere.",
+                    "evidence_ids": ["s2"],
+                    "evidence_quotes": [],
+                    "uncertainty": "low",
+                    "limitations": [],
+                },
+            ],
+            "contradictions": [],
+            "limitations": [],
+        }
+
+    result = execute_operator(
+        _request(
+            tmp_path,
+            "evidence_synthesis",
+            payload={"task_contract": _task_contract(), "seed_snapshot": {"schema": "research_synthesis.seed_snapshot.v1", "seeds": []}},
+            refs=refs,
+        ),
+        services={"model_generate": model},
+    )
+    assert result["status"] == "completed", result.get("errors")
+    assert calls["count"] == 2
+    artifact = _read_artifact(tmp_path, result)
+    assert [c["claim_id"] for c in artifact["claims"]] == ["claim-001"]
+    assert any("repair attempt 2 failed" in item.lower() for item in artifact["limitations"])
+    assert artifact["rejected_claims"], "the ungrounded claim must stay visible as rejected"

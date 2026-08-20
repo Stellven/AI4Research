@@ -278,17 +278,32 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     best_response: dict[str, Any] = {}
     response: dict[str, Any] = {}
     attempts_used = 0
+    provider_fallback_note = ""
     for attempt in range(1, MAX_SYNTHESIS_ATTEMPTS + 1):
         attempts_used = attempt
-        response = model_generate(
-            node_id="evidence_synthesis",
-            task_contract=context.payload.get("task_contract"),
-            seed_snapshot=seed_snapshot,
-            validated_sources=accepted,
-            synthesis_attempt=attempt,
-            max_synthesis_attempts=MAX_SYNTHESIS_ATTEMPTS,
-            grounding_feedback=grounding_feedback,
-        )
+        try:
+            response = model_generate(
+                node_id="evidence_synthesis",
+                task_contract=context.payload.get("task_contract"),
+                seed_snapshot=seed_snapshot,
+                validated_sources=accepted,
+                synthesis_attempt=attempt,
+                max_synthesis_attempts=MAX_SYNTHESIS_ATTEMPTS,
+                grounding_feedback=grounding_feedback,
+            )
+        except ResearchOperatorError as exc:
+            # A provider failure on a REPAIR attempt must not discard grounded
+            # claims an earlier attempt already established: attempt 3 of a
+            # live run answered in prose, and the raise threw away twelve
+            # grounded claims from attempts 1 and 2. With nothing banked the
+            # failure is still terminal.
+            if best_claims:
+                provider_fallback_note = (
+                    f"Synthesis repair attempt {attempt} failed "
+                    f"({exc.error_type}); the best earlier grounded attempt is published instead."
+                )
+                break
+            raise
         if not isinstance(response, dict):
             raise ResearchOperatorError("model_generate service must return a JSON object", error_type="provider_contract")
         invalid_claims: list[dict[str, Any]] = []
@@ -329,7 +344,8 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         )
     limitations = list(dict.fromkeys([
         *[str(item) for item in validation.get("limitations", []) if str(item).strip()],
-        *[str(item) for item in response.get("limitations", []) if str(item).strip()],
+        *[str(item) for item in best_response.get("limitations", []) if str(item).strip()],
+        *([provider_fallback_note] if provider_fallback_note else []),
     ]))
     artifact_payload = {
         "schema": "research_synthesis.evidence_synthesis.v1",

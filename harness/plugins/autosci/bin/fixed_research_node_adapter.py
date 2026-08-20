@@ -453,7 +453,14 @@ def _verify_model_usage(
         )
     if any(str(item.get("session_mode") or "") != "ephemeral" for item in usage):
         raise AdapterError("model stage did not use a fresh provider context")
-    if any(str(item.get("status") or "completed") != "completed" for item in usage):
+    failed_calls = [item for item in usage if str(item.get("status") or "completed") != "completed"]
+    completed_calls = [item for item in usage if str(item.get("status") or "completed") == "completed"]
+    if failed_calls and (node_id not in MAX_CALLS_BY_NODE or not completed_calls):
+        # A stage with a declared bounded repair loop may legitimately record
+        # a failed repair attempt beside the completed call whose output it
+        # published; refusing that re-creates the restated-bound defect.
+        # Everything else keeps the strict rule: a completed single-call stage
+        # with a failed invocation is hiding something.
         raise AdapterError("completed model stage includes a failed provider invocation")
     if not actual_roles.issubset(expected_roles) or not expected_roles.intersection(actual_roles):
         raise AdapterError("provider worker role does not match the fixed node")
