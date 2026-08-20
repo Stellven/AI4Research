@@ -3206,3 +3206,54 @@ def test_retry_feedback_reaches_the_reviser_prompt() -> None:
         "the report_revision prompt must forward preservation_feedback; the "
         "builder constructs its user payload explicitly and drops unknown kwargs"
     )
+
+
+def test_rejected_production_evaluation_never_persists_a_completed_sidecar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A refused stage must not leave a sidecar the gate reconciles to PASS.
+
+    Observed live: report_draft's production evaluator rejected the dispatch
+    (unlinked artifacts), the adapter still persisted the operator's own
+    "completed" status, and the node-complete gate -- which deliberately
+    trusts that recorded status -- reconciled the stage to passed. The refusal
+    lived only in the dispatch record nothing downstream consumes.
+    """
+    graph, graph_path, _sprints = _graph(tmp_path, monkeypatch)
+    node = next(item for item in graph["nodes"] if item["id"] == "seed_fetch")
+    operator_id = fr.PHYSICAL_OPERATOR_BY_NODE["seed_fetch"]
+    dry = gnd.dispatch_queue_item(
+        {
+            "id": "q-fixed-a1-reject",
+            "intent": "graph_node|node_id=seed_fetch",
+            "payload": {
+                "sprint_id": graph["sprint_id"],
+                "graph": str(graph_path),
+                "node": node,
+                "assignment": {"pane": f"operator:{operator_id}"},
+                "dispatch_id": "fixed-a1-reject-dispatch",
+            },
+        },
+        dry_run=True,
+    )
+    assert dry["ok"] is True, dry
+    envelope = dry["operator_envelope"]
+
+    real_evaluate = fixed_adapter.evaluate_production_result
+
+    def rejecting_evaluate(request, result, state, *, artifact_root):
+        verdict = real_evaluate(request, result, state, artifact_root=artifact_root)
+        verdict["accepted"] = False
+        verdict.setdefault("errors", []).append({"message": "injected production rejection"})
+        return verdict
+
+    monkeypatch.setattr(fixed_adapter, "evaluate_production_result", rejecting_evaluate)
+    payload = fixed_adapter.execute(envelope)
+    assert payload["ok"] is False
+    persisted = json.loads(Path(payload["result_path"]).read_text(encoding="utf-8"))
+    assert persisted["status"] == "failed"
+    assert persisted["status_is_terminal"] is True
+    assert any(
+        item.get("error_type") == "production_evaluation_rejected"
+        for item in persisted.get("errors") or []
+    )

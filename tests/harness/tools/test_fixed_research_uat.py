@@ -388,3 +388,42 @@ def test_tick_that_moved_the_graph_is_never_transient() -> None:
 def test_empty_or_unparseable_dispatch_output_is_never_transient() -> None:
     for payload in ("", "   ", "not json", json.dumps({"ok": False, "skipped": []}), json.dumps({"ok": True})):
         assert uat._is_transient_dispatch_noop(payload) is False
+
+
+def test_graph_node_statuses_read_the_runtime_state_plane(tmp_path, monkeypatch):
+    """The boundary detector must see statuses the dispatcher persists.
+
+    save_graph writes a spec-only graph and keeps per-node status in a state
+    sidecar that load_graph re-attaches. Reading the raw JSON reports every
+    node pending forever, which made start-to-final poll to its own timeout
+    after a 15/15 completion.
+    """
+    import importlib.util as _ilu
+    spec = _ilu.spec_from_file_location(
+        "graph_scheduler", uat.SOURCE_HARNESS / "lib" / "graph_scheduler.py"
+    )
+    gs = _ilu.module_from_spec(spec)
+    import sys as _sys
+    _sys.modules.setdefault("graph_scheduler", gs)
+    spec.loader.exec_module(gs)
+
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph_path = sprints / "uat-runtime-status-test.task_graph.json"
+    graph = {
+        "sprint_id": "uat-runtime-status-test",
+        "nodes": [
+            {"id": "seed_fetch", "status": "passed", "depends_on": []},
+            {"id": "source_discovery", "status": "pending", "depends_on": ["seed_fetch"]},
+        ],
+        # The dispatcher records status here; save_graph moves it into the
+        # state sidecar and strips it from the persisted spec payload.
+        "node_results": {"seed_fetch": {"status": "passed"}},
+    }
+    gs.save_graph(graph_path, graph)
+    raw = uat._read_json(graph_path)
+    # The spec-only payload must not carry status, or this test is vacuous.
+    assert all("status" not in node for node in raw["nodes"])
+    statuses = uat._graph_node_statuses(graph_path, raw)
+    assert statuses["seed_fetch"] == "passed"
+    assert statuses["source_discovery"] == "pending"

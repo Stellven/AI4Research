@@ -1662,3 +1662,10 @@ def test_report_draft_compiles_byte_verified_grounded_companion(tmp_path: Path, 
         for path in (grounded_dir.parent / root_name).rglob("*"):
             if path.is_file():
                 assert str(path.relative_to(tmp_path)) in declared, path
+    # And every declared artifact carries a linked evidence row: the
+    # production evaluator refuses one that does not, and a live run showed
+    # that refusal being reconciled into a green stage anyway.
+    from harness.lib.research_orchestration.evaluator import evaluate_production_result
+
+    verdict = evaluate_production_result({}, draft, {}, artifact_root=tmp_path)
+    assert verdict["accepted"] is True, verdict["errors"][:3]

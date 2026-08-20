@@ -734,6 +734,26 @@ def execute(envelope: dict[str, Any]) -> dict[str, Any]:
             dependencies=dependencies,
         )
     evaluator = evaluate_production_result(request, result, {}, artifact_root=work_dir)
+    if str(result.get("status") or "") == "completed" and not bool(evaluator.get("accepted")):
+        # Fail closed in the sidecar, not only in the dispatch: the
+        # node-complete gate deliberately trusts the operator's own recorded
+        # status, so a "completed" result the production evaluator refused
+        # would be reconciled to PASS while the refusal lived only in the
+        # dispatch record. Observed live: report_draft's evaluator rejection
+        # was steamrolled exactly this way.
+        result["status"] = "failed"
+        result["status_is_terminal"] = True
+        result.setdefault("errors", []).append({
+            "error_id": "production_evaluator.rejected",
+            "error_type": "production_evaluation_rejected",
+            "message": (
+                "; ".join(
+                    str(item.get("message") or "")
+                    for item in evaluator.get("errors") or []
+                )[:500]
+                or "production evaluator rejected the completed result"
+            ),
+        })
     result_path, _ = _contained(str((envelope.get("outputs") or {}).get("result_path") or ""), work_dir, label="result_path")
     expected_result_path = stage_dir / "research_node_result.json"
     if result_path != expected_result_path:

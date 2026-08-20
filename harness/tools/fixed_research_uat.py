@@ -623,6 +623,30 @@ def _node_statuses(graph: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _graph_node_statuses(graph_path: Path, graph: dict[str, Any]) -> dict[str, str]:
+    """Node statuses, read through the dispatcher's runtime-state plane.
+
+    save_graph persists a spec-only graph and keeps per-node status in a state
+    sidecar that load_graph re-attaches. A raw JSON read therefore reports
+    every node pending forever, which is why the UAT kept polling to its own
+    timeout after the DAG had completed 15/15. Reading through graph_scheduler
+    is still strictly read-only; the dispatcher remains the only writer.
+    """
+    statuses = _node_statuses(graph)
+    if any(status != "pending" for status in statuses.values()):
+        return statuses
+    try:
+        import graph_scheduler as gs
+    except ImportError:
+        return statuses
+    attached = gs.load_graph(graph_path)
+    return {
+        str(node.get("id") or ""): str(gs.node_status(attached, str(node.get("id") or "")) or "pending")
+        for node in attached.get("nodes") or []
+        if isinstance(node, dict)
+    }
+
+
 def _approval_request(graph_path: Path, graph: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
     sid = str(graph.get("sprint_id") or "")
     request_path = graph_path.parent / sid / "workdir/artifacts/research_evidence_to_poc/poc/approval/approval_request.json"
@@ -634,7 +658,7 @@ def _approval_request(graph_path: Path, graph: dict[str, Any]) -> tuple[Path, di
 
 def _pause_reached(graph_path: Path) -> dict[str, Any] | None:
     graph = _read_json(graph_path)
-    statuses = _node_statuses(graph)
+    statuses = _graph_node_statuses(graph_path, graph)
     failed = {node: status for node, status in statuses.items() if status in {"failed", "cancelled", "skipped"}}
     if failed:
         raise UATError(f"workflow reached a terminal failure before approval: {failed}")
@@ -669,7 +693,7 @@ def _pause_reached(graph_path: Path) -> dict[str, Any] | None:
 
 def _final_reached(graph_path: Path) -> dict[str, Any] | None:
     graph = _read_json(graph_path)
-    statuses = _node_statuses(graph)
+    statuses = _graph_node_statuses(graph_path, graph)
     failed = {node: status for node, status in statuses.items() if status in {"failed", "cancelled", "skipped", "needs_human_review"}}
     if failed:
         raise UATError(f"workflow did not reach final acceptance: {failed}")

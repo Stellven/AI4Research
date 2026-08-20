@@ -459,6 +459,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     report_hash = {"hash_id": "report_markdown", "algorithm": "sha256", "value": report_digest}
     grounded_artifacts: list[dict[str, Any]] = []
     grounded_hashes: list[dict[str, Any]] = []
+    grounded_evidence: list[dict[str, Any]] = []
     if grounded:
         # Every file, declared individually: the adapter's unreported-files
         # check compares file by file, so a declared directory covers none of
@@ -477,6 +478,18 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
                     "sha256": digest,
                 })
                 grounded_hashes.append({"hash_id": artifact_id, "algorithm": "sha256", "value": digest})
+                # The production evaluator refuses any declared artifact with
+                # no linked evidence row -- a declaration alone is a claim
+                # nobody vouched for. One ref per file keeps the evaluator's
+                # per-artifact linkage recomputable.
+                grounded_evidence.append(
+                    evidence_ref(
+                        f"report_draft.grounded.{artifact_id}",
+                        "grounded_report_file",
+                        "Byte-verified grounded report file published beside the writer's draft.",
+                        artifact_id,
+                    )
+                )
     return build_node_result(
         context,
         status="completed",
@@ -484,6 +497,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         evidence=[
             evidence_ref("report_draft.traceable", "traceable_report_draft", "Report draft conclusions are linked to synthesis evidence.", artifact["artifact_id"]),
             evidence_ref("report_draft.usable_markdown", "usable_report", "A non-empty Markdown report was written by the production report operator.", report_artifact["artifact_id"]),
+            *grounded_evidence,
         ],
         hashes=[hash_record, report_hash, *grounded_hashes],
         model_provider_usage=usage,
