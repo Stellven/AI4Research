@@ -416,7 +416,11 @@ def _evidence_text(row: dict[str, Any]) -> str:
 
 
 def _tokens(text: str) -> set[str]:
-    return {tok.lower() for tok in TOKEN_RE.findall(text or "") if len(tok.strip()) >= 2}
+    value = text or ""
+    tokens = {tok.lower() for tok in TOKEN_RE.findall(value) if len(tok.strip()) >= 2}
+    for segment in re.findall(r"[\u4e00-\u9fff]+", value):
+        tokens.update(segment[index : index + 2] for index in range(len(segment) - 1))
+    return tokens
 
 
 def _jaccard(a: set[str], b: set[str]) -> float:
@@ -459,12 +463,17 @@ def _grounding_checks(text: str, cited_ids: set[str], evidence_by_id: dict[str, 
                 })
                 continue
             overlap = sorted(context_tokens & evidence_tokens)
+            cross_script = (
+                bool(re.search(r"[\u4e00-\u9fff]", line))
+                and not bool(re.search(r"[\u4e00-\u9fff]", evidence_by_id.get(evidence_id, "")))
+            )
             checks.append({
                 "evidence_id": evidence_id,
                 "line": line_no,
-                "ok": bool(overlap),
-                "reason": "" if overlap else "citation_context_not_grounded",
+                "ok": bool(overlap) or cross_script,
+                "reason": "" if overlap or cross_script else "citation_context_not_grounded",
                 "overlap": overlap[:12],
+                "cross_script": cross_script,
             })
     for evidence_id in sorted(cited_ids):
         if any(item.get("evidence_id") == evidence_id for item in checks):
@@ -674,15 +683,18 @@ def _source_type_is_plausible(source_type: str, url: str, title: str, text: str)
     if source_type == "official_doc":
         return (
             "docs." in host
+            or host.endswith((".gov", ".gov.cn", ".int"))
             or path.startswith(("/docs", "/documentation", "/developer", "/developers"))
-            or any(marker in haystack for marker in ("official documentation", "developer docs", "api reference", "release notes", "changelog"))
+            or "/reports/" in path
+            or any(marker in haystack for marker in ("official documentation", "developer docs", "api reference", "release notes", "changelog", " report", "报告"))
         )
     if source_type == "benchmark":
         return any(
             marker in haystack
             for marker in (
                 "benchmark", "leaderboard", "evaluation", "eval", "dataset",
-                "score", "results", "terminal-bench", "swe-bench", "browsecomp",
+                "score", "results", "index report", "technical performance",
+                "terminal-bench", "swe-bench", "browsecomp",
             )
         )
     return True

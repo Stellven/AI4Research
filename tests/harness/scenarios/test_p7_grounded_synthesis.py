@@ -14,6 +14,7 @@ if _HARNESS_LIB not in sys.path:
     sys.path.insert(0, _HARNESS_LIB)
 
 import research.grounded_synthesis as grounded_synthesis  # noqa: E402
+import research.evaluator as research_evaluator  # noqa: E402
 from research.evaluator import evaluate_final_closeout  # noqa: E402
 from research.grounded_synthesis import GroundedSynthesisError, compile_grounded_report  # noqa: E402
 from research.source_pack import write_source_pack  # noqa: E402
@@ -147,6 +148,113 @@ def _fixture(tmp_path: Path) -> tuple[list[Path], dict]:
         ],
     }
     return [pack_a, pack_b], plan
+
+
+def _rewrite_as_runtime_wire(pack: Path) -> None:
+    sources = [json.loads(line) for line in (pack / "sources.jsonl").read_text().splitlines()]
+    evidence = [json.loads(line) for line in (pack / "evidence.jsonl").read_text().splitlines()]
+    runtime_sources = []
+    for row in sources:
+        runtime_sources.append(
+            {
+                "source_id": row["source_id"],
+                "source_type": row["source_type"],
+                "title": row["title"],
+                "url": row["url"],
+                "retrieved_at": row["retrieved_at"],
+                "retrieval": {"method": row["provider"], "http_status": 200},
+                "extract": {"path": row["extract_path"], "sha256": row["content_sha256"]},
+            }
+        )
+    runtime_evidence = []
+    for row in evidence:
+        runtime_evidence.append(
+            {
+                "evidence_id": row["evidence_id"],
+                "source_id": row["source_id"],
+                "quote": row["content"],
+                "location": {"char_start": row["span_start"], "char_end": row["span_end"]},
+            }
+        )
+    (pack / "sources.jsonl").write_text(
+        "".join(json.dumps(row) + "\n" for row in runtime_sources), encoding="utf-8"
+    )
+    (pack / "evidence.jsonl").write_text(
+        "".join(json.dumps(row) + "\n" for row in runtime_evidence), encoding="utf-8"
+    )
+
+
+def test_runtime_wire_plan_and_source_packs_compile_through_canonical_checks(tmp_path):
+    packs, canonical_plan = _fixture(tmp_path)
+    for pack in packs:
+        _rewrite_as_runtime_wire(pack)
+    first = canonical_plan["sections"][0]["claims"][0]
+    second = canonical_plan["sections"][0]["claims"][1]
+    rich_plan = {
+        "schema_version": "solar.grounded_synthesis_plan.v2",
+        "research_question": "Compare two documented coding assistants.",
+        "evidence_status": "insufficient",
+        "evidence_gaps": [
+            {
+                "gap_id": "gap-independent-benchmark",
+                "description": "Independent head-to-head benchmark evidence is not present.",
+                "related_evidence_links": [first["evidence_links"][0]],
+            }
+        ],
+        "publishable_claims": [
+            {
+                "claim_id": "claim-copilot",
+                "claim": first["text"],
+                "confidence": "medium",
+                "evidence_links": first["evidence_links"],
+                "rejection_criteria": ["Reject universal superiority without a benchmark."],
+            },
+            {
+                "claim_id": "claim-cursor",
+                "claim": second["text"],
+                "confidence": "medium",
+                "evidence_links": second["evidence_links"],
+                "rejection_criteria": ["Reject universal superiority without a benchmark."],
+            },
+        ],
+        "recommended_report_outline": [
+            {
+                "section_id": "documented-capabilities",
+                "title": "Documented capabilities",
+                "claim_ids": ["claim-copilot", "claim-cursor"],
+            }
+        ],
+    }
+
+    output = tmp_path / "runtime-wire-report"
+    result = compile_grounded_report(
+        source_packs=packs,
+        synthesis_plan=rich_plan,
+        output_dir=output,
+        question="Compare two documented coding assistants.",
+    )
+
+    assert result["ok"] is True
+    assert all(item["normalized"] is True for item in result["input_closeouts"])
+    assert result["evidence_gap_count"] == 1
+    assert (output / "final.md").stat().st_size > 0
+
+
+def test_chinese_grounding_and_cross_script_context_are_supported():
+    assert "计算" in grounded_synthesis._tokens("计算材料学与可编程结构")
+    checks = research_evaluator._grounding_checks(
+        "- 中文趋势判断 [cite:ev_english_context]",
+        {"ev_english_context"},
+        {"ev_english_context": "Independent English benchmark context."},
+    )
+    assert checks[0]["ok"] is True
+    assert checks[0]["cross_script"] is True
+    assert research_evaluator._source_type_is_plausible(
+        "official_doc", "https://www.nasa.gov/mission/example", "Mission", ""
+    )
+    assert research_evaluator._source_type_is_plausible(
+        "benchmark", "https://hai.stanford.edu/ai-index/report", "AI Index Report", ""
+    )
 
 
 def test_fixed_source_packs_compile_to_a_passing_topic_general_report(tmp_path):

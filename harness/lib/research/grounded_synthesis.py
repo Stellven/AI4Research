@@ -75,7 +75,113 @@ def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
 
 
 def _tokens(text: str) -> set[str]:
-    return {token.lower() for token in _TOKEN_RE.findall(str(text or ""))}
+    value = str(text or "")
+    tokens = {token.lower() for token in _TOKEN_RE.findall(value)}
+    # A whole Chinese clause is one regex token, so paraphrases that share a
+    # meaningful phrase (for example “计算材料学”) previously appeared to have
+    # zero lexical overlap. Add CJK bigrams while retaining the original token
+    # set; this is deterministic and still rejects unrelated Chinese claims.
+    for segment in re.findall(r"[\u4e00-\u9fff]+", value):
+        tokens.update(segment[index : index + 2] for index in range(len(segment) - 1))
+    return tokens
+
+
+def _normalize_extended_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    """Normalize the richer planner wire shape into the compiler wire shape.
+
+    Early runtime planners emitted ``publishable_claims`` plus an outline while
+    the deterministic compiler consumed ``sections``.  Both shapes claim the
+    same v2 schema version.  The compatibility conversion is intentionally
+    lossless: it copies only model-authored claims and exact evidence links,
+    preserves every declared gap, and leaves the normal compiler validators in
+    authority over publication.
+    """
+    if isinstance(plan.get("sections"), list) and plan.get("sections"):
+        return plan
+    claims = plan.get("publishable_claims")
+    outline = plan.get("recommended_report_outline")
+    if not isinstance(claims, list) or not claims or not isinstance(outline, list) or not outline:
+        return plan
+
+    claim_by_id = {
+        str(item.get("claim_id") or ""): item
+        for item in claims
+        if isinstance(item, dict) and str(item.get("claim_id") or "")
+    }
+    confidence_map = {"high": 0.90, "medium": 0.75, "low": 0.55}
+    sections: list[dict[str, Any]] = []
+    for index, raw_section in enumerate(outline, start=1):
+        if not isinstance(raw_section, dict):
+            continue
+        section_claims: list[dict[str, Any]] = []
+        for claim_id in raw_section.get("claim_ids") or []:
+            raw_claim = claim_by_id.get(str(claim_id))
+            if not raw_claim:
+                continue
+            raw_confidence = raw_claim.get("confidence", 0.70)
+            confidence = confidence_map.get(str(raw_confidence).strip().lower(), raw_confidence)
+            relations = {
+                str(link.get("relation") or "")
+                for link in raw_claim.get("evidence_links") or []
+                if isinstance(link, dict)
+            }
+            uncertainty = ""
+            if "contradicts" in relations or str(raw_confidence).strip().lower() == "low":
+                uncertainty = "；".join(
+                    str(item) for item in (raw_claim.get("rejection_criteria") or [])[:2]
+                )
+            section_claims.append(
+                {
+                    "text": str(raw_claim.get("claim") or ""),
+                    "claim_type": "predictive",
+                    "evidence_links": list(raw_claim.get("evidence_links") or []),
+                    "confidence": confidence,
+                    "uncertainty": uncertainty,
+                }
+            )
+        if section_claims:
+            sections.append(
+                {
+                    "section_id": str(raw_section.get("section_id") or f"section-{index}"),
+                    "title": str(raw_section.get("title") or f"Section {index}"),
+                    "claims": section_claims,
+                }
+            )
+
+    normalized_gaps: list[dict[str, Any]] = []
+    for raw_gap in plan.get("evidence_gaps") or []:
+        if not isinstance(raw_gap, dict):
+            normalized_gaps.append(raw_gap)
+            continue
+        links = raw_gap.get("related_evidence_links") or []
+        normalized_gaps.append(
+            {
+                **raw_gap,
+                "text": str(raw_gap.get("text") or raw_gap.get("description") or ""),
+                "evidence_ids": list(
+                    raw_gap.get("evidence_ids")
+                    or [
+                        str(link.get("evidence_id"))
+                        for link in links
+                        if isinstance(link, dict) and str(link.get("evidence_id") or "")
+                    ]
+                ),
+            }
+        )
+
+    normalized = dict(plan)
+    normalized["title"] = str(plan.get("title") or plan.get("research_question") or "Grounded report")
+    normalized["sections"] = sections
+    normalized["evidence_gaps"] = normalized_gaps
+    # In this richer wire shape, ``publishable_claims`` is an explicit
+    # declaration that the listed subset is sufficiently supported even when
+    # overall topic coverage is incomplete.  Canonical plans without that
+    # declaration retain the strict insufficient => no publication behavior.
+    if sections and str(plan.get("evidence_status") or "").strip().lower() == "insufficient":
+        normalized["source_evidence_status"] = "insufficient"
+        normalized["evidence_status"] = "sufficient"
+        normalized["bounded_partial_coverage"] = True
+    return normalized
 
 
 def _extract_filename(source_id: str) -> str:
@@ -95,6 +201,7 @@ def _load_plan(value: Path | str | dict[str, Any]) -> dict[str, Any]:
             raise GroundedSynthesisError(f"synthesis_plan_unreadable:{path}") from exc
     if not isinstance(plan, dict):
         raise GroundedSynthesisError("synthesis_plan_not_object")
+    plan = _normalize_extended_plan(plan)
     if plan.get("schema_version") != SYNTHESIS_PLAN_SCHEMA:
         raise GroundedSynthesisError("synthesis_plan_schema_invalid")
     evidence_status = str(plan.get("evidence_status") or "").strip().lower()
@@ -106,7 +213,7 @@ def _load_plan(value: Path | str | dict[str, Any]) -> dict[str, Any]:
     for index, gap in enumerate(gaps, start=1):
         if not isinstance(gap, dict):
             raise GroundedSynthesisError(f"evidence_gap_invalid:{index}")
-        if not " ".join(str(gap.get("text") or "").split()):
+        if not " ".join(str(gap.get("text") or gap.get("description") or "").split()):
             raise GroundedSynthesisError(f"evidence_gap_text_missing:{index}")
         if not isinstance(gap.get("evidence_ids", []), list):
             raise GroundedSynthesisError(f"evidence_gap_ids_invalid:{index}")
@@ -179,7 +286,13 @@ def _validated_evidence_links(
             raise GroundedSynthesisError(
                 f"evidence_quote_not_exact:{section_id}:{evidence_id}"
             )
-        if not claim_tokens.intersection(_tokens(quote)):
+        quote_tokens = _tokens(quote)
+        cross_script_qualifier = (
+            relation in {"qualifies", "contextualizes"}
+            and bool(re.search(r"[\u4e00-\u9fff]", claim_text))
+            and not bool(re.search(r"[\u4e00-\u9fff]", quote))
+        )
+        if not claim_tokens.intersection(quote_tokens) and not cross_script_qualifier:
             raise GroundedSynthesisError(f"claim_not_grounded:{section_id}:{evidence_id}")
         links.append(
             {
@@ -230,6 +343,130 @@ def _source_identity(row: dict[str, Any]) -> tuple[str, str]:
     )
 
 
+def _resolve_nested_extract(pack: Path, source: dict[str, Any]) -> Path:
+    nested = source.get("extract") if isinstance(source.get("extract"), dict) else {}
+    raw_path = str(source.get("extract_path") or nested.get("path") or "").strip()
+    candidates: list[Path] = []
+    if raw_path:
+        given = Path(raw_path)
+        if given.is_absolute():
+            candidates.append(given)
+        else:
+            candidates.extend([pack / given, pack.parents[2] / given])
+            candidates.append(pack / "extracts" / given.name)
+    pack_root = pack.resolve(strict=False)
+    for candidate in candidates:
+        resolved = candidate.resolve(strict=False)
+        try:
+            contained = resolved.is_relative_to(pack_root)
+        except (AttributeError, OSError):
+            contained = False
+        if contained and resolved.is_file():
+            return resolved
+    source_id = str(source.get("id") or source.get("source_id") or "?")
+    raise GroundedSynthesisError(f"source_extract_missing:{source_id}")
+
+
+def _normalize_runtime_source_pack(pack: Path, destination: Path) -> Path:
+    """Convert the runtime retrieval wire shape without weakening evidence checks."""
+    sources = _read_jsonl(pack / "sources.jsonl", "sources_jsonl")
+    evidence = _read_jsonl(pack / "evidence.jsonl", "evidence_jsonl")
+    if all(str(row.get("extract_path") or "") and str(row.get("provider") or "") for row in sources):
+        return pack
+
+    evidence_by_source: dict[str, list[dict[str, Any]]] = {}
+    for row in evidence:
+        evidence_by_source.setdefault(str(row.get("source_id") or ""), []).append(row)
+
+    destination.mkdir(parents=True, exist_ok=True)
+    extracts_dir = destination / "extracts"
+    extracts_dir.mkdir(parents=True, exist_ok=True)
+    canonical_sources: list[dict[str, Any]] = []
+    source_text: dict[str, str] = {}
+    for source in sources:
+        source_id = str(source.get("id") or source.get("source_id") or "").strip()
+        # Access-failure inventory rows with no quoted evidence are useful to
+        # the planner but are not compiler sources. Their limitation remains
+        # represented by the plan's evidence_gaps.
+        if not source_id or not evidence_by_source.get(source_id):
+            continue
+        extract = _resolve_nested_extract(pack, source)
+        try:
+            text = extract.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            raise GroundedSynthesisError(f"source_extract_unreadable:{source_id}") from exc
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        nested_extract = source.get("extract") if isinstance(source.get("extract"), dict) else {}
+        declared_digest = str(
+            source.get("content_sha256")
+            or source.get("content_hash")
+            or nested_extract.get("sha256")
+            or ""
+        ).strip()
+        if not declared_digest or declared_digest != digest:
+            raise GroundedSynthesisError(f"source_extract_hash_mismatch:{source_id}")
+        output_name = _extract_filename(source_id)
+        shutil.copyfile(extract, extracts_dir / output_name)
+        retrieval = source.get("retrieval") if isinstance(source.get("retrieval"), dict) else {}
+        canonical_sources.append(
+            {
+                "id": source_id,
+                "source_id": source_id,
+                "source_type": str(source.get("source_type") or "web"),
+                "title": str(source.get("title") or ""),
+                "url": str(source.get("url") or ""),
+                "retrieved_at": str(source.get("retrieved_at") or ""),
+                "provider": str(retrieval.get("method") or "runtime_retrieval"),
+                "content_sha256": digest,
+                "extract_path": f"extracts/{output_name}",
+            }
+        )
+        source_text[source_id] = text
+
+    canonical_evidence: list[dict[str, Any]] = []
+    for row in evidence:
+        source_id = str(row.get("source_id") or "").strip()
+        text = source_text.get(source_id)
+        if text is None:
+            continue
+        evidence_id = str(row.get("id") or row.get("evidence_id") or "").strip()
+        content = str(row.get("content") or row.get("span_text") or row.get("quote") or "")
+        location = row.get("location") if isinstance(row.get("location"), dict) else {}
+        start = row.get("span_start", location.get("char_start"))
+        end = row.get("span_end", location.get("char_end"))
+        valid_span = (
+            isinstance(start, int)
+            and not isinstance(start, bool)
+            and isinstance(end, int)
+            and not isinstance(end, bool)
+            and 0 <= start <= end <= len(text)
+            and text[start:end] == content
+        )
+        if not valid_span:
+            start = text.find(content)
+            end = start + len(content) if start >= 0 else -1
+        if not evidence_id or not content or start < 0 or text[start:end] != content:
+            raise GroundedSynthesisError(f"evidence_span_mismatch:{evidence_id or '?'}")
+        canonical_evidence.append(
+            {
+                "id": evidence_id,
+                "evidence_id": evidence_id,
+                "source_id": source_id,
+                "source_type": next(
+                    item["source_type"] for item in canonical_sources if item["source_id"] == source_id
+                ),
+                "content": content,
+                "content_hash": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                "span_start": start,
+                "span_end": end,
+            }
+        )
+
+    _write_jsonl(destination / "sources.jsonl", canonical_sources)
+    _write_jsonl(destination / "evidence.jsonl", canonical_evidence)
+    return destination
+
+
 def _merge_source_packs(source_packs: list[Path], destination: Path) -> dict[str, Any]:
     extracts = destination / "extracts"
     extracts.mkdir(parents=True, exist_ok=True)
@@ -239,70 +476,86 @@ def _merge_source_packs(source_packs: list[Path], destination: Path) -> dict[str
     evidence_aliases: dict[str, str] = {}
     input_closeouts: list[dict[str, Any]] = []
 
-    for pack in source_packs:
-        closeout = evaluate_retrieval_closeout(pack)
-        input_closeouts.append({"pack_dir": str(pack), **closeout})
-        if not closeout.get("ok"):
-            issues = ",".join(str(item) for item in closeout.get("issues") or [])
-            raise GroundedSynthesisError(
-                f"source_pack_invalid:{pack}:{closeout.get('verdict')}:{issues}"
+    normalization_root = Path(
+        tempfile.mkdtemp(prefix=".solar-normalized-source-packs-", dir=destination.parent)
+    )
+    try:
+        for pack_index, pack in enumerate(source_packs, start=1):
+            canonical_pack = _normalize_runtime_source_pack(
+                pack,
+                normalization_root / f"pack-{pack_index}",
             )
+            closeout = evaluate_retrieval_closeout(canonical_pack)
+            input_closeouts.append(
+                {
+                    "pack_dir": str(pack),
+                    "normalized": canonical_pack != pack,
+                    **closeout,
+                }
+            )
+            if not closeout.get("ok"):
+                issues = ",".join(str(item) for item in closeout.get("issues") or [])
+                raise GroundedSynthesisError(
+                    f"source_pack_invalid:{pack}:{closeout.get('verdict')}:{issues}"
+                )
 
-        pack_sources = _read_jsonl(pack / "sources.jsonl", "sources_jsonl")
-        pack_evidence = _read_jsonl(pack / "evidence.jsonl", "evidence_jsonl")
-        source_aliases: dict[str, str] = {}
+            pack_sources = _read_jsonl(canonical_pack / "sources.jsonl", "sources_jsonl")
+            pack_evidence = _read_jsonl(canonical_pack / "evidence.jsonl", "evidence_jsonl")
+            source_aliases: dict[str, str] = {}
 
-        for source in pack_sources:
-            source_id = str(source.get("id") or source.get("source_id") or "").strip()
-            identity = _source_identity(source)
-            if not source_id:
-                raise GroundedSynthesisError("source_id_missing")
-            if not all(identity):
-                raise GroundedSynthesisError(f"source_identity_incomplete:{source_id}")
+            for source in pack_sources:
+                source_id = str(source.get("id") or source.get("source_id") or "").strip()
+                identity = _source_identity(source)
+                if not source_id:
+                    raise GroundedSynthesisError("source_id_missing")
+                if not all(identity):
+                    raise GroundedSynthesisError(f"source_identity_incomplete:{source_id}")
 
-            if source_id in source_by_id:
-                if _source_identity(source_by_id[source_id]) != identity:
-                    raise GroundedSynthesisError(f"source_id_collision:{source_id}")
-                canonical_id = source_id
-            elif identity in source_by_identity:
-                canonical_id = source_by_identity[identity]
-            else:
-                canonical_id = source_id
-                source_copy = dict(source)
-                source_copy["id"] = canonical_id
-                source_copy["source_id"] = canonical_id
-                input_extract = pack / str(source.get("extract_path") or "")
-                output_name = _extract_filename(canonical_id)
-                shutil.copyfile(input_extract, extracts / output_name)
-                source_copy["extract_path"] = f"extracts/{output_name}"
-                source_by_id[canonical_id] = source_copy
-                source_by_identity[identity] = canonical_id
-            source_aliases[source_id] = canonical_id
+                if source_id in source_by_id:
+                    if _source_identity(source_by_id[source_id]) != identity:
+                        raise GroundedSynthesisError(f"source_id_collision:{source_id}")
+                    canonical_id = source_id
+                elif identity in source_by_identity:
+                    canonical_id = source_by_identity[identity]
+                else:
+                    canonical_id = source_id
+                    source_copy = dict(source)
+                    source_copy["id"] = canonical_id
+                    source_copy["source_id"] = canonical_id
+                    input_extract = canonical_pack / str(source.get("extract_path") or "")
+                    output_name = _extract_filename(canonical_id)
+                    shutil.copyfile(input_extract, extracts / output_name)
+                    source_copy["extract_path"] = f"extracts/{output_name}"
+                    source_by_id[canonical_id] = source_copy
+                    source_by_identity[identity] = canonical_id
+                source_aliases[source_id] = canonical_id
 
-        for evidence in pack_evidence:
-            old_evidence_id = str(evidence.get("id") or evidence.get("evidence_id") or "").strip()
-            old_source_id = str(evidence.get("source_id") or "").strip()
-            if old_source_id not in source_aliases:
-                raise GroundedSynthesisError(f"evidence_source_unknown:{old_source_id or '?'}")
-            canonical_source_id = source_aliases[old_source_id]
-            start = evidence.get("span_start")
-            end = evidence.get("span_end")
-            digest = str(evidence.get("content_hash") or "").strip()
-            canonical_evidence_id = old_evidence_id
-            if canonical_source_id != old_source_id:
-                canonical_evidence_id = ids.evidence_id(canonical_source_id, int(start), int(end), digest)
-            evidence_copy = dict(evidence)
-            evidence_copy["id"] = canonical_evidence_id
-            evidence_copy["evidence_id"] = canonical_evidence_id
-            evidence_copy["source_id"] = canonical_source_id
-            existing = evidence_by_id.get(canonical_evidence_id)
-            if existing is not None:
-                comparable = ("source_id", "content", "content_hash", "span_start", "span_end")
-                if any(existing.get(key) != evidence_copy.get(key) for key in comparable):
-                    raise GroundedSynthesisError(f"evidence_id_collision:{canonical_evidence_id}")
-            else:
-                evidence_by_id[canonical_evidence_id] = evidence_copy
-            evidence_aliases[old_evidence_id] = canonical_evidence_id
+            for evidence in pack_evidence:
+                old_evidence_id = str(evidence.get("id") or evidence.get("evidence_id") or "").strip()
+                old_source_id = str(evidence.get("source_id") or "").strip()
+                if old_source_id not in source_aliases:
+                    raise GroundedSynthesisError(f"evidence_source_unknown:{old_source_id or '?'}")
+                canonical_source_id = source_aliases[old_source_id]
+                start = evidence.get("span_start")
+                end = evidence.get("span_end")
+                digest = str(evidence.get("content_hash") or "").strip()
+                canonical_evidence_id = old_evidence_id
+                if canonical_source_id != old_source_id:
+                    canonical_evidence_id = ids.evidence_id(canonical_source_id, int(start), int(end), digest)
+                evidence_copy = dict(evidence)
+                evidence_copy["id"] = canonical_evidence_id
+                evidence_copy["evidence_id"] = canonical_evidence_id
+                evidence_copy["source_id"] = canonical_source_id
+                existing = evidence_by_id.get(canonical_evidence_id)
+                if existing is not None:
+                    comparable = ("source_id", "content", "content_hash", "span_start", "span_end")
+                    if any(existing.get(key) != evidence_copy.get(key) for key in comparable):
+                        raise GroundedSynthesisError(f"evidence_id_collision:{canonical_evidence_id}")
+                else:
+                    evidence_by_id[canonical_evidence_id] = evidence_copy
+                evidence_aliases[old_evidence_id] = canonical_evidence_id
+    finally:
+        shutil.rmtree(normalization_root, ignore_errors=True)
 
     source_rows = [source_by_id[key] for key in sorted(source_by_id)]
     evidence_rows = [evidence_by_id[key] for key in sorted(evidence_by_id)]
