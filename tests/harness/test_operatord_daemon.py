@@ -1057,6 +1057,43 @@ class TestFailureFlowControl:
         assert result["status"] == "failed"
         assert "'int' object has no attribute 'seek'" not in result["log_tail"]
 
+    def test_fast_failed_quota_task_drains_trailing_error_before_classification(self, tmp_path):
+        env = _setup_command_harness(tmp_path)
+        self._submit_command_task(
+            tmp_path,
+            env,
+            task_id="T-cooldown-fast-output",
+            command=_command_text(
+                [
+                    _worker_python(),
+                    "-c",
+                    (
+                        "print('\\n'.join(['dispatch preamble'] * 200), flush=True); "
+                        "print(\"You've hit your usage limit for GPT-5.3-Codex-Spark\", flush=True); "
+                        "raise SystemExit(1)"
+                    ),
+                ]
+            ),
+        )
+
+        daemon_proc = self._run_command_daemon_once(env)
+        assert daemon_proc.returncode == 0, daemon_proc.stderr
+
+        status_path = tmp_path / "run" / "operator-status" / "test-command-builder.json"
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+        assert status["runtime_state"] == "cooldown"
+        result_path = (
+            tmp_path
+            / "run"
+            / "operator-results"
+            / "test-command-builder"
+            / "T-cooldown-fast-output"
+            / "result.json"
+        )
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        assert "usage limit for GPT-5.3-Codex-Spark" in result["log_tail"]
+        assert "[flow-control] runtime_state=cooldown" in result["log_tail"]
+
     def test_failed_auth_task_sets_auth_expired(self, tmp_path):
         env = _setup_command_harness(tmp_path)
         self._submit_command_task(

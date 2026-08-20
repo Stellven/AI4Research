@@ -1111,8 +1111,10 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                                 continue
                             lines = [key.fileobj.readline() for key, _mask in events]
 
+                        saw_eof = False
                         for line in lines:
                             if not line:
+                                saw_eof = True
                                 continue
                             from operator_runtime import scrub_secrets  # noqa: E402
                             scrubbed = scrub_secrets(line)
@@ -1120,7 +1122,12 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                             log_f.flush()
                             log_lines.append(scrubbed.rstrip())
 
-                        if proc.poll() is not None:
+                        # A short-lived worker can exit after filling the pipe but
+                        # before the daemon consumes it.  ``poll()`` only says the
+                        # process is terminal; buffered output (including quota or
+                        # auth errors) may still be unread.  Stop only after EOF so
+                        # failure flow-control classifies the actual trailing error.
+                        if saw_eof and proc.poll() is not None:
                             break
 
                 proc.wait()
