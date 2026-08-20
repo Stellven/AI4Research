@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from graph_scheduler import load_graph, save_graph
+
 
 PASS_STATES = {"passed"}
 PROGRESS_STATES = {"queued", "assigned", "dispatched", "in_progress", "reviewing"}
@@ -342,7 +344,10 @@ def evaluate_sid(
             "lane_hint": requirement_ir.get("lane_hint", "delivery"),
         },
     )
-    graph = enrich_task_graph_defaults(_load_json(graph_path), requirement_ir, sprint_id=sid)
+    # Runtime node and gate state lives in task_dag.state.json.  Always use the
+    # canonical graph loader so coverage is computed from the merged spec/state
+    # view instead of the deliberately state-free task_graph.json spec plane.
+    graph = enrich_task_graph_defaults(load_graph(graph_path), requirement_ir, sprint_id=sid)
     trace = build_requirement_trace(requirement_ir, graph)
     coverage = build_coverage_report(trace, graph)
     verdict = build_acceptance_verdict(
@@ -376,7 +381,10 @@ def evaluate_sid(
         verdict.update({"verdict": "PASS", "reasons": [], "coverage_summary": coverage["summary"]})
     if write:
         _write_json(req_path, requirement_ir)
-        _write_json(graph_path, graph)
+        # Preserve the spec/state split while persisting any enriched topology
+        # defaults.  A direct JSON write would leak runtime fields back into the
+        # immutable graph spec and make the next read stale again.
+        save_graph(graph_path, graph)
         _write_json(sprints_dir / f"{sid}.requirement_trace.json", trace)
         _write_json(sprints_dir / f"{sid}.coverage_report.json", coverage)
         _write_json(sprints_dir / f"{sid}.acceptance_verdict.json", verdict)
