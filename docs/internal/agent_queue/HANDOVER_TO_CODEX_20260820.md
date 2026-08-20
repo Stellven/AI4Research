@@ -466,6 +466,22 @@ might do worse" problem the owner flagged.
 3. Route Part B through the resolver so the declared logical operators actually
    execute, instead of `execute_part_b` bypassing it. That alone closes the
    contract-versus-dispatch discrepancy even before the executor exists.
+
+   This is feasible today. `scientific_lifecycle/registry.py:registration_entries()`
+   already binds 33 physical operators, including every one Part B needs:
+
+   ```
+   scientific_lifecycle_action  idea_evaluate_worker
+   scientific_lifecycle_action  experiment_design_worker
+   scientific_lifecycle_action  experiment_approval_gate_worker
+   scientific_lifecycle_action  experiment_run_worker
+   scientific_lifecycle_action  claim_verify_worker
+   scientific_lifecycle_action  publication_produce_worker
+   ```
+
+   So the operators are registered, bound and resolvable. Nothing needs writing
+   to make them dispatchable; the adapter simply never asks for them. Only
+   `experiment_run_worker` additionally needs the executor from step 1.
 4. There is no AutoSci checkout anywhere on this machine outside this plugin
    (searched). So "pull autosci directly" means bind the in-repo
    `scientific_lifecycle` operators, not fetch an external repo.
