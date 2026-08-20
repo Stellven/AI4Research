@@ -1385,3 +1385,152 @@ def test_no_task_specific_constants_and_no_graph_state_access() -> None:
     text = "\n".join(path.read_text(encoding="utf-8") for path in package.glob("*.py"))
     forbidden = ["Tencent", "腾讯", "4-6 trends", "four to six trends", "real_data_research", "research_run_state", "graph_state"]
     assert not any(item in text for item in forbidden)
+
+
+def test_reviewer_process_commentary_never_ships_as_a_report_limitation(tmp_path: Path, monkeypatch) -> None:
+    """A reviewer's note about its own review must not become report content.
+
+    The shipped delivery once carried "This review evaluates only the report's
+    structure..." as a scientific limitation, and one reviewer-authored
+    sentence contradicted the report's own source count. The revision loop is
+    where those sentences crossed over: reviewer limitations were merged into
+    the accumulator that the next attempt was required to render verbatim.
+    """
+    monkeypatch.chdir(tmp_path)
+    method_body = "The method uses only validated sources."
+    base_limitation = "Evidence is limited to abstracts."
+    review_note = "This review evaluates only the report's structure and cannot verify upstream synthesis."
+    body = (
+        "# Bounded report\n\n## Evidence Method\n\n"
+        + method_body
+        + "\n\n## Findings\n\nConclusion one text. Evidence: claim-1.\n\n## Limitations\n\n- "
+        + base_limitation
+    )
+    report_draft = {
+        "schema": "research_synthesis.report_draft.v1",
+        "node_id": "report_draft",
+        "report": {
+            "title": "Bounded report",
+            "body": body,
+            "sections": [],
+            "conclusions": [{"conclusion_id": "c1", "text": "Conclusion one text.", "evidence_ids": ["claim-1"]}],
+        },
+        "claim_source_lineage": {"claim-1": ["src-1"]},
+        "evidence_lineage": ["evidence_synthesis", "source_validation"],
+        "writer_usage": [{"provider": "writer", "model": "writer-model", "usage_kind": "llm"}],
+        "limitations": [base_limitation],
+    }
+    review = {
+        "schema": "research_synthesis.independent_review.v1",
+        "node_id": "independent_review",
+        "findings": [{
+            "finding_id": "review-001",
+            "severity": "high",
+            "category": "structure",
+            "message": "Rework the findings section.",
+        }],
+        "verdict_suggestion": "revise",
+        "evidence_lineage": ["independent_review", "report_draft", "evidence_synthesis", "source_validation"],
+    }
+    synthesis = {
+        "schema": "research_synthesis.evidence_synthesis.v1",
+        "node_id": "evidence_synthesis",
+        "claims": [{
+            "claim_id": "claim-1",
+            "text": "Claim one text.",
+            "evidence_ids": ["src-1"],
+            "evidence_quotes": [{"source_id": "src-1", "quote": "Claim one text."}],
+            "uncertainty": "low",
+            "limitations": [],
+        }],
+        "input_lineage": {"seed_snapshot": "seed_snapshot", "source_validation": "source_validation"},
+    }
+    validation = {
+        "schema": "research_synthesis.source_validation.v1",
+        "node_id": "source_validation",
+        "accepted": [{"source_id": "src-1", "title": "Source", "content_summary": "Claim one text."}],
+    }
+    refs = []
+    for name, payload in (
+        ("report_draft", report_draft),
+        ("independent_review", review),
+        ("evidence_synthesis", synthesis),
+        ("source_validation", validation),
+    ):
+        payload["task_id"] = "task-research-synthesis"
+        payload["run_id"] = "run-research-synthesis"
+        payload["workflow_id"] = "research_synthesis_v1"
+        path = tmp_path / "inputs" / f"{name}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        refs.append({
+            "artifact_id": name,
+            "path": str(path.relative_to(tmp_path)),
+            "schema": payload["schema"],
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        })
+
+    def reviser(**kwargs) -> dict:
+        requirements = kwargs["preservation_requirements"]
+        return {
+            "provider": "writer",
+            "model": "writer-model",
+            "report": {
+                "title": "Bounded report",
+                "body": body + "\n\nRevised per review.",
+                "sections": [],
+                "conclusions": [{"conclusion_id": "c1", "text": "Conclusion one text.", "evidence_ids": ["claim-1"]}],
+            },
+            "limitations": list(requirements["preserved_limitations"]),
+            "preservation": {
+                "preserved_conclusion_ids": list(requirements["preserved_conclusion_ids"]),
+                "preserved_method_sha256": requirements["preserved_method_sha256"],
+                "preserved_limitations": list(requirements["preserved_limitations"]),
+            },
+        }
+
+    seen_preservation_requirements: list[list[str]] = []
+
+    def capturing_reviser(**kwargs) -> dict:
+        seen_preservation_requirements.append(
+            list(kwargs["preservation_requirements"]["preserved_limitations"])
+        )
+        return reviser(**kwargs)
+
+    reviewer_calls = {"count": 0}
+
+    def reviewer(**kwargs) -> dict:
+        reviewer_calls["count"] += 1
+        # First pass demands another revision AND records process commentary;
+        # the loop must carry the demand forward without ever demanding the
+        # commentary be rendered in the report.
+        first = reviewer_calls["count"] == 1
+        return {
+            "provider": "reviewer",
+            "model": "reviewer-model",
+            "findings": [{
+                "finding_id": "revision-review-001",
+                "severity": "medium",
+                "category": "structure",
+                "message": "Tighten the findings section once more.",
+            }] if first else [],
+            "verdict_suggestion": "revise" if first else "accept",
+            "limitations": [review_note],
+        }
+
+    result = execute_operator(
+        _request(tmp_path, "report_revision", payload={"task_contract": _task_contract()}, refs=refs),
+        services={"model_generate": capturing_reviser, "review_model_generate": reviewer},
+    )
+    assert result["status"] == "completed", result.get("errors")
+    artifact = _read_artifact(tmp_path, result)
+    assert artifact["revision_applied"] is True
+    assert base_limitation in artifact["limitations"]
+    assert review_note not in artifact["limitations"]
+    assert review_note in artifact["review_recorded_limitations"]
+    assert review_note not in result["limitations"]
+    # Two attempts ran, and the second was never required to render the
+    # reviewer's process note verbatim -- the exact unsatisfiable demand that
+    # used to deadlock this loop.
+    assert len(seen_preservation_requirements) == 2
+    assert all(review_note not in required for required in seen_preservation_requirements)

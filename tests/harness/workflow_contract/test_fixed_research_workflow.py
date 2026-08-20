@@ -170,6 +170,13 @@ def _seed_controller_accepted_part_a_precondition(
                     "node_id": node_id,
                     "limitations": ["Deterministic Part-A authority precondition for a Part-B runtime test."],
                 }
+                if node_id == "independent_review":
+                    # Review-process commentary. Part B must record it as a
+                    # review scope note and never ship it as a limitation of
+                    # the research itself.
+                    payload["limitations"] = [
+                        "This review evaluates only the report's structure and had no access to the original draft."
+                    ]
                 if node_id == "final_acceptance":
                     payload.update({"accepted": True, "decision": "accepted", "gate_outcome": "pass"})
                 output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -1454,6 +1461,17 @@ def test_non_dry_fixed_part_b_b1_to_b7_with_seeded_controller_accepted_part_a_pr
     )
     markdown_limitations = markdown.split("## Limitations\n\n", 1)[1].splitlines()
     assert [line[2:] for line in markdown_limitations if line.startswith("- ")] == delivery["limitations"]
+    # The reviewer's note about its own process is preserved for audit in the
+    # handoff but never shipped as a scientific limitation of the delivery.
+    handoff = json.loads(
+        (work_dir / "artifacts/research_evidence_to_poc/poc/handoff/poc_handoff.json").read_text(encoding="utf-8")
+    )
+    review_note = "This review evaluates only the report's structure and had no access to the original draft."
+    assert review_note in handoff["review_scope_notes"]
+    assert review_note not in handoff["limitations"]
+    assert review_note not in delivery["limitations"]
+    assert review_note not in markdown
+    assert "Deterministic Part-A authority precondition for a Part-B runtime test." in delivery["limitations"]
 
     durable = gnd.load_graph(graph_path)
     b6_node = next(item for item in durable["nodes"] if item["id"] == "claim_verification")

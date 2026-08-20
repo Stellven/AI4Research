@@ -422,6 +422,14 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         # below for why recording the accumulated list instead breaks two
         # downstream checks.
         accepted_preserved_limitations: list[str] = []
+        # What the REVIEW said about its own scope and process ("no access to
+        # the original draft", "this review evaluates only structure").
+        # Recorded, never merged into the report's limitations: a reviewer's
+        # note about how it reviewed is not a scientific limitation of the
+        # evidence, and shipping it as one is how the delivery ended up
+        # asserting things about the report that the report itself
+        # contradicted.
+        review_process_notes: list[str] = []
         for attempt in range(1, MAX_REVISION_ATTEMPTS + 1):
             preservation_requirements = revision_preservation_requirements(
                 original_report,
@@ -543,8 +551,8 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             }
             revision_review["revision_attempt"] = attempt
             revision_review["max_revision_attempts"] = MAX_REVISION_ATTEMPTS
-            limitations[:] = list(dict.fromkeys([
-                *limitations,
+            review_process_notes[:] = list(dict.fromkeys([
+                *review_process_notes,
                 *(str(item).strip() for item in revision_review.get("limitations") or [] if str(item).strip()),
                 *(str(item).strip() for item in _same_model_limitation(attempt_writer_usage, attempt_reviewer_usage) if str(item).strip()),
             ]))
@@ -645,19 +653,12 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             )
             if str(item).strip()
         )),
-        # Nothing is dropped: limitations the review added after the accepted
-        # revision are recorded here rather than asserted of the report.
-        "review_recorded_limitations": [
-            str(item).strip()
-            for item in limitations
-            if str(item).strip()
-            and str(item).strip() not in set(
-                accepted_preserved_limitations
-                if repair_required and "accepted_preserved_limitations" in locals()
-                else []
-            )
-        ] if repair_required and "accepted_preserved_limitations" in locals()
-        and accepted_preserved_limitations else [],
+        # Nothing is dropped: what the review said about its own scope and
+        # process is recorded here rather than asserted of the report or
+        # shipped downstream as a scientific limitation.
+        "review_recorded_limitations": (
+            review_process_notes if repair_required and "review_process_notes" in locals() else []
+        ),
     }
     artifact, hash_record = write_artifact(
         context,

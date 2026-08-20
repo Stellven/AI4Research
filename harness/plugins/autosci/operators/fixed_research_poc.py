@@ -259,6 +259,20 @@ def _poc_handoff(
         raise ResearchOperatorError("A8 did not record an accepted PASS outcome.", error_type="acceptance_not_passed")
     artifacts: list[dict[str, Any]] = []
     upstream_limitations: list[str] = []
+    review_scope_notes: list[str] = []
+    # Which stages speak about the EVIDENCE, and which speak about their own
+    # process. A reviewer's note that it "had no access to the original draft"
+    # is a fact about the review, not a limitation of the research; carrying it
+    # into the delivery as a scientific limitation is how the delivery shipped
+    # a sentence contradicting the report's own source count.
+    evidence_limitation_nodes = {
+        "seed_fetch",
+        "source_discovery",
+        "source_validation",
+        "evidence_synthesis",
+        "report_draft",
+        "report_revision",
+    }
     for node_id in sorted(PART_A_IDS):
         item = indexed[node_id]
         path = context.workspace_root / str(item["path"])
@@ -280,8 +294,15 @@ def _poc_handoff(
             upstream = _load(context, item)
         except ResearchOperatorError:
             upstream = {}
-        upstream_limitations.extend(
-            str(value) for value in upstream.get("limitations") or [] if str(value).strip()
+        recorded = [str(value) for value in upstream.get("limitations") or [] if str(value).strip()]
+        if node_id in evidence_limitation_nodes:
+            upstream_limitations.extend(recorded)
+        else:
+            review_scope_notes.extend(recorded)
+        review_scope_notes.extend(
+            str(value)
+            for value in upstream.get("review_recorded_limitations") or []
+            if str(value).strip()
         )
     # The accepted report, in the shape AutoSci reads. It travels through the
     # handoff because idea_evaluation's read scope is exactly its declared
@@ -324,6 +345,9 @@ def _poc_handoff(
             *upstream_limitations,
             "Part B tests evidence-lineage integrity; it does not independently establish external scientific validity.",
         ])),
+        # Preserved for audit, never merged into limitations: these sentences
+        # describe how the review was conducted, not what the evidence shows.
+        "review_scope_notes": list(dict.fromkeys(review_scope_notes)),
     }
     return _write(context, primary_rel, payload, artifact_id="poc-handoff", schema=payload["schema"], limitations=payload["limitations"])
 
