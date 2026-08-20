@@ -649,3 +649,69 @@ The substantive findings sections ranked last.
 Fix from our side, not AutoSci's: name the report's sections so the findings
 carry "Findings" or "Results". That is a prompt/deliverable-shape change in
 `report_draft`, and it costs nothing.
+
+---
+
+## 11. Part B now reads the report (done), and what still is not
+
+### What changed
+
+`_idea_evaluation` never opened the research report. It selected a hardcoded
+benchmark idea and verified artifact digests, so Part A produced a
+source-grounded, quote-verified report and Part B tested something unrelated to
+it.
+
+Now the accepted report travels through the handoff as
+`research_paper.v1`-shaped sections, and `execute_claim_extract` -- the
+registered `autosci-evidence-claim-extract` operator -- pulls the claims.
+
+### Operator, not bridge, and here is the measurement
+
+Both paths work on our real report. They are not equivalent:
+
+| | claims | testable |
+|---|---|---|
+| bridge `run --action extract_claims` | 3 | 1 |
+| operator `execute_claim_extract` | 11 | 4 |
+
+The bridge hardcodes `if len(claims) >= 3: break` in `_paper_claims_raw`. The
+operator takes `limit` from the payload, default 12, max 50. The operator is
+also the resolver path, which is where Part B should end up anyway.
+
+### The read-scope detail that shapes the design
+
+`idea_evaluation`'s `read_scope` is exactly its declared dependencies, which is
+`poc_handoff` alone. It cannot open `report_revision` itself. That is why the
+report travels through the handoff rather than being read directly, and it is
+the same constraint that will apply to anything else Part B needs from Part A.
+
+### What is deliberately NOT claimed
+
+None of the extracted claims is executed. No `experiment_executor` is bound for
+domain claims, so only the lineage benchmark actually runs. Rather than leave
+that invisible:
+
+* the extracted claims are recorded in `idea_evaluation.json` as `report_claims`
+* the testable ones appear in `rejected_alternatives` with the real reason
+* `selection_basis` now says the benchmark is chosen because it is the only
+  claim this environment can execute, not because it is the strongest available
+
+### The trap that was avoided, and it is worth stating
+
+Routing execution through the bridge would have produced
+`outcome: "supports"` from a fixture whose own recorded limitation reads
+*"Fixture result is deterministic and not a real benchmark run"*, with metrics
+`result_json_written: true`. That would have replaced a real sandboxed 8/8
+integrity check with something that looks more like science and is less true.
+
+Execute, then convert. Never let the bridge invent the result.
+
+### Next step for this thread
+
+Bind an `experiment_executor` returning
+`{outcome, metrics, evidence_ids, criteria_results?, limitations?}` honouring the
+plan's `sandbox`, `timeout_seconds` and `max_output_bytes`. Once it exists, the
+testable claims already extracted here become executable and Part B stops
+needing the lineage benchmark as its only subject. The scope question -- what a
+falsifiable outcome means for a claim like "query rewriting improves retrieval
+alignment" -- is the owner's to answer, and is the reason this was not guessed.
