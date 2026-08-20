@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import os
 import subprocess
 import sys
@@ -112,6 +113,137 @@ def _file_artifact(path: Path, context: OperatorContext, artifact_id: str, schem
     )
 
 
+_HEADING_RE = re.compile(r"(?m)^##\s+(.+)$")
+
+
+def report_sections(report: dict[str, Any]) -> list[dict[str, str]]:
+    """Split an accepted report body into the sections AutoSci reads.
+
+    `research_paper.v1` wants `sections[{title, text, source_anchor}]`. The
+    accepted report carries markdown, so it is split on level-2 headings and each
+    section keeps an anchor back to where it came from. Structured
+    `report.sections` is preferred when present, since it is the writer's own
+    division rather than one inferred from formatting.
+    """
+    structured = report.get("sections") if isinstance(report.get("sections"), list) else []
+    rows: list[dict[str, str]] = []
+    for item in structured:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or "").strip()
+        text = str(item.get("body") or item.get("text") or "").strip()
+        if title and text:
+            slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+            rows.append({"title": title, "text": text, "source_anchor": f"report.md#{slug}"})
+    if rows:
+        return rows
+    body = str(report.get("body") or "")
+    parts = _HEADING_RE.split(body)
+    for index in range(1, len(parts), 2):
+        title = str(parts[index]).strip()
+        text = str(parts[index + 1]).strip() if index + 1 < len(parts) else ""
+        if title and text:
+            slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+            rows.append({"title": title, "text": text, "source_anchor": f"report.md#{slug}"})
+    return rows
+
+
+def extract_report_claims(
+    context: OperatorContext,
+    stage_dir: Path,
+    research_report: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Run AutoSci's own claim extractor over the accepted research report.
+
+    Rebound, not reimplemented: this calls `execute_claim_extract`, the operator
+    registered as `autosci-evidence-claim-extract`, so the claims, their
+    testability tags and their source anchors are AutoSci's, and the call goes
+    through the same evidence discipline as any other -- hash-verified input,
+    scoped paths, idempotent replay.
+
+    Before this, Part B never read the research report at all: it selected a
+    hardcoded benchmark idea and verified artifact digests. The claims returned
+    here are what make Part B derive from the research it is supposed to follow.
+    """
+    from ..operators.scientific_lifecycle.evidence.registry import execute_claim_extract
+
+    sections = research_report.get("sections") or []
+    if not sections:
+        return [], [], []
+
+    paper_path = stage_dir / "research_paper.v1.json"
+    paper_rel = str(paper_path.relative_to(context.workspace_root)).replace("\\", "/")
+    paper_document = {
+        "schema": "research_paper.v1",
+        "task_id": str(context.node_request.get("task_id") or ""),
+        "sprint_id": str(context.node_request.get("sprint_id") or context.node_request.get("run_id") or ""),
+        "node_id": "claim_extract",
+        "status": "completed",
+        "outputs": {
+            "paper": {
+                "paper_id": "accepted-research-report",
+                "title": str(research_report.get("title") or "Accepted research report"),
+                "source_type": "markdown",
+                "source_ref": str(research_report.get("source_ref") or "report.md"),
+                "abstract": "",
+                "parse_status": "parsed",
+                "sections": sections,
+            }
+        },
+        "limitations": [],
+    }
+    body = (json.dumps(paper_document, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    paper_path.parent.mkdir(parents=True, exist_ok=True)
+    paper_path.write_bytes(body)
+
+    stage_rel = str(stage_dir.relative_to(context.workspace_root)).replace("\\", "/") + "/"
+    request = {
+        "schema": "research_node_request.v1",
+        "task_id": str(context.node_request.get("task_id") or ""),
+        "run_id": str(context.node_request.get("run_id") or ""),
+        "sprint_id": str(context.node_request.get("sprint_id") or context.node_request.get("run_id") or ""),
+        "workflow_id": str(context.node_request.get("workflow_id") or ""),
+        "node_id": "claim_extract",
+        "read_scope": [paper_rel],
+        "write_scope": [stage_rel],
+        "input_artifact_refs": [
+            {
+                "artifact_id": "research_paper",
+                "path": paper_rel,
+                "schema": "research_paper.v1",
+                "sha256": hashlib.sha256(body).hexdigest(),
+            }
+        ],
+        "payload": {"limit": 12},
+    }
+    result = execute_claim_extract(request, workspace_root=context.workspace_root)
+    if str(result.get("status") or "") != "completed":
+        errors = result.get("errors") or []
+        message = str((errors[0] or {}).get("message") or "") if errors else ""
+        raise ResearchOperatorError(
+            f"AutoSci claim extraction did not complete: {message}"[:200],
+            error_type="claim_extraction_failed",
+        )
+
+    claims_path = stage_dir / "research_claims.v1.json"
+    claims: list[dict[str, Any]] = []
+    if claims_path.is_file():
+        payload = json.loads(claims_path.read_text(encoding="utf-8"))
+        claims = [item for item in ((payload.get("outputs") or {}).get("claims") or []) if isinstance(item, dict)]
+
+    artifacts: list[dict[str, Any]] = []
+    hashes: list[dict[str, Any]] = []
+    for path, artifact_id, schema in (
+        (paper_path, "research-paper", "research_paper.v1"),
+        (claims_path, "research-claims", "research_claims.v1"),
+    ):
+        if path.is_file():
+            artifact, digest = _file_artifact(path, context, artifact_id, schema)
+            artifacts.append(artifact)
+            hashes.append(digest)
+    return claims, artifacts, hashes
+
+
 def _poc_handoff(
     context: OperatorContext,
     primary_rel: str,
@@ -151,9 +283,36 @@ def _poc_handoff(
         upstream_limitations.extend(
             str(value) for value in upstream.get("limitations") or [] if str(value).strip()
         )
+    # The accepted report, in the shape AutoSci reads. It travels through the
+    # handoff because idea_evaluation's read scope is exactly its declared
+    # dependencies, which is the handoff alone -- it cannot open report_revision
+    # itself.
+    research_report: dict[str, Any] = {}
+    for source_node in ("report_revision", "report_draft"):
+        reference = indexed.get(source_node)
+        if not isinstance(reference, dict):
+            continue
+        try:
+            document = _load(context, reference)
+        except ResearchOperatorError:
+            continue
+        report = document.get("revised_report") if source_node == "report_revision" else document.get("report")
+        if not isinstance(report, dict):
+            continue
+        sections = report_sections(report)
+        if sections:
+            research_report = {
+                "title": str(report.get("title") or ""),
+                "source_ref": "report.md",
+                "source_node": source_node,
+                "sections": sections,
+            }
+            break
+
     payload = {
         "schema": "solar.fixed_research.poc_handoff.v1",
         "status": "accepted",
+        "research_report": research_report,
         "part_a_final_acceptance": {
             "path": indexed["final_acceptance"]["path"],
             "sha256": indexed["final_acceptance"]["sha256"],
@@ -179,6 +338,29 @@ def _idea_evaluation(context: OperatorContext, primary_rel: str, dependencies: l
     ]
     if not inputs:
         raise ResearchOperatorError("Handoff contains no benchmark inputs.", error_type="lineage_incomplete")
+
+    stage_dir = (context.workspace_root / primary_rel).parent
+    report_claims, extra_artifacts, extra_hashes = extract_report_claims(
+        context, stage_dir, handoff.get("research_report") or {}
+    )
+    testable = [item for item in report_claims if str(item.get("testability") or "") == "testable"]
+
+    limitations = [
+        "Selection is deterministic and bounded to evidence integrity, not scientific effect replication.",
+    ]
+    if report_claims:
+        limitations.append(
+            f"AutoSci extracted {len(report_claims)} claim(s) from the accepted report, "
+            f"{len(testable)} of them testable; none is executed here because no "
+            "experiment executor is bound for domain claims. Only the lineage "
+            "benchmark below is actually run."
+        )
+    else:
+        limitations.append(
+            "No claim was extracted from the accepted report, so Part B rests on the "
+            "lineage benchmark alone."
+        )
+
     payload = {
         "schema": "solar.fixed_research.idea_evaluation.v1",
         "status": "selected",
@@ -187,16 +369,43 @@ def _idea_evaluation(context: OperatorContext, primary_rel: str, dependencies: l
             "title": "Verify accepted research artifact lineage under deterministic replay",
             "hypothesis": "Every artifact accepted into the Part-A handoff still matches its controller-bound SHA-256 digest.",
             "falsification": "Any missing artifact or digest mismatch falsifies the PoC claim.",
-            "selection_basis": "The accepted A1-A8 handoff exposes an exact, bounded integrity claim that can be tested without network access.",
+            "selection_basis": (
+                "The accepted A1-A8 handoff exposes an exact, bounded integrity claim that can be "
+                "tested without network access. It is selected because it is the only claim this "
+                "environment can actually execute, not because it is the strongest claim available."
+            ),
         },
+        # What AutoSci found in the research report. Recorded whether or not it is
+        # executed, so the gap between what was claimed and what was tested is
+        # visible rather than absent.
+        "report_claims": report_claims,
+        "testable_report_claims": [str(item.get("claim_id") or "") for item in testable],
         "handoff": {"path": handoff_ref["path"], "sha256": handoff_ref["sha256"]},
         "benchmark_inputs": inputs,
         "rejected_alternatives": [
-            {"idea_id": "scientific-effect-replication", "reason": "Would require domain-specific data, methods, and authority outside this bounded workflow."}
+            {"idea_id": "scientific-effect-replication", "reason": "Would require domain-specific data, methods, and authority outside this bounded workflow."},
+            *[
+                {
+                    "idea_id": str(item.get("claim_id") or ""),
+                    "claim_text": str(item.get("text") or "")[:400],
+                    "source_anchor": str(item.get("source_anchor") or ""),
+                    "reason": "Extracted from the accepted report and testable, but no experiment executor is bound to run it.",
+                }
+                for item in testable
+            ],
         ],
-        "limitations": ["Selection is deterministic and bounded to evidence integrity, not scientific effect replication."],
+        "limitations": limitations,
     }
-    return _write(context, primary_rel, payload, artifact_id="idea-evaluation", schema=payload["schema"], limitations=payload["limitations"])
+    return _write(
+        context,
+        primary_rel,
+        payload,
+        artifact_id="idea-evaluation",
+        schema=payload["schema"],
+        extra_artifacts=extra_artifacts,
+        extra_hashes=extra_hashes,
+        limitations=payload["limitations"],
+    )
 
 
 def _experiment_design(context: OperatorContext, primary_rel: str, dependencies: list[dict[str, Any]]) -> dict[str, Any]:
