@@ -773,6 +773,44 @@ def test_failed_current_attempt_is_retained_until_replacement(
     assert node["last_operator_closeout_failure"]["reason"] == "operator_result_failed"
 
 
+def test_old_terminal_result_cannot_close_new_virtual_pool_assignment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The scheduler may assign a retry before a physical operator accepts it.
+
+    Until acceptance activates a replacement attempt, the prior failed attempt
+    remains as audit evidence.  Its result must not be replayed against the new
+    graph dispatch id on each reconciliation poll.
+    """
+    monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+    _write_result(
+        tmp_path,
+        "pm-old",
+        "operator-old",
+        status="failed",
+        exit_code=1,
+    )
+    old_attempt = _attempt("pm-old", "operator-old", status="failed")
+    old_attempt["dispatch_id"] = "graph-old"
+    node = {
+        "id": NODE_ID,
+        "status": "assigned",
+        "assigned_to": "operator-pool:builder.0",
+        "dispatch_id": "graph-retry-not-yet-accepted",
+        "execution_attempt": old_attempt,
+    }
+    graph = {
+        "sprint_id": SID,
+        "nodes": [node],
+        "node_results": {NODE_ID: {"status": "assigned"}},
+    }
+
+    closeout = gnd._operator_terminal_result_closeout(SID, NODE_ID, node, graph)
+
+    assert closeout is None
+
+
 def test_operator_pool_success_without_task_identity_fails_closed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

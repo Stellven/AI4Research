@@ -4382,6 +4382,18 @@ def _operator_terminal_result_closeout(
     attempt = current_execution_attempt(node)
     if attempt is not None and not bool(attempt.get("requires_operator_result")):
         return None
+    if attempt is not None:
+        # A virtual pool assignment is created before the physical operator
+        # accepts it.  During that gap the node carries the *new* graph
+        # dispatch id while ``execution_attempt`` still describes the last
+        # terminal worker.  Replaying that old result on every coordinator
+        # poll used to consume the dispatch-starvation budget and could send a
+        # healthy retry to human review.  Only the assignment owned by this
+        # exact attempt may consume its terminal result.
+        attempt_dispatch_id = str(attempt.get("dispatch_id") or "").strip()
+        node_dispatch_id = str(node.get("dispatch_id") or "").strip()
+        if attempt_dispatch_id and node_dispatch_id and attempt_dispatch_id != node_dispatch_id:
+            return None
     pane = str(node.get("assigned_to") or "").strip()
     operator_id = str((attempt or {}).get("operator_id") or "").strip()
     if not operator_id and pane.startswith("operator:"):
