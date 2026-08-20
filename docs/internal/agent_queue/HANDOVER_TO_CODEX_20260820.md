@@ -728,3 +728,61 @@ testable claims already extracted here become executable and Part B stops
 needing the lineage benchmark as its only subject. The scope question -- what a
 falsifiable outcome means for a claim like "query rewriting improves retrieval
 alignment" -- is the owner's to answer, and is the reason this was not guessed.
+
+---
+
+## 12. Third green run, and the caveat in section 1 is now closed
+
+Run `evidence-e2e7` at `96088dcc2` completed 15/15: every gate
+`deterministic_command`, durations 0.060-0.082s, none 0.0, zero failures, zero
+dispatch failures. This run exercised more than the two before it.
+
+### The preservation rewrite is now verified LIVE
+
+Section 1 warned that `report_revision` had short-circuited on both prior green
+runs, so the rewritten preservation checks had never run against a real
+revision. This run the reviewer rejected the draft and the loop actually ran:
+
+    revision attempt      2
+    review verdict        accept
+    remaining findings    0
+    preservation          verified
+    method_changed        True
+    retention             0.9868   (floor 0.8)
+
+`method_changed: True` is exactly the case that deadlocked the workflow before:
+the reviewer required a Method correction and byte-exact preservation forbade
+it, twice, and the node died. The change is now allowed, measured and recorded,
+and `final_acceptance` accepted. **That caveat is closed.**
+
+### AutoSci extraction verified inside the workflow
+
+`poc/idea/` holds `research_paper.v1.json` and `research_claims.v1.json` beside
+`idea_evaluation.json`, all declared and accepted by the unreported-files check.
+Eight claims extracted from the accepted report, one testable, with the honest
+limitation recorded that none is executed.
+
+### A prediction I got wrong, recorded because the reasoning was plausible
+
+I predicted the reviser could not satisfy the reviewer's source-lineage finding,
+since claims come from `evidence_synthesis` and the reviser can only rewrite the
+report. It satisfied it in two attempts. The lesson is narrow but real: the
+reviser has more latitude than "it cannot change the claims" implies, because
+the finding was about how the REPORT presents lineage, not about the claims
+themselves.
+
+### The cause behind that finding, now fixed
+
+The reviewer was right that claims each cited a single source. That was my
+over-constraint. The grounding prompt said:
+
+    "A claim that is only true by combining several sources fails, because
+     support is assessed per source: split it into separate claims instead."
+
+But `assess_claim_grounding` requires ANY cited source to support the claim, not
+all of them, so multi-source claims were always permitted. The instruction now
+reads: cite every source that genuinely supports the claim; at least one must
+support it on its own; split only when no single source carries it.
+
+Without this the reviser papered over the same finding on every run. Not a
+failure, but a recurring cost with a removable cause.
