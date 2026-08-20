@@ -49,6 +49,16 @@ def sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
     monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
     monkeypatch.setattr(gnd, "HARNESS_DIR", harness)
+    monkeypatch.setattr(
+        gnd,
+        "_operator_pool_role_probe",
+        lambda role: {
+            "dispatchable": False,
+            "configured": False,
+            "busy": False,
+            "reason": "operator_pool_role_unavailable",
+        },
+    )
     return sprints, harness
 
 
@@ -116,6 +126,39 @@ class TestDispatchRetryAccounting:
         assert "dispatch" in str(node.get("next_action") or "").lower() or node.get("next_action"), node
         ledger = (sprints / f"{sid}.gate-ledger.jsonl").read_text(encoding="utf-8")
         assert "needs_human_review" in ledger
+
+    def test_busy_operator_pool_backpressure_does_not_escalate(self, sandbox, monkeypatch):
+        """Polling while a compatible operator is busy is not a new failure.
+
+        Two ready research nodes may share one research-capable builder.  The
+        second virtual pool assignment must remain retryable until the first
+        returns capacity instead of reaching the retry cap on wall-clock polls.
+        """
+        sprints, _ = sandbox
+        monkeypatch.setattr(
+            gnd,
+            "_operator_pool_role_probe",
+            lambda role: {
+                "dispatchable": False,
+                "configured": True,
+                "busy": True,
+                "reason": "operator_pool_role_busy",
+            },
+        )
+        sid = "sprint-g4r3-capacity-backpressure"
+        node = _assigned_node(streak=gnd.GRAPH_NODE_DISPATCH_MAX_FAILURES - 1)
+        graph = _graph(sid, node)
+        graph_path = _write(sprints, sid, graph)
+
+        repaired = gnd._reconcile_existing_dispatches(graph, graph_path)
+
+        assert gs.node_status(graph, "S2") == "pending", repaired
+        assert int(node.get("dispatch_failure_streak") or 0) == 0
+        assert node.get("dispatch_retry_class") == "transient_operator_capacity"
+        assert any(
+            item.get("retry_class") == "transient_operator_capacity"
+            for item in repaired
+        )
 
     def test_escalated_node_is_not_reassigned(self, sandbox):
         """Durability: further reconciles leave the escalated node alone."""

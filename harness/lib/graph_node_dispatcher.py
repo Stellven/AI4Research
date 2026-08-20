@@ -5438,6 +5438,7 @@ def _account_dispatch_retry_failures(
     max_fail = GRAPH_NODE_DISPATCH_MAX_FAILURES
     node_index = {str(n.get("id") or ""): n for n in graph.get("nodes", [])}
     escalations: list[dict[str, Any]] = []
+    role_capacity: dict[str, dict[str, Any]] = {}
     for item in repaired:
         node_id = str(item.get("node") or "")
         node = node_index.get(node_id)
@@ -5448,6 +5449,27 @@ def _account_dispatch_retry_failures(
         if str(node_status(graph, node_id) or "").strip().lower() != "pending":
             continue
         reason = str(item.get("reason"))
+        pane = str(item.get("pane") or node.get("assigned_to") or "")
+        if pane.startswith("operator-pool:"):
+            role = node_dispatch_role(node)
+            if role not in role_capacity:
+                role_capacity[role] = _operator_pool_role_probe(role)
+            probe = role_capacity[role]
+            if probe.get("configured") and probe.get("busy"):
+                # A virtual pool assignment can lose its lease while the only
+                # task-compatible physical operator is doing useful work.  The
+                # reconcile reason then looks like a stale dispatch even though
+                # this is ordinary queue backpressure.  Counting coordinator
+                # polling intervals as independent failures terminalizes a
+                # healthy sibling node before capacity can return.
+                item["retry_class"] = "transient_operator_capacity"
+                item["capacity_reason"] = str(probe.get("reason") or "operator_pool_role_busy")
+                node["dispatch_retry_class"] = "transient_operator_capacity"
+                node["last_dispatch_backpressure_at"] = _utc_now()
+                node["last_dispatch_backpressure_reason"] = item["capacity_reason"]
+                node.pop("dispatch_failure_streak", None)
+                node.pop("last_dispatch_failure_reason", None)
+                continue
         failures = int(node.get("dispatch_failure_streak") or 0) + 1
         node["dispatch_failure_streak"] = failures
         node["last_dispatch_failure_reason"] = reason
