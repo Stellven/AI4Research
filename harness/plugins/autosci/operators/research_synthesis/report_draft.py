@@ -183,6 +183,26 @@ def _dedupe_repeated_heading_sections(body: str) -> str:
 _LIMITATIONS_HEADING_RE = re.compile(
     r"(?im)^(#{2,6})\s*[^\r\n]*(?:limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3)[^\r\n]*$"
 )
+_METHOD_HEADING_RE = re.compile(
+    r"(?i)methods?\b|evidence\s+method\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba"
+)
+
+
+def _limitations_heading(body: str) -> re.Match[str] | None:
+    """The first limitations heading that is not ALSO a method heading.
+
+    A writer titling a section "Method: Evidence Synthesis and Limitations"
+    made two normalizers claim the same text: the limitations merge inserted
+    recorded limitations into it on the word "Limitations", preservation then
+    froze that mixture as the accepted METHOD, and the reviewer demanded the
+    mixture be split -- which the retention floor forbade. Observed live as a
+    dead report_revision at retention 0.55. Recorded limitations belong in a
+    section that is only about limitations.
+    """
+    for match in _LIMITATIONS_HEADING_RE.finditer(body):
+        if not _METHOD_HEADING_RE.search(match.group(0)):
+            return match
+    return None
 
 
 def _merge_limitations_section(body: str, limitations: list[str], heading: str) -> str:
@@ -200,7 +220,7 @@ def _merge_limitations_section(body: str, limitations: list[str], heading: str) 
     normalized_body = " ".join(body.split()).casefold()
     missing = [item for item in wanted if " ".join(item.split()).casefold() not in normalized_body]
 
-    match = _LIMITATIONS_HEADING_RE.search(body)
+    match = _limitations_heading(body)
     if match is None:
         if not missing:
             return body

@@ -1669,3 +1669,38 @@ def test_report_draft_compiles_byte_verified_grounded_companion(tmp_path: Path, 
 
     verdict = evaluate_production_result({}, draft, {}, artifact_root=tmp_path)
     assert verdict["accepted"] is True, verdict["errors"][:3]
+
+
+def test_mixed_method_and_limitations_heading_never_receives_the_merge() -> None:
+    """Recorded limitations must not land inside the accepted method section.
+
+    A writer titled its method "Method: Evidence Synthesis and Limitations".
+    The limitations merge matched that heading on the word "Limitations" and
+    injected recorded limitations into it; preservation then froze the mixture
+    as the accepted METHOD, the reviewer demanded the mixture be split, and
+    the retention floor forbade the split -- a live report_revision died at
+    retention 0.55. The merge must target a section that is only about
+    limitations, and the revision's rendered-limitations check must read the
+    same section.
+    """
+    from harness.plugins.autosci.operators.research_synthesis.report_draft import (
+        _merge_limitations_section,
+    )
+    from harness.plugins.autosci.operators.research_synthesis.report_revision import (
+        _markdown_section,
+    )
+
+    body = (
+        "# Report\n\n## Method: Evidence Synthesis and Limitations\n\n"
+        "Method prose about how sources were used.\n\n## Findings\n\nFindings text."
+    )
+    merged = _merge_limitations_section(body, ["Evidence limited to abstracts."], "Limitations")
+    method_section = _markdown_section(merged, r"methods?\b|evidence\s+method\b")
+    assert "evidence limited to abstracts" not in method_section
+    assert "## Limitations\n\n- Evidence limited to abstracts." in merged
+    limitations_section = _markdown_section(
+        merged,
+        r"^(?!.*(?:methods?\b|evidence\s+method|方法))(?=.*(?:limitations?\b|局限|限制|不足))",
+    )
+    assert "evidence limited to abstracts" in limitations_section
+    assert "method prose" not in limitations_section

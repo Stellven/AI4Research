@@ -234,7 +234,16 @@ def verify_revision_response_preservation(
             f"(retention={retention:.2f} < {_METHOD_RETENTION_FLOOR})",
             error_type="provider_contract",
         )
-    limitations_section = _markdown_section(body, r"limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3")
+    # A heading may mention both Method and Limitations ("Method: Evidence
+    # Synthesis and Limitations"). That section is the METHOD under the
+    # preservation rules above, so the rendered-limitations check must read a
+    # section that is only about limitations -- the same exclusion the draft
+    # operator applies when it merges recorded limitations in.
+    limitations_section = _markdown_section(
+        body,
+        r"^(?!.*(?:methods?\b|evidence\s+method|\u65b9\u6cd5))"
+        r"(?=.*(?:limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3))",
+    )
     response_limitations = [str(item).strip() for item in response.get("limitations") or [] if str(item).strip()]
     declared_keys = {_preserved_limitation_key(item) for item in response_limitations}
     for limitation in required["preserved_limitations"]:
