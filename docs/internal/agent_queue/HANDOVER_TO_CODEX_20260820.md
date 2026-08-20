@@ -417,6 +417,42 @@ backend outputs into Solar evidence."* AutoSci here is an **adapter**, and the
 executing backend is external. The setup guide adds: *"long-running experiment
 launch require explicit approval and runtime evidence."*
 
+**And it is worse than a missing executor: Part B is a reimplementation.**
+Checked against the tree, `fixed_research_poc.py` duplicates one-for-one what
+AutoSci already provides:
+
+| bespoke, in `fixed_research_poc.py` | already exists in `scientific_lifecycle/action/` |
+|---|---|
+| `_idea_evaluation` | `idea.evaluate_ideas` |
+| `_experiment_design` | `experiment.design_experiment` |
+| `_experiment_approval` | `experiment.approve_experiment` |
+| `_experiment_run` | `experiment.run_experiment` |
+| `_claim_verification` | `delivery.verify_claim` |
+| `_final_delivery` | `delivery.produce_publication` / `plan_report` / `draft_report` |
+
+The bespoke version is hardcoded to a single `BENCHMARK_ID`
+(`evidence-lineage-integrity`); the AutoSci version takes a plan and returns a
+falsifiable outcome.
+
+**The contract already names the AutoSci operators, and they are not what runs.**
+`idea_evaluation` declares `ScientificIdeaEvaluator`, `experiment_run` declares
+`ScientificExperimentRunner`, `claim_verification` declares
+`ScientificClaimVerifier`, and all three are registered in
+`config/logical-operators.json`. But `fixed_research_node_adapter.py:638`
+short-circuits the resolver for every Part B stage:
+
+```python
+part_b_stage = node_id in PART_B_EXECUTABLE_NODE_IDS
+...
+if part_b_stage:
+    result = execute_part_b(...)
+```
+
+So the DAG says `ScientificExperimentRunner` and a bespoke digest replay
+executes. That is a provenance discrepancy in its own right, independent of what
+the benchmark does, and it is exactly the "why are you recreating things, you
+might do worse" problem the owner flagged.
+
 **So the work is:**
 
 1. Implement or bind an `experiment_executor` service returning
@@ -427,9 +463,14 @@ launch require explicit approval and runtime evidence."*
 2. Decide whether Part B swaps to the AutoSci lifecycle operators or keeps the
    lineage benchmark as an additional integrity stage. Ask the owner; both are
    defensible and it changes what the deliverable claims.
-3. If AutoSci proper is to be pulled in as an external backend, find where it
-   lives -- it is not vendored here, and `autosci_bridge.py` (9700+ lines) is the
-   integration point.
+3. Route Part B through the resolver so the declared logical operators actually
+   execute, instead of `execute_part_b` bypassing it. That alone closes the
+   contract-versus-dispatch discrepancy even before the executor exists.
+4. There is no AutoSci checkout anywhere on this machine outside this plugin
+   (searched). So "pull autosci directly" means bind the in-repo
+   `scientific_lifecycle` operators, not fetch an external repo.
+   `autosci_bridge.py` (9700+ lines) is the integration point if a real external
+   backend is later attached.
 
 Until an executor exists, do not describe Part B as running experiments. It
 replays digests.
