@@ -59,12 +59,30 @@ def _canonical_key(source: dict[str, Any]) -> str:
 
 
 def _rejection(source: dict[str, Any], reasons: list[str], index: int) -> dict[str, Any]:
+    """Record WHAT was rejected, WHY, and WHERE it came from.
+
+    The provenance used to be dropped here. With a five-source pack that was
+    invisible; the first live retrieval run rejected 36 candidates across three
+    providers and the artifact could not say which provider supplied them. That
+    is the first question anyone tuning retrieval asks, so the accepted and
+    rejected records now carry the same origin fields.
+
+    This is a record-keeping change only: nothing here participates in the
+    accept or reject decision.
+    """
+    provenance = source.get("provenance") if isinstance(source.get("provenance"), dict) else {}
     return {
         "source_id": str(source.get("source_id") or source.get("id") or f"candidate-{index + 1:03d}"),
         "title": str(source.get("title") or ""),
         "url": str(source.get("url") or source.get("source_ref") or ""),
         "reasons": reasons,
         "candidate_sha256": stable_json_sha256(source),
+        "acquisition_channel": str(source.get("acquisition_channel") or provenance.get("acquisition_channel") or ""),
+        "provenance": {
+            "provider": str(source.get("provider") or provenance.get("provider") or ""),
+            "query": str(provenance.get("query") or ""),
+            "retrieved_at": str(provenance.get("retrieved_at") or ""),
+        },
     }
 
 
