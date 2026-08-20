@@ -2,8 +2,25 @@
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
+import sys
+from pathlib import Path
 from typing import Any
+
+_LIB = Path(__file__).resolve().parents[4] / "lib"
+if str(_LIB) not in sys.path:
+    sys.path.insert(0, str(_LIB))
+
+# Solar's own byte-verified report chain, rebound rather than reimplemented:
+# accepted sources become a DeepResearch source pack, grounded claims become a
+# synthesis plan, and the compiler publishes final.md, a report AST, and an
+# eval artifact with exact quote spans -- all recomputable from bytes.
+from research.grounded_synthesis import GroundedSynthesisError, compile_grounded_report  # noqa: E402
+
+from .synthesis_plan import build_plan, evidence_index as build_evidence_index  # noqa: E402
+from .validated_pack import write_validated_pack  # noqa: E402
 
 from .base import (
     display_path,
@@ -24,6 +41,81 @@ from .base import (
     validate_scoped_path,
     write_artifact,
 )
+
+
+def _load_validation(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    return load_artifact(
+        context,
+        schemas=("research_synthesis.source_validation.v1",),
+        artifact_ids=("source_validation",),
+        filenames=("source_validation.json",),
+        payload_keys=("source_validation",),
+        expected_node_ids=("source_validation",),
+    )
+
+
+def compile_grounded_companion(
+    *,
+    stage_root: Path,
+    validation: dict[str, Any],
+    claims: list[dict[str, Any]],
+    question: str,
+) -> dict[str, Any]:
+    """Compile the byte-verified grounded report beside the writer's draft.
+
+    Additive by design: report_revision, final_acceptance and the preservation
+    chain consume the writer's `report` structure, so that stays authoritative
+    while `grounded/` carries the quote-span-verified rendering of the same
+    claims. The pack and output directories are siblings because the compiler
+    refuses an output that overlaps a source pack, and both are rebuilt from
+    scratch because it refuses a non-empty output directory.
+    """
+    pack_dir = stage_root / "source_pack"
+    grounded_dir = stage_root / "grounded"
+    for stale in (pack_dir, grounded_dir):
+        if stale.exists():
+            shutil.rmtree(stale)
+    manifest = write_validated_pack(source_validation=validation, output_dir=pack_dir)
+    if not manifest.get("usable"):
+        raise ResearchOperatorError(
+            "validated sources carry no usable text to ground a report",
+            error_type="lineage_incomplete",
+        )
+    evidence_rows = [
+        json.loads(line)
+        for line in (pack_dir / "evidence.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    plan = build_plan(claims=claims, evidence_index=build_evidence_index(evidence_rows))
+    try:
+        compiled = compile_grounded_report(
+            source_packs=[pack_dir],
+            synthesis_plan=plan,
+            output_dir=grounded_dir,
+            question=question,
+        )
+    except GroundedSynthesisError as exc:
+        raise ResearchOperatorError(
+            f"grounded report compile failed: {exc}",
+            error_type="grounded_compile_failed",
+        ) from exc
+    return {
+        "pack_dir": pack_dir,
+        "grounded_dir": grounded_dir,
+        "pack_manifest": {key: manifest[key] for key in ("source_count", "evidence_count", "skipped")},
+        "plan": plan,
+        "metrics": {
+            key: compiled.get(key)
+            for key in (
+                "claim_count",
+                "section_count",
+                "source_count",
+                "evidence_count",
+                "contradiction_count",
+                "evidence_gap_count",
+            )
+        },
+    }
 
 
 def _load_synthesis(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any] | None]:
@@ -281,6 +373,30 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     report = _normalize_report(response, claim_ids)
     usage = provider_usage_from(response, usage_kind="llm")
     limitations = [str(item) for item in response.get("limitations", []) if str(item).strip()]
+    # Grounded compile runs only when source_validation is in scope. The fixed
+    # workflow always supplies it (contract v1.8); the generic research
+    # workflow does not declare that dependency and keeps its prior behavior.
+    validation, validation_ref = _load_validation(context)
+    grounded: dict[str, Any] = {}
+    if validation.get("accepted"):
+        stage_root = Path(
+            validate_scoped_path(
+                output_path(context, "report_draft.json"),
+                context.write_scope,
+                workspace_root=context.workspace_root,
+            )
+        ).parent
+        grounded = compile_grounded_companion(
+            stage_root=stage_root,
+            validation=validation,
+            claims=claims,
+            question=str(task_contract.get("user_intent") or "Research report"),
+        )
+    elif validation_ref is not None:
+        raise ResearchOperatorError(
+            "source_validation is in scope but carries no accepted sources",
+            error_type="lineage_incomplete",
+        )
     artifact_payload = {
         "schema": "research_synthesis.report_draft.v1",
         "node_id": "report_draft",
@@ -298,8 +414,25 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         ],
         "input_artifact_hashes": {
             "evidence_synthesis": str((synthesis_ref or {}).get("sha256") or ""),
+            **(
+                {"source_validation": str((validation_ref or {}).get("sha256") or "")}
+                if validation_ref is not None
+                else {}
+            ),
         },
         "writer_usage": usage,
+        "grounded_report": (
+            {
+                "compiled": True,
+                "output_dir": display_path(grounded["grounded_dir"], context.workspace_root),
+                "source_pack_dir": display_path(grounded["pack_dir"], context.workspace_root),
+                "pack_manifest": grounded["pack_manifest"],
+                "metrics": grounded["metrics"],
+                "evidence_gaps": grounded["plan"].get("evidence_gaps") or [],
+            }
+            if grounded
+            else {"compiled": False, "reason": "source_validation not in scope"}
+        ),
         "limitations": limitations,
     }
     artifact, hash_record = write_artifact(
@@ -324,15 +457,35 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "sha256": report_digest,
     }
     report_hash = {"hash_id": "report_markdown", "algorithm": "sha256", "value": report_digest}
+    grounded_artifacts: list[dict[str, Any]] = []
+    grounded_hashes: list[dict[str, Any]] = []
+    if grounded:
+        # Every file, declared individually: the adapter's unreported-files
+        # check compares file by file, so a declared directory covers none of
+        # its children.
+        for root_dir in (grounded["pack_dir"], grounded["grounded_dir"]):
+            for path in sorted(root_dir.rglob("*")):
+                if not path.is_file():
+                    continue
+                digest = sha256_bytes(_read_bytes(path))
+                relative = display_path(path, context.workspace_root)
+                artifact_id = f"grounded:{path.relative_to(grounded['pack_dir'].parent)}".replace("\\", "/")
+                grounded_artifacts.append({
+                    "artifact_id": artifact_id,
+                    "path": relative,
+                    "schema": "text/markdown" if path.suffix == ".md" else "solar.grounded_report.file.v1",
+                    "sha256": digest,
+                })
+                grounded_hashes.append({"hash_id": artifact_id, "algorithm": "sha256", "value": digest})
     return build_node_result(
         context,
         status="completed",
-        output_artifacts=[artifact, report_artifact],
+        output_artifacts=[artifact, report_artifact, *grounded_artifacts],
         evidence=[
             evidence_ref("report_draft.traceable", "traceable_report_draft", "Report draft conclusions are linked to synthesis evidence.", artifact["artifact_id"]),
             evidence_ref("report_draft.usable_markdown", "usable_report", "A non-empty Markdown report was written by the production report operator.", report_artifact["artifact_id"]),
         ],
-        hashes=[hash_record, report_hash],
+        hashes=[hash_record, report_hash, *grounded_hashes],
         model_provider_usage=usage,
         limitations=limitations,
     )

@@ -245,6 +245,7 @@ def _fake_services() -> dict:
                     "source_id": "source-beta",
                     "title": "Beta Evidence 中文",
                     "canonical_id": "doi:10.0000/beta",
+                    "url": "https://example.test/beta",
                     "provider": "fixture",
                     "metadata": {"kind": "report"},
                     "summary": "Beta evidence preserves 中文 content faithfully.",
@@ -1612,3 +1613,52 @@ def test_synthesis_verifies_contradictions_and_carries_themes(tmp_path: Path, mo
     assert analysis["checked"] is True
     assert analysis["source_disagreement_count"] == 1
     assert analysis["claim_pair_contradictions"] == []
+
+
+def test_report_draft_compiles_byte_verified_grounded_companion(tmp_path: Path, monkeypatch) -> None:
+    """With source_validation in scope, A5 publishes Solar's grounded report.
+
+    The writer's draft stays authoritative for the revision/acceptance chain;
+    grounded/ carries the byte-verified rendering: final.md, a report AST, and
+    research_eval.json whose quote spans are recomputable from the pack.
+    """
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "inputs").mkdir()
+    services = _fake_services()
+
+    def refs_of(result: dict) -> list[dict]:
+        return [
+            {key: ref[key] for key in ("artifact_id", "path", "schema", "sha256")}
+            for ref in result["output_artifacts"]
+            if str(ref.get("schema") or "").startswith("research_synthesis.")
+        ]
+
+    seed = execute_operator(_request(tmp_path, "seed_fetch", payload={"task_contract": _task_contract(), "seed_inputs": [{"seed_id": "url", "seed_kind": "url", "value": "https://example.test"}]}), services=services)
+    discovery = execute_operator(_request(tmp_path, "source_discovery", refs=refs_of(seed)), services=services)
+    validation = execute_operator(_request(tmp_path, "source_validation", refs=refs_of(discovery)), services=services)
+    synthesis = execute_operator(
+        _request(tmp_path, "evidence_synthesis", payload={"task_contract": _task_contract()}, refs=[*refs_of(seed), *refs_of(validation)]),
+        services=services,
+    )
+    draft = execute_operator(
+        _request(tmp_path, "report_draft", payload={"task_contract": _task_contract()}, refs=[*refs_of(synthesis), *refs_of(validation)]),
+        services=services,
+    )
+    assert draft["status"] == "completed", draft.get("errors")
+    artifact = _read_artifact(tmp_path, draft)
+    grounded = artifact["grounded_report"]
+    assert grounded["compiled"] is True
+    grounded_dir = tmp_path / grounded["output_dir"]
+    final_md = grounded_dir / "final.md"
+    assert final_md.is_file() and final_md.read_text(encoding="utf-8").strip()
+    eval_payload = json.loads((grounded_dir / "research_eval.json").read_text(encoding="utf-8"))
+    assert eval_payload["status"] == "passed"
+    assert eval_payload["span_matches"] == eval_payload["total_spans"] > 0
+    assert eval_payload["unsupported_rate"] == 0.0
+    # Every published byte is declared: nothing under source_pack/ or
+    # grounded/ is missing from the result's output_artifacts.
+    declared = {ref["path"] for ref in draft["output_artifacts"]}
+    for root_name in ("source_pack", "grounded"):
+        for path in (grounded_dir.parent / root_name).rglob("*"):
+            if path.is_file():
+                assert str(path.relative_to(tmp_path)) in declared, path

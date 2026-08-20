@@ -87,8 +87,12 @@ def test_plan_resolves_source_ids_onto_pack_evidence_ids(tmp_path) -> None:
             "text": "Retrieval-augmented generation improves factuality.",
             "evidence_ids": ["openalex-rag-01"],
             "evidence_quotes": [{
+                # Shares vocabulary with the claim: the compiler refuses a
+                # link whose quote and claim have no token in common, and the
+                # plan builder now applies the same rule instead of emitting a
+                # plan the compile would abort on.
                 "source_id": "openalex-rag-01",
-                "quote": "grounding output in retrieved passages",
+                "quote": "grounding output in retrieved passages improves factuality",
             }],
             "uncertainty": "medium",
         }],
@@ -99,7 +103,7 @@ def test_plan_resolves_source_ids_onto_pack_evidence_ids(tmp_path) -> None:
     link = plan["sections"][0]["claims"][0]["evidence_links"][0]
     assert link["evidence_id"] == rows[0]["evidence_id"]
     assert link["relation"] == "supports"
-    assert link["quote"] == "grounding output in retrieved passages"
+    assert link["quote"] == "grounding output in retrieved passages improves factuality"
 
 
 def test_a_claim_without_a_verified_quote_is_a_gap_not_a_link(tmp_path) -> None:

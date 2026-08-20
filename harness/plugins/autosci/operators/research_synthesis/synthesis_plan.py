@@ -141,12 +141,23 @@ def build_plan(
         present: list[tuple[str, str]] = []
         missing: list[str] = []
         unquoted: list[str] = []
+        claim_grounding_tokens = _grounding_tokens(text)
         for citation in cited:
             resolved = evidence_index.get(citation) or []
             if not resolved:
                 missing.append(citation)
                 continue
             quote = quote_by_source.get(citation) or ""
+            # The compiler enforces quote length bounds and shared vocabulary
+            # with the claim, and ABORTS the whole compile on a violation. A
+            # verified-verbatim quote outside those bounds is therefore treated
+            # as no quote: the citation becomes a reported gap instead of a
+            # compile that can never publish anything.
+            if quote and (
+                not 20 <= len(quote) <= 2000
+                or not claim_grounding_tokens & _grounding_tokens(quote)
+            ):
+                quote = ""
             if not quote:
                 unquoted.append(citation)
                 continue
