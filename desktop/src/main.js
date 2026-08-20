@@ -68,6 +68,7 @@ const SELFTEST = process.env.SOLAR_DESKTOP_SELFTEST === "1";
 const { assessSelftestSnapshot } = require("./selftest-verdict");
 const {
   buildWindowsRuntimePrewarmCommand,
+  buildWindowsRuntimeReadinessProbe,
   prewarmSucceeded,
 } = require("./runtime-prewarm");
 // Test hook: force the classifier to return a given mode (deterministic screenshots).
@@ -647,8 +648,11 @@ async function ensureRuntimeRequiredDepsReady() {
       };
     }
     const prewarm = wslExec(prewarmCommand, 120000);
-    if (!prewarmSucceeded(prewarm)) {
-      const prewarmOutput = `${prewarm.stdout || ""}\n${prewarm.stderr || ""}`.trim();
+    const probe = prewarm.ok
+      ? wslExec(buildWindowsRuntimeReadinessProbe(wslHarnessBase), 15000)
+      : { ok: false, stdout: "", stderr: "prewarm start failed" };
+    if (!prewarmSucceeded(prewarm, probe)) {
+      const prewarmOutput = `${prewarm.stdout || ""}\n${prewarm.stderr || ""}\n${probe.stdout || ""}\n${probe.stderr || ""}`.trim();
       log("Windows runtime prewarm failed:", prewarmOutput.slice(0, 1000));
       return {
         ok: false,

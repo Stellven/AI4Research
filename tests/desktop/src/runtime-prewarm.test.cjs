@@ -1,5 +1,6 @@
 const {
   buildWindowsRuntimePrewarmCommand,
+  buildWindowsRuntimeReadinessProbe,
   prewarmSucceeded,
 } = require("../../../desktop/src/runtime-prewarm");
 
@@ -9,6 +10,7 @@ function assert(name, condition) {
 }
 
 const command = buildWindowsRuntimePrewarmCommand("/home/solar/.solar/harness/");
+const probe = buildWindowsRuntimeReadinessProbe("/home/solar/.solar/harness/");
 
 assert(
   "prewarm starts the managed status server",
@@ -23,8 +25,8 @@ assert(
 assert(
   "prewarm creates the harness and verifies coordinator liveness",
   command.includes("solar-harness.sh' start") &&
-    command.includes("tmux has-session -t solar-harness") &&
-    command.includes(".coordinator.pid"),
+    probe.includes("tmux has-session -t solar-harness") &&
+    probe.includes(".coordinator.pid"),
 );
 assert(
   "prewarm requires an absolute WSL path",
@@ -39,7 +41,16 @@ assert(
 );
 assert(
   "prewarm success requires both exit success and readiness marker",
-  prewarmSucceeded({ ok: true, stdout: "SOLAR_RUNTIME_PREWARM_READY" }) &&
-    !prewarmSucceeded({ ok: false, stdout: "SOLAR_RUNTIME_PREWARM_READY" }) &&
-    !prewarmSucceeded({ ok: true, stdout: "" }),
+  prewarmSucceeded(
+    { ok: true, stdout: "harness started" },
+    { ok: true, stdout: "SOLAR_RUNTIME_PREWARM_READY" },
+  ) &&
+    !prewarmSucceeded(
+      { ok: false, stdout: "" },
+      { ok: true, stdout: "SOLAR_RUNTIME_PREWARM_READY" },
+    ) &&
+    !prewarmSucceeded(
+      { ok: true, stdout: "harness started" },
+      { ok: true, stdout: "" },
+    ),
 );
