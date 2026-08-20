@@ -561,3 +561,91 @@ codebase rewards reading the artifact over reasoning about it.
 this session with the full evidence for every finding above, including the
 diffs, the measurements, and the corrections in the order they happened. This
 document is the summary; that one is the record.
+
+---
+
+## 10. The AutoSci bridge, tested against the real report
+
+The owner asked: "make sure the autosci bridge is correct and the deep research
+report is present and autosci takes over from there". Tested rather than
+reasoned about, using the green run's own `revision/report.md` (7.6KB).
+
+### The bridge IS correct as an evidence converter
+
+`autosci_bridge.py` (23,171 lines) exposes `smoke`, `validate`, `research` and
+`run --action`. `ACTIONS` includes everything Part B needs: `extract_claims`,
+`generate_ideas`, `evaluate_ideas`, `design_experiment`, `run_experiment`,
+`monitor_experiment`, `run_pilot_experiment`, `evaluate_pilot_result`,
+`run_research_lifecycle`, `plan_report`, `compile_paper`, `review_artifact`.
+
+`_read_sample_paper` reads `inputs.paper_path` and only falls back to a fixture
+when none is given, so a real report can be fed in. Chained against ours:
+
+```
+extract_claims    ok   research_claims.v1 from deep_research_report.md
+generate_ideas    ok   idea_candidate.json
+evaluate_ideas    ok   idea_evaluation.json
+design_experiment ok   experiment_plan.json
+run_experiment    ok   experiment_result.json
+```
+
+It also emitted governance artifacts of its own: `*_approval_contract`,
+`*_gate_policy_decision`, `ideate_final_promotion_boundary`,
+`ideate_pilot_handoff_boundary`, `novelty_final_acceptance_boundary`,
+`experiment_design_final_execution_boundary`.
+
+So yes: the report is present, the bridge reads it, and AutoSci takes over.
+
+### But `run_experiment` does NOT run an experiment
+
+Its own recorded limitation:
+
+    "Fixture result is deterministic and not a real benchmark run."
+
+`_action_run_experiment` loads
+`tests/.../sample_autosci_raw_experiment_result.json` as its raw result, and
+`command_run` defaults to `"fixture-mode:no-external-command"`. The metrics it
+returned for our run were `result_json_written: true` and
+`evidence_jsonl_written: true` -- file-writing, not measurement -- and
+`outcome: "supports"` came from the fixture and means nothing.
+
+**Routing Part B through the bridge as-is would be a REGRESSION in truthfulness.**
+Today Part B actually executes `fixed_research_benchmark.py` under `unshare -Urn`
+and gets 8/8 real integrity checks. Swapping that for a fixture that reports
+"supports" without running anything would look more like science and be less
+true.
+
+### The correct architecture, and the bridge already supports it
+
+`_experiment_result_payload` reads `experiment_result_evidence` /
+`result_evidence` / `experiment_result` from the envelope inputs and overrides
+the fixture when supplied (`raw.update(supplied_result)`). That matches the
+plugin manifest exactly: *"this plugin only converts bounded backend outputs into
+Solar evidence."*
+
+So:
+
+1. Something real **executes** -- `fixed_research_benchmark.py` today, or a
+   proper `experiment_executor` for genuine hypothesis tests.
+2. The bridge **converts** that real result into Solar evidence schemas.
+
+Do not let the bridge invent the result. Execute, then convert.
+
+### Extraction quality: a real mismatch worth fixing
+
+AutoSci pulled only 3 claims from our report, 1 testable, and that one came from
+the Limitations section. Cause is its section ranking:
+
+* sections whose title contains `result`, `finding` or `evidence` rank FIRST
+* sections whose title contains `method` or `procedure` are SKIPPED
+* only the first 2 sentences of each section are considered
+
+Our titles are "Summary", "Evidence and Method", "RAG Evaluation Frameworks...",
+"Reliability Benchmarking...", "Performance Trade-offs...", "Limitations and
+Evidence Constraints". So "Limitations and Evidence Constraints" ranked first on
+the word "evidence", and "Evidence and Method" was skipped on the word "method".
+The substantive findings sections ranked last.
+
+Fix from our side, not AutoSci's: name the report's sections so the findings
+carry "Findings" or "Results". That is a prompt/deliverable-shape change in
+`report_draft`, and it costs nothing.
