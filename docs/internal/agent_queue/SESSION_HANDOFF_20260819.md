@@ -765,3 +765,59 @@ The 21:30 entry said "Part B ... `experiment_run` shells out to `unshare -Urn`,
 which works on this WSL2 host". That was a bare `unshare -Urn true`. The
 stronger claim above -- the real benchmark, real artifacts, real sandbox,
 8/8 integrity checks -- is what actually justifies the conclusion.
+
+## GREEN END TO END 2026-08-20 -- 15/15, sprint ...ab5de2af863a
+
+`research.evidence_to_poc.v1` at contract v1.7 completed every stage on
+`claude-haiku-4-5-20251001`. First time this workflow has run to
+`final_delivery`.
+
+    stage                node        gate  kind                   seconds
+    seed_fetch           completed   PASS  deterministic_command  0.067
+    source_discovery     completed   PASS  deterministic_command  0.068
+    source_validation    completed   PASS  deterministic_command  0.066
+    evidence_synthesis   completed   PASS  deterministic_command  0.088
+    report_draft         completed   PASS  deterministic_command  0.071
+    independent_review   completed   PASS  deterministic_command  0.067
+    report_revision      completed   PASS  deterministic_command  0.068
+    final_acceptance     completed   PASS  deterministic_command  0.098
+    poc_handoff          completed   PASS  deterministic_command  0.075
+    idea_evaluation      completed   PASS  deterministic_command  0.077
+    experiment_design    completed   PASS  deterministic_command  0.079
+    experiment_approval  completed   PASS  deterministic_command  0.067
+    experiment_run       completed   PASS  deterministic_command  0.072
+    claim_verification   completed   PASS  deterministic_command  0.074
+    final_delivery       completed   PASS  deterministic_command  0.073
+
+`phase: completed`, `failed_nodes: []`, zero dispatch failures, zero failed
+model calls.
+
+Why this is not the old false green: every gate_kind is
+`deterministic_command`, not one is `none`, and every duration is non-zero.
+Earlier runs recorded `PASS / gate_kind none / duration 0.0` for stages that had
+failed. Each of these gates ran a real command that read the stage's own
+recorded status and would have failed the node on anything but `completed` --
+demonstrated when a wrong path in that very gate failed the previous run at
+8/15.
+
+Substance behind the passes:
+
+* three real Haiku calls (evidence_synthesis 53.7s, report_draft 33.9s,
+  independent_review 37.1s), all completed, all recorded as
+  `claude_subscription`
+* `report_revision` short-circuited legitimately: independent_review returned
+  `accept` with zero findings, so no repair was required
+* `final_acceptance` decided `accepted`, `gate_outcome: pass`
+* `experiment_run` executed the benchmark in the `unshare -Urn` sandbox:
+  8/8 checks, `integrity_rate 1.0`
+* `claim_verification` recorded `verified` for "Every retained Part-A artifact in
+  the accepted handoff matched its controller-bound SHA-256 digest during
+  replay."
+* `delivery/final_delivery.md` (3.4KB) and `final_delivery.json` (17KB) written
+
+### What made the difference
+
+Six fixes, five of them the same shape: the operator imposing a condition on the
+model that the operator itself made unsatisfiable. The sixth was a `deepcopy`
+that made a recovery path structurally incapable of recovering anything. None
+were model failures. Haiku did its job on every call in every run today.
