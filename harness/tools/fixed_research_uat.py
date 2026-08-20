@@ -701,7 +701,11 @@ def _final_reached(graph_path: Path) -> dict[str, Any] | None:
     if not all(statuses.get(node) == "passed" for node in expected):
         return None
     sid = str(graph.get("sprint_id") or "")
-    delivery_dir = graph_path.parent / sid / "workdir/artifacts/research_evidence_to_poc/poc/final"
+    # The contract's declared B7 output directory. The old "poc/final" spelling
+    # predated the contract and was unreachable dead code until the boundary
+    # detector could actually see a completed graph; the first run that got
+    # here failed on a path final_delivery never wrote to.
+    delivery_dir = graph_path.parent / sid / "workdir/artifacts/research_evidence_to_poc/delivery"
     delivery_json = _regular_file(delivery_dir / "final_delivery.json", "final delivery JSON")
     delivery_md = _regular_file(delivery_dir / "final_delivery.md", "final delivery Markdown")
     return {

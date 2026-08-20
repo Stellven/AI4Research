@@ -427,3 +427,26 @@ def test_graph_node_statuses_read_the_runtime_state_plane(tmp_path, monkeypatch)
     statuses = uat._graph_node_statuses(graph_path, raw)
     assert statuses["seed_fetch"] == "passed"
     assert statuses["source_discovery"] == "pending"
+
+
+def test_final_boundary_reads_the_contracts_delivery_paths(tmp_path):
+    """_final_reached must look where final_delivery actually writes.
+
+    The stale poc/final spelling was dead code while the boundary detector
+    could not see completed graphs; the first run that reached the boundary
+    failed on a path B7 never wrote to. The expected path comes from the
+    contract's declared outputs, so the two cannot drift silently again.
+    """
+    import inspect
+    contract = json.loads(
+        (uat.SOURCE_HARNESS / "config/workflows/research.evidence_to_poc.v1.workflow.json").read_text(encoding="utf-8")
+    )
+    stage = next(item for item in contract["stages"] if item["id"] == "final_delivery")
+    declared_json = next(
+        str(item["path"]) for item in stage["outputs"] if str(item["path"]).endswith("final_delivery.json")
+    )
+    source = inspect.getsource(uat._final_reached)
+    declared_dir = declared_json.rsplit("/", 1)[0]
+    assert f'"workdir/{declared_dir}"' in source
+    code_lines = [line for line in source.splitlines() if not line.strip().startswith("#")]
+    assert not any("poc/final" in line for line in code_lines)
