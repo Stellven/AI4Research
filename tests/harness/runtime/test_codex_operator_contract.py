@@ -209,10 +209,86 @@ def test_operatord_materializes_work_dir_for_codex(tmp_path, monkeypatch):
     assert Path(env["SOLAR_OPERATOR_ENVELOPE_JSON"]).exists()
     assert result_path.is_file()
     assert handoff_path.is_file()
+    publish_map = json.loads(env["SOLAR_OPERATOR_OUTPUT_PUBLISH_MAP_JSON"])
+    assert len(publish_map) == 1
+    assert publish_map[0]["write_path"] == str(
+        result_dir / "declared-outputs" / "00-sprint-1.N1-handoff.md"
+    )
+    assert publish_map[0]["publish_path"] == str(handoff_path)
+    assert publish_map[0]["initial_sha256"]
     assert set(json.loads(env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"])) == {
         str(result_path),
-        str(handoff_path),
+        publish_map[0]["write_path"],
     }
+
+
+def test_operatord_stages_and_atomically_publishes_replaceable_outputs(tmp_path, monkeypatch):
+    operatord = _load_module("operatord_contract_output_publish", ROOT / "tools" / "operatord.py")
+    harness = tmp_path / "harness"
+    monkeypatch.setattr(operatord, "HARNESS_DIR", harness)
+    result_dir = harness / "run" / "operator-results" / "planner" / "task"
+    result_dir.mkdir(parents=True)
+    work_dir = harness / "sprints" / "sprint-1" / "workdir"
+    canonical = harness / "sprints" / "sprint-1.task_graph.json"
+    canonical.parent.mkdir(parents=True, exist_ok=True)
+    canonical.write_text('{"version": "old"}\n', encoding="utf-8")
+
+    env = operatord._materialize_envelope_context(
+        result_dir,
+        {
+            "task_id": "pm-sprint-1-N0-abc",
+            "sprint_id": "sprint-1",
+            "work_dir": str(work_dir),
+            "expected_artifacts": [str(canonical)],
+        },
+    )
+    mapping = json.loads(env["SOLAR_OPERATOR_OUTPUT_PUBLISH_MAP_JSON"])[0]
+    staged = Path(mapping["write_path"])
+    assert staged.read_text(encoding="utf-8") == '{"version": "old"}\n'
+
+    replacement = canonical.with_suffix(".replacement")
+    replacement.write_text('{"version": "control-plane"}\n', encoding="utf-8")
+    os.replace(replacement, canonical)
+    staged.write_text('{"version": "worker"}\n', encoding="utf-8")
+
+    assert operatord._publish_staged_outputs(env) == [str(canonical)]
+    assert canonical.read_text(encoding="utf-8") == '{"version": "worker"}\n'
+
+
+def test_operatord_refuses_to_publish_empty_staged_output(tmp_path, monkeypatch):
+    operatord = _load_module("operatord_contract_empty_publish", ROOT / "tools" / "operatord.py")
+    harness = tmp_path / "harness"
+    monkeypatch.setattr(operatord, "HARNESS_DIR", harness)
+    result_dir = harness / "run" / "operator-results" / "planner" / "task"
+    result_dir.mkdir(parents=True)
+    canonical = harness / "sprints" / "sprint-1.task_graph.json"
+
+    env = operatord._materialize_envelope_context(
+        result_dir,
+        {"expected_artifacts": [str(canonical)]},
+    )
+
+    with pytest.raises(ValueError, match="was not materialized"):
+        operatord._publish_staged_outputs(env)
+
+
+def test_operatord_refuses_to_publish_unchanged_staged_output(tmp_path, monkeypatch):
+    operatord = _load_module("operatord_contract_stale_publish", ROOT / "tools" / "operatord.py")
+    harness = tmp_path / "harness"
+    monkeypatch.setattr(operatord, "HARNESS_DIR", harness)
+    result_dir = harness / "run" / "operator-results" / "planner" / "task"
+    result_dir.mkdir(parents=True)
+    canonical = harness / "sprints" / "sprint-1.task_graph.json"
+    canonical.parent.mkdir(parents=True, exist_ok=True)
+    canonical.write_text('{"version": "stale"}\n', encoding="utf-8")
+
+    env = operatord._materialize_envelope_context(
+        result_dir,
+        {"expected_artifacts": [str(canonical)]},
+    )
+
+    with pytest.raises(ValueError, match="was not updated"):
+        operatord._publish_staged_outputs(env)
 
 
 def test_operatord_derives_work_dir_for_legacy_pm_envelope(tmp_path, monkeypatch):
@@ -274,6 +350,28 @@ def test_codex_operator_explains_precreated_output_placeholders(tmp_path, monkey
     assert "zero-byte placeholders" in dispatch
     assert "use Update File rather than Add File" in dispatch
     assert str(expected) in dispatch
+
+
+def test_codex_operator_explains_staged_publish_paths(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_publish_guidance", ROOT / "tools" / "codex_operator.py")
+    dispatch_file = tmp_path / "dispatch.md"
+    dispatch_file.write_text("# Plan the sprint\n", encoding="utf-8")
+    staged = tmp_path / "task" / "00-task_graph.json"
+    canonical = tmp_path / "sprints" / "sprint.task_graph.json"
+    staged.parent.mkdir()
+    staged.touch()
+    monkeypatch.setenv("DISPATCH_FILE", str(dispatch_file))
+    monkeypatch.setenv("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON", json.dumps([str(staged)]))
+    monkeypatch.setenv(
+        "SOLAR_OPERATOR_OUTPUT_PUBLISH_MAP_JSON",
+        json.dumps([{"write_path": str(staged), "publish_path": str(canonical)}]),
+    )
+
+    dispatch = codex_operator._read_dispatch()
+
+    assert "Do not write their canonical publish paths directly" in dispatch
+    assert f"Write `{staged}`" in dispatch
+    assert f"publishes it to `{canonical}`" in dispatch
 
 
 def test_codex_operator_materializes_direct_skill_bridge_evidence(tmp_path, monkeypatch):

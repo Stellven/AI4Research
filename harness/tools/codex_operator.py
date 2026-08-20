@@ -190,12 +190,32 @@ def _write_skill_bridge_result(task_dir: Path, evidence: dict[str, object], exit
 def _declared_output_guidance() -> str:
     try:
         outputs = json.loads(os.environ.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
+        publish_map = json.loads(
+            os.environ.get("SOLAR_OPERATOR_OUTPUT_PUBLISH_MAP_JSON") or "[]"
+        )
     except (TypeError, ValueError):
         return ""
     paths = [str(item).strip() for item in outputs if isinstance(item, str) and item.strip()]
     if not paths:
         return ""
     rendered = "\n".join(f"- `{path}`" for path in paths)
+    publish_guidance = ""
+    if isinstance(publish_map, list) and publish_map:
+        mappings = []
+        for item in publish_map:
+            if not isinstance(item, dict):
+                continue
+            write_path = str(item.get("write_path") or "").strip()
+            publish_path = str(item.get("publish_path") or "").strip()
+            if write_path and publish_path:
+                mappings.append(f"- Write `{write_path}`; Solar publishes it to `{publish_path}`")
+        if mappings:
+            publish_guidance = (
+                "\n\nSome canonical outputs are concurrently maintained by the Solar control plane. "
+                "Do not write their canonical publish paths directly. Write the task-local paths "
+                "below; operatord will atomically publish them after you exit successfully:\n"
+                + "\n".join(mappings)
+            )
     return (
         "## Solar filesystem output contract\n\n"
         "Solar may pre-create the exact declared output paths as zero-byte placeholders so "
@@ -204,6 +224,7 @@ def _declared_output_guidance() -> str:
         "an existing placeholder, use Update File rather than Add File.\n\n"
         "Declared writable outputs:\n"
         f"{rendered}"
+        f"{publish_guidance}"
     )
 
 

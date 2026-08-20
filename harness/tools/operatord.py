@@ -21,9 +21,11 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import shlex
+import shutil
 import sys
 import re
 from pathlib import Path
@@ -345,18 +347,49 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
         env["RESULT_PATH"] = result_path
         env["PM_RESULT_PATH"] = result_path
     allowed_outputs: list[str] = []
-    for raw in envelope.get("expected_artifacts") or []:
+    output_publish_map: list[dict[str, str]] = []
+    direct_write_roots = [result_dir.expanduser().resolve(strict=False)]
+    if work_dir:
+        direct_write_roots.append(Path(work_dir).expanduser().resolve(strict=False))
+    for index, raw in enumerate(envelope.get("expected_artifacts") or []):
         if not str(raw or "").strip():
             continue
         path = authorized_output(str(raw).strip())
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch(exist_ok=True)
-        allowed_outputs.append(str(path))
+        if any(path == root or path.is_relative_to(root) for root in direct_write_roots):
+            allowed_outputs.append(str(path))
+            continue
+
+        # Control-plane files such as task_graph.json are atomically replaced
+        # while an operator is running. Landlock file rules follow the inode,
+        # so an exact-path grant silently becomes read-only after replacement.
+        # Give the worker a stable task-local inode and publish it only after
+        # the sandboxed process has exited successfully.
+        staging_dir = result_dir / "declared-outputs"
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        staging_path = staging_dir / f"{index:02d}-{path.name}"
+        if path.is_file():
+            shutil.copyfile(path, staging_path)
+        else:
+            staging_path.touch(exist_ok=True)
+        allowed_outputs.append(str(staging_path))
+        output_publish_map.append(
+            {
+                "write_path": str(staging_path),
+                "publish_path": str(path),
+                "initial_sha256": hashlib.sha256(staging_path.read_bytes()).hexdigest(),
+            }
+        )
     if result_path:
         allowed_outputs.append(str(Path(result_path).expanduser()))
     if allowed_outputs:
         env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"] = json.dumps(
             sorted(set(allowed_outputs)), ensure_ascii=False
+        )
+    if output_publish_map:
+        env["SOLAR_OPERATOR_OUTPUT_PUBLISH_MAP_JSON"] = json.dumps(
+            output_publish_map, ensure_ascii=False
         )
     pm_context = str(envelope.get("pm_context") or "").strip()
     if pm_context:
@@ -366,6 +399,41 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     env["HARNESS_DIR"] = str(HARNESS_DIR)
     env["SPRINTS_DIR"] = str(HARNESS_DIR / "sprints")
     return env
+
+
+def _publish_staged_outputs(exec_env: dict[str, str]) -> list[str]:
+    """Publish task-local declared outputs after the sandbox exits cleanly."""
+    raw = exec_env.get("SOLAR_OPERATOR_OUTPUT_PUBLISH_MAP_JSON") or "[]"
+    mappings = json.loads(raw)
+    if not isinstance(mappings, list):
+        raise ValueError("operator output publish map must be a list")
+
+    published: list[str] = []
+    for index, item in enumerate(mappings):
+        if not isinstance(item, dict):
+            raise ValueError("operator output publish map entries must be objects")
+        write_path = Path(str(item.get("write_path") or "")).expanduser()
+        publish_path = Path(str(item.get("publish_path") or "")).expanduser()
+        if not write_path.is_file() or write_path.stat().st_size <= 0:
+            raise ValueError(f"declared output was not materialized: {write_path}")
+        initial_sha256 = str(item.get("initial_sha256") or "").strip()
+        current_sha256 = hashlib.sha256(write_path.read_bytes()).hexdigest()
+        if initial_sha256 and current_sha256 == initial_sha256:
+            raise ValueError(f"declared output was not updated: {write_path}")
+        publish_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = publish_path.with_name(
+            f".{publish_path.name}.operator-publish-{os.getpid()}-{index}.tmp"
+        )
+        try:
+            shutil.copyfile(write_path, temporary)
+            os.replace(temporary, publish_path)
+        finally:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
+        published.append(str(publish_path))
+    return published
 
 
 def _claude_print_command(config: dict[str, Any]) -> list[str]:
@@ -1169,6 +1237,15 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 log_lines.append("[ERROR] Antigravity output was placeholder/non-final; refusing false completed status")
                 result_status = "failed_nonfinal_output"
                 exit_code = exit_code or 65
+
+            if result_status == "completed":
+                try:
+                    for published_path in _publish_staged_outputs(exec_env):
+                        log_lines.append(f"[output-publish] {published_path}")
+                except Exception as exc:
+                    log_lines.append(f"[ERROR] declared output publish failed: {exc}")
+                    result_status = "failed_contract_closeout"
+                    exit_code = exit_code or 67
 
             if result_status == "completed" and pm_result_path is not None:
                 if not pm_result_path.exists():
