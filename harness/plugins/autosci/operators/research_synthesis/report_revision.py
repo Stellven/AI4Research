@@ -39,6 +39,48 @@ def _normalized_text(value: Any) -> str:
     return " ".join(str(value or "").split()).casefold()
 
 
+def _preserved_limitation_key(value: Any) -> str:
+    """Compare recorded limitations by substance, not by byte.
+
+    A reviser is asked to echo free prose back exactly. In the 2026-08-20 run it
+    returned one limitation with a trailing full stop added -- required 172
+    characters, declared 173, otherwise identical -- and the whole node failed
+    with "did not declare the exact original ... preservation set". A single
+    punctuation mark cost the stage, twice, and pointed at nothing.
+
+    Whitespace, case and trailing sentence punctuation are normalised away; every
+    word is still required. Conclusion ids and the method digest are deliberately
+    NOT normalised, because those are identifiers where an exact match is the
+    whole point.
+    """
+    return _normalized_text(value).rstrip(".;,:!?\u3002\uff0c\uff1b")
+
+
+# Leading decoration on a conclusion: bold/italic markers and bracketed labels
+# such as "**[Synthesis based on evidence synthesis]**". The claim is the
+# sentence, not its ornament, so this is stripped before comparing.
+_CONCLUSION_DECORATION_RE = re.compile(r"^[\s*_]*(?:\[[^\]]*\])?[\s*_:.\-]*")
+
+# How much of the accepted method must survive a revision. A reviewer-demanded
+# correction ("five sources" -> "four sources") moves one token in a hundred; a
+# rewrite or a gutting does not survive this.
+_METHOD_RETENTION_FLOOR = 0.8
+
+
+def _conclusion_key(value: Any) -> str:
+    return _normalized_text(_CONCLUSION_DECORATION_RE.sub("", str(value or "")))
+
+
+def method_retention(original: str, revised: str) -> float:
+    """Fraction of the accepted method's words still present in the revision."""
+    original_terms = _normalized_text(original).split()
+    if not original_terms:
+        return 1.0
+    revised_terms = set(_normalized_text(revised).split())
+    kept = sum(1 for term in original_terms if term in revised_terms)
+    return kept / len(original_terms)
+
+
 def _markdown_section(body: str, heading_pattern: str) -> str:
     """Text of the first matching section that actually has content.
 
@@ -140,7 +182,15 @@ def verify_revision_response_preservation(
         "preserved_method_sha256": required["preserved_method_sha256"],
         "preserved_limitations": required["preserved_limitations"],
     }
-    if declared != expected:
+    identifiers_match = (
+        declared["preserved_conclusion_ids"] == expected["preserved_conclusion_ids"]
+        and declared["preserved_method_sha256"] == expected["preserved_method_sha256"]
+    )
+    declared_limitations = declared["preserved_limitations"]
+    limitations_match = isinstance(declared_limitations, list) and [
+        _preserved_limitation_key(item) for item in declared_limitations
+    ] == [_preserved_limitation_key(item) for item in expected["preserved_limitations"]]
+    if not identifiers_match or not limitations_match:
         raise ResearchOperatorError(
             "Revision response did not declare the exact original conclusion, method, and limitation preservation set",
             error_type="provider_contract",
@@ -155,7 +205,10 @@ def verify_revision_response_preservation(
         conclusion_id = str(original.get("conclusion_id") or "")
         revised = revised_conclusions.get(conclusion_id)
         if not isinstance(revised, dict) or (
-            _normalized_text(revised.get("text")) != _normalized_text(original.get("text"))
+            # Substance, not ornament: a reviser that drops a leading
+            # "**[Synthesis based on ...]**" label has not changed the claim.
+            # Evidence ids stay exact, because those are identifiers.
+            _conclusion_key(revised.get("text")) != _conclusion_key(original.get("text"))
             or [str(item) for item in revised.get("evidence_ids") or []]
             != [str(item) for item in original.get("evidence_ids") or []]
         ):
@@ -168,16 +221,27 @@ def verify_revision_response_preservation(
         body,
         r"methods?\b|evidence\s+method\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba",
     )
-    if required["original_method"] not in revised_method:
+    # Preservation means the accepted method is not silently LOST, not that it can
+    # never be corrected. The 2026-08-20 run deadlocked here: the reviewer
+    # required the Method section to say "four sources" instead of "five", and
+    # byte-exact preservation forbade exactly that correction, so the node could
+    # not satisfy both and died after both attempts. Retention is measured
+    # instead, and any change is recorded by the operator alongside this proof.
+    retention = method_retention(required["original_method"], revised_method)
+    if not revised_method.strip() or retention < _METHOD_RETENTION_FLOOR:
         raise ResearchOperatorError(
-            "Revision response omitted or changed the accepted method section",
+            "Revision response omitted or replaced the accepted method section "
+            f"(retention={retention:.2f} < {_METHOD_RETENTION_FLOOR})",
             error_type="provider_contract",
         )
     limitations_section = _markdown_section(body, r"limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3")
     response_limitations = [str(item).strip() for item in response.get("limitations") or [] if str(item).strip()]
+    declared_keys = {_preserved_limitation_key(item) for item in response_limitations}
     for limitation in required["preserved_limitations"]:
-        normalized = _normalized_text(limitation)
-        if limitation not in response_limitations or normalized not in limitations_section:
+        # The needle is punctuation-stripped too, so a rendered sentence that
+        # ends with a full stop the recorded limitation lacks still matches.
+        normalized = _preserved_limitation_key(limitation)
+        if normalized not in declared_keys or normalized not in limitations_section:
             raise ResearchOperatorError(
                 "Revision response omitted a provider-recorded limitation",
                 error_type="provider_contract",
@@ -273,6 +337,23 @@ def _normalize_review_response(
             "evidence_synthesis" if chain_validation.get("evidence_synthesis_present") else "",
             "source_validation" if validation else "",
         ],
+    }
+
+
+def _method_change_record(
+    original_report: dict[str, Any], revised_report: dict[str, Any]
+) -> dict[str, Any]:
+    """Before/after digests for the accepted method section."""
+    pattern = r"methods?\b|evidence\s+method\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba"
+    base = original_report.get("report") if isinstance(original_report.get("report"), dict) else {}
+    original_method = _markdown_section(str(base.get("body") or ""), pattern)
+    revised_method = _markdown_section(str((revised_report or {}).get("body") or ""), pattern)
+    return {
+        "original_method_sha256": hashlib.sha256(original_method.encode("utf-8")).hexdigest(),
+        "revised_method_sha256": hashlib.sha256(revised_method.encode("utf-8")).hexdigest(),
+        "method_changed": original_method != revised_method,
+        "retention": round(method_retention(original_method, revised_method), 4),
+        "retention_floor": _METHOD_RETENTION_FLOOR,
     }
 
 
@@ -527,6 +608,12 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "revised_report": revised_report,
         "revised_report_sha256": stable_json_sha256(revised_report),
         "preservation": preservation,
+        # Recorded beside the proof, not inside it: the adapter recomputes
+        # `preservation` and refuses the node if it differs, so that object has
+        # to stay exactly reproducible from the base report. A correction the
+        # reviewer demanded is legal now, and this is what makes it visible
+        # rather than silent.
+        "method_change": _method_change_record(original_report, revised_report),
         "claim_source_lineage": claim_source_lineage if isinstance(claim_source_lineage, dict) else {},
         "input_artifact_hashes": input_artifact_hashes if isinstance(input_artifact_hashes, dict) else {},
         "revision_review": revision_review,
