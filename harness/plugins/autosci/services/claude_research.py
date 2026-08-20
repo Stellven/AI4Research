@@ -128,6 +128,10 @@ class ClaudeResearchModelService(CodexResearchModelService):
         prompt_text = json.dumps(prompt_payload, ensure_ascii=False, sort_keys=True)
         request_sha256 = hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
+        # The prompt travels over stdin, never argv: a live-retrieval synthesis
+        # carries fifty-plus source summaries and Linux caps a single argv
+        # element at 128KB, so an argv prompt fails with E2BIG exactly when the
+        # evidence base reaches the scale the workflow was built for.
         argv = [
             binary, "-p",
             "--model", str(self.model),
@@ -136,7 +140,6 @@ class ClaudeResearchModelService(CodexResearchModelService):
             # meet the schema fails here rather than returning prose that later
             # parses as "no claims returned".
             "--json-schema", json.dumps(cli_schema, ensure_ascii=False, sort_keys=True),
-            prompt_text,
         ]
 
         env = os.environ.copy()
@@ -147,7 +150,7 @@ class ClaudeResearchModelService(CodexResearchModelService):
         try:
             proc = subprocess.run(
                 argv, capture_output=True, text=True, env=env,
-                stdin=subprocess.DEVNULL, timeout=self.timeout_seconds, check=False,
+                input=prompt_text, timeout=self.timeout_seconds, check=False,
             )
         except subprocess.TimeoutExpired as exc:
             events_path.write_text("", encoding="utf-8")
