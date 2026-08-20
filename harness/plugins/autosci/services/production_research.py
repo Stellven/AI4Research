@@ -632,6 +632,12 @@ class LiteratureDiscoveryService:
     monotonic: Callable[[], float] = time.monotonic
     max_attempts_per_provider: int = 2
     max_total_wait_seconds: float = 12.0
+    # How many distinct providers must contribute before the chain may stop
+    # early. The default keeps the historical behavior for every other caller;
+    # the fixed research workflow raises it through its retrieval policy so a
+    # large candidate budget is not filled by whichever provider answered
+    # first.
+    min_contributing_providers: int = MIN_DISCOVERY_PROVIDERS
     _attempts: list[dict[str, Any]] = field(default_factory=list, init=False, repr=False)
     _attempt_paths: dict[str, list[str]] = field(default_factory=dict, init=False, repr=False)
 
@@ -1170,7 +1176,7 @@ class LiteratureDiscoveryService:
             ("crossref", self._crossref, "Crossref"),
         ):
             enough = len(seeded) + len(candidates) >= self.limit
-            if enough and len(contributed) >= MIN_DISCOVERY_PROVIDERS:
+            if enough and len(contributed) >= max(1, int(self.min_contributing_providers)):
                 break
             try:
                 found, trace = backend(query)

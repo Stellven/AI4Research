@@ -180,6 +180,43 @@ def _git_source() -> dict[str, Any]:
     }
 
 
+def _selected_model_provider() -> str:
+    return str(os.environ.get("SOLAR_RESEARCH_MODEL_PROVIDER") or "codex").strip().lower()
+
+
+def _claude_preflight() -> dict[str, Any]:
+    """Verify the Claude CLI the model stages will actually invoke.
+
+    The Codex preflight demanded a Codex binary and auth file even when the
+    selected provider was Claude -- the same shape as the adapter defects: one
+    component imposing a requirement another component had already made
+    unsatisfiable. The Claude CLI manages its own authentication state, so the
+    checkable preconditions here are presence and executability; an
+    unauthenticated CLI still fails closed at the first model stage.
+    """
+    binary_raw = shutil.which("claude")
+    if not binary_raw:
+        raise UATError("Claude CLI is unavailable on PATH")
+    launcher = Path(binary_raw).absolute()
+    try:
+        resolved = launcher.resolve(strict=True)
+    except OSError as exc:
+        raise UATError(f"Claude executable cannot be resolved: {launcher}") from exc
+    binary = _regular_file(resolved, "Claude executable target")
+    if not os.access(binary, os.X_OK):
+        raise UATError(f"Claude executable is not executable: {binary}")
+    return {
+        "provider": "claude",
+        "launcher": str(launcher),
+        "binary": str(binary),
+        "binary_sha256": _sha(binary.read_bytes()),
+        "auth_home": "",
+        "auth_file_present": False,
+        "auth_managed_by_cli": True,
+        "credential_contents_recorded": False,
+    }
+
+
 def _codex_preflight(codex_binary: Path, codex_home: Path) -> dict[str, Any]:
     launcher = codex_binary.expanduser().absolute()
     try:
@@ -277,6 +314,7 @@ def _runtime_env(
     source_pack: Path,
     authority_root: Path,
     codex_home: Path,
+    acquisition_mode: str = "source_pack",
     experiment_policy: str = "",
     policy_actor: str = "",
     policy_statement: str = "",
@@ -304,6 +342,11 @@ def _runtime_env(
             "SOLAR_CODEX_OPERATOR_STATE_ROOT": str(evidence_root / "runtime/codex-state"),
         }
     )
+    env["SOLAR_RESEARCH_ACQUISITION_MODE"] = acquisition_mode
+    if acquisition_mode in {"live_search", "hybrid"}:
+        # Intake refuses live acquisition without the exact public no-key
+        # retrieval policy, so selecting a live mode selects the policy too.
+        env["SOLAR_RESEARCH_RETRIEVAL_POLICY"] = "public_bibliographic_no_key_v1"
     if experiment_policy:
         env["SOLAR_RESEARCH_EXPERIMENT_POLICY"] = experiment_policy
         env["SOLAR_RESEARCH_EXPERIMENT_POLICY_ACTOR"] = policy_actor
@@ -322,6 +365,10 @@ def _manifest_env(env: dict[str, str]) -> dict[str, str]:
         "SOLAR_RESEARCH_SOURCE_PACK_ROOT",
         "SOLAR_RESEARCH_SOURCE_PACK",
         "SOLAR_RESEARCH_EXECUTION_PROFILE",
+        "SOLAR_RESEARCH_ACQUISITION_MODE",
+        "SOLAR_RESEARCH_RETRIEVAL_POLICY",
+        "SOLAR_RESEARCH_MODEL_PROVIDER",
+        "SOLAR_RESEARCH_MODEL",
         "SOLAR_WORKFLOW_ROUTER",
         "SOLAR_PRODUCT_MODE",
         "SOLAR_GATE_LEDGER",
@@ -697,10 +744,16 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
         workspace_root = Path(args.workspace_root).expanduser().resolve(strict=True)
         if not workspace_root.is_dir():
             raise UATError(f"workspace root must be a directory: {workspace_root}")
-        codex_binary_raw = shutil.which("codex")
-        if not codex_binary_raw:
-            raise UATError("Codex CLI is unavailable on PATH")
-        codex_home = Path(args.codex_home).expanduser().resolve(strict=True)
+        provider = _selected_model_provider()
+        if provider == "claude":
+            model_cli = _claude_preflight()
+            codex_home = Path(args.codex_home).expanduser()
+        else:
+            codex_binary_raw = shutil.which("codex")
+            if not codex_binary_raw:
+                raise UATError("Codex CLI is unavailable on PATH")
+            codex_home = Path(args.codex_home).expanduser().resolve(strict=True)
+            model_cli = {"provider": "codex", **_codex_preflight(Path(codex_binary_raw), codex_home)}
         source_authority = validate_source_pack(source_pack, authority_root=authority_root)
         source_manifest = {key: value for key, value in source_authority.items() if key != "candidates"}
         runtime_harness = evidence_root / "runtime-harness"
@@ -713,6 +766,7 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
             source_pack=source_pack,
             authority_root=authority_root,
             codex_home=codex_home,
+            acquisition_mode=str(getattr(args, "acquisition_mode", "") or "source_pack"),
             experiment_policy="evidence_lineage_integrity_v1" if one_shot else "",
             policy_actor=str(getattr(args, "policy_actor", "") or ""),
             policy_statement=str(getattr(args, "policy_statement", "") or ""),
@@ -726,7 +780,7 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
             "created_at": _now(),
             "source": _git_source(),
             "registry": _registry_preflight(),
-            "codex_auth": _codex_preflight(Path(codex_binary_raw), codex_home),
+            "model_cli": model_cli,
             "request": {"path": str(request_file), "sha256": _sha(request_file.read_bytes()), "bytes": request_file.stat().st_size},
             "source_pack": source_manifest,
             "environment": _manifest_env(env),
@@ -962,10 +1016,16 @@ def _drive_dashboard(args: argparse.Namespace) -> dict[str, Any]:
         if str(request_payload.get("request_id") or "") != args.request_id:
             raise UATError("dashboard intake receipt request id mismatch")
         _require_quiescent(runtime_harness)
-        codex_binary_raw = shutil.which("codex")
-        if not codex_binary_raw:
-            raise UATError("Codex CLI is unavailable on PATH")
-        codex_home = Path(args.codex_home).expanduser().resolve(strict=True)
+        provider = _selected_model_provider()
+        if provider == "claude":
+            model_cli = _claude_preflight()
+            codex_home = Path(args.codex_home).expanduser()
+        else:
+            codex_binary_raw = shutil.which("codex")
+            if not codex_binary_raw:
+                raise UATError("Codex CLI is unavailable on PATH")
+            codex_home = Path(args.codex_home).expanduser().resolve(strict=True)
+            model_cli = {"provider": "codex", **_codex_preflight(Path(codex_binary_raw), codex_home)}
         env = _dashboard_runtime_env(
             runtime_harness=runtime_harness,
             evidence_root=evidence_root,
@@ -991,7 +1051,7 @@ def _drive_dashboard(args: argparse.Namespace) -> dict[str, Any]:
             "experiment_policy": policy,
             "source": _git_source(),
             "registry": _registry_preflight(),
-            "codex_auth": _codex_preflight(Path(codex_binary_raw), codex_home),
+            "model_cli": model_cli,
             "environment": _manifest_env(env),
             "intake_invoked_by_driver": False,
             "controller_commands": ["graph-dispatch dispatch-ready", "graph-dispatch dispatch-evals"],
@@ -1039,6 +1099,12 @@ def _parser() -> argparse.ArgumentParser:
         target.add_argument("--request-file", required=True)
         target.add_argument("--workspace-root", required=True)
         target.add_argument("--codex-home", default=os.environ.get("CODEX_HOME") or str(Path.home() / ".codex"))
+        target.add_argument(
+            "--acquisition-mode",
+            choices=("source_pack", "live_search", "hybrid"),
+            default="source_pack",
+            help="hybrid/live_search turn on live public bibliographic retrieval under the no-key policy",
+        )
         target.add_argument("--timeout-seconds", type=int, default=7200)
         target.add_argument("--poll-seconds", type=float, default=2.0)
         target.add_argument("--preflight-only", action="store_true")

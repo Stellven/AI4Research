@@ -23,6 +23,9 @@ from fixed_research_workflow import (  # noqa: E402
     EXPECTED_SCHEMA_BY_NODE,
     PART_B_EXECUTABLE_NODE_IDS,
     PHYSICAL_OPERATOR_BY_NODE,
+    PUBLIC_RETRIEVAL_MAX_CANDIDATES,
+    PUBLIC_RETRIEVAL_MIN_CONTRIBUTING_PROVIDERS,
+    PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES,
     PUBLIC_RETRIEVAL_POLICY_ID,
     PUBLIC_RETRIEVAL_PROVIDERS,
     RESEARCH_OPERATOR_BY_NODE,
@@ -226,6 +229,13 @@ def _retrieval_policy_ref(envelope: dict[str, Any], work_dir: Path, request_text
         "network_scope": policy.get("network_scope") == "https_public_bibliographic_apis_only",
         "budget": 1 <= int(policy.get("max_attempts_per_provider") or 0) <= 2
         and 0 < float(policy.get("max_total_wait_seconds") or 0) <= 12.0,
+        # The candidate budget travels IN the policy so the discovery service
+        # below is built from the controller-authorized number rather than a
+        # literal restated here.
+        "candidates": 1 <= int(policy.get("max_candidates") or 0) <= PUBLIC_RETRIEVAL_MAX_CANDIDATES,
+        "live_floor": 1
+        <= int(policy.get("minimum_live_sources") or 0)
+        <= int(policy.get("max_candidates") or 0),
     }
     if not all(checks.values()):
         raise AdapterError(
@@ -592,11 +602,19 @@ def execute(envelope: dict[str, Any]) -> dict[str, Any]:
     }
     if node_id == "seed_fetch":
         typed_payload["seed_inputs"] = [{"seed_kind": "research_brief", "value": typed_payload["task_contract"]["user_intent"]}]
+    retrieval_policy_payload: dict[str, Any] = {}
+    if node_id == "source_discovery" and acquisition_mode in {"live_search", "hybrid"}:
+        policy_dependency = next(
+            item for item in dependencies if item.get("artifact_id") == "public-retrieval-authorization"
+        )
+        retrieval_policy_payload = dict(policy_dependency.get("policy") or {})
     if node_id == "source_discovery":
         if authority:
             typed_payload["supplied_source_candidates"] = authority["candidates"]
             dependencies.extend(_source_pack_refs(authority, work_dir))
-        typed_payload["minimum_live_sources"] = 3
+        typed_payload["minimum_live_sources"] = int(
+            retrieval_policy_payload.get("minimum_live_sources") or PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES
+        ) if retrieval_policy_payload else 3
     part_b_stage = node_id in PART_B_EXECUTABLE_NODE_IDS
     model_stage = node_id in {"evidence_synthesis", "report_draft", "independent_review", "report_revision"}
     deterministic_acceptance = node_id == "final_acceptance"
@@ -638,7 +656,19 @@ def execute(envelope: dict[str, Any]) -> dict[str, Any]:
     services = _codex_services(node_id=node_id, stage_dir=stage_dir) if model_stage else {}
     if public_discovery:
         services = {
-            "discover_sources": LiteratureDiscoveryService(stage_dir, limit=12),
+            # Sized by the controller-authorized policy, not a literal: the
+            # policy artifact is hash-verified above, so the candidate budget a
+            # run retrieves with is exactly the one that was authorized.
+            "discover_sources": LiteratureDiscoveryService(
+                stage_dir,
+                limit=int(retrieval_policy_payload.get("max_candidates") or PUBLIC_RETRIEVAL_MAX_CANDIDATES),
+                min_contributing_providers=int(
+                    retrieval_policy_payload.get("min_contributing_providers")
+                    or PUBLIC_RETRIEVAL_MIN_CONTRIBUTING_PROVIDERS
+                ),
+                max_attempts_per_provider=int(retrieval_policy_payload.get("max_attempts_per_provider") or 2),
+                max_total_wait_seconds=float(retrieval_policy_payload.get("max_total_wait_seconds") or 12.0),
+            ),
             "service_metadata": {
                 "discover_sources": {
                     "service_id": "autosci-production-literature-discovery",

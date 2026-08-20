@@ -12345,7 +12345,11 @@ def _fixed_research_retrieval_policy_valid(graph: dict[str, Any]) -> bool:
     seed = _node_by_id(graph, "seed_fetch") or {}
     request_text = str((seed.get("operator_payload") or {}).get("request") or "")
     source_manifest = graph.get("source_pack_authority") if isinstance(graph.get("source_pack_authority"), dict) else {}
-    from fixed_research_workflow import PUBLIC_RETRIEVAL_PROVIDERS
+    from fixed_research_workflow import (
+        PUBLIC_RETRIEVAL_MAX_CANDIDATES,
+        PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES,
+        PUBLIC_RETRIEVAL_PROVIDERS,
+    )
 
     return bool(
         policy.get("schema") == "solar.fixed_research.public_retrieval_authorization.v1"
@@ -12359,7 +12363,10 @@ def _fixed_research_retrieval_policy_valid(graph: dict[str, Any]) -> bool:
         and policy.get("credential_mode") == "public_no_key"
         and policy.get("secret_refs") == []
         and policy.get("network_scope") == "https_public_bibliographic_apis_only"
-        and int(policy.get("minimum_live_sources") or 0) == 3
+        # The bound lives in fixed_research_workflow; restating the number here
+        # is how a raised candidate budget silently kept an old ceiling alive.
+        and int(policy.get("minimum_live_sources") or 0) == PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES
+        and 1 <= int(policy.get("max_candidates") or 0) <= PUBLIC_RETRIEVAL_MAX_CANDIDATES
         and 1 <= int(policy.get("max_attempts_per_provider") or 0) <= 2
         and 0 < float(policy.get("max_total_wait_seconds") or 0) <= 12.0
     )

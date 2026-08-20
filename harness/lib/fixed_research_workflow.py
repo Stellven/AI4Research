@@ -85,6 +85,13 @@ EXECUTION_PROFILES = {"part_a_only", "part_a_plus_poc"}
 ACQUISITION_MODES = {"source_pack", "live_search", "hybrid"}
 PUBLIC_RETRIEVAL_POLICY_ID = "public_bibliographic_no_key_v1"
 PUBLIC_RETRIEVAL_PROVIDERS = ["semantic_scholar", "arxiv", "europe_pmc", "openalex", "crossref"]
+# The live retrieval budget, stated once. The adapter builds the discovery
+# service from the policy artifact and the dispatcher guard verifies the policy
+# against these same names, so raising the budget cannot leave a second copy of
+# the old number behind in another component.
+PUBLIC_RETRIEVAL_MAX_CANDIDATES = 60
+PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES = 10
+PUBLIC_RETRIEVAL_MIN_CONTRIBUTING_PROVIDERS = 3
 EXPERIMENT_POLICY_ID = "evidence_lineage_integrity_v1"
 EXPERIMENT_POLICY_RUNNER = "harness/tools/fixed_research_benchmark.py"
 EXPERIMENT_POLICY_CAPABILITIES = ["execute:fixed_evidence_lineage_benchmark", "network:none"]
@@ -197,8 +204,9 @@ def _write_public_retrieval_policy(
         "credential_mode": "public_no_key",
         "secret_refs": [],
         "network_scope": "https_public_bibliographic_apis_only",
-        "minimum_live_sources": 3,
-        "max_candidates": 12,
+        "minimum_live_sources": PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES,
+        "max_candidates": PUBLIC_RETRIEVAL_MAX_CANDIDATES,
+        "min_contributing_providers": PUBLIC_RETRIEVAL_MIN_CONTRIBUTING_PROVIDERS,
         "max_attempts_per_provider": 2,
         "max_total_wait_seconds": 12.0,
         "issued_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
@@ -214,7 +222,7 @@ def _write_public_retrieval_policy(
         "sha256": _sha256_bytes(target.read_bytes()),
         "request_sha256": payload["request_sha256"],
         "providers": list(PUBLIC_RETRIEVAL_PROVIDERS),
-        "minimum_live_sources": 3,
+        "minimum_live_sources": PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES,
     }
 
 
