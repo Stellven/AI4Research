@@ -160,3 +160,26 @@ def test_gate_catches_a_quote_that_is_not_in_its_source(tmp_path: Path) -> None:
     ])
     failures = gate.check_claim_grounding(workspace)
     assert any("verbatim" in item for item in failures)
+
+
+def test_gate_accepts_a_quote_across_a_line_wrapped_source(tmp_path: Path) -> None:
+    """"Verbatim" must mean the same thing to the operator and the gate.
+
+    The operator verifies and STORES whitespace-normalized quotes; arXiv
+    abstracts line-wrap mid-sentence. A raw substring check here refused a
+    healthy live stage over a newline the operator had already normalized
+    away.
+    """
+    wrapped_source = SOURCE.replace(" ", "\n", 3)
+    validation = tmp_path / gate.SOURCE_VALIDATION
+    validation.parent.mkdir(parents=True, exist_ok=True)
+    validation.write_text(json.dumps({
+        "accepted": [{"source_id": "s1", "content_summary": wrapped_source}],
+        "rejected": [],
+    }), encoding="utf-8")
+    synthesis = tmp_path / gate.EVIDENCE_SYNTHESIS
+    synthesis.parent.mkdir(parents=True, exist_ok=True)
+    synthesis.write_text(json.dumps({
+        "claims": [_claim("c1", GROUNDED_CLAIM_TEXT, quotes=[{"source_id": "s1", "quote": QUOTE}])],
+    }), encoding="utf-8")
+    assert gate.check_claim_grounding(tmp_path) == []

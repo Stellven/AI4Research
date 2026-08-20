@@ -356,12 +356,20 @@ def check_claim_grounding(workspace: Path) -> list[str]:
     if validation is None or synthesis is None:
         return []  # linkage checks already report unreadable inputs
 
+    # Whitespace-normalized on BOTH sides, exactly as the synthesis operator
+    # verifies and stores quotes: an arXiv abstract line-wraps mid-sentence,
+    # so a quote the operator verified against normalized text failed a raw
+    # substring check here and a healthy stage was refused. Normalization is
+    # not a loosening -- the stored quotes are themselves normalized.
+    def _flat(value: Any) -> str:
+        return " ".join(str(value or "").split())
+
     text_by_id: dict[str, str] = {}
     for item in validation.get("accepted") or []:
         if not isinstance(item, dict):
             continue
         for key in ("content", "extracted_text", "content_summary", "abstract"):
-            value = str(item.get(key) or "").strip()
+            value = _flat(item.get(key))
             if value:
                 text_by_id[str(item.get("source_id") or "")] = value
                 break
@@ -375,8 +383,8 @@ def check_claim_grounding(workspace: Path) -> list[str]:
         verbatim = [
             row for row in (claim.get("evidence_quotes") or [])
             if isinstance(row, dict)
-            and str(row.get("quote") or "")
-            and str(row.get("quote")) in text_by_id.get(str(row.get("source_id") or ""), "")
+            and _flat(row.get("quote"))
+            and _flat(row.get("quote")) in text_by_id.get(str(row.get("source_id") or ""), "")
         ]
         if not verbatim:
             failures.append(f"{claim_id}: no recorded quote appears verbatim in the source it names")
