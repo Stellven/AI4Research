@@ -1404,7 +1404,28 @@ class ResearchModelService:
                     "long enough to stand alone (at least 40 characters), and must contain "
                     "wording the claim itself relies on. Do not paraphrase, reflow, or repair "
                     "a quote: it is checked as an exact substring of the source text.",
+                    # A verbatim quote proves the TEXT exists; it does not prove the
+                    # claim rests on it. Each claim is additionally checked against the
+                    # full source text with a lexical support test, and claims that
+                    # fail are refused and sent back. These four rules are that test,
+                    # stated so the model can satisfy it directly.
+                    "Each claim must be supported by at least one cited source ON ITS OWN. "
+                    "A claim that is only true by combining several sources fails, because "
+                    "support is assessed per source: split it into separate claims instead.",
+                    "Write each claim in the source's own vocabulary. At least 45 percent of "
+                    "the claim's substantive words must also appear in that source's text, so "
+                    "reuse the source's terms rather than substituting synonyms.",
+                    "Every number, percentage, or count in a claim must also appear in the "
+                    "cited source. Do not compute, round, or infer figures.",
+                    "Do not use absolute wording such as all, always, never, every, none, "
+                    "proves, guarantees, or cures: a claim scoped that broadly is refused.",
                 ],
+                # Populated only on a repair attempt, listing the claims that were
+                # refused and exactly why, so the retry is targeted rather than a
+                # blind regeneration.
+                "grounding_feedback": kwargs.get("grounding_feedback") or [],
+                "synthesis_attempt": kwargs.get("synthesis_attempt") or 1,
+                "max_synthesis_attempts": kwargs.get("max_synthesis_attempts") or 1,
             }
         elif node_id == "report_draft":
             synthesis = kwargs.get("evidence_synthesis") if isinstance(kwargs.get("evidence_synthesis"), dict) else {}

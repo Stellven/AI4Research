@@ -62,6 +62,16 @@ if str(HARNESS / "plugins" / "autosci") not in sys.path:
 
 from operators.research_synthesis.base import subject_terms  # noqa: E402
 
+_LIB = HARNESS / "lib"
+if str(_LIB) not in sys.path:
+    sys.path.insert(0, str(_LIB))
+
+# The same checker evidence_synthesis enforces with. Recomputed here rather than
+# read from the operator's own `support_assessment` field, because that field is
+# the thing under test. This gate has never trusted an operator's verdict about
+# its own work and must not start now.
+from research.evidence.review_proof import claim_support_assessment  # noqa: E402
+
 ARTIFACT_ROOT = Path("artifacts/research_evidence_to_poc")
 SOURCE_VALIDATION = ARTIFACT_ROOT / "validation" / "source_validation.json"
 SEED_SNAPSHOT = ARTIFACT_ROOT / "seed" / "seed_snapshot.json"
@@ -328,6 +338,58 @@ def check_claims(workspace: Path) -> list[str]:
     return failures
 
 
+def check_claim_grounding(workspace: Path) -> list[str]:
+    """Recompute, per published claim, that the evidence really carries it.
+
+    `evidence_synthesis` refuses to publish a claim without a verbatim quote and
+    without a source that passes Solar's support assessment. That refusal is
+    what makes `unsupported_rate: 0.0` downstream true rather than asserted, so
+    it has to be verified independently or the guarantee is only a promise.
+
+    Two checks, matching the operator's two conditions:
+      * at least one recorded quote appears VERBATIM in the source it names
+      * at least one cited source passes claim_support_assessment
+    """
+    failures: list[str] = []
+    validation = _load(workspace / SOURCE_VALIDATION)
+    synthesis = _load(workspace / EVIDENCE_SYNTHESIS)
+    if validation is None or synthesis is None:
+        return []  # linkage checks already report unreadable inputs
+
+    text_by_id: dict[str, str] = {}
+    for item in validation.get("accepted") or []:
+        if not isinstance(item, dict):
+            continue
+        for key in ("content", "extracted_text", "content_summary", "abstract"):
+            value = str(item.get(key) or "").strip()
+            if value:
+                text_by_id[str(item.get("source_id") or "")] = value
+                break
+
+    for claim in synthesis.get("claims") or []:
+        if not isinstance(claim, dict):
+            continue
+        claim_id = str(claim.get("claim_id") or "?")
+        text = str(claim.get("text") or "")
+
+        verbatim = [
+            row for row in (claim.get("evidence_quotes") or [])
+            if isinstance(row, dict)
+            and str(row.get("quote") or "")
+            and str(row.get("quote")) in text_by_id.get(str(row.get("source_id") or ""), "")
+        ]
+        if not verbatim:
+            failures.append(f"{claim_id}: no recorded quote appears verbatim in the source it names")
+
+        supported = [
+            source_id for source_id in (claim.get("evidence_ids") or [])
+            if claim_support_assessment(text, text_by_id.get(str(source_id), "")).get("supported")
+        ]
+        if not supported:
+            failures.append(f"{claim_id}: no cited source supports the claim under claim_support_assessment")
+    return failures
+
+
 def check_node_complete(workspace: Path, stages: list[str]) -> list[str]:
     """Fail when a stage's own result does not say it completed.
 
@@ -386,6 +448,7 @@ def main(argv: list[str] | None = None) -> int:
         failures.extend(check_sources(workspace))
     if run_claims:
         failures.extend(check_claims(workspace))
+        failures.extend(check_claim_grounding(workspace))
     if args.node_complete:
         failures.extend(check_node_complete(workspace, list(args.node_complete)))
 
