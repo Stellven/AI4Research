@@ -38,6 +38,9 @@ from harness.plugins.autosci.services.codex_research import (  # noqa: E402
     SharedInvocationJournal,
 )
 from harness.plugins.autosci.services.production_research import LiteratureDiscoveryService  # noqa: E402
+from harness.plugins.autosci.operators.research_synthesis.evidence_synthesis import (  # noqa: E402
+    MAX_SYNTHESIS_ATTEMPTS,
+)
 from harness.plugins.autosci.operators.fixed_research_poc import (  # noqa: E402
     execute_part_b,
     verify_final_delivery_artifact,
@@ -370,6 +373,17 @@ def _merge_codex_invocation_usage(
     return merged
 
 
+# Per-stage model-call ceilings, taken from the operators' own declared bounds so
+# the two cannot drift apart. A stage absent from this table gets exactly one
+# call, which is the safe default.
+MAX_CALLS_BY_NODE = {
+    # writer + reviewer per attempt
+    "report_revision": MAX_REVISION_ATTEMPTS * 2,
+    # one call per grounding repair attempt
+    "evidence_synthesis": MAX_SYNTHESIS_ATTEMPTS,
+}
+
+
 # Each selectable CLI records its own provenance label. The guard below checks
 # the usage against the label for the provider that was actually selected, so
 # swapping providers stays legal while a service recording something other than
@@ -441,9 +455,17 @@ def _verify_model_usage(
         }
         if actual_roles != expected_roles or role_counts.get("writer") != role_counts.get("reviewer"):
             raise AdapterError("report revision must pair each writer attempt with a reviewer attempt")
-    max_calls = MAX_REVISION_ATTEMPTS * 2 if node_id == "report_revision" else 1
+    # One call per stage unless the operator declares a bounded repair loop, and
+    # the bound is READ FROM THAT OPERATOR rather than restated here. Restating
+    # it is how this check silently forbade the grounding repair loop the moment
+    # evidence_synthesis grew one: the operator retried up to three times, the
+    # ceiling was still a hardcoded 1, and a stage that had done exactly what it
+    # was designed to do was refused.
+    max_calls = MAX_CALLS_BY_NODE.get(node_id, 1)
     if len(usage) > max_calls:
-        raise AdapterError("model stage exceeded the fixed Codex call ceiling")
+        raise AdapterError(
+            f"model stage exceeded its declared call ceiling: {len(usage)} > {max_calls}"
+        )
 
 
 def _normalize_provider_archives(result: dict[str, Any], work_dir: Path, stage_dir: Path) -> set[str]:
