@@ -65,6 +65,19 @@ def test_authentication_session_security_provider_authenticated_live_status() ->
     assert "api_key" not in payload
 
 
+def test_authentication_session_security_host_reuse_can_replace_stale_wsl_auth() -> None:
+    helper_text = AUTH_HELPER.read_text(encoding="utf-8")
+
+    assert "cmp -s" in helper_text
+    assert 'install -m 600 "$source" "$temporary"' in helper_text
+    assert 'mv -f "$temporary" "$target"' in helper_text
+    assert '"replaced":%s' in helper_text
+    response_line = next(line for line in helper_text.splitlines() if '"replaced":%s' in line)
+    assert "auth.json" not in response_line
+    assert "$source" not in response_line
+    assert "$target" not in response_line
+
+
 class _FakeProcess:
     def __init__(self, returncode: int | None) -> None:
         self.returncode = returncode

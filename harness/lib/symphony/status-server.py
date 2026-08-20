@@ -1612,8 +1612,11 @@ def _auth_run_dir() -> Path:
 
 
 def _auth_reuse_host_creds(provider: str) -> dict:
-    """Zero-step path: on WSL, copy creds the user already has on the Windows side. Delegates to
-    auth-helpers.sh (which only copies when the runtime-home target is absent — never overwrites)."""
+    """Copy the selected host CLI credential into WSL without exposing its contents.
+
+    The helper performs an atomic, content-different replacement so the same UI
+    action can recover an expired WSL token as well as bootstrap a missing one.
+    """
     if provider not in ("codex", "claude"):
         return {"ok": False, "error": "unknown provider"}
     helper = HARNESS_DIR / "auth-helpers.sh"

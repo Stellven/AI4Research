@@ -60,24 +60,42 @@ cmd_open_url() {
 }
 
 # Zero-step path: on WSL, reuse creds the user already has on the Windows side. Consent is the
-# UI's job; this only copies when the runtime-home target is ABSENT (never overwrites).
+# UI's job. A repeated click must also repair an expired/stale WSL credential, so the copy is
+# atomic and replaces the target only when the host file differs. No credential bytes are logged.
 cmd_reuse_host_creds() {
-  local provider="${1:-}" copied=false wu base
+  local provider="${1:-}" copied=false replaced=false wu base source="" target="" host_profile=""
   if [ "$(_os)" = "wsl" ]; then
-    for wu in /mnt/c/Users/*/; do
+    if [ -n "${SOLAR_HOST_USER_DIR:-}" ] && [ -d "$SOLAR_HOST_USER_DIR" ]; then
+      host_profile="$SOLAR_HOST_USER_DIR"
+    elif command -v cmd.exe >/dev/null 2>&1 && command -v wslpath >/dev/null 2>&1; then
+      host_profile="$(cmd.exe /d /c echo %USERPROFILE% 2>/dev/null | tr -d '\r' | tail -n 1)"
+      host_profile="$(wslpath -u "$host_profile" 2>/dev/null || true)"
+    fi
+    if [ -n "$host_profile" ]; then
+      set -- "$host_profile/"
+    else
+      set -- /mnt/c/Users/*/
+    fi
+    for wu in "$@"; do
       base="$(basename "$wu")"
       case "$base" in Public|Default|"Default User"|All*) continue ;; esac
-      if [ "$provider" = "codex" ] && [ -s "${wu}.codex/auth.json" ] && [ ! -s "$HOME_DIR/.codex/auth.json" ]; then
-        mkdir -p "$HOME_DIR/.codex"; cp "${wu}.codex/auth.json" "$HOME_DIR/.codex/auth.json"
-        chmod 600 "$HOME_DIR/.codex/auth.json"; copied=true; break
+      if [ "$provider" = "codex" ] && [ -s "${wu}.codex/auth.json" ]; then
+        source="${wu}.codex/auth.json"; target="$HOME_DIR/.codex/auth.json"; break
       fi
-      if [ "$provider" = "claude" ] && [ -s "${wu}.claude/.credentials.json" ] && [ ! -s "$HOME_DIR/.claude/.credentials.json" ]; then
-        mkdir -p "$HOME_DIR/.claude"; cp "${wu}.claude/.credentials.json" "$HOME_DIR/.claude/.credentials.json"
-        chmod 600 "$HOME_DIR/.claude/.credentials.json"; copied=true; break
+      if [ "$provider" = "claude" ] && [ -s "${wu}.claude/.credentials.json" ]; then
+        source="${wu}.claude/.credentials.json"; target="$HOME_DIR/.claude/.credentials.json"; break
       fi
     done
+    if [ -n "$source" ] && [ -n "$target" ] && { [ ! -s "$target" ] || ! cmp -s "$source" "$target"; }; then
+      [ -s "$target" ] && replaced=true
+      mkdir -p "$(dirname "$target")"
+      local temporary="${target}.tmp.$$"
+      install -m 600 "$source" "$temporary"
+      mv -f "$temporary" "$target"
+      copied=true
+    fi
   fi
-  printf '{"ok":true,"provider":"%s","reused":%s}\n' "$provider" "$copied"
+  printf '{"ok":true,"provider":"%s","reused":%s,"replaced":%s}\n' "$provider" "$copied" "$replaced"
 }
 
 cmd_login() {
