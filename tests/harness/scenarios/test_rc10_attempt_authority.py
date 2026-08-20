@@ -951,3 +951,134 @@ def test_untracked_operator_pool_submission_never_falls_back_to_second_worker(
 
     assert result == pool_failure
     assert fallback_calls == []
+
+
+def test_dispatched_virtual_pool_assignment_is_resubmitted_through_operator_pool(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    graph_path = tmp_path / f"{SID}.task_graph.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": SID,
+                "nodes": [
+                    {
+                        "id": NODE_ID,
+                        "status": "dispatched",
+                        "depends_on": [],
+                        "assigned_to": "operator-pool:builder.0",
+                        "dispatch_id": "graph-current",
+                    }
+                ],
+                "node_results": {
+                    NODE_ID: {
+                        "status": "dispatched",
+                        "assigned_to": "operator-pool:builder.0",
+                        "dispatch_id": "graph-current",
+                    }
+                },
+                "gate_results": {},
+                "required_gates": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    pool_success = {"ok": True, "dispatch_mode": "operator_pool"}
+    calls: list[str] = []
+    monkeypatch.setattr(gnd, "_plan_validator_enabled", lambda: False)
+    monkeypatch.setattr(gnd, "_prepare_human_search_handoff", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        gnd,
+        "_submit_builder_to_operator_pool",
+        lambda **_kwargs: calls.append("pool") or pool_success,
+    )
+    monkeypatch.setattr(
+        gnd,
+        "_assigned_pane_unavailable_reason",
+        lambda _pane: (_ for _ in ()).throw(AssertionError("virtual pool pane reached tmux guard")),
+    )
+
+    result = gnd.dispatch_queue_item(
+        {
+            "intent": f"graph_node|node_id={NODE_ID}",
+            "priority": 80,
+            "payload": {
+                "sprint_id": SID,
+                "node": {"id": NODE_ID, "status": "dispatched"},
+                "assignment": {"pane": "operator-pool:builder.0"},
+                "dispatch_id": "graph-current",
+                "graph": str(graph_path),
+            },
+        },
+        dry_run=False,
+    )
+
+    assert result == pool_success
+    assert calls == ["pool"]
+
+
+def test_virtual_pool_assignment_with_tracked_attempt_repairs_operator_pane_without_resubmit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    graph_path = tmp_path / f"{SID}.task_graph.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": SID,
+                "nodes": [
+                    {
+                        "id": NODE_ID,
+                        "status": "dispatched",
+                        "depends_on": [],
+                        "assigned_to": "operator-pool:builder.0",
+                        "dispatch_id": "graph-current",
+                        "execution_attempt": {
+                            **_attempt("pm-current", "operator-current"),
+                            "dispatch_id": "graph-current",
+                        },
+                    }
+                ],
+                "node_results": {
+                    NODE_ID: {
+                        "status": "dispatched",
+                        "assigned_to": "operator-pool:builder.0",
+                        "dispatch_id": "graph-current",
+                    }
+                },
+                "gate_results": {},
+                "required_gates": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gnd, "_plan_validator_enabled", lambda: False)
+    monkeypatch.setattr(gnd, "_prepare_human_search_handoff", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        gnd,
+        "_submit_builder_to_operator_pool",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("tracked attempt was resubmitted")),
+    )
+    monkeypatch.setattr(gnd, "_ledger_transition", lambda *_args, **_kwargs: None)
+
+    result = gnd.dispatch_queue_item(
+        {
+            "intent": f"graph_node|node_id={NODE_ID}",
+            "priority": 80,
+            "payload": {
+                "sprint_id": SID,
+                "node": {"id": NODE_ID, "status": "dispatched"},
+                "assignment": {"pane": "operator-pool:builder.0"},
+                "dispatch_id": "graph-current",
+                "graph": str(graph_path),
+            },
+        },
+        dry_run=False,
+    )
+
+    assert result["ok"] is True
+    assert result["reason"] == "operator_pool_submission_in_flight"
+    assert result["pane"] == "operator:operator-current"
+    persisted = gnd.load_graph(graph_path)
+    assert persisted["nodes"][0]["assigned_to"] == "operator:operator-current"

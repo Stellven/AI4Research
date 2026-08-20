@@ -6891,11 +6891,13 @@ def _graph_node_runtime_state(graph_path: str, node_id: str) -> dict[str, Any]:
         result = (graph.get("node_results") or {}).get(node_id) or {}
         status = str(node_status(graph, node_id) or "pending").lower()
         active_statuses = {"assigned", "dispatched", "in_progress", "running"}
+        execution_attempt = current_execution_attempt(node) or {}
         return {
             "ok": True,
             "status": status,
             "dispatch_id": (node.get("dispatch_id") or result.get("dispatch_id") or "") if status in active_statuses else "",
             "assigned_to": (node.get("assigned_to") or result.get("assigned_to") or "") if status in active_statuses else "",
+            "execution_attempt": execution_attempt,
         }
     except Exception as exc:
         return {"ok": False, "error": str(exc), "status": ""}
@@ -10881,10 +10883,52 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
             if not dry_run:
                 _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
             return {**validator_refusal, "node": node_id, "dispatch_id": dispatch_id, "requeued": False}
+    virtual_operator_pool = bool(str(pane).startswith("operator-pool:"))
+    execution_attempt = (
+        runtime_state.get("execution_attempt")
+        if isinstance(runtime_state.get("execution_attempt"), dict)
+        else {}
+    )
+    attempt_dispatch_id = str(execution_attempt.get("dispatch_id") or "")
+    attempt_task_id = str(execution_attempt.get("task_id") or "")
+    attempt_operator_id = str(execution_attempt.get("operator_id") or "")
+    matching_active_pool_attempt = (
+        virtual_operator_pool
+        and attempt_task_id
+        and attempt_operator_id
+        and (not attempt_dispatch_id or attempt_dispatch_id == dispatch_id)
+    )
+    if matching_active_pool_attempt:
+        operator_pane = f"operator:{attempt_operator_id}"
+        graph_updated = False
+        if not dry_run:
+            recovered_status = (
+                current_status
+                if current_status in {"dispatched", "in_progress", "running"}
+                else "dispatched"
+            )
+            graph_updated = _mark_graph_node_compat(
+                graph_path,
+                node_id,
+                recovered_status,
+                pane=operator_pane,
+                dispatch_id=dispatch_id,
+            )
+        return {
+            "ok": True,
+            "reason": "operator_pool_submission_in_flight",
+            "node": node_id,
+            "pane": operator_pane,
+            "dispatch_id": dispatch_id,
+            "pm_task_id": attempt_task_id,
+            "graph_updated": graph_updated,
+            "dry_run": dry_run,
+        }
+
     use_operator_pool = (
-        current_status in {"assigned", "pending", "queued"}
+        current_status in {"assigned", "pending", "queued", "dispatched", "in_progress", "running"}
         and (not current_dispatch_id or current_dispatch_id == dispatch_id)
-        and (not pane or str(pane).startswith("operator-pool:"))
+        and (not pane or virtual_operator_pool)
     )
     if use_operator_pool:
         pool_result = _submit_builder_to_operator_pool(
