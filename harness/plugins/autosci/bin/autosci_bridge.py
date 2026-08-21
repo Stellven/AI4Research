@@ -456,13 +456,19 @@ def _native_prepare_paper_source(
 
 
 def _rel(path: Path) -> str:
-    try:
-        return path.resolve().relative_to(HARNESS_DIR.resolve()).as_posix()
-    except ValueError:
+    """Relativize a resolved path for evidence.
+
+    _resolve_harness_path also accepts REPO_ROOT-relative inputs, so this must
+    try REPO_ROOT too or those paths fall through to an absolute machine path
+    and leak local directory layout into committed evidence artifacts.
+    """
+    resolved = path.resolve()
+    for root in (HARNESS_DIR, REPO_HARNESS_DIR, REPO_ROOT):
         try:
-            return path.resolve().relative_to(REPO_HARNESS_DIR.resolve()).as_posix()
-        except ValueError:
-            return Path(path).as_posix()
+            return resolved.relative_to(Path(root).resolve()).as_posix()
+        except (ValueError, OSError):
+            continue
+    return Path(path).as_posix()
 
 
 def _output_dir(envelope: dict[str, Any], action: str) -> Path:
@@ -10109,6 +10115,29 @@ def _action_run_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
         f"experiment_id={experiment_id}",
         f"command_run={command_run}",
     ]
+    # Unapproved EXTERNAL execution is a safety condition, not merely incomplete
+    # input, so it fails closed ahead of the plan-resolution check. Previously
+    # the missing-plan branch below returned "inconclusive" first and this was
+    # never reached, so an approved-external experiment with no approval at all
+    # was reported as inconclusive rather than failed. With no upstream approval
+    # node, this is the only remaining check on unapproved external execution.
+    if execution_mode == "approved-external" and not _experiment_approval_satisfied(envelope):
+        log_lines.append("blocked missing approval for external execution")
+        artifact = _experiment_log_artifact(envelope, experiment_id, log_lines)
+        return convert_experiment_result({
+            "experiment_id": experiment_id,
+            "outcome": "failed",
+            "status": "failed",
+            "metrics": [{"name": "approval_present", "value": False}],
+            "evidence_ids": evidence_ids,
+            "execution_mode": execution_mode,
+            "command_run": command_run,
+            "logs": log_lines,
+            "artifacts": [artifact],
+            "limitations": [
+                "External experiment execution was blocked because approval is required and absent; no experiment command was executed.",
+            ],
+        }, envelope)
     if experiment_id == "experiment-unresolved" and not plan and not target_ref:
         log_lines.append("blocked missing experiment plan evidence")
         artifact = _experiment_log_artifact(envelope, experiment_id, log_lines)

@@ -153,3 +153,42 @@ def test_intake_stub_wiring_is_fail_closed():
     branch = script.split("SOLAR_INTAKE_WORKFLOW_ID", 1)[1][:2000]
     assert "workflow_intake.py" in branch
     assert "return 1" in branch, "unknown/failed contract intake must fail closed"
+
+
+def test_dashboard_request_id_is_stamped_on_sprint_status(tmp_path, monkeypatch):
+    """The dashboard front door must leave a durable attribution trail.
+
+    symphony/status-server.py writes its own intake receipt under
+    HARNESS_DIR/run/intake-requests/<request_id>.json and exports
+    SOLAR_INTAKE_REQUEST_ID to this CLI.  Without the id on the authoritative
+    sprint status, a downstream controller cannot tell which sprint belongs to
+    which dashboard submission except by guessing on title or mtime.
+    """
+    monkeypatch.setenv("SOLAR_INTAKE_REQUEST_ID", "webapp-intake-deb42a89-8560-4024-9ecf-a8f9c8fef5d8")
+    result = _create(tmp_path)
+    status = json.loads((tmp_path / "sprints" / f"{result['sprint_id']}.status.json").read_text(encoding="utf-8"))
+    assert status["request_id"] == "webapp-intake-deb42a89-8560-4024-9ecf-a8f9c8fef5d8"
+
+
+def test_absent_dashboard_request_id_leaves_status_unstamped(tmp_path, monkeypatch):
+    monkeypatch.delenv("SOLAR_INTAKE_REQUEST_ID", raising=False)
+    result = _create(tmp_path)
+    status = json.loads((tmp_path / "sprints" / f"{result['sprint_id']}.status.json").read_text(encoding="utf-8"))
+    assert "request_id" not in status
+
+    monkeypatch.setenv("SOLAR_INTAKE_REQUEST_ID", "   ")
+    blank = _create(tmp_path)
+    blank_status = json.loads((tmp_path / "sprints" / f"{blank['sprint_id']}.status.json").read_text(encoding="utf-8"))
+    assert "request_id" not in blank_status
+
+
+def test_dashboard_request_id_is_resanitized(tmp_path, monkeypatch):
+    """The id reaches this process through the environment, so it is re-bounded
+    here rather than trusted from the caller that set it."""
+    monkeypatch.setenv("SOLAR_INTAKE_REQUEST_ID", "../../etc/passwd\nrogue " + "z" * 200)
+    result = _create(tmp_path)
+    status = json.loads((tmp_path / "sprints" / f"{result['sprint_id']}.status.json").read_text(encoding="utf-8"))
+    stamped = status["request_id"]
+    assert len(stamped) <= 96
+    assert re.fullmatch(r"[A-Za-z0-9_.:-]+", stamped), stamped
+    assert "/" not in stamped and "\n" not in stamped

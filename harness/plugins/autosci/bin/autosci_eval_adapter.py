@@ -70,8 +70,22 @@ def _utc_now() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _fs_path(path: Path) -> str:
+    absolute = os.path.abspath(os.fspath(path.expanduser()))
+    if os.name != "nt" or absolute.startswith("\\\\?\\"):
+        return absolute
+    if absolute.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + absolute.lstrip("\\")
+    return "\\\\?\\" + absolute
+
+
+def _exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
 def _load_json(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    with open(_fs_path(path), encoding="utf-8") as handle:
+        payload = json.load(handle)
     if not isinstance(payload, dict):
         raise ValueError(f"JSON object expected at {path}")
     return payload
@@ -113,7 +127,7 @@ def _resolve_path(raw: str | Path, *, graph_path: Path | None = None) -> Path:
     if parts and parts[0] == "harness":
         candidates.insert(0, HARNESS_DIR / Path(*parts[1:]))
     for candidate in candidates:
-        if candidate.exists():
+        if _exists(candidate):
             return candidate
     return candidates[0]
 
@@ -176,7 +190,7 @@ def _append_from_artifacts(
 
 def _bridge_result_evidence_refs(candidate: dict[str, str], *, graph_path: Path) -> list[dict[str, str]]:
     path = Path(candidate["path"])
-    if not path.exists():
+    if not _exists(path):
         return []
     try:
         payload = _load_json(path)
@@ -239,7 +253,7 @@ def _select_evidence(
     loaded: list[tuple[Path, dict[str, Any], dict[str, str]]] = []
     for candidate in candidates:
         path = Path(candidate["path"])
-        if not path.exists():
+        if not _exists(path):
             continue
         try:
             payload = _load_json(path)
@@ -272,7 +286,11 @@ def _gate_evidence(evidence_path: Path, expected_schema: str) -> dict[str, Any]:
     env = os.environ.copy()
     env["HARNESS_DIR"] = str(HARNESS_DIR)
     proc = subprocess.run(
-        [sys.executable, str(REPO_HARNESS_DIR / "evaluators" / "scientific" / gate_file), str(evidence_path)],
+        [
+            sys.executable,
+            str(REPO_HARNESS_DIR / "evaluators" / "scientific" / gate_file),
+            _fs_path(evidence_path),
+        ],
         cwd=str(HARNESS_DIR),
         env=env,
         text=True,

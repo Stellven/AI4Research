@@ -990,7 +990,6 @@ def _intake_command(task: str) -> list[str]:
             if bash:
                 return [bash, str(harness_sh), "intake", "--request", task]
         return [str(harness_sh), "intake", "--request", task]
-
     solar = shutil.which("solar")
     if solar:
         return [solar, "harness", "intake", "--request", task]
@@ -1036,6 +1035,29 @@ def _intake_subprocess_env() -> dict[str, str]:
     # the same current config when Codex is selected.
     if selected_runtime != stale_runtime:
         env.pop("SOLAR_CODEX_EXTRA_FLAGS", None)
+    dashboard_profile = str(env.get("SOLAR_DASHBOARD_RESEARCH_PROFILE") or "").strip()
+    if dashboard_profile:
+        if dashboard_profile != "fixed_hybrid_demo_v1":
+            raise ValueError("unsupported dashboard research profile")
+        required = {
+            "SOLAR_DASHBOARD_RESEARCH_SOURCE_PACK": "SOLAR_RESEARCH_SOURCE_PACK",
+            "SOLAR_DASHBOARD_RESEARCH_SOURCE_PACK_ROOT": "SOLAR_RESEARCH_SOURCE_PACK_ROOT",
+            "SOLAR_DASHBOARD_RESEARCH_POLICY_ACTOR": "SOLAR_RESEARCH_EXPERIMENT_POLICY_ACTOR",
+            "SOLAR_DASHBOARD_RESEARCH_POLICY_STATEMENT": "SOLAR_RESEARCH_EXPERIMENT_POLICY_STATEMENT",
+        }
+        for source_key, target_key in required.items():
+            value = str(env.get(source_key) or "").strip()
+            if not value:
+                raise ValueError(f"dashboard research profile is missing {source_key}")
+            env[target_key] = value
+        env.update({
+            "SOLAR_INTAKE_WORKFLOW_ID": "research.evidence_to_poc.v1",
+            "SOLAR_RESEARCH_EXECUTION_PROFILE": "part_a_plus_poc",
+            "SOLAR_RESEARCH_ACQUISITION_MODE": "hybrid",
+            "SOLAR_RESEARCH_RETRIEVAL_POLICY": "public_bibliographic_no_key_v1",
+            "SOLAR_RESEARCH_EXPERIMENT_POLICY": "evidence_lineage_integrity_v1",
+            "SOLAR_WORKFLOW_ROUTER": "1",
+        })
     return env
 
 
@@ -1133,6 +1155,50 @@ def _task_with_intake_attachments(task: str, attachments: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _classify_intake_request(task: str, env: dict, *, explicit_workflow_id: str) -> dict:
+    """Decide which workflow a free-text prompt should enter, and say why.
+
+    The dashboard research profile used to pin SOLAR_INTAKE_WORKFLOW_ID for
+    every prompt, so "what is 2+2" and a full literature review both entered the
+    fifteen-node research contract. Routing was therefore not being exercised at
+    all: the demo only looked like it handled any prompt. An explicit
+    workflow_id from the caller still wins; this only replaces the blanket pin.
+    """
+    if explicit_workflow_id:
+        return {"applied": False, "reason": "caller supplied an explicit workflow_id"}
+    if str(env.get("SOLAR_INTAKE_WORKFLOW_ID") or "") != "research.evidence_to_poc.v1":
+        return {"applied": False, "reason": "no pinned research workflow to reconsider"}
+    try:
+        from workflow_router import classify_research_request
+    except ImportError as exc:
+        # Fail closed onto the pinned behaviour rather than silently routing a
+        # research request to the generic planner.
+        return {"applied": False, "reason": f"router unavailable: {exc}"}
+    verdict = classify_research_request(task)
+    tier = str(verdict.get("tier") or "")
+    if tier == "simple":
+        # Nothing in the prompt asks for research. Drop the pin and let the
+        # generic planner path handle it.
+        for key in (
+            "SOLAR_INTAKE_WORKFLOW_ID",
+            "SOLAR_RESEARCH_EXECUTION_PROFILE",
+            "SOLAR_RESEARCH_ACQUISITION_MODE",
+            "SOLAR_RESEARCH_RETRIEVAL_POLICY",
+            "SOLAR_RESEARCH_EXPERIMENT_POLICY",
+        ):
+            env.pop(key, None)
+    else:
+        env["SOLAR_RESEARCH_EXECUTION_PROFILE"] = str(verdict.get("execution_profile") or "")
+    return {
+        "applied": True,
+        "tier": tier,
+        "execution_profile": str(verdict.get("execution_profile") or ""),
+        "research_markers": list(verdict.get("research_markers") or []),
+        "poc_markers": list(verdict.get("poc_markers") or []),
+        "reason": str(verdict.get("reason") or ""),
+    }
+
+
 def _intake_payload(data: dict) -> dict:
     task = str(data.get("task") or data.get("request") or "").strip()
     request_id = re.sub(r"[^A-Za-z0-9_.:-]", "-", str(data.get("request_id") or "").strip())[:96]
@@ -1166,6 +1232,7 @@ def _intake_payload(data: dict) -> dict:
     if not Path(cmd[0]).exists() and shutil.which(cmd[0]) is None:
         return {"ok": False, "status": "error", "error": "intake_cli_not_found", "command": cmd[0], "request_id": request_id}
     before = time.time()
+    resolved_profile: dict[str, str] = {}
     try:
         req_dir = HARNESS_DIR / "run" / "intake-requests"
         req_dir.mkdir(parents=True, exist_ok=True)
@@ -1174,6 +1241,7 @@ def _intake_payload(data: dict) -> dict:
             "task_preview": task[:500],
             "workflow_id": workflow_id,
             "attachments": attachments,
+            "workflow_inputs": workflow_inputs,
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     except OSError:
@@ -1183,7 +1251,39 @@ def _intake_payload(data: dict) -> dict:
     env["SOLAR_INTAKE_REQUEST_ID"] = request_id
     if attachments:
         env["SOLAR_INTAKE_ATTACHMENTS_JSON"] = json.dumps(attachments, ensure_ascii=False)
-    if workflow_id:
+    routing = _classify_intake_request(task, env, explicit_workflow_id=workflow_id)
+    if not workflow_id and str(env.get("SOLAR_INTAKE_WORKFLOW_ID") or "") == "research.evidence_to_poc.v1":
+        resolved_profile = {
+            "workflow_id": "research.evidence_to_poc.v1",
+            "execution_profile": str(env.get("SOLAR_RESEARCH_EXECUTION_PROFILE") or ""),
+            "acquisition_mode": str(env.get("SOLAR_RESEARCH_ACQUISITION_MODE") or ""),
+            "retrieval_policy": str(env.get("SOLAR_RESEARCH_RETRIEVAL_POLICY") or ""),
+            "experiment_policy": str(env.get("SOLAR_RESEARCH_EXPERIMENT_POLICY") or ""),
+            "source_pack_configured": str(bool(env.get("SOLAR_RESEARCH_SOURCE_PACK"))).lower(),
+        }
+    if workflow_id == "research.evidence_to_poc.v1":
+        env["SOLAR_INTAKE_WORKFLOW_ID"] = workflow_id
+        mapping = {
+            "execution_profile": "SOLAR_RESEARCH_EXECUTION_PROFILE",
+            "acquisition_mode": "SOLAR_RESEARCH_ACQUISITION_MODE",
+            "source_pack_root": "SOLAR_RESEARCH_SOURCE_PACK",
+            "retrieval_policy": "SOLAR_RESEARCH_RETRIEVAL_POLICY",
+            "experiment_policy": "SOLAR_RESEARCH_EXPERIMENT_POLICY",
+            "experiment_policy_actor": "SOLAR_RESEARCH_EXPERIMENT_POLICY_ACTOR",
+            "experiment_policy_statement": "SOLAR_RESEARCH_EXPERIMENT_POLICY_STATEMENT",
+        }
+        for key, target in mapping.items():
+            if key in workflow_inputs:
+                env[target] = workflow_inputs[key]
+        resolved_profile = {
+            "workflow_id": workflow_id,
+            "execution_profile": str(env.get("SOLAR_RESEARCH_EXECUTION_PROFILE") or ""),
+            "acquisition_mode": str(env.get("SOLAR_RESEARCH_ACQUISITION_MODE") or ""),
+            "retrieval_policy": str(env.get("SOLAR_RESEARCH_RETRIEVAL_POLICY") or ""),
+            "experiment_policy": str(env.get("SOLAR_RESEARCH_EXPERIMENT_POLICY") or ""),
+            "source_pack_configured": str(bool(env.get("SOLAR_RESEARCH_SOURCE_PACK"))).lower(),
+        }
+    elif workflow_id:
         env["SOLAR_INTAKE_WORKFLOW_ID"] = workflow_id
         if workflow_inputs:
             env["SOLAR_INTAKE_WORKFLOW_INPUTS"] = json.dumps(workflow_inputs, ensure_ascii=False)
@@ -1237,6 +1337,8 @@ def _intake_payload(data: dict) -> dict:
         "returncode": proc.returncode,
         "command": " ".join(cmd[:3]),
         "stdout_tail": output[-4000:],
+        "research_profile": resolved_profile,
+        "request_routing": routing,
     }
 
 
@@ -2426,6 +2528,17 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                 try:
                     resolved = path.resolve()
                     if not _is_within(resolved, workdir):
+                        continue
+                    # Keep the bounded shallow scan for arbitrary workspace
+                    # files, but surface deeper files when the TaskGraph
+                    # explicitly declares them.  Fixed research deliverables
+                    # live at artifacts/research_evidence_to_poc/... and must
+                    # not disappear merely because their governed path is
+                    # deeper than legacy planner outputs.
+                    if len(parts) > 3 and not any(
+                        resolved == declared or _is_within(resolved, declared)
+                        for declared, _task_type in output_contracts
+                    ):
                         continue
                     key = _safe_rel(resolved, HARNESS_DIR)  # absolute string for workdir files
                     if key in seen:

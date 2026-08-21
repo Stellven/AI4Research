@@ -52,6 +52,16 @@ class _Response:
         return self._url
 
 
+def _offline_urlopen(request, *, timeout: int):
+    """Refuse every public provider call so a unit test never leaves the host.
+
+    Discovery consults several bibliographic providers, so any test that leaves
+    ``urlopen`` at its default would reach the live internet and its result
+    would depend on what arXiv or OpenAlex happened to return that minute.
+    """
+    raise urllib.error.URLError("network disabled in unit tests")
+
+
 class _Opener:
     def __init__(self, response: _Response) -> None:
         self.response = response
@@ -176,6 +186,9 @@ def test_literature_discovery_reuses_backend_and_hashes_multiple_sources(tmp_pat
         tmp_path,
         backend=backend,
         clock=lambda: "2026-08-05T12:00:00Z",
+        urlopen=_offline_urlopen,
+        sleep=lambda _seconds: None,
+        max_attempts_per_provider=1,
     )
     snapshot = {"seeds": [{"seed_kind": "topic", "content": "WebAssembly runtime compiler optimization"}]}
 
@@ -189,9 +202,17 @@ def test_literature_discovery_reuses_backend_and_hashes_multiple_sources(tmp_pat
     assert len(result["candidates"]) == 3
     assert {item["provider"] for item in result["candidates"]} == {"semantic_scholar"}
     assert all(len(item["candidate_sha256"]) == 64 for item in result["candidates"])
-    usage = result["provider_usage"][0]
+    usage = {item["provider"]: item for item in result["provider_usage"]}["semantic_scholar"]
     assert (tmp_path / usage["archive_path"]).is_file()
     assert len(usage["request_sha256"]) == len(usage["response_sha256"]) == 64
+    # Every other provider was consulted and failed closed into a limitation
+    # rather than silently disappearing from the record.
+    assert {item["provider"] for item in result["provider_usage"] if item["status"] == "failed"} == {
+        "arxiv",
+        "europe_pmc",
+        "openalex",
+        "crossref",
+    }
 
 
 def test_literature_discovery_falls_back_after_semantic_retry_budget_is_exceeded(tmp_path: Path) -> None:
@@ -207,7 +228,12 @@ def test_literature_discovery_falls_back_after_semantic_retry_budget_is_exceeded
             ],
         }
 
-    discovery = LiteratureDiscoveryService(tmp_path, backend=backend)
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=backend,
+        urlopen=_offline_urlopen,
+        sleep=lambda _seconds: None,
+    )
     discovery._openalex = lambda query: (
         [
             {
@@ -236,7 +262,13 @@ def test_literature_discovery_falls_back_after_semantic_retry_budget_is_exceeded
     assert {item["provider"] for item in result["candidates"]} == {"openalex"}
     assert [item["provider"] for item in json.loads(
         (tmp_path / result["provider_usage"][0]["archive_path"]).read_text(encoding="utf-8")
-    )["provider_traces"]] == ["semantic_scholar", "openalex"]
+    )["provider_traces"]] == [
+        "semantic_scholar",
+        "arxiv",
+        "europe_pmc",
+        "openalex",
+        "crossref",
+    ]
     assert any("no early retry was attempted" in item for item in result["limitations"])
 
 
@@ -257,7 +289,13 @@ def test_literature_discovery_can_require_provider_diversity(tmp_path: Path) -> 
             "limitations": [],
         }
 
-    discovery = LiteratureDiscoveryService(tmp_path, backend=backend, limit=4)
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=backend,
+        limit=4,
+        urlopen=_offline_urlopen,
+        sleep=lambda _seconds: None,
+    )
     discovery._openalex = lambda query: (
         [
             {
@@ -307,7 +345,13 @@ def test_literature_discovery_archives_under_long_windows_workspace_path(tmp_pat
             "limitations": [],
         }
 
-    discovery = LiteratureDiscoveryService(long_root, backend=backend)
+    discovery = LiteratureDiscoveryService(
+        long_root,
+        backend=backend,
+        urlopen=_offline_urlopen,
+        sleep=lambda _seconds: None,
+        max_attempts_per_provider=1,
+    )
     snapshot = {"seeds": [{"seed_kind": "topic", "content": "Long path archive"}]}
 
     result = discovery(seed_snapshot=snapshot, payload={})
@@ -318,6 +362,74 @@ def test_literature_discovery_archives_under_long_windows_workspace_path(tmp_pat
     with open(_test_fs_path(archive_path), "rb") as handle:
         body = handle.read()
     assert result["provider_usage"][0]["archive_sha256"] == hashlib.sha256(body).hexdigest()
+
+
+def test_literature_discovery_retries_then_archives_raw_openalex_attempts(tmp_path: Path) -> None:
+    calls: list[str] = []
+    sleeps: list[float] = []
+    openalex = {
+        "results": [
+            {
+                "id": f"https://openalex.org/W{index}",
+                "doi": f"https://doi.org/10.1000/rag{index}",
+                "title": f"Retrieval augmented generation evaluation method {index}",
+                "publication_year": 2025,
+                "primary_location": {"landing_page_url": f"https://openalex.org/W{index}", "source": {}},
+                "authorships": [],
+                "abstract_inverted_index": {"retrieval": [0], "evaluation": [1], "method": [2]},
+            }
+            for index in range(1, 4)
+        ]
+    }
+
+    def urlopen(request, *, timeout):
+        calls.append(request.full_url)
+        if "api.openalex.org" not in request.full_url:
+            raise urllib.error.URLError("provider not part of this scenario")
+        if len([call for call in calls if "api.openalex.org" in call]) == 1:
+            raise urllib.error.URLError("temporary provider failure")
+        return _Response(
+            json.dumps(openalex).encode("utf-8"),
+            url=request.full_url,
+            content_type="application/json",
+        )
+
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=lambda **_kwargs: {"status": "inconclusive", "candidates": [], "limitations": ["S2 unavailable"]},
+        urlopen=urlopen,
+        sleep=sleeps.append,
+        clock=lambda: "2026-08-18T12:00:00Z",
+        max_attempts_per_provider=2,
+        max_total_wait_seconds=2,
+    )
+    result = discovery(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "retrieval augmented generation evaluation"}]},
+        payload={"task_contract": {"user_intent": "Research retrieval augmented generation evaluation"}},
+    )
+
+    assert len(result["candidates"]) == 3
+    assert {item["provider"] for item in result["candidates"]} == {"openalex"}
+    usage = {item["provider"]: item for item in result["provider_usage"]}
+    # Every bibliographic provider in the chain retried its transient failure
+    # exactly once, with the same one-second backoff. Only OpenAlex recovers on
+    # its second attempt; the rest stay failed and are recorded as such.
+    consulted_over_http = {"arxiv", "europe_pmc", "openalex", "crossref"}
+    assert sleeps == [1.0] * len(consulted_over_http)
+    assert {name for name, item in usage.items() if item["status"] == "failed"} == (
+        consulted_over_http - {"openalex"}
+    )
+    # Semantic Scholar answered, it just had nothing to offer. That is not the
+    # same as the transport failing, and the record must not conflate them.
+    assert usage["semantic_scholar"]["status"] == "empty"
+    assert usage["openalex"]["status"] == "completed"
+    attempts = json.loads((tmp_path / usage["openalex"]["archive_path"]).read_text(encoding="utf-8"))["provider_attempts"]
+    openalex_attempts = [item for item in attempts if item["provider"] == "openalex"]
+    assert [item["status"] for item in openalex_attempts] == ["failed", "completed"]
+    for attempt in openalex_attempts:
+        assert (tmp_path / attempt["request_path"]).is_file()
+        assert (tmp_path / attempt["response_path"]).is_file()
+        assert len(attempt["request_sha256"]) == len(attempt["response_sha256"]) == 64
 
 
 def test_production_service_composition_supports_injected_fakes_without_secrets(tmp_path: Path, monkeypatch) -> None:
@@ -589,3 +701,316 @@ def test_research_model_retries_timeout_on_same_route(tmp_path: Path) -> None:
     usage = result["provider_usage"][0]
     assert usage["attempt_count"] == 2
     assert usage["retry_events"][0]["failure"] == "TimeoutError"
+
+
+_ARXIV_ATOM = """<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <entry>
+    <id>http://arxiv.org/abs/2410.03810v3</id>
+    <published>2024-10-04T00:00:00Z</published>
+    <title>Exploring the Limitations of Mamba in COPY
+      and CoT Reasoning</title>
+    <summary>We study where the Mamba state space architecture
+      falls short of transformers.</summary>
+    <author><name>Ada Researcher</name></author>
+    <author><name>Bo Reviewer</name></author>
+    <arxiv:primary_category term="cs.LG"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2404.15772v3</id>
+    <published>2024-04-24T00:00:00Z</published>
+    <title>Bi-Mamba+: Bidirectional Mamba for Time Series Forecasting</title>
+    <summary>A bidirectional Mamba variant for forecasting.</summary>
+    <author><name>Cai Author</name></author>
+    <arxiv:doi>10.1000/bimamba</arxiv:doi>
+    <arxiv:journal_ref>Journal of Sequence Models 3 (2025) 1-20</arxiv:journal_ref>
+    <arxiv:primary_category term="cs.LG"/>
+  </entry>
+  <entry>
+    <id></id>
+    <title>Entry without an identifier is skipped</title>
+  </entry>
+</feed>
+"""
+
+
+def test_literature_discovery_parses_arxiv_atom_into_traceable_candidates(tmp_path: Path) -> None:
+    def urlopen(request, *, timeout):
+        if "export.arxiv.org" not in request.full_url:
+            raise urllib.error.URLError("provider not part of this scenario")
+        return _Response(
+            _ARXIV_ATOM.encode("utf-8"),
+            url=request.full_url,
+            content_type="application/atom+xml",
+        )
+
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=lambda **_kwargs: {"status": "inconclusive", "candidates": [], "limitations": []},
+        urlopen=urlopen,
+        sleep=lambda _seconds: None,
+        clock=lambda: "2026-08-18T12:00:00Z",
+        max_attempts_per_provider=1,
+    )
+
+    result = discovery(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "mamba architecture transformer"}]},
+        payload={"task_contract": {"user_intent": "Research mamba architecture transformer"}},
+    )
+
+    assert {item["provider"] for item in result["candidates"]} == {"arxiv"}
+    by_id = {item["source_id"]: item for item in result["candidates"]}
+    assert set(by_id) == {"arxiv:2410.03810v3", "arxiv:2404.15772v3"}
+
+    limitations_paper = by_id["arxiv:2410.03810v3"]
+    # The Atom title wraps across lines; it must arrive as one normalized line.
+    assert limitations_paper["title"] == "Exploring the Limitations of Mamba in COPY and CoT Reasoning"
+    # arXiv answers with an http id; the candidate must carry https so the
+    # downstream URL policy does not reject its own discovery result.
+    assert limitations_paper["canonical_id"] == "https://arxiv.org/abs/2410.03810v3"
+    assert limitations_paper["url"] == "https://arxiv.org/abs/2410.03810v3"
+    assert limitations_paper["metadata"]["year"] == 2024
+    assert limitations_paper["metadata"]["venue"] == "arXiv preprint"
+    assert limitations_paper["metadata"]["authors"] == ["Ada Researcher", "Bo Reviewer"]
+    assert limitations_paper["metadata"]["primary_category"] == "cs.LG"
+    assert "state space architecture falls short" in limitations_paper["content_summary"]
+
+    # A published DOI outranks the abs URL as the canonical identifier.
+    assert by_id["arxiv:2404.15772v3"]["canonical_id"] == "https://doi.org/10.1000/bimamba"
+    assert by_id["arxiv:2404.15772v3"]["metadata"]["venue"] == "Journal of Sequence Models 3 (2025) 1-20"
+
+    usage = {item["provider"]: item for item in result["provider_usage"]}
+    assert usage["arxiv"]["status"] == "completed"
+    assert (tmp_path / usage["arxiv"]["evidence_paths"][0]).is_file()
+
+
+def test_literature_discovery_rejects_arxiv_response_that_is_not_atom(tmp_path: Path) -> None:
+    def urlopen(request, *, timeout):
+        if "export.arxiv.org" not in request.full_url:
+            raise urllib.error.URLError("provider not part of this scenario")
+        return _Response(b"<html>rate exceeded</html", url=request.full_url, content_type="text/html")
+
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=lambda **_kwargs: {"status": "inconclusive", "candidates": [], "limitations": []},
+        urlopen=urlopen,
+        sleep=lambda _seconds: None,
+        max_attempts_per_provider=1,
+    )
+
+    with pytest.raises(ResearchOperatorError) as raised:
+        discovery(
+            seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "mamba architecture"}]},
+            payload={},
+        )
+
+    # No provider answered, so discovery fails closed rather than reporting an
+    # empty but successful search.
+    assert raised.value.error_type == "provider_unavailable"
+
+
+def test_literature_discovery_shares_the_candidate_budget_across_providers(tmp_path: Path) -> None:
+    """One broad provider must not be able to fill the whole candidate budget."""
+
+    def openalex_payload(count: int) -> bytes:
+        return json.dumps(
+            {
+                "results": [
+                    {
+                        "id": f"https://openalex.org/W{index}",
+                        "doi": f"https://doi.org/10.1000/broad{index}",
+                        "title": f"Loosely related survey {index}",
+                        "publication_year": 2025,
+                        "primary_location": {"landing_page_url": f"https://openalex.org/W{index}", "source": {}},
+                        "authorships": [],
+                        "abstract_inverted_index": {"survey": [0]},
+                    }
+                    for index in range(1, count + 1)
+                ]
+            }
+        ).encode("utf-8")
+
+    def urlopen(request, *, timeout):
+        if "export.arxiv.org" in request.full_url:
+            return _Response(_ARXIV_ATOM.encode("utf-8"), url=request.full_url, content_type="application/atom+xml")
+        if "api.openalex.org" in request.full_url:
+            return _Response(openalex_payload(20), url=request.full_url, content_type="application/json")
+        raise urllib.error.URLError("provider not part of this scenario")
+
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=lambda **_kwargs: {"status": "inconclusive", "candidates": [], "limitations": []},
+        urlopen=urlopen,
+        sleep=lambda _seconds: None,
+        max_attempts_per_provider=1,
+        limit=4,
+    )
+
+    result = discovery(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "mamba architecture transformer"}]},
+        payload={},
+    )
+
+    providers = [item["provider"] for item in result["candidates"]]
+    # OpenAlex offered 20 rows and arXiv 2; round-robin keeps both arXiv rows
+    # instead of letting the larger response crowd them out.
+    assert providers.count("arxiv") == 2
+    assert providers.count("openalex") == 3
+
+
+def test_literature_discovery_collapses_the_same_work_seen_under_two_identifiers(tmp_path: Path) -> None:
+    """A preprint and its published record are one source, not two."""
+    openalex = {
+        "results": [
+            {
+                "id": "https://openalex.org/W1",
+                "doi": "https://doi.org/10.1000/preprint",
+                "title": "When Does BiMamba Beat Transformers in JEPA-style Prediction?",
+                "publication_year": 2025,
+                "primary_location": {"landing_page_url": "https://openalex.org/W1", "source": {}},
+                "authorships": [],
+                "abstract_inverted_index": {"comparison": [0]},
+            },
+            {
+                "id": "https://openalex.org/W2",
+                "doi": "https://doi.org/10.1000/published",
+                "title": "When does BiMamba beat Transformers in JEPA-style prediction?",
+                "publication_year": 2026,
+                "primary_location": {"landing_page_url": "https://openalex.org/W2", "source": {}},
+                "authorships": [],
+                "abstract_inverted_index": {"comparison": [0]},
+            },
+            {
+                "id": "https://openalex.org/W3",
+                "doi": "https://doi.org/10.1000/distinct",
+                "title": "A genuinely different state space survey",
+                "publication_year": 2025,
+                "primary_location": {"landing_page_url": "https://openalex.org/W3", "source": {}},
+                "authorships": [],
+                "abstract_inverted_index": {"survey": [0]},
+            },
+        ]
+    }
+
+    def urlopen(request, *, timeout):
+        if "api.openalex.org" not in request.full_url:
+            raise urllib.error.URLError("provider not part of this scenario")
+        return _Response(json.dumps(openalex).encode("utf-8"), url=request.full_url, content_type="application/json")
+
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=lambda **_kwargs: {"status": "inconclusive", "candidates": [], "limitations": []},
+        urlopen=urlopen,
+        sleep=lambda _seconds: None,
+        max_attempts_per_provider=1,
+    )
+
+    result = discovery(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "bimamba transformers jepa"}]},
+        payload={},
+    )
+
+    # The two DOIs differ, so identifier dedup alone would have kept both.
+    titles = [item["title"] for item in result["candidates"]]
+    assert len(titles) == 2
+    assert titles[0] == "When Does BiMamba Beat Transformers in JEPA-style Prediction?"
+    assert titles[1] == "A genuinely different state space survey"
+
+
+def test_literature_discovery_parses_europe_pmc_life_science_records(tmp_path: Path) -> None:
+    """arXiv does not index the life sciences; Europe PMC is why they are reachable."""
+    europe_pmc = {
+        "hitCount": 27841,
+        "resultList": {
+            "result": [
+                {
+                    "id": "42046128",
+                    "source": "MED",
+                    "pmid": "42046128",
+                    "doi": "10.1186/s12967-026-08175-1",
+                    "title": "Deep learning-driven prediction of off-target risk in CRISPR editing.",
+                    "authorString": "Du W, Zhang T, Guo L",
+                    "pubYear": "2026",
+                    "journalInfo": {"journal": {"title": "Journal of translational medicine"}},
+                    "abstractText": "<h4>Background</h4> The CRISPR/Cas9 system has emerged as a tool.",
+                },
+                {
+                    "id": "PMC13295995",
+                    "source": "PMC",
+                    "title": "Advances in Fish Gene Editing",
+                    "authorString": "Xu J, Cheng F",
+                    "pubYear": "2026",
+                    "journalInfo": {"journal": {"title": "Animals"}},
+                    "abstractText": "",
+                },
+                {"id": "", "source": "", "title": "Unidentifiable record is skipped"},
+            ]
+        },
+    }
+
+    def urlopen(request, *, timeout):
+        if "europepmc" not in request.full_url:
+            raise urllib.error.URLError("provider not part of this scenario")
+        return _Response(
+            json.dumps(europe_pmc).encode("utf-8"), url=request.full_url, content_type="application/json"
+        )
+
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=lambda **_kwargs: {"status": "inconclusive", "candidates": [], "limitations": []},
+        urlopen=urlopen,
+        sleep=lambda _seconds: None,
+        max_attempts_per_provider=1,
+    )
+
+    result = discovery(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "crispr off target screening"}]},
+        payload={},
+    )
+
+    by_id = {item["source_id"]: item for item in result["candidates"]}
+    assert set(by_id) == {"doi:10.1186/s12967-026-08175-1", "europepmc:PMC/PMC13295995"}
+
+    with_doi = by_id["doi:10.1186/s12967-026-08175-1"]
+    assert with_doi["canonical_id"] == "https://doi.org/10.1186/s12967-026-08175-1"
+    # The trailing period Europe PMC puts on titles is dropped so the same work
+    # from another provider collapses onto it.
+    assert with_doi["title"] == "Deep learning-driven prediction of off-target risk in CRISPR editing"
+    assert with_doi["metadata"]["year"] == 2026
+    assert with_doi["metadata"]["pmid"] == "42046128"
+    assert with_doi["metadata"]["authors"] == ["Du W", "Zhang T", "Guo L"]
+    # Europe PMC embeds section markup in abstracts; it must not reach evidence.
+    assert "<h4>" not in with_doi["content_summary"]
+    assert with_doi["content_summary"].startswith("Background")
+
+    # A record without a DOI is still addressable through its Europe PMC id.
+    assert by_id["europepmc:PMC/PMC13295995"]["canonical_id"] == "https://europepmc.org/article/PMC/PMC13295995"
+
+
+def test_literature_discovery_refuses_an_arxiv_feed_that_declares_an_entity(tmp_path: Path) -> None:
+    """XML from the network is the one amplification vector this service has."""
+    hostile = (
+        b'<?xml version="1.0"?>\n'
+        b'<!DOCTYPE feed [<!ENTITY lol "aaaaaaaaaa">]>\n'
+        b'<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+        b"<id>https://arxiv.org/abs/1</id><title>&lol;</title>"
+        b"</entry></feed>"
+    )
+
+    def urlopen(request, *, timeout):
+        if "export.arxiv.org" not in request.full_url:
+            raise urllib.error.URLError("provider not part of this scenario")
+        return _Response(hostile, url=request.full_url, content_type="application/atom+xml")
+
+    discovery = LiteratureDiscoveryService(
+        tmp_path,
+        backend=lambda **_kwargs: {"status": "inconclusive", "candidates": [], "limitations": []},
+        urlopen=urlopen,
+        sleep=lambda _seconds: None,
+        max_attempts_per_provider=1,
+    )
+
+    with pytest.raises(ResearchOperatorError) as raised:
+        discovery(seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "mamba"}]}, payload={})
+
+    assert raised.value.error_type == "provider_unavailable"

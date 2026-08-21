@@ -1,0 +1,57 @@
+capability_capsule_id: cap.research-evidence-poc-handoff
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Evidence-to-PoC Handoff
+  description: Freeze the accepted Part A evidence into an exact manifest for Part B consumption.
+applicability:
+  task_types: [research]
+  positive_signals: [evidence handoff, accepted artifact manifest, part b boundary]
+  negative_signals: [model authoring, network retrieval, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: final_acceptance, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: poc_handoff, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [research]}
+  postconditions:
+    - {check: output_present, field: poc_handoff_json}
+  invariants:
+    - The handoff carries only evaluator-accepted Part A artifacts with IDs, schemas, paths, SHA-256 hashes, byte counts, limitations, and receipts.
+    - The handoff is computed deterministically and performs no model call.
+    - Part B consumes this manifest and never reaches back into unaccepted Part A state.
+composition:
+  consumes: [{type: artifact.final_acceptance}]
+  produces: [{type: artifact.poc_handoff}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-final-acceptance]
+effects:
+  read: [artifacts.final_acceptance]
+  write: [artifacts.poc_handoff]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [unaccepted_evidence_leak, manifest_drift]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-research-poc-handoff-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

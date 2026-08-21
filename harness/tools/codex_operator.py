@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import hashlib
 import json
 import os
 import shutil
@@ -12,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from pathlib import Path
 
 _HARNESS_LIB_DIR = str(Path(__file__).resolve().parents[1] / "lib")
@@ -19,6 +21,15 @@ if _HARNESS_LIB_DIR not in sys.path:
     sys.path.insert(0, _HARNESS_LIB_DIR)
 
 from codex_cli_runtime import resolve_codex_cli
+
+try:
+    from developer_observability import observe as _observe, stable_id as _observation_id  # noqa: E402
+except Exception:  # Observability must never become a CLI dependency.
+    def _observe(*_args, **_kwargs) -> bool:
+        return False
+
+    def _observation_id(kind: str, *parts) -> str:
+        return f"{kind}-unavailable"
 
 
 _SKILL_BRIDGE_CAPSULE_ID = "cap.skill-execution-bridge"
@@ -838,6 +849,77 @@ def main() -> int:
         return 78
     timeout_seconds = _timeout_seconds()
     pm_result_grace = float(os.environ.get("CODEX_PM_RESULT_GRACE_SECONDS", "20"))
+    invocation_id = str(uuid.uuid4())
+    dispatch_id = os.environ.get("DISPATCH_ID") or os.environ.get("TASK_ID") or "dispatch-unknown"
+    attempt_id = os.environ.get("ATTEMPT_ID") or "1"
+    operation_id = _observation_id("operation", dispatch_id, attempt_id, invocation_id, "codex-cli")
+    span_id = _observation_id("span", operation_id)
+    observation_ids = {
+        "sprint_id": os.environ.get("SID") or os.environ.get("SPRINT_ID"),
+        "node_id": os.environ.get("NODE_ID"),
+        "task_id": os.environ.get("TASK_ID"),
+        "dispatch_id": dispatch_id,
+        "attempt_id": attempt_id,
+        "invocation_id": invocation_id,
+        "correlation_id": os.environ.get("CORRELATION_ID") or os.environ.get("TASK_ID"),
+        "causation_id": os.environ.get("CAUSATION_ID") or dispatch_id,
+        "span_id": span_id,
+        "parent_span_id": os.environ.get("SOLAR_OBSERVABILITY_SPAN_ID"),
+    }
+    started = time.monotonic()
+    terminal_emitted = False
+
+    def _complete_invocation(status: str, exit_code: int | None, **extra) -> None:
+        nonlocal terminal_emitted
+        if terminal_emitted:
+            return
+        terminal_emitted = True
+        _observe(
+            "codex_cli.invocation.completed",
+            component="codex_operator",
+            operation="codex_cli_invocation",
+            operation_id=operation_id,
+            phase="completed",
+            terminal=True,
+            status=status,
+            identifiers=observation_ids,
+            data={
+                "exit_code": exit_code,
+                "codex_cli_elapsed_ms": (time.monotonic() - started) * 1000,
+                "provider_latency_ms": None,
+                "model_latency_ms": None,
+                "input_tokens": None,
+                "output_tokens": None,
+                "tool_calls": None,
+                **extra,
+            },
+            provenance="observed",
+        )
+
+    atexit.register(_complete_invocation, "wrapper_exit", None)
+
+    _observe(
+        "codex_cli.invocation.started",
+        component="codex_operator",
+        operation="codex_cli_invocation",
+        operation_id=operation_id,
+        phase="started",
+        identifiers=observation_ids,
+        data={
+            "provider": "openai",
+            "model": model,
+            "reasoning_effort": effort,
+            "dispatch_bytes": len(dispatch.encode("utf-8", errors="replace")),
+            "dispatch_sha256": hashlib.sha256(
+                dispatch.encode("utf-8", errors="replace")
+            ).hexdigest(),
+            "structured_stream": False,
+            "structured_stream_reason": "json_mode_parity_not_verified",
+            "provider_latency_ms": None,
+            "model_latency_ms": None,
+        },
+        provenance="observed",
+    )
     print(
         "codex_operator: env "
         f"cwd={shlex.quote(cwd)} "
@@ -857,17 +939,30 @@ def main() -> int:
         flush=True,
     )
     cli_log = task_dir / "codex-cli-output.log"
-    started = time.monotonic()
     started_wall = time.time()
     with open(cli_log, "w", encoding="utf-8") as log_f:
-        proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=log_f,
-            stderr=subprocess.STDOUT,
-            text=True,
-            start_new_session=True,
-            env=codex_env,
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=log_f,
+                stderr=subprocess.STDOUT,
+                text=True,
+                start_new_session=True,
+                env=codex_env,
+            )
+        except Exception as exc:
+            _complete_invocation("spawn_error", None, failure_class=type(exc).__name__)
+            raise
+        _observe(
+            "codex_cli.process.started",
+            component="codex_operator",
+            operation="codex_cli_invocation",
+            operation_id=operation_id,
+            phase="progress",
+            identifiers=observation_ids,
+            data={"pid": int(proc.pid), "provider": "openai", "model": model},
+            provenance="observed",
         )
         if not _register_codex_process_group(proc.pid):
             _terminate_process_group(proc)
@@ -879,6 +974,7 @@ def main() -> int:
                 except Exception:
                     proc.kill()
                 proc.wait(timeout=5)
+            _complete_invocation("registration_failed", 75)
             return 75
         try:
             assert proc.stdin is not None
@@ -888,7 +984,24 @@ def main() -> int:
             pass
 
         pm_ready_since: float | None = None
+        first_output_observed = False
         while True:
+            if not first_output_observed:
+                try:
+                    first_output_observed = cli_log.stat().st_size > 0
+                except OSError:
+                    first_output_observed = False
+                if first_output_observed:
+                    _observe(
+                        "codex_cli.first_output",
+                        component="codex_operator",
+                        operation="codex_cli_invocation",
+                        operation_id=operation_id,
+                        phase="progress",
+                        identifiers=observation_ids,
+                        data={"elapsed_ms": (time.monotonic() - started) * 1000},
+                        provenance="observed",
+                    )
             if proc.poll() is not None:
                 break
             elapsed = time.monotonic() - started
@@ -899,6 +1012,21 @@ def main() -> int:
                         f"codex_operator: PM result ready; terminating lingering codex exec after {pm_result_grace:.0f}s grace"
                     )
                     _terminate_process_group(proc)
+                    _observe(
+                        "codex_cli.termination_requested",
+                        component="codex_operator",
+                        operation="codex_cli_invocation",
+                        operation_id=operation_id,
+                        phase="progress",
+                        status="pm_result_ready",
+                        identifiers=observation_ids,
+                        data={
+                            "signal": "SIGTERM",
+                            "grace_seconds": pm_result_grace,
+                            "elapsed_ms": (time.monotonic() - started) * 1000,
+                        },
+                        provenance="observed",
+                    )
                     try:
                         proc.wait(timeout=5)
                     except subprocess.TimeoutExpired:
@@ -908,9 +1036,25 @@ def main() -> int:
                             proc.kill()
                         proc.wait(timeout=5)
                     _write_skill_bridge_result(task_dir, skill_bridge_evidence, 0)
+                    _complete_invocation(
+                        "pm_result_ready",
+                        int(proc.returncode or 0),
+                        first_output_observed=first_output_observed,
+                    )
                     return 0
             if timeout_seconds > 0 and elapsed >= timeout_seconds:
                 _terminate_process_group(proc)
+                _observe(
+                    "codex_cli.termination_requested",
+                    component="codex_operator",
+                    operation="codex_cli_invocation",
+                    operation_id=operation_id,
+                    phase="progress",
+                    status="timeout",
+                    identifiers=observation_ids,
+                    data={"signal": "SIGTERM", "elapsed_ms": elapsed * 1000},
+                    provenance="observed",
+                )
                 try:
                     proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
@@ -931,6 +1075,7 @@ def main() -> int:
                 print(combined, file=sys.stderr)
                 _write_pm_result(task_dir, output_file, combined, 124)
                 _write_skill_bridge_result(task_dir, skill_bridge_evidence, 124)
+                _complete_invocation("timeout", 124, first_output_observed=first_output_observed)
                 return 124
             time.sleep(1)
 
@@ -941,6 +1086,12 @@ def main() -> int:
         _write_pm_result(task_dir, output_file, combined, int(proc.returncode))
     exit_code = int(proc.returncode or 0)
     _write_skill_bridge_result(task_dir, skill_bridge_evidence, exit_code)
+    _complete_invocation(
+        "completed" if exit_code == 0 else "failed",
+        exit_code,
+        first_output_observed=first_output_observed,
+        structured_stream=False,
+    )
     return exit_code
 
 

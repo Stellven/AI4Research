@@ -63,6 +63,20 @@ def canonical_content_digest(payload: Any) -> str:
     return _canonical_sha256(payload)
 
 
+def _fs_path(path: Path) -> str:
+    """Return a native path that remains usable beyond MAX_PATH on Windows."""
+    absolute = os.path.abspath(os.fspath(path.expanduser()))
+    if os.name != "nt" or absolute.startswith("\\\\?\\"):
+        return absolute
+    if absolute.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + absolute.lstrip("\\")
+    return "\\\\?\\" + absolute
+
+
+def _path_exists(path: Path) -> bool:
+    return os.path.exists(_fs_path(path))
+
+
 def _path_snapshot(path: Path, *, root: Optional[Path] = None) -> Dict[str, Any]:
     """Hash one regular file or a complete directory tree without links.
 
@@ -84,15 +98,18 @@ def _path_snapshot(path: Path, *, root: Optional[Path] = None) -> Dict[str, Any]
         if root is not None:
             root_lexical = Path(os.path.abspath(root.expanduser()))
             lexical.relative_to(root_lexical)
-            if _has_symlink_from(root_lexical, lexical):
+            root_native = Path(_fs_path(root_lexical))
+            lexical_native = Path(_fs_path(lexical))
+            if _has_symlink_from(root_native, lexical_native):
                 raise ValueError(f"snapshot path traverses a symlink: {lexical}")
-            resolved_root = root_lexical.resolve(strict=True)
-            resolved = lexical.resolve(strict=True)
+            resolved_root = root_native.resolve(strict=True)
+            resolved = lexical_native.resolve(strict=True)
             resolved.relative_to(resolved_root)
         else:
-            if lexical.is_symlink():
+            lexical_native = Path(_fs_path(lexical))
+            if lexical_native.is_symlink():
                 raise ValueError(f"snapshot path is a symlink: {lexical}")
-            resolved = lexical.resolve(strict=True)
+            resolved = lexical_native.resolve(strict=True)
 
         stat = resolved.stat()
         result["exists"] = True
@@ -323,7 +340,7 @@ def _resolve_declared(declared: str, roots: Dict[str, str], base: Path) -> tuple
             return raw, name
         return raw, ""
     anchored = base / raw
-    if anchored.exists():
+    if _path_exists(anchored):
         for name, root in ordered:
             try:
                 anchored.relative_to(root)
@@ -332,7 +349,7 @@ def _resolve_declared(declared: str, roots: Dict[str, str], base: Path) -> tuple
             return anchored, name
     for name, root in ordered:
         candidate = root / raw
-        if candidate.exists():
+        if _path_exists(candidate):
             return candidate, name
     return anchored, ""
 

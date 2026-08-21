@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -28,6 +29,90 @@ EXIT_MATCH = 0
 EXIT_NO_MATCH = 1
 EXIT_ERROR = 2
 EXIT_COMPILE_FAILED = 3
+FIXED_RESEARCH_WORKFLOW_ID = "research.evidence_to_poc.v1"
+
+
+# --- research request classification ---------------------------------------
+#
+# research.evidence_to_poc.v1 declares no explicit trigger markers ("selection":
+# "typed RESEARCH intake"), so match_trigger can never select it from prompt
+# text and the caller has to name the workflow id outright. The dashboard
+# profile did exactly that -- it pinned SOLAR_INTAKE_WORKFLOW_ID for EVERY
+# prompt, so "fix a bug in my parser" would still compile the 15-node
+# research topology.
+#
+# These tiers let the router decide instead:
+#   simple          -> no match; the generic Planner/Epic path handles it
+#   research_report -> the fixed contract, Part A only (A1-A8)
+#   research_poc    -> the fixed contract, Part A plus Part B (all 15)
+#
+# Deliberately lexical and inspectable rather than model-judged: routing decides
+# which governance applies, so it must be reproducible and reviewable.
+
+# Every marker here must be vocabulary that an ordinary engineering request
+# would not use. Widening this list is not free: a false positive sends a
+# debugging task through the fifteen-node research contract, while a false
+# negative only costs the user a rephrase. That asymmetry is why bare words
+# like "investigate", "compare" and "evidence" are deliberately absent -- "add
+# evidence logging" and "investigate this crash" are not research requests.
+_RESEARCH_MARKERS = re.compile(
+    r"\b(?:research|literature|scholarly|survey|systematic\s+review|prior\s+work|"
+    r"related\s+work|meta[-\s]analys[ei]s|preprints?|arxiv|bibliograph\w*|"
+    r"state[-\s]of[-\s]the[-\s]art|papers?|publications?|citations?|cite|"
+    r"empirical\s+(?:study|studies|evidence|comparison)|"
+    r"evidence[-\s]backed|evidence[-\s]linked|source[-\s]linked|peer[-\s]reviewed)\b",
+    re.IGNORECASE,
+)
+
+# Asking to BUILD or RUN something, not merely to discuss benchmarks. "benchmark"
+# alone is a topic word -- "compare reliability benchmarks" is a report request --
+# so Part B needs an explicit build/execute intent.
+_POC_MARKERS = re.compile(
+    r"\b(?:proof[-\s]of[-\s]concept|poc|prototype|implement(?:ation)?|"
+    r"build\s+(?:a|an|the)?|run\s+(?:a|an|the)?\s*(?:experiment|benchmark)|"
+    r"execute\s+(?:a|an|the)?\s*(?:experiment|benchmark)|"
+    r"design\s+and\s+run|empirical(?:ly)?|reproduce|measure\s+)\b",
+    re.IGNORECASE,
+)
+
+
+def classify_research_request(request: str) -> dict:
+    """Route a free-text request to a workflow and execution profile."""
+    text = str(request or "")
+    research = sorted({m.group(0).lower() for m in _RESEARCH_MARKERS.finditer(text)})
+    if not research:
+        return {
+            "tier": "simple",
+            "workflow_id": None,
+            "execution_profile": None,
+            "research_markers": [],
+            "poc_markers": [],
+            "reason": "no research markers; the generic planner path applies",
+        }
+    poc = sorted({m.group(0).lower().strip() for m in _POC_MARKERS.finditer(text)})
+    if poc:
+        return {
+            "tier": "research_poc",
+            "workflow_id": FIXED_RESEARCH_WORKFLOW_ID,
+            "execution_profile": "part_a_plus_poc",
+            "research_markers": research,
+            "poc_markers": poc,
+            "reason": "research request that also asks to build or run something",
+        }
+    return {
+        "tier": "research_report",
+        "workflow_id": FIXED_RESEARCH_WORKFLOW_ID,
+        "execution_profile": "part_a_only",
+        "research_markers": research,
+        "poc_markers": [],
+        "reason": "research request with no build or execute intent",
+    }
+
+
+def cmd_classify(args: argparse.Namespace) -> int:
+    result = classify_research_request(args.request)
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return EXIT_MATCH if result["workflow_id"] else EXIT_NO_MATCH
 
 
 def _workflows_dir(args: argparse.Namespace) -> Path:
@@ -87,6 +172,11 @@ def cmd_compile(args: argparse.Namespace) -> int:
 
 def cmd_instantiate(args: argparse.Namespace) -> int:
     contract = _load_target_contract(args)
+    if str(contract.get("workflow_id") or "") == FIXED_RESEARCH_WORKFLOW_ID:
+        raise wc.ContractInstantiationError(
+            "research.evidence_to_poc.v1 requires the typed workflow_intake boundary; "
+            "raw instantiation cannot authorize a source pack or specialize conditional Part B"
+        )
     inputs = {}
     for pair in args.input or []:
         key, sep, value = pair.partition("=")

@@ -22,11 +22,30 @@ if str(LIB) not in sys.path:
     sys.path.insert(0, str(LIB))
 
 
+def _fs_path(path: Path) -> str:
+    resolved = str(path.resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
+
+
 def _prepare_isolated_harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
     harness_dir = tmp_path / "harness"
     harness_dir.mkdir()
     shutil.copytree(HARNESS / "config", harness_dir / "config")
-    for name in ("evaluators", "lib", "personas", "plugins", "schemas", "templates", "tools", "workflows"):
+    for name in (
+        "capability-capsules",
+        "evaluators",
+        "lib",
+        "personas",
+        "plugins",
+        "schemas",
+        "templates",
+        "tools",
+        "workflows",
+    ):
         link = harness_dir / name
         try:
             link.symlink_to(HARNESS / name, target_is_directory=True)
@@ -376,8 +395,9 @@ def test_dispatch_node_evals_routes_autosci_contract_to_autosci_evaluator_green(
     saved = gnd.load_graph(graph_path)
     node = saved["nodes"][0]
 
-    assert result["ok"] is True, result
+    assert result["ok"] is True, json.dumps(result, indent=2)
     assert submitted
+    assert submitted[0]["eval_generation"] == 0
     assert result["dispatched"][0]["pane"] == "operator:mini-codex-gpt55-medium-evaluator-1"
     assert result["dispatched"][0]["evaluation_plan"]["independence_policy"]["mechanism"] == (
         "solar_policy_gate_plus_independent_codex_evaluator"
@@ -585,11 +605,13 @@ def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
         scope for scope in paper_node["read_scope"] if str(scope).endswith("literature_discovery.v1.json")
     )
     upstream = workdir / str(upstream_scope)
-    upstream.parent.mkdir(parents=True, exist_ok=True)
-    upstream.write_text('{"schema_version":"literature_discovery.v1","status":"completed"}\n', encoding="utf-8")
+    os.makedirs(_fs_path(upstream.parent), exist_ok=True)
+    with open(_fs_path(upstream), "w", encoding="utf-8") as handle:
+        handle.write('{"schema_version":"literature_discovery.v1","status":"completed"}\n')
     evidence = workdir / str(paper_node["write_scope"][0])
-    evidence.parent.mkdir(parents=True, exist_ok=True)
-    evidence.write_text(PASS_EVIDENCE.read_text(encoding="utf-8"), encoding="utf-8")
+    os.makedirs(_fs_path(evidence.parent), exist_ok=True)
+    with open(_fs_path(evidence), "w", encoding="utf-8") as handle:
+        handle.write(PASS_EVIDENCE.read_text(encoding="utf-8"))
     paper_node["status"] = "reviewing"
     paper_node["artifacts"] = {"evidence_payload_path": str(evidence)}
     graph["node_results"] = {
@@ -612,7 +634,7 @@ def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
     result = gnd.dispatch_node_evals(str(graph_path), ttl=30)
     saved = gnd.load_graph(graph_path)
 
-    assert result["ok"] is True, result
+    assert result["ok"] is True, json.dumps(result, indent=2)
     assert submitted
     assert result["dispatched"][0]["pane"] == "operator:mini-codex-gpt55-medium-evaluator-1"
     assert saved["workflow_contract"] == "research.autosci.v1"

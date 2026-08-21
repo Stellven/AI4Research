@@ -69,10 +69,17 @@ from typing import Any, Dict, List, Optional
 
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _POLL_INTERVAL_S = 0.05
+_HARD_KILL_SIGNAL = getattr(signal, "SIGKILL", signal.SIGTERM)
 
 
 class TerminalRunError(RuntimeError):
     """Raised when registering into a run that is already marked terminal."""
+
+
+def _developer_observability_enabled() -> bool:
+    return os.environ.get("SOLAR_DEVELOPER_OBSERVABILITY", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
 
 
 def _now() -> str:
@@ -560,6 +567,7 @@ def teardown(
     self_pid = os.getpid()
     handled: set[int] = set()
     killed: List[int] = []
+    term_signalled: List[int] = []
     sigkilled: List[int] = []
     already_gone: List[int] = []
     skipped: List[Dict[str, Any]] = []
@@ -603,13 +611,14 @@ def teardown(
         for entry in targets:
             try:
                 _signal_entry(entry, signal.SIGTERM)
+                term_signalled.append(int(entry["pid"]))
             except ProcessLookupError:
                 pass
         stubborn = _wait_entries_gone(targets, grace_s)
         for entry in stubborn:
             pid = int(entry["pid"])
             try:
-                _signal_entry(entry, signal.SIGKILL)
+                _signal_entry(entry, _HARD_KILL_SIGNAL)
                 sigkilled.append(pid)
             except ProcessLookupError:
                 pass
@@ -636,6 +645,9 @@ def teardown(
         "survivors": survivors,
         "finished_at": _now(),
     }
+    if _developer_observability_enabled():
+        result["term_signalled"] = term_signalled
+        result["kill_signalled"] = sigkilled
     _append(run_id, result, harness_dir)
     return result
 

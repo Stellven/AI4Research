@@ -1,0 +1,58 @@
+capability_capsule_id: cap.research-external-claim-verification
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: AutoSci Claim Verification
+  description: Map experiment outcomes onto claim verdicts via the AutoSci bridge.
+  logical_operator: ScientificClaimVerifier
+applicability:
+  task_types: [verification]
+  positive_signals: [claim verification, outcome to verdict mapping, evidence reconciliation]
+  negative_signals: [experiment execution, idea authoring, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: experiment_result, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: claim_verification, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [verification]}
+  postconditions:
+    - {check: output_present, field: claim_verification_json}
+  invariants:
+    - Verdicts are restricted to supported, partially_supported, not_supported, and inconclusive.
+    - An outcome without collected results maps to inconclusive, never to supported.
+    - Evidence carries provenance operator_id, implementation_package, and timestamp.
+composition:
+  consumes: [{type: artifact.experiment_result}]
+  produces: [{type: artifact.claim_verification}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-external-experiment-run]
+effects:
+  read: [artifacts.experiment_result]
+  write: [artifacts.claim_verification]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [overstated_verdict, unsupported_claim_promotion]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-exec-claim-verification-worker, autosci-claim-verify-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

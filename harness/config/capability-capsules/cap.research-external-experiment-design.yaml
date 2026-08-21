@@ -1,0 +1,58 @@
+capability_capsule_id: cap.research-external-experiment-design
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: AutoSci Experiment Design
+  description: Produce the AutoSci experiment plan and its experimental blocks via the bridge.
+  logical_operator: ScientificExperimentDesigner
+applicability:
+  task_types: [planning]
+  positive_signals: [experiment design, experimental blocks, ablation planning]
+  negative_signals: [experiment execution, result collection, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: idea_evaluation, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: experiment_plan, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [planning]}
+  postconditions:
+    - {check: output_present, field: experiment_plan_json}
+  invariants:
+    - The plan names its experimental blocks and the target idea explicitly; it never defaults to an arbitrary idea slug.
+    - Design performs no execution and collects no results.
+    - Evidence carries provenance operator_id, implementation_package, and timestamp.
+composition:
+  consumes: [{type: artifact.idea_evaluation}]
+  produces: [{type: artifact.experiment_plan}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-external-idea-evaluation]
+effects:
+  read: [artifacts.idea_evaluation]
+  write: [artifacts.experiment_plan]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [underspecified_plan, wrong_target_idea]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-exec-experiment-design-worker, autosci-experiment-design-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

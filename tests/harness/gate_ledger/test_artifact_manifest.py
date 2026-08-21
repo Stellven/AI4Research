@@ -53,8 +53,9 @@ def test_write_and_read_roundtrip_with_hashes(tmp_path):
     assert row["declared"] == "report.md"
     assert row["resolved_root"] == "canonical"
     assert row["exists"] is True
-    assert row["size"] == len("# report\n")
-    assert row["sha256"] == hashlib.sha256(b"# report\n").hexdigest()
+    expected_bytes = target.read_bytes()
+    assert row["size"] == len(expected_bytes)
+    assert row["sha256"] == hashlib.sha256(expected_bytes).hexdigest()
     assert row["mtime"]
     assert Path(row["path"]) == target
 
@@ -251,16 +252,12 @@ def test_absolute_roots_unaffected_by_base_dir(tmp_path):
 
 
 def test_manifest_write_is_atomic_and_best_effort(tmp_path):
-    # Unwritable sprints dir: returns None, never raises.
-    import os
+    # A sprints path below a regular file returns None, never raises. Unlike
+    # chmod-based permission checks, this is deterministic on Windows too.
     blocked = tmp_path / "blocked"
-    blocked.mkdir()
-    os.chmod(blocked, 0o500)
-    try:
-        out = am.write_manifest(blocked / "sub", SID, _node([]), generation=1, roots={})
-        assert out is None
-    finally:
-        os.chmod(blocked, 0o700)
+    blocked.write_text("not a directory", encoding="utf-8")
+    out = am.write_manifest(blocked / "sub", SID, _node([]), generation=1, roots={})
+    assert out is None
 
 
 def test_read_manifest_missing_returns_empty(tmp_path):

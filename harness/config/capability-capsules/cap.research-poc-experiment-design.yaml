@@ -1,0 +1,58 @@
+capability_capsule_id: cap.research-poc-experiment-design
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Bounded Experiment Design
+  description: Produce the exact bounded no-network benchmark plan whose hash gates execution.
+applicability:
+  task_types: [planning]
+  positive_signals: [experiment design, bounded benchmark plan, plan hashing]
+  negative_signals: [experiment execution, network retrieval, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: idea_evaluation, type: json}
+      - {name: poc_handoff, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: experiment_plan, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [planning]}
+  postconditions:
+    - {check: output_present, field: experiment_plan_json}
+  invariants:
+    - The plan declares the exact command, inputs, metrics, and no-network sandbox it authorizes.
+    - The plan is hashed; execution is gated on that exact SHA-256 and approved scope.
+    - Design performs no execution and no network access.
+composition:
+  consumes: [{type: artifact.idea_evaluation}, {type: artifact.poc_handoff}]
+  produces: [{type: artifact.experiment_plan}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-poc-idea-evaluation]
+effects:
+  read: [artifacts.idea_evaluation, artifacts.poc_handoff]
+  write: [artifacts.experiment_plan]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [underspecified_plan, scope_creep]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-research-poc-experiment-design-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

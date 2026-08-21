@@ -1,0 +1,57 @@
+capability_capsule_id: cap.research-external-experiment-monitor
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: AutoSci Experiment Monitor
+  description: Record in-flight experiment status from AutoSci runtime records via the bridge.
+  logical_operator: ScientificExperimentMonitor
+applicability:
+  task_types: [verification]
+  positive_signals: [experiment status, progress monitoring, deployment state]
+  negative_signals: [result interpretation, idea authoring, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: experiment_plan, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: experiment_status, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [verification]}
+  postconditions:
+    - {check: output_present, field: experiment_status_json}
+  invariants:
+    - Status reflects retained runtime records only and never asserts a completion the records do not show.
+    - Evidence carries provenance operator_id, implementation_package, and timestamp.
+composition:
+  consumes: [{type: artifact.experiment_plan}]
+  produces: [{type: artifact.experiment_status}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-external-experiment-design]
+effects:
+  read: [artifacts.experiment_plan]
+  write: [artifacts.experiment_status]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [stale_status, premature_completion_claim]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-experiment-monitor-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

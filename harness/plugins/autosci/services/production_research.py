@@ -18,6 +18,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from html.parser import HTMLParser
@@ -40,6 +41,12 @@ DEFAULT_FETCH_TIMEOUT_SECONDS = 30
 DEFAULT_FETCH_MAX_BYTES = 5 * 1024 * 1024
 DEFAULT_FETCH_MAX_REDIRECTS = 5
 DEFAULT_EXTRACTED_TEXT_CHARS = 120_000
+MIN_DISCOVERY_PROVIDERS = 2
+_XML_ENTITY_DECLARATION_RE = re.compile(rb"<!(?:DOCTYPE|ENTITY)\b", re.IGNORECASE)
+_ARXIV_NAMESPACES = {
+    "atom": "http://www.w3.org/2005/Atom",
+    "arxiv": "http://arxiv.org/schemas/atom",
+}
 DEFAULT_PROVIDER_TIMEOUT_SECONDS = 90
 DEFAULT_PROVIDER_MAX_BYTES = 5 * 1024 * 1024
 DEFAULT_PROVIDER_MAX_ATTEMPTS = 3
@@ -409,6 +416,39 @@ class BoundedUrlFetcher:
         }
 
 
+# This module is imported both as part of the package and as a bare module by
+# the autosci_bridge subprocess, which runs without the repo root on sys.path.
+# The absolute "harness.*" form fails in that second case, so fall back to
+# loading the helper directly by path. It is never silently skipped: a failure
+# to import here must raise, or the provider query would quietly go back to
+# being the whole user request.
+try:  # package import
+    from ..operators.research_synthesis.base import distill_search_query
+except ImportError:  # bare-module import by the bridge subprocess
+    import importlib.util as _ilu
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    _base_path = _Path(__file__).resolve().parents[1] / "operators" / "research_synthesis" / "base.py"
+    _spec = _ilu.spec_from_file_location("_autosci_research_synthesis_base", _base_path)
+    if _spec is None or _spec.loader is None:  # pragma: no cover - defensive
+        raise
+    _base_mod = _ilu.module_from_spec(_spec)
+    # base.py defines a @dataclass, and dataclass processing looks the defining
+    # module up in sys.modules; without this registration it raises
+    # AttributeError: 'NoneType' object has no attribute '__dict__'.
+    _sys.modules[_spec.name] = _base_mod
+    _spec.loader.exec_module(_base_mod)
+    distill_search_query = _base_mod.distill_search_query
+
+
+_DELIVERABLE_MARKER_RE = re.compile(
+    r"\b(?:produce|source-linked|evidence\s+ids?|scholarly\s+sources?|"
+    r"independent\s+review|conclusions|limitations|deliverables?)\b",
+    re.IGNORECASE,
+)
+
+
 def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any]) -> str:
     task_contract = payload.get("task_contract") if isinstance(payload.get("task_contract"), dict) else {}
     intent = str(task_contract.get("user_intent") or payload.get("topic") or "").strip()
@@ -427,7 +467,21 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # than appending the full user instruction (which can swamp provider
     # relevance ranking). Topic-only runs first distill the subject from
     # common research-instruction phrasing while preserving the user's domain.
+    # Only a fetched PAGE TITLE is already a good provider query. An inline
+    # topic/research_brief seed carries the user's own request text, so it needs
+    # the same distillation as the raw intent -- otherwise the frozen pack's
+    # topic seed re-supplies the full instruction and the search is buried again.
+    from_page_title = bool(titles[:1]) and not inline[:1]
     query = " ".join(inline[:1] or titles[:1] or [intent]).strip()
+    if False:
+        # No page title or inline seed, so the query is the raw user request.
+        # The phrase patterns below only catch "survey/review on X" shapes;
+        # "Research and compare CRISPR ... Produce a source-linked report with
+        # evidence IDs, ..." matches none of them and went to the providers
+        # whole, which buried the topic and returned "Applied bibliometrics".
+        # Distil with the same topic definition the relevance gate uses so the
+        # search and the gate cannot disagree about what was asked.
+        pass
     if has_topic_seed or not titles:
         match = re.search(
             r"\b(?:survey|review|report|analysis|brief)\s+(?:on|about|for)\s+(.+)",
@@ -445,7 +499,81 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     else:
         query = re.sub(r"^(?:survey|review|research|analy[sz]e|synthesize)\s+", "", query, flags=re.IGNORECASE)
         query = re.split(r"[,;]", query, maxsplit=1)[0].strip()
-    return re.sub(r"\s+", " ", query)[:500]
+    query = re.sub(r"\s+", " ", query).strip()
+    # The phrase patterns above only catch "survey/review on X" shapes. A request
+    # like "Research and compare CRISPR ... Produce a source-linked report with
+    # evidence IDs, ..." matches none of them and previously went to the
+    # providers whole, which buried the topic: OpenAlex returned 4 hits (image
+    # profiling, bibliometrics) instead of 939 CRISPR papers. Token-distil only
+    # when the instruction survived, so inputs the patterns already handle keep
+    # their cleaner phrasing, and never touch a fetched page title.
+    if not from_page_title and _DELIVERABLE_MARKER_RE.search(query):
+        distilled = distill_search_query(query)
+        if distilled:
+            query = distilled
+    return query[:500]
+
+
+def _candidate_key(candidate: dict[str, Any]) -> str:
+    return str(
+        candidate.get("canonical_id") or candidate.get("url") or candidate.get("title") or ""
+    ).strip().lower()
+
+
+def _candidate_title_key(candidate: dict[str, Any]) -> str:
+    """Normalized title, used to collapse the same work seen twice.
+
+    Identifier dedup alone is not enough: a preprint and its published version
+    carry different DOIs, and providers disagree on punctuation and case, so the
+    same paper was arriving twice and spending two slots of the budget.
+    """
+    return re.sub(r"[^a-z0-9]+", " ", str(candidate.get("title") or "").lower()).strip()
+
+
+def _select_candidates(
+    seeded: list[dict[str, Any]],
+    discovered: list[dict[str, Any]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Take seeded sources first, then round-robin across discovery providers.
+
+    Straight concatenation let whichever provider ran first fill the whole
+    candidate budget, so a broad-but-poorly-ranked provider could crowd out the
+    on-topic results a later provider had already returned. Round-robin gives
+    every provider that answered the same shot at the budget, and the relevance
+    gate downstream still decides what is admissible.
+    """
+    selected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    seen_titles: set[str] = set()
+
+    def take(candidate: dict[str, Any]) -> bool:
+        key = _candidate_key(candidate)
+        if not key or key in seen:
+            return False
+        title_key = _candidate_title_key(candidate)
+        if title_key and title_key in seen_titles:
+            return False
+        seen.add(key)
+        if title_key:
+            seen_titles.add(title_key)
+        selected.append(candidate)
+        return len(selected) >= limit
+
+    for candidate in seeded:
+        if take(candidate):
+            return selected
+
+    by_provider: dict[str, list[dict[str, Any]]] = {}
+    for candidate in discovered:
+        by_provider.setdefault(str(candidate.get("provider") or "unknown"), []).append(candidate)
+    queues = list(by_provider.values())
+    for index in range(max((len(queue) for queue in queues), default=0)):
+        for queue in queues:
+            if index < len(queue) and take(queue[index]):
+                return selected
+    return selected
 
 
 def _abstract_from_openalex(value: Any) -> str:
@@ -500,6 +628,12 @@ class LiteratureDiscoveryService:
     limit: int = 8
     urlopen: Callable[..., Any] = urllib.request.urlopen
     clock: Callable[[], str] = _utc_now
+    sleep: Callable[[float], None] = time.sleep
+    monotonic: Callable[[], float] = time.monotonic
+    max_attempts_per_provider: int = 2
+    max_total_wait_seconds: float = 12.0
+    _attempts: list[dict[str, Any]] = field(default_factory=list, init=False, repr=False)
+    _attempt_paths: dict[str, list[str]] = field(default_factory=dict, init=False, repr=False)
 
     service_id: str = DISCOVERY_SERVICE_ID
     service_version: str = SERVICE_VERSION
@@ -507,40 +641,253 @@ class LiteratureDiscoveryService:
     def __post_init__(self) -> None:
         self.workspace_root = Path(self.workspace_root).resolve()
 
-    def _open_json(self, url: str) -> tuple[dict[str, Any], str]:
+    def _record_discovery_attempt(
+        self,
+        *,
+        provider: str,
+        url: str,
+        attempt: int,
+        status: str,
+        status_code: int,
+        body: bytes,
+        retry_wait_seconds: float,
+        error_type: str = "",
+        response_kind: str = "raw_http_body",
+    ) -> dict[str, Any]:
+        attempt_id = f"{len(self._attempts) + 1:03d}-{_safe_component(provider)}-attempt-{attempt}"
+        root = self.workspace_root / "service-evidence" / "discovery" / "attempts"
+        request_payload = {
+            "schema": "autosci_public_discovery_request.v1",
+            "provider": provider,
+            "method": "GET",
+            "url": url,
+            "attempt": attempt,
+            "credential_mode": "public_no_key",
+            "requested_at": self.clock(),
+        }
+        request_path = root / f"{attempt_id}-request.json"
+        request_sha = _write_json(request_path, request_payload)
+        response_path = root / f"{attempt_id}-response.bin"
+        _write_bytes(response_path, body)
+        response_sha = _sha256(body)
+        metadata = {
+            "schema": "autosci_public_discovery_attempt.v1",
+            "provider": provider,
+            "attempt": attempt,
+            "status": status,
+            "status_code": status_code,
+            "request_path": _display_path(request_path, self.workspace_root),
+            "request_sha256": request_sha,
+            "response_path": _display_path(response_path, self.workspace_root),
+            "response_sha256": response_sha,
+            "response_bytes": len(body),
+            "response_kind": response_kind,
+            "retry_wait_seconds": retry_wait_seconds,
+            "error_type": error_type,
+            "recorded_at": self.clock(),
+        }
+        metadata_path = root / f"{attempt_id}-metadata.json"
+        metadata_sha = _write_json(metadata_path, metadata)
+        metadata["metadata_path"] = _display_path(metadata_path, self.workspace_root)
+        metadata["metadata_sha256"] = metadata_sha
+        paths = [
+            _display_path(request_path, self.workspace_root),
+            _display_path(response_path, self.workspace_root),
+            _display_path(metadata_path, self.workspace_root),
+        ]
+        self._attempts.append(metadata)
+        self._attempt_paths.setdefault(provider, []).extend(paths)
+        return metadata
+
+    def _open_body(self, provider: str, url: str, *, accept: str = "application/json") -> tuple[bytes, str]:
         request = urllib.request.Request(
             url,
-            headers={"Accept": "application/json", "User-Agent": "OpenSolar-AutoSci/1.0"},
+            headers={"Accept": accept, "User-Agent": "OpenSolar-AutoSci/1.0"},
             method="GET",
         )
-        try:
-            with self.urlopen(request, timeout=self.timeout_seconds) as response:
-                body = response.read(DEFAULT_PROVIDER_MAX_BYTES + 1)
-        except urllib.error.HTTPError as exc:
-            raise ResearchOperatorError(
-                f"Public discovery provider returned HTTP {exc.code}",
-                error_type="provider_rate_limited" if exc.code == 429 else "provider_http_error",
-            ) from exc
-        except (OSError, urllib.error.URLError, TimeoutError) as exc:
-            raise ResearchOperatorError(
-                f"Public discovery provider failed: {type(exc).__name__}: {exc}",
-                error_type="provider_unavailable",
-            ) from exc
+        waited = 0.0
+        body = b""
+        for attempt in range(1, max(1, min(int(self.max_attempts_per_provider), 2)) + 1):
+            try:
+                with self.urlopen(request, timeout=self.timeout_seconds) as response:
+                    body = response.read(DEFAULT_PROVIDER_MAX_BYTES + 1)
+                self._record_discovery_attempt(
+                    provider=provider, url=url, attempt=attempt, status="completed",
+                    status_code=int(getattr(response, "status", 200) or 200), body=body,
+                    retry_wait_seconds=0.0,
+                )
+                break
+            except urllib.error.HTTPError as exc:
+                error_body = exc.read(DEFAULT_PROVIDER_MAX_BYTES + 1) if hasattr(exc, "read") else b""
+                retryable = exc.code == 429 or 500 <= int(exc.code) <= 599
+                retry_after = str((exc.headers or {}).get("Retry-After") or "0")
+                try:
+                    requested_wait = max(0.0, float(retry_after))
+                except ValueError:
+                    requested_wait = 0.0
+                wait = min(5.0, requested_wait or float(attempt), max(0.0, self.max_total_wait_seconds - waited))
+                self._record_discovery_attempt(
+                    provider=provider, url=url, attempt=attempt, status="failed",
+                    status_code=int(exc.code), body=error_body, retry_wait_seconds=wait,
+                    error_type="provider_rate_limited" if exc.code == 429 else "provider_http_error",
+                )
+                if not retryable or attempt >= self.max_attempts_per_provider or wait <= 0:
+                    raise ResearchOperatorError(
+                        f"Public discovery provider returned HTTP {exc.code}",
+                        error_type="provider_rate_limited" if exc.code == 429 else "provider_http_error",
+                    ) from exc
+                self.sleep(wait)
+                waited += wait
+            except (OSError, urllib.error.URLError, TimeoutError) as exc:
+                wait = min(5.0, float(attempt), max(0.0, self.max_total_wait_seconds - waited))
+                self._record_discovery_attempt(
+                    provider=provider, url=url, attempt=attempt, status="failed",
+                    status_code=0, body=b"", retry_wait_seconds=wait,
+                    error_type="provider_unavailable",
+                )
+                if attempt >= self.max_attempts_per_provider or wait <= 0:
+                    raise ResearchOperatorError(
+                        f"Public discovery provider failed: {type(exc).__name__}: {exc}",
+                        error_type="provider_unavailable",
+                    ) from exc
+                self.sleep(wait)
+                waited += wait
         if len(body) > DEFAULT_PROVIDER_MAX_BYTES:
             raise ResearchOperatorError("Discovery response exceeds the size limit", error_type="provider_contract")
+        return body, _sha256(body)
+
+    def _open_json(self, provider: str, url: str) -> tuple[dict[str, Any], str]:
+        body, response_hash = self._open_body(provider, url)
         try:
             payload = json.loads(body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ResearchOperatorError("Discovery provider returned invalid JSON", error_type="provider_contract") from exc
         if not isinstance(payload, dict):
             raise ResearchOperatorError("Discovery provider returned a non-object response", error_type="provider_contract")
-        return payload, _sha256(body)
+        return payload, response_hash
+
+    def _arxiv(self, query: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode(
+            {
+                "search_query": f"all:{query}",
+                "start": 0,
+                "max_results": self.limit,
+                "sortBy": "relevance",
+                "sortOrder": "descending",
+            }
+        )
+        body, response_hash = self._open_body("arxiv", url, accept="application/atom+xml")
+        # This is the only place the service parses XML from the network.
+        # ElementTree expands internal entities, so a declared entity is a
+        # memory-amplification vector even though the body itself is size
+        # capped. A legitimate Atom feed declares none, so refuse outright
+        # rather than relying on the parser to stay bounded.
+        if _XML_ENTITY_DECLARATION_RE.search(body[:8192]):
+            raise ResearchOperatorError(
+                "arXiv response declares an XML entity, which a feed never needs",
+                error_type="provider_contract",
+            )
+        try:
+            root = ElementTree.fromstring(body)
+        except ElementTree.ParseError as exc:
+            raise ResearchOperatorError(
+                "arXiv returned a response that is not parseable Atom",
+                error_type="provider_contract",
+            ) from exc
+        candidates: list[dict[str, Any]] = []
+        for entry in root.findall("atom:entry", _ARXIV_NAMESPACES):
+            title = re.sub(r"\s+", " ", entry.findtext("atom:title", "", _ARXIV_NAMESPACES)).strip()
+            abs_url = str(entry.findtext("atom:id", "", _ARXIV_NAMESPACES)).strip()
+            if not title or not abs_url:
+                continue
+            # arXiv states its entry id over http; downstream fetching only
+            # accepts https, so canonicalize here rather than leaking a scheme
+            # that the URL policy will reject.
+            if abs_url.startswith("http://"):
+                abs_url = "https://" + abs_url[len("http://") :]
+            doi = str(entry.findtext("arxiv:doi", "", _ARXIV_NAMESPACES)).strip()
+            published = str(entry.findtext("atom:published", "", _ARXIV_NAMESPACES)).strip()
+            primary = entry.find("arxiv:primary_category", _ARXIV_NAMESPACES)
+            category = str(primary.get("term") or "") if primary is not None else ""
+            authors = [
+                str(node.findtext("atom:name", "", _ARXIV_NAMESPACES)).strip()
+                for node in entry.findall("atom:author", _ARXIV_NAMESPACES)
+            ]
+            canonical = f"https://doi.org/{doi}" if doi else abs_url
+            candidates.append(
+                {
+                    "source_id": f"arxiv:{abs_url.rsplit('/', 1)[-1]}",
+                    "canonical_id": canonical,
+                    "title": title,
+                    "url": abs_url,
+                    "provider": "arxiv",
+                    "metadata": {
+                        "year": int(published[:4]) if published[:4].isdigit() else None,
+                        "venue": str(entry.findtext("arxiv:journal_ref", "", _ARXIV_NAMESPACES)).strip() or "arXiv preprint",
+                        "authors": [item for item in authors if item],
+                        "primary_category": category,
+                        "doi": doi,
+                    },
+                    "provenance": {"provider": "arxiv", "query": query, "discovered_at": self.clock()},
+                    "content_summary": re.sub(r"\s+", " ", entry.findtext("atom:summary", "", _ARXIV_NAMESPACES)).strip(),
+                }
+            )
+        return candidates, {"provider": "arxiv", "request_url": url, "response_sha256": response_hash}
+
+    def _europe_pmc(self, query: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + urllib.parse.urlencode(
+            {"query": query, "format": "json", "pageSize": self.limit, "resultType": "core"}
+        )
+        payload, response_hash = self._open_json("europe_pmc", url)
+        results = payload.get("resultList") if isinstance(payload.get("resultList"), dict) else {}
+        candidates: list[dict[str, Any]] = []
+        for raw in results.get("result") or []:
+            if not isinstance(raw, dict):
+                continue
+            title = re.sub(r"\s+", " ", str(raw.get("title") or "")).strip().rstrip(".")
+            if not title:
+                continue
+            doi = str(raw.get("doi") or "").strip()
+            record_id = str(raw.get("id") or "").strip()
+            source = str(raw.get("source") or "").strip()
+            if doi:
+                canonical = f"https://doi.org/{doi}"
+            elif source and record_id:
+                canonical = f"https://europepmc.org/article/{source}/{record_id}"
+            else:
+                continue
+            journal = raw.get("journalInfo") if isinstance(raw.get("journalInfo"), dict) else {}
+            journal_title = journal.get("journal") if isinstance(journal.get("journal"), dict) else {}
+            year = str(raw.get("pubYear") or "").strip()
+            candidates.append(
+                {
+                    "source_id": f"doi:{doi}" if doi else f"europepmc:{source}/{record_id}",
+                    "canonical_id": canonical,
+                    "title": title,
+                    "url": canonical,
+                    "provider": "europe_pmc",
+                    "metadata": {
+                        "year": int(year) if year.isdigit() else None,
+                        "venue": str(journal_title.get("title") or ""),
+                        "authors": [
+                            item.strip()
+                            for item in str(raw.get("authorString") or "").split(",")
+                            if item.strip()
+                        ],
+                        "doi": doi,
+                        "pmid": str(raw.get("pmid") or ""),
+                    },
+                    "provenance": {"provider": "europe_pmc", "query": query, "discovered_at": self.clock()},
+                    "content_summary": re.sub(r"<[^>]+>", " ", str(raw.get("abstractText") or "")).strip(),
+                }
+            )
+        return candidates, {"provider": "europe_pmc", "request_url": url, "response_sha256": response_hash}
 
     def _openalex(self, query: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         url = "https://api.openalex.org/works?" + urllib.parse.urlencode(
             {"search": query, "per-page": self.limit, "select": "id,doi,title,publication_year,primary_location,authorships,abstract_inverted_index"}
         )
-        payload, response_hash = self._open_json(url)
+        payload, response_hash = self._open_json("openalex", url)
         candidates: list[dict[str, Any]] = []
         for raw in payload.get("results") or []:
             if not isinstance(raw, dict) or not str(raw.get("title") or "").strip():
@@ -579,7 +926,7 @@ class LiteratureDiscoveryService:
                 "select": "DOI,title,URL,author,published,container-title,abstract,type",
             }
         )
-        payload, response_hash = self._open_json(url)
+        payload, response_hash = self._open_json("crossref", url)
         message = payload.get("message") if isinstance(payload.get("message"), dict) else {}
         candidates: list[dict[str, Any]] = []
         for raw in message.get("items") or []:
@@ -638,7 +985,7 @@ class LiteratureDiscoveryService:
                     "formatversion": 2,
                 }
             )
-            payload, response_hash = self._open_json(url)
+            payload, response_hash = self._open_json("wikipedia", url)
             response_hashes.append(response_hash)
             request_urls.append(url)
             raw_query = payload.get("query") if isinstance(payload.get("query"), dict) else {}
@@ -686,6 +1033,22 @@ class LiteratureDiscoveryService:
         )
         if not isinstance(raw, dict):
             raise ResearchOperatorError("AutoSci discovery backend returned a non-object response", error_type="provider_contract")
+        semantic_url = "https://api.semanticscholar.org/graph/v1/paper/search?" + urllib.parse.urlencode(
+            {"query": query, "limit": self.limit}
+        )
+        normalized_body = json.dumps(raw, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        self._record_discovery_attempt(
+            provider="semantic_scholar",
+            url=semantic_url,
+            attempt=1,
+            status="completed" if str(raw.get("status") or "") == "completed" else str(raw.get("status") or "unknown"),
+            status_code=200,
+            body=normalized_body,
+            retry_wait_seconds=0.0,
+            response_kind="normalized_backend_payload",
+        )
+        if progress.exists():
+            self._attempt_paths.setdefault("semantic_scholar", []).append(_display_path(progress, self.workspace_root))
         candidates: list[dict[str, Any]] = []
         for item in raw.get("candidates") or []:
             if not isinstance(item, dict) or not str(item.get("title") or "").strip():
@@ -723,6 +1086,8 @@ class LiteratureDiscoveryService:
         return candidates, trace, [str(item) for item in raw.get("limitations") or [] if str(item).strip()]
 
     def __call__(self, *, seed_snapshot: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+        self._attempts.clear()
+        self._attempt_paths.clear()
         query = _topic_from_snapshot(seed_snapshot, payload)
         if not query:
             raise ResearchOperatorError("Source discovery requires a non-empty query", error_type="invalid_input")
@@ -735,6 +1100,7 @@ class LiteratureDiscoveryService:
                 "seed_snapshot_sha256": stable_json_sha256(seed_snapshot),
             }
         )
+        seeded: list[dict[str, Any]] = []
         candidates: list[dict[str, Any]] = []
         limitations: list[str] = []
         traces: list[dict[str, Any]] = []
@@ -747,7 +1113,7 @@ class LiteratureDiscoveryService:
             if not isinstance(seed, dict) or str(seed.get("seed_kind") or "") != "url":
                 continue
             source_id = f"url:{str(seed.get('content_sha256') or seed.get('sha256') or '')[:24]}"
-            candidates.append(
+            seeded.append(
                 {
                     "source_id": source_id,
                     "canonical_id": str(seed.get("final_url") or seed.get("source") or source_id),
@@ -769,19 +1135,24 @@ class LiteratureDiscoveryService:
                     "content_summary": str(seed.get("content") or "")[:20_000],
                 }
             )
+        contributed: set[str] = set()
+        # What each provider actually did, so a provider that answered honestly
+        # with nothing on topic is not later reported as having failed.
+        answered: dict[str, str] = {}
         try:
             semantic, trace, warnings = self._semantic_scholar(query)
             candidates.extend(semantic)
             traces.append(trace)
             limitations.extend(warnings)
+            answered["semantic_scholar"] = "completed" if semantic else "empty"
+            if semantic:
+                contributed.add("semantic_scholar")
         except ResearchOperatorError as exc:
             limitations.append(f"Semantic Scholar fallback boundary: {exc.error_type}: {exc}")
             traces.append({"provider": "semantic_scholar", "status": "failed", "error_type": exc.error_type})
-        has_fetched_url = any(
-            isinstance(seed, dict) and str(seed.get("seed_kind") or "") == "url"
-            for seed in seed_snapshot.get("seeds") or []
-        )
-        if has_fetched_url and len(candidates) < 4:
+            answered["semantic_scholar"] = "failed"
+        has_fetched_url = bool(seeded)
+        if has_fetched_url and len(seeded) + len(candidates) < 4:
             try:
                 wikipedia, trace = self._wikipedia(_supplemental_queries(seed_snapshot, query))
                 candidates.extend(wikipedia)
@@ -789,53 +1160,43 @@ class LiteratureDiscoveryService:
             except ResearchOperatorError as exc:
                 limitations.append(f"Wikipedia fallback boundary: {exc.error_type}: {exc}")
                 traces.append({"provider": "wikipedia", "status": "failed", "error_type": exc.error_type})
-        provider_families = {str(item.get("provider") or "") for item in candidates if str(item.get("provider") or "")}
-        if len(candidates) < 3 or len(provider_families) < min_provider_families:
+        # Bibliographic providers are consulted as a chain rather than a
+        # single-shot fallback. The previous rule stopped as soon as any one
+        # provider returned three rows, which let one weakly-ranked provider be
+        # the sole basis for the evidence set; downstream relevance filtering
+        # then had nothing on-topic left to choose from. Keep going until at
+        # least two independent providers have contributed, or the chain is
+        # exhausted.
+        # arXiv covers computing, physics and mathematics; Europe PMC covers the
+        # life sciences. Neither alone spans the topics this workflow accepts,
+        # and OpenAlex ranks too loosely to be trusted on its own, so the chain
+        # deliberately mixes a domain-specific pair with the broad catalogues.
+        required_contributors = max(MIN_DISCOVERY_PROVIDERS, min_provider_families)
+        for provider, backend, boundary in (
+            ("arxiv", self._arxiv, "arXiv"),
+            ("europe_pmc", self._europe_pmc, "Europe PMC"),
+            ("openalex", self._openalex, "OpenAlex"),
+            ("crossref", self._crossref, "Crossref"),
+        ):
+            enough = len(seeded) + len(candidates) >= self.limit
+            if enough and len(contributed) >= required_contributors:
+                break
             try:
-                openalex, trace = self._openalex(query)
-                candidates.extend(openalex)
-                traces.append(trace)
+                found, trace = backend(query)
             except ResearchOperatorError as exc:
-                limitations.append(f"OpenAlex fallback boundary: {exc.error_type}: {exc}")
-                traces.append({"provider": "openalex", "status": "failed", "error_type": exc.error_type})
-        provider_families = {str(item.get("provider") or "") for item in candidates if str(item.get("provider") or "")}
-        if len(candidates) < 3 or len(provider_families) < min_provider_families:
-            try:
-                crossref, trace = self._crossref(query)
-                candidates.extend(crossref)
-                traces.append(trace)
-            except ResearchOperatorError as exc:
-                limitations.append(f"Crossref fallback boundary: {exc.error_type}: {exc}")
-                traces.append({"provider": "crossref", "status": "failed", "error_type": exc.error_type})
-        deduped_all: list[dict[str, Any]] = []
-        seen: set[str] = set()
-        for candidate in candidates:
-            key = str(candidate.get("canonical_id") or candidate.get("url") or candidate.get("title") or "").strip().lower()
-            if not key or key in seen:
+                limitations.append(f"{boundary} fallback boundary: {exc.error_type}: {exc}")
+                traces.append({"provider": provider, "status": "failed", "error_type": exc.error_type})
+                answered[provider] = "failed"
                 continue
-            seen.add(key)
+            candidates.extend(found)
+            traces.append(trace)
+            answered[provider] = "completed" if found else "empty"
+            if found:
+                contributed.add(provider)
+        deduped = _select_candidates(seeded, candidates, limit=self.limit + 1)
+        for candidate in deduped:
             candidate["candidate_sha256"] = stable_json_sha256(candidate)
             candidate["query"] = query
-            deduped_all.append(candidate)
-        deduped: list[dict[str, Any]] = []
-        if min_provider_families > 1:
-            selected_keys: set[str] = set()
-            for candidate in deduped_all:
-                provider = str(candidate.get("provider") or "")
-                if not provider or provider in selected_keys:
-                    continue
-                deduped.append(candidate)
-                selected_keys.add(provider)
-                if len(selected_keys) >= min_provider_families:
-                    break
-            for candidate in deduped_all:
-                if candidate in deduped:
-                    continue
-                deduped.append(candidate)
-                if len(deduped) >= self.limit:
-                    break
-        else:
-            deduped = deduped_all[: self.limit + 1]
         if not deduped:
             raise ResearchOperatorError(
                 "All configured public discovery providers returned no traceable sources",
@@ -848,8 +1209,19 @@ class LiteratureDiscoveryService:
             "request_sha256": request_hash,
             "query": query,
             "provider_traces": traces,
+            "provider_attempts": list(self._attempts),
             "candidate_count": len(deduped),
             "candidate_hashes": [str(item["candidate_sha256"]) for item in deduped],
+            "candidate_records": [
+                {
+                    "source_id": str(item.get("source_id") or ""),
+                    "canonical_id": str(item.get("canonical_id") or ""),
+                    "url": str(item.get("url") or ""),
+                    "provider": str(item.get("provider") or ""),
+                    "candidate_sha256": str(item.get("candidate_sha256") or ""),
+                }
+                for item in deduped
+            ],
             "created_at": self.clock(),
             "limitations": limitations,
         }
@@ -857,6 +1229,7 @@ class LiteratureDiscoveryService:
         archive_path = self.workspace_root / "service-evidence" / "discovery" / f"{response_hash}.json"
         archive_hash = _write_json(archive_path, response_payload)
         providers = sorted({str(item.get("provider") or "unknown") for item in deduped})
+        attempted_providers = sorted(set(self._attempt_paths) | set(providers) | set(answered))
         return {
             "service_id": self.service_id,
             "service_version": self.service_version,
@@ -877,7 +1250,11 @@ class LiteratureDiscoveryService:
                     "archive_path": _display_path(archive_path, self.workspace_root),
                     "archive_sha256": archive_hash,
                 }
-                for provider in providers
+                | {
+                    "status": answered.get(provider, "completed" if provider in providers else "failed"),
+                    "evidence_paths": sorted(set(self._attempt_paths.get(provider) or [])),
+                }
+                for provider in attempted_providers
             ],
             "limitations": limitations,
         }
@@ -1007,6 +1384,17 @@ class ResearchModelService:
                             "claim_id": "claim-001",
                             "text": "source-grounded finding",
                             "evidence_ids": ["one or more exact source_id values"],
+                            # The exact sentence the claim rests on, per cited
+                            # source. Without it a claim records WHICH source
+                            # supported it but never WHICH TEXT, so nothing
+                            # downstream can verify the support -- only the
+                            # linkage.
+                            "evidence_quotes": [
+                                {
+                                    "source_id": "exact source_id value",
+                                    "quote": "verbatim sentence copied from that source's content_summary",
+                                }
+                            ],
                             "uncertainty": "low|medium|high",
                             "limitations": [],
                         }
@@ -1020,7 +1408,36 @@ class ResearchModelService:
                     "When two or more validated sources are available, cite at least two distinct exact source_id values across the claims.",
                     "Every evidence_ids entry must be copied exactly from allowed_source_ids; do not abbreviate, hash, prefix, suffix, or repair source ids.",
                     "Produce at least four substantive claims when evidence supports them.",
+                    "Every claim must carry an evidence_quotes entry for each cited source_id.",
+                    "Each quote must be copied VERBATIM from that source's content_summary, "
+                    "long enough to stand alone (at least 40 characters), and must contain "
+                    "wording the claim itself relies on. Do not paraphrase, reflow, or repair "
+                    "a quote: it is checked as an exact substring of the source text.",
+                    # A verbatim quote proves the TEXT exists; it does not prove the
+                    # claim rests on it. Each claim is additionally checked against the
+                    # full source text with a lexical support test, and claims that
+                    # fail are refused and sent back. These four rules are that test,
+                    # stated so the model can satisfy it directly.
+                    "Cite EVERY validated source that genuinely supports a claim, not just "
+                    "one. A claim resting on two sources must list both.",
+                    "At least one of a claim's cited sources must support it ON ITS OWN, "
+                    "because support is assessed per source. Only split a claim when NO "
+                    "single source carries it; do not drop a corroborating source merely to "
+                    "keep one citation per claim.",
+                    "Write each claim in the source's own vocabulary. At least 45 percent of "
+                    "the claim's substantive words must also appear in that source's text, so "
+                    "reuse the source's terms rather than substituting synonyms.",
+                    "Every number, percentage, or count in a claim must also appear in the "
+                    "cited source. Do not compute, round, or infer figures.",
+                    "Do not use absolute wording such as all, always, never, every, none, "
+                    "proves, guarantees, or cures: a claim scoped that broadly is refused.",
                 ],
+                # Populated only on a repair attempt, listing the claims that were
+                # refused and exactly why, so the retry is targeted rather than a
+                # blind regeneration.
+                "grounding_feedback": kwargs.get("grounding_feedback") or [],
+                "synthesis_attempt": kwargs.get("synthesis_attempt") or 1,
+                "max_synthesis_attempts": kwargs.get("max_synthesis_attempts") or 1,
             }
         elif node_id == "report_draft":
             synthesis = kwargs.get("evidence_synthesis") if isinstance(kwargs.get("evidence_synthesis"), dict) else {}
@@ -1038,13 +1455,23 @@ class ResearchModelService:
                             {
                                 "conclusion_id": "conclusion-001",
                                 "text": "bounded conclusion",
-                                "evidence_ids": ["one or more exact claim_id values"],
+                                # CLAIM ids, not source ids. Each grounded_claim
+                                # carries its OWN `evidence_ids` holding source
+                                # ids, so the same field name means two different
+                                # id spaces one level apart. Showing the shape
+                                # here is what stops the writer citing the wrong.
+                                "evidence_ids": ["claim-001", "claim-002"],
                             }
                         ],
                     },
                     "limitations": [],
                 },
                 "quality_requirements": [
+                    "Every conclusion's evidence_ids must be claim_id values taken from "
+                    "grounded_claims, such as claim-001. Never put a source id there, such "
+                    "as openalex-rag-01. Each grounded_claim has its own evidence_ids field "
+                    "listing the SOURCES it rests on; that is a different id space and a "
+                    "conclusion citing it is rejected.",
                     "The body must be non-empty, clearly structured Markdown and directly answer the whole request.",
                     "Include an explicit Method or Evidence Method section that explains how supplied sources were used.",
                     "When grounded claims cite two or more distinct source ids, the report must preserve at least two distinct cited sources.",
@@ -1086,6 +1513,7 @@ class ResearchModelService:
         elif node_id == "report_revision":
             synthesis = kwargs.get("evidence_synthesis") if isinstance(kwargs.get("evidence_synthesis"), dict) else {}
             review = kwargs.get("independent_review") if isinstance(kwargs.get("independent_review"), dict) else {}
+            preservation = kwargs.get("preservation_requirements") if isinstance(kwargs.get("preservation_requirements"), dict) else {}
             user = {
                 "node_id": node_id,
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
@@ -1094,8 +1522,13 @@ class ResearchModelService:
                 "original_report": kwargs.get("original_report") or {},
                 "independent_review_findings": review.get("findings") or [],
                 "basis_verdict": str(review.get("verdict_suggestion") or ""),
+                "required_preservation": preservation,
                 "revision_attempt": int(kwargs.get("revision_attempt") or 1),
                 "max_revision_attempts": int(kwargs.get("max_revision_attempts") or 1),
+                # Populated only on a retry: the exact deterministic rejection
+                # the previous attempt produced, so the reviser is told what it
+                # dropped instead of guessing.
+                "previous_attempt_rejected_because": str(kwargs.get("preservation_feedback") or ""),
                 "required_output": {
                     "report": {
                         "title": "specific revised report title",
@@ -1105,17 +1538,24 @@ class ResearchModelService:
                             {
                                 "conclusion_id": "conclusion-001",
                                 "text": "bounded revised conclusion",
-                                "evidence_ids": ["one or more exact claim_id values"],
+                                # CLAIM ids, not source ids. Each grounded_claim
+                                # carries its OWN `evidence_ids` holding source
+                                # ids, so the same field name means two different
+                                # id spaces one level apart. Showing the shape
+                                # here is what stops the writer citing the wrong.
+                                "evidence_ids": ["claim-001", "claim-002"],
                             }
                         ],
                     },
                     "limitations": [],
+                    "preservation": preservation,
                 },
                 "quality_requirements": [
                     "Repair only issues identified by the independent review or deterministic quality checks.",
                     "Use only supplied grounded_claims and preserve exact claim_id values in conclusion evidence_ids.",
                     "Do not invent sources, evidence ids, benchmarks, metrics, or methods that are not supported by grounded_claims.",
                     "Preserve uncertainty and limitation qualifiers from grounded_claims.",
+                    "Copy required_preservation exactly, preserve every listed conclusion unchanged, retain the accepted method text, and render every listed limitation verbatim under a substantive Limitations section.",
                     "The revised body must directly answer the complete user request in the requested language.",
                     "Include an explicit Method or Evidence Method section when the requested deliverable is a survey or technical report.",
                     "Replace the report body instead of appending duplicate section summaries from prior drafts.",

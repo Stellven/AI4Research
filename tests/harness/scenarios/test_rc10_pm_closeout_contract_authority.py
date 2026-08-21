@@ -372,6 +372,7 @@ def test_graph_node_and_graph_eval_submitters_declare_distinct_closeout_kinds(
         dispatch_id="dispatch-eval",
         instruction_file=eval_dispatch,
         dry_run=True,
+        eval_generation=3,
         eval_md_path=str(tmp_path / "sprints" / f"{SID}.S3-eval-q2.md"),
         eval_json_path=str(tmp_path / "sprints" / f"{SID}.S3-eval-q2.json"),
         artifact_snapshot=snapshot,
@@ -383,6 +384,8 @@ def test_graph_node_and_graph_eval_submitters_declare_distinct_closeout_kinds(
     eval_index = eval_cmd.index("--closeout-kind")
     assert node_cmd[node_index + 1] == "graph_node_execution"
     assert eval_cmd[eval_index + 1] == "graph_eval"
+    attempt_index = eval_cmd.index("--attempt-id")
+    assert eval_cmd[attempt_index + 1] == "3"
     expected_indexes = [index for index, value in enumerate(eval_cmd) if value == "--expected-artifact"]
     assert [eval_cmd[index + 1] for index in expected_indexes] == [
         str(tmp_path / "sprints" / f"{SID}.S3-eval-q2.md"),

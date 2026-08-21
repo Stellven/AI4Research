@@ -1,0 +1,63 @@
+capability_capsule_id: cap.research-evidence-poc-claim-verification
+capsule_kind: capability
+metadata:
+  name: Fixed Research Evidence PoC Claim Verification
+  description: Reconcile the controller-accepted benchmark result and raw hashes against the approved fixed plan.
+applicability:
+  task_types: [verification]
+  positive_signals: [fixed benchmark claim verification, raw metric reconciliation]
+  negative_signals: [repository patch]
+contract:
+  inputs:
+    required:
+      - {name: experiment_plan, type: json}
+      - {name: experiment_result, type: json}
+      - {name: benchmark_raw, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: claim_verification, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [verification]}
+  postconditions:
+    - {check: output_present, field: claim_verification_json}
+  invariants:
+    - The B5 dependency must carry a consumable controller closeout and current artifact manifest.
+    - Result status, raw-result digest, metrics, exit code, and integrity threshold must agree before a claim is verified.
+    - Noncompleted or tampered experiment evidence can never produce a verified claim.
+    - This capsule has no repository or GitHub resource authority.
+composition:
+  consumes:
+    - {type: artifact.experiment_plan}
+    - {type: artifact.experiment_result}
+    - {type: artifact.benchmark_raw}
+  produces:
+    - {type: artifact.claim_verification}
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-evidence-poc-experiment-run]
+effects:
+  read: [artifacts.experiment_plan, artifacts.experiment_result, artifacts.benchmark_raw]
+  write: [artifacts.claim_verification]
+  execute: []
+  network: [none]
+  cost: [bounded_local_verification]
+  risk: [unsupported_claim_promotion]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-research-poc-claim-verification-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

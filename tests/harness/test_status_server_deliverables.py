@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -229,3 +231,141 @@ def test_supporting_evidence_remains_result_when_it_is_the_only_output(tmp_path:
     assert len(selected) == 1
     assert selected[0]["name"] == "review.md"
     assert selected[0]["supporting"] is True
+
+
+def test_deep_fixed_workflow_final_delivery_is_visible_but_undeclared_peer_is_not(
+    tmp_path: Path,
+) -> None:
+    module, _harness, sprints = _load_status_server(tmp_path)
+    sid = "sprint-fixed-final-delivery"
+    workdir = sprints / sid / "workdir"
+    final = _write(
+        workdir
+        / "artifacts"
+        / "research_evidence_to_poc"
+        / "delivery"
+        / "final_delivery.md",
+        "# Final delivery\n\nEvidence and PoC accepted.\n",
+    )
+    hidden = _write(
+        workdir / "private" / "deep" / "uncontracted" / "notes.md",
+        "not a declared deliverable\n",
+    )
+    _write(
+        sprints / f"{sid}.task_graph.json",
+        json.dumps(
+            {
+                "workflow_contract_id": "research.evidence_to_poc.v1",
+                "nodes": [
+                    {
+                        "id": "final_delivery",
+                        "task_type": "report-writing",
+                        "write_scope": [
+                            "artifacts/research_evidence_to_poc/delivery",
+                            "artifacts/research_evidence_to_poc/delivery/final_delivery.md",
+                        ],
+                    }
+                ],
+            }
+        ),
+    )
+
+    items = module._discover_sprint_deliverables(sid)
+
+    assert any(item["name"] == final.name and item["result"] for item in items)
+    assert all(item["rel_path"] != str(hidden.resolve()) for item in items)
+
+
+def test_dashboard_fixed_hybrid_profile_is_controller_owned_and_explicit(tmp_path: Path, monkeypatch) -> None:
+    module, _harness, _sprints = _load_status_server(tmp_path)
+    pack = tmp_path / "authority/source-pack"
+    authority = pack.parent
+    monkeypatch.setattr(module, "_read_user_config_runtime", lambda: ("codex", "test"))
+    monkeypatch.setenv("SOLAR_DASHBOARD_RESEARCH_PROFILE", "fixed_hybrid_demo_v1")
+    monkeypatch.setenv("SOLAR_DASHBOARD_RESEARCH_SOURCE_PACK", str(pack))
+    monkeypatch.setenv("SOLAR_DASHBOARD_RESEARCH_SOURCE_PACK_ROOT", str(authority))
+    monkeypatch.setenv("SOLAR_DASHBOARD_RESEARCH_POLICY_ACTOR", "user")
+    monkeypatch.setenv("SOLAR_DASHBOARD_RESEARCH_POLICY_STATEMENT", "run the fixed no-network evidence benchmark")
+
+    env = module._intake_subprocess_env()
+
+    assert env["SOLAR_INTAKE_WORKFLOW_ID"] == "research.evidence_to_poc.v1"
+    assert env["SOLAR_RESEARCH_EXECUTION_PROFILE"] == "part_a_plus_poc"
+    assert env["SOLAR_RESEARCH_ACQUISITION_MODE"] == "hybrid"
+    assert env["SOLAR_RESEARCH_RETRIEVAL_POLICY"] == "public_bibliographic_no_key_v1"
+    assert env["SOLAR_RESEARCH_EXPERIMENT_POLICY"] == "evidence_lineage_integrity_v1"
+    assert env["SOLAR_RESEARCH_SOURCE_PACK"] == str(pack)
+    assert env["SOLAR_RESEARCH_SOURCE_PACK_ROOT"] == str(authority)
+
+
+def test_dashboard_intake_prefers_its_own_harness_over_stale_installed_solar(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module, harness, _sprints = _load_status_server(tmp_path)
+    local_harness = _write(harness / "solar-harness.sh", "#!/usr/bin/env bash\nexit 0\n")
+    stale_solar = _write(tmp_path / "installed/bin/solar", "#!/usr/bin/env bash\nexit 99\n")
+    monkeypatch.setattr(
+        module.shutil,
+        "which",
+        lambda name: str(stale_solar) if name in {"solar", "solar-harness"} else None,
+    )
+
+    command = module._intake_command("Research evidence lineage")
+
+    assert command == [
+        str(local_harness),
+        "intake",
+        "--request",
+        "Research evidence lineage",
+    ]
+
+
+def test_dashboard_explicit_fixed_inputs_override_deployment_defaults_at_shipped_intake_boundary(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module, _harness, _sprints = _load_status_server(tmp_path)
+    observed: dict = {}
+    monkeypatch.setattr(module, "_intake_command", lambda task: [sys.executable, "intake", "--request", task])
+    monkeypatch.setattr(module, "_intake_subprocess_env", lambda: {
+        "SOLAR_INTAKE_WORKFLOW_ID": "research.evidence_to_poc.v1",
+        "SOLAR_RESEARCH_EXECUTION_PROFILE": "part_a_plus_poc",
+        "SOLAR_RESEARCH_ACQUISITION_MODE": "hybrid",
+        "SOLAR_RESEARCH_RETRIEVAL_POLICY": "public_bibliographic_no_key_v1",
+        "SOLAR_RESEARCH_EXPERIMENT_POLICY": "evidence_lineage_integrity_v1",
+        "SOLAR_RESEARCH_SOURCE_PACK": "/deployment/pack",
+    })
+
+    def run(cmd, **kwargs):
+        observed["cmd"] = cmd
+        observed["env"] = kwargs["env"]
+        return subprocess.CompletedProcess(cmd, 0, stdout="Sprint created: fixed-dashboard-sprint\n", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", run)
+    result = module._intake_payload({
+        "task": "Research retrieval augmented generation evaluation methods",
+        "request_id": "dashboard-fixed-request",
+        "workflow_id": "research.evidence_to_poc.v1",
+        "workflow_inputs": {
+            "execution_profile": "part_a_plus_poc",
+            "acquisition_mode": "live_search",
+            "retrieval_policy": "public_bibliographic_no_key_v1",
+            "experiment_policy": "evidence_lineage_integrity_v1",
+            "experiment_policy_actor": "user",
+            "experiment_policy_statement": "run fixed evidence benchmark",
+        },
+    })
+
+    assert result["ok"] is True
+    assert result["sprint_id"] == "fixed-dashboard-sprint"
+    assert result["research_profile"] == {
+        "workflow_id": "research.evidence_to_poc.v1",
+        "execution_profile": "part_a_plus_poc",
+        "acquisition_mode": "live_search",
+        "retrieval_policy": "public_bibliographic_no_key_v1",
+        "experiment_policy": "evidence_lineage_integrity_v1",
+        "source_pack_configured": "true",
+    }
+    assert observed["env"]["SOLAR_RESEARCH_ACQUISITION_MODE"] == "live_search"
+    assert observed["env"]["SOLAR_INTAKE_REQUEST_ID"] == "dashboard-fixed-request"

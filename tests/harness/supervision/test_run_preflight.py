@@ -623,26 +623,32 @@ def test_run_preflight_rejects_bad_sid(tmp_path):
 def _fake_bin(tmp_path: Path) -> Path:
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir(exist_ok=True)
+    suffix = ".cmd" if os.name == "nt" else ""
+    success_script = "@exit /b 0\n" if os.name == "nt" else "#!/bin/sh\nexit 0\n"
+    failure_script = "@exit /b 1\n" if os.name == "nt" else "#!/bin/sh\nexit 1\n"
     for name in ("claude", "codex"):
-        exe = fake_bin / name
-        exe.write_text("#!/bin/sh\nexit 0\n")
+        exe = fake_bin / f"{name}{suffix}"
+        exe.write_text(success_script)
         exe.chmod(0o755)
     # fake tmux: binary present (auto-startable), no session alive
-    tmux = fake_bin / "tmux"
-    tmux.write_text("#!/bin/sh\nexit 1\n")
+    tmux = fake_bin / f"tmux{suffix}"
+    tmux.write_text(failure_script)
     tmux.chmod(0o755)
     return fake_bin
 
 
 def _cli_env(tmp_path: Path, worktree_harness: Path, ops_path: Path, home: Path) -> dict:
-    env = {
+    env = dict(os.environ)
+    env.update({
         "HARNESS_DIR": str(worktree_harness),
         "SPRINTS_DIR": str(tmp_path / "sprints"),
         "PYTHONPATH": str(worktree_harness / "lib"),
         "SOLAR_MULTI_TASK_OPERATORS": str(ops_path),
         "HOME": str(home),
-        "PATH": f"{_fake_bin(tmp_path)}:/usr/bin:/bin",
-    }
+        "USERPROFILE": str(home),
+        "PATH": os.pathsep.join((str(_fake_bin(tmp_path)), os.environ.get("PATH", ""))),
+    })
+    env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
     return env
 
 
@@ -681,3 +687,96 @@ def test_cli_exit_codes_and_report(tmp_path):
     assert green.returncode == 0, green.stdout + green.stderr
     report = json.loads((tmp_path / "sprints" / f"{SID}.preflight.json").read_text())
     assert report["ok"] is True
+
+
+def test_landlock_probe_grants_read_on_an_interpreter_outside_usr(tmp_path, monkeypatch):
+    """The probe execs sys.executable, so its own prefix must be readable.
+
+    The grants were a fixed list -- /usr, /bin, /lib, /lib64, /etc -- and the
+    probe then executed the running interpreter. Under conda, pyenv or a
+    virtualenv in $HOME that binary is outside every grant, so Landlock denied
+    the exec with EACCES before any write was attempted, and preflight reported
+    a filesystem that "cannot honor write grants". Measured on this machine:
+
+        landlock_exec: active abi=3 ro=5 rw=1
+        PermissionError: [Errno 13] Permission denied:
+            '/home/ssubr/miniconda3/bin/python3'
+    """
+    harness = _landlock_harness(tmp_path)
+    fake_prefix = tmp_path / "opt" / "conda"
+    (fake_prefix / "bin").mkdir(parents=True)
+    fake_python = fake_prefix / "bin" / "python3"
+    fake_python.write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.setattr(rp.sys, "executable", str(fake_python))
+    monkeypatch.setattr(rp.sys, "prefix", str(fake_prefix))
+
+    seen: dict = {}
+
+    def _run(command, **_kwargs):
+        seen["command"] = list(command)
+        Path(command[-1]).write_bytes(b"landlock-ok")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(rp.subprocess, "run", _run)
+    result = rp.check_codex_landlock_write_scope(
+        harness_dir=harness,
+        env={"SOLAR_PANE_RUNTIME": "codex"},
+        platform_name="linux",
+    )
+
+    assert result["ok"] is True
+    granted = [
+        seen["command"][i + 1]
+        for i, part in enumerate(seen["command"])
+        if part == "--read-only"
+    ]
+    assert str(fake_python.parent) in granted, granted
+
+
+def test_landlock_probe_does_not_duplicate_a_system_interpreter_grant(tmp_path, monkeypatch):
+    """An interpreter already under /usr needs no extra grant."""
+    harness = _landlock_harness(tmp_path)
+    monkeypatch.setattr(rp.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(rp.sys, "prefix", "/usr")
+    seen: dict = {}
+
+    def _run(command, **_kwargs):
+        seen["command"] = list(command)
+        Path(command[-1]).write_bytes(b"landlock-ok")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(rp.subprocess, "run", _run)
+    rp.check_codex_landlock_write_scope(
+        harness_dir=harness, env={"SOLAR_PANE_RUNTIME": "codex"}, platform_name="linux"
+    )
+
+    granted = [
+        seen["command"][i + 1]
+        for i, part in enumerate(seen["command"])
+        if part == "--read-only"
+    ]
+    assert granted.count("/usr") == 1, granted
+    assert "/usr/bin" not in granted
+
+
+def test_landlock_remediation_distinguishes_denied_exec_from_bad_filesystem(tmp_path, monkeypatch):
+    """The old text named one cause with total confidence, and was wrong.
+
+    It sent the reader to check filesystems while the real fault was a binary
+    outside the grant set, which cost three failed runs to notice.
+    """
+    harness = _landlock_harness(tmp_path)
+
+    def _run(command, **_kwargs):
+        return subprocess.CompletedProcess(command, 1, "", "PermissionError: Permission denied")
+
+    monkeypatch.setattr(rp.subprocess, "run", _run)
+    result = rp.check_codex_landlock_write_scope(
+        harness_dir=harness, env={"SOLAR_PANE_RUNTIME": "codex"}, platform_name="linux"
+    )
+
+    assert result["ok"] is False
+    # Both causes are offered, with the discriminator the reader can check.
+    assert "error_tail" in result["remediation"]
+    assert "outside the read-only grants" in result["remediation"]
+    assert "/mnt/c" in result["remediation"]

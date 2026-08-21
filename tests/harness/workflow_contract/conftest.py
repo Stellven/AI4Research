@@ -64,6 +64,7 @@ def shipped_contracts():
         "code.cli_smoke_anthropic",
         "pm.generic.v1",
         "research.autosci.v1",
+        "research.evidence_to_poc.v1",
         "research.deepdive.rsi_demo",
     }
     return indexed

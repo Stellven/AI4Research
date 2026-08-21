@@ -1,0 +1,59 @@
+capability_capsule_id: cap.research-external-idea-evaluation
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: AutoSci Idea Evaluation
+  description: Score and filter candidate ideas, recording rejections and their risks, via the AutoSci bridge.
+  logical_operator: ScientificIdeaEvaluator
+applicability:
+  task_types: [review]
+  positive_signals: [idea screening, novelty scoring, candidate rejection]
+  negative_signals: [experiment execution, idea authoring, repository patch]
+contract:
+  inputs:
+    required:
+      - {name: idea_candidate, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: idea_evaluation, type: json}
+      - {name: research_memory_update, type: json}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [review]}
+  postconditions:
+    - {check: output_present, field: idea_evaluation_json}
+  invariants:
+    - Rejected candidates retain an explicit risk rationale rather than being dropped silently.
+    - Memory updates are proposed, never applied, without an explicit write decision.
+    - Evidence carries provenance operator_id, implementation_package, and timestamp.
+composition:
+  consumes: [{type: artifact.idea_candidate}]
+  produces: [{type: artifact.idea_evaluation}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-external-idea-generation]
+effects:
+  read: [artifacts.idea_candidate, autosci.wiki]
+  write: [artifacts.idea_evaluation, artifacts.research_memory_update]
+  execute: []
+  network: [none]
+  cost: [bounded_local_cpu]
+  risk: [unjustified_rejection, silent_memory_mutation]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-exec-idea-evaluation-worker, autosci-idea-evaluate-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

@@ -60,6 +60,21 @@ if sys.path and sys.path[0] != str(_LIB_DIR):
     sys.path.insert(0, str(_LIB_DIR))
 
 import file_lock_compat as fcntl  # noqa: E402
+try:
+    from developer_observability import (  # noqa: E402
+        enabled as _observability_enabled,
+        observe as _observe,
+        stable_id as _observation_id,
+    )
+except Exception:  # Observability must never become a worker dependency.
+    def _observe(*_args: Any, **_kwargs: Any) -> bool:
+        return False
+
+    def _observation_id(kind: str, *parts: Any) -> str:
+        return f"{kind}-unavailable"
+
+    def _observability_enabled() -> bool:
+        return False
 
 from operator_persona import (  # noqa: E402  (import after path setup)
     EVALUATOR_PROTOCOL_FILENAME,
@@ -321,6 +336,18 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
         env["TASK_ID"] = str(envelope["task_id"])
     if str(envelope.get("sprint_id") or "").strip():
         env["SID"] = str(envelope["sprint_id"])
+    if _observability_enabled():
+        identity_environment = {
+            "DISPATCH_ID": envelope.get("dispatch_id"),
+            "ATTEMPT_ID": envelope.get("attempt_id"),
+            "CORRELATION_ID": envelope.get("correlation_id"),
+            "CAUSATION_ID": envelope.get("causation_id"),
+            "SOLAR_OBSERVABILITY_SPAN_ID": envelope.get("span_id"),
+            "SOLAR_OBSERVABILITY_PARENT_SPAN_ID": envelope.get("parent_span_id"),
+        }
+        for name, value in identity_environment.items():
+            if value not in {None, ""}:
+                env[name] = str(value)
 
     allowed_output_roots = [
         HARNESS_DIR.expanduser().resolve(strict=False),
@@ -778,11 +805,33 @@ def cmd_daemon(args: argparse.Namespace) -> int:
         try:
             os.killpg(pid, signal.SIGTERM)
             _info(f"Sent SIGTERM to worker process group pid={pid} ({reason})")
+            _observe(
+                "operator.teardown.term_sent",
+                component="operatord",
+                operator=operator_id,
+                operation="operator_teardown",
+                operation_id=_observation_id("operation", operator_id, pid, reason, "teardown"),
+                phase="point",
+                status="sent",
+                data={"pid": int(pid), "signal": "SIGTERM", "reason": reason, "target_kind": "process_group"},
+                provenance="observed",
+            )
             return True
         except Exception:
             try:
                 os.kill(pid, signal.SIGTERM)
                 _info(f"Sent SIGTERM to worker pid={pid} ({reason})")
+                _observe(
+                    "operator.teardown.term_sent",
+                    component="operatord",
+                    operator=operator_id,
+                    operation="operator_teardown",
+                    operation_id=_observation_id("operation", operator_id, pid, reason, "teardown"),
+                    phase="point",
+                    status="sent",
+                    data={"pid": int(pid), "signal": "SIGTERM", "reason": reason, "target_kind": "process"},
+                    provenance="observed",
+                )
                 return True
             except Exception as exc:
                 _info(f"Unable to terminate worker pid={pid} ({reason}): {exc}")
@@ -796,11 +845,33 @@ def cmd_daemon(args: argparse.Namespace) -> int:
         try:
             os.killpg(pid, signal.SIGKILL)
             _info(f"Sent SIGKILL to worker process group pid={pid} ({reason})")
+            _observe(
+                "operator.teardown.kill_sent",
+                component="operatord",
+                operator=operator_id,
+                operation="operator_teardown",
+                operation_id=_observation_id("operation", operator_id, pid, reason, "teardown"),
+                phase="point",
+                status="sent",
+                data={"pid": int(pid), "signal": "SIGKILL", "reason": reason, "target_kind": "process_group"},
+                provenance="observed",
+            )
             return True
         except Exception:
             try:
                 os.kill(pid, signal.SIGKILL)
                 _info(f"Sent SIGKILL to worker pid={pid} ({reason})")
+                _observe(
+                    "operator.teardown.kill_sent",
+                    component="operatord",
+                    operator=operator_id,
+                    operation="operator_teardown",
+                    operation_id=_observation_id("operation", operator_id, pid, reason, "teardown"),
+                    phase="point",
+                    status="sent",
+                    data={"pid": int(pid), "signal": "SIGKILL", "reason": reason, "target_kind": "process"},
+                    provenance="observed",
+                )
                 return True
             except Exception as exc:
                 _info(f"Unable to force kill worker pid={pid} ({reason}): {exc}")
@@ -933,6 +1004,24 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     leased_task_id = None
 
             task_id, envelope, envelope_path = tasks[0]
+            observation_ids = {
+                "sprint_id": str(envelope.get("sprint_id") or "") or None,
+                "node_id": str(envelope.get("node_id") or "") or None,
+                "task_id": task_id,
+                "dispatch_id": str(envelope.get("dispatch_id") or task_id),
+                "attempt_id": str(envelope.get("attempt_id") or "1"),
+                "correlation_id": str(envelope.get("correlation_id") or task_id),
+                "causation_id": str(envelope.get("causation_id") or envelope.get("dispatch_id") or task_id),
+            }
+            task_operation_id = _observation_id(
+                "operation",
+                observation_ids["dispatch_id"],
+                observation_ids["attempt_id"],
+                "operatord-task",
+            )
+            task_span_id = _observation_id("span", task_operation_id)
+            observation_ids["span_id"] = task_span_id
+            observation_ids["parent_span_id"] = str(envelope.get("span_id") or "") or None
 
             if lease is None or lease.get("task_id") != task_id:
                 recovered_lease = None
@@ -1024,6 +1113,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 continue
 
             _info(f"Claiming task {task_id}")
+            claim_started_ns = time.monotonic_ns()
             try:
                 update_operator_lease_state(operator_id, "running")
             except RuntimeError as exc:
@@ -1036,6 +1126,23 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     break
                 time.sleep(poll_interval)
                 continue
+
+            _observe(
+                "operator.task.claimed",
+                component="operatord",
+                operator=operator_id,
+                operation="operator_task",
+                operation_id=task_operation_id,
+                phase="started",
+                identifiers=observation_ids,
+                data={
+                    "lease_state": "running",
+                    "claim_duration_ms": (time.monotonic_ns() - claim_started_ns) / 1_000_000,
+                    "provider": model_route.get("effective_provider"),
+                    "model": model_route.get("effective_model"),
+                },
+                provenance="observed",
+            )
 
             _state["current_state"] = "running"
             write_heartbeat(
@@ -1053,12 +1160,24 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             result_status: str = "failed"
             exit_code: int = -1
             log_lines: list[str] = []
+            worker_operation_id = _observation_id("operation", task_operation_id, "worker")
+            worker_span_id = _observation_id("span", worker_operation_id)
+            worker_ids = dict(observation_ids)
+            worker_ids["span_id"] = worker_span_id
+            worker_ids["parent_span_id"] = task_span_id
+            worker_started = False
+            worker_terminal_emitted = False
 
             result_dir = OPERATOR_RESULTS_DIR / operator_id / task_id
             result_dir.mkdir(parents=True, exist_ok=True)
             log_path = result_dir / "output.log"
             exec_env = os.environ.copy()
-            exec_env.update(_materialize_envelope_context(result_dir, envelope))
+            child_envelope = dict(envelope)
+            if _observability_enabled():
+                child_envelope["span_id"] = worker_span_id
+                child_envelope["parent_span_id"] = task_span_id
+                child_envelope["causation_id"] = observation_ids["dispatch_id"]
+            exec_env.update(_materialize_envelope_context(result_dir, child_envelope))
             pm_result_path = _pm_result_path(envelope) if _is_pm_dispatch_task(envelope) else None
             if pm_result_path is not None:
                 try:
@@ -1087,6 +1206,9 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     env=exec_env,
                     start_new_session=os.name != "nt",
                 )
+                worker_started_ns = time.monotonic_ns()
+                first_output_observed = False
+                worker_started = True
                 _state["current_proc"] = proc
                 _state["current_task_id"] = task_id
                 _register_worker_process(proc.pid, envelope)
@@ -1102,6 +1224,21 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     worker_pid=int(proc.pid),
                     resolved_persona=resolved_persona,
                     model_route=model_route,
+                )
+                _observe(
+                    "operator.worker.started",
+                    component="operatord",
+                    operator=operator_id,
+                    operation="operator_worker",
+                    operation_id=worker_operation_id,
+                    phase="started",
+                    identifiers=worker_ids,
+                    data={
+                        "pid": int(proc.pid),
+                        "provider": model_route.get("effective_provider"),
+                        "model": model_route.get("effective_model"),
+                    },
+                    provenance="observed",
                 )
 
                 with open(log_path, "w", encoding="utf-8") as log_f:
@@ -1157,7 +1294,33 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                                 proc.wait(timeout=5)
                             except subprocess.TimeoutExpired:
                                 _kill_worker_force(int(proc.pid), reason="task_timeout_escalation")
-                                proc.wait(timeout=5)
+                                try:
+                                    proc.wait(timeout=5)
+                                finally:
+                                    survivor = _pid_exists(int(proc.pid))
+                                    _observe(
+                                        "operator.teardown.survivors_measured",
+                                        component="operatord",
+                                        operator=operator_id,
+                                        operation="operator_teardown",
+                                        operation_id=_observation_id("operation", operator_id, proc.pid, "task_timeout", "teardown"),
+                                        phase="point",
+                                        status="survivors" if survivor else "clear",
+                                        data={"survivor_count": int(survivor), "survivor_pids": [int(proc.pid)] if survivor else []},
+                                        provenance="observed",
+                                    )
+                            else:
+                                _observe(
+                                    "operator.teardown.survivors_measured",
+                                    component="operatord",
+                                    operator=operator_id,
+                                    operation="operator_teardown",
+                                    operation_id=_observation_id("operation", operator_id, proc.pid, "task_timeout", "teardown"),
+                                    phase="point",
+                                    status="clear",
+                                    data={"survivor_count": 0, "survivor_pids": []},
+                                    provenance="observed",
+                                )
                             break
 
                         if line_queue is not None:
@@ -1184,6 +1347,24 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                             if not line:
                                 saw_eof = True
                                 continue
+                            if not first_output_observed:
+                                first_output_observed = True
+                                _observe(
+                                    "operator.worker.first_output",
+                                    component="operatord",
+                                    operator=operator_id,
+                                    operation="operator_worker",
+                                    operation_id=worker_operation_id,
+                                    phase="progress",
+                                    identifiers=worker_ids,
+                                    data={
+                                        "elapsed_ms": (
+                                            time.monotonic_ns() - worker_started_ns
+                                        )
+                                        / 1_000_000,
+                                    },
+                                    provenance="observed",
+                                )
                             from operator_runtime import scrub_secrets  # noqa: E402
                             scrubbed = scrub_secrets(line)
                             log_f.write(scrubbed)
@@ -1205,12 +1386,55 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     result_status = "failed_timeout"
                 else:
                     result_status = "completed" if exit_code == 0 else "failed"
+                _observe(
+                    "operator.worker.exited",
+                    component="operatord",
+                    operator=operator_id,
+                    operation="operator_worker",
+                    operation_id=worker_operation_id,
+                    phase="completed",
+                    terminal=True,
+                    identifiers=worker_ids,
+                    data={
+                        "exit_code": exit_code,
+                        "status": result_status,
+                        "timed_out": timed_out,
+                        "active_duration_ms": (
+                            time.monotonic_ns() - worker_started_ns
+                        )
+                        / 1_000_000,
+                        "first_output_observed": first_output_observed,
+                    },
+                    provenance="observed",
+                )
+                worker_terminal_emitted = True
 
             except Exception as exc:
                 _info(f"Execution error: {exc}")
                 log_lines.append(f"[ERROR] {exc}")
                 result_status = "error"
             finally:
+                if worker_started and not worker_terminal_emitted:
+                    _observe(
+                        "operator.worker.exited",
+                        component="operatord",
+                        operator=operator_id,
+                        operation="operator_worker",
+                        operation_id=worker_operation_id,
+                        phase="completed",
+                        terminal=True,
+                        status="error",
+                        identifiers=worker_ids,
+                        data={
+                            "exit_code": exit_code,
+                            "status": "error",
+                            "timed_out": False,
+                            "active_duration_ms": (
+                                time.monotonic_ns() - worker_started_ns
+                            ) / 1_000_000,
+                        },
+                        provenance="observed",
+                    )
                 _state["current_proc"] = None
                 _state["current_task_id"] = None
 
@@ -1267,6 +1491,22 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                         pass
 
             if result_status == "completed" and pm_result_path is not None:
+                closeout_started_ns = time.monotonic_ns()
+                closeout_operation_id = _observation_id("operation", task_operation_id, "closeout")
+                closeout_ids = dict(observation_ids)
+                closeout_ids["span_id"] = _observation_id("span", closeout_operation_id)
+                closeout_ids["parent_span_id"] = task_span_id
+                _observe(
+                    "operator.closeout.started",
+                    component="operatord",
+                    operator=operator_id,
+                    operation="operator_closeout",
+                    operation_id=closeout_operation_id,
+                    phase="started",
+                    identifiers=closeout_ids,
+                    data={"hook": "pm_dispatch.complete"},
+                    provenance="observed",
+                )
                 try:
                     completed = subprocess.run(
                         _pm_dispatch_complete_command(task_id),
@@ -1291,6 +1531,25 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     log_lines.append(f"[WARN] pm_dispatch complete hook failed: {exc}")
                     result_status = "failed_contract_closeout"
                     exit_code = exit_code or 67
+                _observe(
+                    "operator.closeout.completed",
+                    component="operatord",
+                    operator=operator_id,
+                    operation="operator_closeout",
+                    operation_id=closeout_operation_id,
+                    phase="completed",
+                    terminal=True,
+                    identifiers=closeout_ids,
+                    data={
+                        "hook": "pm_dispatch.complete",
+                        "status": result_status,
+                        "duration_ms": (
+                            time.monotonic_ns() - closeout_started_ns
+                        )
+                        / 1_000_000,
+                    },
+                    provenance="observed",
+                )
 
             # ── Write result artifact ─────────────────────────────────────────────
             log_tail = "\n".join(log_lines[-50:])
@@ -1310,6 +1569,33 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     runtime_state = str((flow_control_decision or {}).get("runtime_state") or "").strip()
                     if runtime_state:
                         log_lines.append(f"[flow-control] runtime_state={runtime_state}")
+                    task_control = (flow_control_decision or {}).get("task_control")
+                    action = (
+                        str(task_control.get("action") or "defer")
+                        if isinstance(task_control, dict)
+                        else "operator_blocked_no_defer"
+                        if runtime_state in {"cooldown", "auth_expired"}
+                        else "no_retry"
+                    )
+                    flow_operation_id = _observation_id(
+                        "operation", observation_ids.get("dispatch_id"), observation_ids.get("attempt_id"), "flow-control"
+                    )
+                    _observe(
+                        "flow_control.decision",
+                        component="operatord",
+                        operator=operator_id,
+                        operation="flow_control",
+                        operation_id=flow_operation_id,
+                        phase="point",
+                        status=runtime_state or "unclassified",
+                        identifiers={
+                            **observation_ids,
+                            "span_id": _observation_id("span", flow_operation_id),
+                            "parent_span_id": worker_span_id,
+                        },
+                        data={"runtime_state": runtime_state or "unclassified", "decision": action},
+                        provenance="observed",
+                    )
                 log_tail = "\n".join(log_lines[-50:])
             result_path = write_result(
                 operator_id=operator_id,
@@ -1324,6 +1610,18 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 model_route=model_route,
             )
             _info(f"Result written: {result_path}")
+            _observe(
+                "operator.result.persisted",
+                component="operatord",
+                operator=operator_id,
+                identifiers=observation_ids,
+                data={
+                    "status": result_status,
+                    "exit_code": exit_code,
+                    "result_filename": Path(result_path).name,
+                },
+                provenance="observed",
+            )
 
             if pm_result_path is not None and result_status != "completed":
                 try:
@@ -1366,6 +1664,29 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 release_operator_lease(operator_id, reason=result_status)
             except Exception:
                 pass
+            else:
+                _observe(
+                    "operator.lease.released",
+                    component="operatord",
+                    operator=operator_id,
+                    identifiers=observation_ids,
+                    data={"reason": result_status},
+                    provenance="observed",
+                )
+
+            _observe(
+                "operator.task.completed",
+                component="operatord",
+                operator=operator_id,
+                operation="operator_task",
+                operation_id=task_operation_id,
+                phase="completed",
+                terminal=True,
+                status=result_status,
+                identifiers=observation_ids,
+                data={"exit_code": exit_code, "result_status": result_status},
+                provenance="observed",
+            )
 
             processed += 1
             _state["current_state"] = "idle"

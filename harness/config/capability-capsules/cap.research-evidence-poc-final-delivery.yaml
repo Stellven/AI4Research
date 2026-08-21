@@ -1,0 +1,70 @@
+capability_capsule_id: cap.research-evidence-poc-final-delivery
+capsule_kind: capability
+metadata:
+  name: Fixed Research Evidence PoC Final Delivery
+  description: Package accepted Part-A evidence and the controller-verified PoC into hash-bound JSON and Markdown delivery artifacts.
+applicability:
+  task_types: [report-writing]
+  positive_signals: [fixed evidence-to-poc delivery, verified benchmark package]
+  negative_signals: [repository patch]
+contract:
+  inputs:
+    required:
+      - {name: final_acceptance, type: json}
+      - {name: report_revision, type: json}
+      - {name: poc_handoff, type: json}
+      - {name: experiment_result, type: json}
+      - {name: claim_verification, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: final_delivery, type: json}
+      - {name: final_delivery_markdown, type: markdown}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [report-writing]}
+  postconditions:
+    - {check: output_present, field: final_delivery_json}
+    - {check: output_present, field: final_delivery_md}
+  invariants:
+    - Part-A final acceptance and the B6 claim-verification dependency must each carry consumable controller closeouts.
+    - The JSON manifest and Markdown artifact must bind exact retained input hashes and preserve the evidence-integrity limitation.
+    - Nonverified or incomplete PoC evidence can never produce a completed delivery.
+    - This capsule has no repository or GitHub resource authority.
+composition:
+  consumes:
+    - {type: artifact.final_acceptance}
+    - {type: artifact.report_revision}
+    - {type: artifact.poc_handoff}
+    - {type: artifact.experiment_result}
+    - {type: artifact.claim_verification}
+  produces:
+    - {type: artifact.final_delivery}
+    - {type: artifact.final_delivery_markdown}
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-evidence-poc-claim-verification]
+effects:
+  read: [artifacts.final_acceptance, artifacts.report_revision, artifacts.poc_handoff, artifacts.experiment_result, artifacts.claim_verification]
+  write: [artifacts.final_delivery, artifacts.final_delivery_markdown]
+  execute: []
+  network: [none]
+  cost: [bounded_local_packaging]
+  risk: [incomplete_delivery_lineage]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [autosci-research-poc-final-delivery-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

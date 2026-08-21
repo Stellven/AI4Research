@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import importlib.util
 import json
 import os
@@ -50,6 +51,21 @@ if sys.path and sys.path[0] != _PM_LIB_DIR:
 
 from codex_cli_runtime import resolve_codex_cli
 from task_lifecycle import activate_execution_attempt
+try:
+    from developer_observability import (
+        enabled as _observability_enabled,
+        observe as _observe,
+        stable_id as _observation_id,
+    )
+except Exception:  # Observability must never become a dispatch dependency.
+    def _observe(*_args: Any, **_kwargs: Any) -> bool:
+        return False
+
+    def _observation_id(kind: str, *parts: Any) -> str:
+        return f"{kind}-unavailable"
+
+    def _observability_enabled() -> bool:
+        return False
 
 HOME = Path.home()
 HARNESS_DIR = Path(
@@ -166,9 +182,60 @@ def _graph_path_for_sprint(sprint_id: str) -> str:
     return str(path) if path.exists() else ""
 
 
+def _execution_attempt_id(
+    task_graph_node: dict[str, Any] | None,
+    *,
+    role: str = "",
+    explicit_attempt_id: str = "",
+) -> str:
+    """Return the scalar identity of the attempt being submitted.
+
+    ``execution_attempt`` is a structured lifecycle record, not an identifier.
+    Converting that record with ``str()`` leaks an unstable Python repr into
+    every downstream telemetry event.  A builder submission happens before
+    lifecycle activation, so its identity is the *next* monotonic sequence.
+    Evaluator attempts are generation-fenced separately and should be supplied
+    explicitly by graph dispatch; direct evaluator submissions fall back to
+    the node's current repair generation.
+    """
+    explicit = str(explicit_attempt_id or "").strip()
+    if explicit:
+        return explicit
+
+    node = task_graph_node if isinstance(task_graph_node, dict) else {}
+    if normalize_role(role) == "evaluator":
+        generation = node.get("repair_attempts")
+        if isinstance(generation, (str, int)) and not isinstance(generation, bool):
+            normalized = str(generation).strip()
+            if normalized:
+                return normalized
+        return "0"
+
+    observed_sequences: list[int] = []
+    attempt = node.get("execution_attempt")
+    if isinstance(attempt, dict):
+        try:
+            observed_sequences.append(int(attempt.get("sequence") or 0))
+        except (TypeError, ValueError):
+            pass
+    history = node.get("execution_attempt_history")
+    if isinstance(history, list):
+        for item in history:
+            if not isinstance(item, dict):
+                continue
+            try:
+                observed_sequences.append(int(item.get("sequence") or 0))
+            except (TypeError, ValueError):
+                continue
+    return str(max(observed_sequences, default=0) + 1)
+
+
 def _build_pm_operator_envelope(
     *,
     task_id: str,
+    dispatch_id: str = "",
+    attempt_id: str = "",
+    correlation_id: str = "",
     sprint_id: str,
     node_id: str,
     operator_id: str,
@@ -226,6 +293,14 @@ def _build_pm_operator_envelope(
         "strict_filesystem_boundaries": bool(graph_policy.get("strict_filesystem_boundaries")),
         "expected_artifacts": list(expected_artifacts or []),
     }
+    if _observability_enabled():
+        envelope.update({
+            "dispatch_id": dispatch_id or task_id,
+            "attempt_id": attempt_id or "1",
+            "correlation_id": correlation_id or f"{sprint_id}:{node_id}",
+            "span_id": _observation_id("span", dispatch_id or task_id, attempt_id or "1", "pm"),
+            "parent_span_id": os.environ.get("SOLAR_OBSERVABILITY_SPAN_ID") or "",
+        })
     if not envelope["graph_path"]:
         envelope.pop("graph_path", None)
     if operator.get("borrowed_for_role"):
@@ -1356,6 +1431,7 @@ def select_operator_by_role(
     resolved_capsule: dict[str, Any] | None = None,
     logical_operator: str = "",
     allowed_providers: set[str] | frozenset[str] | None = None,
+    observation_identifiers: dict[str, Any] | None = None,
 ) -> tuple[str, dict[str, Any], str]:
     """选择最合适的可调度算子。
 
@@ -1378,6 +1454,38 @@ def select_operator_by_role(
         str(item).strip().lower() for item in allowed_providers if str(item).strip()
     )
 
+    candidate_observations: list[dict[str, Any]] = []
+
+    def record_selection(selected: str = "", failure: str = "", *, spillover: bool = False) -> None:
+        selection_ids = dict(observation_identifiers or {})
+        selection_operation_id = _observation_id(
+            "operation",
+            selection_ids.get("dispatch_id") or selection_ids.get("task_id") or "unbound",
+            selection_ids.get("attempt_id") or "1",
+            "operator-selection",
+        )
+        selection_ids.setdefault("span_id", _observation_id("span", selection_operation_id))
+        _observe(
+            "operator.selection.completed",
+            component="pm_dispatch",
+            operation="physical_operator_selection",
+            operation_id=selection_operation_id,
+            phase="completed",
+            terminal=True,
+            status="selected" if selected else "unavailable",
+            identifiers=selection_ids,
+            data={
+                "requested_role": norm_role,
+                "task_type": task_type,
+                "logical_operator": logical_operator,
+                "preferred_operator": prefer_operator or None,
+                "selected_operator_id": selected or None,
+                "failure_class": failure or None,
+                "spillover": spillover,
+                "candidates": candidate_observations,
+            },
+        )
+
     # 1. 指定 operator 优先
     if prefer_operator:
         if prefer_operator in operators:
@@ -1385,21 +1493,38 @@ def select_operator_by_role(
             op["operator_id"] = prefer_operator
             if not _operator_matches_provider_policy(op, provider_policy):
                 provider = str(op.get("provider") or op.get("vendor") or "unknown")
-                return "", {}, f"preferred_operator_provider_mismatch: {prefer_operator}: {provider}"
+                reason = f"preferred_operator_provider_mismatch: {prefer_operator}: {provider}"
+                candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": "provider_mismatch"})
+                record_selection(failure=reason)
+                return "", {}, reason
             if not _operator_matches_cost_policy(op):
-                return "", {}, (
+                reason = (
                     f"preferred_operator_cost_tier_exceeds_ceiling: {prefer_operator}: "
                     f"operator={op.get('cost_tier') or 'medium'} ceiling={_max_cost_tier() or 'unset'}"
                 )
+                candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": "cost_policy"})
+                record_selection(failure=reason)
+                return "", {}, reason
             task_reject_reason = _operator_reject_reason_for_task(op, norm_role, task_type)
             if task_reject_reason:
-                return "", {}, f"preferred_operator_rejected_for_task: {prefer_operator}: {task_reject_reason}"
+                reason = f"preferred_operator_rejected_for_task: {prefer_operator}: {task_reject_reason}"
+                candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": task_reject_reason})
+                record_selection(failure=reason)
+                return "", {}, reason
             ok, reason = is_dispatchable(op)
             if ok:
+                candidate_observations.append({"operator_id": prefer_operator, "eligible": True, "score": None, "reason": "preferred"})
+                record_selection(selected=prefer_operator)
                 return prefer_operator, op, ""
             else:
-                return "", {}, f"preferred_operator_unavailable: {prefer_operator}: {reason}"
-        return "", {}, f"preferred_operator_not_found: {prefer_operator}"
+                failure = f"preferred_operator_unavailable: {prefer_operator}: {reason}"
+                candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": reason})
+                record_selection(failure=failure)
+                return "", {}, failure
+        failure = f"preferred_operator_not_found: {prefer_operator}"
+        candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": "not_found"})
+        record_selection(failure=failure)
+        return "", {}, failure
 
     # 2. 按 role 过滤；builder 默认从显式 builder_pool 中挑可用算子。
     candidates: list[tuple[int, str, dict[str, Any]]] = []
@@ -1407,28 +1532,38 @@ def select_operator_by_role(
         op = dict(spec)
         op["operator_id"] = op_id
         if bool(op.get("deprecated")):
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": "deprecated"})
             continue
         if not _operator_matches_provider_policy(op, provider_policy):
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": "provider_policy"})
             continue
         if not _operator_matches_cost_policy(op):
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": "cost_policy"})
             continue
-        ok, _ = is_dispatchable(op)
+        ok, dispatch_reason = is_dispatchable(op)
         if not ok:
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": dispatch_reason or "not_dispatchable"})
             continue
         if op_id in forbidden_ops:
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": "capsule_forbidden"})
             continue
         op_roles = _operator_roles(op)
         if norm_role not in op_roles:
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": "role_mismatch"})
             continue
         if pool_mode and op_id not in pool_member_ids:
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": "not_in_builder_pool"})
             continue
         # Hard-reject: operators may declare task types they will not accept.
         # This prevents stub/print-once operators from receiving complex tasks
         # (e.g. runtime-hardening, implementation, refactor) that require a
         # long-running interactive session.
         if _task_type_rejected(op, task_type):
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": "task_type_rejected"})
             continue
-        if _operator_reject_reason_for_task(op, norm_role, task_type):
+        task_reason = _operator_reject_reason_for_task(op, norm_role, task_type)
+        if task_reason:
+            candidate_observations.append({"operator_id": op_id, "eligible": False, "reason": task_reason})
             continue
         # 评分：builder pool 用统一池优先级；旧模式保留 print_once > command > interactive_repl。
         priority = _operator_priority(
@@ -1444,6 +1579,13 @@ def select_operator_by_role(
             policy=policy,
         )
         candidates.append((priority, op_id, op))
+        candidate_observations.append({
+            "operator_id": op_id,
+            "eligible": True,
+            "score": priority,
+            "provider": str(op.get("provider") or op.get("vendor") or "") or None,
+            "model": str(op.get("model") or "") or None,
+        })
 
     if not candidates:
         # In explicit single-provider modes (Codex-only / Claude-only), role spillover is unsafe:
@@ -1457,8 +1599,12 @@ def select_operator_by_role(
         }
         if provider_policy and not provider_mode_spillover:
             if pool_mode:
-                return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
-            return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; provider_mode_role_spillover_disabled"
+                failure = f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
+                record_selection(failure=failure)
+                return "", {}, failure
+            failure = f"no_dispatchable_operator_for_role: {norm_role}; provider_mode_role_spillover_disabled"
+            record_selection(failure=failure)
+            return "", {}, failure
         spillover_spec = _role_spillover_spec(policy_mod, policy, norm_role)
         if spillover_spec and not prefer_operator:
             spillover_candidates, spillover_reason = _role_spillover_candidates(
@@ -1476,16 +1622,28 @@ def select_operator_by_role(
             )
             if spillover_candidates:
                 spillover_candidates.sort(key=lambda x: -x[0])
-                _, best_id, best_op = spillover_candidates[0]
+                _best_score, best_id, best_op = spillover_candidates[0]
+                candidate_observations.extend(
+                    {"operator_id": op_id, "eligible": True, "score": score, "spillover": True}
+                    for score, op_id, _op in spillover_candidates
+                )
+                record_selection(selected=best_id, spillover=True)
                 return best_id, best_op, ""
             if spillover_reason:
-                return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; {spillover_reason}"
+                failure = f"no_dispatchable_operator_for_role: {norm_role}; {spillover_reason}"
+                record_selection(failure=failure, spillover=True)
+                return "", {}, failure
         if pool_mode:
-            return "", {}, f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
-        return "", {}, f"no_dispatchable_operator_for_role: {norm_role}"
+            failure = f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
+            record_selection(failure=failure)
+            return "", {}, failure
+        failure = f"no_dispatchable_operator_for_role: {norm_role}"
+        record_selection(failure=failure)
+        return "", {}, failure
 
     candidates.sort(key=lambda x: -x[0])
     _, best_id, best_op = candidates[0]
+    record_selection(selected=best_id)
     return best_id, best_op, ""
 
 
@@ -2253,6 +2411,38 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
 
     sprint_id = str(args.sprint or _new_sprint_id())
     workspace_root = Path(args.workspace_root or os.getcwd())
+    compile_operation_id = _observation_id("operation", sprint_id, "pm-compile")
+    compile_span_id = _observation_id("span", compile_operation_id)
+    compile_started_ns = time.monotonic_ns()
+    compile_terminal_emitted = False
+
+    def finish_compile(status: str) -> None:
+        nonlocal compile_terminal_emitted
+        if compile_terminal_emitted:
+            return
+        compile_terminal_emitted = True
+        _observe(
+            "pm.compile.completed",
+            component="pm_dispatch",
+            operation="pm_compile",
+            operation_id=compile_operation_id,
+            phase="completed",
+            terminal=True,
+            status=status,
+            identifiers={"sprint_id": sprint_id, "span_id": compile_span_id},
+            data={"duration_ms": (time.monotonic_ns() - compile_started_ns) / 1_000_000},
+            provenance="observed",
+        )
+
+    _observe(
+        "pm.compile.started",
+        component="pm_dispatch",
+        operation="pm_compile",
+        operation_id=compile_operation_id,
+        phase="started",
+        identifiers={"sprint_id": sprint_id, "span_id": compile_span_id},
+        provenance="observed",
+    )
 
     router_path = Path(__file__).resolve().parent / "codex_pm_router.py"
     spec = importlib.util.spec_from_file_location("codex_pm_router", router_path)
@@ -2272,6 +2462,7 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
             target_system=str(getattr(args, "target_system", "solar-harness") or "solar-harness"),
         )
     except router.RequestTooLargeError as exc:
+        finish_compile("request_too_long")
         print(
             json.dumps(
                 {
@@ -2285,28 +2476,41 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
             )
         )
         return 2
+    except Exception:
+        finish_compile("exception")
+        raise
     validation = router.validate_compiled_package(payload)
     if not validation.get("ok", False):
+        finish_compile("validation_failed")
         print("ERROR: compiled requirement package failed validation", file=sys.stderr)
         for item in validation.get("errors", []) or []:
             print(f" - {item}", file=sys.stderr)
         return 2
-    emitted = router.emit_requirement_package(
-        payload,
-        workspace_root=workspace_root,
-        sprint_root=SPRINTS_DIR,
-        sprint_id=sprint_id,
-    )
-    status_path = ensure_compiled_sprint_status(
-        sprint_id,
-        title=payload["compiled_artifacts"]["product_brief"]["title"],
-        summary=payload["compiled_artifacts"]["product_brief"]["problem"][:180],
-        status_value="drafting",
-        phase="prd_ready",
-        handoff_to="planner",
-        target_role="planner",
-    )
+    try:
+        emitted = router.emit_requirement_package(
+            payload,
+            workspace_root=workspace_root,
+            sprint_root=SPRINTS_DIR,
+            sprint_id=sprint_id,
+        )
+    except Exception:
+        finish_compile("exception")
+        raise
+    try:
+        status_path = ensure_compiled_sprint_status(
+            sprint_id,
+            title=payload["compiled_artifacts"]["product_brief"]["title"],
+            summary=payload["compiled_artifacts"]["product_brief"]["problem"][:180],
+            status_value="drafting",
+            phase="prd_ready",
+            handoff_to="planner",
+            target_role="planner",
+        )
+    except Exception:
+        finish_compile("exception")
+        raise
     emitted["status"] = str(status_path)
+    finish_compile("completed")
 
     if bool(getattr(args, "dispatch_planner", False)):
         submit_args = argparse.Namespace(
@@ -2463,6 +2667,17 @@ def cmd_submit(args: argparse.Namespace) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     task_id = f"pm-{sprint_id}-{node_id}-{_short_id()}"
+    dispatch_id = f"dispatch-{task_id}"
+    attempt_id = _execution_attempt_id(
+        task_graph_node,
+        role=role,
+        explicit_attempt_id=str(getattr(args, "attempt_id", "") or ""),
+    )
+    correlation_id = f"{sprint_id}:{node_id}"
+    admission_operation_id = _observation_id(
+        "operation", dispatch_id, attempt_id, "operator-admission"
+    )
+    admission_span_id = _observation_id("span", admission_operation_id)
     result_path = str(
         _pm_result_path_for_role(
             sprint_id,
@@ -2481,6 +2696,14 @@ def cmd_submit(args: argparse.Namespace) -> int:
         prefer_operator=prefer_operator,
         resolved_capsule=resolved_capsule,
         logical_operator=logical_operator,
+        observation_identifiers={
+            "sprint_id": sprint_id,
+            "node_id": node_id,
+            "task_id": task_id,
+            "dispatch_id": dispatch_id,
+            "attempt_id": attempt_id,
+            "correlation_id": correlation_id,
+        },
     )
     if not operator_id:
         failure_record: dict[str, Any] = {
@@ -2557,6 +2780,9 @@ def cmd_submit(args: argparse.Namespace) -> int:
     # 5. 构建 task envelope → operator_runtime.submit
     envelope = _build_pm_operator_envelope(
         task_id=task_id,
+        dispatch_id=dispatch_id,
+        attempt_id=attempt_id,
+        correlation_id=correlation_id,
         sprint_id=sprint_id,
         node_id=node_id,
         operator_id=operator_id,
@@ -2628,6 +2854,29 @@ def cmd_submit(args: argparse.Namespace) -> int:
         record["inbox_path"] = str(inbox_path)
         record["submit_error"] = str(exc)
         submit_mode = "direct_inbox"
+        _observe(
+            "flow_control.fallback_decision",
+            component="pm_dispatch",
+            operation="operator_admission",
+            operation_id=admission_operation_id,
+            phase="point",
+            status="fallback",
+            identifiers={
+                "sprint_id": sprint_id,
+                "node_id": node_id,
+                "task_id": task_id,
+                "dispatch_id": dispatch_id,
+                "attempt_id": attempt_id,
+                "correlation_id": correlation_id,
+                "span_id": admission_span_id,
+            },
+            data={
+                "decision": "direct_inbox",
+                "fallback_reason": "operator_runtime_import_failed",
+                "failure_class": type(exc).__name__,
+            },
+            provenance="observed",
+        )
     else:
         try:
             result = submit(envelope)
@@ -2637,6 +2886,17 @@ def cmd_submit(args: argparse.Namespace) -> int:
             record["failure_reason"] = f"operator_runtime.submit failed: {exc}"
             record["submit_error"] = str(exc)
             write_pm_task_record(task_id, record)
+            _observe(
+                "operator.admission.failed",
+                component="pm_dispatch",
+                operation="operator_admission",
+                operation_id=admission_operation_id,
+                phase="completed",
+                terminal=True,
+                status="failed_submit_exception",
+                identifiers={"sprint_id": sprint_id, "node_id": node_id, "task_id": task_id, "dispatch_id": dispatch_id, "attempt_id": attempt_id, "correlation_id": correlation_id, "span_id": admission_span_id},
+                data={"operator_id": operator_id, "failure_class": type(exc).__name__},
+            )
             print(f"ERROR: operator_runtime.submit failed: {exc}", file=sys.stderr)
             return 1
         record["status"] = "submitted"
@@ -2648,6 +2908,27 @@ def cmd_submit(args: argparse.Namespace) -> int:
 
     # 6. 写 PM inbox 记录
     write_pm_task_record(task_id, record)
+    _observe(
+        "operator.enqueued",
+        component="pm_dispatch",
+        operation="operator_admission",
+        operation_id=admission_operation_id,
+        phase="completed",
+        terminal=True,
+        status=record["status"],
+        identifiers={"sprint_id": sprint_id, "node_id": node_id, "task_id": task_id, "dispatch_id": dispatch_id, "attempt_id": attempt_id, "correlation_id": correlation_id, "span_id": admission_span_id},
+        data={
+            "operator_id": operator_id,
+            "provider": str(operator.get("provider") or operator.get("vendor") or "") or None,
+            "model": str(operator.get("model") or "") or None,
+            "requested_role": normalize_role(role),
+            "task_type": task_type,
+            "submit_mode": submit_mode,
+            "dispatch_bytes": len(dispatch_text.encode("utf-8")),
+            "dispatch_sha256": hashlib.sha256(dispatch_text.encode("utf-8")).hexdigest(),
+            "lease_id": record.get("lease_id") or None,
+        },
+    )
 
     # 7. 输出
     print("OK: PM task submitted")
@@ -3541,6 +3822,11 @@ def main() -> int:
     s.add_argument("--operator", default="", help="指定物理算子 ID（可选）")
     s.add_argument("--sprint", default="", help="关联 sprint ID（可选，默认 pm-adhoc-xxx）")
     s.add_argument("--node", default="N1", help="关联 DAG 节点 ID（默认 N1）")
+    s.add_argument(
+        "--attempt-id",
+        default="",
+        help="显式提交尝试/评审代次标识；graph dispatcher 用于保留 evaluator generation",
+    )
     s.add_argument("--task-type", default="", help="任务类型提示（用于算子评分）")
     s.add_argument(
         "--closeout-kind",

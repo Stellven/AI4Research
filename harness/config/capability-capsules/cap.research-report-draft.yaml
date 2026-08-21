@@ -1,0 +1,58 @@
+capability_capsule_id: cap.research-report-draft
+version: 0.1.0
+capsule_kind: capability
+metadata:
+  name: Fixed Research Report Draft
+  description: Compose a source-linked research report draft from accepted synthesis claims.
+applicability:
+  task_types: [report-writing]
+  positive_signals: [report draft, source-linked writing, methods and conclusions]
+  negative_signals: [network retrieval, repository patch, independent review]
+contract:
+  inputs:
+    required:
+      - {name: evidence_synthesis, type: json}
+    optional: []
+  outputs:
+    required:
+      - {name: report_draft, type: json}
+      - {name: report, type: markdown}
+    optional: []
+  preconditions:
+    - {check: task_type_in, values: [report-writing]}
+  postconditions:
+    - {check: output_present, field: report_draft_json}
+  invariants:
+    - Every reported conclusion traces to a synthesized claim and its evidence IDs.
+    - Recorded limitations from synthesis are carried into the draft and never silently dropped.
+    - The draft introduces no source text that is not present in accepted evidence.
+composition:
+  consumes: [{type: artifact.evidence_synthesis}]
+  produces: [{type: artifact.report_draft}]
+  compatible_with: [guard.secret-leak-guard]
+  incompatible_with: [resource.repo-workspace, resource.github-readonly]
+  requires_after: [cap.research-evidence-synthesis]
+effects:
+  read: [artifacts.evidence_synthesis]
+  write: [artifacts.report_draft]
+  execute: []
+  network: [api.openai.com]
+  cost: [codex_subscription_quota]
+  risk: [unsupported_conclusion, limitation_loss]
+bindings:
+  skills: {required: [], optional: []}
+  mcp_capabilities: {}
+  data_refs: []
+  secret_refs: []
+  required_guard_capsules: [guard.secret-leak-guard]
+  required_resource_capsules: []
+verification:
+  self_check: []
+  external_verifier: {required: false, preferred_capsules: []}
+  pass_conditions: []
+operator_compatibility:
+  preferred: [codex-research-report-draft-worker]
+  forbidden: []
+provenance:
+  owner: opensolar
+  created_at: "2026-08-18T00:00:00Z"

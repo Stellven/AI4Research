@@ -240,7 +240,20 @@ def execute_gate(
         # the builder's anchor; fixed contracts keep HARNESS_DIR (their
         # commands address sprints/<sid>/... forms — the P2/P3 convention).
         gate_cwd = harness
-        if _sprint_is_certified_generic(sprints, sid):
+        certified_generic = _sprint_is_certified_generic(sprints, sid)
+        if not certified_generic and argv is not None:
+            # Fixed contracts store deterministic command paths in the stable
+            # graph vocabulary (sprints/<sid>/...). Resolve that vocabulary
+            # against the scheduler's actual sprint root, which may live
+            # outside HARNESS_DIR in tests or an installed deployment.
+            prefix = f"sprints/{sid}/"
+            rewritten = list(argv)
+            for index, token in enumerate(rewritten):
+                normalized = str(token).replace("\\", "/")
+                if normalized.startswith(prefix):
+                    rewritten[index] = str(sprints / sid / normalized[len(prefix):])
+            argv = rewritten
+        if certified_generic:
             # G4-lite run 2: builder output may sit under the stray
             # sprints/<sid>.workdir spelling — relocate BEFORE cwd selection
             # so the gate judges the real work.

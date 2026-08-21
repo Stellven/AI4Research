@@ -88,6 +88,48 @@ def _dedupe_repeated_heading_sections(body: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", compact).strip()
 
 
+_LIMITATIONS_HEADING_RE = re.compile(
+    r"(?im)^(#{2,6})\s*[^\r\n]*(?:limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3)[^\r\n]*$"
+)
+
+
+def _merge_limitations_section(body: str, limitations: list[str], heading: str) -> str:
+    """Put every recorded limitation into ONE limitations section.
+
+    Appending a second "## Limitations" is what produced the duplicate heading a
+    reviewer flags as a critical finding, and because this ran on every revision
+    attempt the operator recreated the duplicate each time -- so no revision
+    could ever clear it. When the body already has a limitations section the
+    missing entries are inserted into it; only otherwise is a section created.
+    """
+    wanted = list(dict.fromkeys(item for item in limitations if item))
+    if not wanted:
+        return body
+    normalized_body = " ".join(body.split()).casefold()
+    missing = [item for item in wanted if " ".join(item.split()).casefold() not in normalized_body]
+
+    match = _LIMITATIONS_HEADING_RE.search(body)
+    if match is None:
+        if not missing:
+            return body
+        return body + f"\n\n## {heading}\n\n" + "\n".join(f"- {item}" for item in missing)
+    if not missing:
+        return body
+
+    # Insert at the end of the existing section, before the next heading of the
+    # same or higher level, so the entries land under the right heading rather
+    # than at the end of the document.
+    level = len(match.group(1))
+    section_end = len(body)
+    for following in re.finditer(r"(?m)^(#{1,6})\s+", body[match.end():]):
+        if len(following.group(1)) <= level:
+            section_end = match.end() + following.start()
+            break
+    head, tail = body[:section_end].rstrip(), body[section_end:]
+    addition = "\n".join(f"- {item}" for item in missing)
+    return f"{head}\n{addition}\n{tail}" if tail else f"{head}\n{addition}"
+
+
 def _body_has_substantive_section(raw_body: str, title: str, section_body: str) -> bool:
     normalized_body = " ".join(raw_body.split()).casefold()
     normalized_section = " ".join(section_body.split()).casefold()
@@ -124,7 +166,15 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
             raise ResearchOperatorError("Every major report conclusion must include evidence_ids", error_type="unsupported_report_claim")
         invalid = sorted(set(evidence_ids) - claim_ids)
         if invalid:
-            raise ResearchOperatorError(f"Report conclusion references unknown synthesis evidence: {', '.join(invalid)}", error_type="unsupported_report_claim")
+            # Name what was expected. The usual cause is a SOURCE id cited where
+            # a CLAIM id belongs, because grounded_claims carry their own
+            # `evidence_ids` of source ids under the same field name.
+            raise ResearchOperatorError(
+                "Report conclusion references unknown synthesis evidence: "
+                f"{', '.join(invalid)}. Conclusions must cite claim_id values from "
+                f"evidence_synthesis, one of: {', '.join(sorted(claim_ids)) or '<none>'}",
+                error_type="unsupported_report_claim",
+            )
         normalized_conclusions.append({
             "conclusion_id": str(item.get("conclusion_id") or f"conclusion-{index + 1:03d}"),
             "text": str(item.get("text") or ""),
@@ -189,7 +239,7 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
     limitations = [str(item).strip() for item in response.get("limitations") or [] if str(item).strip()]
     if limitations:
         limitation_heading = "局限" if cjk_report else "Limitations"
-        body += f"\n\n## {limitation_heading}\n\n" + "\n".join(f"- {item}" for item in limitations)
+        body = _merge_limitations_section(body, limitations, limitation_heading)
     return {
         "title": title,
         "body": body,
@@ -222,6 +272,11 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
     )
     if not isinstance(response, dict):
         raise ResearchOperatorError("model_generate service must return a JSON object", error_type="provider_contract")
+    response = dict(response)
+    response["limitations"] = list(dict.fromkeys([
+        *[str(item) for item in synthesis.get("limitations", []) if str(item).strip()],
+        *[str(item) for item in response.get("limitations", []) if str(item).strip()],
+    ]))
     claim_ids = {str(item.get("claim_id")) for item in claims if item.get("claim_id")}
     report = _normalize_report(response, claim_ids)
     usage = provider_usage_from(response, usage_kind="llm")
