@@ -777,6 +777,35 @@ def test_report_normalizer_inserts_generated_sections_before_references() -> Non
     assert body.rstrip().endswith("- source-1: https://example.test/one")
 
 
+def test_report_normalizer_merges_traceable_bullets_into_numbered_conclusions() -> None:
+    report = _normalize_report(
+        {
+            "report": {
+                "title": "中文报告",
+                "body": (
+                    "# 中文报告\n\n"
+                    "## 方法\n\n仅使用已验证证据。\n\n"
+                    "## 七、结论\n\n总体判断保持谨慎。\n\n"
+                    "## 参考资料\n\n- source-1: https://example.test/one"
+                ),
+                "conclusions": [
+                    {
+                        "conclusion_id": "conclusion-1",
+                        "text": "证据支持一项有边界的技术趋势判断。",
+                        "evidence_ids": ["claim-1"],
+                    }
+                ],
+            }
+        },
+        {"claim-1"},
+    )
+
+    body = report["body"]
+    assert body.count("结论") == 1
+    assert "证据支持一项有边界的技术趋势判断。 证据: claim-1." in body
+    assert body.index("证据支持一项有边界的技术趋势判断") < body.index("## 参考资料")
+
+
 def test_topic_discovery_query_distills_research_subject_from_instruction() -> None:
     query = _topic_from_snapshot(
         {

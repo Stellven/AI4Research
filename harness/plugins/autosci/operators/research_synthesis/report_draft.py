@@ -103,6 +103,9 @@ _LIMITATIONS_HEADING_RE = re.compile(
 _SOURCES_HEADING_RE = re.compile(
     r"(?im)^#{2,6}\s*[^\r\n]*(?:sources?\b|references?\b|\u53c2\u8003\u8d44\u6599|\u8d44\u6599\u6765\u6e90|\u53c2\u8003\u6765\u6e90)[^\r\n]*$"
 )
+_CONCLUSIONS_HEADING_RE = re.compile(
+    r"(?im)^(#{2,6})\s*[^\r\n]*(?:conclusions?\b|\u7ed3\u8bba|\u603b\u7ed3)[^\r\n]*$"
+)
 
 
 def _insert_before_sources(body: str, addition: str) -> str:
@@ -114,6 +117,29 @@ def _insert_before_sources(body: str, addition: str) -> str:
     head = body[:sources.start()].rstrip()
     tail = body[sources.start():].lstrip()
     return f"{head}\n\n{addition.strip()}\n\n{tail}"
+
+
+def _merge_conclusions_section(
+    body: str,
+    conclusions: list[dict[str, Any]],
+    heading: str,
+    evidence_label: str,
+) -> str:
+    bullets = "\n".join(
+        f"- {item['text']} {evidence_label}: {', '.join(item['evidence_ids'])}."
+        for item in conclusions
+    )
+    match = _CONCLUSIONS_HEADING_RE.search(body)
+    if match is None:
+        return _insert_before_sources(body, f"## {heading}\n\n{bullets}")
+    level = len(match.group(1))
+    section_end = len(body)
+    for following in re.finditer(r"(?m)^(#{1,6})\s+", body[match.end():]):
+        if len(following.group(1)) <= level:
+            section_end = match.end() + following.start()
+            break
+    head, tail = body[:section_end].rstrip(), body[section_end:]
+    return f"{head}\n\n{bullets}\n\n{tail.lstrip()}" if tail else f"{head}\n\n{bullets}"
 
 
 def _merge_limitations_section(body: str, limitations: list[str], heading: str) -> str:
@@ -253,11 +279,12 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
     if missing_conclusions:
         conclusion_heading = "结论" if cjk_report else "Conclusions"
         evidence_label = "证据" if cjk_report else "Evidence"
-        conclusion_section = f"## {conclusion_heading}\n\n" + "\n".join(
-            f"- {item['text']} {evidence_label}: {', '.join(item['evidence_ids'])}."
-            for item in missing_conclusions
+        body = _merge_conclusions_section(
+            body,
+            missing_conclusions,
+            conclusion_heading,
+            evidence_label,
         )
-        body = _insert_before_sources(body, conclusion_section)
     if not re.search(r"(?im)^##\s+[^\r\n]*(?:methods?\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba)[^\r\n]*$", body):
         method_heading = "æ–¹æ³•" if cjk_report else "Evidence Method"
         method_body = (

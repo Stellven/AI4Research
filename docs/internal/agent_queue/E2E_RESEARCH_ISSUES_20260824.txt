@@ -550,3 +550,21 @@ use it for generated Conclusions, Evidence Method, and new Limitations blocks;
 retain end-appending only for bodies without references.
 Verification so far: the new generated-section ordering regression and all
 production research service tests passed (31 passed in 2.01s).
+
+PRODUCT-018 - Traceable conclusions create a second Conclusions heading
+Status: FIXED (pending commit and live E2E verification)
+Observed in: qq-tech-trends-e2e-20260824-r12 acceptance review
+Evidence: final Markdown contained both `## 七、结论` from the provider body and
+an auto-generated `## 结论` containing the evidence-linked structured
+conclusions. References correctly remained last, but the conclusion section was
+duplicated.
+Root cause: `_normalize_report` checks whether each structured conclusion text
+appears verbatim. When it does not, it always creates a new Conclusions section,
+even if the body already has a semantically identical numbered Conclusions
+heading. The heading deduper runs earlier, before this generated section exists.
+Impact: the report preserves traceability but presents two conclusion sections.
+Fix: merge missing evidence-linked conclusion bullets into the existing
+Conclusions/结论/总结 section before its next peer heading; create a new section
+only when none exists.
+Verification so far: the numbered-Chinese-conclusion regression and all
+production research service tests passed (32 passed in 2.02s).
