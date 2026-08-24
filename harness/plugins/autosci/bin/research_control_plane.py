@@ -180,7 +180,7 @@ def prepare_runtime_inputs(
     artifact_root = Path(artifact_root).resolve()
     evidence_refs: list[dict[str, Any]] = []
     if classification.input_kind == "resume":
-        return ([{"seed_id": "resume-state", "seed_kind": "external_evidence", "value": f"resume:{run_id}"}], [])
+        return ([], [])
     if classification.input_kind == "website":
         values = sources or (_URL_RE.findall(prompt)[:1])
         return ([{"seed_id": f"website-{idx}", "seed_kind": "url", "value": value} for idx, value in enumerate(values, 1)], [])

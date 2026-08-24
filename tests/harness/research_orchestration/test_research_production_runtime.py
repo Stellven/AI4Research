@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 ROOT = (Path(__file__).resolve().parents[3] / 'harness')
 sys.path.insert(0, str(ROOT / "lib"))
@@ -14,6 +16,7 @@ from research_orchestration.evaluator import evaluate_production_result  # noqa:
 from research_orchestration.resolver import PhysicalOperatorBinding, PhysicalOperatorResolver  # noqa: E402
 from research_orchestration.runtime import (  # noqa: E402
     FileWorkflowCatalog,
+    ResearchRuntimeError,
     SolarResearchRuntime,
     _git_checkout_provenance,
     default_production_resolver,
@@ -141,12 +144,32 @@ def test_runtime_resume_reuses_completed_state_without_redispatch(tmp_path: Path
     prompt = "Survey durable workflow recovery"
 
     first = runtime.run(prompt=prompt, run_id="resume-run")
+    contract_path = Path(first["task_contract_path"])
+    contract_before = contract_path.read_bytes()
     resumed = runtime.run(prompt=prompt, run_id="resume-run", run_mode="resume")
 
     assert first["final_status"] == "completed"
     assert resumed["final_status"] == "completed"
     assert resumed["run_mode"] == "resume"
+    assert resumed["route"]["workflow_kind"] == first["route"]["workflow_kind"]
+    assert contract_path.read_bytes() == contract_before
     assert calls["count"] == 1
+
+
+def test_runtime_resume_rejects_prompt_different_from_persisted_contract(tmp_path: Path) -> None:
+    runtime = SolarResearchRuntime(
+        artifact_root=tmp_path,
+        workflow_loader=_workflow_loader(tmp_path),
+        operator_resolver=_resolver(tmp_path),
+    )
+    runtime.run(prompt="Survey durable workflow recovery", run_id="resume-prompt-boundary")
+
+    with pytest.raises(ResearchRuntimeError, match="prompt does not match"):
+        runtime.run(
+            prompt="Ignore the original task and research something else",
+            run_id="resume-prompt-boundary",
+            run_mode="resume",
+        )
 
 
 def test_runtime_import_evidence_enters_evidence_import_stage(tmp_path: Path) -> None:

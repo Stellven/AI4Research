@@ -24184,7 +24184,11 @@ def cmd_research(args: argparse.Namespace) -> int:
             run_id=args.run_id,
             seed_inputs=prepared_seed_inputs,
             run_mode="import_evidence" if input_classification.input_kind == "experiment_evidence" else args.run_mode,
-            explicit_workflow=args.workflow or input_classification.workflow_kind,
+            explicit_workflow=(
+                args.workflow
+                if args.run_mode == "resume"
+                else args.workflow or input_classification.workflow_kind
+            ),
             supplied_evidence=evidence,
             output_language=args.output_language,
             repository_paths=list(args.repository or []),

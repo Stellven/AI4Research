@@ -154,6 +154,48 @@ def test_import_evidence_source_pack_uses_import_argument(tmp_path: Path) -> Non
     assert "prior evidence" in manifest.read_text(encoding="utf-8")
 
 
+def test_research_cli_resume_reuses_persisted_task_and_route(tmp_path: Path) -> None:
+    prompt = "Analyze https://example.org/resume-route and write a report."
+    artifact_root = tmp_path / "artifacts"
+    first = run_bridge(
+        tmp_path,
+        "research",
+        "--prompt",
+        prompt,
+        "--run-id",
+        "resume-route",
+        "--artifact-root",
+        str(artifact_root),
+        "--max-steps",
+        "1",
+    )
+    first_data = payload(first)
+    contract_path = Path(first_data["task_contract_path"])
+    contract_before = contract_path.read_bytes()
+
+    resumed = run_bridge(
+        tmp_path,
+        "research",
+        "--prompt",
+        prompt,
+        "--run-id",
+        "resume-route",
+        "--artifact-root",
+        str(artifact_root),
+        "--run-mode",
+        "resume",
+        "--max-steps",
+        "1",
+    )
+
+    resumed_data = payload(resumed)
+    assert resumed.returncode == 0, resumed.stdout + resumed.stderr
+    assert resumed_data["final_status"] == "awaiting_external"
+    assert resumed_data["route"]["workflow_kind"] == "research_synthesis"
+    assert resumed_data["route"]["seed_kind"] == "url"
+    assert contract_path.read_bytes() == contract_before
+
+
 def test_research_cli_exposes_distinct_initial_nodes_for_supported_inputs(tmp_path: Path) -> None:
     pdf = write_pdf(tmp_path / "paper.pdf")
     pack = tmp_path / "pack"

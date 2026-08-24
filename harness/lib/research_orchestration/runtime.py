@@ -119,39 +119,68 @@ class SolarResearchRuntime:
         repository_paths: list[str] | None = None,
         max_steps: int = 100,
     ) -> dict[str, Any]:
-        normalized_seeds = _complete_seed_inputs(
-            prompt,
-            seed_inputs,
-            artifact_root=self.artifact_root,
-            run_id=run_id,
-        )
-        evidence = deepcopy(supplied_evidence or [])
-        if run_mode == "resume" and not evidence:
-            evidence = [self._state_provenance_ref(run_id)]
-        if run_mode == "import_evidence":
-            if not evidence:
-                raise ResearchRuntimeError("import_evidence requires at least one evidence artifact")
-            first = deepcopy(evidence[0])
-            normalized_seeds = [
-                {
-                    "seed_id": "imported-evidence-1",
-                    "seed_kind": "external_evidence",
-                    "value": str(first.get("path") or "imported evidence"),
-                    "artifact_ref": first,
-                },
-                *normalized_seeds,
-            ]
-        repositories = _complete_repository_inputs(
-            repository_paths or [],
-            artifact_root=self.artifact_root,
-            run_id=run_id,
-        )
-        decision = select_production_route(
-            prompt,
-            seed_inputs=normalized_seeds,
-            explicit_workflow=explicit_workflow,
-            run_mode=run_mode,
-        )
+        contract_path = self.artifact_root / "contracts" / f"{_safe_component(run_id)}.research_task_contract.json"
+        persisted_contract: dict[str, Any] | None = None
+        if run_mode == "resume":
+            persisted_contract = _load_task_contract(contract_path, run_id=run_id)
+            persisted_prompt = str(persisted_contract.get("user_intent") or "")
+            if prompt != persisted_prompt:
+                raise ResearchRuntimeError("resume prompt does not match the persisted task contract")
+            persisted_workflow = str(persisted_contract.get("workflow_kind") or "")
+            if explicit_workflow and explicit_workflow != persisted_workflow:
+                raise ResearchRuntimeError("resume workflow does not match the persisted task contract")
+            normalized_seeds = deepcopy(persisted_contract.get("seed_inputs") or [])
+            evidence = deepcopy(persisted_contract.get("supplied_evidence") or [])
+            repositories = deepcopy(
+                (persisted_contract.get("constraints") or {}).get("repository_inputs") or []
+            )
+            persisted_decision = select_production_route(
+                persisted_prompt,
+                seed_inputs=normalized_seeds,
+                explicit_workflow=persisted_workflow,
+                run_mode=str(persisted_contract.get("run_mode") or "execute"),
+            )
+            decision = ResearchRouteDecision(
+                seed_kind=persisted_decision.seed_kind,
+                workflow_kind=persisted_decision.workflow_kind,
+                run_mode="resume",
+                start_stage=persisted_decision.start_stage,
+                reason_codes=(*persisted_decision.reason_codes, "persisted_task_contract"),
+                confidence=persisted_decision.confidence,
+                requires_user_confirmation=False,
+            )
+        else:
+            normalized_seeds = _complete_seed_inputs(
+                prompt,
+                seed_inputs,
+                artifact_root=self.artifact_root,
+                run_id=run_id,
+            )
+            evidence = deepcopy(supplied_evidence or [])
+            if run_mode == "import_evidence":
+                if not evidence:
+                    raise ResearchRuntimeError("import_evidence requires at least one evidence artifact")
+                first = deepcopy(evidence[0])
+                normalized_seeds = [
+                    {
+                        "seed_id": "imported-evidence-1",
+                        "seed_kind": "external_evidence",
+                        "value": str(first.get("path") or "imported evidence"),
+                        "artifact_ref": first,
+                    },
+                    *normalized_seeds,
+                ]
+            repositories = _complete_repository_inputs(
+                repository_paths or [],
+                artifact_root=self.artifact_root,
+                run_id=run_id,
+            )
+            decision = select_production_route(
+                prompt,
+                seed_inputs=normalized_seeds,
+                explicit_workflow=explicit_workflow,
+                run_mode=run_mode,
+            )
         try:
             configured_workflow = self.workflow_loader(decision)
         except Exception as exc:
@@ -161,18 +190,21 @@ class SolarResearchRuntime:
             "workflow_version": configured_workflow.get("version", "unavailable"),
             "workflow_kind": str(configured_workflow.get("workflow_kind") or decision.workflow_kind),
         }
-        task_contract = build_task_contract(
-            prompt=prompt,
-            run_id=run_id,
-            decision=decision,
-            seed_inputs=normalized_seeds,
-            supplied_evidence=evidence,
-            output_language=output_language,
-            repository_inputs=repositories,
-            workflow_identity=workflow_identity,
-            run_provenance=_git_checkout_provenance(_HARNESS_ROOT.parent),
-        )
-        contract_path = _write_task_contract(self.artifact_root, run_id, task_contract)
+        if persisted_contract is not None:
+            task_contract = persisted_contract
+        else:
+            task_contract = build_task_contract(
+                prompt=prompt,
+                run_id=run_id,
+                decision=decision,
+                seed_inputs=normalized_seeds,
+                supplied_evidence=evidence,
+                output_language=output_language,
+                repository_inputs=repositories,
+                workflow_identity=workflow_identity,
+                run_provenance=_git_checkout_provenance(_HARNESS_ROOT.parent),
+            )
+            contract_path = _write_task_contract(self.artifact_root, run_id, task_contract)
         readiness_gate = task_contract["constraints"].get("readiness_gate", {})
         if readiness_gate.get("status") == "needs_clarification":
             return {
@@ -605,6 +637,18 @@ def _write_task_contract(artifact_root: Path, run_id: str, task_contract: dict[s
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(task_contract, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
+
+
+def _load_task_contract(path: Path, *, run_id: str) -> dict[str, Any]:
+    if not path.is_file():
+        raise ResearchRuntimeError(f"cannot resume missing task contract: {run_id}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ResearchRuntimeError(f"cannot read persisted task contract: {run_id}") from exc
+    if not isinstance(payload, dict) or str(payload.get("run_id") or "") != run_id:
+        raise ResearchRuntimeError(f"persisted task contract identity mismatch: {run_id}")
+    return payload
 
 
 def _git_checkout_provenance(repo_root: Path) -> dict[str, Any]:
