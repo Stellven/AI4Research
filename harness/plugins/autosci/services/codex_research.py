@@ -204,6 +204,19 @@ def _response_schema(node_id: str) -> dict[str, Any]:
 
 
 def _terminate_process_group(process: subprocess.Popen[str]) -> None:
+    if os.name == "nt":
+        # Windows has no os.killpg.  More importantly, kill() is asynchronous:
+        # wait for the handle to be reaped before TemporaryDirectory attempts
+        # to remove Codex's SQLite state files.
+        try:
+            process.kill()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        return
     try:
         os.killpg(process.pid, signal.SIGTERM)
         process.wait(timeout=5)
@@ -212,6 +225,10 @@ def _terminate_process_group(process: subprocess.Popen[str]) -> None:
             os.killpg(process.pid, signal.SIGKILL)
         except Exception:
             process.kill()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
 
 
 class CodexResearchModelService(ResearchModelService):

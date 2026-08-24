@@ -287,7 +287,7 @@ Fix: set SOLAR_AUTOSCI_OUTPUT_HARNESS (and AUTOSCI_ARTIFACT_ROOT) to the same
 run-specific absolute output root on the next invocation.
 
 PRODUCT-007 - Codex subprocess stdin uses the Windows legacy text encoding
-Status: FIXED (pending commit)
+Status: FIXED (commit 35d6e7348)
 Observed in: qq-tech-trends-e2e-20260824-r4
 Evidence: the subprocess writer thread raised UnicodeEncodeError in cp1252 for
 Chinese characters in the exact user prompt. No response.json was produced,
@@ -304,7 +304,7 @@ service regression test.
 Verification: focused Codex service regression passed (1 passed in 2.16s).
 
 PRODUCT-008 - Windows timeout cleanup masks the provider error with a locked SQLite file
-Status: OPEN
+Status: FIXED (pending commit)
 Observed in: qq-tech-trends-e2e-20260824-r4
 Evidence: after the 900-second timeout, the final blocker reported WinError 32
 for goals_1.sqlite instead of the expected provider_unavailable timeout. The
@@ -314,5 +314,8 @@ Root cause: _terminate_process_group falls back to process.kill() on Windows
 but does not wait for process exit before TemporaryDirectory cleanup begins.
 Impact: the true provider failure is obscured, cleanup is unreliable, and the
 runtime emits an evaluation_error rather than the bounded provider error.
-Planned fix: use a Windows-specific kill-and-wait path and regression-test that
-the process is reaped before cleanup proceeds.
+Fix: use a Windows-specific kill-and-wait path and regression-test that the
+process is reaped before cleanup proceeds. The POSIX process-group path also
+waits after its force-kill fallback.
+Verification: UTF-8 transport plus Windows reap regressions passed together
+(2 passed in 2.06s).

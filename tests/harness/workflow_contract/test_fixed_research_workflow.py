@@ -573,6 +573,25 @@ def test_codex_research_service_uses_fresh_schema_bound_context_and_scrubs_api_k
     assert (tmp_path / usage["archive_path"]).is_file()
 
 
+def test_codex_timeout_reaps_windows_process_before_state_cleanup(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[object] = []
+
+    class TimedOutProcess:
+        pid = 12345
+
+        def kill(self) -> None:
+            calls.append("kill")
+
+        def wait(self, timeout: int) -> None:
+            calls.append(("wait", timeout))
+
+    monkeypatch.setattr(cr.os, "name", "nt")
+
+    cr._terminate_process_group(TimedOutProcess())
+
+    assert calls == ["kill", ("wait", 5)]
+
+
 def test_codex_research_service_rejects_schema_invalid_agent_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
