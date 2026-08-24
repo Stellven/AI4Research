@@ -308,7 +308,11 @@ def _fake_services() -> dict:
             "model": "writer-model",
             "report": {
                 "title": "Research synthesis draft",
-                "body": "English report body with 中文内容.",
+                "body": (
+                    "English report body with 中文内容.\n\n"
+                    "## Sources\n\n"
+                    "- [source-alpha — Alpha Evidence](https://example.test/alpha)"
+                ),
                 "conclusions": [
                     {"conclusion_id": "conclusion-alpha", "text": "Alpha is supported.", "evidence_ids": ["claim-alpha"]},
                     {"conclusion_id": "conclusion-beta", "text": "Unicode is preserved.", "evidence_ids": ["claim-beta"]},

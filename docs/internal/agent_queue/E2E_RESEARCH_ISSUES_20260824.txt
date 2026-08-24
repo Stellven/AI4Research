@@ -398,7 +398,7 @@ Verification so far: prompt-contract and final-acceptance regressions passed
 doubles recorded as TEST-004 below.
 
 TEST-004 - Fake valid reports omit URLs required by the strengthened acceptance contract
-Status: OPEN
+Status: FIXED (pending commit)
 Observed while verifying: PRODUCT-011
 Evidence: broader related suites produced 4 failures and 102 passes. The two
 generic seven-node chains and two revision-loop cases reached final_acceptance,
@@ -407,5 +407,7 @@ cited fixture source. The new focused negative test passed.
 Impact: these tests no longer exercise their intended successful chain/revision
 behavior because their fake model outputs violate the new reader-visible source
 contract.
-Planned fix: update only the fake writer/reviser report bodies to render the
-exact fixture source URLs they receive. Do not weaken the production gate.
+Fix: update only the fake writer/reviser report bodies to render the exact
+fixture source URLs they receive. The production gate remains unchanged.
+Verification: four formerly failing target cases passed in 4.57s; the full
+related set passed (106 passed in 71.50s).

@@ -523,7 +523,10 @@ class _RevisionLoopModel:
                         f"{preservation['original_method']}\n\n"
                         f"Revision attempt {attempt} handled the latest reviewer findings.\n\n"
                         "## Limitations\n\n"
-                        f"{rendered_limitations}"
+                        f"{rendered_limitations}\n\n"
+                        "## Sources\n\n"
+                        "- [source-1 — Bounded Solar report repair loop behavior](https://example.test/report-repair)\n"
+                        "- [source-2 — Evidence-preserving gates for Solar repair loops](https://example.test/final-gates)"
                     ),
                     "conclusions": [
                         {
