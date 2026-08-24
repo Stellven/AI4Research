@@ -67,14 +67,30 @@ Verification:
   independent missing-fixture defect recorded as PRODUCT-002 below.
 
 PRODUCT-002 - Existing research parity test references a missing PDF fixture
-Status: OPEN
+Status: FIXED (pending commit)
 Observed while verifying: PRODUCT-001
 Evidence: tests/harness/research_orchestration/test_research_control_plane_contract.py::test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity
-failed because the expected path
-tests/research_orchestration/fixtures/phase5/seed_portability/local_pdf_synthesis_seed.pdf
-does not exist. The production bridge returned a truthful failed result, then
-the test raised KeyError while assuming task_contract_path was present.
+constructed a path below harness/tests, while the canonical fixture is below
+tests/harness/research_orchestration/fixtures/phase5/seed_portability/. The
+production bridge returned a truthful failed result, then the test raised
+KeyError while assuming task_contract_path was present.
 Impact: the related control-plane suite cannot complete, and its PDF parity
 case does not provide regression evidence.
-Planned fix: locate the canonical fixture or add the smallest valid fixture at
-the path already used by the parity contract, then rerun the exact test.
+Fix: resolve the PDF relative to the test module's own fixtures directory.
+Verification: the exact parity selector advanced successfully through its
+topic, URL, and PDF cases. It then failed on the independent import-evidence
+defect recorded as PRODUCT-003.
+
+PRODUCT-003 - import_evidence source packs are ignored during input preparation
+Status: OPEN
+Observed while verifying: PRODUCT-002
+Evidence: the evidence-resume case in
+tests/harness/research_orchestration/test_research_control_plane_contract.py::test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity
+passes --run-mode import_evidence and --import-evidence <external JSON>. Intake
+classifies the ordinary JSON as source_pack, but prepare_runtime_inputs reads
+only the empty --source list and raises "source pack requires at least one
+source" before a task contract is created.
+Impact: non-experiment evidence bundles cannot enter the production research
+route through the documented --import-evidence option.
+Planned fix: prepare source packs from import_evidence when it is supplied, add
+a focused regression assertion, and rerun the parity selector.

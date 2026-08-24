@@ -93,7 +93,7 @@ def test_production_entrypoint_ambiguous_request_returns_clarification_gate(tmp_
 
 def test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity(tmp_path: Path) -> None:
     fixture = json.loads(PARITY_FIXTURE.read_text(encoding="utf-8"))
-    pdf = ROOT / "tests" / "research_orchestration" / "fixtures" / "phase5" / "seed_portability" / "local_pdf_synthesis_seed.pdf"
+    pdf = Path(__file__).resolve().parent / "fixtures" / "phase5" / "seed_portability" / "local_pdf_synthesis_seed.pdf"
 
     static_extra_args = {
         "topic-survey": [],
