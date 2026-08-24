@@ -517,7 +517,11 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
                 "claims": [
                     {"claim_id": "claim-1", "evidence_ids": ["source-1"]},
                     {"claim_id": "claim-2", "evidence_ids": ["source-2"]},
-                ]
+                ],
+                "source_lineage": [
+                    {"source_id": "source-1", "title": "One", "url": "https://example.test/one"},
+                    {"source_id": "source-2", "title": "Two", "url": "https://example.test/two"},
+                ],
             },
         },
     )
@@ -529,7 +533,10 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
             "evidence_synthesis": {
                 "claims": [
                     {"claim_id": "claim-1", "evidence_ids": ["source-1"], "limitations": ["bounded evidence"]},
-                ]
+                ],
+                "source_lineage": [
+                    {"source_id": "source-1", "title": "One", "url": "https://example.test/one"},
+                ],
             },
             "original_report": {"report": {"body": "Draft"}},
             "independent_review": {
@@ -558,6 +565,8 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
     assert "copied exactly from allowed_source_ids" in synthesis_requirements
     assert "do not abbreviate, hash, prefix, suffix, or repair source ids" in synthesis_requirements
     assert "explicit Method or Evidence Method section" in report_requirements
+    assert report_user["source_catalog"][0]["url"] == "https://example.test/one"
+    assert "reader-visible Markdown link" in report_requirements
     assert "at least two distinct cited sources" in report_requirements
     assert "avoid repeating the same Failure modes" in report_requirements
     assert "explicitly labeled as synthesis" in report_requirements
@@ -566,10 +575,13 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
     assert "at least two cited source lineages" in review_rules
     assert revision_user["basis_verdict"] == "revise"
     assert "preserve exact claim_id values" in revision_requirements
+    assert revision_user["source_catalog"][0]["source_id"] == "source-1"
+    assert "reader-visible URL" in revision_requirements
     assert "Repair only issues identified by the independent review" in revision_requirements
     assert "Replace the report body instead of appending duplicate section summaries" in revision_requirements
     assert "Do not claim immutable evidence_synthesis claim_source_lineage was removed" in revision_requirements
     assert "resolves high and critical prior review findings" in revision_review_rules
+    assert "exact URL" in revision_review_rules
     assert "Do not require report_revision to mutate immutable evidence_synthesis claim_source_lineage" in revision_review_rules
     assert "all remaining findings are low-severity nits" in revision_review_rules
     assert "Return revise only for medium, high, or critical issues" in revision_review_rules

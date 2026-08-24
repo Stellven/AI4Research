@@ -1448,11 +1448,22 @@ class ResearchModelService:
             }
         elif node_id == "report_draft":
             synthesis = kwargs.get("evidence_synthesis") if isinstance(kwargs.get("evidence_synthesis"), dict) else {}
+            source_catalog = [
+                {
+                    "source_id": str(item.get("source_id") or ""),
+                    "title": str(item.get("title") or ""),
+                    "url": str(item.get("url") or ""),
+                    "provider": str(item.get("provider") or ""),
+                }
+                for item in synthesis.get("source_lineage") or []
+                if isinstance(item, dict) and str(item.get("source_id") or "").strip()
+            ]
             user = {
                 "node_id": node_id,
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
                 "deliverable_requirements": kwargs.get("deliverable_requirements") or {},
                 "grounded_claims": synthesis.get("claims") or [],
+                "source_catalog": source_catalog,
                 "required_output": {
                     "report": {
                         "title": "specific report title",
@@ -1481,6 +1492,7 @@ class ResearchModelService:
                     "conclusion citing it is rejected.",
                     "The body must be non-empty, clearly structured Markdown and directly answer the whole request.",
                     "Include an explicit Method or Evidence Method section that explains how supplied sources were used.",
+                    "Include a final Sources or 参考资料 section. For every source cited by a conclusion, copy its exact source_id, title, and non-empty URL from source_catalog; render the URL as a reader-visible Markdown link and never invent or repair a URL.",
                     "When grounded claims cite two or more distinct source ids, the report must preserve at least two distinct cited sources.",
                     "For a survey, include an explicit performance trade-offs section and an open research problems section.",
                     "For Chinese requests, write the report in Chinese.",
@@ -1491,11 +1503,12 @@ class ResearchModelService:
                 ],
             }
         elif node_id == "independent_review":
+            source_validation = kwargs.get("source_validation") if isinstance(kwargs.get("source_validation"), dict) else {}
             user = {
                 "node_id": node_id,
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
                 "report_draft": kwargs.get("report_draft") or {},
-                "source_validation": kwargs.get("source_validation") or {},
+                "source_validation": source_validation,
                 "required_output": {
                     "findings": [
                         {
@@ -1511,6 +1524,7 @@ class ResearchModelService:
                 "review_rules": [
                     "Accept only a non-empty relevant report whose conclusions are grounded in supplied source lineage.",
                     "Require an explicit Method or Evidence Method section when the requested deliverable is a survey or technical report.",
+                    "Require a reader-visible Sources or 参考资料 section containing the exact URL of every validated source used by a report conclusion.",
                     "Require at least two cited source lineages when two or more validated sources are available.",
                     "For surveys, require performance trade-offs and open research problems.",
                     "For Chinese requests, require Chinese output.",
@@ -1526,6 +1540,7 @@ class ResearchModelService:
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
                 "deliverable_requirements": kwargs.get("deliverable_requirements") or {},
                 "grounded_claims": synthesis.get("claims") or [],
+                "source_catalog": synthesis.get("source_lineage") or [],
                 "original_report": kwargs.get("original_report") or {},
                 "independent_review_findings": review.get("findings") or [],
                 "basis_verdict": str(review.get("verdict_suggestion") or ""),
@@ -1565,6 +1580,7 @@ class ResearchModelService:
                     "Copy required_preservation exactly, preserve every listed conclusion unchanged, retain the accepted method text, and render every listed limitation verbatim under a substantive Limitations section.",
                     "The revised body must directly answer the complete user request in the requested language.",
                     "Include an explicit Method or Evidence Method section when the requested deliverable is a survey or technical report.",
+                    "Preserve or repair a final Sources or 参考资料 section so every source cited by a conclusion has its exact source_id, title, and reader-visible URL from source_catalog.",
                     "Replace the report body instead of appending duplicate section summaries from prior drafts.",
                     "Keep one coherent set of Methods, Findings, Limitations, and Conclusions sections.",
                     "Do not claim immutable evidence_synthesis claim_source_lineage was removed; instead restrict the report text to the source scopes supported by each claim limitation.",
@@ -1594,6 +1610,7 @@ class ResearchModelService:
                     "Accept only if the revised report resolves high and critical prior review findings.",
                     "Require conclusions to cite exact claim_id values present in the revised report lineage.",
                     "Require the revised report to remain grounded in supplied source validation and evidence synthesis lineage.",
+                    "Require the revised body to render the exact URL of every validated source used by a conclusion in a Sources or 参考资料 section.",
                     "Do not require report_revision to mutate immutable evidence_synthesis claim_source_lineage; judge whether the revised report text uses sources within the stated claim limitations.",
                     "For Chinese requests, require Chinese output.",
                     "Return accept when all remaining findings are low-severity nits that do not require another writing pass.",

@@ -159,6 +159,7 @@ def _valid_acceptance_refs(
     source_count: int = 2,
     cited_source_count: int = 1,
     report_limitations: list[str] | None = None,
+    source_urls: bool = False,
 ) -> list[dict]:
     sources = [f"source-{index}" for index in range(1, source_count + 1)]
     primary_source = sources[0] if sources else "missing-source"
@@ -187,7 +188,14 @@ def _valid_acceptance_refs(
     validation_ref = write_ref("source_validation", {
         "schema": "research_synthesis.source_validation.v1",
         "node_id": "source_validation",
-        "accepted": [{"source_id": source_id, "title": source_id} for source_id in sources],
+        "accepted": [
+            {
+                "source_id": source_id,
+                "title": source_id,
+                **({"url": f"https://example.test/{source_id}"} if source_urls else {}),
+            }
+            for source_id in sources
+        ],
     })
     synthesis_ref = write_ref("evidence_synthesis", {
         "schema": "research_synthesis.evidence_synthesis.v1",
@@ -218,6 +226,21 @@ def _valid_acceptance_refs(
         },
     })
     return refs
+
+
+def test_final_acceptance_rejects_report_that_hides_cited_source_url(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    refs = _valid_acceptance_refs(tmp_path, source_urls=True, report_body="Grounded report body. Grounded")
+
+    result = execute_operator(
+        _request(tmp_path, "final_acceptance", payload={"task_contract": _task_contract()}, refs=refs),
+        services={},
+    )
+    decision = _read_artifact(tmp_path, result)
+
+    assert result["status"] == "failed"
+    assert decision["decision"] == "rejected"
+    assert any("omits reader-visible URL" in reason for reason in decision["reasons"])
 
 
 def _fake_services() -> dict:

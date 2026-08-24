@@ -347,7 +347,7 @@ Verification: schema-valid, schema-invalid, Windows reap, and credential scrub
 regressions passed together (4 passed in 2.91s). Live rerun remains required.
 
 PRODUCT-010 - Webpage discovery searches the article headline instead of its technical topics
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit b5958ea7e; live E2E verification pending)
 Observed in: qq-tech-trends-e2e-20260824-r6 acceptance review
 Evidence:
 - Runtime final_status was completed and final_acceptance was accepted.
@@ -377,7 +377,7 @@ production discovery plus relevance suites passed (49 passed in 2.19s). Live
 rerun remains required.
 
 PRODUCT-011 - User-visible report omits source URLs and cites internal claim IDs only
-Status: OPEN
+Status: FIXED (pending commit and live E2E verification)
 Observed in: qq-tech-trends-e2e-20260824-r6 acceptance review
 Evidence: the accepted revision/report.md is 10,275 bytes, contains 2,869
 Chinese characters and eight headings, but contains no `https://` URL—not even
@@ -389,6 +389,23 @@ revision prompt likewise does not require a reader-visible references section,
 and final acceptance checks internal lineage but not rendered source links.
 Impact: the report is internally traceable but not independently inspectable by
 the user.
-Planned fix: pass a bounded source catalog through synthesis to drafting and
-revision, require an explicit references section with exact source IDs/titles/
-URLs, and deterministically reject a final report that omits cited source URLs.
+Fix: pass a bounded source catalog through synthesis to drafting and revision;
+require an explicit references section with exact source IDs/titles/URLs in
+draft, review, revision, and re-review prompts; and deterministically reject a
+final report that omits the URL of any cited source that has one.
+Verification so far: prompt-contract and final-acceptance regressions passed
+(2 passed in 0.96s). Broader verification exposed only the outdated test
+doubles recorded as TEST-004 below.
+
+TEST-004 - Fake valid reports omit URLs required by the strengthened acceptance contract
+Status: OPEN
+Observed while verifying: PRODUCT-011
+Evidence: broader related suites produced 4 failures and 102 passes. The two
+generic seven-node chains and two revision-loop cases reached final_acceptance,
+where their fixture reports were rejected for omitting the URL carried by their
+cited fixture source. The new focused negative test passed.
+Impact: these tests no longer exercise their intended successful chain/revision
+behavior because their fake model outputs violate the new reader-visible source
+contract.
+Planned fix: update only the fake writer/reviser report bodies to render the
+exact fixture source URLs they receive. Do not weaken the production gate.

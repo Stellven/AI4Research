@@ -294,6 +294,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         "source_lineage": [
             {
                 "source_id": str(item.get("source_id") or ""),
+                "title": str(item.get("title") or ""),
                 "url": str(item.get("url") or ""),
                 "provider": str((item.get("provenance") or {}).get("provider") or ""),
                 "acquisition_channel": str(item.get("acquisition_channel") or ""),

@@ -234,6 +234,21 @@ def _recompute_chain(
         conclusion_text = " ".join(str(conclusion.get("text") or "").split()).casefold()
         if not conclusion_text or conclusion_text not in normalized_report_body:
             issues.append(f"report conclusion {index} is not rendered in the report body")
+    accepted_by_id = {
+        str(item.get("source_id")): item
+        for item in accepted
+        if str(item.get("source_id") or "").strip()
+    }
+    rendered_source_urls = 0
+    for source_id in sorted(cited_source_ids):
+        source = accepted_by_id.get(source_id, {})
+        source_url = str(source.get("url") or "").strip()
+        if not source_url:
+            continue
+        if source_url.casefold() not in report_body.casefold():
+            issues.append(f"active report omits reader-visible URL for cited source `{source_id}`")
+        else:
+            rendered_source_urls += 1
     expected_review_lineage = {"report_draft", "evidence_synthesis", "source_validation"}
     if revision_applied:
         expected_review_lineage.add("report_revision")
@@ -270,6 +285,7 @@ def _recompute_chain(
         "conclusion_count": len(conclusions),
         "cited_claim_count": len(cited_claim_ids),
         "cited_source_count": len(cited_source_ids),
+        "rendered_source_url_count": rendered_source_urls,
         "all_conclusions_grounded": bool(conclusions) and not any(
             "not rendered" not in issue
             and any(token in issue for token in ("conclusion", "claim", "source"))
