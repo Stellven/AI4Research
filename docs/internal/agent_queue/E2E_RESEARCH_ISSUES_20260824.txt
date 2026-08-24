@@ -217,7 +217,7 @@ multi-provider fallback behaved as designed, so changing code would weaken the
 evidence that the resilience path actually worked.
 
 PRODUCT-006 - Generic production research cannot select the Codex subscription provider
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit c86e39af1; live route reached in r4)
 Observed in: qq-tech-trends-e2e-20260824-r3
 Evidence:
 - Exit code: 2
@@ -272,3 +272,47 @@ Impact: the oversized temporary prefix produced false failures throughout the
 fixed-workflow suite, including the existing Codex adapter tests.
 Fix: keep the required unique pytest basetemp but place it under the short
 system temporary directory for Windows verification runs.
+
+RUN-005 - r4 used the wrong environment variable for the journey evidence root
+Status: FIXED (run procedure)
+Observed in: qq-tech-trends-e2e-20260824-r4
+Evidence: the invocation set AUTOSCI_ARTIFACT_ROOT to the reserved journey
+folder, but the generic `$research` command passes SOLAR_AUTOSCI_OUTPUT_HARNESS
+to the bridge as its artifact root. The r4 contracts, state, and provider
+evidence were therefore written below harness/ instead of
+outputs/phase22-real-journeys/qq-tech-trends-e2e-20260824-r4/.
+Impact: r4 remains useful diagnostic evidence but is not accepted as the final
+journey run because its artifacts are not isolated in the canonical folder.
+Fix: set SOLAR_AUTOSCI_OUTPUT_HARNESS (and AUTOSCI_ARTIFACT_ROOT) to the same
+run-specific absolute output root on the next invocation.
+
+PRODUCT-007 - Codex subprocess stdin uses the Windows legacy text encoding
+Status: FIXED (pending commit)
+Observed in: qq-tech-trends-e2e-20260824-r4
+Evidence: the subprocess writer thread raised UnicodeEncodeError in cp1252 for
+Chinese characters in the exact user prompt. No response.json was produced,
+and the Codex process waited until the 900-second timeout without receiving the
+complete request.
+Root cause: CodexResearchModelService starts subprocess.Popen with text=True
+but no explicit encoding, so Python uses the host locale instead of the UTF-8
+JSON contract used to construct prompt_bytes.
+Impact: Chinese and other non-cp1252 prompts cannot reach the Codex physical
+operator on Windows.
+Fix: bind the subprocess stdin/stdout text transport explicitly to UTF-8 with
+strict error handling and assert that boundary in the existing schema-bound
+service regression test.
+Verification: focused Codex service regression passed (1 passed in 2.16s).
+
+PRODUCT-008 - Windows timeout cleanup masks the provider error with a locked SQLite file
+Status: OPEN
+Observed in: qq-tech-trends-e2e-20260824-r4
+Evidence: after the 900-second timeout, the final blocker reported WinError 32
+for goals_1.sqlite instead of the expected provider_unavailable timeout. The
+temporary state directory cleanup ran while the killed Codex process still had
+the SQLite file open.
+Root cause: _terminate_process_group falls back to process.kill() on Windows
+but does not wait for process exit before TemporaryDirectory cleanup begins.
+Impact: the true provider failure is obscured, cleanup is unreliable, and the
+runtime emits an evaluation_error rather than the bounded provider error.
+Planned fix: use a Windows-specific kill-and-wait path and regression-test that
+the process is reaped before cleanup proceeds.

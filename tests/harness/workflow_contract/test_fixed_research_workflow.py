@@ -517,6 +517,8 @@ def test_codex_research_service_uses_fresh_schema_bound_context_and_scrubs_api_k
         def __init__(self, command: list[str], **kwargs: object) -> None:
             captured["command"] = command
             captured["env"] = dict(kwargs["env"])
+            captured["encoding"] = kwargs["encoding"]
+            captured["errors"] = kwargs["errors"]
 
         def communicate(self, prompt: str, timeout: int) -> tuple[str, None]:
             captured["prompt"] = prompt
@@ -557,6 +559,8 @@ def test_codex_research_service_uses_fresh_schema_bound_context_and_scrubs_api_k
     assert command[command.index("--sandbox") + 1] == "read-only"
     assert command[command.index("--output-schema") + 1].endswith("response.schema.json")
     assert captured["timeout"] == 17
+    assert captured["encoding"] == "utf-8"
+    assert captured["errors"] == "strict"
     assert "OPENAI_API_KEY" not in captured["env"]
     assert "OPENROUTER_API_KEY" not in captured["env"]
     assert "ambient-api-key-must-not-cross-boundary" not in captured["prompt"]

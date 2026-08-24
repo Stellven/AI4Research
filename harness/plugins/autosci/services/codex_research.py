@@ -458,6 +458,8 @@ class CodexResearchModelService(ResearchModelService):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
+                    encoding="utf-8",
+                    errors="strict",
                     start_new_session=True,
                     env=env,
                 )
