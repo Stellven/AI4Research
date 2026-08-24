@@ -24,6 +24,7 @@ from harness.plugins.autosci.operators.research_synthesis.base import (  # noqa:
     research_query_terms,
 )
 from harness.plugins.autosci.operators.research_synthesis.source_validation import (  # noqa: E402
+    _candidate_relevance,
     _relevance_class,
 )
 
@@ -43,6 +44,21 @@ RAG_PAPER = {
 def test_off_topic_source_is_rejected_on_every_channel(channel: str) -> None:
     source = dict(RAG_PAPER, acquisition_channel=channel)
     assert _relevance_class(source, CRISPR_REQUEST)["class"] == "off_topic"
+
+
+def test_live_multitopic_source_can_bind_to_controller_generated_heading_query() -> None:
+    source = {
+        "title": "通用机器人操作能力与触觉反馈技术",
+        "content_summary": "通用机器人通过灵巧手、触觉反馈与训练数据提升操作能力。",
+        "acquisition_channel": "live_search",
+        "provenance": {"provider": "wikipedia_zh", "query": "通用机器人"},
+    }
+
+    result = _candidate_relevance(source, "AI智能体")
+
+    assert result["class"] != "off_topic"
+    assert result["query_binding"]["selected_query"] == "通用机器人"
+    assert result["query_binding"]["global_query"] == "AI智能体"
 
 
 def test_on_topic_pack_source_is_still_accepted() -> None:

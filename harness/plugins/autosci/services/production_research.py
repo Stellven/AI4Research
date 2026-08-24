@@ -473,15 +473,14 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # topic seed re-supplies the full instruction and the search is buried again.
     from_page_title = bool(titles[:1]) and not inline[:1]
     query = " ".join(inline[:1] or titles[:1] or [intent]).strip()
-    if False:
-        # No page title or inline seed, so the query is the raw user request.
-        # The phrase patterns below only catch "survey/review on X" shapes;
-        # "Research and compare CRISPR ... Produce a source-linked report with
-        # evidence IDs, ..." matches none of them and went to the providers
-        # whole, which buried the topic and returned "Applied bibliometrics".
-        # Distil with the same topic definition the relevance gate uses so the
-        # search and the gate cannot disagree about what was asked.
-        pass
+    if from_page_title:
+        # A generic headline is a poor query when the fetched page already
+        # exposes controller-visible structured topics such as "愿景一：AI智能体".
+        # Use the first topic for the bibliographic chain; the remaining topics
+        # are retained as per-candidate Wikipedia provenance below.
+        page_topics = [item for item in _supplemental_queries(seed_snapshot, "") if item]
+        if page_topics:
+            query = page_topics[0]
     if has_topic_seed or not titles:
         match = re.search(
             r"\b(?:survey|review|report|analysis|brief)\s+(?:on|about|for)\s+(.+)",
@@ -613,7 +612,7 @@ def _supplemental_queries(seed_snapshot: dict[str, Any], fallback: str) -> list[
                 queries.append(compact[:100])
             if len(queries) >= 4:
                 break
-    if not queries:
+    if not queries and fallback:
         queries.append(fallback[:160])
     return queries
 

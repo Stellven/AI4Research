@@ -674,6 +674,23 @@ def test_topic_discovery_query_distills_research_subject_from_instruction() -> N
     assert "Cover evaluation dimensions" not in query
 
 
+def test_webpage_discovery_uses_structured_topic_instead_of_generic_headline() -> None:
+    query = _topic_from_snapshot(
+        {
+            "seeds": [
+                {
+                    "seed_kind": "url",
+                    "title": "中国科学家首次叩响未来之门，发布2049十大科技愿景",
+                    "content": "愿景一：AI智能体深度嵌入行业流程\n愿景二：通用机器人突破操作瓶颈",
+                }
+            ]
+        },
+        {"task_contract": {"user_intent": "梳理网页技术趋势并搜索公开资料"}},
+    )
+
+    assert query == "AI智能体"
+
+
 def test_research_model_retries_429_retry_after_on_same_route(tmp_path: Path) -> None:
     calls = []
 

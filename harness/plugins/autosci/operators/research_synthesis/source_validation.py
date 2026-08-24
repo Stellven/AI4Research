@@ -188,6 +188,30 @@ def _relevance_class(source: dict[str, Any], query: str) -> dict[str, Any]:
     return {"class": "unknown", "score": None, "proof": ["no explicit relevance score or substantive summary"], "query_binding": proof}
 
 
+def _candidate_relevance(source: dict[str, Any], task_query: str) -> dict[str, Any]:
+    """Bind live multi-topic candidates to their controller-generated subquery."""
+
+    primary = _relevance_class(source, task_query)
+    provenance = source.get("provenance") if isinstance(source.get("provenance"), dict) else {}
+    candidate_query = str(provenance.get("query") or "").strip()
+    channel = str(source.get("acquisition_channel") or provenance.get("acquisition_channel") or "")
+    if (
+        primary.get("class") == "off_topic"
+        and channel in {"live_search", "provider_discovery"}
+        and candidate_query
+        and candidate_query != task_query
+    ):
+        candidate_bound = _relevance_class(source, candidate_query)
+        if candidate_bound.get("class") != "off_topic":
+            binding = dict(candidate_bound.get("query_binding") or {})
+            binding["selected_query"] = candidate_query
+            binding["global_query"] = task_query
+            binding["binding_reason"] = "controller_generated_multitopic_discovery_query"
+            candidate_bound["query_binding"] = binding
+            return candidate_bound
+    return primary
+
+
 def _source_failure_reasons(source: dict[str, Any]) -> list[str]:
     reasons: list[str] = []
     status_values = [
@@ -227,7 +251,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             reasons.append(f"duplicate_of:{seen[key]}")
         reasons.extend(_source_failure_reasons(source))
         authority = _authority_class(source)
-        relevance = _relevance_class(source, query)
+        relevance = _candidate_relevance(source, query)
         if authority["class"] == "unattributed":
             reasons.append("authority: unattributed source")
         if relevance["class"] == "low":
