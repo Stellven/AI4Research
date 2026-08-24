@@ -509,3 +509,25 @@ to describe controller search truthfully while retaining coverage caveats.
 Verification so far: focused runtime acquisition propagation and model prompt
 contract tests passed (2 passed in 1.94s). Live exact-prompt verification is
 required because the final wording is model-generated.
+
+PRODUCT-016 - Structured report sections are appended after a complete references section
+Status: FIXED (pending commit and live E2E verification)
+Observed in: qq-tech-trends-e2e-20260824-r10 acceptance review
+Evidence: the independent reviewer accepted the report with one low-severity
+structure finding: after the complete Markdown body reached `## 参考资料`, the
+normalizer appended compressed `方法与证据`, `关键趋势`, `技术底座`, `性能取舍`,
+`开放问题`, `结论`, and `局限` sections from the model's parallel structured
+`sections` field.
+Root cause: `_normalize_report` treats a structured section as missing unless
+its heading or full normalized body matches exactly. Semantically equivalent
+but differently titled summaries therefore get appended even when the raw body
+already contains a final Sources/参考资料 section and is plainly complete.
+Impact: accepted deliverables can place duplicate summary material after their
+references, creating a stitched, unprofessional ending and violating the
+prompt's final-references-section intent.
+Fix: when the provider body already contains a Sources/参考资料 heading,
+treat that Markdown body as the complete publication surface and retain the
+parallel sections only as structured metadata; continue compiling sections for
+partial bodies without a references heading.
+Verification so far: the new publication-boundary regression and all production
+research service tests passed (30 passed in 1.88s).

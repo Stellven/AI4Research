@@ -717,6 +717,38 @@ def test_report_normalizer_preserves_nested_subsections_exactly_once() -> None:
     assert report["body"].count("Robot evidence.") == 1
 
 
+def test_report_normalizer_does_not_append_section_summaries_after_references() -> None:
+    report = _normalize_report(
+        {
+            "report": {
+                "title": "Complete report",
+                "body": (
+                    "# Complete report\n\n"
+                    "## Evidence Method\n\nOnly supplied claims are used.\n\n"
+                    "## Detailed findings\n\nThe conclusion is grounded.\n\n"
+                    "## References\n\n- source-1: https://example.test/one"
+                ),
+                "sections": [
+                    {"title": "Findings summary", "body": "Compressed duplicate of the detailed findings."},
+                    {"title": "Limitations", "body": "Compressed duplicate limitation."},
+                ],
+                "conclusions": [
+                    {
+                        "conclusion_id": "conclusion-1",
+                        "text": "The conclusion is grounded.",
+                        "evidence_ids": ["claim-1"],
+                    }
+                ],
+            }
+        },
+        {"claim-1"},
+    )
+
+    assert report["body"].endswith("- source-1: https://example.test/one")
+    assert "Findings summary" not in report["body"]
+    assert "Compressed duplicate" not in report["body"]
+
+
 def test_topic_discovery_query_distills_research_subject_from_instruction() -> None:
     query = _topic_from_snapshot(
         {

@@ -100,6 +100,9 @@ def _dedupe_repeated_heading_sections(body: str) -> str:
 _LIMITATIONS_HEADING_RE = re.compile(
     r"(?im)^(#{2,6})\s*[^\r\n]*(?:limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3)[^\r\n]*$"
 )
+_SOURCES_HEADING_RE = re.compile(
+    r"(?im)^#{2,6}\s*[^\r\n]*(?:sources?\b|references?\b|\u53c2\u8003\u8d44\u6599|\u8d44\u6599\u6765\u6e90|\u53c2\u8003\u6765\u6e90)[^\r\n]*$"
+)
 
 
 def _merge_limitations_section(body: str, limitations: list[str], heading: str) -> str:
@@ -217,11 +220,17 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
             body_parts.append(f"# {title}\n\n## Summary\n\n{raw_body}")
     else:
         body_parts.append(f"# {title}")
-    body_parts.extend(
-        f"## {section['title']}\n\n{section['body']}"
-        for section in sections
-        if not _body_has_substantive_section(raw_body, section["title"], section["body"])
-    )
+    # A references heading is the publication boundary promised by the model
+    # contract. When it already exists, the Markdown body is authoritative and
+    # the parallel ``sections`` array remains metadata only. Appending
+    # differently titled section summaries after References produced stitched
+    # reports whose complete body was followed by a second compressed report.
+    if not _SOURCES_HEADING_RE.search(raw_body):
+        body_parts.extend(
+            f"## {section['title']}\n\n{section['body']}"
+            for section in sections
+            if not _body_has_substantive_section(raw_body, section["title"], section["body"])
+        )
     body = "\n\n".join(body_parts)
     body = _dedupe_repeated_heading_sections(body)
     missing_conclusions = [
