@@ -749,6 +749,34 @@ def test_report_normalizer_does_not_append_section_summaries_after_references() 
     assert "Compressed duplicate" not in report["body"]
 
 
+def test_report_normalizer_inserts_generated_sections_before_references() -> None:
+    report = _normalize_report(
+        {
+            "report": {
+                "title": "Bounded report",
+                "body": (
+                    "# Bounded report\n\n"
+                    "## Findings\n\nA source-grounded finding.\n\n"
+                    "## References\n\n- source-1: https://example.test/one"
+                ),
+                "conclusions": [
+                    {
+                        "conclusion_id": "conclusion-1",
+                        "text": "A bounded conclusion not copied into the provider body.",
+                        "evidence_ids": ["claim-1"],
+                    }
+                ],
+            },
+            "limitations": ["Only one validated source was available."],
+        },
+        {"claim-1"},
+    )
+
+    body = report["body"]
+    assert body.index("## Conclusions") < body.index("## Limitations") < body.index("## References")
+    assert body.rstrip().endswith("- source-1: https://example.test/one")
+
+
 def test_topic_discovery_query_distills_research_subject_from_instruction() -> None:
     query = _topic_from_snapshot(
         {

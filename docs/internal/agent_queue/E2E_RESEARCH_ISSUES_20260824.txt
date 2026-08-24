@@ -531,3 +531,22 @@ parallel sections only as structured metadata; continue compiling sections for
 partial bodies without a references heading.
 Verification so far: the new publication-boundary regression and all production
 research service tests passed (30 passed in 1.88s).
+
+PRODUCT-017 - Auto-generated conclusions and limitations can follow references
+Status: FIXED (pending commit and live E2E verification)
+Observed in: qq-tech-trends-e2e-20260824-r11 acceptance review
+Evidence: r11 completed and passed deterministic acceptance, and the structured
+`sections` summaries were no longer appended. However, the final Markdown still
+placed `## 结论` and `## 局限` after `## 参考资料`.
+Root cause: when provider conclusions are not already present verbatim,
+`_normalize_report` appends the generated Conclusions block to the end of the
+body. `_merge_limitations_section` likewise appends a new Limitations block when
+none exists. Neither path observes the existing references publication
+boundary fixed in PRODUCT-016.
+Impact: required content is present and traceable, but the report still ends
+with internally generated material after its reference list.
+Fix: centralize insertion before an existing Sources/参考资料 heading and
+use it for generated Conclusions, Evidence Method, and new Limitations blocks;
+retain end-appending only for bodies without references.
+Verification so far: the new generated-section ordering regression and all
+production research service tests passed (31 passed in 2.01s).

@@ -105,6 +105,17 @@ _SOURCES_HEADING_RE = re.compile(
 )
 
 
+def _insert_before_sources(body: str, addition: str) -> str:
+    """Keep generated report sections ahead of the references boundary."""
+
+    sources = _SOURCES_HEADING_RE.search(body)
+    if sources is None:
+        return f"{body.rstrip()}\n\n{addition.strip()}"
+    head = body[:sources.start()].rstrip()
+    tail = body[sources.start():].lstrip()
+    return f"{head}\n\n{addition.strip()}\n\n{tail}"
+
+
 def _merge_limitations_section(body: str, limitations: list[str], heading: str) -> str:
     """Put every recorded limitation into ONE limitations section.
 
@@ -124,7 +135,8 @@ def _merge_limitations_section(body: str, limitations: list[str], heading: str) 
     if match is None:
         if not missing:
             return body
-        return body + f"\n\n## {heading}\n\n" + "\n".join(f"- {item}" for item in missing)
+        addition = f"## {heading}\n\n" + "\n".join(f"- {item}" for item in missing)
+        return _insert_before_sources(body, addition)
     if not missing:
         return body
 
@@ -241,10 +253,11 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
     if missing_conclusions:
         conclusion_heading = "结论" if cjk_report else "Conclusions"
         evidence_label = "证据" if cjk_report else "Evidence"
-        body += f"\n\n## {conclusion_heading}\n\n" + "\n".join(
+        conclusion_section = f"## {conclusion_heading}\n\n" + "\n".join(
             f"- {item['text']} {evidence_label}: {', '.join(item['evidence_ids'])}."
             for item in missing_conclusions
         )
+        body = _insert_before_sources(body, conclusion_section)
     if not re.search(r"(?im)^##\s+[^\r\n]*(?:methods?\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba)[^\r\n]*$", body):
         method_heading = "æ–¹æ³•" if cjk_report else "Evidence Method"
         method_body = (
@@ -253,7 +266,7 @@ def _normalize_report(response: dict[str, Any], claim_ids: set[str]) -> dict[str
             if cjk_report
             else "This report uses only the traceable claims in evidence_synthesis; any recommendation, trade-off, or operational implication beyond direct source wording is a source-bounded synthesis."
         )
-        body += f"\n\n## {method_heading}\n\n{method_body}"
+        body = _insert_before_sources(body, f"## {method_heading}\n\n{method_body}")
     limitations = [str(item).strip() for item in response.get("limitations") or [] if str(item).strip()]
     if limitations:
         limitation_heading = "局限" if cjk_report else "Limitations"
