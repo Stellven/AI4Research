@@ -306,6 +306,7 @@ def test_explicit_live_provider_authorization_approves_provider_capability(tmp_p
 
     def run(request: dict) -> dict:
         captured.update(request["authorization"])
+        captured["payload"] = request["typed_inputs"]["payload"]
         forwarded = dict(request)
         forwarded["physical_operator"] = {
             **request["physical_operator"],
@@ -332,6 +333,8 @@ def test_explicit_live_provider_authorization_approves_provider_capability(tmp_p
     assert captured["allow_network"] is True
     assert captured["allow_live_provider"] is True
     assert captured["approved_capabilities"] == ["cap.research.source.discovery"]
+    assert captured["payload"]["acquisition_mode"] == "live_search"
+    assert captured["payload"]["minimum_live_sources"] == 1
 
 
 def test_real_markdown_lifecycle_preserves_method_result_and_git_provenance(tmp_path: Path) -> None:

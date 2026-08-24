@@ -241,6 +241,7 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             task_contract=context.payload.get("task_contract"),
             seed_snapshot=seed_snapshot,
             validated_sources=accepted,
+            source_policy_summary=validation.get("source_policy_summary") or {},
             synthesis_attempt=attempt,
             max_synthesis_attempts=MAX_SYNTHESIS_ATTEMPTS,
             grounding_feedback=grounding_feedback,

@@ -481,3 +481,31 @@ Verification: the shared reviewer/claim-compiler suite and a direct Chinese
 evidence-synthesis regression passed (7 passed in 0.69s). The regression also
 confirmed that unrelated Chinese claims and unsupported years still fail
 closed.
+
+PRODUCT-015 - Online discovery is mislabeled as a source-pack-only run
+Status: FIXED (pending commit and live E2E verification)
+Observed in: qq-tech-trends-e2e-20260824-r9 acceptance review
+Evidence:
+- The exact command used `--online`; provider evidence records live calls to
+  Semantic Scholar, Wikipedia, Europe PMC, and OpenAlex.
+- The accepted report nevertheless says `未进行实时联网检索` and
+  `未调用外部工具`, which is false for the workflow as a whole.
+- `source_policy_summary` records `acquisition_mode=source_pack`, zero live
+  sources, and `live_claim_allowed=false`, even though candidate provenance is
+  `provider_discovery` and five public sources passed validation.
+Root cause: the generic runtime converts `--online` into authorization only;
+it does not put the corresponding `live_search` acquisition mode into the
+source-discovery typed payload. The legacy compatibility path still performs
+provider discovery but labels the artifact as source-pack mode. Downstream
+model prompts also do not explicitly distinguish controller-performed live
+discovery from the writer's bounded use of already validated artifacts.
+Impact: the workflow does the requested public-internet search but its evidence
+contract and user-visible report deny that it happened, making provenance and
+limitations materially misleading.
+Fix: bind an authorized network source-discovery node to
+`acquisition_mode=live_search` with a minimum of one live source; propagate the
+resulting source-policy summary into writer/reviewer prompts; and require them
+to describe controller search truthfully while retaining coverage caveats.
+Verification so far: focused runtime acquisition propagation and model prompt
+contract tests passed (2 passed in 1.94s). Live exact-prompt verification is
+required because the final wording is model-generated.

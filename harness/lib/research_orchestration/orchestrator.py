@@ -534,6 +534,14 @@ class ResearchOrchestrator:
             "topic": str(self.task_contract.get("user_intent") or ""),
             "title": str(self.task_contract.get("user_intent") or ""),
         }
+        if node["node_id"] == "source_discovery" and auth["allow_network"]:
+            # Authorization says whether a network action may execute; the
+            # acquisition contract says what kind of evidence it produced.
+            # Keeping only the former made an --online run perform public API
+            # calls through the legacy provider path while labelling the
+            # resulting artifact as source_pack-only.
+            typed_payload["acquisition_mode"] = "live_search"
+            typed_payload["minimum_live_sources"] = 1
         seeds = self.task_contract.get("seed_inputs") or []
         primary_seed = seeds[0] if seeds and isinstance(seeds[0], dict) else {}
         seed_value = str(primary_seed.get("value") or "")

@@ -496,6 +496,11 @@ def test_openrouter_is_default_and_openai_key_is_not_bound_when_both_exist(tmp_p
 
 def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_path: Path) -> None:
     service = ResearchModelService(tmp_path, routes=[])
+    source_policy_summary = {
+        "acquisition_mode": "live_search",
+        "live_requirement_met": True,
+        "accepted_live_count": 2,
+    }
     task_contract = {
         "user_intent": "Generate a technical survey with traceable judgments.",
         "deliverable": {"language": "en"},
@@ -509,6 +514,7 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
                 {"source_id": "source-1", "title": "One", "content_summary": "A"},
                 {"source_id": "source-2", "title": "Two", "content_summary": "B"},
             ],
+            "source_policy_summary": source_policy_summary,
         },
     )
     _system, report_user = service._prompt(
@@ -524,10 +530,14 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
                     {"source_id": "source-1", "title": "One", "url": "https://example.test/one"},
                     {"source_id": "source-2", "title": "Two", "url": "https://example.test/two"},
                 ],
+                "source_policy_summary": source_policy_summary,
             },
         },
     )
-    _system, review_user = service._prompt("independent_review", {"task_contract": task_contract})
+    _system, review_user = service._prompt(
+        "independent_review",
+        {"task_contract": task_contract, "source_validation": {"source_policy_summary": source_policy_summary}},
+    )
     _system, revision_user = service._prompt(
         "report_revision",
         {
@@ -539,6 +549,7 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
                 "source_lineage": [
                     {"source_id": "source-1", "title": "One", "url": "https://example.test/one"},
                 ],
+                "source_policy_summary": source_policy_summary,
             },
             "original_report": {"report": {"body": "Draft"}},
             "independent_review": {
@@ -552,7 +563,10 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
         {
             "task_contract": task_contract,
             "report_draft": {"report": {"body": "Revised"}},
-            "source_validation": {"accepted": [{"source_id": "source-1"}]},
+            "source_validation": {
+                "accepted": [{"source_id": "source-1"}],
+                "source_policy_summary": source_policy_summary,
+            },
             "prior_review": {"findings": [{"severity": "high", "message": "Missing method section"}]},
         },
     )
@@ -563,30 +577,37 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
     revision_requirements = " ".join(revision_user["quality_requirements"])
     revision_review_rules = " ".join(revision_review_user["review_rules"])
     assert synthesis_user["allowed_source_ids"] == ["source-1", "source-2"]
+    assert synthesis_user["source_policy_summary"] == source_policy_summary
     assert "at least two distinct exact source_id values" in synthesis_requirements
     assert "copied exactly from allowed_source_ids" in synthesis_requirements
     assert "do not abbreviate, hash, prefix, suffix, or repair source ids" in synthesis_requirements
     assert "explicit Method or Evidence Method section" in report_requirements
     assert report_user["source_catalog"][0]["url"] == "https://example.test/one"
+    assert report_user["source_policy_summary"] == source_policy_summary
     assert "reader-visible Markdown link" in report_requirements
     assert "at least two distinct cited sources" in report_requirements
     assert "avoid repeating the same Failure modes" in report_requirements
     assert "explicitly labeled as synthesis" in report_requirements
     assert "do not expand a source-specific finding into a general guarantee" in report_requirements
+    assert "controller performed live public discovery" in report_requirements
     assert "explicit Method or Evidence Method section" in review_rules
     assert "at least two cited source lineages" in review_rules
+    assert "controller-performed live public discovery" in review_rules
     assert revision_user["basis_verdict"] == "revise"
     assert "preserve exact claim_id values" in revision_requirements
     assert revision_user["source_catalog"][0]["source_id"] == "source-1"
+    assert revision_user["source_policy_summary"] == source_policy_summary
     assert "reader-visible URL" in revision_requirements
     assert "Repair only issues identified by the independent review" in revision_requirements
     assert "Replace the report body instead of appending duplicate section summaries" in revision_requirements
     assert "Do not claim immutable evidence_synthesis claim_source_lineage was removed" in revision_requirements
+    assert "controller performed live public discovery" in revision_requirements
     assert "resolves high and critical prior review findings" in revision_review_rules
     assert "exact URL" in revision_review_rules
     assert "Do not require report_revision to mutate immutable evidence_synthesis claim_source_lineage" in revision_review_rules
     assert "all remaining findings are low-severity nits" in revision_review_rules
     assert "Return revise only for medium, high, or critical issues" in revision_review_rules
+    assert "controller-performed live public discovery" in revision_review_rules
     assert revision_review_user["prior_review_findings"][0]["severity"] == "high"
 
 

@@ -1404,6 +1404,7 @@ class ResearchModelService:
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
                 "allowed_source_ids": allowed_source_ids,
                 "validated_sources": sources,
+                "source_policy_summary": kwargs.get("source_policy_summary") or {},
                 "required_output": {
                     "claims": [
                         {
@@ -1483,6 +1484,7 @@ class ResearchModelService:
                 "deliverable_requirements": kwargs.get("deliverable_requirements") or {},
                 "grounded_claims": synthesis.get("claims") or [],
                 "source_catalog": source_catalog,
+                "source_policy_summary": synthesis.get("source_policy_summary") or {},
                 "required_output": {
                     "report": {
                         "title": "specific report title",
@@ -1518,6 +1520,7 @@ class ResearchModelService:
                     "Use each requested dimension once; avoid repeating the same Failure modes, Observability, Conclusions, or Limitations material in multiple sections.",
                     "Any recommendation, benchmark design, operational practice, or industry implication that is synthesized beyond a source's direct wording must be explicitly labeled as synthesis, proposed practice, or conditional inference.",
                     "Preserve the uncertainty and limitation qualifiers from grounded_claims; do not expand a source-specific finding into a general guarantee.",
+                    "Describe source acquisition exactly as source_policy_summary records it. When acquisition_mode is live_search and live_requirement_met is true, state that the OpenSolar controller performed live public discovery; do not claim that no network search occurred merely because this writer receives only validated artifacts. Separately disclose any narrow coverage or provider failures.",
                     "State evidence limitations without inventing methods or conclusions.",
                 ],
             }
@@ -1528,6 +1531,7 @@ class ResearchModelService:
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
                 "report_draft": kwargs.get("report_draft") or {},
                 "source_validation": source_validation,
+                "source_policy_summary": source_validation.get("source_policy_summary") or {},
                 "required_output": {
                     "findings": [
                         {
@@ -1547,6 +1551,7 @@ class ResearchModelService:
                     "Require at least two cited source lineages when two or more validated sources are available.",
                     "For surveys, require performance trade-offs and open research problems.",
                     "For Chinese requests, require Chinese output.",
+                    "Reject a report that contradicts source_policy_summary about whether controller-performed live public discovery occurred; limited coverage may be disclosed without denying the recorded search.",
                     "Do not create a high-severity finding merely because the evidence has explicit limitations.",
                 ],
             }
@@ -1560,6 +1565,7 @@ class ResearchModelService:
                 "deliverable_requirements": kwargs.get("deliverable_requirements") or {},
                 "grounded_claims": synthesis.get("claims") or [],
                 "source_catalog": synthesis.get("source_lineage") or [],
+                "source_policy_summary": synthesis.get("source_policy_summary") or {},
                 "original_report": kwargs.get("original_report") or {},
                 "independent_review_findings": review.get("findings") or [],
                 "basis_verdict": str(review.get("verdict_suggestion") or ""),
@@ -1603,6 +1609,7 @@ class ResearchModelService:
                     "Replace the report body instead of appending duplicate section summaries from prior drafts.",
                     "Keep one coherent set of Methods, Findings, Limitations, and Conclusions sections.",
                     "Do not claim immutable evidence_synthesis claim_source_lineage was removed; instead restrict the report text to the source scopes supported by each claim limitation.",
+                    "Describe source acquisition exactly as source_policy_summary records it. A live_search run with live_requirement_met=true must say the OpenSolar controller performed live public discovery, while separately disclosing provider failures and evidence-coverage limits.",
                 ],
             }
         elif node_id == "report_revision_review":
@@ -1632,6 +1639,7 @@ class ResearchModelService:
                     "Require the revised body to render the exact URL of every validated source used by a conclusion in a Sources or 参考资料 section.",
                     "Do not require report_revision to mutate immutable evidence_synthesis claim_source_lineage; judge whether the revised report text uses sources within the stated claim limitations.",
                     "For Chinese requests, require Chinese output.",
+                    "Reject a report that contradicts source_validation.source_policy_summary about whether controller-performed live public discovery occurred.",
                     "Return accept when all remaining findings are low-severity nits that do not require another writing pass.",
                     "Return revise only for medium, high, or critical issues that require another writing pass.",
                     "Return reject when unsupported new claims, missing methods, or language mismatch remain and cannot be repaired within the bounded loop.",
