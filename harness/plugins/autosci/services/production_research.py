@@ -1304,6 +1304,33 @@ class _ProviderRoute:
     api_key: str
 
 
+def _source_usage_summary(
+    validated_sources: list[dict[str, Any]],
+    grounded_claims: list[dict[str, Any]],
+) -> dict[str, Any]:
+    validated_ids = sorted({
+        str(item.get("source_id") or "").strip()
+        for item in validated_sources
+        if isinstance(item, dict) and str(item.get("source_id") or "").strip()
+    })
+    grounded_ids = sorted({
+        str(source_id).strip()
+        for claim in grounded_claims
+        if isinstance(claim, dict)
+        for source_id in claim.get("evidence_ids") or []
+        if str(source_id).strip()
+    })
+    validated = set(validated_ids)
+    grounded = set(grounded_ids)
+    return {
+        "validated_source_count": len(validated_ids),
+        "validated_source_ids": validated_ids,
+        "grounded_claim_source_count": len(grounded_ids),
+        "grounded_claim_source_ids": grounded_ids,
+        "unused_validated_source_ids": sorted(validated - grounded),
+    }
+
+
 @dataclass
 class ResearchModelService:
     """Call configured OpenAI-compatible providers for bounded JSON outputs."""
@@ -1485,6 +1512,10 @@ class ResearchModelService:
                 "grounded_claims": synthesis.get("claims") or [],
                 "source_catalog": source_catalog,
                 "source_policy_summary": synthesis.get("source_policy_summary") or {},
+                "source_usage_summary": _source_usage_summary(
+                    [item for item in synthesis.get("source_lineage") or [] if isinstance(item, dict)],
+                    [item for item in synthesis.get("claims") or [] if isinstance(item, dict)],
+                ),
                 "required_output": {
                     "report": {
                         "title": "specific report title",
@@ -1521,17 +1552,24 @@ class ResearchModelService:
                     "Any recommendation, benchmark design, operational practice, or industry implication that is synthesized beyond a source's direct wording must be explicitly labeled as synthesis, proposed practice, or conditional inference.",
                     "Preserve the uncertainty and limitation qualifiers from grounded_claims; do not expand a source-specific finding into a general guarantee.",
                     "Describe source acquisition exactly as source_policy_summary records it. When acquisition_mode is live_search and live_requirement_met is true, state that the OpenSolar controller performed live public discovery; do not claim that no network search occurred merely because this writer receives only validated artifacts. Separately disclose any narrow coverage or provider failures.",
+                    "Keep source counts distinct using source_usage_summary: validated_source_count is the admitted input set, grounded_claim_source_count is the set actually supporting grounded claims, and unused_validated_source_ids were not used to support claims. Never say all validated sources were used unless unused_validated_source_ids is empty.",
                     "State evidence limitations without inventing methods or conclusions.",
                 ],
             }
         elif node_id == "independent_review":
             source_validation = kwargs.get("source_validation") if isinstance(kwargs.get("source_validation"), dict) else {}
+            report_draft = kwargs.get("report_draft") if isinstance(kwargs.get("report_draft"), dict) else {}
+            lineage = report_draft.get("claim_source_lineage") if isinstance(report_draft.get("claim_source_lineage"), dict) else {}
             user = {
                 "node_id": node_id,
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
                 "report_draft": kwargs.get("report_draft") or {},
                 "source_validation": source_validation,
                 "source_policy_summary": source_validation.get("source_policy_summary") or {},
+                "source_usage_summary": _source_usage_summary(
+                    [item for item in source_validation.get("accepted") or [] if isinstance(item, dict)],
+                    [{"evidence_ids": value} for value in lineage.values() if isinstance(value, list)],
+                ),
                 "required_output": {
                     "findings": [
                         {
@@ -1552,6 +1590,7 @@ class ResearchModelService:
                     "For surveys, require performance trade-offs and open research problems.",
                     "For Chinese requests, require Chinese output.",
                     "Reject a report that contradicts source_policy_summary about whether controller-performed live public discovery occurred; limited coverage may be disclosed without denying the recorded search.",
+                    "Check source-count language against source_usage_summary and require the report to distinguish validated inputs, grounded-claim-used sources, and unused validated sources.",
                     "Do not create a high-severity finding merely because the evidence has explicit limitations.",
                 ],
             }
@@ -1566,6 +1605,10 @@ class ResearchModelService:
                 "grounded_claims": synthesis.get("claims") or [],
                 "source_catalog": synthesis.get("source_lineage") or [],
                 "source_policy_summary": synthesis.get("source_policy_summary") or {},
+                "source_usage_summary": _source_usage_summary(
+                    [item for item in synthesis.get("source_lineage") or [] if isinstance(item, dict)],
+                    [item for item in synthesis.get("claims") or [] if isinstance(item, dict)],
+                ),
                 "original_report": kwargs.get("original_report") or {},
                 "independent_review_findings": review.get("findings") or [],
                 "basis_verdict": str(review.get("verdict_suggestion") or ""),
@@ -1610,15 +1653,23 @@ class ResearchModelService:
                     "Keep one coherent set of Methods, Findings, Limitations, and Conclusions sections.",
                     "Do not claim immutable evidence_synthesis claim_source_lineage was removed; instead restrict the report text to the source scopes supported by each claim limitation.",
                     "Describe source acquisition exactly as source_policy_summary records it. A live_search run with live_requirement_met=true must say the OpenSolar controller performed live public discovery, while separately disclosing provider failures and evidence-coverage limits.",
+                    "Keep validated and grounded-claim-used source counts distinct using source_usage_summary; never describe unused_validated_source_ids as sources used to support the report.",
                 ],
             }
         elif node_id == "report_revision_review":
             prior_review = kwargs.get("prior_review") if isinstance(kwargs.get("prior_review"), dict) else {}
+            source_validation = kwargs.get("source_validation") if isinstance(kwargs.get("source_validation"), dict) else {}
+            report_draft = kwargs.get("report_draft") if isinstance(kwargs.get("report_draft"), dict) else {}
+            lineage = report_draft.get("claim_source_lineage") if isinstance(report_draft.get("claim_source_lineage"), dict) else {}
             user = {
                 "node_id": node_id,
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
                 "revised_report_draft": kwargs.get("report_draft") or {},
                 "source_validation": kwargs.get("source_validation") or {},
+                "source_usage_summary": _source_usage_summary(
+                    [item for item in source_validation.get("accepted") or [] if isinstance(item, dict)],
+                    [{"evidence_ids": value} for value in lineage.values() if isinstance(value, list)],
+                ),
                 "prior_review_findings": prior_review.get("findings") or [],
                 "required_output": {
                     "findings": [
@@ -1640,6 +1691,7 @@ class ResearchModelService:
                     "Do not require report_revision to mutate immutable evidence_synthesis claim_source_lineage; judge whether the revised report text uses sources within the stated claim limitations.",
                     "For Chinese requests, require Chinese output.",
                     "Reject a report that contradicts source_validation.source_policy_summary about whether controller-performed live public discovery occurred.",
+                    "Check source-count wording against source_usage_summary and reject any claim that unused validated sources supported the report.",
                     "Return accept when all remaining findings are low-severity nits that do not require another writing pass.",
                     "Return revise only for medium, high, or critical issues that require another writing pass.",
                     "Return reject when unsupported new claims, missing methods, or language mismatch remain and cannot be repaired within the bounded loop.",

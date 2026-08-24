@@ -536,7 +536,14 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
     )
     _system, review_user = service._prompt(
         "independent_review",
-        {"task_contract": task_contract, "source_validation": {"source_policy_summary": source_policy_summary}},
+        {
+            "task_contract": task_contract,
+            "report_draft": {"claim_source_lineage": {"claim-1": ["source-1"]}},
+            "source_validation": {
+                "accepted": [{"source_id": "source-1"}, {"source_id": "source-2"}],
+                "source_policy_summary": source_policy_summary,
+            },
+        },
     )
     _system, revision_user = service._prompt(
         "report_revision",
@@ -584,30 +591,43 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
     assert "explicit Method or Evidence Method section" in report_requirements
     assert report_user["source_catalog"][0]["url"] == "https://example.test/one"
     assert report_user["source_policy_summary"] == source_policy_summary
+    assert report_user["source_usage_summary"] == {
+        "validated_source_count": 2,
+        "validated_source_ids": ["source-1", "source-2"],
+        "grounded_claim_source_count": 2,
+        "grounded_claim_source_ids": ["source-1", "source-2"],
+        "unused_validated_source_ids": [],
+    }
     assert "reader-visible Markdown link" in report_requirements
     assert "at least two distinct cited sources" in report_requirements
     assert "avoid repeating the same Failure modes" in report_requirements
     assert "explicitly labeled as synthesis" in report_requirements
     assert "do not expand a source-specific finding into a general guarantee" in report_requirements
     assert "controller performed live public discovery" in report_requirements
+    assert "unused_validated_source_ids" in report_requirements
     assert "explicit Method or Evidence Method section" in review_rules
     assert "at least two cited source lineages" in review_rules
     assert "controller-performed live public discovery" in review_rules
+    assert review_user["source_usage_summary"]["unused_validated_source_ids"] == ["source-2"]
+    assert "validated inputs" in review_rules
     assert revision_user["basis_verdict"] == "revise"
     assert "preserve exact claim_id values" in revision_requirements
     assert revision_user["source_catalog"][0]["source_id"] == "source-1"
     assert revision_user["source_policy_summary"] == source_policy_summary
+    assert revision_user["source_usage_summary"]["grounded_claim_source_ids"] == ["source-1"]
     assert "reader-visible URL" in revision_requirements
     assert "Repair only issues identified by the independent review" in revision_requirements
     assert "Replace the report body instead of appending duplicate section summaries" in revision_requirements
     assert "Do not claim immutable evidence_synthesis claim_source_lineage was removed" in revision_requirements
     assert "controller performed live public discovery" in revision_requirements
+    assert "unused_validated_source_ids" in revision_requirements
     assert "resolves high and critical prior review findings" in revision_review_rules
     assert "exact URL" in revision_review_rules
     assert "Do not require report_revision to mutate immutable evidence_synthesis claim_source_lineage" in revision_review_rules
     assert "all remaining findings are low-severity nits" in revision_review_rules
     assert "Return revise only for medium, high, or critical issues" in revision_review_rules
     assert "controller-performed live public discovery" in revision_review_rules
+    assert "unused validated sources" in revision_review_rules
     assert revision_review_user["prior_review_findings"][0]["severity"] == "high"
 
 

@@ -568,3 +568,23 @@ Conclusions/结论/总结 section before its next peer heading; create a new sec
 only when none exists.
 Verification so far: the numbered-Chinese-conclusion regression and all
 production research service tests passed (32 passed in 2.02s).
+
+PRODUCT-019 - Report conflates validated source count with cited source count
+Status: FIXED (pending commit and live E2E verification)
+Observed in: qq-tech-trends-e2e-20260824-r12 independent review
+Evidence: the report says the synthesis “uses the given 5 validated sources,”
+while its conclusions and references use 3; a later limitation correctly says
+the two remaining validated company sources did not support concrete claims.
+The reviewer accepted this as a low-severity wording issue.
+Root cause: writer and reviewer prompts receive the source catalog and grounded
+claims separately but no explicit, precomputed distinction among validated,
+grounded-claim-used, and unused validated source IDs.
+Impact: otherwise accurate provenance can imply that every validated input was
+cited in the delivered analysis.
+Fix: provide writer, reviser, and both reviewer prompts a deterministic
+source-usage summary containing validated count/IDs, grounded-claim source
+count/IDs, and unused validated IDs; require those counts to remain distinct in
+the report wording.
+Verification so far: prompt-contract assertions for writer, reviser, reviewer,
+and revision reviewer passed with the full production research service suite
+(32 passed in 1.94s).
