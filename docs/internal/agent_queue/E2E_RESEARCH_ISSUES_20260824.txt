@@ -40,7 +40,7 @@ basetemp; then rerun the same selector.
 Verification: required by the repeated focused test command.
 
 PRODUCT-001 - Chinese punctuation is captured as part of an inline URL
-Status: FIXED (pending commit)
+Status: FIXED (commit a4f161052)
 Observed in: qq-tech-trends-e2e-20260824-r1
 Evidence:
 - Exit code: 2
@@ -67,7 +67,7 @@ Verification:
   independent missing-fixture defect recorded as PRODUCT-002 below.
 
 PRODUCT-002 - Existing research parity test references a missing PDF fixture
-Status: FIXED (pending commit)
+Status: FIXED (commit 35b308371)
 Observed while verifying: PRODUCT-001
 Evidence: tests/harness/research_orchestration/test_research_control_plane_contract.py::test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity
 constructed a path below harness/tests, while the canonical fixture is below
@@ -82,7 +82,7 @@ topic, URL, and PDF cases. It then failed on the independent import-evidence
 defect recorded as PRODUCT-003.
 
 PRODUCT-003 - import_evidence source packs are ignored during input preparation
-Status: FIXED (pending commit)
+Status: FIXED (commit deed52c55)
 Observed while verifying: PRODUCT-002
 Evidence: the evidence-resume case in
 tests/harness/research_orchestration/test_research_control_plane_contract.py::test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity
@@ -101,7 +101,7 @@ Verification:
 - Related control-plane suites: 12 passed in 58.46s
 
 TEST-001 - New import-evidence regression fixture initially escaped artifact root
-Status: FIXED IN TEST (pending PRODUCT-003 commit)
+Status: FIXED IN TEST (included in commit deed52c55)
 Observed while verifying: PRODUCT-003
 Evidence: the focused regression placed external-evidence.json directly below
 pytest tmp_path but configured tmp_path/artifacts as artifact_root. The runtime
@@ -132,7 +132,7 @@ in the user's E2E request without weakening the runtime authorization model.
 Verification: required by the r2 resume invocation.
 
 PRODUCT-004 - Production resume recompiles an invalid, different task
-Status: FIXED (pending commit)
+Status: FIXED (commit 5d9d0288a)
 Observed in: qq-tech-trends-e2e-20260824-r2 resume
 Evidence:
 - Exit code: 2
@@ -162,7 +162,7 @@ Verification:
   Those failures are recorded below as PRODUCT-005 and TEST-002.
 
 PRODUCT-005 - Scientific final-evaluation output exceeds the Windows path limit
-Status: FIXED (pending commit)
+Status: FIXED (commit e0f1838a9)
 Observed while verifying: PRODUCT-004
 Evidence: test_real_markdown_lifecycle_preserves_method_result_and_git_provenance
 reached final_evaluation after producing all prerequisite report artifacts, but
@@ -183,7 +183,7 @@ Verification:
 - Full target rerun after the test read fix: 1 passed in 4.36s.
 
 TEST-002 - Report-revision fixtures no longer satisfy the relevance gate
-Status: FIXED (pending commit)
+Status: FIXED (commit f77b91cbb)
 Observed while verifying: PRODUCT-004
 Evidence: three report-revision tests stopped at source_validation with zero
 accepted sources. The query subject terms are survey/solar/repair/loop/behavior;
@@ -347,7 +347,7 @@ Verification: schema-valid, schema-invalid, Windows reap, and credential scrub
 regressions passed together (4 passed in 2.91s). Live rerun remains required.
 
 PRODUCT-010 - Webpage discovery searches the article headline instead of its technical topics
-Status: FIXED (commit b5958ea7e; live E2E verification pending)
+Status: FIXED (commit b5958ea7e; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r6 acceptance review
 Evidence:
 - Runtime final_status was completed and final_acceptance was accepted.
@@ -377,7 +377,7 @@ production discovery plus relevance suites passed (49 passed in 2.19s). Live
 rerun remains required.
 
 PRODUCT-011 - User-visible report omits source URLs and cites internal claim IDs only
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit a78deffe0; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r6 acceptance review
 Evidence: the accepted revision/report.md is 10,275 bytes, contains 2,869
 Chinese characters and eight headings, but contains no `https://` URL—not even
@@ -398,7 +398,7 @@ Verification so far: prompt-contract and final-acceptance regressions passed
 doubles recorded as TEST-004 below.
 
 TEST-004 - Fake valid reports omit URLs required by the strengthened acceptance contract
-Status: FIXED (pending commit)
+Status: FIXED (commit 784d78e13)
 Observed while verifying: PRODUCT-011
 Evidence: broader related suites produced 4 failures and 102 passes. The two
 generic seven-node chains and two revision-loop cases reached final_acceptance,
@@ -413,7 +413,7 @@ Verification: four formerly failing target cases passed in 4.57s; the full
 related set passed (106 passed in 71.50s).
 
 PRODUCT-012 - Multi-topic webpage discovery spends its shortlist on the first broad topic
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit 209941d0b; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r7 acceptance review
 Evidence:
 - The seven-node run completed and its deterministic final gate passed.
@@ -439,7 +439,7 @@ Verification so far: the two new query-diversity regressions and all existing
 production research service tests passed (28 passed in 2.00s).
 
 PRODUCT-013 - Report heading deduplication duplicates every nested subsection
-Status: FIXED (pending commit)
+Status: FIXED (commit 48735ff27; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r8
 Evidence: the final reviewer found that all nine `###` technology-trend
 subsections appeared twice in the deliverable Markdown, even though the model's
@@ -459,7 +459,7 @@ Verification: the new nested-heading regression and the complete production
 research service suite passed (29 passed in 2.03s).
 
 PRODUCT-014 - Claim grounding treats substantive Chinese claims as empty text
-Status: FIXED (pending commit)
+Status: FIXED (commit 94ed59024; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r8
 Evidence:
 - Synthesis generated a mirror-world/digital-twin claim grounded in the fetched
@@ -483,7 +483,7 @@ confirmed that unrelated Chinese claims and unsupported years still fail
 closed.
 
 PRODUCT-015 - Online discovery is mislabeled as a source-pack-only run
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit 73ee81e8d; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r9 acceptance review
 Evidence:
 - The exact command used `--online`; provider evidence records live calls to
@@ -511,7 +511,7 @@ contract tests passed (2 passed in 1.94s). Live exact-prompt verification is
 required because the final wording is model-generated.
 
 PRODUCT-016 - Structured report sections are appended after a complete references section
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit eca66d840; live verified with follow-up PRODUCT-017 in r13)
 Observed in: qq-tech-trends-e2e-20260824-r10 acceptance review
 Evidence: the independent reviewer accepted the report with one low-severity
 structure finding: after the complete Markdown body reached `## 参考资料`, the
@@ -533,7 +533,7 @@ Verification so far: the new publication-boundary regression and all production
 research service tests passed (30 passed in 1.88s).
 
 PRODUCT-017 - Auto-generated conclusions and limitations can follow references
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit b1aa65dd9; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r11 acceptance review
 Evidence: r11 completed and passed deterministic acceptance, and the structured
 `sections` summaries were no longer appended. However, the final Markdown still
@@ -552,7 +552,7 @@ Verification so far: the new generated-section ordering regression and all
 production research service tests passed (31 passed in 2.01s).
 
 PRODUCT-018 - Traceable conclusions create a second Conclusions heading
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit d9f848d4e; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r12 acceptance review
 Evidence: final Markdown contained both `## 七、结论` from the provider body and
 an auto-generated `## 结论` containing the evidence-linked structured
@@ -570,7 +570,7 @@ Verification so far: the numbered-Chinese-conclusion regression and all
 production research service tests passed (32 passed in 2.02s).
 
 PRODUCT-019 - Report conflates validated source count with cited source count
-Status: FIXED (pending commit and live E2E verification)
+Status: FIXED (commit b260b7288; live verified in r13)
 Observed in: qq-tech-trends-e2e-20260824-r12 independent review
 Evidence: the report says the synthesis “uses the given 5 validated sources,”
 while its conclusions and references use 3; a later limitation correctly says
@@ -588,3 +588,78 @@ the report wording.
 Verification so far: prompt-contract assertions for writer, reviser, reviewer,
 and revision reviewer passed with the full production research service suite
 (32 passed in 1.94s).
+
+Final accepted E2E run
+======================
+
+Run ID: qq-tech-trends-e2e-20260824-r13
+Result: PASS_WITH_KNOWN_LIMITATIONS
+Exit code: 0
+Duration: approximately 3 minutes 41 seconds
+Git commit exercised: b260b72884b9ba859ff73b9638945216be369a74
+
+Task:
+梳理这个网页的关键技术趋势 https://news.qq.com/rain/a/20251207A0337Y00， 并搜索当前互联网上公开的资料，生成一个相关技术趋势的深度分析报告， 报告用中文。
+
+Production command:
+HARNESS_DIR="$PWD/harness" SOLAR_PYTHON="/c/Users/j50058254/Desktop/Github repo/OpenSolar-Canonical/.venv/Scripts/python.exe" ./harness/solar-harness.sh autosci '$research 梳理这个网页的关键技术趋势 https://news.qq.com/rain/a/20251207A0337Y00， 并搜索当前互联网上公开的资料，生成一个相关技术趋势的深度分析报告， 报告用中文。 --solar-orchestrator --online --output-language zh --run-id qq-tech-trends-e2e-20260824-r13 --review-llm-provider codex --approval-ref user-request-e2e-20260824'
+
+Required environment/configuration (values are paths, not credentials):
+- SOLAR_AUTOSCI_OUTPUT_HARNESS and AUTOSCI_ARTIFACT_ROOT both pointed to the
+  run-specific canonical output root.
+- SOLAR_CODEX_BINARY pointed to the installed Codex desktop binary.
+- SOLAR_CODEX_SOURCE_HOME pointed to the signed-in Codex configuration root;
+  no authentication value was printed, archived, or committed.
+
+Acceptance evidence:
+- Runtime final_status: completed.
+- All seven processing nodes completed: seed_fetch, source_discovery,
+  source_validation, evidence_synthesis, report_draft, independent_review,
+  report_revision, followed by completed final_acceptance.
+- final_acceptance decision=accepted and gate_outcome=pass.
+- Independent/revision review verdict=accept; zero remaining blocking findings.
+- Source acquisition mode=live_search; live_requirement_met=true; 5 live
+  sources passed validation.
+- Evidence chain contains 12 grounded claims, 9 traceable conclusions, 4 cited
+  sources, and 4 rendered source URLs.
+- Final Markdown is 14,030 bytes with 3,546 CJK characters, includes the exact
+  Tencent URL, truthfully records controller-performed live discovery, and does
+  not claim that no live search occurred.
+- Source counts are explicit: 5 validated sources, 4 sources used by grounded
+  claims, and 1 validated-but-unused DOI source.
+- Normalized duplicate-heading groups=0; headings after References=0.
+- Credential cleanup audit: 0 auth.json copies in the r13 evidence root and 0
+  under run-owned solar-codex-research-state temporary directories.
+
+Canonical artifacts:
+- outputs/phase22-real-journeys/qq-tech-trends-e2e-20260824-r13/contracts/qq-tech-trends-e2e-20260824-r13.research_task_contract.json
+- outputs/phase22-real-journeys/qq-tech-trends-e2e-20260824-r13/state/qq-tech-trends-e2e-20260824-r13.research_run_state.json
+- outputs/phase22-real-journeys/qq-tech-trends-e2e-20260824-r13/artifacts/research_synthesis_v1/revision/report.md
+- outputs/phase22-real-journeys/qq-tech-trends-e2e-20260824-r13/artifacts/research_synthesis_v1/final/final_acceptance.json
+- outputs/phase22-real-journeys/qq-tech-trends-e2e-20260824-r13/service-evidence/
+
+Product paths exercised:
+- website prompt intake and bounded URL fetch;
+- multi-topic public source discovery and source validation;
+- CJK evidence grounding and synthesis;
+- Chinese report drafting, independent review, bounded revision, and final
+  acceptance;
+- Codex subscription writer/reviewer transport and sensitive-state cleanup.
+
+Final regression evidence:
+- 119 passed in 72.24s across production discovery/model services, research
+  synthesis operators, control-plane intake/contracts, production runtime, and
+  scientific reviewer/claim compiler suites.
+- git diff --check passed after this final log update.
+
+Known limitations retained truthfully:
+- Semantic Scholar returned HTTP 429 after its bounded retry; the multi-provider
+  fallback completed the run.
+- The writer and reviewer used the same Codex provider/model identity, so full
+  provider independence is not established.
+- Supplemental public evidence is strongest for AI, robotics, and model-company
+  context; several non-AI long-horizon trends remain primarily supported by the
+  Tencent source and are labeled as forward-looking rather than verified facts.
+
+Publishing disposition: all fixes and this evidence remain local. No push was
+performed, as requested.
