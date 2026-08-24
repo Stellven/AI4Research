@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -21,6 +22,15 @@ from research_orchestration.runtime import (  # noqa: E402
     _git_checkout_provenance,
     default_production_resolver,
 )
+
+
+def _test_fs_path(path: Path) -> str:
+    resolved = str(path.resolve())
+    if os.name != "nt" or resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + resolved.lstrip("\\")
+    return "\\\\?\\" + resolved
 
 
 def _workflow_loader(artifact_root: Path):
@@ -373,12 +383,12 @@ def test_real_markdown_lifecycle_preserves_method_result_and_git_provenance(tmp_
     }
     state = json.loads(Path(result["state_path"]).read_text(encoding="utf-8"))
     assert state["run_provenance"] == result["run_provenance"]
-    final_evaluation = json.loads(
-        (
-            tmp_path
-            / "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json"
-        ).read_text(encoding="utf-8")
+    final_evaluation_path = (
+        tmp_path
+        / "artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_final_evaluation.v1.json"
     )
+    with open(_test_fs_path(final_evaluation_path), encoding="utf-8") as handle:
+        final_evaluation = json.load(handle)
     evaluation = final_evaluation["outputs"]["evaluation"]
     assert evaluation["accepted"] is True
     assert evaluation["run_provenance"] == result["run_provenance"]

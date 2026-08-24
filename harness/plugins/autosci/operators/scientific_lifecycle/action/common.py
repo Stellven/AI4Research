@@ -9,6 +9,8 @@ from typing import Any, Iterable
 from ...research_synthesis.base import (
     OperatorContext,
     ResearchOperatorError,
+    _read_bytes,
+    _write_bytes,
     build_node_result,
     display_path,
     evidence_ref,
@@ -192,10 +194,9 @@ def write_evidence_artifact(
         context.write_scope,
         workspace_root=context.workspace_root,
     )
-    target.parent.mkdir(parents=True, exist_ok=True)
-    body = json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
-    target.write_text(body, encoding="utf-8")
-    digest = sha256_bytes(target.read_bytes())
+    body = (json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
+    _write_bytes(target, body)
+    digest = sha256_bytes(_read_bytes(target))
     ref = {
         "artifact_id": final_artifact_id,
         "path": display_path(target, context.workspace_root),
@@ -269,9 +270,8 @@ def write_scoped_text(
     if not clean.strip():
         raise ResearchOperatorError("Compiled artifact content is empty", error_type="product_failure")
     target = validate_scoped_path(relative_path, context.write_scope, workspace_root=context.workspace_root)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(clean, encoding="utf-8")
-    digest = sha256_bytes(target.read_bytes())
+    _write_bytes(target, clean.encode("utf-8"))
+    digest = sha256_bytes(_read_bytes(target))
     return (
         {
             "artifact_id": artifact_id,

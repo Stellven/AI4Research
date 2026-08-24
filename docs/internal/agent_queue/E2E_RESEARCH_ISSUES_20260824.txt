@@ -162,7 +162,7 @@ Verification:
   Those failures are recorded below as PRODUCT-005 and TEST-002.
 
 PRODUCT-005 - Scientific final-evaluation output exceeds the Windows path limit
-Status: OPEN
+Status: FIXED (pending commit)
 Observed while verifying: PRODUCT-004
 Evidence: test_real_markdown_lifecycle_preserves_method_result_and_git_provenance
 reached final_evaluation after producing all prerequisite report artifacts, but
@@ -171,8 +171,16 @@ artifacts/scientific/scientific_research_lifecycle_full_v1/09_report/research_fi
 The resolved absolute target is 262 characters on this Windows checkout.
 Impact: a valid lifecycle fails only at its final evidence write when the
 workspace/test prefix crosses the legacy Windows 260-character boundary.
-Planned fix: use an extended-length filesystem path for scoped artifact I/O on
-Windows while retaining the ordinary path in user-facing artifact metadata.
+Fix: scientific lifecycle action operators now reuse the research-synthesis
+package's extended-length byte I/O for scoped JSON and text artifacts while
+retaining ordinary paths in user-facing metadata. The regression assertion
+also reads the deliberately long final-evaluation path through the Windows
+extended-length form.
+Verification:
+- First rerun after the product write fix reached final_status=completed and
+  created the artifact; the ordinary test read then exposed the same Windows
+  limitation on the assertion side.
+- Full target rerun after the test read fix: 1 passed in 4.36s.
 
 TEST-002 - Report-revision fixtures no longer satisfy the relevance gate
 Status: OPEN
