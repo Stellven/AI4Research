@@ -569,7 +569,7 @@ BIBLIOGRAPHIC_PROVIDERS = frozenset({
 })
 
 RESEARCH_INSTRUCTION_STOPWORDS = frozenset({
-    "about", "analysis", "analyze", "and", "for", "from", "into", "research",
+    "about", "analysis", "analyze", "and", "for", "from", "into", "its", "research",
     "report", "study", "that", "the", "their", "this", "using", "what", "with",
     # deliverable verbs
     "compare", "produce", "provide", "deliver", "write", "create", "generate",
@@ -589,6 +589,39 @@ RESEARCH_INSTRUCTION_STOPWORDS = frozenset({
     # comparison connectives carry no subject meaning
     "better", "than", "versus", "worse", "whether",
 })
+
+_WORKFLOW_INSTRUCTION_MARKERS = (
+    "accepted part a evidence",
+    "accepted part-a evidence",
+    "evidence-lineage integrity benchmark",
+    "evidence lineage integrity benchmark",
+    "fixed no-network",
+)
+
+
+def research_subject_text(value: str) -> str:
+    """Exclude explicit workflow-control sentences from the research topic.
+
+    The fixed A+B prompt contains both a scholarly question and a sentence
+    telling Part B to design and run a fixed evidence-lineage PoC.  Treating
+    both as one topic produced the live provider query ``... design run fixed``
+    and let orchestration vocabulary participate in relevance.  Strong,
+    workflow-specific markers make this separation deterministic without
+    stripping words such as ``design`` or ``run`` when they genuinely belong
+    to the scientific question.
+    """
+    text = str(value or "")
+    fragments = [
+        fragment.strip()
+        for fragment in re.split(r"(?<=[.!?])\s+|[\r\n]+", text)
+        if fragment.strip()
+    ]
+    topical = [
+        fragment
+        for fragment in fragments
+        if not any(marker in fragment.casefold() for marker in _WORKFLOW_INSTRUCTION_MARKERS)
+    ]
+    return " ".join(topical) if topical else text
 
 # Methodology vocabulary shared by nearly every research paper. These terms are
 # real query terms -- they are NOT stripped, because "detection methods" is part
@@ -663,7 +696,7 @@ def _is_stopword_compound(token: str) -> bool:
 
 def research_query_terms(value: str) -> set[str]:
     """Topic terms for relevance, with deliverable instruction vocabulary removed."""
-    text = str(value or "").lower()
+    text = research_subject_text(value).lower()
     terms: set[str] = set()
     for token in _RESEARCH_TOKEN_RE.findall(text):
         # trailing sentence punctuation would hide "sources." from the stoplist

@@ -528,6 +528,7 @@ def test_fixed_graph_binds_controller_public_retrieval_only_to_a2(
     assert _sha(policy_path.read_bytes()) == policy_ref["sha256"]
     assert policy["node_id"] == "source_discovery"
     assert policy["providers"] == fr.PUBLIC_RETRIEVAL_PROVIDERS
+    assert policy["max_candidates"] == fr.PUBLIC_RETRIEVAL_MAX_CANDIDATES == 150
     assert policy["secret_refs"] == []
     assert policy["credential_mode"] == "public_no_key"
     assert any(policy_ref["path"] in item for item in nodes["source_discovery"]["read_scope"])
@@ -746,6 +747,8 @@ def test_all_codex_stage_schemas_are_closed_and_node_bound() -> None:
         assert schema["properties"]["node_id"] == {"type": "string", "const": node_id}
         assert set(schema["required"]) == set(schema["properties"])
         assert "uniqueItems" not in json.dumps(schema)
+    claim_text = _response_schema("evidence_synthesis")["properties"]["claims"]["items"]["properties"]["text"]
+    assert claim_text["maxLength"] == 500
 
 
 def test_report_revision_omitting_provider_limitations_fails_before_a7_acceptance(

@@ -1,0 +1,11 @@
+artifacts
+reports
+run
+sessions
+sprints
+tmp
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+**/*.log
+**/*.lock

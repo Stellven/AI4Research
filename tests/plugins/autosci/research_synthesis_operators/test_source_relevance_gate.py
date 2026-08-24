@@ -216,6 +216,22 @@ def test_a_single_common_word_does_not_admit_a_source() -> None:
     assert "single non-discriminating subject term" in verdict["proof"][0]
 
 
+def test_fixed_part_b_instruction_does_not_contaminate_research_topic() -> None:
+    request = (
+        "Research and compare retrieval-augmented generation evaluation methods and reliability "
+        "benchmarks using at least three real public scholarly sources. Produce a source-linked "
+        "deep research report with evidence IDs, methods, conclusions, limitations, and independent "
+        "review. Then use the accepted Part A evidence to design and run the fixed no-network "
+        "evidence-lineage integrity benchmark PoC, verify its raw results, and package the final "
+        "report and PoC deliverables."
+    )
+
+    assert distill_search_query(request) == "retrieval-augmented generation"
+    terms = research_query_terms(request)
+    assert {"retrieval-augmented", "generation", "evaluation", "methods", "reliability", "benchmarks"} <= terms
+    assert not ({"design", "run", "fixed", "no-network", "evidence-lineage", "integrity"} & terms)
+
+
 def test_one_discriminating_term_is_enough() -> None:
     """A flat "require two matches" rule would have dropped this real paper.
 

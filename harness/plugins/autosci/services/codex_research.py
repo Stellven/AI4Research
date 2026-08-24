@@ -88,7 +88,11 @@ def _response_schema(node_id: str) -> dict[str, Any]:
                 "type": "object",
                 "properties": {
                     "claim_id": {"type": "string", "minLength": 1},
-                    "text": {"type": "string", "minLength": 1},
+                    # This is the same ceiling enforced by
+                    # research.schemas.Claim in the grounded compiler. Keeping
+                    # it in the provider schema prevents A4 from publishing an
+                    # artifact A5 is structurally unable to compile.
+                    "text": {"type": "string", "minLength": 1, "maxLength": 500},
                     "evidence_ids": _string_array(),
                     # The verbatim sentence behind each cited source. Without
                     # it a claim records WHICH source supported it but never

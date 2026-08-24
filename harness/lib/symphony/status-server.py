@@ -206,6 +206,9 @@ _STATUS_PAYLOAD_CACHE_TTL_SECONDS = 2.0
 _STATUS_WARMUP_ACTIVE = False
 _EVENTS_CACHE = {}
 _EVENTS_CACHE_TTL_SECONDS = 3.0
+_DELIVERABLES_CACHE = {}
+_DELIVERABLES_CACHE_TTL_SECONDS = 2.0
+_DELIVERABLES_CACHE_LOCK = threading.Lock()
 _ACTIVE_SPRINT_STATUSES = {
     "drafting",
     "queued",
@@ -1885,7 +1888,7 @@ def _deliverable_stage(name: str, rel_path: str, source: str) -> str:
     return "other"
 
 
-def _declared_output_contracts(sid: str, workdir: Path) -> list[tuple[Path, str]]:
+def _declared_output_contracts(sid: str, workdir: Path) -> list[tuple[Path, str, int]]:
     """Resolve graph write-scope declarations into sprint-owned output paths.
 
     Planner graphs use both workdir-relative declarations (``workspace/x``)
@@ -1895,9 +1898,9 @@ def _declared_output_contracts(sid: str, workdir: Path) -> list[tuple[Path, str]
     """
     graph, _path = _sprint_contract_graph(sid)
     nodes = graph.get("nodes") if isinstance(graph.get("nodes"), list) else []
-    contracts: list[tuple[Path, str]] = []
-    seen: set[tuple[str, str]] = set()
-    for node in nodes:
+    contracts: list[tuple[Path, str, int]] = []
+    seen: set[tuple[str, str, int]] = set()
+    for producer_order, node in enumerate(nodes):
         if not isinstance(node, dict):
             continue
         task_type = str(
@@ -1925,21 +1928,31 @@ def _declared_output_contracts(sid: str, workdir: Path) -> list[tuple[Path, str]
                     continue
                 if not _is_within(resolved, workdir):
                     continue
-                key = (str(resolved), task_type)
+                key = (str(resolved), task_type, producer_order)
                 if key not in seen:
-                    contracts.append((resolved, task_type))
+                    contracts.append((resolved, task_type, producer_order))
                     seen.add(key)
     return contracts
 
 
-def _output_role(path: Path, workdir: Path, contracts: list[tuple[Path, str]]) -> tuple[str, bool]:
-    """Return producer task type and whether an output is supporting evidence."""
+def _output_role(
+    path: Path,
+    workdir: Path,
+    contracts: list[tuple[Path, str, int]],
+) -> tuple[str, bool, int]:
+    """Return producer role, support classification, and graph order.
+
+    Graph order is retained so two otherwise equivalent report artifacts are
+    ranked by the stage that produced them.  This prevents a large intermediate
+    source extract from replacing a smaller final delivery as the dashboard's
+    canonical result.
+    """
     matches = [
-        (len(declared.parts), task_type)
-        for declared, task_type in contracts
+        (len(declared.parts), producer_order, task_type)
+        for declared, task_type, producer_order in contracts
         if path == declared or _is_within(path, declared)
     ]
-    producer_task_type = max(matches, default=(0, ""))[1]
+    _specificity, producer_order, producer_task_type = max(matches, default=(0, -1, ""))
     try:
         parts = tuple(part.lower() for part in path.relative_to(workdir).parts[:-1])
     except ValueError:
@@ -1948,7 +1961,7 @@ def _output_role(path: Path, workdir: Path, contracts: list[tuple[Path, str]]) -
         producer_task_type in _SUPPORTING_OUTPUT_TASK_TYPES
         or any(part in _SUPPORTING_OUTPUT_DIRS for part in parts)
     )
-    return producer_task_type, supporting
+    return producer_task_type, supporting, producer_order
 
 
 def _select_result_index(rows: list[dict]) -> int:
@@ -1991,15 +2004,20 @@ def _select_result_index(rows: list[dict]) -> int:
     for predicate in tiers:
         matched = [i for i, row in enumerate(rows) if predicate(row)]
         if matched:
-            # A real result is the most substantial / most recent of its tier.
+            # Prefer the artifact produced later in the governed graph, then
+            # use substance/recency only to break ties within that stage.
             return max(
                 matched,
-                key=lambda i: (float(rows[i].get("size") or 0), float(rows[i].get("mtime") or 0)),
+                key=lambda i: (
+                    int(rows[i].get("producer_order", -1)),
+                    float(rows[i].get("size") or 0),
+                    float(rows[i].get("mtime") or 0),
+                ),
             )
     return -1
 
 
-def _discover_sprint_deliverables(sid: str) -> list[dict]:
+def _discover_sprint_deliverables_uncached(sid: str) -> list[dict]:
     if not _valid_sprint_id(sid):
         return []
     allowed_suffixes = {".html", ".htm", ".md", ".markdown", ".json", ".txt", ".log", ".pdf", ".png", ".jpg", ".jpeg"}
@@ -2115,7 +2133,7 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                     # deeper than legacy planner outputs.
                     if len(parts) > 3 and not any(
                         resolved == declared or _is_within(resolved, declared)
-                        for declared, _task_type in output_contracts
+                        for declared, _task_type, _producer_order in output_contracts
                     ):
                         continue
                     key = _safe_rel(resolved, HARNESS_DIR)  # absolute string for workdir files
@@ -2127,7 +2145,7 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                     continue
                 if cutoff and stat.st_mtime < cutoff:
                     continue
-                producer_task_type, supporting = _output_role(
+                producer_task_type, supporting, producer_order = _output_role(
                     resolved, workdir, output_contracts
                 )
                 rows.append({
@@ -2139,6 +2157,7 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                     "source": "output",
                     "primary": True,
                     "producer_task_type": producer_task_type,
+                    "producer_order": producer_order,
                     "supporting": supporting,
                     "stage": _deliverable_stage(resolved.name, key, "output"),
                     "view_url": f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(key)}",
@@ -2162,6 +2181,22 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
         str(item.get("name") or ""),
     ))
     return rows
+
+
+def _discover_sprint_deliverables(sid: str) -> list[dict]:
+    """Return a fresh-enough inventory while making full scans single-flight."""
+    cache_key = (str(HARNESS_DIR), str(SPRINTS_DIR), str(REPORTS_DIR), sid)
+    with _DELIVERABLES_CACHE_LOCK:
+        now = time.monotonic()
+        cached = _DELIVERABLES_CACHE.get(cache_key)
+        if cached and now - float(cached.get("ts") or 0.0) <= _DELIVERABLES_CACHE_TTL_SECONDS:
+            return [dict(item) for item in cached.get("value") or []]
+        rows = _discover_sprint_deliverables_uncached(sid)
+        _DELIVERABLES_CACHE[cache_key] = {
+            "ts": time.monotonic(),
+            "value": [dict(item) for item in rows],
+        }
+        return rows
 
 
 def _resolve_sprint_deliverable(sid: str, raw_path: str) -> Path | None:

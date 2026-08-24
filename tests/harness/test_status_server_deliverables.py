@@ -250,6 +250,76 @@ def test_deep_fixed_workflow_final_delivery_is_visible_but_undeclared_peer_is_no
     assert all(item["rel_path"] != str(hidden.resolve()) for item in items)
 
 
+def test_later_governed_final_delivery_outranks_larger_intermediate_extract(
+    tmp_path: Path,
+) -> None:
+    module, _harness, sprints = _load_status_server(tmp_path)
+    sid = "sprint-final-over-intermediate"
+    workdir = sprints / sid / "workdir"
+    extract = _write(
+        workdir / "artifacts/research/report/grounded/extracts/source.md",
+        "# Source extract\n\n" + ("supporting source bytes\n" * 500),
+    )
+    final = _write(
+        workdir / "artifacts/research/delivery/final_delivery.md",
+        "# Final delivery\n\nAccepted report and PoC.\n",
+    )
+    _write(
+        sprints / f"{sid}.task_graph.json",
+        json.dumps(
+            {
+                "nodes": [
+                    {
+                        "id": "report_draft",
+                        "task_type": "report-writing",
+                        "write_scope": ["artifacts/research/report"],
+                    },
+                    {
+                        "id": "final_delivery",
+                        "task_type": "report-writing",
+                        "depends_on": ["report_draft"],
+                        "write_scope": [
+                            "artifacts/research/delivery",
+                            "artifacts/research/delivery/final_delivery.md",
+                        ],
+                    },
+                ]
+            }
+        ),
+    )
+
+    items = module._discover_sprint_deliverables(sid)
+    selected = [item for item in items if item["result"]]
+
+    assert extract.stat().st_size > final.stat().st_size
+    assert len(selected) == 1
+    assert selected[0]["name"] == "final_delivery.md"
+    assert selected[0]["producer_order"] == 1
+
+
+def test_deliverable_inventory_scan_is_reused_within_short_ttl(
+    tmp_path: Path, monkeypatch
+) -> None:
+    module, _harness, _sprints = _load_status_server(tmp_path)
+    calls = []
+
+    def scan(sid: str):
+        calls.append(sid)
+        return [{"name": "final.md", "result": True}]
+
+    monkeypatch.setattr(module, "_discover_sprint_deliverables_uncached", scan)
+    module._DELIVERABLES_CACHE.clear()
+
+    first = module._discover_sprint_deliverables("sprint-cache")
+    second = module._discover_sprint_deliverables("sprint-cache")
+    second[0]["name"] = "mutated-by-caller.md"
+    third = module._discover_sprint_deliverables("sprint-cache")
+
+    assert calls == ["sprint-cache"]
+    assert first[0]["name"] == "final.md"
+    assert third[0]["name"] == "final.md"
+
+
 def test_dashboard_fixed_hybrid_profile_is_controller_owned_and_explicit(tmp_path: Path, monkeypatch) -> None:
     module, _harness, _sprints = _load_status_server(tmp_path)
     pack = tmp_path / "authority/source-pack"

@@ -165,12 +165,24 @@ def build_plan(
                 if all(eid != existing for existing, _ in present):
                     present.append((eid, quote))
         if unquoted:
+            # A claim cites source ids, while the grounded compiler accepts
+            # only the content-addressed evidence ids written into the source
+            # pack.  Keep the human-readable source ids in the gap text, but
+            # project the machine-readable field through the same index used
+            # for normal evidence links.  Passing the raw citation here makes
+            # the compiler abort with evidence_id_unknown even though the
+            # source was successfully resolved.
+            unquoted_evidence_ids = sorted({
+                evidence_id
+                for citation in unquoted
+                for evidence_id in (evidence_index.get(citation) or [])
+            })
             gaps.append({
                 "text": (
                     f"{claim_id} cites sources with no verified supporting quote: "
                     + ", ".join(sorted(unquoted))
                 ),
-                "evidence_ids": sorted(unquoted),
+                "evidence_ids": unquoted_evidence_ids,
             })
         if missing:
             gaps.append({

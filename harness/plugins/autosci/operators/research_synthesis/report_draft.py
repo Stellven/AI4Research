@@ -214,35 +214,54 @@ def _normalized_heading(value: str) -> str:
 
 
 def _dedupe_repeated_heading_sections(body: str) -> str:
+    """Keep the first occurrence of each Markdown heading path.
+
+    A section ends at the next heading of any level for this normalization
+    pass.  The previous implementation also calculated a parent section out
+    to the next heading of the same or higher level, then iterated over and
+    appended its child sections again.  A perfectly valid ``## Domain`` with
+    ``### Clinical`` and ``### Materials`` therefore gained a second copy of
+    both children during normalization.
+
+    The normalized ancestor path is part of the identity: two ``### Results``
+    sections under different level-two parents remain distinct, while a second
+    ``Domain-Specific > Clinical`` section is removed.  This preserves the
+    established contract that reports have one Method, Conclusions, and
+    Limitations section without conflating same-named children in different
+    branches.
+    """
     headings = list(re.finditer(r"(?m)^(#{2,6})\s+(.+?)\s*$", body))
     if not headings:
         return body
-    keep_ranges: list[tuple[int, int]] = []
-    seen: set[tuple[int, str]] = set()
+    pieces: list[str] = []
+    seen: set[tuple[str, ...]] = set()
+    ancestors: list[tuple[int, str]] = []
     cursor = 0
     for index, heading in enumerate(headings):
         if heading.start() > cursor:
-            keep_ranges.append((cursor, heading.start()))
+            pieces.append(body[cursor:heading.start()])
         level = len(heading.group(1))
         normalized = _normalized_heading(heading.group(2))
-        section_end = len(body)
-        for following in headings[index + 1:]:
-            if len(following.group(1)) <= level:
-                section_end = following.start()
-                break
-        key = (level, normalized)
+        section_end = headings[index + 1].start() if index + 1 < len(headings) else len(body)
+        ancestors = [item for item in ancestors if item[0] < level]
+        key = tuple([*(name for _ancestor_level, name in ancestors), normalized])
         if not normalized or key not in seen:
-            keep_ranges.append((heading.start(), section_end))
+            pieces.append(body[heading.start():section_end])
+        if normalized:
             seen.add(key)
+            ancestors.append((level, normalized))
         cursor = section_end
     if cursor < len(body):
-        keep_ranges.append((cursor, len(body)))
-    compact = "".join(body[start:end] for start, end in keep_ranges)
+        pieces.append(body[cursor:])
+    compact = "".join(pieces)
     return re.sub(r"\n{3,}", "\n\n", compact).strip()
 
 
 _LIMITATIONS_HEADING_RE = re.compile(
-    r"(?im)^(#{2,6})\s*[^\r\n]*(?:limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3)[^\r\n]*$"
+    # Final acceptance requires a report-level ``##`` section. A nested
+    # topical heading such as ``### Evaluation Practice Limitations`` is part
+    # of the findings hierarchy, not the deliverable's limitations register.
+    r"(?im)^(##)(?!#)[ \t]+[^\r\n]*(?:limitations?\b|\u5c40\u9650|\u9650\u5236|\u4e0d\u8db3)[^\r\n]*$"
 )
 _METHOD_HEADING_RE = re.compile(
     r"(?i)methods?\b|evidence\s+method\b|\u65b9\u6cd5|\u65b9\u6cd5\u8bba"
@@ -272,8 +291,9 @@ def _merge_limitations_section(body: str, limitations: list[str], heading: str) 
     Appending a second "## Limitations" is what produced the duplicate heading a
     reviewer flags as a critical finding, and because this ran on every revision
     attempt the operator recreated the duplicate each time -- so no revision
-    could ever clear it. When the body already has a limitations section the
-    missing entries are inserted into it; only otherwise is a section created.
+    could ever clear it. When the body already has a report-level limitations
+    section the missing entries are inserted into it; a nested topical heading
+    does not qualify, so a dedicated report-level section is created instead.
     """
     wanted = list(dict.fromkeys(item for item in limitations if item))
     if not wanted:

@@ -21,12 +21,31 @@ from harness.plugins.autosci.operators.research_synthesis.base import (  # noqa:
     ResearchOperatorError,
     write_artifact,
 )
+from harness.plugins.autosci.operators.research_synthesis.evidence_synthesis import (  # noqa: E402
+    normalize_validated_source_count_limitations,
+)
+from harness.plugins.autosci.operators.research_synthesis.report_draft import (  # noqa: E402
+    _dedupe_repeated_heading_sections,
+)
 from harness.plugins.autosci.operators.research_synthesis.registry import execute_operator  # noqa: E402
 
 
 NODE_RESULT_SCHEMA = json.loads((HARNESS / "schemas" / "evidence" / "research_node_result.v1.schema.json").read_text(encoding="utf-8"))
 WORKFLOW = json.loads((HARNESS / "workflows" / "drafts" / "research_synthesis_v1.json").read_text(encoding="utf-8"))
 BASELINE_ARTIFACTS_FOR_TEST = ("independent_review", "report_draft", "evidence_synthesis", "source_validation")
+
+
+def test_validated_source_count_in_limitations_is_bound_to_authoritative_input() -> None:
+    assert normalize_validated_source_count_limitations(
+        [
+            "Analysis limited to 41 provided validated sources; broader literature was not accessed",
+            "The report selected five cited sources for detailed discussion.",
+        ],
+        validated_source_count=43,
+    ) == [
+        "Analysis limited to 43 provided validated sources; broader literature was not accessed",
+        "The report selected five cited sources for detailed discussion.",
+    ]
 
 
 def _test_fs_path(path: Path) -> str:
@@ -276,6 +295,7 @@ def _fake_services() -> dict:
                     },
                 ],
                 "provider_usage": [{"provider": "writer-provider", "model": "writer-model", "usage_kind": "llm", "input_tokens": 10, "output_tokens": 20}],
+                "limitations": ["Analysis limited to 41 provided validated sources."],
             }
         return {
             "provider": "writer-provider",
@@ -327,6 +347,9 @@ def test_full_seven_node_chain_with_injected_services(tmp_path: Path, monkeypatc
     final_node = next(node for node in WORKFLOW["nodes"] if node["node_id"] == "final_acceptance")
     assert refs_used["final_acceptance"] == [produced_by_declared_path[path] for path in final_node["input_artifacts"]]
     assert len(refs_used["final_acceptance"]) == len(final_node["input_artifacts"])
+    synthesis_artifact = _read_artifact(tmp_path, results["evidence_synthesis"])
+    assert synthesis_artifact["validated_source_count"] == 2
+    assert "Analysis limited to 2 provided validated sources." in synthesis_artifact["limitations"]
     for result in results.values():
         assert result["status"] == "completed"
         _validate_result(result)
@@ -708,6 +731,44 @@ def test_report_draft_deduplicates_sections_already_rendered_in_provider_body(
     assert body.count("## 1. Trade-offs") == 1
     assert "## Open problems" in body
     assert "Portable profiling remains an open research problem." in body
+
+
+def test_report_normalizer_preserves_nested_sections_and_removes_only_exact_repetition() -> None:
+    """Regression for the live r5 A8 rejection.
+
+    The first model revision contained one Clinical and one Materials child.
+    The old range walk retained their parent span and appended both children a
+    second time.  A7 then truthfully failed review on duplication created by
+    Solar itself.
+    """
+    clinical = (
+        "### Clinical RAG Systems\n\n"
+        "Clinical retrieval variance depends on the corpus and embedding model."
+    )
+    materials = (
+        "### Materials Science RAG Systems\n\n"
+        "Materials benchmarks expose domain-specific score limitations."
+    )
+    single = (
+        "# Report\n\n## Domain-Specific Reliability Benchmarks\n\n"
+        f"{clinical}\n\n{materials}\n\n"
+        "## Conclusions\n\nThe comparison is domain bounded."
+    )
+
+    unchanged = _dedupe_repeated_heading_sections(single)
+    assert unchanged.count("### Clinical RAG Systems") == 1
+    assert unchanged.count("### Materials Science RAG Systems") == 1
+    assert "The comparison is domain bounded." in unchanged
+
+    duplicated = single.replace(
+        "\n\n## Conclusions",
+        f"\n\n{clinical}\n\n{materials}\n\n## Conclusions",
+    )
+    repaired = _dedupe_repeated_heading_sections(duplicated)
+    assert repaired.count("### Clinical RAG Systems") == 1
+    assert repaired.count("### Materials Science RAG Systems") == 1
+    assert repaired.count("Clinical retrieval variance depends") == 1
+    assert repaired.count("Materials benchmarks expose") == 1
 
 
 def test_report_draft_localizes_compiled_conclusion_and_limitation_headings_for_chinese(
@@ -1706,6 +1767,27 @@ def test_mixed_method_and_limitations_heading_never_receives_the_merge() -> None
     assert "method prose" not in limitations_section
 
 
+def test_topical_nested_limitations_heading_does_not_replace_report_limitations() -> None:
+    """A topical subsection cannot satisfy the report-level A8 requirement."""
+    from harness.plugins.autosci.operators.research_synthesis.report_draft import (
+        _merge_limitations_section,
+    )
+
+    body = (
+        "# RAG report\n\n## Robustness and Reliability Challenges\n\n"
+        "### Evaluation Practice Limitations\n\n"
+        "Studies use heterogeneous metrics.\n\n"
+        "## Trade-offs\n\nEfficiency versus quality."
+    )
+    limitation = "Semantic Scholar rate limiting reduced discovery completeness."
+    merged = _merge_limitations_section(body, [limitation], "Limitations")
+
+    assert merged.count("### Evaluation Practice Limitations") == 1
+    assert "### Evaluation Practice Limitations\n\nStudies use heterogeneous metrics." in merged
+    assert f"## Limitations\n\n- {limitation}" in merged
+    assert merged.index("## Limitations") > merged.index("## Trade-offs")
+
+
 def test_mistyped_source_id_is_repair_feedback_not_an_abort(tmp_path: Path, monkeypatch) -> None:
     """One bad character must consume the retry budget, not the whole stage.
 
@@ -1777,6 +1859,71 @@ def test_mistyped_source_id_is_repair_feedback_not_an_abort(tmp_path: Path, monk
     artifact = _read_artifact(tmp_path, result)
     assert [c["claim_id"] for c in artifact["claims"]] == ["claim-001"]
     assert artifact["claims"][0]["evidence_ids"] == ["arxiv:1234.56789"]
+
+
+def test_overlong_claim_is_repair_feedback_before_grounded_report(tmp_path: Path, monkeypatch) -> None:
+    """A4 must not publish a claim that Solar's A5 Claim schema cannot load."""
+    monkeypatch.chdir(tmp_path)
+    source_text = "Retrieval quality improves with reranking in benchmark studies."
+    validation = {
+        "schema": "research_synthesis.source_validation.v1",
+        "node_id": "source_validation",
+        "task_id": "task-research-synthesis",
+        "run_id": "run-research-synthesis",
+        "workflow_id": "research_synthesis_v1",
+        "accepted": [{
+            "source_id": "source-001",
+            "title": "Source",
+            "content_summary": source_text,
+        }],
+    }
+    path = tmp_path / "inputs/source_validation.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(validation), encoding="utf-8")
+    refs = [{
+        "artifact_id": "source_validation",
+        "path": str(path.relative_to(tmp_path)),
+        "schema": validation["schema"],
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }]
+    calls = {"count": 0}
+
+    def model(**kwargs) -> dict:
+        calls["count"] += 1
+        if calls["count"] == 2:
+            feedback = kwargs.get("grounding_feedback") or []
+            assert any("at most 500 characters" in reason for item in feedback for reason in item["reasons"])
+        return {
+            "provider": "writer",
+            "model": "writer-model",
+            "claims": [{
+                "claim_id": "claim-001",
+                "text": ("x" * 501) if calls["count"] == 1 else source_text,
+                "evidence_ids": ["source-001"],
+                "evidence_quotes": [{"source_id": "source-001", "quote": source_text}],
+                "theme": "Retrieval quality",
+                "contradicted_by": [],
+                "uncertainty": "low",
+                "limitations": [],
+            }],
+            "contradictions": [],
+            "limitations": [],
+        }
+
+    result = execute_operator(
+        _request(
+            tmp_path,
+            "evidence_synthesis",
+            payload={"task_contract": _task_contract(), "seed_snapshot": {"schema": "research_synthesis.seed_snapshot.v1", "seeds": []}},
+            refs=refs,
+        ),
+        services={"model_generate": model},
+    )
+    assert result["status"] == "completed", result.get("errors")
+    assert calls["count"] == 2
+    artifact = _read_artifact(tmp_path, result)
+    assert artifact["claims"][0]["text"] == source_text
+    assert len(artifact["claims"][0]["text"]) <= 500
 
 
 def test_provider_failure_on_a_repair_attempt_publishes_the_banked_best(tmp_path: Path, monkeypatch) -> None:

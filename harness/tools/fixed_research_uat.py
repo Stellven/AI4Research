@@ -9,6 +9,7 @@ remain the only components that change workflow state.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -17,6 +18,7 @@ import stat
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -40,6 +42,8 @@ from fixed_research_workflow import (  # noqa: E402
 
 
 SCHEMA = "solar.fixed_research.shipped_uat.v1"
+DASHBOARD_CAPTURE_ATTEMPTS = 2
+DASHBOARD_CAPTURE_TIMEOUT_SECONDS = 30
 MODEL_NODE_IDS = {"evidence_synthesis", "report_draft", "independent_review", "report_revision"}
 PRE_APPROVAL_PASSED = (*PART_A_NODE_IDS, "poc_handoff", "idea_evaluation", "experiment_design")
 POST_APPROVAL_PENDING = ("experiment_run", "claim_verification", "final_delivery")
@@ -69,13 +73,18 @@ SOURCE_FILES = (
     "plugins/autosci/bin/fixed_research_node_adapter.py",
     "plugins/autosci/backends/literature_discover.py",
     "plugins/autosci/operators/fixed_research_poc.py",
+    "plugins/autosci/operators/research_synthesis/base.py",
     "plugins/autosci/operators/research_synthesis/evidence_synthesis.py",
+    "plugins/autosci/operators/research_synthesis/plan_admission.py",
     "plugins/autosci/operators/research_synthesis/report_draft.py",
     "plugins/autosci/operators/research_synthesis/report_revision.py",
     "plugins/autosci/operators/research_synthesis/source_discovery.py",
     "plugins/autosci/operators/research_synthesis/source_validation.py",
+    "plugins/autosci/operators/research_synthesis/synthesis_plan.py",
+    "plugins/autosci/operators/research_synthesis/validated_pack.py",
     "plugins/autosci/services/codex_research.py",
     "plugins/autosci/services/production_research.py",
+    "lib/research/grounded_synthesis.py",
     "config/capability-capsules.registry.yaml",
     "config/capability-capsules/cap.research-seed-snapshot.yaml",
     "config/capability-capsules/cap.research-public-source-discovery.yaml",
@@ -567,10 +576,29 @@ def _capture_dashboard_surfaces(*, base_url: str, sprint_id: str, output_dir: Pa
     rows: list[dict[str, Any]] = []
     for label, suffix in endpoints.items():
         url = base_url.rstrip("/") + suffix
-        request = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
-        with urllib.request.urlopen(request, timeout=15) as response:
-            body = response.read(4 * 1024 * 1024 + 1)
-            status = int(getattr(response, "status", 200) or 200)
+        headers = {"Accept": "application/json"}
+        auth_token = str(os.environ.get("SOLAR_AUTH_TOKEN") or "").strip()
+        if auth_token:
+            headers["X-Solar-Token"] = auth_token
+        request = urllib.request.Request(url, headers=headers, method="GET")
+        body: bytes | None = None
+        status = 0
+        last_error: BaseException | None = None
+        for attempt in range(1, DASHBOARD_CAPTURE_ATTEMPTS + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=DASHBOARD_CAPTURE_TIMEOUT_SECONDS) as response:
+                    body = response.read(4 * 1024 * 1024 + 1)
+                    status = int(getattr(response, "status", 200) or 200)
+                break
+            except (TimeoutError, urllib.error.URLError, OSError) as exc:
+                last_error = exc
+                if attempt < DASHBOARD_CAPTURE_ATTEMPTS:
+                    time.sleep(0.25)
+        if body is None:
+            raise UATError(
+                f"dashboard {label} evidence could not be captured after "
+                f"{DASHBOARD_CAPTURE_ATTEMPTS} attempts: {type(last_error).__name__}"
+            ) from last_error
         if status != 200 or len(body) > 4 * 1024 * 1024:
             raise UATError(f"dashboard {label} evidence was unavailable or oversized")
         payload = json.loads(body.decode("utf-8"))
@@ -747,15 +775,90 @@ def _advance(
     raise UATError(f"timed out waiting for {target} boundary after {timeout_seconds}s")
 
 
+def _process_lock_identity(pid: int) -> dict[str, str]:
+    """Return the kernel identity needed to distinguish PID reuse.
+
+    A PID alone is not a durable owner identity: container restarts and host
+    reboots both reuse small PIDs.  The boot id, PID namespace and process
+    start ticks make a surviving owner distinguishable from a later process
+    that happened to receive the same number.
+    """
+
+    proc = Path("/proc") / str(pid)
+    stat_text = (proc / "stat").read_text(encoding="utf-8")
+    _prefix, separator, suffix = stat_text.rpartition(")")
+    fields = suffix.strip().split() if separator else []
+    if len(fields) <= 19:
+        raise UATError(f"cannot read process start identity for pid {pid}")
+    return {
+        "pid": str(pid),
+        "boot_id": Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf-8").strip(),
+        "pid_namespace": os.readlink(proc / "ns/pid"),
+        "start_ticks": fields[19],
+    }
+
+
+def _parse_lock(lock: Path) -> dict[str, str]:
+    if lock.is_symlink() or not stat.S_ISREG(lock.stat(follow_symlinks=False).st_mode):
+        raise UATError(f"UAT lock is not a regular file: {lock}")
+    raw = lock.read_text(encoding="utf-8")
+    values: dict[str, str] = {}
+    for token in raw.split():
+        key, separator, value = token.partition("=")
+        if separator and key and value:
+            values[key] = value
+    if not values.get("pid", "").isdigit():
+        raise UATError(f"UAT lock owner is invalid: {lock}")
+    return values
+
+
+def _lock_owner_is_stale(lock: Path) -> bool:
+    recorded = _parse_lock(lock)
+    pid = int(recorded["pid"])
+    try:
+        current = _process_lock_identity(pid)
+    except FileNotFoundError:
+        return True
+    # Legacy locks recorded only pid/created_at.  Reclaim those only when the
+    # PID is absent; a live PID without stronger identity remains fail-closed.
+    for key in ("boot_id", "pid_namespace", "start_ticks"):
+        expected = recorded.get(key)
+        if expected and expected != current[key]:
+            return True
+    return False
+
+
 def _acquire_lock(evidence_root: Path) -> Path:
     evidence_root.mkdir(parents=True, exist_ok=True)
     lock = evidence_root / ".fixed-research-uat.lock"
+    guard = evidence_root / ".fixed-research-uat.lock.guard"
+    guard_descriptor = os.open(guard, os.O_CREAT | os.O_RDWR, 0o600)
     try:
-        descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    except FileExistsError as exc:
-        raise UATError(f"UAT root is already locked: {lock}") from exc
+        fcntl.flock(guard_descriptor, fcntl.LOCK_EX)
+        try:
+            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError as exc:
+            if not _lock_owner_is_stale(lock):
+                raise UATError(f"UAT root is already locked: {lock}") from exc
+            lock.unlink()
+            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    finally:
+        fcntl.flock(guard_descriptor, fcntl.LOCK_UN)
+        os.close(guard_descriptor)
+    identity = _process_lock_identity(os.getpid())
     with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-        stream.write(f"pid={os.getpid()} created_at={_now()}\n")
+        stream.write(
+            " ".join(
+                [
+                    f"pid={identity['pid']}",
+                    f"created_at={_now()}",
+                    f"boot_id={identity['boot_id']}",
+                    f"pid_namespace={identity['pid_namespace']}",
+                    f"start_ticks={identity['start_ticks']}",
+                ]
+            )
+            + "\n"
+        )
     return lock
 
 

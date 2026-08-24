@@ -373,6 +373,11 @@ def test_research_model_prompt_preserves_content_acceptance_requirements(tmp_pat
             ],
         },
     )
+    assert synthesis_user["validated_source_count"] == 2
+    assert any(
+        "Exactly 2 validated sources are available" in requirement
+        for requirement in synthesis_user["quality_requirements"]
+    )
     _system, report_user = service._prompt(
         "report_draft",
         {
@@ -745,8 +750,9 @@ def test_literature_discovery_shares_the_candidate_budget_across_providers(tmp_p
     providers = [item["provider"] for item in result["candidates"]]
     # OpenAlex offered 20 rows and arXiv 2; round-robin keeps both arXiv rows
     # instead of letting the larger response crowd them out.
+    assert len(providers) == 4
     assert providers.count("arxiv") == 2
-    assert providers.count("openalex") == 3
+    assert providers.count("openalex") == 2
 
 
 def test_literature_discovery_collapses_the_same_work_seen_under_two_identifiers(tmp_path: Path) -> None:

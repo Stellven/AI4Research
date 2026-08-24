@@ -89,7 +89,7 @@ PUBLIC_RETRIEVAL_PROVIDERS = ["semantic_scholar", "arxiv", "europe_pmc", "openal
 # service from the policy artifact and the dispatcher guard verifies the policy
 # against these same names, so raising the budget cannot leave a second copy of
 # the old number behind in another component.
-PUBLIC_RETRIEVAL_MAX_CANDIDATES = 60
+PUBLIC_RETRIEVAL_MAX_CANDIDATES = 150
 PUBLIC_RETRIEVAL_MIN_LIVE_SOURCES = 10
 PUBLIC_RETRIEVAL_MIN_CONTRIBUTING_PROVIDERS = 3
 EXPERIMENT_POLICY_ID = "evidence_lineage_integrity_v1"

@@ -131,7 +131,10 @@ def test_a_claim_without_a_verified_quote_is_a_gap_not_a_link(tmp_path) -> None:
     )
 
     assert plan["evidence_status"] == "insufficient"
-    assert any("no verified supporting quote" in gap["text"] for gap in plan["evidence_gaps"])
+    gap = next(gap for gap in plan["evidence_gaps"] if "no verified supporting quote" in gap["text"])
+    assert "openalex-rag-01" in gap["text"]
+    assert gap["evidence_ids"] == [rows[0]["evidence_id"]]
+    assert gap["evidence_ids"][0].startswith("ev_")
 
 
 def test_a_claim_citing_absent_evidence_is_reported(tmp_path) -> None:

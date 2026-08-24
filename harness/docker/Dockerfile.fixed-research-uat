@@ -1,0 +1,59 @@
+FROM ubuntu:24.04
+
+ARG SOURCE_HEAD=unknown
+ARG SOURCE_TREE_SHA256=unknown
+
+LABEL org.solar.product="solar-harness-fixed-research-uat"
+LABEL org.solar.source-head="${SOURCE_HEAD}"
+LABEL org.solar.source-tree-sha256="${SOURCE_TREE_SHA256}"
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-get install -y --no-install-recommends \
+      bash \
+      ca-certificates \
+      curl \
+      git \
+      jq \
+      procps \
+      python3 \
+      python3-jsonschema \
+      python3-requests \
+      python3-yaml \
+      tmux \
+      util-linux \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN usermod --login solar --home /home/solar --move-home ubuntu && \
+    groupmod --new-name solar ubuntu && \
+    mkdir -p /opt/solar /evidence /input /run/claude-auth && \
+    chown -R solar:solar /opt/solar /evidence /input /run/claude-auth
+
+COPY --chown=solar:solar . /opt/solar/harness
+
+# The UAT driver requires a source identity.  The frozen build context becomes
+# a deterministic, container-local Git snapshot; host commit/tree identities
+# remain independently pinned in the image labels and external freeze manifest.
+USER solar
+RUN cd /opt/solar && \
+    git init --quiet && \
+    git config user.name "Solar UAT Freeze" && \
+    git config user.email "solar-uat@invalid.local" && \
+    git add harness && \
+    GIT_AUTHOR_DATE="2000-01-01T00:00:00Z" \
+    GIT_COMMITTER_DATE="2000-01-01T00:00:00Z" \
+      git commit --quiet -m "frozen fixed-research UAT source"
+
+ENV HOME=/home/solar
+ENV HARNESS_DIR=/opt/solar/harness
+ENV SOLAR_HARNESS_DIR=/opt/solar/harness
+ENV SOLAR_BIND_HOST=0.0.0.0
+ENV SOLAR_STATUS_PORT_START=8765
+ENV SOLAR_STATUS_PORT_END=8765
+ENV PATH=/usr/local/bin:/usr/bin:/bin
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /opt/solar/harness
+
+EXPOSE 8765
+ENTRYPOINT ["/opt/solar/harness/docker/fixed-research-uat-entry.sh"]
+CMD ["status-server"]

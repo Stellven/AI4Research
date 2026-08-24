@@ -8,6 +8,8 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -23,6 +25,54 @@ SPEC.loader.exec_module(uat)
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def test_uat_lock_rejects_a_live_owner(tmp_path: Path) -> None:
+    lock = uat._acquire_lock(tmp_path)
+    try:
+        with pytest.raises(uat.UATError, match="already locked"):
+            uat._acquire_lock(tmp_path)
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+def test_uat_lock_reclaims_a_dead_legacy_owner_after_restart(tmp_path: Path) -> None:
+    lock = tmp_path / ".fixed-research-uat.lock"
+    lock.write_text("pid=999999999 created_at=2000-01-01T00:00:00Z\n", encoding="utf-8")
+
+    acquired = uat._acquire_lock(tmp_path)
+    try:
+        recorded = uat._parse_lock(acquired)
+        assert recorded["pid"] == str(os.getpid())
+        assert recorded["boot_id"]
+        assert recorded["pid_namespace"].startswith("pid:")
+        assert recorded["start_ticks"].isdigit()
+    finally:
+        acquired.unlink(missing_ok=True)
+
+
+def test_uat_lock_reclaims_reused_pid_identity(tmp_path: Path) -> None:
+    identity = uat._process_lock_identity(os.getpid())
+    lock = tmp_path / ".fixed-research-uat.lock"
+    lock.write_text(
+        " ".join(
+            [
+                f"pid={identity['pid']}",
+                "created_at=2000-01-01T00:00:00Z",
+                f"boot_id={identity['boot_id']}",
+                f"pid_namespace={identity['pid_namespace']}",
+                f"start_ticks={int(identity['start_ticks']) + 1}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    acquired = uat._acquire_lock(tmp_path)
+    try:
+        assert uat._parse_lock(acquired)["start_ticks"] == identity["start_ticks"]
+    finally:
+        acquired.unlink(missing_ok=True)
 
 
 def test_runtime_environment_records_explicit_policy_without_ambient_api_keys(tmp_path: Path) -> None:
@@ -194,6 +244,66 @@ def test_dashboard_driver_rejects_wrong_workflow_attribution(tmp_path: Path) -> 
             request_id=request_id,
             timeout_seconds=1,
             poll_seconds=0.01,
+        )
+
+
+def test_dashboard_surface_capture_retries_a_transient_deliverables_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[tuple[str, int]] = []
+    observed_tokens: list[str | None] = []
+
+    class Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _limit: int) -> bytes:
+            return b'{"ok":true}'
+
+    def urlopen(request, *, timeout: int):
+        url = request.full_url
+        calls.append((url, timeout))
+        observed_tokens.append(request.get_header("X-solar-token"))
+        if url.endswith("/deliverables") and sum(item[0] == url for item in calls) == 1:
+            raise TimeoutError("slow deliverables scan")
+        return Response()
+
+    monkeypatch.setattr(uat.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(uat.time, "sleep", lambda _seconds: None)
+    monkeypatch.setenv("SOLAR_AUTH_TOKEN", "runtime-container-token")
+
+    rows = uat._capture_dashboard_surfaces(
+        base_url="http://127.0.0.1:8765",
+        sprint_id="fixed-dashboard-sprint",
+        output_dir=tmp_path / "dashboard",
+    )
+
+    assert [row["label"] for row in rows] == ["projection", "events", "deliverables"]
+    assert len([url for url, _timeout in calls if url.endswith("/deliverables")]) == 2
+    assert {timeout for _url, timeout in calls} == {uat.DASHBOARD_CAPTURE_TIMEOUT_SECONDS}
+    assert set(observed_tokens) == {"runtime-container-token"}
+
+
+def test_dashboard_surface_capture_fails_closed_after_bounded_retries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unavailable(_request, *, timeout: int):
+        assert timeout == uat.DASHBOARD_CAPTURE_TIMEOUT_SECONDS
+        raise urllib.error.URLError("dashboard unavailable")
+
+    monkeypatch.setattr(uat.urllib.request, "urlopen", unavailable)
+    monkeypatch.setattr(uat.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(uat.UATError, match="projection.*after 2 attempts"):
+        uat._capture_dashboard_surfaces(
+            base_url="http://127.0.0.1:8765",
+            sprint_id="fixed-dashboard-sprint",
+            output_dir=tmp_path / "dashboard",
         )
 
 

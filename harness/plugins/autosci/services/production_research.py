@@ -1190,7 +1190,12 @@ class LiteratureDiscoveryService:
             answered[provider] = "completed" if found else "empty"
             if found:
                 contributed.add(provider)
-        deduped = _select_candidates(seeded, candidates, limit=self.limit + 1)
+        # The controller policy authorizes an exact maximum candidate count.
+        # Returning ``limit + 1`` made the physical provider exceed that
+        # authority even though every individual request used the declared
+        # limit.  Keep the archive and downstream artifact within the exact
+        # policy budget.
+        deduped = _select_candidates(seeded, candidates, limit=self.limit)
         for candidate in deduped:
             candidate["candidate_sha256"] = stable_json_sha256(candidate)
             candidate["query"] = query
@@ -1373,6 +1378,7 @@ class ResearchModelService:
             user = {
                 "node_id": node_id,
                 "complete_user_request": str(task_contract.get("user_intent") or ""),
+                "validated_source_count": len(sources),
                 "allowed_source_ids": allowed_source_ids,
                 "validated_sources": sources,
                 "required_output": {
@@ -1416,6 +1422,7 @@ class ResearchModelService:
                 },
                 "quality_requirements": [
                     "Cover the complete user request.",
+                    f"Exactly {len(sources)} validated sources are available. If a limitation states the number of validated sources, use this exact count. Do not confuse it with the smaller number of sources selected or cited in the report.",
                     "For surveys, compare performance trade-offs and identify open research problems.",
                     "For webpage research, use the fetched webpage as evidence and distinguish supplemental sources.",
                     "When two or more validated sources are available, cite at least two distinct exact source_id values across the claims.",
@@ -1442,6 +1449,8 @@ class ResearchModelService:
                     "reuse the source's terms rather than substituting synonyms.",
                     "Every number, percentage, or count in a claim must also appear in the "
                     "cited source. Do not compute, round, or infer figures.",
+                    "Keep each claim text at or below 500 characters; this is a hard schema "
+                    "boundary of the downstream grounded-report compiler.",
                     "Do not use absolute wording such as all, always, never, every, none, "
                     "proves, guarantees, or cures: a claim scoped that broadly is refused.",
                     "Give each claim a short theme naming the topic it belongs to, and use "

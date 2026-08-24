@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,16 @@ from research.evidence.review_proof import claim_support_assessment  # noqa: E40
 # is bounded; a synthesis that still cannot ground a claim after three tries is
 # reported, never published.
 MAX_SYNTHESIS_ATTEMPTS = 3
+# The grounded-report compiler binds each published synthesis claim to Solar's
+# ``research.schemas.Claim`` contract, whose ``claim_text`` ceiling is 500
+# characters.  Enforce the same boundary at the producer so an overlong model
+# response consumes the existing bounded repair budget instead of reaching A5
+# as an artifact that can never be compiled.
+MAX_GROUNDED_CLAIM_CHARS = 500
+
+_VALIDATED_SOURCE_LIMIT_RE = re.compile(
+    r"(?i)(\blimited\s+to\s+)(\d+)(\s+(?:provided\s+)?validated\s+sources?\b)"
+)
 
 from .base import (
     OperatorContext,
@@ -121,6 +132,24 @@ def _normalize_claims(
     for index, item in enumerate(response.get("claims", []) if isinstance(response.get("claims"), list) else []):
         if not isinstance(item, dict):
             continue
+        claim_id = str(item.get("claim_id") or f"claim-{index + 1:03d}")
+        claim_text = str(item.get("text") or "")
+        if len(claim_text) > MAX_GROUNDED_CLAIM_CHARS:
+            rejection = {
+                "claim_id": claim_id,
+                "text": claim_text,
+                "reasons": [
+                    f"claim text is {len(claim_text)} characters; rewrite it to at most "
+                    f"{MAX_GROUNDED_CLAIM_CHARS} characters without changing its evidence scope"
+                ],
+            }
+            if invalid_claims is not None:
+                invalid_claims.append(rejection)
+                continue
+            raise ResearchOperatorError(
+                rejection["reasons"][0],
+                error_type="claim_schema_invalid",
+            )
         evidence_ids = [str(value) for value in item.get("evidence_ids", []) if str(value).strip()]
         invalid = sorted(set(evidence_ids) - accepted_ids)
         if invalid:
@@ -130,8 +159,8 @@ def _normalize_claims(
             # one mistyped character (a colon for a dot in an arXiv id) while
             # the retry budget built for exactly this sat unused.
             rejection = {
-                "claim_id": str(item.get("claim_id") or f"claim-{index + 1:03d}"),
-                "text": str(item.get("text") or ""),
+                "claim_id": claim_id,
+                "text": claim_text,
                 "reasons": [
                     "cites source ids outside the validated set: "
                     + ", ".join(invalid)
@@ -147,12 +176,12 @@ def _normalize_claims(
             )
         claims.append(
             {
-                "claim_id": str(item.get("claim_id") or f"claim-{index + 1:03d}"),
-                "text": str(item.get("text") or ""),
+                "claim_id": claim_id,
+                "text": claim_text,
                 "evidence_ids": evidence_ids,
                 "evidence_quotes": _normalize_quotes(
                     item,
-                    claim_id=str(item.get("claim_id") or f"claim-{index + 1:03d}"),
+                    claim_id=claim_id,
                     evidence_ids=evidence_ids,
                     source_text_by_id=source_text_by_id,
                 ),
@@ -240,6 +269,35 @@ def assess_claim_grounding(
         }
         kept.append(enriched)
     return kept, rejected
+
+
+def normalize_validated_source_count_limitations(
+    limitations: list[str],
+    *,
+    validated_source_count: int,
+) -> list[str]:
+    """Bind model-written validated-source counts to controller-owned facts.
+
+    A live synthesis described itself as limited to 41 validated sources while
+    the accepted source-validation artifact contained 43.  The count is not a
+    semantic judgement the model should own: it is a deterministic property of
+    the exact input list.  Only the narrow ``limited to N validated sources``
+    wording is normalized; cited/selected-source counts remain distinct facts.
+    """
+
+    authoritative = str(max(0, int(validated_source_count)))
+    normalized: list[str] = []
+    for value in limitations:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        text = _VALIDATED_SOURCE_LIMIT_RE.sub(
+            lambda match: f"{match.group(1)}{authoritative}{match.group(3)}",
+            text,
+        )
+        if text not in normalized:
+            normalized.append(text)
+    return normalized
 
 
 def execute(node_request: dict, context: OperatorContext) -> dict:
@@ -350,16 +408,17 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
             "model_generate returned no claim that both quotes its source verbatim and is supported by it",
             error_type="provider_contract",
         )
-    limitations = list(dict.fromkeys([
+    limitations = normalize_validated_source_count_limitations(list(dict.fromkeys([
         *[str(item) for item in validation.get("limitations", []) if str(item).strip()],
         *[str(item) for item in best_response.get("limitations", []) if str(item).strip()],
         *([provider_fallback_note] if provider_fallback_note else []),
-    ]))
+    ])), validated_source_count=len(accepted_ids))
     artifact_payload = {
         "schema": "research_synthesis.evidence_synthesis.v1",
         "node_id": "evidence_synthesis",
         "created_at": utc_now(),
         "source_ids": sorted(accepted_ids),
+        "validated_source_count": len(accepted_ids),
         "claims": claims,
         "claim_count": len(claims),
         # What was refused and why. A synthesis that quietly dropped weak claims
