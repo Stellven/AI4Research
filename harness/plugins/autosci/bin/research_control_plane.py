@@ -189,7 +189,11 @@ def prepare_runtime_inputs(
         _validate_local_pdf(Path(source))
         return ([{"seed_id": "local-pdf-1", "seed_kind": "pdf", "value": source}], [])
     if classification.input_kind == "source_pack":
-        manifest = _write_source_pack_manifest(sources, artifact_root=artifact_root, run_id=run_id)
+        manifest = _write_source_pack_manifest(
+            [*sources, *import_evidence],
+            artifact_root=artifact_root,
+            run_id=run_id,
+        )
         return ([{"seed_id": "source-pack-1", "seed_kind": "markdown", "value": str(manifest)}], [])
     if classification.input_kind == "experiment_evidence":
         raw_paths = import_evidence or sources

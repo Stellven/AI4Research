@@ -120,6 +120,40 @@ def test_research_cli_stops_inline_url_at_chinese_punctuation(tmp_path: Path) ->
     assert contract["constraints"]["request_capture"]["detected_urls"] == [url]
 
 
+def test_import_evidence_source_pack_uses_import_argument(tmp_path: Path) -> None:
+    artifact_root = tmp_path / "artifacts"
+    artifact_root.mkdir()
+    evidence = artifact_root / "external-evidence.json"
+    evidence.write_text(
+        '{"schema":"external.test.v1","summary":"prior evidence"}\n',
+        encoding="utf-8",
+    )
+    proc = run_bridge(
+        tmp_path,
+        "research",
+        "--prompt",
+        "Resume from the supplied external evidence bundle and write a report.",
+        "--run-id",
+        "source-pack-import",
+        "--artifact-root",
+        str(artifact_root),
+        "--run-mode",
+        "import_evidence",
+        "--import-evidence",
+        str(evidence),
+        "--max-steps",
+        "1",
+    )
+
+    data = payload(proc)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert data["input_classification"]["input_kind"] == "source_pack"
+    contract = json.loads(Path(data["task_contract_path"]).read_text(encoding="utf-8"))
+    manifest = Path(contract["seed_inputs"][0]["value"])
+    assert manifest.is_file()
+    assert "prior evidence" in manifest.read_text(encoding="utf-8")
+
+
 def test_research_cli_exposes_distinct_initial_nodes_for_supported_inputs(tmp_path: Path) -> None:
     pdf = write_pdf(tmp_path / "paper.pdf")
     pack = tmp_path / "pack"

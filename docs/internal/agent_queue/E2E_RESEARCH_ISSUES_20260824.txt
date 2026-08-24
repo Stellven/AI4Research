@@ -82,7 +82,7 @@ topic, URL, and PDF cases. It then failed on the independent import-evidence
 defect recorded as PRODUCT-003.
 
 PRODUCT-003 - import_evidence source packs are ignored during input preparation
-Status: OPEN
+Status: FIXED (pending commit)
 Observed while verifying: PRODUCT-002
 Evidence: the evidence-resume case in
 tests/harness/research_orchestration/test_research_control_plane_contract.py::test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity
@@ -92,5 +92,21 @@ only the empty --source list and raises "source pack requires at least one
 source" before a task contract is created.
 Impact: non-experiment evidence bundles cannot enter the production research
 route through the documented --import-evidence option.
-Planned fix: prepare source packs from import_evidence when it is supplied, add
-a focused regression assertion, and rerun the parity selector.
+Fix: source-pack preparation now includes values passed through both --source
+and --import-evidence instead of dropping the latter.
+Regression test:
+tests/repairs/research_control_plane/test_research_control_plane.py::test_import_evidence_source_pack_uses_import_argument
+Verification:
+- Focused regression plus upstream-parity selector: 2 passed in 13.12s
+- Related control-plane suites: 12 passed in 58.46s
+
+TEST-001 - New import-evidence regression fixture initially escaped artifact root
+Status: FIXED IN TEST (pending PRODUCT-003 commit)
+Observed while verifying: PRODUCT-003
+Evidence: the focused regression placed external-evidence.json directly below
+pytest tmp_path but configured tmp_path/artifacts as artifact_root. The runtime
+correctly failed closed with "imported evidence escapes artifact root".
+Impact: the first focused regression attempt tested path containment instead of
+the import-evidence source-pack behavior.
+Fix: create the evidence fixture inside the configured artifact_root. The
+production containment rule remains unchanged.
