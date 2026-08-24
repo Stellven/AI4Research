@@ -22,7 +22,11 @@ _STOP_WORDS = {
     "with", "we", "our", "study", "result", "results", "show", "shows",
 }
 _BROAD_CLAIM = re.compile(r"\b(all|always|never|every|none|prove[sd]?|guarantee[sd]?|cure[sd]?|universally)\b", re.I)
-_NUMBERS = re.compile(r"\b\d+(?:\.\d+)?%?\b")
+# ASCII word boundaries do not exist between a CJK character and a digit
+# because both are Unicode ``\w``. Digit-only lookarounds preserve the original
+# number check for English while also detecting years and metrics in CJK text.
+_NUMBERS = re.compile(r"(?<!\d)\d+(?:\.\d+)?%?(?!\d)")
+_CJK_RUNS = re.compile(r"[\u3400-\u9fff]{2,}")
 
 
 def sha256_file(path: Path) -> str:
@@ -30,7 +34,14 @@ def sha256_file(path: Path) -> str:
 
 
 def _tokens(text: str) -> set[str]:
-    return {item for item in re.findall(r"[a-z0-9][a-z0-9_-]*", text.lower()) if item not in _STOP_WORDS}
+    tokens = {item for item in re.findall(r"[a-z0-9][a-z0-9_-]*", text.lower()) if item not in _STOP_WORDS}
+    # CJK text has no required whitespace boundaries. Overlapping two-character
+    # terms provide the same bounded lexical signal used by the research query
+    # validator, so a substantive Chinese claim is not classified as empty
+    # merely because the safety check was originally English-only.
+    for run in _CJK_RUNS.findall(text):
+        tokens.update(run[index:index + 2] for index in range(len(run) - 1))
+    return tokens
 
 
 def claim_support_assessment(claim: str, evidence_span: str) -> dict[str, Any]:

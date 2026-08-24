@@ -457,3 +457,27 @@ ranges so a repeated parent safely removes its subtree without reconstructing
 or duplicating the first copy.
 Verification: the new nested-heading regression and the complete production
 research service suite passed (29 passed in 2.03s).
+
+PRODUCT-014 - Claim grounding treats substantive Chinese claims as empty text
+Status: FIXED (pending commit)
+Observed in: qq-tech-trends-e2e-20260824-r8
+Evidence:
+- Synthesis generated a mirror-world/digital-twin claim grounded in the fetched
+  Tencent page, but deterministic grounding rejected it with
+  `claim_not_substantive` and `term_coverage=0.00`.
+- The final reviewer then found that mirror-world/virtual-physical coexistence
+  and land/space/deep-sea coexistence were omitted even though the validated
+  source summary contains those requested webpage trends.
+Root cause: the shared `claim_support_assessment` tokenizer recognizes only
+ASCII `[a-z0-9]` tokens. A claim written entirely in Chinese has zero tokens by
+construction, so it can never pass the otherwise language-neutral grounding
+gate.
+Impact: legitimate Chinese evidence is silently removed from synthesis; later
+report stages cannot cover the original request and final acceptance fails.
+Fix: extend the shared lexical safety check with bounded overlapping
+two-character CJK terms, while retaining its existing ASCII, number, scope,
+and minimum-coverage checks.
+Verification: the shared reviewer/claim-compiler suite and a direct Chinese
+evidence-synthesis regression passed (7 passed in 0.69s). The regression also
+confirmed that unrelated Chinese claims and unsupported years still fail
+closed.

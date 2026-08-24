@@ -13,7 +13,7 @@ sys.path.insert(0, str(REPO / "harness" / "plugins" / "autosci"))
 
 from backends.artifact_review import review_artifact
 from research.claim_compiler import AlignmentStatus, NaiveClaimCompiler
-from research.evidence.review_proof import normalize_review_proof
+from research.evidence.review_proof import claim_support_assessment, normalize_review_proof
 
 
 def _sha(path: Path) -> str:
@@ -95,6 +95,24 @@ def test_unreferenced_and_overbroad_claims_fail_closed(tmp_path: Path) -> None:
     no_evidence = normalize_review_proof(proof_bundle_path=missing, artifact_path=artifact, workspace_root=tmp_path)
     assert no_evidence["verdict"] == "not_supported"
     assert "claims_missing" in no_evidence["blockers"]
+
+
+def test_chinese_claim_support_uses_cjk_terms_and_still_fails_closed() -> None:
+    supported = claim_support_assessment(
+        "镜像世界通过数字孪生映射城市与工业系统，使现实世界可被预测和优化。",
+        "高精度数字孪生能够把城市、工业与自然系统映射到虚拟空间，让现实世界可被预测和优化。",
+    )
+    unrelated = claim_support_assessment(
+        "可控核聚变将在2035年实现商业化。",
+        "高精度数字孪生能够映射城市和工业系统。",
+    )
+
+    assert supported["supported"] is True
+    assert supported["term_coverage"] >= 0.45
+    assert "claim_not_substantive" not in supported["blockers"]
+    assert unrelated["supported"] is False
+    assert any(item.startswith("evidence_does_not_support_claim") for item in unrelated["blockers"])
+    assert "claim_numbers_missing_from_evidence:2035" in unrelated["blockers"]
 
 
 def test_tampered_evidence_and_writer_approval_are_blockers(tmp_path: Path) -> None:

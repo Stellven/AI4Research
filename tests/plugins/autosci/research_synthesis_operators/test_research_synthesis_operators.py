@@ -21,12 +21,33 @@ from harness.plugins.autosci.operators.research_synthesis.base import (  # noqa:
     ResearchOperatorError,
     write_artifact,
 )
+from harness.plugins.autosci.operators.research_synthesis.evidence_synthesis import assess_claim_grounding  # noqa: E402
 from harness.plugins.autosci.operators.research_synthesis.registry import execute_operator  # noqa: E402
 
 
 NODE_RESULT_SCHEMA = json.loads((HARNESS / "schemas" / "evidence" / "research_node_result.v1.schema.json").read_text(encoding="utf-8"))
 WORKFLOW = json.loads((HARNESS / "workflows" / "drafts" / "research_synthesis_v1.json").read_text(encoding="utf-8"))
 BASELINE_ARTIFACTS_FOR_TEST = ("independent_review", "report_draft", "evidence_synthesis", "source_validation")
+
+
+def test_chinese_evidence_claim_survives_grounding_when_source_supports_it() -> None:
+    quote = "高精度数字孪生能够把城市、工业与自然系统映射到虚拟空间"
+    claims = [
+        {
+            "claim_id": "claim-cjk",
+            "text": "镜像世界通过数字孪生映射城市与工业系统，使现实世界可被预测和优化。",
+            "evidence_ids": ["source-cjk"],
+            "evidence_quotes": [{"source_id": "source-cjk", "quote": quote}],
+        }
+    ]
+
+    kept, rejected = assess_claim_grounding(
+        claims,
+        {"source-cjk": quote + "，让现实世界可被预测和优化。"},
+    )
+
+    assert [item["claim_id"] for item in kept] == ["claim-cjk"]
+    assert rejected == []
 
 
 def _test_fs_path(path: Path) -> str:
