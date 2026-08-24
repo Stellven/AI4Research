@@ -564,6 +564,25 @@ def _select_candidates(
         if take(candidate):
             return selected
 
+    # A fetched multi-topic page can produce one controller-owned query per
+    # visible heading. Preserve one candidate for every query before ordinary
+    # provider round-robin: otherwise the first broad query (often "AI") fills
+    # the bounded shortlist with loosely related records and later technology
+    # headings never reach validation. Single-topic literature searches keep
+    # the existing provider-diversity ordering.
+    query_order: list[str] = []
+    first_by_query: dict[str, dict[str, Any]] = {}
+    for candidate in discovered:
+        provenance = candidate.get("provenance") if isinstance(candidate.get("provenance"), dict) else {}
+        candidate_query = str(provenance.get("query") or "").strip()
+        if candidate_query and candidate_query not in first_by_query:
+            query_order.append(candidate_query)
+            first_by_query[candidate_query] = candidate
+    if len(query_order) > 1:
+        for candidate_query in query_order:
+            if take(first_by_query[candidate_query]):
+                return selected
+
     by_provider: dict[str, list[dict[str, Any]]] = {}
     for candidate in discovered:
         by_provider.setdefault(str(candidate.get("provider") or "unknown"), []).append(candidate)
@@ -968,7 +987,7 @@ class LiteratureDiscoveryService:
         candidates: list[dict[str, Any]] = []
         response_hashes: list[str] = []
         request_urls: list[str] = []
-        for query in queries[:3]:
+        for query in queries[:4]:
             language = "zh" if re.search(r"[\u3400-\u9fff]", query) else "en"
             url = f"https://{language}.wikipedia.org/w/api.php?" + urllib.parse.urlencode(
                 {

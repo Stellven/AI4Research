@@ -411,3 +411,29 @@ Fix: update only the fake writer/reviser report bodies to render the exact
 fixture source URLs they receive. The production gate remains unchanged.
 Verification: four formerly failing target cases passed in 4.57s; the full
 related set passed (106 passed in 71.50s).
+
+PRODUCT-012 - Multi-topic webpage discovery spends its shortlist on the first broad topic
+Status: FIXED (pending commit and live E2E verification)
+Observed in: qq-tech-trends-e2e-20260824-r7 acceptance review
+Evidence:
+- The seven-node run completed and its deterministic final gate passed.
+- The fetched page exposed several structured technology headings, but the
+  shortlist contained the seed page, three Wikipedia records, three Europe PMC
+  records, and two OpenAlex records; every bibliographic record was searched
+  with only the first broad topic, `人工智能`.
+- Validation admitted two AI-education papers. The final report used one only
+  for a weak cross-domain analogy and explicitly said independent public-source
+  coverage remained too narrow for several requested trends.
+Root cause: Wikipedia is the only provider that receives the page's alternate
+topic queries, it is capped at three topics, and provider round-robin selection
+does not preserve query/topic diversity. Candidates for the first broad query
+therefore consume the bounded shortlist before later webpage topics can enter.
+Impact: a technically completed run can produce a transparent but shallower
+report than the multi-trend request warrants, while irrelevant first-topic
+results displace more useful later-topic evidence.
+Fix: search all four bounded structured webpage topics and, only when
+the controller generated multiple topic queries, allocate the discovered
+shortlist across those queries before filling remaining slots. Preserve the
+existing single-topic behavior for ordinary literature requests.
+Verification so far: the two new query-diversity regressions and all existing
+production research service tests passed (28 passed in 2.00s).

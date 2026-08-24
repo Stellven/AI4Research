@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import urllib.error
+import urllib.parse
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ from harness.plugins.autosci.services.production_research import (
     LiteratureDiscoveryService,
     ResearchModelService,
     _ProviderRoute,
+    _select_candidates,
     _topic_from_snapshot,
     production_services_from_environment,
 )
@@ -701,6 +703,71 @@ def test_webpage_discovery_uses_structured_topic_instead_of_generic_headline() -
     )
 
     assert query == "AI智能体"
+
+
+def test_multitopic_candidate_selection_preserves_each_controller_query() -> None:
+    seeded = [
+        {
+            "source_id": "seed-page",
+            "canonical_id": "https://example.test/trends",
+            "title": "Technology trends",
+            "provider": "bounded_http",
+        }
+    ]
+
+    def candidate(source_id: str, provider: str, query: str) -> dict:
+        return {
+            "source_id": source_id,
+            "canonical_id": f"https://example.test/{source_id}",
+            "title": source_id,
+            "provider": provider,
+            "provenance": {"provider": provider, "query": query},
+        }
+
+    discovered = [
+        candidate("broad-1", "catalog-a", "人工智能"),
+        candidate("broad-2", "catalog-a", "人工智能"),
+        candidate("broad-3", "catalog-a", "人工智能"),
+        candidate("robotics", "wikipedia_zh", "通用机器人"),
+        candidate("flying-car", "wikipedia_zh", "飞行汽车"),
+    ]
+
+    selected = _select_candidates(seeded, discovered, limit=4)
+
+    assert [item["source_id"] for item in selected] == [
+        "seed-page",
+        "broad-1",
+        "robotics",
+        "flying-car",
+    ]
+
+
+def test_wikipedia_discovery_searches_four_bounded_webpage_topics(tmp_path: Path) -> None:
+    discovery = LiteratureDiscoveryService(tmp_path, urlopen=_offline_urlopen)
+    observed: list[str] = []
+
+    def open_json(_provider: str, url: str):
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)["gsrsearch"][0]
+        observed.append(query)
+        page_id = len(observed)
+        return {
+            "query": {
+                "pages": [
+                    {
+                        "pageid": page_id,
+                        "title": query,
+                        "fullurl": f"https://zh.wikipedia.org/?curid={page_id}",
+                        "extract": f"Evidence about {query}.",
+                    }
+                ]
+            }
+        }, str(page_id) * 64
+
+    discovery._open_json = open_json
+    candidates, _trace = discovery._wikipedia(["人工智能", "通用机器人", "飞行汽车", "镜像世界", "量子计算"])
+
+    assert observed == ["人工智能", "通用机器人", "飞行汽车", "镜像世界"]
+    assert [item["provenance"]["query"] for item in candidates] == observed
 
 
 def test_research_model_retries_429_retry_after_on_same_route(tmp_path: Path) -> None:
