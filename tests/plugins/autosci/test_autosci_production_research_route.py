@@ -5,10 +5,16 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-
-
 HARNESS = (Path(__file__).resolve().parents[3] / 'harness')
 SHIM = HARNESS / "plugins" / "autosci" / "bin" / "autosci_skill_shim.py"
+if str(SHIM.parent) not in sys.path:
+    sys.path.insert(0, str(SHIM.parent))
+
+import autosci_skill_shim  # noqa: E402
+
+
+def test_shim_loads_through_its_production_entrypoint_context() -> None:
+    assert Path(autosci_skill_shim.__file__).resolve() == SHIM.resolve()
 
 
 def test_research_opt_in_preserves_complete_prompt_run_id_and_uses_solar_route(tmp_path: Path) -> None:
