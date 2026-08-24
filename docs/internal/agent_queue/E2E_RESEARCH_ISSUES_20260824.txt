@@ -183,7 +183,7 @@ Verification:
 - Full target rerun after the test read fix: 1 passed in 4.36s.
 
 TEST-002 - Report-revision fixtures no longer satisfy the relevance gate
-Status: OPEN
+Status: FIXED (pending commit)
 Observed while verifying: PRODUCT-004
 Evidence: three report-revision tests stopped at source_validation with zero
 accepted sources. The query subject terms are survey/solar/repair/loop/behavior;
@@ -192,6 +192,14 @@ and the second has no sufficient subject overlap.
 Impact: the tests never reach the report-revision behavior they claim to test.
 The production relevance gate is behaving as designed and should not be
 weakened.
-Planned fix: update only the test discovery fixtures so each supplied source is
-clearly bound to the requested Solar repair-loop topic, then rerun all three
-revision tests.
+Fix: update only the test doubles so they satisfy the current production
+contracts: sources now have multiple discriminating query-term matches; model
+claims include verified verbatim quotes; revision responses echo the exact
+preservation declaration supplied by the operator and render the original
+method and accumulated limitations. No production gate was weakened.
+Verification progression:
+- After relevance repair, all three tests reached evidence_synthesis and
+  truthfully rejected quote-less model claims.
+- After quote repair, all three reached report_revision and truthfully rejected
+  missing preservation declarations.
+- After preservation repair: 3 passed in 7.01s.

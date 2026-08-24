@@ -410,19 +410,19 @@ def _revision_discovery(*, seed_snapshot: dict, payload: dict) -> dict:
         "candidates": [
             {
                 "source_id": "source-1",
-                "title": "Bounded report repair loops",
+                "title": "Bounded Solar report repair loop behavior",
                 "url": "https://example.test/report-repair",
                 "metadata": {"kind": "paper"},
                 "provenance": {"provider": "unit", "trace": "source-1"},
-                "content_summary": "Report repair loops should revise review-identified defects before final acceptance.",
+                "content_summary": "Report repair loops revise review-identified defects before final acceptance. This evidence concerns Solar repair loop behavior.",
             },
             {
                 "source_id": "source-2",
-                "title": "Evidence-preserving final gates",
+                "title": "Evidence-preserving gates for Solar repair loops",
                 "url": "https://example.test/final-gates",
                 "metadata": {"kind": "paper"},
                 "provenance": {"provider": "unit", "trace": "source-2"},
-                "content_summary": "Final gates should preserve hash lineage and fail closed after unresolved review defects.",
+                "content_summary": "Final gates preserve hash lineage and fail closed after unresolved review defects. This evidence concerns Solar repair loop behavior.",
             },
         ],
         "provider_usage": [],
@@ -458,6 +458,12 @@ class _RevisionLoopModel:
                         "claim_id": "claim-1",
                         "text": "Report repair loops revise review-identified defects before final acceptance.",
                         "evidence_ids": ["source-1"],
+                        "evidence_quotes": [
+                            {
+                                "source_id": "source-1",
+                                "quote": "Report repair loops revise review-identified defects before final acceptance.",
+                            }
+                        ],
                         "uncertainty": "low",
                         "limitations": [],
                     },
@@ -465,6 +471,12 @@ class _RevisionLoopModel:
                         "claim_id": "claim-2",
                         "text": "Final gates preserve hash lineage and fail closed after unresolved review defects.",
                         "evidence_ids": ["source-2"],
+                        "evidence_quotes": [
+                            {
+                                "source_id": "source-2",
+                                "quote": "Final gates preserve hash lineage and fail closed after unresolved review defects.",
+                            }
+                        ],
                         "uncertainty": "low",
                         "limitations": [],
                     },
@@ -495,6 +507,10 @@ class _RevisionLoopModel:
             prior_review = kwargs["independent_review"]
             assert prior_review["verdict_suggestion"] == "revise"
             attempt = int(kwargs.get("revision_attempt") or 1)
+            preservation = kwargs["preservation_requirements"]
+            rendered_limitations = "\n".join(
+                f"- {item}" for item in preservation["preserved_limitations"]
+            )
             return {
                 "report": {
                     "title": "Report Repair Loop",
@@ -504,8 +520,10 @@ class _RevisionLoopModel:
                         "Report repair loops revise review-identified defects before final acceptance.\n\n"
                         "Final gates preserve hash lineage and fail closed after unresolved review defects.\n\n"
                         "## Evidence Method\n\n"
-                        "The revision used the source-validation, synthesis, report draft, and independent-review artifacts.\n\n"
-                        f"Revision attempt {attempt} handled the latest reviewer findings."
+                        f"{preservation['original_method']}\n\n"
+                        f"Revision attempt {attempt} handled the latest reviewer findings.\n\n"
+                        "## Limitations\n\n"
+                        f"{rendered_limitations}"
                     ),
                     "conclusions": [
                         {
@@ -519,6 +537,11 @@ class _RevisionLoopModel:
                             "evidence_ids": ["claim-2"],
                         },
                     ],
+                },
+                "preservation": {
+                    "preserved_conclusion_ids": preservation["preserved_conclusion_ids"],
+                    "preserved_method_sha256": preservation["preserved_method_sha256"],
+                    "preserved_limitations": preservation["preserved_limitations"],
                 },
                 "provider_usage": usage,
             }
