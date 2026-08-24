@@ -95,6 +95,31 @@ def test_research_cli_preserves_complete_prompt_and_routes_by_input(tmp_path: Pa
     assert contract["constraints"]["request_capture"]["raw_prompt_length_chars"] == len(prompt)
 
 
+def test_research_cli_stops_inline_url_at_chinese_punctuation(tmp_path: Path) -> None:
+    url = "https://news.qq.com/rain/a/20251207A0337Y00"
+    prompt = f"梳理这个网页的关键技术趋势 {url}， 并搜索公开资料，报告用中文。"
+    proc = run_bridge(
+        tmp_path,
+        "research",
+        "--prompt",
+        prompt,
+        "--run-id",
+        "chinese-url-boundary",
+        "--artifact-root",
+        str(tmp_path / "artifacts"),
+        "--max-steps",
+        "1",
+    )
+
+    data = payload(proc)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    contract = json.loads(Path(data["task_contract_path"]).read_text(encoding="utf-8"))
+    assert contract["seed_inputs"] == [
+        {"seed_id": "website-1", "seed_kind": "url", "value": url}
+    ]
+    assert contract["constraints"]["request_capture"]["detected_urls"] == [url]
+
+
 def test_research_cli_exposes_distinct_initial_nodes_for_supported_inputs(tmp_path: Path) -> None:
     pdf = write_pdf(tmp_path / "paper.pdf")
     pack = tmp_path / "pack"

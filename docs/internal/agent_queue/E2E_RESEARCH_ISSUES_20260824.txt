@@ -1,0 +1,80 @@
+OpenSolar E2E Research Issue Log
+================================
+
+Run date: 2026-08-24
+Branch: opensolar-main
+Baseline commit: 40154e1a4723b9aae35b693965ed9e28085577ff
+Push policy: DO NOT PUSH
+
+Exact user prompt:
+梳理这个网页的关键技术趋势 https://news.qq.com/rain/a/20251207A0337Y00， 并搜索当前互联网上公开的资料，生成一个相关技术趋势的深度分析报告， 报告用中文。
+
+Production entrypoint:
+harness/solar-harness.sh autosci '$research <exact prompt> --solar-orchestrator --online --output-language zh --run-id <run-id>'
+
+Issue handling rule:
+For every distinct defect, record the observed evidence and root cause here,
+add a focused regression test, implement the smallest safe fix, verify it,
+and create exactly one local commit for that fix. Never push these commits.
+
+Issues encountered:
+
+RUN-001 - PowerShell invocation used the reserved HOME variable name
+Status: FIXED IN RUN PROCEDURE (no product-code defect)
+Observed in: qq-tech-trends-e2e-20260824-r1
+Evidence: the launcher printed "Cannot overwrite variable HOME because it is
+read-only or constant." PowerShell variable names are case-insensitive, so the
+temporary variable named $home collided with the reserved $HOME variable.
+Impact: the E2E continued, but the intended sandbox HOME was not selected.
+Fix: all subsequent commands use the task-specific variable $e2eSandboxHome.
+Verification: required in the next E2E invocation.
+
+RUN-002 - pytest basetemp parent directory did not exist
+Status: FIXED IN TEST PROCEDURE (no product-code defect)
+Observed while reproducing: PRODUCT-001
+Evidence: pytest setup failed before collection with FileNotFoundError for
+.codex-tmp/pytest-product-001.
+Impact: the first focused test command did not exercise the regression test.
+Fix: create the ignored .codex-tmp parent before invoking pytest with a unique
+basetemp; then rerun the same selector.
+Verification: required by the repeated focused test command.
+
+PRODUCT-001 - Chinese punctuation is captured as part of an inline URL
+Status: FIXED (pending commit)
+Observed in: qq-tech-trends-e2e-20260824-r1
+Evidence:
+- Exit code: 2
+- Final status: failed
+- Failed node: seed_fetch
+- Task contract:
+  outputs/phase22-real-journeys/qq-tech-trends-e2e-20260824-r1/sandbox/harness/contracts/qq-tech-trends-e2e-20260824-r1.research_task_contract.json
+- Node record:
+  outputs/phase22-real-journeys/qq-tech-trends-e2e-20260824-r1/sandbox/harness/state/node-records/247907ddf3cdcc46dc2513d90fc1fb16721e930f6966fae0e904a95814e8b5ac.json
+Observed seed value: https://news.qq.com/rain/a/20251207A0337Y00，
+Observed exception: UnicodeEncodeError: 'ascii' codec can't encode character
+'\\uff0c' in position 28.
+Root cause: research_control_plane.py and research_orchestration/runtime.py use
+URL expressions that stop only at ASCII-oriented delimiters, so a full-width
+Chinese comma is included in both the seed URL and detected_urls metadata.
+Fix: both production intake URL expressions now stop at CJK punctuation and
+CJK prose boundaries; the raw prompt remains unchanged.
+Regression test:
+tests/repairs/research_control_plane/test_research_control_plane.py::test_research_cli_stops_inline_url_at_chinese_punctuation
+Verification:
+- Focused red test before fix: 1 failed (seed value retained the Chinese comma)
+- Focused test after fix: 1 passed in 2.78s
+- Related suites: 10 passed, 1 failed in 55.35s. The only failure is the
+  independent missing-fixture defect recorded as PRODUCT-002 below.
+
+PRODUCT-002 - Existing research parity test references a missing PDF fixture
+Status: OPEN
+Observed while verifying: PRODUCT-001
+Evidence: tests/harness/research_orchestration/test_research_control_plane_contract.py::test_same_input_upstream_fixture_vs_solar_production_entrypoint_parity
+failed because the expected path
+tests/research_orchestration/fixtures/phase5/seed_portability/local_pdf_synthesis_seed.pdf
+does not exist. The production bridge returned a truthful failed result, then
+the test raised KeyError while assuming task_contract_path was present.
+Impact: the related control-plane suite cannot complete, and its PDF parity
+case does not provide regression evidence.
+Planned fix: locate the canonical fixture or add the smallest valid fixture at
+the path already used by the parity contract, then rerun the exact test.

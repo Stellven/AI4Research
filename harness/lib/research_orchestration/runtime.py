@@ -36,7 +36,10 @@ _HARNESS_ROOT = Path(__file__).resolve().parents[2]
 _REQUEST_SCHEMA = _HARNESS_ROOT / "schemas" / "draft" / "research_node_request.v1.schema.json"
 _RESULT_SCHEMA = _HARNESS_ROOT / "schemas" / "evidence" / "research_node_result.v1.schema.json"
 _DEFAULT_SELECTION = _HARNESS_ROOT / "config" / "research-workflow-selection.v1.json"
-_PROMPT_URL_RE = re.compile(r"https?://[^\s)>\]]+", re.IGNORECASE)
+_PROMPT_URL_RE = re.compile(
+    r"https?://[^\s<>()\[\]{}\"'，。；：！？、（）【】《》「」『』\u4e00-\u9fff]+",
+    re.IGNORECASE,
+)
 _PROMPT_PDF_RE = re.compile(r"(?<!\w)[^\s]+\.pdf\b", re.IGNORECASE)
 _MARKDOWN_DELIVERABLE_RE = re.compile(r"\b(?:markdown|md)\b|\.md\b", re.IGNORECASE)
 _PDF_DELIVERABLE_RE = re.compile(

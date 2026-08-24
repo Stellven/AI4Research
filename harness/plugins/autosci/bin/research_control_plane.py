@@ -21,7 +21,10 @@ class ResearchControlPlaneError(ValueError):
     """Raised when the research request cannot be safely routed."""
 
 
-_URL_RE = re.compile(r"https?://[^\s)>\]]+", re.IGNORECASE)
+_URL_RE = re.compile(
+    r"https?://[^\s<>()\[\]{}\"'，。；：！？、（）【】《》「」『』\u4e00-\u9fff]+",
+    re.IGNORECASE,
+)
 _CHINESE_RE = re.compile(r"[\u4e00-\u9fff]|\b(?:chinese|zh-cn|mandarin)\b", re.IGNORECASE)
 _ENGLISH_RE = re.compile(r"\b(?:english|en-us|en-gb)\b", re.IGNORECASE)
 _SOURCE_PACK_SUFFIXES = {".md", ".markdown", ".txt", ".json", ".jsonl", ".yaml", ".yml", ".csv", ".tsv"}
