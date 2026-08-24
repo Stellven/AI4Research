@@ -437,3 +437,23 @@ shortlist across those queries before filling remaining slots. Preserve the
 existing single-topic behavior for ordinary literature requests.
 Verification so far: the two new query-diversity regressions and all existing
 production research service tests passed (28 passed in 2.00s).
+
+PRODUCT-013 - Report heading deduplication duplicates every nested subsection
+Status: FIXED (pending commit)
+Observed in: qq-tech-trends-e2e-20260824-r8
+Evidence: the final reviewer found that all nine `###` technology-trend
+subsections appeared twice in the deliverable Markdown, even though the model's
+structured `sections` field contained only one technology-trend section. The
+revision then incorrectly claimed that the duplicates had been removed.
+Root cause: `_dedupe_repeated_heading_sections` appends the complete range of a
+parent `##` section, including all nested headings, and subsequently appends
+each nested `###` range again while walking the same heading list.
+Impact: any model report that uses nested Markdown headings is mechanically
+duplicated by normalization, wastes revision attempts, and can fail final
+acceptance even when the provider returned only one copy.
+Fix: retain the original document as the base and remove only ranges
+whose normalized heading identity was already seen; merge overlapping removal
+ranges so a repeated parent safely removes its subtree without reconstructing
+or duplicating the first copy.
+Verification: the new nested-heading regression and the complete production
+research service suite passed (29 passed in 2.03s).

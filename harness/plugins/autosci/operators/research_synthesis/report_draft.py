@@ -64,27 +64,36 @@ def _dedupe_repeated_heading_sections(body: str) -> str:
     headings = list(re.finditer(r"(?m)^(#{2,6})\s+(.+?)\s*$", body))
     if not headings:
         return body
-    keep_ranges: list[tuple[int, int]] = []
+    remove_ranges: list[tuple[int, int]] = []
     seen: set[tuple[int, str]] = set()
-    cursor = 0
     for index, heading in enumerate(headings):
-        if heading.start() > cursor:
-            keep_ranges.append((cursor, heading.start()))
         level = len(heading.group(1))
         normalized = _normalized_heading(heading.group(2))
+        key = (level, normalized)
+        if not normalized or key not in seen:
+            seen.add(key)
+            continue
         section_end = len(body)
         for following in headings[index + 1:]:
             if len(following.group(1)) <= level:
                 section_end = following.start()
                 break
-        key = (level, normalized)
-        if not normalized or key not in seen:
-            keep_ranges.append((heading.start(), section_end))
-            seen.add(key)
-        cursor = section_end
-    if cursor < len(body):
-        keep_ranges.append((cursor, len(body)))
-    compact = "".join(body[start:end] for start, end in keep_ranges)
+        remove_ranges.append((heading.start(), section_end))
+    if not remove_ranges:
+        return body
+    merged: list[tuple[int, int]] = []
+    for start, end in remove_ranges:
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    compact_parts: list[str] = []
+    cursor = 0
+    for start, end in merged:
+        compact_parts.append(body[cursor:start])
+        cursor = end
+    compact_parts.append(body[cursor:])
+    compact = "".join(compact_parts)
     return re.sub(r"\n{3,}", "\n\n", compact).strip()
 
 

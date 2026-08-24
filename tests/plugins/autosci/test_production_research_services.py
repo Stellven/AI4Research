@@ -665,6 +665,37 @@ def test_report_normalizer_removes_repeated_markdown_sections() -> None:
     assert "Duplicate method section" not in report["body"]
 
 
+def test_report_normalizer_preserves_nested_subsections_exactly_once() -> None:
+    report = _normalize_report(
+        {
+            "report": {
+                "title": "Technology trends",
+                "body": (
+                    "# Technology trends\n\n"
+                    "## Evidence Method\n\nOnly supplied claims are used.\n\n"
+                    "## Key trends\n\n"
+                    "### 1. Agents\n\nAgent evidence.\n\n"
+                    "### 2. Robotics\n\nRobot evidence.\n\n"
+                    "## Conclusions\n\nThe trends are evidence bounded."
+                ),
+                "conclusions": [
+                    {
+                        "conclusion_id": "conclusion-1",
+                        "text": "The trends are evidence bounded.",
+                        "evidence_ids": ["claim-1"],
+                    }
+                ],
+            }
+        },
+        {"claim-1"},
+    )
+
+    assert report["body"].count("### 1. Agents") == 1
+    assert report["body"].count("Agent evidence.") == 1
+    assert report["body"].count("### 2. Robotics") == 1
+    assert report["body"].count("Robot evidence.") == 1
+
+
 def test_topic_discovery_query_distills_research_subject_from_instruction() -> None:
     query = _topic_from_snapshot(
         {
