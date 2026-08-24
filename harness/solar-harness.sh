@@ -1878,12 +1878,13 @@ intake_request() {
     printf '%s\n' "$wf_out"
     return 0
   fi
-  local out rc raw_file autopilot_out autopilot_rc intent_out intent_rc intent_id intent_lane sid_from_out consumer_out consumer_rc consumer_status planner_handoff_status fixed_route
+  local out rc raw_file autopilot_out autopilot_rc intent_out intent_rc intent_id intent_lane sid_from_out consumer_out consumer_rc consumer_status planner_handoff_status fixed_route planner_selected_workflow
   intent_out=""
   intent_rc=0
   intent_id=""
   intent_lane=""
   fixed_route=0
+  planner_selected_workflow="${SOLAR_PLANNER_SELECTED_WORKFLOW_ID:-}"
   consumer_out=""
   consumer_rc=0
   consumer_status=""
@@ -1904,14 +1905,18 @@ intake_request() {
       intent_lane=$(python3 -c 'import json,sys; print((json.loads(sys.stdin.read()).get("lane") or ""))' <<<"$intent_out" 2>/dev/null || true)
     fi
   fi
-  if [[ "${SOLAR_INTAKE_WORKFLOW_ID:-}" == "research.evidence_to_poc.v1" && "$intent_lane" != "research" ]]; then
-    err "fixed research workflow was explicitly requested but Requirement IR lane was ${intent_lane:-unavailable}"
+  if [[ -n "$planner_selected_workflow" && "$planner_selected_workflow" != "research.evidence_to_poc.v1" ]]; then
+    err "unsupported planner-selected workflow: $planner_selected_workflow"
     return 2
   fi
-  # Ordinary research is selected from the persisted Requirement IR lane,
-  # before the generic epic/Planner fallback.  Topology and acquisition are
-  # typed inputs; prompt text never selects individual stages.
-  if [[ "$intent_rc" == "0" && -n "$intent_id" && "$intent_lane" == "research" ]]; then
+  if [[ "$planner_selected_workflow" == "research.evidence_to_poc.v1" && "$intent_lane" != "research" ]]; then
+    err "planner selected the research template but Requirement IR lane was ${intent_lane:-unavailable}"
+    return 2
+  fi
+  # Requirement compilation may expose this registered workflow as a memoized
+  # TaskGraph candidate, but only the elastic planner may select it. A research
+  # lane by itself must continue into the normal Planner handoff.
+  if [[ "$intent_rc" == "0" && -n "$intent_id" && "$intent_lane" == "research" && "$planner_selected_workflow" == "research.evidence_to_poc.v1" ]]; then
     local fixed_args fixed_out fixed_rc fixed_sid fixed_execution_profile fixed_acquisition_mode
     fixed_execution_profile="${SOLAR_RESEARCH_EXECUTION_PROFILE:-part_a_only}"
     fixed_acquisition_mode="${SOLAR_RESEARCH_ACQUISITION_MODE:-source_pack}"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -288,7 +289,8 @@ def test_dashboard_fixed_hybrid_profile_is_controller_owned_and_explicit(tmp_pat
 
     env = module._intake_subprocess_env()
 
-    assert env["SOLAR_INTAKE_WORKFLOW_ID"] == "research.evidence_to_poc.v1"
+    assert "SOLAR_INTAKE_WORKFLOW_ID" not in env
+    assert env["SOLAR_PLANNER_WORKFLOW_CANDIDATE_ID"] == "research.evidence_to_poc.v1"
     assert env["SOLAR_RESEARCH_EXECUTION_PROFILE"] == "part_a_plus_poc"
     assert env["SOLAR_RESEARCH_ACQUISITION_MODE"] == "hybrid"
     assert env["SOLAR_RESEARCH_RETRIEVAL_POLICY"] == "public_bibliographic_no_key_v1"
@@ -326,7 +328,7 @@ def test_dashboard_explicit_fixed_inputs_override_deployment_defaults_at_shipped
 ) -> None:
     module, _harness, _sprints = _load_status_server(tmp_path)
     observed: dict = {}
-    monkeypatch.setattr(module, "_intake_command", lambda task: ["/bin/true", "intake", "--request", task])
+    monkeypatch.setattr(module, "_intake_command", lambda task: [sys.executable, "intake", "--request", task])
     monkeypatch.setattr(module, "_intake_subprocess_env", lambda: {
         "SOLAR_INTAKE_WORKFLOW_ID": "research.evidence_to_poc.v1",
         "SOLAR_RESEARCH_EXECUTION_PROFILE": "part_a_plus_poc",
@@ -368,3 +370,5 @@ def test_dashboard_explicit_fixed_inputs_override_deployment_defaults_at_shipped
     }
     assert observed["env"]["SOLAR_RESEARCH_ACQUISITION_MODE"] == "live_search"
     assert observed["env"]["SOLAR_INTAKE_REQUEST_ID"] == "dashboard-fixed-request"
+    assert observed["env"]["SOLAR_PLANNER_SELECTED_WORKFLOW_ID"] == "research.evidence_to_poc.v1"
+    assert "SOLAR_INTAKE_WORKFLOW_ID" not in observed["env"]

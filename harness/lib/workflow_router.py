@@ -41,13 +41,14 @@ FIXED_RESEARCH_WORKFLOW_ID = "research.evidence_to_poc.v1"
 # prompt, so "fix a bug in my parser" would still compile the 15-node
 # research topology.
 #
-# These tiers let the router decide instead:
-#   simple          -> no match; the generic Planner/Epic path handles it
-#   research_report -> the fixed contract, Part A only (A1-A8)
-#   research_poc    -> the fixed contract, Part A plus Part B (all 15)
+# These tiers are deterministic planner hints, not routing decisions:
+#   simple          -> no research-template candidate
+#   research_report -> candidate template with a Part-A profile hint
+#   research_poc    -> candidate template with a Part-A-plus-PoC profile hint
 #
-# Deliberately lexical and inspectable rather than model-judged: routing decides
-# which governance applies, so it must be reproducible and reviewable.
+# The elastic planner owns the final decision to answer directly, reuse this
+# memoized TaskGraph template, or generate a new DAG. Keeping the lexical signal
+# inspectable is still useful, but it must never instantiate topology by itself.
 
 # Every marker here must be vocabulary that an ordinary engineering request
 # would not use. Widening this list is not free: a false positive sends a
@@ -77,14 +78,17 @@ _POC_MARKERS = re.compile(
 
 
 def classify_research_request(request: str) -> dict:
-    """Route a free-text request to a workflow and execution profile."""
+    """Return deterministic planner hints without selecting a workflow."""
     text = str(request or "")
     research = sorted({m.group(0).lower() for m in _RESEARCH_MARKERS.finditer(text)})
     if not research:
         return {
             "tier": "simple",
             "workflow_id": None,
+            "candidate_workflow_id": None,
             "execution_profile": None,
+            "routing_authority": "planner",
+            "auto_instantiate": False,
             "research_markers": [],
             "poc_markers": [],
             "reason": "no research markers; the generic planner path applies",
@@ -93,16 +97,22 @@ def classify_research_request(request: str) -> dict:
     if poc:
         return {
             "tier": "research_poc",
-            "workflow_id": FIXED_RESEARCH_WORKFLOW_ID,
+            "workflow_id": None,
+            "candidate_workflow_id": FIXED_RESEARCH_WORKFLOW_ID,
             "execution_profile": "part_a_plus_poc",
+            "routing_authority": "planner",
+            "auto_instantiate": False,
             "research_markers": research,
             "poc_markers": poc,
             "reason": "research request that also asks to build or run something",
         }
     return {
         "tier": "research_report",
-        "workflow_id": FIXED_RESEARCH_WORKFLOW_ID,
+        "workflow_id": None,
+        "candidate_workflow_id": FIXED_RESEARCH_WORKFLOW_ID,
         "execution_profile": "part_a_only",
+        "routing_authority": "planner",
+        "auto_instantiate": False,
         "research_markers": research,
         "poc_markers": [],
         "reason": "research request with no build or execute intent",
@@ -112,7 +122,7 @@ def classify_research_request(request: str) -> dict:
 def cmd_classify(args: argparse.Namespace) -> int:
     result = classify_research_request(args.request)
     print(json.dumps(result, indent=2, sort_keys=True))
-    return EXIT_MATCH if result["workflow_id"] else EXIT_NO_MATCH
+    return EXIT_MATCH if result["candidate_workflow_id"] else EXIT_NO_MATCH
 
 
 def _workflows_dir(args: argparse.Namespace) -> Path:

@@ -708,6 +708,34 @@ def model_rewrite(raw_intent: dict[str, Any], prompt_path: Path) -> tuple[dict[s
     return fallback, meta
 
 
+def _planner_workflow_candidates(request: str, lane: str) -> list[dict[str, Any]]:
+    """Expose memoized TaskGraphs to the planner without selecting one."""
+    if str(lane or "").strip().lower() != "research":
+        return []
+    try:
+        from workflow_router import FIXED_RESEARCH_WORKFLOW_ID, classify_research_request
+
+        hint = classify_research_request(request)
+        profile_hint = str(hint.get("execution_profile") or "part_a_only")
+        reason = str(hint.get("reason") or "Requirement IR classified the request as research")
+    except Exception as exc:
+        # Candidate discovery is advisory. Requirement compilation and planner
+        # handoff remain available when the template catalog cannot be loaded.
+        FIXED_RESEARCH_WORKFLOW_ID = "research.evidence_to_poc.v1"
+        profile_hint = "part_a_only"
+        reason = f"research lane candidate; classifier unavailable: {type(exc).__name__}"
+    return [
+        {
+            "workflow_id": FIXED_RESEARCH_WORKFLOW_ID,
+            "candidate_kind": "memoized_task_graph",
+            "selection_authority": "planner",
+            "auto_instantiate": False,
+            "execution_profile_hint": profile_hint,
+            "reason": reason,
+        }
+    ]
+
+
 def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: dict[str, Any]) -> dict[str, Any]:
     context = raw_intent.get("context", {}) if isinstance(raw_intent.get("context"), dict) else {}
     raw_block = raw_intent.get("raw", {}) if isinstance(raw_intent.get("raw"), dict) else {}
@@ -743,6 +771,11 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
         requires_human_confirm=bool(routing_hints.get("requires_human_confirm")),
         answers=answers,
     )
+    lane = str(rewritten.get("suggested_lane") or "delivery")
+    workflow_candidates = _planner_workflow_candidates(
+        str(raw_block.get("text") or ""),
+        lane,
+    )
     return {
         "schema_version": "solar.requirement_ir.v1",
         "intent_id": intent_id,
@@ -755,8 +788,13 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
         "constraints": rewritten.get("constraints", []),
         "non_goals": rewritten.get("non_goals", []),
         "acceptance": rewritten.get("acceptance", []),
-        "lane": rewritten.get("suggested_lane", "delivery"),
+        "lane": lane,
         "logical_operators": rewritten.get("suggested_logical_operators", []),
+        "planner_hints": {
+            "workflow_candidates": workflow_candidates,
+            "selection_authority": "planner",
+            "allowed_outcomes": ["direct_answer", "memoized_task_graph", "new_task_graph"],
+        },
         "readiness": readiness,
         "compiler_next": (
             "pm_planner_task_graph" if readiness["ready"] else "clarification_required"
@@ -919,6 +957,12 @@ def bind_intent_artifacts(intent_id: str, sprint_id: str) -> dict[str, Any]:
                     gateway_source = gateway_payload.get("source")
                     if not payload.get("source") and isinstance(gateway_source, dict):
                         payload["source"] = gateway_source
+                    gateway_planner_hints = gateway_payload.get("planner_hints")
+                    if (
+                        not payload.get("planner_hints")
+                        and isinstance(gateway_planner_hints, dict)
+                    ):
+                        payload["planner_hints"] = gateway_planner_hints
                     compiled_inputs = payload.get("source_inputs")
                     if not isinstance(compiled_inputs, dict):
                         compiled_inputs = {}

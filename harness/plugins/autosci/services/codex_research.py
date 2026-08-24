@@ -431,9 +431,13 @@ class CodexResearchModelService(ResearchModelService):
             "SOLAR_CODEX_EXTRA_FLAGS",
         ):
             env.pop(name, None)
+        # os.getuid() is unavailable on Windows. The process id keeps the
+        # default state sandbox isolated there; callers can still provide a
+        # stable explicit root through SOLAR_CODEX_OPERATOR_STATE_ROOT.
+        owner_id = os.getuid() if hasattr(os, "getuid") else os.getpid()
         state_parent = Path(
             env.get("SOLAR_CODEX_OPERATOR_STATE_ROOT")
-            or (tempfile.gettempdir() + f"/solar-codex-research-state-{os.getuid()}")
+            or (tempfile.gettempdir() + f"/solar-codex-research-state-{owner_id}")
         ).expanduser()
         state_parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         started = time.monotonic()

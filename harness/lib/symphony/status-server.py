@@ -1052,12 +1052,11 @@ def _intake_subprocess_env() -> dict[str, str]:
                 raise ValueError(f"dashboard research profile is missing {source_key}")
             env[target_key] = value
         env.update({
-            "SOLAR_INTAKE_WORKFLOW_ID": "research.evidence_to_poc.v1",
+            "SOLAR_PLANNER_WORKFLOW_CANDIDATE_ID": "research.evidence_to_poc.v1",
             "SOLAR_RESEARCH_EXECUTION_PROFILE": "part_a_plus_poc",
             "SOLAR_RESEARCH_ACQUISITION_MODE": "hybrid",
             "SOLAR_RESEARCH_RETRIEVAL_POLICY": "public_bibliographic_no_key_v1",
             "SOLAR_RESEARCH_EXPERIMENT_POLICY": "evidence_lineage_integrity_v1",
-            "SOLAR_WORKFLOW_ROUTER": "1",
         })
     return env
 
@@ -1157,42 +1156,52 @@ def _task_with_intake_attachments(task: str, attachments: list[dict]) -> str:
 
 
 def _classify_intake_request(task: str, env: dict, *, explicit_workflow_id: str) -> dict:
-    """Decide which workflow a free-text prompt should enter, and say why.
+    """Expose a research template candidate without deciding the workflow.
 
-    The dashboard research profile used to pin SOLAR_INTAKE_WORKFLOW_ID for
-    every prompt, so "what is 2+2" and a full literature review both entered the
-    fifteen-node research contract. Routing was therefore not being exercised at
-    all: the demo only looked like it handled any prompt. An explicit
-    workflow_id from the caller still wins; this only replaces the blanket pin.
+    An explicit workflow id is a caller-owned debug/manual selection. Ordinary
+    prompts retain the generic Requirement IR -> planner path. Deterministic
+    markers are recorded only as candidate metadata for that planner.
     """
     if explicit_workflow_id:
         return {"applied": False, "reason": "caller supplied an explicit workflow_id"}
-    if str(env.get("SOLAR_INTAKE_WORKFLOW_ID") or "") != "research.evidence_to_poc.v1":
-        return {"applied": False, "reason": "no pinned research workflow to reconsider"}
+    legacy_pin = str(env.get("SOLAR_INTAKE_WORKFLOW_ID") or "")
+    candidate_id = str(env.get("SOLAR_PLANNER_WORKFLOW_CANDIDATE_ID") or legacy_pin)
+    if candidate_id != "research.evidence_to_poc.v1":
+        return {"applied": False, "reason": "no research template candidate configured"}
+    env.pop("SOLAR_INTAKE_WORKFLOW_ID", None)
     try:
         from workflow_router import classify_research_request
     except ImportError as exc:
-        # Fail closed onto the pinned behaviour rather than silently routing a
-        # research request to the generic planner.
-        return {"applied": False, "reason": f"router unavailable: {exc}"}
+        return {"applied": False, "reason": f"candidate classifier unavailable: {exc}"}
     verdict = classify_research_request(task)
     tier = str(verdict.get("tier") or "")
-    if tier == "simple":
-        # Nothing in the prompt asks for research. Drop the pin and let the
-        # generic planner path handle it.
+    candidate_workflow_id = str(verdict.get("candidate_workflow_id") or "")
+    candidates = []
+    if candidate_workflow_id:
+        candidates.append(
+            {
+                "workflow_id": candidate_workflow_id,
+                "candidate_kind": "memoized_task_graph",
+                "selection_authority": "planner",
+                "auto_instantiate": False,
+                "execution_profile_hint": str(verdict.get("execution_profile") or ""),
+            }
+        )
+    else:
         for key in (
-            "SOLAR_INTAKE_WORKFLOW_ID",
             "SOLAR_RESEARCH_EXECUTION_PROFILE",
             "SOLAR_RESEARCH_ACQUISITION_MODE",
             "SOLAR_RESEARCH_RETRIEVAL_POLICY",
             "SOLAR_RESEARCH_EXPERIMENT_POLICY",
         ):
             env.pop(key, None)
-    else:
-        env["SOLAR_RESEARCH_EXECUTION_PROFILE"] = str(verdict.get("execution_profile") or "")
+    env["SOLAR_PLANNER_WORKFLOW_CANDIDATES_JSON"] = json.dumps(candidates, sort_keys=True)
     return {
         "applied": True,
         "tier": tier,
+        "candidate_workflow_id": candidate_workflow_id,
+        "selection_authority": "planner",
+        "auto_instantiate": False,
         "execution_profile": str(verdict.get("execution_profile") or ""),
         "research_markers": list(verdict.get("research_markers") or []),
         "poc_markers": list(verdict.get("poc_markers") or []),
@@ -1253,6 +1262,10 @@ def _intake_payload(data: dict) -> dict:
     if attachments:
         env["SOLAR_INTAKE_ATTACHMENTS_JSON"] = json.dumps(attachments, ensure_ascii=False)
     routing = _classify_intake_request(task, env, explicit_workflow_id=workflow_id)
+    if workflow_id:
+        # Do not let a legacy deployment pin obscure that this workflow was
+        # selected explicitly by the caller/planner boundary.
+        env.pop("SOLAR_INTAKE_WORKFLOW_ID", None)
     if not workflow_id and str(env.get("SOLAR_INTAKE_WORKFLOW_ID") or "") == "research.evidence_to_poc.v1":
         resolved_profile = {
             "workflow_id": "research.evidence_to_poc.v1",
@@ -1263,7 +1276,10 @@ def _intake_payload(data: dict) -> dict:
             "source_pack_configured": str(bool(env.get("SOLAR_RESEARCH_SOURCE_PACK"))).lower(),
         }
     if workflow_id == "research.evidence_to_poc.v1":
-        env["SOLAR_INTAKE_WORKFLOW_ID"] = workflow_id
+        # An explicit caller choice is a workflow selection, not an intake
+        # classifier decision.  Keep the ownership boundary visible to the
+        # harness so ordinary research prompts still reach the planner.
+        env["SOLAR_PLANNER_SELECTED_WORKFLOW_ID"] = workflow_id
         mapping = {
             "execution_profile": "SOLAR_RESEARCH_EXECUTION_PROFILE",
             "acquisition_mode": "SOLAR_RESEARCH_ACQUISITION_MODE",
@@ -1285,7 +1301,7 @@ def _intake_payload(data: dict) -> dict:
             "source_pack_configured": str(bool(env.get("SOLAR_RESEARCH_SOURCE_PACK"))).lower(),
         }
     elif workflow_id:
-        env["SOLAR_INTAKE_WORKFLOW_ID"] = workflow_id
+        env["SOLAR_PLANNER_SELECTED_WORKFLOW_ID"] = workflow_id
         if workflow_inputs:
             env["SOLAR_INTAKE_WORKFLOW_INPUTS"] = json.dumps(workflow_inputs, ensure_ascii=False)
     try:

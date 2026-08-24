@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""The dashboard must route a prompt, not pin every prompt to one workflow.
+"""The dashboard may propose a template but only the planner may select it.
 
 The research dashboard profile set ``SOLAR_INTAKE_WORKFLOW_ID`` for every
 request it accepted, so a trivial question and a full literature review both
 entered the fifteen-node research contract and the router was never consulted.
-These tests pin the routing decision the intake path now makes.
+These tests pin the planner-candidate contract the intake path now makes.
 """
 
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -46,9 +47,10 @@ def test_a_prompt_with_no_research_intent_leaves_the_research_contract():
     assert "SOLAR_INTAKE_WORKFLOW_ID" not in env
     assert "SOLAR_RESEARCH_EXECUTION_PROFILE" not in env
     assert "SOLAR_RESEARCH_ACQUISITION_MODE" not in env
+    assert json.loads(env["SOLAR_PLANNER_WORKFLOW_CANDIDATES_JSON"]) == []
 
 
-def test_a_research_request_without_build_intent_runs_part_a_only():
+def test_a_research_request_without_build_intent_proposes_part_a_only():
     env = _pinned_env()
 
     routing = status_server._classify_intake_request(
@@ -58,13 +60,20 @@ def test_a_research_request_without_build_intent_runs_part_a_only():
     )
 
     assert routing["tier"] == "research_report"
-    assert env["SOLAR_INTAKE_WORKFLOW_ID"] == PINNED
-    # The profile is narrowed from the pinned part_a_plus_poc: nothing in the
-    # request asked for an experiment to be built or run.
-    assert env["SOLAR_RESEARCH_EXECUTION_PROFILE"] == "part_a_only"
+    assert routing["selection_authority"] == "planner"
+    assert routing["auto_instantiate"] is False
+    assert "SOLAR_INTAKE_WORKFLOW_ID" not in env
+    candidates = json.loads(env["SOLAR_PLANNER_WORKFLOW_CANDIDATES_JSON"])
+    assert candidates == [{
+        "auto_instantiate": False,
+        "candidate_kind": "memoized_task_graph",
+        "execution_profile_hint": "part_a_only",
+        "selection_authority": "planner",
+        "workflow_id": PINNED,
+    }]
 
 
-def test_a_research_request_that_asks_to_benchmark_runs_part_b_too():
+def test_a_research_request_that_asks_to_benchmark_proposes_part_b():
     env = _pinned_env()
 
     routing = status_server._classify_intake_request(
@@ -76,8 +85,10 @@ def test_a_research_request_that_asks_to_benchmark_runs_part_b_too():
 
     assert routing["tier"] == "research_poc"
     assert routing["poc_markers"]
-    assert env["SOLAR_INTAKE_WORKFLOW_ID"] == PINNED
-    assert env["SOLAR_RESEARCH_EXECUTION_PROFILE"] == "part_a_plus_poc"
+    assert "SOLAR_INTAKE_WORKFLOW_ID" not in env
+    candidates = json.loads(env["SOLAR_PLANNER_WORKFLOW_CANDIDATES_JSON"])
+    assert candidates[0]["workflow_id"] == PINNED
+    assert candidates[0]["execution_profile_hint"] == "part_a_plus_poc"
 
 
 def test_an_explicit_workflow_id_from_the_caller_is_never_overridden():

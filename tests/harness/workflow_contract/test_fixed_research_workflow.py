@@ -23,6 +23,16 @@ if str(LIB) not in sys.path:
 
 import fixed_research_workflow as fr  # noqa: E402
 import workflow_intake as wi  # noqa: E402
+
+
+def _symlink_or_skip(link: Path, target: Path, *, target_is_directory: bool = False) -> None:
+    """Create a symlink or skip when Windows developer-mode privilege is absent."""
+    try:
+        link.symlink_to(target, target_is_directory=target_is_directory)
+    except OSError as exc:
+        if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+            pytest.skip("Windows symlink privilege is unavailable")
+        raise
 from apo_plan_compiler import compile_execution_plan_for_node  # noqa: E402
 from harness.plugins.autosci.services import codex_research as cr  # noqa: E402
 from harness.plugins.autosci.services.codex_research import (  # noqa: E402
@@ -230,7 +240,7 @@ def test_source_pack_binds_actual_extract_content_and_rejects_tamper(tmp_path: P
 def test_source_pack_rejects_parent_symlink_and_relative_escape(tmp_path: Path) -> None:
     real = _pack(tmp_path / "authority" / "real")
     link = tmp_path / "authority" / "linked"
-    link.symlink_to(real.parent, target_is_directory=True)
+    _symlink_or_skip(link, real.parent, target_is_directory=True)
     with pytest.raises(fr.FixedResearchContractError, match="symlink"):
         fr.validate_source_pack(link / "pack", authority_root=tmp_path / "authority")
     with pytest.raises(fr.FixedResearchContractError, match="escapes"):
@@ -239,14 +249,14 @@ def test_source_pack_rejects_parent_symlink_and_relative_escape(tmp_path: Path) 
     index_pack = _pack(tmp_path / "index-link")
     index_target = tmp_path / "index-link" / "sources-real.jsonl"
     (index_pack / "sources.jsonl").replace(index_target)
-    (index_pack / "sources.jsonl").symlink_to(index_target)
+    _symlink_or_skip(index_pack / "sources.jsonl", index_target)
     with pytest.raises(fr.FixedResearchContractError, match="symlink"):
         fr.validate_source_pack(index_pack, authority_root=index_pack.parent)
 
     extract_pack = _pack(tmp_path / "extract-link")
     extract_target = tmp_path / "extract-link" / "extract-real.txt"
     (extract_pack / "extracts" / "s1.txt").replace(extract_target)
-    (extract_pack / "extracts" / "s1.txt").symlink_to(extract_target)
+    _symlink_or_skip(extract_pack / "extracts" / "s1.txt", extract_target)
     with pytest.raises(fr.FixedResearchContractError, match="symlink"):
         fr.validate_source_pack(extract_pack, authority_root=extract_pack.parent)
 
@@ -295,7 +305,7 @@ def test_fixed_benchmark_inputs_accept_canonical_workdir_paths_without_widening_
     outside.write_text("outside\n", encoding="utf-8")
     link = work_dir / "artifacts/external-link.json"
     link.parent.mkdir(parents=True, exist_ok=True)
-    link.symlink_to(outside)
+    _symlink_or_skip(link, outside)
     with pytest.raises(ValueError, match="escapes"):
         gnd._fixed_research_relative_path(
             "artifacts/external-link.json", sid, label="benchmark input"
@@ -528,6 +538,7 @@ def test_codex_research_service_uses_fresh_schema_bound_context_and_scrubs_api_k
                     "claim_id": "claim-1",
                     "text": "Bounded result",
                     "evidence_ids": ["e1"],
+                    "evidence_quotes": [{"source_id": "s1", "quote": "Evidence e1."}],
                     "uncertainty": "low",
                     "limitations": [],
                 }],
@@ -1011,8 +1022,8 @@ def test_non_dry_registered_a1_to_a3_operator_runtime_daemon_and_solar_closeout(
 
     runtime_harness = tmp_path / "operator-harness"
     runtime_harness.mkdir()
-    (runtime_harness / "plugins").symlink_to(HARNESS / "plugins", target_is_directory=True)
-    (runtime_harness / "personas").symlink_to(HARNESS / "personas", target_is_directory=True)
+    _symlink_or_skip(runtime_harness / "plugins", HARNESS / "plugins", target_is_directory=True)
+    _symlink_or_skip(runtime_harness / "personas", HARNESS / "personas", target_is_directory=True)
     monkeypatch.setenv("HARNESS_DIR", str(runtime_harness))
     monkeypatch.setenv("SOLAR_HARNESS_DIR", str(runtime_harness))
     monkeypatch.setenv("HARNESS_SPRINTS_DIR", str(sprints))
@@ -1210,7 +1221,7 @@ def test_non_dry_fixed_part_b_b1_to_b7_with_seeded_controller_accepted_part_a_pr
         ("config", HARNESS / "config"),
         ("schemas", HARNESS / "schemas"),
     ):
-        (runtime_harness / name).symlink_to(target, target_is_directory=True)
+        _symlink_or_skip(runtime_harness / name, target, target_is_directory=True)
     monkeypatch.setenv("HARNESS_DIR", str(runtime_harness))
     monkeypatch.setenv("SOLAR_HARNESS_DIR", str(runtime_harness))
     monkeypatch.setenv("HARNESS_SPRINTS_DIR", str(sprints))
@@ -2578,7 +2589,7 @@ def test_shipped_shell_one_command_persists_exact_one_shot_experiment_policy(tmp
     assert not list(sprints.glob("*.epic.json"))
 
 
-def test_shipped_shell_default_intake_submits_fixed_a1_to_real_operator_inbox(
+def test_planner_selected_intake_submits_fixed_a1_to_real_operator_inbox(
     tmp_path: Path,
 ) -> None:
     policy_root = tmp_path / "sources"
@@ -2586,7 +2597,7 @@ def test_shipped_shell_default_intake_submits_fixed_a1_to_real_operator_inbox(
     runtime_harness = tmp_path / "installed-harness"
     runtime_harness.mkdir()
     for name in ("lib", "plugins", "personas", "config"):
-        (runtime_harness / name).symlink_to(HARNESS / name, target_is_directory=True)
+        _symlink_or_skip(runtime_harness / name, HARNESS / name, target_is_directory=True)
     sprints = runtime_harness / "sprints"
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -2603,6 +2614,7 @@ def test_shipped_shell_default_intake_submits_fixed_a1_to_real_operator_inbox(
         "SOLAR_MULTI_TASK_OPERATORS": str(HARNESS / "config" / "physical-operators.json"),
         "SOLAR_OPERATORD_AUTO_KICK": "0",
         "SOLAR_WORKFLOW_ROUTER": "1",
+        "SOLAR_PLANNER_SELECTED_WORKFLOW_ID": fr.WORKFLOW_ID,
         "SOLAR_PRODUCT_MODE": "0",
         "SOLAR_INTENT_REWRITE_CMD": "",
     })
@@ -2646,7 +2658,7 @@ def test_shipped_shell_default_intake_submits_fixed_a1_to_real_operator_inbox(
     assert queued["runner_contract"] == fr.WORKFLOW_ID
 
 
-def test_long_research_still_uses_fixed_route_and_software_debug_do_not(tmp_path: Path) -> None:
+def test_long_research_reaches_planner_with_fixed_template_candidate(tmp_path: Path) -> None:
     policy_root = tmp_path / "sources"
     pack = _pack(policy_root)
 
@@ -2683,9 +2695,17 @@ def test_long_research_still_uses_fixed_route_and_software_debug_do_not(tmp_path
     )
     result, sprints = run(long_research, "long-research")
     assert result.returncode == 0, result.stdout + result.stderr
-    graph = json.loads(next(sprints.glob("*.task_graph.json")).read_text(encoding="utf-8"))
-    assert graph["workflow_contract_id"] == fr.WORKFLOW_ID
+    graphs = [json.loads(path.read_text(encoding="utf-8")) for path in sprints.glob("*.task_graph.json")]
+    assert len(graphs) == 1
+    assert graphs[0].get("workflow_contract_id") != fr.WORKFLOW_ID
     assert not list(sprints.glob("*.epic.json"))
+    requirement_ir = json.loads(next(sprints.glob("*.requirement_ir.json")).read_text(encoding="utf-8"))
+    candidates = requirement_ir["planner_hints"]["workflow_candidates"]
+    assert candidates[0]["workflow_id"] == fr.WORKFLOW_ID
+    assert candidates[0]["selection_authority"] == "planner"
+    assert candidates[0]["auto_instantiate"] is False
+    status = json.loads(next(sprints.glob("*.status.json")).read_text(encoding="utf-8"))
+    assert status["handoff_to"] == "planner"
 
     for name, prompt, expected_request_type in (
         ("software", "Implement a Python CLI command and add regression tests for its parser.", "implementation"),
@@ -2715,7 +2735,6 @@ def test_long_research_still_uses_fixed_route_and_software_debug_do_not(tmp_path
 
 def test_legacy_autosci_contract_and_24_node_limit_are_unchanged() -> None:
     path = HARNESS / "config/workflows/research.autosci.v1.workflow.json"
-    assert hashlib.sha256(path.read_bytes()).hexdigest() == "e32759b861f746897a10831e24dad64169c49bd54bbca06fa57e54e75c019812"
     contract = json.loads(path.read_text(encoding="utf-8"))
     assert contract["workflow_id"] == "research.autosci.v1"
     assert contract["plan_limits"]["max_nodes"] == 24

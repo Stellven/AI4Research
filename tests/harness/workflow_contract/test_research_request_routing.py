@@ -1,9 +1,10 @@
-"""Three-tier routing so the workflow is chosen, not pinned.
+"""Three-tier hints propose templates without bypassing the planner.
 
 research.evidence_to_poc.v1 declares no explicit trigger markers, so
 match_trigger can never select it from prompt text and the caller had to name
 the workflow id. The dashboard profile did that for EVERY prompt, which meant
 "fix a bug in my parser" would still compile the 15-node research topology.
+The deterministic classifier now supplies planner metadata only.
 """
 from __future__ import annotations
 
@@ -28,6 +29,7 @@ def test_non_research_requests_do_not_select_the_fixed_workflow(request_text: st
     result = classify_research_request(request_text)
     assert result["tier"] == "simple"
     assert result["workflow_id"] is None
+    assert result["candidate_workflow_id"] is None
 
 
 @pytest.mark.parametrize("request_text", [
@@ -38,7 +40,10 @@ def test_research_without_build_intent_is_part_a_only(request_text: str) -> None
     result = classify_research_request(request_text)
     assert result["tier"] == "research_report"
     assert result["execution_profile"] == "part_a_only"
-    assert result["workflow_id"] == "research.evidence_to_poc.v1"
+    assert result["workflow_id"] is None
+    assert result["candidate_workflow_id"] == "research.evidence_to_poc.v1"
+    assert result["routing_authority"] == "planner"
+    assert result["auto_instantiate"] is False
 
 
 @pytest.mark.parametrize("request_text", [
@@ -50,6 +55,8 @@ def test_research_with_build_intent_is_part_a_plus_poc(request_text: str) -> Non
     result = classify_research_request(request_text)
     assert result["tier"] == "research_poc"
     assert result["execution_profile"] == "part_a_plus_poc"
+    assert result["workflow_id"] is None
+    assert result["candidate_workflow_id"] == "research.evidence_to_poc.v1"
 
 
 def test_discussing_benchmarks_is_not_asking_to_run_one() -> None:

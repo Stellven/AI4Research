@@ -217,6 +217,39 @@ def test_general_user_research_requests_get_research_lane_and_roles(prompt):
     ]
 
 
+def test_research_requirement_ir_exposes_template_without_selecting_it():
+    gateway = _load_gateway("intent_gateway_planner_template_candidate")
+    prompt = "Research current agent runtime architectures and cite public sources."
+    rewritten = gateway.deterministic_rewrite(prompt)
+    raw_intent = {
+        "raw": {"text": prompt},
+        "source": {},
+        "context": {},
+        "routing_hints": {},
+    }
+
+    requirement_ir = gateway.build_requirement_ir("intent-template", raw_intent, rewritten)
+
+    assert requirement_ir["lane"] == "research"
+    assert requirement_ir["planner_hints"]["selection_authority"] == "planner"
+    assert requirement_ir["planner_hints"]["allowed_outcomes"] == [
+        "direct_answer",
+        "memoized_task_graph",
+        "new_task_graph",
+    ]
+    assert requirement_ir["planner_hints"]["workflow_candidates"] == [
+        {
+            "workflow_id": "research.evidence_to_poc.v1",
+            "candidate_kind": "memoized_task_graph",
+            "selection_authority": "planner",
+            "auto_instantiate": False,
+            "execution_profile_hint": "part_a_only",
+            "reason": "research request with no build or execute intent",
+        }
+    ]
+    assert "selected_workflow_id" not in requirement_ir
+
+
 @pytest.mark.parametrize(
     "prompt",
     [

@@ -279,6 +279,8 @@ def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
         2. 如有必要，细化或修正 task_graph.json，但不得绕过 compiled contracts。
         3. 不要直接跳 Builder；保持 RawIntent -> Requirement Compiler -> Planner -> task_graph -> Builder 主链。
         4. 如果 compiled package 缺失关键字段，先写明 blocker 和修正建议。
+        5. 检查 requirement_ir.planner_hints.workflow_candidates，并在 direct_answer、memoized_task_graph、new_task_graph 中明确选择一种；候选模板不能自行生效。
+        6. 只有选择 memoized_task_graph 时，才可把选中的 workflow_id 交给 TaskGraph compiler；必须保留节点合同、capability capsule、physical operator 候选和 fallback。
         """
     ).strip()
     # P5 G2: teach the planner the compile rules it will be checked against
