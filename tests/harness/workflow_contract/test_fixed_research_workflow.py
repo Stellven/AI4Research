@@ -592,6 +592,15 @@ def test_codex_timeout_reaps_windows_process_before_state_cleanup(monkeypatch: p
     assert calls == ["kill", ("wait", 5)]
 
 
+def test_codex_temporary_auth_is_overwritten_and_removed(tmp_path: Path) -> None:
+    auth_path = tmp_path / "auth.json"
+    auth_path.write_bytes(b"temporary-subscription-secret")
+
+    cr._scrub_temporary_auth(auth_path)
+
+    assert not auth_path.exists()
+
+
 def test_codex_research_service_rejects_schema_invalid_agent_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

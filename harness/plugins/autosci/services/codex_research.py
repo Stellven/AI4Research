@@ -231,6 +231,37 @@ def _terminate_process_group(process: subprocess.Popen[str]) -> None:
             pass
 
 
+def _scrub_temporary_auth(path: Path, *, attempts: int = 20) -> None:
+    """Overwrite and remove the copied subscription credential before cache cleanup."""
+
+    for attempt in range(1, max(1, attempts) + 1):
+        try:
+            if path.is_symlink():
+                path.unlink()
+                return
+            if not path.exists():
+                return
+            size = path.stat().st_size
+            with path.open("r+b", buffering=0) as stream:
+                remaining = size
+                zeros = b"\0" * min(65_536, max(1, size))
+                while remaining > 0:
+                    chunk = zeros[: min(len(zeros), remaining)]
+                    stream.write(chunk)
+                    remaining -= len(chunk)
+                stream.truncate(0)
+                os.fsync(stream.fileno())
+            path.unlink()
+            return
+        except OSError as exc:
+            if attempt >= max(1, attempts):
+                raise ResearchOperatorError(
+                    "Temporary Codex authentication could not be scrubbed",
+                    error_type="security_cleanup",
+                ) from exc
+            time.sleep(0.1)
+
+
 class CodexResearchModelService(ResearchModelService):
     """Implement the AutoSci model service contract with one Codex agent call."""
 
@@ -455,12 +486,17 @@ class CodexResearchModelService(ResearchModelService):
         ).expanduser()
         state_parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         started = time.monotonic()
-        with tempfile.TemporaryDirectory(prefix="agent-", dir=state_parent) as state_raw:
+        with tempfile.TemporaryDirectory(
+            prefix="agent-",
+            dir=state_parent,
+            ignore_cleanup_errors=os.name == "nt",
+        ) as state_raw:
             state_root = Path(state_raw)
             codex_home = state_root / "home"
             codex_home.mkdir(mode=0o700)
-            shutil.copyfile(source_auth, codex_home / "auth.json")
-            (codex_home / "auth.json").chmod(0o600)
+            temporary_auth = codex_home / "auth.json"
+            shutil.copyfile(source_auth, temporary_auth)
+            temporary_auth.chmod(0o600)
             (codex_home / "config.toml").write_text(
                 'cli_auth_credentials_store = "file"\n',
                 encoding="utf-8",
@@ -469,63 +505,66 @@ class CodexResearchModelService(ResearchModelService):
             env["CODEX_HOME"] = str(codex_home)
             env["CODEX_SQLITE_HOME"] = str(state_root / "sqlite")
             try:
-                process = subprocess.Popen(
-                    command,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    encoding="utf-8",
-                    errors="strict",
-                    start_new_session=True,
-                    env=env,
-                )
-            except OSError as exc:
-                events_path.write_text("", encoding="utf-8")
-                message = f"Codex research agent could not start at node={node_id}"
-                self._record_invocation(
-                    invocation_id=invocation_id,
-                    node_id=node_id,
-                    status="failed",
-                    started=started,
-                    request_sha256=request_sha256,
-                    prompt_payload=prompt_payload,
-                    request_path=request_path,
-                    schema_path=schema_path,
-                    response_path=response_path,
-                    events_path=events_path,
-                    response_payload=None,
-                    exit_code=-1,
-                    error_type="provider_unavailable",
-                    error=message,
-                )
-                raise ResearchOperatorError(message, error_type="provider_unavailable") from exc
-            try:
-                stdout, _ = process.communicate(prompt_bytes.decode("utf-8"), timeout=self.timeout_seconds)
-            except subprocess.TimeoutExpired as exc:
-                _terminate_process_group(process)
-                events_path.write_text("", encoding="utf-8")
-                message = f"Codex research agent timed out at node={node_id}"
-                self._record_invocation(
-                    invocation_id=invocation_id,
-                    node_id=node_id,
-                    status="failed",
-                    started=started,
-                    request_sha256=request_sha256,
-                    prompt_payload=prompt_payload,
-                    request_path=request_path,
-                    schema_path=schema_path,
-                    response_path=response_path,
-                    events_path=events_path,
-                    response_payload=None,
-                    exit_code=-1,
-                    error_type="provider_unavailable",
-                    error=message,
-                )
-                raise ResearchOperatorError(
-                    message,
-                    error_type="provider_unavailable",
-                ) from exc
+                try:
+                    process = subprocess.Popen(
+                        command,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        encoding="utf-8",
+                        errors="strict",
+                        start_new_session=True,
+                        env=env,
+                    )
+                except OSError as exc:
+                    events_path.write_text("", encoding="utf-8")
+                    message = f"Codex research agent could not start at node={node_id}"
+                    self._record_invocation(
+                        invocation_id=invocation_id,
+                        node_id=node_id,
+                        status="failed",
+                        started=started,
+                        request_sha256=request_sha256,
+                        prompt_payload=prompt_payload,
+                        request_path=request_path,
+                        schema_path=schema_path,
+                        response_path=response_path,
+                        events_path=events_path,
+                        response_payload=None,
+                        exit_code=-1,
+                        error_type="provider_unavailable",
+                        error=message,
+                    )
+                    raise ResearchOperatorError(message, error_type="provider_unavailable") from exc
+                try:
+                    stdout, _ = process.communicate(prompt_bytes.decode("utf-8"), timeout=self.timeout_seconds)
+                except subprocess.TimeoutExpired as exc:
+                    _terminate_process_group(process)
+                    events_path.write_text("", encoding="utf-8")
+                    message = f"Codex research agent timed out at node={node_id}"
+                    self._record_invocation(
+                        invocation_id=invocation_id,
+                        node_id=node_id,
+                        status="failed",
+                        started=started,
+                        request_sha256=request_sha256,
+                        prompt_payload=prompt_payload,
+                        request_path=request_path,
+                        schema_path=schema_path,
+                        response_path=response_path,
+                        events_path=events_path,
+                        response_payload=None,
+                        exit_code=-1,
+                        error_type="provider_unavailable",
+                        error=message,
+                    )
+                    raise ResearchOperatorError(
+                        message,
+                        error_type="provider_unavailable",
+                    ) from exc
+            finally:
+                _scrub_temporary_auth(temporary_auth)
         events_path.write_text(stdout, encoding="utf-8")
         if process.returncode != 0:
             message = f"Codex research agent failed at node={node_id} exit={process.returncode}"

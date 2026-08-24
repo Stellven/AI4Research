@@ -304,7 +304,7 @@ service regression test.
 Verification: focused Codex service regression passed (1 passed in 2.16s).
 
 PRODUCT-008 - Windows timeout cleanup masks the provider error with a locked SQLite file
-Status: FIXED (pending commit)
+Status: FIXED (commit 768a49570)
 Observed in: qq-tech-trends-e2e-20260824-r4
 Evidence: after the 900-second timeout, the final blocker reported WinError 32
 for goals_1.sqlite instead of the expected provider_unavailable timeout. The
@@ -319,3 +319,29 @@ process is reaped before cleanup proceeds. The POSIX process-group path also
 waits after its force-kill fallback.
 Verification: UTF-8 transport plus Windows reap regressions passed together
 (2 passed in 2.06s).
+
+PRODUCT-009 - Successful Codex response is masked by temporary plugin-cache cleanup race
+Status: FIXED (pending commit and live E2E verification)
+Observed in: qq-tech-trends-e2e-20260824-r5
+Evidence:
+- Codex produced response.json in 58 seconds, proving the UTF-8 request reached
+  the signed-in model and returned structured output.
+- TemporaryDirectory teardown then raised WinError 145 (directory not empty)
+  under home/plugins/cache/.../tests/fixtures.
+- The exception occurred before response validation/archival and became the
+  evidence_synthesis evaluation_error.
+- The abandoned temporary home still contained auth.json. Its contents were
+  never displayed or logged; the exact run-owned file was immediately deleted
+  and its absence verified.
+Root cause: Codex can populate non-sensitive plugin cache entries while its
+temporary home is being torn down on Windows. Strict recursive cleanup races
+with those filesystem updates, and the service did not separately scrub its
+sensitive copied authentication file before general cache cleanup.
+Impact: a successful model call is reported as failed, and a cleanup race can
+leave a copied authentication file in a run-owned temporary directory.
+Fix: explicitly overwrite, fsync, truncate, and unlink the copied auth file
+after the child exits and before leaving the context; fail closed after bounded
+retries if that scrub cannot be verified; and allow Windows to ignore only
+residual non-sensitive cache cleanup errors after credential removal.
+Verification: schema-valid, schema-invalid, Windows reap, and credential scrub
+regressions passed together (4 passed in 2.91s). Live rerun remains required.
