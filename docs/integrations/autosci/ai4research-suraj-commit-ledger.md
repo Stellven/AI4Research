@@ -21,9 +21,10 @@ node completion against contracts.
 The candidate branch deliberately implemented a different policy: all research
 requests bypass the planner and instantiate a fixed 15-node workflow. Therefore
 the fixed workflow is accepted only as a reusable memoized TaskGraph template
-and physical execution/evidence implementation. A local follow-up adaptation
-must return selection authority to the planner before this integration is
-considered complete.
+and physical execution/evidence implementation. Local adaptation commit
+`ca5812cf4b02f1259a0ed28a3b278e7b121ae892` returns selection authority to the
+planner: classification emits a non-self-activating candidate and only an
+explicit planner/caller selection can instantiate the template.
 
 ## Disposition rules
 
@@ -106,12 +107,66 @@ considered complete.
 | 64 | `2f7cd1e1d2a001bb4225fc974d4db8654fe63475` | rejected | Autonomous-agent brief only. |
 | 65 | `a8e9d31a9bb5fdde2da4b48fbaf5a95112d02a71` | rejected | Rewrite of the autonomous-agent brief only. |
 
-## Planned integration summary
+## Integration result
 
 - Accepted: 36 commits.
 - Rejected: 29 commits.
-- Required local adaptation after cherry-picking: remove automatic
-  Requirement-IR-lane-to-fixed-workflow dispatch and expose
-  `research.evidence_to_poc.v1` as a planner-selected memoized TaskGraph
-  candidate.
+- Every accepted commit was cherry-picked individually with `-x`; Suraj remains
+  the author of each integrated commit.
+- Local adaptation: `ca5812cf4b02f1259a0ed28a3b278e7b121ae892`
+  (`fix(planner): keep workflow selection under planner authority`).
+- Focused planner/intake tests: 57 passed (`30 + 16 + 11`).
+- Reusable fixed-workflow core: 54 passed, 2 skipped because the host lacks
+  Windows symlink privilege, and 9 Unix daemon/shell tests were deselected.
+- Syntax and whitespace checks passed: Python `py_compile`, `bash -n`, and
+  `git diff --check`.
 - No push is authorized by this task.
+
+### Accepted source-to-local mapping
+
+| Source commit | Integrated commit |
+|---|---|
+| `38e64de4c20181963371999a387540463a1fde82` | `c815cab64ce37369ebead76f5de08dc8e1107041` |
+| `7302ab2ba0bba261b539e0e5d1d55068d33c59fb` | `b37bfdf248f2d8415a18265cf53a0c5b82ad3c86` |
+| `8d79c10a7d673268282aac3bdcd187fa05143c76` | `475263b8942b1ee71c3fce112a725964440ff927` |
+| `a82376f4d1fb86205b376e9acc120d7f440c4a27` | `ea0d7b1415d1aae6761c7aee1aa21abbc00e9ee9` |
+| `ecbeb0d7a94a334ce6fcb897953d31d3f693b674` | `5918fb5174687b6eaadb3338eeba075345c036f0` |
+| `8a41c42c836d25a2ebfa66fc77f0cda659c208bf` | `ef0709669b495e93e546fce695cc89dae6effff2` |
+| `cbce9d265b1ef8d5a5b4556f65adfc1b13722da9` | `58c5b885e43aae23619fc401e535a89e57f7c04c` |
+| `f33103dd3a09791d50b4b67e67abef6a5f9ee215` | `3312ffed073b9a9439ec9571a64b236121803873` |
+| `ca3b283017b7888fb92b9eefd07fc9a0ff386c9b` | `72214e4eedb7bf007340b54131bfa250032d9200` |
+| `dd76aa5ccf6f0b1bf0bef0f985e0c146d61502cc` | `e7d02bf085901356647b67aa27c0c90743512bfe` |
+| `eafb69bd996fae9f6cc88efe2d204368e7e1e131` | `59d18b96f81db72b9ff57fae5744c760bcba8101` |
+| `fff86a468141e91a16f1f0ee5b6b252b41220e5a` | `62dda93cc1cf2a754a8374f0264703719680ee99` |
+| `21bbeba58528c90b19f1384153447902f2ecf4af` | `97a291e450d91678693d84a7cace753a544bc95d` |
+| `a714e6b2f26d533da54c7c3b89470f5c797c3b63` | `7914ec6255b91a330a9038fe2676d722463854c7` |
+| `4ecfee8c78e5f62afeb73b95d1ff9643091c1df1` | `ae50072a3cb879e66b68552a1aad9cb766f5892a` |
+| `102573f3c69340a9e9e5fe90c30e6f2bac6d52ca` | `29e689d6706e1ec771770105234d8304a775db89` |
+| `a2c4981bf618046afc8d3c31a095c7edeaaec95c` | `038f51b9985ae83b6a420aa250daf396e44f20d9` |
+| `21d92302fe891ca0d3eb8679ca96f6990021f858` | `69cb878e9763c1167c894dc802fb72b6bd44169f` |
+| `2d26f45c364e689ae683953b3959f482787f6d84` | `78f377104aaae4a234b92f76aa7c433fdd7bee1c` |
+| `90b516941458d7caac736992f9edb8e05b160e3c` | `38cfbb5d2fc4068e9050c367c547576e7fd10f7a` |
+| `ee1f8955fe63370f80c5e5f29e5bc18da8aab2f8` | `72b46db2c56c75a0a09a34176433477bef712cbc` |
+| `1bb14c2cc3c3f5db825d7a9a341a72962902f49f` | `f92d60f36ed469bf3906ec93218485f59919d281` |
+| `40c932e3f6ff1e0b499d33f61f2ef048d83c8be0` | `31466c95477ba63159d51cebf2c7d72c34274c9d` |
+| `7d6c851930a7bbb124638ad80a1d041bc73f9048` | `dc7779e37660597f090e928ef628498e57bf7343` |
+| `0fc36ff8df7ce54447b990556629d3fc40986f4a` | `74b708a30d6a2e432c18397fc53f3083d3b14d83` |
+| `319e2640511951f0ab2e50d548a31128e94fbc88` | `50a72a41c8dc9c81422dc106e46fabb70491bbd9` |
+| `a18ac7e3588519b4bf0973f1a21a3af90ec57440` | `1b2ffea85d1a8fe7829759746cc3408d4f09a98f` |
+| `886ebd51e0fc330354355abc3afdc59d2bafb338` | `241f66abe03e3db6f6574408fa4bb3e54a8a0a0c` |
+| `15c6095b2023a39a0e9cb1e86534f2bbc88d7512` | `7714c590396a47efa381693279dcbfcf13f8bd89` |
+| `2e428d0065d5cef264b67f4902456223c88d3282` | `eb498dc9ea36af50e4d9b73563c5f57950a63da4` |
+| `d952df36f8b86d694cdea78ecc8927056feabe44` | `01e4079c751155254f6faf2ea43ee783394fa610` |
+| `7231486274dae761b02d69efcf1462d92c1f2f79` | `ab88bece64b79e79a7f441b01638499b96813ea4` |
+| `d45fcc158690ca0e4c7a80db0e5db75fc08dc62b` | `89de1dc0b4e9d3a63c8a5fb17825c8f94fdc5805` |
+| `443e30ac191c82f9baa79c3653fca1e1df84c8a6` | `923c199bf5648e1bfbae5e4aec1a15a99c6e202a` |
+| `96088dcc2fda491f653459788a711a199c0d6077` | `aa00f77e56a2a17e06cef13fc08b81f9ae669307` |
+| `ca58238ada24d4ff99e0327e46ddf7f1d71c95cd` | `938e03254ea6e2eb8bab6a1d6a6b50d3c8fd8155` |
+
+### Known verification boundary
+
+The imported core is covered by deterministic tests on this host. The nine
+deselected tests launch Unix shell/daemon boundaries or construct symlinked
+runtime harnesses; they are not accepted as Windows evidence. They should be
+run in the repository's supported Unix/WSL runtime before a release push. No
+live provider was invoked during this selective integration.
