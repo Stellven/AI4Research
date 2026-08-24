@@ -1306,9 +1306,17 @@ class ResearchModelService:
         self.workspace_root = Path(self.workspace_root).resolve()
 
     @classmethod
-    def from_environment(cls, workspace_root: Path) -> "ResearchModelService":
-        requested_model = str(os.environ.get("AUTOSCI_RESEARCH_LLM_MODEL") or "").strip()
-        explicit_provider = str(os.environ.get("AUTOSCI_RESEARCH_LLM_PROVIDER") or "").strip().lower()
+    def from_environment(
+        cls,
+        workspace_root: Path,
+        *,
+        requested_provider: str = "",
+        requested_model: str = "",
+    ) -> "ResearchModelService":
+        requested_model = str(requested_model or os.environ.get("AUTOSCI_RESEARCH_LLM_MODEL") or "").strip()
+        explicit_provider = str(
+            requested_provider or os.environ.get("AUTOSCI_RESEARCH_LLM_PROVIDER") or ""
+        ).strip().lower()
         allow_openai_fallback = str(
             os.environ.get("AUTOSCI_RESEARCH_ALLOW_OPENAI_FALLBACK") or ""
         ).strip().lower() in {"1", "true", "yes", "on"}
@@ -1766,30 +1774,76 @@ def configured_secret_values(*, active_model_providers: set[str] | None = None) 
             values.pop("OPENAI_API_KEY", None)
         if "openrouter" not in active_model_providers:
             values.pop("OPENROUTER_API_KEY", None)
+        if "openai_compatible" not in active_model_providers:
+            values.pop("AUTOSCI_REVIEW_LLM_API_KEY", None)
     return values
 
 
 def production_services_from_environment(
     *,
     workspace_root: Path,
+    requested_model_provider: str = "",
+    requested_model: str = "",
     overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compose general production services while preserving deterministic injection."""
 
     root = Path(workspace_root).resolve()
-    model = ResearchModelService.from_environment(root)
-    active_model_providers = {route.provider for route in model.routes}
+    provider = str(
+        requested_model_provider or os.environ.get("AUTOSCI_RESEARCH_LLM_PROVIDER") or ""
+    ).strip().lower()
+    if provider in {"codex", "codex_subscription"}:
+        # Reuse the already schema-bound physical operator from the fixed-node
+        # workflow.  Import lazily because that service subclasses the prompt
+        # and evidence-archive implementation in this module.
+        from .codex_research import CodexResearchModelService, SharedInvocationJournal
+
+        model_name = str(
+            requested_model
+            or os.environ.get("SOLAR_RESEARCH_MODEL")
+            or os.environ.get("SOLAR_CODEX_RESEARCH_MODEL")
+            or "gpt-5.5"
+        ).strip()
+        reviewer_model = str(os.environ.get("SOLAR_CODEX_REVIEW_MODEL") or model_name).strip()
+        reasoning_effort = str(os.environ.get("SOLAR_CODEX_RESEARCH_REASONING_EFFORT") or "high").strip()
+        codex_binary = str(os.environ.get("SOLAR_CODEX_BINARY") or "codex").strip()
+        invocation_journal: list[dict[str, Any]] = SharedInvocationJournal()
+        writer_model: Any = CodexResearchModelService(
+            root,
+            model=model_name,
+            role="writer",
+            reasoning_effort=reasoning_effort,
+            codex_binary=codex_binary,
+            invocation_journal=invocation_journal,
+        )
+        review_model: Any = CodexResearchModelService(
+            root,
+            model=reviewer_model,
+            role="reviewer",
+            reasoning_effort=reasoning_effort,
+            codex_binary=codex_binary,
+            invocation_journal=invocation_journal,
+        )
+        active_model_providers = {"codex_subscription"}
+    else:
+        writer_model = ResearchModelService.from_environment(
+            root,
+            requested_provider=provider,
+            requested_model=requested_model,
+        )
+        review_model = writer_model
+        active_model_providers = {route.provider for route in writer_model.routes}
     services: dict[str, Any] = {
         "fetch_url": BoundedUrlFetcher(root),
         "discover_sources": LiteratureDiscoveryService(root),
-        "model_generate": model,
-        "review_model_generate": model,
+        "model_generate": writer_model,
+        "review_model_generate": review_model,
         "secret_values": configured_secret_values(active_model_providers=active_model_providers),
         "service_metadata": {
             "fetch_url": {"service_id": FETCH_SERVICE_ID, "version": SERVICE_VERSION},
             "discover_sources": {"service_id": DISCOVERY_SERVICE_ID, "version": SERVICE_VERSION},
-            "model_generate": {"service_id": MODEL_SERVICE_ID, "version": SERVICE_VERSION},
-            "review_model_generate": {"service_id": MODEL_SERVICE_ID, "version": SERVICE_VERSION},
+            "model_generate": {"service_id": writer_model.service_id, "version": writer_model.service_version},
+            "review_model_generate": {"service_id": review_model.service_id, "version": review_model.service_version},
         },
     }
     services.update(dict(overrides or {}))

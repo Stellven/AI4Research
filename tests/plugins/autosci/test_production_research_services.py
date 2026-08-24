@@ -10,6 +10,7 @@ import pytest
 
 from harness.plugins.autosci.operators.research_synthesis.base import ResearchOperatorError
 from harness.plugins.autosci.operators.research_synthesis.report_draft import _normalize_report
+from harness.plugins.autosci.services.codex_research import CodexResearchModelService
 from harness.plugins.autosci.services.production_research import (
     BoundedUrlFetcher,
     LiteratureDiscoveryService,
@@ -444,6 +445,32 @@ def test_production_service_composition_supports_injected_fakes_without_secrets(
     assert callable(services["model_generate"])
     assert services["secret_values"] == {}
     assert services["service_metadata"]["fetch_url"]["version"] == "1.0.0"
+
+
+def test_production_service_composition_can_select_codex_subscription(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "ambient-openai-key")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "ambient-openrouter-key")
+    monkeypatch.setenv("AUTOSCI_REVIEW_LLM_API_KEY", "ambient-compatible-key")
+    monkeypatch.setenv("SOLAR_CODEX_BINARY", "C:/trusted/codex.exe")
+
+    services = production_services_from_environment(
+        workspace_root=tmp_path,
+        requested_model_provider="codex",
+        requested_model="gpt-test",
+    )
+
+    writer = services["model_generate"]
+    reviewer = services["review_model_generate"]
+    assert isinstance(writer, CodexResearchModelService)
+    assert isinstance(reviewer, CodexResearchModelService)
+    assert writer.role == "writer"
+    assert reviewer.role == "reviewer"
+    assert writer.model == reviewer.model == "gpt-test"
+    assert writer.codex_binary == reviewer.codex_binary == "C:/trusted/codex.exe"
+    assert services["secret_values"] == {}
+    assert services["service_metadata"]["model_generate"]["service_id"] == writer.service_id
 
 
 def test_openrouter_is_default_and_openai_key_is_not_bound_when_both_exist(tmp_path: Path, monkeypatch) -> None:

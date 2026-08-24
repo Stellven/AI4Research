@@ -2129,6 +2129,9 @@ def cmd_run_solar_research(args: argparse.Namespace) -> int:
         command.append("--allow-network")
     if args.review_llm_provider:
         command.append("--allow-live-provider")
+        command.extend(["--model-provider", str(args.review_llm_provider)])
+    if args.review_llm_model:
+        command.extend(["--model", str(args.review_llm_model)])
     if args.approval_ref:
         command.extend(["--approval-ref", str(args.approval_ref)])
     proc = subprocess.run(
@@ -2198,7 +2201,11 @@ def build_parser() -> argparse.ArgumentParser:
     skill.add_argument("--review-llm-evidence", action="append", help="Existing Review LLM evidence JSON for /review")
     skill.add_argument("--proof-bundle", help="Persisted scientific_review_proof.v1 bundle reloaded by the reviewer")
     skill.add_argument("--review-llm-command", help="Command bridge that returns artifact_review.v1 Review LLM JSON on stdout")
-    skill.add_argument("--review-llm-provider", choices=["openai", "openrouter", "openai_compatible"], help="OpenAI-compatible Review LLM provider")
+    skill.add_argument(
+        "--review-llm-provider",
+        choices=["openai", "openrouter", "openai_compatible", "codex", "codex_subscription"],
+        help="Physical research/review model provider",
+    )
     skill.add_argument("--review-llm-model", help="Review LLM model name, defaulting to gpt-5.5 when provider mode is used")
     skill.add_argument("--review-llm-endpoint", help="OpenAI-compatible chat completions endpoint for Review LLM provider mode")
     skill.add_argument("--model-evidence", action="append", help="Existing autosci_model_response.v1 JSON for ask/check synthesis")

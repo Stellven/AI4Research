@@ -203,3 +203,72 @@ Verification progression:
 - After quote repair, all three reached report_revision and truthfully rejected
   missing preservation declarations.
 - After preservation repair: 3 passed in 7.01s.
+
+ENV-001 - Semantic Scholar temporarily rate-limited public discovery
+Status: RECOVERED; no product fix required
+Observed in: qq-tech-trends-e2e-20260824-r3
+Evidence: Semantic Scholar returned HTTP 429 on its first public discovery
+attempt. The bounded provider retry waited 5 seconds and the source_validation
+node still completed from the available public-provider evidence.
+Impact: one provider contributed less evidence during this run, but discovery
+and validation remained operational and the run did not fail at this stage.
+Disposition: retain the event as a run limitation. Existing bounded retry and
+multi-provider fallback behaved as designed, so changing code would weaken the
+evidence that the resilience path actually worked.
+
+PRODUCT-006 - Generic production research cannot select the Codex subscription provider
+Status: FIXED (pending commit and live E2E verification)
+Observed in: qq-tech-trends-e2e-20260824-r3
+Evidence:
+- Exit code: 2
+- Completed nodes: seed_fetch, source_discovery, source_validation
+- Failed node: evidence_synthesis
+- Error: No configured production research model provider is available
+- OPENAI_API_KEY, OPENROUTER_API_KEY, and AUTOSCI_REVIEW_LLM_API_KEY were all
+  absent (presence-only check; no secret values were read or logged).
+- An authenticated local Codex CLI is available (`codex-cli 0.148.0-alpha.15`,
+  `Logged in using ChatGPT`), and the repository already contains the bounded
+  CodexResearchModelService used by the fixed research-node adapter.
+Root cause: the generic `$research` shim turns `--review-llm-provider` into an
+authorization boolean only. It does not carry the selected provider into the
+bridge, and production_services_from_environment composes only the
+OpenAI-compatible HTTP service. The existing Codex subscription physical
+operator is therefore unreachable from the generic research DAG.
+Impact: retrieval succeeds, but a signed-in Codex user with no separate API key
+cannot synthesize or deliver the requested report through the generic pipeline.
+Fix: pass the explicit provider/model selection through the shim and bridge;
+compose separate Codex writer/reviewer services when selected; and reuse the
+existing schema-bound, ephemeral, read-only Codex adapter. Current
+OpenRouter/OpenAI defaults remain unchanged when Codex is not explicitly
+selected. Ambient HTTP API keys are excluded from the Codex service contract.
+Verification so far: 82 passed, 10 skipped across production research
+services, the generic production route, and the fixed research workflow.
+Live exact-prompt verification remains required.
+
+TEST-003 - Production-route test imported a direct-execution CLI as a package
+Status: FIXED (commit ec8b2a2bb)
+Observed while verifying: PRODUCT-006
+Evidence: pytest collection failed with ModuleNotFoundError for
+autosci_operator_smoke after the new route-forwarding test imported
+harness.plugins.autosci.bin.autosci_skill_shim as a package.
+Root cause: autosci_skill_shim is a bin entrypoint whose supported load context
+puts its own directory on sys.path; its sibling imports are intentionally bare.
+Impact: the new test did not reach its assertions. Production direct execution
+was unaffected.
+Fix: load the shim in the test through the same bin-directory import context
+used by its production entrypoint.
+Verification: pytest collection proceeded and the new route-forwarding test
+executed in the next verification run.
+
+RUN-004 - Verification basetemp prefix was too long for fixed-workflow tests
+Status: FIXED (run procedure)
+Observed while verifying: PRODUCT-006
+Evidence: the combined suite reported 16 failures and 66 passes. Every failure
+was a FileNotFoundError/WinError 206 under the deliberately long
+.codex-tmp/pytest-product006-r2/base prefix; even controller-created files that
+passed with a shorter prefix could not be opened. No assertion demonstrated a
+behavioral regression from the provider changes.
+Impact: the oversized temporary prefix produced false failures throughout the
+fixed-workflow suite, including the existing Codex adapter tests.
+Fix: keep the required unique pytest basetemp but place it under the short
+system temporary directory for Windows verification runs.

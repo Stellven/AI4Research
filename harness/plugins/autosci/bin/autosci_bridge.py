@@ -24158,7 +24158,11 @@ def cmd_research(args: argparse.Namespace) -> int:
         "secret_refs": [],
     }
     try:
-        production_services = production_services_from_environment(workspace_root=artifact_root)
+        production_services = production_services_from_environment(
+            workspace_root=artifact_root,
+            requested_model_provider=args.model_provider,
+            requested_model=args.model,
+        )
         secret_values = dict(production_services.get("secret_values") or {})
         authorization["secret_refs"] = sorted(secret_values)
         authorization["secret_values"] = secret_values
@@ -24237,6 +24241,13 @@ def build_parser() -> argparse.ArgumentParser:
     research.add_argument("--max-steps", type=int, default=100)
     research.add_argument("--allow-network", action="store_true")
     research.add_argument("--allow-live-provider", action="store_true")
+    research.add_argument(
+        "--model-provider",
+        choices=["openai", "openrouter", "openai_compatible", "codex", "codex_subscription"],
+        default="",
+        help="Explicit physical model provider for synthesis and review",
+    )
+    research.add_argument("--model", default="", help="Explicit model for the selected physical provider")
     research.add_argument("--approval-ref")
     run = sub.add_parser("run", help="Run one fixture-mode backend action")
     run.add_argument("--action", required=True, choices=sorted(ACTIONS))
