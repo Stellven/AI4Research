@@ -1,0 +1,16 @@
+{
+  "schema_version": "solar.raw_intent.v2",
+  "raw_intent_id": "raw-intent-20260825-091412-a3f8",
+  "raw": {
+    "text": "Compare satellite, airborne, and ground-based methods for detecting and quantifying methane leaks from oil and gas infrastructure. Assess sensitivity, false positives, weather and coverage limitations, and conflicting validation results; then design a bounded reproducibility check for the most testable claims.",
+    "encoding": "utf-8",
+    "sha256": "ab9db5b677295f015c2ab66a8714b0b19de524497c5ee4b09305d47f000483c7",
+    "received_at": "2026-08-25T09:14:12Z"
+  },
+  "source": {
+    "channel": "dashboard",
+    "actor_ref": "user-local"
+  },
+  "context_refs": [],
+  "attachments": []
+}
