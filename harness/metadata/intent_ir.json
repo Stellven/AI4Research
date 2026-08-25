@@ -1,151 +1,87 @@
 {
   "schema_version": "solar.intent_ir.v2",
   "intent_ir_id": "intent-ir-20260825-091412-a3f8",
-  "status": "candidate",
   "raw_intent_ref": {
     "raw_intent_id": "raw-intent-20260825-091412-a3f8",
     "raw_text_sha256": "ab9db5b677295f015c2ab66a8714b0b19de524497c5ee4b09305d47f000483c7"
   },
-  "objectives": [
+  "goals": [
     {
-      "objective_id": "O1",
-      "statement": "Compare satellite, airborne, and ground-based methods for detecting and quantifying methane leaks from oil and gas infrastructure.",
-      "priority": "primary",
-      "provenance": {
-        "kind": "explicit",
-        "raw_quote": "Compare satellite, airborne, and ground-based methods for detecting and quantifying methane leaks from oil and gas infrastructure."
-      }
+      "goal_id": "G1",
+      "statement": "Compare methane-leak detection and quantification methods for oil and gas infrastructure.",
+      "source_spans": [[0, 130]]
     },
     {
-      "objective_id": "O2",
+      "goal_id": "G2",
       "statement": "Design a bounded reproducibility check for the most testable claims.",
-      "priority": "primary",
-      "provenance": {
-        "kind": "explicit",
-        "raw_quote": "then design a bounded reproducibility check for the most testable claims"
-      }
+      "source_spans": [[238, 310]]
     }
   ],
-  "requested_outcomes": [
+  "outcomes": [
     {
-      "outcome_id": "OUT1",
-      "kind": "comparative_research_assessment",
-      "description": "An evidence-based comparison of the three methane-leak measurement method classes.",
-      "provenance": {
-        "kind": "explicit",
-        "raw_quote": "Compare satellite, airborne, and ground-based methods"
-      }
+      "outcome_id": "D1",
+      "class": "information",
+      "description": "A comparative assessment across the requested dimensions.",
+      "source_spans": [[0, 236]]
     },
     {
-      "outcome_id": "OUT2",
-      "kind": "reproducibility_check_design",
-      "description": "A bounded design for checking the most testable claims; execution is not explicitly requested.",
-      "provenance": {
-        "kind": "explicit_with_interpretation",
-        "raw_quote": "design a bounded reproducibility check"
-      }
+      "outcome_id": "D2",
+      "class": "artifact",
+      "description": "A bounded reproducibility-check design.",
+      "source_spans": [[238, 310]]
     }
   ],
-  "intent_constraints": [
+  "constraints": [
     {
       "constraint_id": "C1",
-      "kind": "comparison_scope",
+      "category": "scope",
       "operator": "require",
-      "strength": "hard",
-      "statement": "The comparison must cover satellite, airborne, and ground-based methods.",
-      "provenance": {
-        "kind": "explicit",
-        "raw_quote": "satellite, airborne, and ground-based methods"
-      }
+      "statement": "Include all three measurement-method classes.",
+      "values": ["satellite", "airborne", "ground_based"],
+      "source_spans": [[8, 53]]
     },
     {
       "constraint_id": "C2",
-      "kind": "domain_scope",
+      "category": "content",
       "operator": "require",
-      "strength": "hard",
-      "statement": "The subject is methane leaks from oil and gas infrastructure.",
-      "provenance": {
-        "kind": "explicit",
-        "raw_quote": "methane leaks from oil and gas infrastructure"
-      }
+      "statement": "Assess all requested evaluation dimensions.",
+      "values": [
+        "sensitivity",
+        "false_positives",
+        "weather_limitations",
+        "coverage_limitations",
+        "validation_conflicts"
+      ],
+      "source_spans": [[131, 236]]
     },
     {
       "constraint_id": "C3",
-      "kind": "evaluation_dimensions",
-      "operator": "require",
-      "strength": "hard",
-      "statement": "The assessment must address sensitivity, false positives, weather, coverage limitations, and conflicting validation results.",
-      "provenance": {
-        "kind": "explicit",
-        "raw_quote": "sensitivity, false positives, weather and coverage limitations, and conflicting validation results"
-      }
-    },
-    {
-      "constraint_id": "C4",
-      "kind": "reproducibility_scope",
+      "category": "limit",
       "operator": "limit",
-      "strength": "hard",
-      "statement": "The reproducibility check must remain bounded and target the most testable claims.",
-      "provenance": {
-        "kind": "explicit",
-        "raw_quote": "bounded reproducibility check for the most testable claims"
-      }
+      "statement": "Keep the reproducibility check bounded and focused on the most testable claims.",
+      "values": ["bounded", "most_testable_claims"],
+      "source_spans": [[252, 310]]
     }
   ],
-  "classification": {
-    "task_family": "research_and_experiment_design",
-    "domain": "methane_emissions_measurement",
-    "provenance": {
-      "kind": "model_inferred",
-      "basis_refs": ["O1", "O2"]
-    }
-  },
   "ambiguities": [
     {
       "ambiguity_id": "A1",
-      "statement": "The resource, time, and sample-size boundary implied by 'bounded' is unspecified.",
-      "materiality": "non_blocking",
-      "status": "unresolved",
-      "resolution_owner": "elastic_planner",
-      "resolution_policy": "define_from_resource_profile_and_disclose",
-      "provenance": {
-        "kind": "explicit_term",
-        "raw_quote": "bounded"
-      }
-    },
-    {
-      "ambiguity_id": "A2",
-      "statement": "The criteria for selecting the 'most testable claims' are unspecified.",
-      "materiality": "non_blocking",
-      "status": "unresolved",
-      "resolution_owner": "requirement_compiler",
-      "resolution_policy": "compile_transparent_selection_criteria",
-      "provenance": {
-        "kind": "explicit_term",
-        "raw_quote": "most testable claims"
-      }
+      "question": "What resource boundary should bounded represent?",
+      "blocking": false,
+      "source_spans": [[252, 259]]
     }
   ],
-  "contradictions": [],
+  "conflicts": [],
   "unknowns": [
     {
       "unknown_id": "U1",
-      "kind": "domain_fact",
-      "statement": "Which reported validation results conflict and which associated claims are reproducible cannot be known before evidence discovery.",
-      "materiality": "workflow_relevant",
-      "status": "unresolved",
-      "resolution_owner": "workflow_discovery",
-      "provenance": {
-        "kind": "explicit_subject",
-        "raw_quote": "conflicting validation results"
-      }
+      "question": "Which validation results conflict?",
+      "derived_from": ["C2"]
+    },
+    {
+      "unknown_id": "U2",
+      "question": "Which claims are most testable?",
+      "derived_from": ["G2", "C3"]
     }
-  ],
-  "assumptions": [],
-  "policy_signals": [],
-  "context_refs": [],
-  "compilation": {
-    "method": "human_reviewed_contract_example",
-    "generated_at": "2026-08-25T09:14:13Z"
-  }
+  ]
 }

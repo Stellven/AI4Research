@@ -1,39 +1,32 @@
 # Compiler metadata incubator
 
-This directory is the initial, intentionally consolidated home for the Solar
-intent and requirements compiler contracts. It keeps the first architecture
-increment reviewable before the schemas, templates, registries, validators,
-and examples are separated into their long-term package locations.
+This directory holds the first reviewed examples for Solar's input, intent,
+and requirement compilation architecture. Each stage emits one small JSON
+document that references the preceding artifact instead of copying it.
 
-Runtime-generated request artifacts must not be committed here. Files in this
-directory are repository-owned contracts, templates, or reviewed examples.
+The example chain is:
 
-The first example chain is intentionally non-executable and uses one immutable
-methane-research request throughout:
-
-1. `raw_intent.json` preserves the exact received request.
-2. `intent_ir.json` proposes a typed semantic interpretation.
-3. `intent_validation.json` records reproducible structural checks.
-4. `intent_fidelity.json` records the semantic decision still awaiting review.
-5. `requirement_ir.json` lowers the proposed intent into workflow-independent
-   obligations.
+1. `raw_intent.json` preserves the exact request, source, and byte identity.
+2. `intent_ir.json` records normalized goals, outcomes, constraints, issues,
+   and their RawIntent spans.
+3. `intent_validation.json` records deterministic structural checks.
+4. `intent_fidelity.json` records semantic review of the normalized meaning.
+5. `requirement_ir.json` compiles accepted intent into workflow-independent,
+   verifiable obligations.
 6. `requirement_validation.json` records requirement integrity checks.
-7. `requirement_coverage.json` maps every intent item to requirements.
-8. `compilation_trace.json` binds the example chain and its file digests.
+7. `requirement_coverage.json` maps every IntentIR item to requirements.
+8. `compilation_trace.json` binds the chain with file hashes.
 
-`artifact_registry.json` names the producer and consumers for every artifact.
-`validate_contract_examples.py` verifies the committed examples without an LLM
-or network call. It does not claim to be the future production compiler.
+`artifact_registry.json` names the producer and consumers of each artifact.
+`field_consumer_matrix.json` rejects semantic fields that drive no downstream
+decision. `generalization_cases.json` exercises the design across diverse
+prompt classes. `validate_contract_examples.py` checks this committed example
+without a model or network call.
 
-This proposed chain is not wired into the current runtime. The current
-`intent_gateway.py` writes `solar.rewritten_intent.v1` and then constructs
-`solar.requirement_ir.v1` directly. The proposed `solar.intent_ir.v2` must not
-be described as a production input until a later increment connects it to the
-gateway, validators, Requirement Compiler, and planner admission gate.
+These are ordinary artifact examples, not formal JSON Schema documents and
+not runtime-generated request data. Formal schemas belong in the repository's
+schema package after the examples are accepted.
 
-The architecture is not accepted from the methane example alone.
-`generalization_cases.json` contains diverse prompt fixtures and the downstream
-decision each fixture must support. `field_consumer_matrix.json` requires every
-IntentIR field to name the real component and decision that consume it. These
-are design fixtures until a live LLM compiler is implemented and evaluated
-against them.
+This metadata contract is not wired into production. The current gateway still
+emits `solar.rewritten_intent.v1` and lowers it directly into
+`solar.requirement_ir.v1`. Runtime wiring is a later increment.

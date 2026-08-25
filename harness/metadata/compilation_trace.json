@@ -1,45 +1,20 @@
 {
   "schema_version": "solar.compilation_trace.v1",
   "trace_id": "compile-trace-20260825-091412-a3f8",
-  "status": "awaiting_semantic_acceptance",
+  "status": "metadata_contract_verified",
+  "integration_status": "not_wired_to_runtime",
   "raw_intent_id": "raw-intent-20260825-091412-a3f8",
   "intent_ir_id": "intent-ir-20260825-091412-a3f8",
   "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
-  "integration_status": "metadata_contract_only_not_wired_to_runtime",
   "stages": [
-    {
-      "stage": "raw_intent_capture",
-      "status": "completed"
-    },
-    {
-      "stage": "intent_semantic_compilation",
-      "status": "candidate_created"
-    },
-    {
-      "stage": "intent_structural_validation",
-      "status": "pass"
-    },
-    {
-      "stage": "intent_fidelity_verification",
-      "status": "pending_review",
-      "blocking_question_refs": ["FQ1"]
-    },
-    {
-      "stage": "requirement_compilation",
-      "status": "candidate_created"
-    },
-    {
-      "stage": "requirement_structural_validation",
-      "status": "structurally_valid_pending_dependency"
-    },
-    {
-      "stage": "requirement_coverage",
-      "status": "pass"
-    },
-    {
-      "stage": "planner_admission",
-      "status": "not_admitted"
-    }
+    {"stage": "input_normalization", "status": "completed"},
+    {"stage": "intent_compilation", "status": "candidate_created"},
+    {"stage": "intent_structural_validation", "status": "pass"},
+    {"stage": "intent_fidelity_review", "status": "pass"},
+    {"stage": "requirement_compilation", "status": "candidate_created"},
+    {"stage": "requirement_validation", "status": "pass"},
+    {"stage": "requirement_coverage", "status": "pass"},
+    {"stage": "runtime_integration", "status": "not_run"}
   ],
   "artifacts": [
     {
@@ -47,48 +22,63 @@
       "sha256": "6fe68e156d842726374243d0bc5529e11b693d1a9c297b7601cfefff4ba5345e"
     },
     {
+      "name": "README.md",
+      "sha256": "ce8b4e59f56d1fc4d4b016c3b0129836f5b806b3c5b07871394e621562b34e01"
+    },
+    {
       "name": "artifact_registry.json",
-      "sha256": "edde568a95004725decf6d9a2353c924e89d0619d34e36d46692df99b1cad0aa"
+      "sha256": "ebc371bc552d43a876742608bf22d05458806a0768121b689f0425cbdd55954a"
     },
     {
       "name": "field_consumer_matrix.json",
-      "sha256": "a3c68e5e2c26a62d81448e8cbef68c79d040c00474ced789171ddf24528f99a0"
+      "sha256": "b9b2a98902fc29e4bfb2fb82535aab285ee31c91f2e44e9657113311c4e3958d"
     },
     {
       "name": "generalization_cases.json",
-      "sha256": "167906a69c3698c5a5e978e97d06742e5b24c0e6778b5e6c257a5e3c9756b1be"
+      "sha256": "e843bf96a2ea918b223bc74ea84086f65a9c857de89379a91d826e993de8bd96"
     },
     {
       "name": "intent_ir.json",
-      "sha256": "597e37c83e49839cd3e5454b81fd16b42a4cbcda430e4aa08b3333e7c48a99a1"
+      "sha256": "a9d4a3b707cc63cc6202cab28732bc98ee21ff2a94ab43e82bdcdcb22a8e9f1a"
     },
     {
       "name": "intent_validation.json",
-      "sha256": "05189049162de912cde0fb1a3867a2d6e2ae9ee1031d1d3ced1cdb51c984040e"
+      "sha256": "31356c7d83328eef062c8df0e4d4c8de0b4c73efa8dc54981c2462e170e12cd7"
     },
     {
       "name": "intent_fidelity.json",
-      "sha256": "ef73fc98f552fdd53b71aefe56fcdfafc53edf1f097a8b7ae21a4cfc98eeedd7"
+      "sha256": "3b0db1916379793ce19a431e5c39665a9ca190140d22ced8be0c9b18f393bf89"
     },
     {
       "name": "requirement_ir.json",
-      "sha256": "b5f8f0705954b682067d112fd407deee563326367215533caf86865cb5a9003f"
+      "sha256": "503696165a808014616ca2b79b0f89697456354cd287a822f44ee11113eed542"
     },
     {
       "name": "requirement_validation.json",
-      "sha256": "0ede933018d8ceeaf91b30a0b2e30ab3db6706759bf068b26de096dc28fa84c6"
+      "sha256": "8907bfb26a5d6da109e84b981f73d13da4b757daf9ddef42fe9bfcd16e4d6fb6"
     },
     {
       "name": "requirement_coverage.json",
-      "sha256": "e0e3215e045534254586eeb7281f9aee05b7f3b965d01d923fe01c9f6bf7a969"
-    }
-  ],
-  "acceptance_blockers": [
+      "sha256": "36327578e0266a3dfc8e3b67916a63a6582f00a6fc3bcb315fb70aeb60568069"
+    },
     {
-      "blocker_id": "FQ1",
-      "kind": "semantic_interpretation",
-      "summary": "Confirm whether the requested reproducibility check is design-only or should be executed when feasible."
+      "name": "validate_contract_examples.py",
+      "sha256": "8b13349aa0549db5b029374e1f86c9d09d62d4e3204604b7235fc1f1839a666f"
     }
   ],
-  "next_stage": "review_metadata_contract_before_runtime_wiring"
+  "reviewed_decisions": [
+    {
+      "decision_id": "CD1",
+      "decision": "Keep RawIntent, IntentIR, and RequirementIR as separate referenced artifacts."
+    },
+    {
+      "decision_id": "CD2",
+      "decision": "Treat the reproducibility request as design-only because execution was not requested."
+    },
+    {
+      "decision_id": "CD3",
+      "decision": "Keep scheduling, runtime effects, policy classification, planning, and operator binding out of IntentIR."
+    }
+  ],
+  "next_stage": "runtime_wiring_in_a_separate_increment"
 }

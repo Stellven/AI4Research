@@ -1,119 +1,83 @@
 {
   "schema_version": "solar.intent_field_consumer_matrix.v1",
   "status": "proposed",
-  "integration_status": {
-    "production_producer": false,
-    "production_consumer": false,
-    "current_runtime_input": "solar.rewritten_intent.v1",
-    "current_runtime_path": "intent_gateway.py currently lowers RawIntent directly into solar.requirement_ir.v1",
-    "target_increment": "Wire accepted solar.intent_ir.v2 into requirement compilation and planner admission."
-  },
+  "integration_status": "target_contract_not_yet_wired",
   "fields": [
     {
-      "field": "schema_version",
-      "source": "compiler_contract",
+      "path": "schema_version",
       "consumers": ["artifact_loader", "intent_validator"],
-      "decision": "Select the exact parser and validation rules or reject an unsupported version.",
-      "failure_if_missing": "The artifact cannot be interpreted safely."
+      "decision": "Select the compatible parser and validation contract or reject the artifact."
     },
     {
-      "field": "intent_ir_id",
-      "source": "compiler_controller",
+      "path": "intent_ir_id",
       "consumers": ["artifact_ledger", "requirement_compiler", "compilation_trace"],
-      "decision": "Correlate one semantic compilation with its validation, requirements, and later planning artifacts.",
-      "failure_if_missing": "Artifacts from different requests or attempts can be mixed."
+      "decision": "Correlate one interpretation with its validation, requirements, and trace."
     },
     {
-      "field": "status",
-      "source": "intent_acceptance_gate",
-      "consumers": ["requirement_compiler", "elastic_planner"],
-      "decision": "Allow only an accepted IntentIR to become a canonical planning input.",
-      "failure_if_missing": "A candidate or rejected interpretation may be planned as if accepted."
+      "path": "raw_intent_ref",
+      "consumers": ["intent_validator", "intent_fidelity_verifier"],
+      "decision": "Load and verify the exact RawIntent interpreted by the compiler."
     },
     {
-      "field": "raw_intent_ref",
-      "source": "intake_capture",
-      "consumers": ["intent_fidelity_verifier", "audit_replay", "compiler_cache"],
-      "decision": "Verify the exact prompt bytes interpreted and reuse results only for the same input.",
-      "failure_if_missing": "Semantic fidelity and replay cannot be proven."
-    },
-    {
-      "field": "objectives",
-      "source": "semantic_extraction",
+      "path": "goals",
       "consumers": ["requirement_compiler", "requirement_coverage_verifier"],
-      "decision": "Create obligations for every user goal and reject a RequirementIR that drops one.",
-      "failure_if_missing": "The system can complete a partial task while reporting success."
+      "decision": "Create requirements for every user goal and reject dropped goals."
     },
     {
-      "field": "requested_outcomes",
-      "source": "semantic_extraction",
+      "path": "outcomes",
       "consumers": ["requirement_compiler", "elastic_planner"],
-      "decision": "Compile deliverable obligations and choose direct response, tool execution, or workflow planning.",
-      "failure_if_missing": "The system may answer conversationally when a file, code change, experiment, or report was required."
+      "decision": "Compile promised results and help the planner distinguish a direct answer from artifact or action work."
     },
     {
-      "field": "intent_constraints",
-      "source": "semantic_extraction",
-      "consumers": ["requirement_compiler", "plan_validator", "acceptance_verifier"],
-      "decision": "Preserve user requirements, prohibitions, limits, and preferences through requirements and planning.",
-      "failure_if_missing": "A plan may violate explicit user boundaries."
+      "path": "outcomes[].class",
+      "consumers": ["requirement_compiler", "elastic_planner"],
+      "decision": "Choose the general result shape: information, artifact, or action."
     },
     {
-      "field": "classification",
-      "source": "semantic_classification",
-      "consumers": ["elastic_planner", "workflow_registry"],
-      "decision": "Rank compatible strategy and workflow families without hard-coding a final DAG.",
-      "failure_if_missing": "Every prompt must be interpreted from scratch by every downstream component."
+      "path": "constraints",
+      "consumers": ["requirement_compiler", "plan_validator", "final_acceptance"],
+      "decision": "Preserve explicit scope, content, limits, prohibitions, preferences, format, and temporal boundaries."
     },
     {
-      "field": "ambiguities",
-      "source": "semantic_extraction",
-      "consumers": ["intent_acceptance_gate", "requirement_compiler", "elastic_planner"],
-      "decision": "Clarify blocking user-preference ambiguity or assign non-blocking uncertainty to a disclosed downstream owner.",
-      "failure_if_missing": "The system silently chooses one interpretation."
+      "path": "constraints[].operator",
+      "consumers": ["requirement_compiler", "plan_validator"],
+      "decision": "Distinguish required, prohibited, limited, and preferred behavior."
     },
     {
-      "field": "contradictions",
-      "source": "semantic_extraction_and_rules",
-      "consumers": ["intent_acceptance_gate", "user_clarification"],
-      "decision": "Block incompatible hard instructions unless an explicit precedence rule resolves them.",
-      "failure_if_missing": "The planner arbitrarily violates one of two incompatible instructions."
+      "path": "constraints[].values",
+      "consumers": ["requirement_compiler", "requirement_coverage_verifier"],
+      "decision": "Generate deterministic coverage checks for structured values instead of reparsing prose."
     },
     {
-      "field": "unknowns",
-      "source": "semantic_extraction",
-      "consumers": ["elastic_planner", "runtime_preflight"],
-      "decision": "Create discovery or preflight work for facts and resources that are not knowable at intake.",
-      "failure_if_missing": "The planner invents facts or produces an infeasible plan."
+      "path": "*.source_spans",
+      "consumers": ["intent_validator", "intent_fidelity_verifier"],
+      "decision": "Recover the exact RawIntent text supporting each normalized statement."
     },
     {
-      "field": "assumptions",
-      "source": "compiler_or_policy_proposal",
-      "consumers": ["elastic_planner", "acceptance_verifier", "final_delivery"],
-      "decision": "Permit only disclosed assumptions and carry material ones into evaluation and limitations.",
-      "failure_if_missing": "Guesses become invisible facts."
+      "path": "ambiguities",
+      "consumers": ["intent_acceptance_gate", "requirement_compiler"],
+      "decision": "Clarify blocking uncertainty or compile non-blocking uncertainty into a disclosed requirement."
     },
     {
-      "field": "policy_signals",
-      "source": "semantic_extraction_without_policy_judgment",
-      "consumers": ["policy_compiler", "elastic_planner", "plan_validator"],
-      "decision": "Select policy obligations and exclude plans or operators that cannot safely handle sensitive data, external effects, or high-stakes domains.",
-      "failure_if_missing": "A semantically valid plan can still violate privacy, authorization, or high-stakes safety boundaries."
+      "path": "ambiguities[].blocking",
+      "consumers": ["intent_acceptance_gate"],
+      "decision": "Admit or stop the request before requirement compilation."
     },
     {
-      "field": "context_refs",
-      "source": "intake_capture",
-      "consumers": ["context_loader", "intent_fidelity_verifier"],
-      "decision": "Load and verify attachments or prior turns required to interpret references such as 'use option B'.",
-      "failure_if_missing": "Multi-turn and attachment-dependent prompts are interpreted without their referenced content."
+      "path": "conflicts",
+      "consumers": ["intent_acceptance_gate"],
+      "decision": "Block mutually incompatible instructions until resolved."
     },
     {
-      "field": "compilation",
-      "source": "compiler_controller",
-      "consumers": ["audit_replay", "compiler_evaluation"],
-      "decision": "Attribute behavior to a compiler, model, template, and version when comparing or reproducing results.",
-      "failure_if_missing": "Compiler regressions cannot be attributed or reproduced."
+      "path": "unknowns",
+      "consumers": ["requirement_compiler", "elastic_planner"],
+      "decision": "Create discovery requirements rather than invent unavailable facts."
+    },
+    {
+      "path": "*.derived_from",
+      "consumers": ["intent_validator", "requirement_coverage_verifier"],
+      "decision": "Verify inferred items are traceable to grounded IntentIR items."
     }
   ],
-  "rejection_rule": "Reject any proposed core field that lacks a concrete consumer decision or integrity purpose."
+  "rejection_rule": "Reject any proposed semantic field that drives no consumer decision or integrity check."
 }

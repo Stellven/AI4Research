@@ -1,70 +1,69 @@
 {
   "schema_version": "solar.compiler_artifact_registry.v1",
   "status": "proposed",
+  "integration_status": "metadata_contract_only_not_wired_to_runtime",
   "artifacts": [
     {
       "name": "raw_intent.json",
-      "producer": "intake_capture",
-      "consumers": ["intent_compiler", "intent_fidelity_verifier", "audit_replay"],
-      "purpose": "Preserve the exact user request and its byte identity."
+      "producer": "input_normalizer",
+      "consumers": ["intent_compiler", "intent_validator", "intent_fidelity_verifier"],
+      "purpose": "Preserve the exact request, source, context references, attachments, and text hash."
     },
     {
       "name": "intent_ir.json",
       "producer": "intent_compiler",
       "consumers": ["intent_validator", "intent_fidelity_verifier", "requirement_compiler"],
-      "purpose": "Represent objectives, requested outcomes, intent constraints, ambiguities, contradictions, and unknowns."
+      "purpose": "Normalize goals, outcomes, constraints, ambiguities, conflicts, and unknowns with RawIntent grounding."
     },
     {
       "name": "intent_validation.json",
       "producer": "intent_validator",
-      "consumers": ["intent_acceptance_gate", "compiler_repair"],
-      "purpose": "Record deterministic structural and referential validation results."
+      "consumers": ["intent_acceptance_gate", "requirement_compiler"],
+      "purpose": "Record deterministic reference, identifier, span, and controlled-value checks."
     },
     {
       "name": "intent_fidelity.json",
       "producer": "intent_fidelity_verifier",
-      "consumers": ["intent_acceptance_gate", "compiler_repair", "user_clarification"],
-      "purpose": "Record whether the semantic interpretation faithfully preserves the raw request."
+      "consumers": ["intent_acceptance_gate", "requirement_compiler"],
+      "purpose": "Record whether normalized meaning is supported by the referenced RawIntent."
     },
     {
       "name": "requirement_ir.json",
       "producer": "requirement_compiler",
       "consumers": ["requirement_validator", "requirement_coverage_verifier", "elastic_planner"],
-      "purpose": "Compile accepted intent into workflow-independent, evidence-bearing obligations."
+      "purpose": "Compile accepted intent into workflow-independent requirements with acceptance and evidence specifications."
     },
     {
       "name": "requirement_validation.json",
       "producer": "requirement_validator",
-      "consumers": ["requirement_acceptance_gate", "compiler_repair"],
-      "purpose": "Record deterministic requirement integrity and verifier-binding checks."
+      "consumers": ["requirement_acceptance_gate", "elastic_planner"],
+      "purpose": "Record requirement reference, acceptance, evidence, verification, and dependency checks."
     },
     {
       "name": "requirement_coverage.json",
       "producer": "requirement_coverage_verifier",
       "consumers": ["requirement_acceptance_gate", "elastic_planner"],
-      "purpose": "Prove that every objective, outcome, and intent constraint is represented by requirements."
+      "purpose": "Prove that every IntentIR item is represented by one or more requirements."
     },
     {
       "name": "compilation_trace.json",
       "producer": "compiler_controller",
-      "consumers": ["elastic_planner", "audit_replay", "dashboard"],
-      "purpose": "Bind compiler stages, artifact identities, decisions, and file digests."
+      "consumers": ["audit_replay", "dashboard"],
+      "purpose": "Bind compiler stages and immutable artifact hashes."
     }
   ],
   "design_support": [
     {
       "name": "field_consumer_matrix.json",
-      "purpose": "Reject fields that do not drive a downstream decision or integrity check."
+      "purpose": "Require every semantic field to drive a concrete downstream decision or integrity check."
     },
     {
       "name": "generalization_cases.json",
-      "purpose": "Exercise the proposed fields and routing decisions across diverse prompt classes."
+      "purpose": "Exercise the artifact design across diverse prompt and planner-strategy classes."
     },
     {
       "name": "validate_contract_examples.py",
-      "purpose": "Run deterministic integrity and generalization checks over this incubator."
+      "purpose": "Deterministically validate the committed metadata examples."
     }
-  ],
-  "attempt_naming": "<artifact>.candidate.<attempt>.json",
-  "canonical_naming": "Accepted artifacts use the unqualified filename only after their acceptance gates pass."
+  ]
 }

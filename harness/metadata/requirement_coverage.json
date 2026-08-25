@@ -1,23 +1,26 @@
 {
   "schema_version": "solar.requirement_coverage.v1",
-  "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
-  "status": "pass",
+  "coverage_id": "requirement-coverage-20260825-091412-a3f8",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
+    "sha256": "503696165a808014616ca2b79b0f89697456354cd287a822f44ee11113eed542"
+  },
   "coverage": [
-    {"intent_ref": "O1", "requirement_refs": ["R1", "R2", "R3"]},
-    {"intent_ref": "O2", "requirement_refs": ["R4", "R5"]},
-    {"intent_ref": "OUT1", "requirement_refs": ["R1"]},
-    {"intent_ref": "OUT2", "requirement_refs": ["R5"]},
+    {"intent_ref": "G1", "requirement_refs": ["R1", "R2"]},
+    {"intent_ref": "G2", "requirement_refs": ["R4", "R5"]},
+    {"intent_ref": "D1", "requirement_refs": ["R1", "R2"]},
+    {"intent_ref": "D2", "requirement_refs": ["R5"]},
     {"intent_ref": "C1", "requirement_refs": ["R1"]},
-    {"intent_ref": "C2", "requirement_refs": ["R1"]},
-    {"intent_ref": "C3", "requirement_refs": ["R2", "R3"]},
-    {"intent_ref": "C4", "requirement_refs": ["R4", "R5"]},
+    {"intent_ref": "C2", "requirement_refs": ["R2", "R3"]},
+    {"intent_ref": "C3", "requirement_refs": ["R4", "R5"]},
     {"intent_ref": "A1", "requirement_refs": ["R5"]},
-    {"intent_ref": "A2", "requirement_refs": ["R4"]},
-    {"intent_ref": "U1", "requirement_refs": ["R3"]}
+    {"intent_ref": "U1", "requirement_refs": ["R3"]},
+    {"intent_ref": "U2", "requirement_refs": ["R4"]}
   ],
   "uncovered_intent_refs": [],
   "coverage_rate": 1.0,
+  "status": "pass",
   "limitations": [
-    "Coverage proves representation, not that the requirements are scientifically sufficient or semantically faithful."
+    "Coverage proves that each IntentIR item is represented; it does not prove scientific sufficiency or semantic fidelity."
   ]
 }

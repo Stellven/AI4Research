@@ -1,20 +1,22 @@
 {
   "schema_version": "solar.requirement_validation.v1",
-  "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
-  "status": "structurally_valid_pending_dependency",
-  "dependency": {
-    "artifact": "intent_fidelity.json",
-    "required_status": "accepted",
-    "current_status": "pending_review"
+  "validation_id": "requirement-validation-20260825-091412-a3f8",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
+    "sha256": "503696165a808014616ca2b79b0f89697456354cd287a822f44ee11113eed542"
   },
-  "validator": "harness.metadata.validate_contract_examples.v1",
-  "checks": [
-    {"check_id": "RV1", "kind": "requirement_identifier_uniqueness", "passed": true},
-    {"check_id": "RV2", "kind": "source_reference_integrity", "passed": true},
-    {"check_id": "RV3", "kind": "expected_evidence_presence", "passed": true},
-    {"check_id": "RV4", "kind": "verification_binding_presence", "passed": true},
-    {"check_id": "RV5", "kind": "intent_acceptance_dependency", "passed": false}
+  "dependencies": [
+    {"artifact": "intent_validation.json", "required_status": "pass"},
+    {"artifact": "intent_fidelity.json", "required_status": "pass"}
   ],
-  "errors": [],
-  "blocking_conditions": ["Intent fidelity has not yet been accepted by the owner."]
+  "status": "pass",
+  "checks": [
+    {"check_id": "RV1", "kind": "requirement_identifier_uniqueness", "status": "pass"},
+    {"check_id": "RV2", "kind": "intent_reference_integrity", "status": "pass"},
+    {"check_id": "RV3", "kind": "acceptance_specification_presence", "status": "pass"},
+    {"check_id": "RV4", "kind": "required_evidence_presence", "status": "pass"},
+    {"check_id": "RV5", "kind": "verification_method_presence", "status": "pass"},
+    {"check_id": "RV6", "kind": "intent_gate_dependencies", "status": "pass"}
+  ],
+  "errors": []
 }

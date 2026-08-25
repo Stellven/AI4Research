@@ -1,18 +1,20 @@
 {
   "schema_version": "solar.intent_validation.v1",
-  "intent_ir_id": "intent-ir-20260825-091412-a3f8",
+  "validation_id": "intent-validation-20260825-091412-a3f8",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-20260825-091412-a3f8",
+    "sha256": "a9d4a3b707cc63cc6202cab28732bc98ee21ff2a94ab43e82bdcdcb22a8e9f1a"
+  },
   "status": "pass",
-  "validator": "harness.metadata.validate_contract_examples.v1",
   "checks": [
-    {"check_id": "IV1", "kind": "raw_reference", "passed": true},
-    {"check_id": "IV2", "kind": "identifier_uniqueness", "passed": true},
-    {"check_id": "IV3", "kind": "provenance_quote_presence", "passed": true},
-    {"check_id": "IV4", "kind": "controlled_value_integrity", "passed": true},
-    {"check_id": "IV5", "kind": "internal_reference_integrity", "passed": true}
+    {"check_id": "IV1", "kind": "raw_intent_reference", "status": "pass"},
+    {"check_id": "IV2", "kind": "identifier_uniqueness", "status": "pass"},
+    {"check_id": "IV3", "kind": "source_span_integrity", "status": "pass"},
+    {"check_id": "IV4", "kind": "controlled_value_integrity", "status": "pass"},
+    {"check_id": "IV5", "kind": "derived_reference_integrity", "status": "pass"}
   ],
   "errors": [],
   "limitations": [
-    "This validator checks the committed contract examples; it is not the future production JSON Schema validator.",
-    "Structural validation cannot prove semantic fidelity to the user's meaning."
+    "Structural validation does not prove that normalized statements preserve the user's meaning."
   ]
 }
