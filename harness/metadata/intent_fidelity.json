@@ -1,0 +1,25 @@
+{
+  "schema_version": "solar.intent_fidelity.v1",
+  "intent_ir_id": "intent-ir-20260825-091412-a3f8",
+  "raw_intent_id": "raw-intent-20260825-091412-a3f8",
+  "status": "pending_review",
+  "verdict": "not_yet_accepted",
+  "review_method": "owner_review_required",
+  "preserved": [
+    "All three measurement method classes are represented.",
+    "All requested evaluation dimensions are represented.",
+    "The conflicting-validation requirement is represented.",
+    "The bounded reproducibility-check design is represented."
+  ],
+  "material_questions": [
+    {
+      "question_id": "FQ1",
+      "question": "Does 'design a bounded reproducibility check' mean design-only, or should the system execute the check when feasible?",
+      "current_interpretation": "design_only",
+      "affected_refs": ["O2", "OUT2", "C4"]
+    }
+  ],
+  "invented_constraints": [],
+  "omissions": [],
+  "acceptance_condition": "The owner confirms or corrects FQ1 before intent_ir.json becomes canonical."
+}

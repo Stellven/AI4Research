@@ -1,0 +1,94 @@
+{
+  "schema_version": "solar.compilation_trace.v1",
+  "trace_id": "compile-trace-20260825-091412-a3f8",
+  "status": "awaiting_semantic_acceptance",
+  "raw_intent_id": "raw-intent-20260825-091412-a3f8",
+  "intent_ir_id": "intent-ir-20260825-091412-a3f8",
+  "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
+  "integration_status": "metadata_contract_only_not_wired_to_runtime",
+  "stages": [
+    {
+      "stage": "raw_intent_capture",
+      "status": "completed"
+    },
+    {
+      "stage": "intent_semantic_compilation",
+      "status": "candidate_created"
+    },
+    {
+      "stage": "intent_structural_validation",
+      "status": "pass"
+    },
+    {
+      "stage": "intent_fidelity_verification",
+      "status": "pending_review",
+      "blocking_question_refs": ["FQ1"]
+    },
+    {
+      "stage": "requirement_compilation",
+      "status": "candidate_created"
+    },
+    {
+      "stage": "requirement_structural_validation",
+      "status": "structurally_valid_pending_dependency"
+    },
+    {
+      "stage": "requirement_coverage",
+      "status": "pass"
+    },
+    {
+      "stage": "planner_admission",
+      "status": "not_admitted"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "raw_intent.json",
+      "sha256": "6fe68e156d842726374243d0bc5529e11b693d1a9c297b7601cfefff4ba5345e"
+    },
+    {
+      "name": "artifact_registry.json",
+      "sha256": "edde568a95004725decf6d9a2353c924e89d0619d34e36d46692df99b1cad0aa"
+    },
+    {
+      "name": "field_consumer_matrix.json",
+      "sha256": "a3c68e5e2c26a62d81448e8cbef68c79d040c00474ced789171ddf24528f99a0"
+    },
+    {
+      "name": "generalization_cases.json",
+      "sha256": "167906a69c3698c5a5e978e97d06742e5b24c0e6778b5e6c257a5e3c9756b1be"
+    },
+    {
+      "name": "intent_ir.json",
+      "sha256": "597e37c83e49839cd3e5454b81fd16b42a4cbcda430e4aa08b3333e7c48a99a1"
+    },
+    {
+      "name": "intent_validation.json",
+      "sha256": "05189049162de912cde0fb1a3867a2d6e2ae9ee1031d1d3ced1cdb51c984040e"
+    },
+    {
+      "name": "intent_fidelity.json",
+      "sha256": "ef73fc98f552fdd53b71aefe56fcdfafc53edf1f097a8b7ae21a4cfc98eeedd7"
+    },
+    {
+      "name": "requirement_ir.json",
+      "sha256": "b5f8f0705954b682067d112fd407deee563326367215533caf86865cb5a9003f"
+    },
+    {
+      "name": "requirement_validation.json",
+      "sha256": "0ede933018d8ceeaf91b30a0b2e30ab3db6706759bf068b26de096dc28fa84c6"
+    },
+    {
+      "name": "requirement_coverage.json",
+      "sha256": "e0e3215e045534254586eeb7281f9aee05b7f3b965d01d923fe01c9f6bf7a969"
+    }
+  ],
+  "acceptance_blockers": [
+    {
+      "blocker_id": "FQ1",
+      "kind": "semantic_interpretation",
+      "summary": "Confirm whether the requested reproducibility check is design-only or should be executed when feasible."
+    }
+  ],
+  "next_stage": "review_metadata_contract_before_runtime_wiring"
+}

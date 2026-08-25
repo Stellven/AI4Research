@@ -1,0 +1,23 @@
+{
+  "schema_version": "solar.requirement_coverage.v1",
+  "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
+  "status": "pass",
+  "coverage": [
+    {"intent_ref": "O1", "requirement_refs": ["R1", "R2", "R3"]},
+    {"intent_ref": "O2", "requirement_refs": ["R4", "R5"]},
+    {"intent_ref": "OUT1", "requirement_refs": ["R1"]},
+    {"intent_ref": "OUT2", "requirement_refs": ["R5"]},
+    {"intent_ref": "C1", "requirement_refs": ["R1"]},
+    {"intent_ref": "C2", "requirement_refs": ["R1"]},
+    {"intent_ref": "C3", "requirement_refs": ["R2", "R3"]},
+    {"intent_ref": "C4", "requirement_refs": ["R4", "R5"]},
+    {"intent_ref": "A1", "requirement_refs": ["R5"]},
+    {"intent_ref": "A2", "requirement_refs": ["R4"]},
+    {"intent_ref": "U1", "requirement_refs": ["R3"]}
+  ],
+  "uncovered_intent_refs": [],
+  "coverage_rate": 1.0,
+  "limitations": [
+    "Coverage proves representation, not that the requirements are scientifically sufficient or semantically faithful."
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
+  "status": "candidate",
+  "intent_ir_ref": "intent-ir-20260825-091412-a3f8",
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "statement": "Produce an evidence-based comparison covering satellite, airborne, and ground-based methane-leak detection and quantification methods for oil and gas infrastructure.",
+      "priority": "must",
+      "source_refs": ["O1", "OUT1", "C1", "C2"],
+      "expected_evidence": ["method_inventory", "source_linked_comparison"],
+      "verification": {"kind": "semantic_evidence_review", "registered": true}
+    },
+    {
+      "requirement_id": "R2",
+      "statement": "Compare sensitivity, false-positive behavior, weather limitations, and coverage limitations using definitions and evidence appropriate to each method class.",
+      "priority": "must",
+      "source_refs": ["O1", "C3"],
+      "expected_evidence": ["dimension_definitions", "source_linked_findings"],
+      "verification": {"kind": "semantic_evidence_review", "registered": true}
+    },
+    {
+      "requirement_id": "R3",
+      "statement": "Identify reported validation disagreements, preserve the conflicting evidence, and avoid presenting absence of recorded contradiction as scientific consensus.",
+      "priority": "must",
+      "source_refs": ["O1", "C3", "U1"],
+      "expected_evidence": ["contradiction_matrix", "source_quotations"],
+      "verification": {"kind": "contradiction_coverage_check", "registered": true}
+    },
+    {
+      "requirement_id": "R4",
+      "statement": "Define and disclose evidence-based criteria for selecting the most testable claims before creating the reproducibility-check design.",
+      "priority": "must",
+      "source_refs": ["O2", "C4", "A2"],
+      "expected_evidence": ["claim_testability_assessment", "selection_decision"],
+      "verification": {"kind": "selection_trace_check", "registered": true}
+    },
+    {
+      "requirement_id": "R5",
+      "statement": "Design a reproducibility check whose datasets, metrics, baselines, resource envelope, stopping conditions, and tested-versus-not-tested boundary are explicit.",
+      "priority": "must",
+      "source_refs": ["O2", "OUT2", "C4", "A1"],
+      "expected_evidence": ["reproducibility_check_plan", "resource_envelope"],
+      "verification": {"kind": "experiment_design_completeness_check", "registered": true}
+    }
+  ],
+  "execution_scope": {
+    "current_interpretation": "design_only",
+    "status": "pending_intent_fidelity_review",
+    "question_ref": "FQ1"
+  },
+  "compiler_notes": [
+    "Requirements are workflow-independent and do not select DAG nodes, workers, datasets, or physical operators.",
+    "RequirementIR cannot become canonical until IntentIR fidelity is accepted."
+  ]
+}

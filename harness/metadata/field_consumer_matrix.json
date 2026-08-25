@@ -1,0 +1,119 @@
+{
+  "schema_version": "solar.intent_field_consumer_matrix.v1",
+  "status": "proposed",
+  "integration_status": {
+    "production_producer": false,
+    "production_consumer": false,
+    "current_runtime_input": "solar.rewritten_intent.v1",
+    "current_runtime_path": "intent_gateway.py currently lowers RawIntent directly into solar.requirement_ir.v1",
+    "target_increment": "Wire accepted solar.intent_ir.v2 into requirement compilation and planner admission."
+  },
+  "fields": [
+    {
+      "field": "schema_version",
+      "source": "compiler_contract",
+      "consumers": ["artifact_loader", "intent_validator"],
+      "decision": "Select the exact parser and validation rules or reject an unsupported version.",
+      "failure_if_missing": "The artifact cannot be interpreted safely."
+    },
+    {
+      "field": "intent_ir_id",
+      "source": "compiler_controller",
+      "consumers": ["artifact_ledger", "requirement_compiler", "compilation_trace"],
+      "decision": "Correlate one semantic compilation with its validation, requirements, and later planning artifacts.",
+      "failure_if_missing": "Artifacts from different requests or attempts can be mixed."
+    },
+    {
+      "field": "status",
+      "source": "intent_acceptance_gate",
+      "consumers": ["requirement_compiler", "elastic_planner"],
+      "decision": "Allow only an accepted IntentIR to become a canonical planning input.",
+      "failure_if_missing": "A candidate or rejected interpretation may be planned as if accepted."
+    },
+    {
+      "field": "raw_intent_ref",
+      "source": "intake_capture",
+      "consumers": ["intent_fidelity_verifier", "audit_replay", "compiler_cache"],
+      "decision": "Verify the exact prompt bytes interpreted and reuse results only for the same input.",
+      "failure_if_missing": "Semantic fidelity and replay cannot be proven."
+    },
+    {
+      "field": "objectives",
+      "source": "semantic_extraction",
+      "consumers": ["requirement_compiler", "requirement_coverage_verifier"],
+      "decision": "Create obligations for every user goal and reject a RequirementIR that drops one.",
+      "failure_if_missing": "The system can complete a partial task while reporting success."
+    },
+    {
+      "field": "requested_outcomes",
+      "source": "semantic_extraction",
+      "consumers": ["requirement_compiler", "elastic_planner"],
+      "decision": "Compile deliverable obligations and choose direct response, tool execution, or workflow planning.",
+      "failure_if_missing": "The system may answer conversationally when a file, code change, experiment, or report was required."
+    },
+    {
+      "field": "intent_constraints",
+      "source": "semantic_extraction",
+      "consumers": ["requirement_compiler", "plan_validator", "acceptance_verifier"],
+      "decision": "Preserve user requirements, prohibitions, limits, and preferences through requirements and planning.",
+      "failure_if_missing": "A plan may violate explicit user boundaries."
+    },
+    {
+      "field": "classification",
+      "source": "semantic_classification",
+      "consumers": ["elastic_planner", "workflow_registry"],
+      "decision": "Rank compatible strategy and workflow families without hard-coding a final DAG.",
+      "failure_if_missing": "Every prompt must be interpreted from scratch by every downstream component."
+    },
+    {
+      "field": "ambiguities",
+      "source": "semantic_extraction",
+      "consumers": ["intent_acceptance_gate", "requirement_compiler", "elastic_planner"],
+      "decision": "Clarify blocking user-preference ambiguity or assign non-blocking uncertainty to a disclosed downstream owner.",
+      "failure_if_missing": "The system silently chooses one interpretation."
+    },
+    {
+      "field": "contradictions",
+      "source": "semantic_extraction_and_rules",
+      "consumers": ["intent_acceptance_gate", "user_clarification"],
+      "decision": "Block incompatible hard instructions unless an explicit precedence rule resolves them.",
+      "failure_if_missing": "The planner arbitrarily violates one of two incompatible instructions."
+    },
+    {
+      "field": "unknowns",
+      "source": "semantic_extraction",
+      "consumers": ["elastic_planner", "runtime_preflight"],
+      "decision": "Create discovery or preflight work for facts and resources that are not knowable at intake.",
+      "failure_if_missing": "The planner invents facts or produces an infeasible plan."
+    },
+    {
+      "field": "assumptions",
+      "source": "compiler_or_policy_proposal",
+      "consumers": ["elastic_planner", "acceptance_verifier", "final_delivery"],
+      "decision": "Permit only disclosed assumptions and carry material ones into evaluation and limitations.",
+      "failure_if_missing": "Guesses become invisible facts."
+    },
+    {
+      "field": "policy_signals",
+      "source": "semantic_extraction_without_policy_judgment",
+      "consumers": ["policy_compiler", "elastic_planner", "plan_validator"],
+      "decision": "Select policy obligations and exclude plans or operators that cannot safely handle sensitive data, external effects, or high-stakes domains.",
+      "failure_if_missing": "A semantically valid plan can still violate privacy, authorization, or high-stakes safety boundaries."
+    },
+    {
+      "field": "context_refs",
+      "source": "intake_capture",
+      "consumers": ["context_loader", "intent_fidelity_verifier"],
+      "decision": "Load and verify attachments or prior turns required to interpret references such as 'use option B'.",
+      "failure_if_missing": "Multi-turn and attachment-dependent prompts are interpreted without their referenced content."
+    },
+    {
+      "field": "compilation",
+      "source": "compiler_controller",
+      "consumers": ["audit_replay", "compiler_evaluation"],
+      "decision": "Attribute behavior to a compiler, model, template, and version when comparing or reproducing results.",
+      "failure_if_missing": "Compiler regressions cannot be attributed or reproduced."
+    }
+  ],
+  "rejection_rule": "Reject any proposed core field that lacks a concrete consumer decision or integrity purpose."
+}

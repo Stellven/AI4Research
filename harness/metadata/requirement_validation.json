@@ -1,0 +1,20 @@
+{
+  "schema_version": "solar.requirement_validation.v1",
+  "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
+  "status": "structurally_valid_pending_dependency",
+  "dependency": {
+    "artifact": "intent_fidelity.json",
+    "required_status": "accepted",
+    "current_status": "pending_review"
+  },
+  "validator": "harness.metadata.validate_contract_examples.v1",
+  "checks": [
+    {"check_id": "RV1", "kind": "requirement_identifier_uniqueness", "passed": true},
+    {"check_id": "RV2", "kind": "source_reference_integrity", "passed": true},
+    {"check_id": "RV3", "kind": "expected_evidence_presence", "passed": true},
+    {"check_id": "RV4", "kind": "verification_binding_presence", "passed": true},
+    {"check_id": "RV5", "kind": "intent_acceptance_dependency", "passed": false}
+  ],
+  "errors": [],
+  "blocking_conditions": ["Intent fidelity has not yet been accepted by the owner."]
+}

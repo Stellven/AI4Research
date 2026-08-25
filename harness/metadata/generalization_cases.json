@@ -1,0 +1,264 @@
+{
+  "schema_version": "solar.intent_generalization_cases.v1",
+  "status": "design_fixtures_not_yet_run_through_a_live_compiler",
+  "cases": [
+    {
+      "case_id": "G01-direct-fact",
+      "category": "simple_question",
+      "raw_text": "What is the capital of France?",
+      "expected": {
+        "task_family": "direct_answer",
+        "outcome_kinds": ["answer"],
+        "blocking_issue": false,
+        "planner_strategy": "direct_response"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "classification"],
+      "downstream_decision": "The elastic planner should return a direct response instead of creating a DAG.",
+      "decision_assertions": [
+        {"stage": "intent_acceptance_gate", "decision": "admit_without_clarification"},
+        {"stage": "requirement_compiler", "decision": "compile_answer_obligation"},
+        {"stage": "elastic_planner", "decision": "direct_response"}
+      ]
+    },
+    {
+      "case_id": "G02-audience-constrained-explanation",
+      "category": "constrained_explanation",
+      "raw_text": "Explain Raft consensus to a beginner in fewer than 500 words and include one concrete example.",
+      "expected": {
+        "task_family": "direct_answer",
+        "outcome_kinds": ["explanation"],
+        "constraint_kinds": ["audience", "length_limit", "content_requirement"],
+        "blocking_issue": false,
+        "planner_strategy": "direct_response"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification"],
+      "downstream_decision": "The Requirement Compiler must preserve audience, length, and example constraints without creating unnecessary workflow nodes.",
+      "decision_assertions": [
+        {"stage": "intent_acceptance_gate", "decision": "admit_without_clarification"},
+        {"stage": "requirement_compiler", "decision": "compile_audience_length_and_example_obligations"},
+        {"stage": "elastic_planner", "decision": "direct_response"},
+        {"stage": "acceptance_verifier", "decision": "check_length_and_example_presence"}
+      ]
+    },
+    {
+      "case_id": "G03-code-change",
+      "category": "implementation",
+      "raw_text": "Add CSV export to the existing dashboard without adding dependencies, include tests, and do not change the current JSON export behavior.",
+      "expected": {
+        "task_family": "code_change",
+        "outcome_kinds": ["code_patch", "test_evidence"],
+        "constraint_kinds": ["dependency_prohibition", "compatibility_preservation"],
+        "blocking_issue": false,
+        "planner_strategy": "implementation_workflow"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "assumptions"],
+      "downstream_decision": "The planner must include implementation and regression verification while the plan validator protects the no-dependency and compatibility constraints.",
+      "decision_assertions": [
+        {"stage": "requirement_compiler", "decision": "compile_patch_tests_no_dependency_and_compatibility_obligations"},
+        {"stage": "elastic_planner", "decision": "implementation_workflow"},
+        {"stage": "plan_validator", "decision": "require_implementation_and_regression_verification_nodes"},
+        {"stage": "acceptance_verifier", "decision": "reject_json_export_regression_or_new_dependency"}
+      ]
+    },
+    {
+      "case_id": "G04-diagnosis-only",
+      "category": "read_only_diagnosis",
+      "raw_text": "Diagnose why the API returns 502 errors, but do not modify code, configuration, or production state.",
+      "expected": {
+        "task_family": "diagnosis",
+        "outcome_kinds": ["diagnostic_report"],
+        "constraint_kinds": ["write_prohibition", "external_state_prohibition"],
+        "blocking_issue": false,
+        "planner_strategy": "read_only_diagnostic_workflow"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "policy_signals"],
+      "downstream_decision": "The planner and policy gate must exclude mutation-capable nodes and operators.",
+      "decision_assertions": [
+        {"stage": "requirement_compiler", "decision": "compile_diagnosis_and_non_mutation_obligations"},
+        {"stage": "policy_compiler", "decision": "deny_write_and_external_mutation_effects"},
+        {"stage": "elastic_planner", "decision": "read_only_diagnostic_workflow"},
+        {"stage": "plan_validator", "decision": "reject_mutation_capable_nodes"}
+      ]
+    },
+    {
+      "case_id": "G05-research-and-design",
+      "category": "research_and_experiment_design",
+      "raw_text": "Compare satellite, airborne, and ground-based methods for detecting and quantifying methane leaks from oil and gas infrastructure. Assess sensitivity, false positives, weather and coverage limitations, and conflicting validation results; then design a bounded reproducibility check for the most testable claims.",
+      "expected": {
+        "task_family": "research_and_experiment_design",
+        "outcome_kinds": ["comparative_research_assessment", "reproducibility_check_design"],
+        "ambiguity_kinds": ["resource_boundary", "selection_criteria"],
+        "unknown_kinds": ["domain_fact"],
+        "blocking_issue": false,
+        "planner_strategy": "research_and_design_workflow"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "ambiguities", "unknowns"],
+      "downstream_decision": "The planner should include evidence discovery and design nodes but must not infer that experiment execution was requested.",
+      "decision_assertions": [
+        {"stage": "intent_acceptance_gate", "decision": "admit_non_blocking_ambiguities_with_owners"},
+        {"stage": "requirement_compiler", "decision": "compile_research_comparison_and_design_only_obligations"},
+        {"stage": "elastic_planner", "decision": "research_and_design_workflow"},
+        {"stage": "plan_validator", "decision": "reject_unrequested_experiment_execution"}
+      ]
+    },
+    {
+      "case_id": "G06-research-and-execution",
+      "category": "research_and_experiment_execution",
+      "raw_text": "Compare RAG chunking strategies by running reproducible experiments on public datasets. Use no more than two hours and $20, run at least three seeds, and deliver the measured results as HTML.",
+      "expected": {
+        "task_family": "research_and_experiment_execution",
+        "outcome_kinds": ["executed_experiment", "html_report"],
+        "constraint_kinds": ["public_dataset", "time_budget", "cost_budget", "minimum_seed_count", "output_format"],
+        "unknown_kinds": ["resource_availability", "dataset_availability"],
+        "blocking_issue": false,
+        "planner_strategy": "resource_bounded_experiment_workflow"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "unknowns", "policy_signals"],
+      "downstream_decision": "The planner must include preflight, dataset preparation, execution, measurement verification, and HTML delivery within explicit budgets.",
+      "decision_assertions": [
+        {"stage": "requirement_compiler", "decision": "compile_dataset_budget_seed_execution_and_html_obligations"},
+        {"stage": "runtime_preflight", "decision": "resolve_dataset_compute_and_cost_feasibility"},
+        {"stage": "elastic_planner", "decision": "resource_bounded_experiment_workflow"},
+        {"stage": "acceptance_verifier", "decision": "require_measured_multi_seed_results_within_budget"}
+      ]
+    },
+    {
+      "case_id": "G07-direct-contradiction",
+      "category": "contradictory_constraints",
+      "raw_text": "Write the report in no more than 500 words and make it at least 2,000 words long.",
+      "expected": {
+        "task_family": "document_generation",
+        "outcome_kinds": ["report"],
+        "contradiction_kinds": ["incompatible_length_constraints"],
+        "blocking_issue": true,
+        "planner_strategy": "clarify_before_planning"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "contradictions"],
+      "downstream_decision": "The intent acceptance gate must block planning until one length constraint is resolved.",
+      "decision_assertions": [
+        {"stage": "intent_acceptance_gate", "decision": "block_for_incompatible_hard_constraints"},
+        {"stage": "user_clarification", "decision": "ask_for_one_length_rule"},
+        {"stage": "elastic_planner", "decision": "not_admitted"}
+      ]
+    },
+    {
+      "case_id": "G08-user-preference-ambiguity",
+      "category": "blocking_ambiguity",
+      "raw_text": "Recommend the best database for my application.",
+      "expected": {
+        "task_family": "recommendation",
+        "outcome_kinds": ["recommendation"],
+        "ambiguity_kinds": ["missing_workload_and_priority"],
+        "blocking_issue": true,
+        "planner_strategy": "clarify_before_planning"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "classification", "ambiguities"],
+      "downstream_decision": "The system must ask about workload, scale, consistency, operations, and decision criteria rather than researching an unknowable user preference.",
+      "decision_assertions": [
+        {"stage": "intent_acceptance_gate", "decision": "block_for_material_user_preference"},
+        {"stage": "user_clarification", "decision": "ask_for_workload_scale_consistency_operations_and_priorities"},
+        {"stage": "elastic_planner", "decision": "not_admitted"}
+      ]
+    },
+    {
+      "case_id": "G09-attachment-dependent",
+      "category": "attachment_processing",
+      "raw_text": "Summarize the attached paper and cite the page number for every major finding.",
+      "expected": {
+        "task_family": "document_analysis",
+        "outcome_kinds": ["source_grounded_summary"],
+        "constraint_kinds": ["page_citation_required"],
+        "context_required": true,
+        "blocking_issue": false,
+        "planner_strategy": "attachment_analysis_workflow"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "context_refs"],
+      "downstream_decision": "The context loader must resolve and hash-verify the attachment before analysis can start.",
+      "decision_assertions": [
+        {"stage": "context_loader", "decision": "resolve_and_hash_verify_attachment"},
+        {"stage": "requirement_compiler", "decision": "compile_grounded_summary_and_page_citation_obligations"},
+        {"stage": "elastic_planner", "decision": "attachment_analysis_workflow"},
+        {"stage": "acceptance_verifier", "decision": "reject_uncited_major_findings"}
+      ]
+    },
+    {
+      "case_id": "G10-multi-turn-correction",
+      "category": "conversation_revision",
+      "raw_text": "Use option B instead. Ignore my earlier two-hour limit and cap the run at 30 minutes.",
+      "expected": {
+        "task_family": "intent_revision",
+        "outcome_kinds": ["revised_request"],
+        "constraint_kinds": ["time_budget"],
+        "context_required": true,
+        "blocking_issue": false,
+        "planner_strategy": "recompile_from_conversation_context"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "context_refs", "compilation"],
+      "downstream_decision": "The context loader must resolve option B and the compiler must apply explicit correction precedence without mutating the historical RawIntent.",
+      "decision_assertions": [
+        {"stage": "context_loader", "decision": "resolve_option_b_and_prior_time_limit"},
+        {"stage": "intent_compiler", "decision": "create_new_candidate_with_explicit_correction_precedence"},
+        {"stage": "compilation_trace", "decision": "link_superseding_candidate_without_mutating_history"},
+        {"stage": "elastic_planner", "decision": "replan_with_thirty_minute_budget"}
+      ]
+    },
+    {
+      "case_id": "G11-network-contradiction",
+      "category": "feasibility_contradiction",
+      "raw_text": "Use no network access and retrieve today's latest AI model prices from the public web.",
+      "expected": {
+        "task_family": "current_information_retrieval",
+        "outcome_kinds": ["current_price_comparison"],
+        "constraint_kinds": ["network_prohibition", "freshness_requirement"],
+        "contradiction_kinds": ["network_required_but_forbidden"],
+        "blocking_issue": true,
+        "planner_strategy": "clarify_or_report_infeasible"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "contradictions", "unknowns"],
+      "downstream_decision": "The acceptance gate must not let the planner silently violate the network prohibition or fabricate current prices.",
+      "decision_assertions": [
+        {"stage": "intent_acceptance_gate", "decision": "block_infeasible_freshness_and_network_combination"},
+        {"stage": "user_clarification", "decision": "ask_to_relax_network_or_freshness_constraint"},
+        {"stage": "elastic_planner", "decision": "not_admitted"}
+      ]
+    },
+    {
+      "case_id": "G12-sensitive-log-analysis",
+      "category": "privacy_constrained_analysis",
+      "raw_text": "Analyze the uploaded support logs for recurring failure patterns, but do not expose customer email addresses or copy raw logs into the final report.",
+      "expected": {
+        "task_family": "data_analysis",
+        "outcome_kinds": ["diagnostic_analysis"],
+        "constraint_kinds": ["personal_data_non_disclosure", "raw_data_non_disclosure"],
+        "context_required": true,
+        "blocking_issue": false,
+        "planner_strategy": "privacy_constrained_analysis_workflow"
+      },
+      "fields_exercised": ["objectives", "requested_outcomes", "intent_constraints", "classification", "context_refs", "assumptions", "policy_signals"],
+      "downstream_decision": "The requirements, plan validator, and final acceptance gate must enforce redaction and prohibit raw-log publication.",
+      "decision_assertions": [
+        {"stage": "context_loader", "decision": "load_logs_under_sensitive_data_policy"},
+        {"stage": "policy_compiler", "decision": "require_pii_redaction_and_raw_data_non_disclosure"},
+        {"stage": "elastic_planner", "decision": "privacy_constrained_analysis_workflow"},
+        {"stage": "acceptance_verifier", "decision": "scan_final_output_for_email_addresses_and_raw_log_copying"}
+      ]
+    }
+  ],
+  "acceptance_rules": {
+    "minimum_cases": 12,
+    "required_strategies": [
+      "direct_response",
+      "implementation_workflow",
+      "read_only_diagnostic_workflow",
+      "research_and_design_workflow",
+      "resource_bounded_experiment_workflow",
+      "clarify_before_planning",
+      "attachment_analysis_workflow",
+      "recompile_from_conversation_context",
+      "clarify_or_report_infeasible",
+      "privacy_constrained_analysis_workflow"
+    ],
+    "required_issue_fields": ["ambiguities", "contradictions", "unknowns", "policy_signals"],
+    "every_core_field_requires_a_consumer_decision": true
+  }
+}
