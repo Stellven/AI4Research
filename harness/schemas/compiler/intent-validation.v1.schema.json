@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/intent-validation.v1.schema.json",
+  "title": "Solar deterministic IntentIR validation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_role", "validation_id", "intent_ir_ref", "attempt", "repair_count",
+    "status", "checks", "errors", "warnings", "limitations", "failure_policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "solar.intent_validation.v1"},
+    "artifact_role": {"enum": ["runtime_artifact", "metadata_contract_example_not_live_execution"]},
+    "validation_id": {"type": "string", "minLength": 1},
+    "intent_ir_ref": {"$ref": "#/$defs/intent_ref"},
+    "attempt": {"type": "integer", "minimum": 1, "maximum": 2},
+    "repair_count": {"type": "integer", "minimum": 0, "maximum": 1},
+    "status": {"enum": ["pass", "pass_with_warnings", "fail"]},
+    "checks": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {"$ref": "#/$defs/check"}
+    },
+    "errors": {"type": "array", "items": {"$ref": "#/$defs/issue"}},
+    "warnings": {"type": "array", "items": {"$ref": "#/$defs/issue"}},
+    "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "failure_policy": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "intent_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent_ir_id", "generation", "sha256"],
+      "properties": {
+        "intent_ir_id": {"type": "string"},
+        "generation": {"type": "integer", "minimum": 0, "maximum": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "kind", "status"],
+      "properties": {
+        "check_id": {"type": "string", "pattern": "^IV[1-7]$"},
+        "kind": {"type": "string", "minLength": 1},
+        "status": {"enum": ["pass", "warning", "fail"]}
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "path", "message", "repairable"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1},
+        "repairable": {"type": "boolean"}
+      }
+    }
+  }
+}

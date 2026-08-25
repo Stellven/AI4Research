@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.compiler_artifact_registry.v2",
-  "status": "proposed",
-  "integration_status": "metadata_contract_only_not_wired_to_runtime",
+  "status": "incremental_implementation",
+  "integration_status": "intent_compiler_live_dashboard_verified_other_stages_remain_metadata_only",
   "engine_legend": {
     "DET": "Deterministic producer or validator",
     "LLM": "Model judgment",
@@ -10,8 +10,9 @@
   "artifacts": [
     {"name": "raw_intent.json", "producer": "input_normalizer", "engine": "DET", "consumers": ["intent_compiler", "intent_validator", "intent_fidelity_verifier"], "decision": "Preserve the immutable grounding target and request identity."},
     {"name": "intent_ir.json", "producer": "intent_compiler", "engine": "LLM+V", "consumers": ["intent_validator", "intent_fidelity_verifier", "requirement_compiler"], "decision": "Represent grounded goals, outcomes, constraints, ambiguities, conflicts, and unknowns."},
-    {"name": "intent_validation.json", "producer": "intent_validator", "engine": "DET", "consumers": ["intent_acceptance_gate", "repair_controller"], "decision": "Accept, repair, clarify, or reject the structural IntentIR candidate."},
-    {"name": "intent_fidelity.json", "producer": "independent_intent_reviewer", "engine": "LLM", "consumers": ["intent_acceptance_gate", "requirement_compiler"], "decision": "Reject semantic drift that structural checks cannot detect."},
+    {"name": "intent_validation.json", "producer": "intent_validator", "engine": "DET", "consumers": ["intent_acceptance_gate", "repair_controller"], "decision": "Report mechanical errors and non-blocking warnings without making semantic judgments."},
+    {"name": "intent_fidelity.json", "producer": "independent_intent_reviewer", "engine": "LLM", "consumers": ["intent_acceptance_gate", "repair_controller"], "decision": "Report material semantic drift that structural checks cannot detect."},
+    {"name": "intent_acceptance.json", "producer": "intent_acceptance_gate", "engine": "DET", "consumers": ["requirement_compiler", "audit"], "decision": "Provide the single accepted, needs-clarification, or failed admission boundary."},
     {"name": "clarification.json", "producer": "clarification_gate", "engine": "DET", "consumers": ["user", "intent_compiler", "requirement_compiler"], "decision": "Stop on a material ambiguity or conflict and bind the user's answer."},
     {"name": "check_registry.json", "producer": "registry_snapshotter", "engine": "DET", "consumers": ["requirement_validator", "binding_gate", "final_verifier"], "decision": "Resolve every machine-checkable obligation to a known check and input artifact contract."},
     {"name": "requirement_ir.json", "producer": "requirement_compiler", "engine": "LLM+V", "consumers": ["requirement_validator", "coverage_gate", "elastic_planner", "final_verifier"], "decision": "Compile workflow-independent obligations, scope, assumptions, approvals, and rollback semantics."},

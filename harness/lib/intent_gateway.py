@@ -852,6 +852,163 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
     if research:
         raw_intent["research"] = research
     base = INTENTS_DIR / intent_id
+    artifact_compiler_provider = os.environ.get("SOLAR_INTENT_COMPILER_PROVIDER", "").strip()
+    if artifact_compiler_provider:
+        from intent_compiler import (
+            model_from_environment,
+            project_legacy_rewritten_intent,
+            requirement_handoff,
+            run_pipeline,
+        )
+
+        compiler_result = run_pipeline(
+            raw_intent,
+            base / "intent",
+            model_from_environment("compiler"),
+            model_from_environment("reviewer"),
+        )
+        acceptance = compiler_result["intent_acceptance"]
+        accepted_intent = compiler_result.get("intent_ir")
+        write_json(base / "raw_intent.json", raw_intent)
+        candidate_trace_artifacts = {
+            "raw_intent": str(base / "raw_intent.json"),
+            "input": str(base / "intent" / "input.json"),
+            "intent_ir": str(base / "intent" / "intent_ir.json"),
+            "intent_validation": str(base / "intent" / "intent_validation.json"),
+            "intent_fidelity": str(base / "intent" / "intent_fidelity.json"),
+            "intent_acceptance": str(base / "intent" / "intent_acceptance.json"),
+        }
+        trace_artifacts = {
+            name: path
+            for name, path in candidate_trace_artifacts.items()
+            if Path(path).exists()
+        }
+        trace = {
+            "schema_version": "solar.requirement_trace.v1",
+            "intent_id": intent_id,
+            "created_at": created,
+            "artifacts": trace_artifacts,
+            "stages": [
+                {"stage": "raw_intent_capture", "status": "ok"},
+                {
+                    "stage": "intent_ir_compile",
+                    "status": "ok" if accepted_intent else "failed",
+                    "provider": artifact_compiler_provider,
+                },
+                {
+                    "stage": "intent_validation",
+                    "status": (
+                        compiler_result.get("intent_validation") or {"status": "not_run"}
+                    ).get("status"),
+                },
+                {
+                    "stage": "intent_fidelity",
+                    "status": (
+                        compiler_result.get("intent_fidelity") or {"status": "not_run"}
+                    ).get("status"),
+                },
+                {
+                    "stage": "intent_acceptance",
+                    "status": acceptance["decision"],
+                    "repair_attempted": acceptance["repair"]["attempted"],
+                },
+            ],
+        }
+        if acceptance["decision"] != "accepted" or not accepted_intent:
+            raw_intent["routing_hints"]["allow_autodispatch"] = False
+            raw_intent["routing_hints"]["readiness_blocked"] = True
+            write_json(base / "raw_intent.json", raw_intent)
+            write_json(base / "requirement_trace.json", trace)
+            return {
+                "ok": True,
+                "intent_id": intent_id,
+                "title": None,
+                "lane": None,
+                "ready": False,
+                "readiness_status": acceptance["decision"],
+                "clarification_questions": acceptance["clarification_questions"],
+                "rewrite_method": "intent_ir_v3",
+                "raw_intent": str(base / "raw_intent.json"),
+                "intent_ir": (
+                    str(base / "intent" / "intent_ir.json")
+                    if (base / "intent" / "intent_ir.json").exists()
+                    else None
+                ),
+                "intent_validation": (
+                    str(base / "intent" / "intent_validation.json")
+                    if (base / "intent" / "intent_validation.json").exists()
+                    else None
+                ),
+                "intent_fidelity": (
+                    str(base / "intent" / "intent_fidelity.json")
+                    if (base / "intent" / "intent_fidelity.json").exists()
+                    else None
+                ),
+                "intent_acceptance": str(base / "intent" / "intent_acceptance.json"),
+                "requirement_trace": str(base / "requirement_trace.json"),
+            }
+        requirement_handoff(accepted_intent, acceptance)
+        rewritten = project_legacy_rewritten_intent(accepted_intent, raw_text)
+        legacy_hints = deterministic_rewrite(raw_text)
+        rewritten["suggested_lane"] = legacy_hints["suggested_lane"]
+        rewritten["suggested_logical_operators"] = legacy_hints[
+            "suggested_logical_operators"
+        ]
+        rewritten["intent_id"] = intent_id
+        rewritten["model_rewrite"] = {
+            "attempted": True,
+            "status": "accepted",
+            "method": "intent_ir_v3",
+        }
+        requirement_ir = build_requirement_ir(intent_id, raw_intent, rewritten)
+        legacy_readiness = requirement_ir["readiness"]
+        requirement_ir["compatibility_readiness"] = legacy_readiness
+        requirement_ir["readiness"] = {
+            "schema_version": "solar.intent_readiness.v1",
+            "status": "ready",
+            "ready": True,
+            "blocking_count": 0,
+            "unresolved": [],
+            "questions": [],
+            "applied_answers": legacy_readiness.get("applied_answers", {}),
+            "planning_admitted": True,
+            "next_action": "plan",
+            "policy": "Authoritative admission comes from accepted solar.intent_acceptance.v1.",
+        }
+        requirement_ir["compiler_next"] = "pm_planner_task_graph"
+        readiness = requirement_ir["readiness"]
+        trace["artifacts"].update(
+            {
+                "rewritten_intent": str(base / "rewritten_intent.json"),
+                "requirement_ir": str(base / "requirement_ir.json"),
+            }
+        )
+        trace["stages"].append(
+            {"stage": "requirement_ir_compatibility_compile", "status": "ok"}
+        )
+        write_json(base / "rewritten_intent.json", rewritten)
+        write_json(base / "requirement_ir.json", requirement_ir)
+        write_json(base / "requirement_trace.json", trace)
+        if args.sprint_id:
+            bind_intent_artifacts(intent_id, args.sprint_id)
+        return {
+            "ok": True,
+            "intent_id": intent_id,
+            "title": rewritten.get("title"),
+            "lane": requirement_ir.get("lane"),
+            "ready": readiness["ready"],
+            "readiness_status": acceptance["decision"],
+            "clarification_questions": acceptance["clarification_questions"],
+            "rewrite_method": "intent_ir_v3",
+            "raw_intent": str(base / "raw_intent.json"),
+            "intent_ir": str(base / "intent" / "intent_ir.json"),
+            "intent_validation": str(base / "intent" / "intent_validation.json"),
+            "intent_fidelity": str(base / "intent" / "intent_fidelity.json"),
+            "intent_acceptance": str(base / "intent" / "intent_acceptance.json"),
+            "rewritten_intent": str(base / "rewritten_intent.json"),
+            "requirement_ir": str(base / "requirement_ir.json"),
+            "requirement_trace": str(base / "requirement_trace.json"),
+        }
     model_result, rewrite_meta = model_rewrite(raw_intent, base / "rewrite_prompt.json")
     rewritten = model_result or deterministic_rewrite(raw_text)
     rewritten["intent_id"] = intent_id
@@ -919,8 +1076,26 @@ def bind_intent_artifacts(intent_id: str, sprint_id: str) -> dict[str, Any]:
         "requirement_ir.json": SPRINTS_DIR / f"{sprint_id}.requirement_ir.json",
         "requirement_trace.json": SPRINTS_DIR / f"{sprint_id}.requirement_trace.json",
     }
+    optional_mapping = {
+        "intent/input.json": SPRINTS_DIR / f"{sprint_id}.input.json",
+        "intent/intent_ir.json": SPRINTS_DIR / f"{sprint_id}.intent_ir.json",
+        "intent/intent_validation.json": SPRINTS_DIR / f"{sprint_id}.intent_validation.json",
+        "intent/intent_fidelity.json": SPRINTS_DIR / f"{sprint_id}.intent_fidelity.json",
+        "intent/intent_acceptance.json": SPRINTS_DIR / f"{sprint_id}.intent_acceptance.json",
+    }
+    immutable_compiler_artifacts = set(optional_mapping)
+    mapping.update(
+        {name: destination for name, destination in optional_mapping.items() if (base / name).exists()}
+    )
     for name, dst in mapping.items():
-        gateway_payload = json.loads((base / name).read_text(encoding="utf-8"))
+        source_path = base / name
+        if name in immutable_compiler_artifacts:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            temporary = dst.with_suffix(dst.suffix + ".tmp")
+            temporary.write_bytes(source_path.read_bytes())
+            os.replace(temporary, dst)
+            continue
+        gateway_payload = json.loads(source_path.read_text(encoding="utf-8"))
         payload = gateway_payload
         if (
             dst.exists()

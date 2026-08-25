@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/intent-fidelity.v1.schema.json",
+  "title": "Solar independent IntentIR fidelity review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_role", "fidelity_id", "raw_intent_ref", "intent_ir_ref", "status",
+    "review_method", "reviewer", "checks", "decisions", "errors", "warnings"
+  ],
+  "properties": {
+    "schema_version": {"const": "solar.intent_fidelity.v1"},
+    "artifact_role": {"enum": ["runtime_artifact", "metadata_contract_example_not_live_execution"]},
+    "fidelity_id": {"type": "string", "minLength": 1},
+    "raw_intent_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_intent_id", "raw_text_sha256"],
+      "properties": {
+        "raw_intent_id": {"type": "string", "minLength": 1},
+        "raw_text_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "intent_ir_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent_ir_id", "generation", "sha256"],
+      "properties": {
+        "intent_ir_id": {"type": "string", "minLength": 1},
+        "generation": {"type": "integer", "minimum": 0, "maximum": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "status": {"enum": ["pass", "pass_with_warnings", "fail"]},
+    "review_method": {"const": "independent_model_call"},
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "model"],
+      "properties": {
+        "provider": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1}
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check_id", "kind", "status"],
+        "properties": {
+          "check_id": {"type": "string", "pattern": "^IF[1-6]$"},
+          "kind": {"type": "string", "minLength": 1},
+          "status": {"enum": ["pass", "warning", "fail"]}
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decision_id", "question", "answer", "basis"],
+        "properties": {
+          "decision_id": {"type": "string", "pattern": "^FD[1-9][0-9]*$"},
+          "question": {"type": "string", "minLength": 1},
+          "answer": {"type": "string", "minLength": 1},
+          "basis": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "errors": {"type": "array", "items": {"$ref": "intent-fidelity.review.v1.schema.json#/$defs/error"}},
+    "warnings": {"type": "array", "items": {"$ref": "intent-fidelity.review.v1.schema.json#/$defs/warning"}}
+  }
+}

@@ -915,6 +915,23 @@ def _extract_intake_id(text: str) -> str:
     return ""
 
 
+def _extract_intent_admission(text: str) -> dict:
+    """Recover a fail-closed Intent Compiler stop returned by solar-harness."""
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", text or "")
+    decoder = json.JSONDecoder()
+    for match in reversed(list(re.finditer(r"\{", clean))):
+        try:
+            payload, _end = decoder.raw_decode(clean, match.start())
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        status = str(payload.get("readiness_status") or "")
+        if status in {"needs_clarification", "failed"} and payload.get("intent_id"):
+            return payload
+    return {}
+
+
 def _latest_sprint_candidate_after(after_ts: float, request_id: str = "") -> dict:
     rows: list[tuple[float, str]] = []
     try:
@@ -1065,6 +1082,17 @@ _MAX_INTAKE_ATTACHMENTS = 8
 _MAX_INTAKE_ATTACHMENT_BYTES = 5 * 1024 * 1024
 _MAX_INTAKE_ATTACHMENTS_TOTAL_BYTES = 10 * 1024 * 1024
 _MAX_INTAKE_JSON_BODY_BYTES = 16 * 1024 * 1024
+_MAX_INTENT_MODEL_CALLS = 4  # compile + review, then one bounded compile + review repair
+
+
+def _intake_timeout_seconds(env: dict[str, str]) -> int:
+    explicit = str(env.get("SOLAR_INTAKE_TIMEOUT_SEC") or "").strip()
+    if explicit:
+        return max(1, int(explicit))
+    if str(env.get("SOLAR_INTENT_COMPILER_PROVIDER") or "").strip():
+        per_call = max(1, int(env.get("SOLAR_INTENT_MODEL_TIMEOUT_SEC") or "180"))
+        return max(180, per_call * _MAX_INTENT_MODEL_CALLS + 60)
+    return 180
 
 
 def _safe_intake_attachment_name(raw_name: str, index: int) -> str:
@@ -1259,6 +1287,10 @@ def _intake_payload(data: dict) -> dict:
     env = _intake_subprocess_env()
     env["HARNESS_DIR"] = str(HARNESS_DIR)
     env["SOLAR_INTAKE_REQUEST_ID"] = request_id
+    # Preserve the user's real entry point. The status server invokes the CLI
+    # as an implementation detail, but the request originated in the dashboard.
+    env["SOLAR_INTENT_SOURCE_CHANNEL"] = "dashboard"
+    env["SOLAR_INTENT_ACTOR"] = "user"
     if attachments:
         env["SOLAR_INTAKE_ATTACHMENTS_JSON"] = json.dumps(attachments, ensure_ascii=False)
     routing = _classify_intake_request(task, env, explicit_workflow_id=workflow_id)
@@ -1309,7 +1341,7 @@ def _intake_payload(data: dict) -> dict:
             cmd,
             text=True,
             capture_output=True,
-            timeout=180,
+            timeout=_intake_timeout_seconds(env),
             cwd=os.getcwd(),
             env=env,
         )
@@ -1338,6 +1370,27 @@ def _intake_payload(data: dict) -> dict:
             "stdout_tail": output[-4000:],
         }
     output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
+    admission = _extract_intent_admission(output)
+    if admission:
+        readiness_status = str(admission.get("readiness_status") or "failed")
+        return {
+            "ok": False,
+            "status": readiness_status,
+            "sprint_id": "",
+            "request_id": request_id,
+            "intent_id": str(admission.get("intent_id") or ""),
+            "error": (
+                "intent_needs_clarification"
+                if readiness_status == "needs_clarification"
+                else "intent_compilation_failed"
+            ),
+            "clarification_questions": list(admission.get("clarification_questions") or []),
+            "intent_acceptance": str(admission.get("intent_acceptance") or ""),
+            "returncode": proc.returncode,
+            "command": " ".join(cmd[:3]),
+            "research_profile": resolved_profile,
+            "request_routing": routing,
+        }
     parsed = _extract_intake_id(output)
     candidate = {"sprint_id": parsed, "attribution": "stdout", "ambiguous": False, "candidates": [parsed]} if parsed else _latest_sprint_candidate_after(before, request_id)
     sprint_id = str(candidate.get("sprint_id") or "")

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/intent-acceptance.v1.schema.json",
+  "title": "Solar Intent Compiler admission decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_role", "acceptance_id", "raw_intent_ref", "intent_ir_ref",
+    "validation_ref", "fidelity_ref", "decision", "final_generation", "repair",
+    "reasons", "clarification_questions", "requirement_compiler_handoff_allowed"
+  ],
+  "properties": {
+    "schema_version": {"const": "solar.intent_acceptance.v1"},
+    "artifact_role": {"enum": ["runtime_artifact", "metadata_contract_example_not_live_execution"]},
+    "acceptance_id": {"type": "string", "minLength": 1},
+    "raw_intent_ref": {"$ref": "#/$defs/raw_ref"},
+    "intent_ir_ref": {"oneOf": [{"$ref": "#/$defs/artifact_ref"}, {"type": "null"}]},
+    "validation_ref": {"oneOf": [{"$ref": "#/$defs/artifact_ref"}, {"type": "null"}]},
+    "fidelity_ref": {"oneOf": [{"$ref": "#/$defs/artifact_ref"}, {"type": "null"}]},
+    "decision": {"enum": ["accepted", "needs_clarification", "failed"]},
+    "final_generation": {"type": ["integer", "null"], "minimum": 0, "maximum": 1},
+    "repair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempted", "maximum_attempts"],
+      "properties": {
+        "attempted": {"type": "boolean"},
+        "maximum_attempts": {"const": 1}
+      }
+    },
+    "reasons": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "clarification_questions": {"type": "array", "items": {"type": "object"}},
+    "requirement_compiler_handoff_allowed": {"type": "boolean"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"decision": {"const": "accepted"}}},
+      "then": {
+        "properties": {
+          "intent_ir_ref": {"$ref": "#/$defs/artifact_ref"},
+          "validation_ref": {"$ref": "#/$defs/artifact_ref"},
+          "fidelity_ref": {"$ref": "#/$defs/artifact_ref"},
+          "final_generation": {"type": "integer"},
+          "clarification_questions": {"maxItems": 0},
+          "requirement_compiler_handoff_allowed": {"const": true}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"decision": {"const": "needs_clarification"}}},
+      "then": {
+        "properties": {
+          "clarification_questions": {"minItems": 1},
+          "requirement_compiler_handoff_allowed": {"const": false}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"decision": {"const": "failed"}}},
+      "then": {"properties": {"requirement_compiler_handoff_allowed": {"const": false}}}
+    }
+  ],
+  "$defs": {
+    "raw_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_intent_id", "sha256"],
+      "properties": {
+        "raw_intent_id": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "artifact_ref": {
+      "type": "object",
+      "minProperties": 2,
+      "maxProperties": 2,
+      "required": ["sha256"],
+      "properties": {
+        "intent_ir_id": {"type": "string", "minLength": 1},
+        "validation_id": {"type": "string", "minLength": 1},
+        "fidelity_id": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

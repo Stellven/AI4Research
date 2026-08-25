@@ -1,0 +1,33 @@
+{
+  "schema_version": "solar.intent_acceptance.v1",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "acceptance_id": "intent-acceptance-raw-intent-20260825-091412-a3f8",
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-20260825-091412-a3f8",
+    "sha256": "6fe68e156d842726374243d0bc5529e11b693d1a9c297b7601cfefff4ba5345e"
+  },
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-20260825-091412-a3f8",
+    "sha256": "f61ae0efe3f91a70bfbaff9e2e0d5cad647533e46b1a874475d998044748bb5a"
+  },
+  "validation_ref": {
+    "validation_id": "intent-validation-20260825-091412-a3f8",
+    "sha256": "b71b440912e73eb9e26aee387e286c84b11c37adde42ba937fd3c1d75171a1ce"
+  },
+  "fidelity_ref": {
+    "fidelity_id": "intent-fidelity-20260825-091412-a3f8",
+    "sha256": "0ff474268438ba7e20c51a41e77c8b81f1be8e67d13b23fa1e847246463fd376"
+  },
+  "decision": "accepted",
+  "final_generation": 0,
+  "repair": {
+    "attempted": false,
+    "maximum_attempts": 1
+  },
+  "reasons": [
+    "Mechanical validation passed.",
+    "Independent meaning-preservation review passed."
+  ],
+  "clarification_questions": [],
+  "requirement_compiler_handoff_allowed": true
+}

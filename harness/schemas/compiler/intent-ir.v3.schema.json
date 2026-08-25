@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/intent-ir.v3.schema.json",
+  "title": "Solar IntentIR v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_role", "intent_ir_id", "generation", "raw_intent_ref", "producer",
+    "goals", "outcomes", "constraints", "ambiguities", "conflicts", "unknowns"
+  ],
+  "properties": {
+    "schema_version": {"const": "solar.intent_ir.v3"},
+        "artifact_role": {"enum": ["runtime_artifact", "metadata_contract_example_not_live_execution"]},
+        "intent_ir_id": {"type": "string", "minLength": 1},
+        "generation": {"type": "integer", "minimum": 0, "maximum": 1},
+        "raw_intent_ref": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["raw_intent_id", "raw_text_sha256"],
+          "properties": {
+            "raw_intent_id": {"type": "string", "minLength": 1},
+            "raw_text_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          }
+        },
+        "producer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "provider", "model"],
+          "properties": {
+            "method": {"const": "model"},
+            "provider": {"type": "string", "minLength": 1},
+            "model": {"type": "string", "minLength": 1}
+          }
+        },
+    "goals": {"$ref": "https://solar.local/schemas/intent-ir.semantic.v1.schema.json#/properties/goals"},
+    "outcomes": {"$ref": "https://solar.local/schemas/intent-ir.semantic.v1.schema.json#/properties/outcomes"},
+    "constraints": {"$ref": "https://solar.local/schemas/intent-ir.semantic.v1.schema.json#/properties/constraints"},
+    "ambiguities": {"$ref": "https://solar.local/schemas/intent-ir.semantic.v1.schema.json#/properties/ambiguities"},
+    "conflicts": {"$ref": "https://solar.local/schemas/intent-ir.semantic.v1.schema.json#/properties/conflicts"},
+    "unknowns": {"$ref": "https://solar.local/schemas/intent-ir.semantic.v1.schema.json#/properties/unknowns"}
+  }
+}

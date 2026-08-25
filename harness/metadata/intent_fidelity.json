@@ -1,18 +1,29 @@
 {
   "schema_version": "solar.intent_fidelity.v1",
+  "artifact_role": "metadata_contract_example_not_live_execution",
   "fidelity_id": "intent-fidelity-20260825-091412-a3f8",
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-20260825-091412-a3f8",
+    "raw_text_sha256": "ab9db5b677295f015c2ab66a8714b0b19de524497c5ee4b09305d47f000483c7"
+  },
   "intent_ir_ref": {
     "intent_ir_id": "intent-ir-20260825-091412-a3f8",
-    "sha256": "a9d4a3b707cc63cc6202cab28732bc98ee21ff2a94ab43e82bdcdcb22a8e9f1a"
+    "generation": 0,
+    "sha256": "f61ae0efe3f91a70bfbaff9e2e0d5cad647533e46b1a874475d998044748bb5a"
   },
   "status": "pass",
-  "review_method": "human_reviewed_contract_example",
+  "review_method": "independent_model_call",
+  "reviewer": {
+    "provider": "codex",
+    "model": "contract-example-not-live"
+  },
   "checks": [
     {"check_id": "IF1", "kind": "goals_supported_by_source", "status": "pass"},
     {"check_id": "IF2", "kind": "outcomes_supported_by_source", "status": "pass"},
     {"check_id": "IF3", "kind": "constraints_supported_by_source", "status": "pass"},
     {"check_id": "IF4", "kind": "no_material_omissions", "status": "pass"},
-    {"check_id": "IF5", "kind": "no_unrequested_execution", "status": "pass"}
+    {"check_id": "IF5", "kind": "no_unrequested_execution", "status": "pass"},
+    {"check_id": "IF6", "kind": "ambiguity_unknown_classification", "status": "pass"}
   ],
   "decisions": [
     {
@@ -20,7 +31,14 @@
       "question": "Does designing the reproducibility check authorize executing it?",
       "answer": "no",
       "basis": "The prompt requests a design and does not request measured execution."
+    },
+    {
+      "decision_id": "FD2",
+      "question": "Does the unspecified resource envelope require user clarification before planning?",
+      "answer": "no",
+      "basis": "The requested deliverable is a design. Workflow design can define and disclose a concrete bound before that design is accepted."
     }
   ],
-  "errors": []
+  "errors": [],
+  "warnings": []
 }

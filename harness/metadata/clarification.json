@@ -4,7 +4,7 @@
   "emission_rule": "Emit only when an IntentIR ambiguity or conflict blocks compilation.",
   "main_example": {
     "emitted": false,
-    "reason": "The methane example contains one non-blocking ambiguity, so RequirementIR records the boundary instead."
+    "reason": "The methane example has no blocking ambiguity. Its unspecified resource envelope is a design parameter assigned to workflow design, not a reason to question the user."
   },
   "blocking_example": {
     "clarification_id": "clarification-example-database-choice",

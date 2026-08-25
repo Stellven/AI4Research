@@ -1,9 +1,16 @@
 {
-  "schema_version": "solar.intent_ir.v2",
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
   "intent_ir_id": "intent-ir-20260825-091412-a3f8",
+  "generation": 0,
   "raw_intent_ref": {
     "raw_intent_id": "raw-intent-20260825-091412-a3f8",
     "raw_text_sha256": "ab9db5b677295f015c2ab66a8714b0b19de524497c5ee4b09305d47f000483c7"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "codex",
+    "model": "contract-example-not-live"
   },
   "goals": [
     {
@@ -35,52 +42,94 @@
     {
       "constraint_id": "C1",
       "category": "scope",
-      "operator": "require",
       "statement": "Include all three measurement-method classes.",
-      "values": ["satellite", "airborne", "ground_based"],
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {"ref": "comparison.method_classes"},
+          {"set": ["satellite", "airborne", "ground_based"]}
+        ]
+      },
       "source_spans": [[8, 53]]
     },
     {
       "constraint_id": "C2",
       "category": "content",
-      "operator": "require",
       "statement": "Assess all requested evaluation dimensions.",
-      "values": [
-        "sensitivity",
-        "false_positives",
-        "weather_limitations",
-        "coverage_limitations",
-        "validation_conflicts"
-      ],
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {"ref": "comparison.evaluation_dimensions"},
+          {
+            "set": [
+              "sensitivity",
+              "false_positives",
+              "weather_limitations",
+              "coverage_limitations",
+              "validation_conflicts"
+            ]
+          }
+        ]
+      },
       "source_spans": [[131, 236]]
     },
     {
       "constraint_id": "C3",
       "category": "limit",
-      "operator": "limit",
       "statement": "Keep the reproducibility check bounded and focused on the most testable claims.",
-      "values": ["bounded", "most_testable_claims"],
+      "expression": {
+        "op": "all_of",
+        "args": [
+          {
+            "op": "select_by",
+            "args": [
+              {"ref": "reproducibility_check.claims"},
+              {"literal": "highest_testability"}
+            ]
+          },
+          {
+            "op": "bounded_by",
+            "args": [
+              {"ref": "reproducibility_check.resource_envelope"},
+              {"unknown_ref": "U3"}
+            ]
+          }
+        ]
+      },
       "source_spans": [[252, 310]]
     }
   ],
-  "ambiguities": [
-    {
-      "ambiguity_id": "A1",
-      "question": "What resource boundary should bounded represent?",
-      "blocking": false,
-      "source_spans": [[252, 259]]
-    }
-  ],
+  "ambiguities": [],
   "conflicts": [],
   "unknowns": [
     {
       "unknown_id": "U1",
       "question": "Which validation results conflict?",
+      "kind": "discoverable_fact",
+      "resolution": {
+        "mode": "workflow_discovery",
+        "required_before": "evidence_synthesis"
+      },
       "derived_from": ["C2"]
     },
     {
       "unknown_id": "U2",
       "question": "Which claims are most testable?",
+      "kind": "selection_decision",
+      "resolution": {
+        "mode": "workflow_analysis",
+        "required_before": "reproducibility_design"
+      },
+      "derived_from": ["G2", "C3"]
+    },
+    {
+      "unknown_id": "U3",
+      "question": "What concrete resource envelope makes the reproducibility-check design bounded?",
+      "kind": "design_parameter",
+      "resolution": {
+        "mode": "workflow_design",
+        "required_before": "reproducibility_design_acceptance"
+      },
       "derived_from": ["G2", "C3"]
     }
   ]

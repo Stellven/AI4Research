@@ -10,6 +10,7 @@
     "defects": ["machine-readable defect"],
     "requested_from": "producer-id",
     "result_artifact_id": null,
+    "result_generation": null,
     "status": "requested|completed|failed"
   },
   "budget": {"maximum_repairs_per_boundary": 1, "on_exhaustion": "clarify_or_reject"}

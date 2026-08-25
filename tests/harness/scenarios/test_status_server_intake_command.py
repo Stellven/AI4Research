@@ -46,6 +46,20 @@ def test_intake_prefers_harness_local_cli_over_ambient_path(
     assert command == [str(script), "intake", "--request", "test prompt"]
 
 
+def test_intake_timeout_covers_the_bounded_compiler_repair_budget() -> None:
+    status_server = _load_status_server()
+
+    assert status_server._intake_timeout_seconds({}) == 180
+    assert status_server._intake_timeout_seconds({
+        "SOLAR_INTENT_COMPILER_PROVIDER": "codex",
+        "SOLAR_INTENT_MODEL_TIMEOUT_SEC": "300",
+    }) == 1260
+    assert status_server._intake_timeout_seconds({
+        "SOLAR_INTENT_COMPILER_PROVIDER": "codex",
+        "SOLAR_INTAKE_TIMEOUT_SEC": "90",
+    }) == 90
+
+
 def test_windows_intake_runs_harness_script_inside_wsl(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -105,6 +119,43 @@ def test_intake_launch_failure_is_structured(
     assert "OSError" in result["detail"]
 
 
+def test_intent_clarification_is_returned_without_creating_a_sprint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    status_server = _load_status_server()
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    status_server.HARNESS_DIR = harness
+    status_server.SPRINTS_DIR = harness / "sprints"
+    monkeypatch.setattr(status_server, "_intake_command", lambda _task: [sys.executable])
+    compiler_stop = {
+        "ok": True,
+        "intent_id": "intent-needs-user",
+        "ready": False,
+        "readiness_status": "needs_clarification",
+        "clarification_questions": [
+            {"item_id": "A1", "question": "Who should receive the report?"}
+        ],
+        "intent_acceptance": "/tmp/intent_acceptance.json",
+    }
+    monkeypatch.setattr(
+        status_server.subprocess,
+        "run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(
+            command, 3, stdout="Harness note\n" + json.dumps(compiler_stop, indent=2) + "\n", stderr=""
+        ),
+    )
+
+    result = status_server._intake_payload({"task": "Email the report to them."})
+
+    assert result["ok"] is False
+    assert result["status"] == "needs_clarification"
+    assert result["error"] == "intent_needs_clarification"
+    assert result["sprint_id"] == ""
+    assert result["intent_id"] == "intent-needs-user"
+    assert result["clarification_questions"][0]["item_id"] == "A1"
+
+
 def test_intake_upload_persists_file_and_forwards_structured_attachment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -157,6 +208,8 @@ def test_intake_upload_persists_file_and_forwards_structured_attachment(
     assert str(path) in captured["command"][1]
     forwarded = json.loads(captured["env"]["SOLAR_INTAKE_ATTACHMENTS_JSON"])
     assert forwarded[0]["sha256"] == attachment["sha256"]
+    assert captured["env"]["SOLAR_INTENT_SOURCE_CHANNEL"] == "dashboard"
+    assert captured["env"]["SOLAR_INTENT_ACTOR"] == "user"
 
 
 def test_intake_upload_rejects_oversized_attachment_before_launch(

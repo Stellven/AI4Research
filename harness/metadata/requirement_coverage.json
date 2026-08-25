@@ -3,7 +3,7 @@
   "coverage_id": "requirement-coverage-20260825-091412-a3f8",
   "requirement_ir_ref": {
     "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
-    "sha256": "812618f109a4934989e1f96aa909139f65f49f2952d4c45ad82adbd4db7d837f"
+    "sha256": "96adcb11c4660914bf2e4cf2f4d1bc0985125baf58cddae0429e8b6d41164d3f"
   },
   "coverage": [
     {"intent_ref": "G1", "requirement_refs": ["R1", "R2"]},
@@ -13,7 +13,7 @@
     {"intent_ref": "C1", "requirement_refs": ["R1"]},
     {"intent_ref": "C2", "requirement_refs": ["R2", "R3"]},
     {"intent_ref": "C3", "requirement_refs": ["R4", "R5"]},
-    {"intent_ref": "A1", "requirement_refs": ["R5"]},
+    {"intent_ref": "U3", "requirement_refs": ["R5"]},
     {"intent_ref": "U1", "requirement_refs": ["R3"]},
     {"intent_ref": "U2", "requirement_refs": ["R4"]}
   ],

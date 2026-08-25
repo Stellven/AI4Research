@@ -66,7 +66,7 @@
       "expected_constraint_categories": ["scope", "limit"],
       "expected_blocking_issue": false,
       "expected_planner_strategy": "workflow_capsule_or_compose",
-      "fields_exercised": ["goals", "outcomes", "constraints", "ambiguities", "unknowns", "source_spans", "derived_from"],
+      "fields_exercised": ["goals", "outcomes", "constraints", "unknowns", "source_spans", "derived_from"],
       "downstream_decisions": [
         {"stage": "requirement_compiler", "decision": "compile_research_and_design_only_requirements"},
         {"stage": "elastic_planner", "decision": "include_discovery_without_unrequested_execution"}

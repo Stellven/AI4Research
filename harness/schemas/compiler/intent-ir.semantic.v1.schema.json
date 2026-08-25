@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/intent-ir.semantic.v1.schema.json",
+  "title": "IntentIR semantic body authored by a model",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["goals", "outcomes", "constraints", "ambiguities", "conflicts", "unknowns"],
+  "properties": {
+    "goals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/goal"}
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/outcome"}
+    },
+    "constraints": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/constraint"}
+    },
+    "ambiguities": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/ambiguity"}
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/conflict"}
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/unknown"}
+    }
+  },
+  "$defs": {
+    "source_spans": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          {"type": "integer", "minimum": 0},
+          {"type": "integer", "minimum": 1}
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "derived_from": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["goal_id", "statement", "source_spans"],
+      "properties": {
+        "goal_id": {"type": "string", "pattern": "^G[1-9][0-9]*$"},
+        "statement": {"type": "string", "minLength": 1},
+        "source_spans": {"$ref": "#/$defs/source_spans"}
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome_id", "class", "description", "source_spans"],
+      "properties": {
+        "outcome_id": {"type": "string", "pattern": "^D[1-9][0-9]*$"},
+        "class": {"enum": ["information", "artifact", "action"]},
+        "description": {"type": "string", "minLength": 1},
+        "source_spans": {"$ref": "#/$defs/source_spans"}
+      }
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref"],
+          "properties": {"ref": {"type": "string", "minLength": 1}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["unknown_ref"],
+          "properties": {"unknown_ref": {"type": "string", "pattern": "^U[1-9][0-9]*$"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["literal"],
+          "properties": {"literal": {"type": ["string", "number", "integer", "boolean"]}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["set"],
+          "properties": {
+            "set": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": ["string", "number", "integer", "boolean"]}
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "args"],
+          "properties": {
+            "op": {
+              "enum": [
+                "all_of", "any_of", "not", "equals", "not_equals",
+                "contains_all", "contains_any", "contains_none", "at_least", "at_most",
+                "less_than", "less_than_or_equal", "greater_than",
+                "greater_than_or_equal", "exactly", "select_by",
+                "bounded_by", "before", "after", "implies", "triggers"
+              ]
+            },
+            "args": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"$ref": "#/$defs/expression"}
+            }
+          }
+        }
+      ]
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["constraint_id", "category", "statement", "expression", "source_spans"],
+      "properties": {
+        "constraint_id": {"type": "string", "pattern": "^C[1-9][0-9]*$"},
+        "category": {"enum": ["scope", "content", "limit", "prohibition", "preference", "format", "temporal"]},
+        "statement": {"type": "string", "minLength": 1},
+        "expression": {"$ref": "#/$defs/expression"},
+        "source_spans": {"$ref": "#/$defs/source_spans"}
+      }
+    },
+    "ambiguity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ambiguity_id", "question", "blocking", "source_spans"],
+      "properties": {
+        "ambiguity_id": {"type": "string", "pattern": "^A[1-9][0-9]*$"},
+        "question": {"type": "string", "minLength": 1},
+        "blocking": {"type": "boolean"},
+        "source_spans": {"$ref": "#/$defs/source_spans"}
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conflict_id", "description", "resolution", "source_spans", "derived_from"],
+      "properties": {
+        "conflict_id": {"type": "string", "pattern": "^X[1-9][0-9]*$"},
+        "description": {"type": "string", "minLength": 1},
+        "resolution": {"enum": ["clarify", "reject"]},
+        "source_spans": {"$ref": "#/$defs/source_spans"},
+        "derived_from": {"$ref": "#/$defs/derived_from"}
+      }
+    },
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unknown_id", "question", "kind", "resolution", "derived_from"],
+      "properties": {
+        "unknown_id": {"type": "string", "pattern": "^U[1-9][0-9]*$"},
+        "question": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["discoverable_fact", "selection_decision", "design_parameter"]},
+        "resolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "required_before"],
+          "properties": {
+            "mode": {"enum": ["workflow_discovery", "workflow_analysis", "workflow_design"]},
+            "required_before": {"type": "string", "minLength": 1}
+          }
+        },
+        "derived_from": {"$ref": "#/$defs/derived_from"}
+      }
+    }
+  }
+}

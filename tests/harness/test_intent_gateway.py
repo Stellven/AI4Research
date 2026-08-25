@@ -89,6 +89,44 @@ def test_bind_copies_intent_artifacts_to_sprint(tmp_path):
     assert ir["sprint_id"] == sprint_id
 
 
+def test_bind_preserves_formal_compiler_artifact_identity(tmp_path):
+    gateway = _load_gateway("intent_gateway_immutable_compiler_binding")
+    gateway.INTENTS_DIR = tmp_path / "intents"
+    gateway.SPRINTS_DIR = tmp_path / "sprints"
+    intent_id = "intent-immutable"
+    sprint_id = "sprint-immutable"
+    base = gateway.INTENTS_DIR / intent_id
+    (base / "intent").mkdir(parents=True)
+    legacy = {
+        "raw_intent.json": {"intent_id": intent_id},
+        "rewritten_intent.json": {"intent_id": intent_id},
+        "requirement_ir.json": {"intent_id": intent_id},
+        "requirement_trace.json": {"intent_id": intent_id},
+    }
+    compiler_artifacts = {
+        "input.json": {"schema_version": "solar.raw_intent.v2", "value": "input"},
+        "intent_ir.json": {"schema_version": "solar.intent_ir.v3", "value": "intent"},
+        "intent_validation.json": {"schema_version": "solar.intent_validation.v1", "value": "validation"},
+        "intent_fidelity.json": {"schema_version": "solar.intent_fidelity.v1", "value": "fidelity"},
+        "intent_acceptance.json": {"schema_version": "solar.intent_acceptance.v1", "value": "acceptance"},
+    }
+    for name, payload in legacy.items():
+        gateway.write_json(base / name, payload)
+    for name, payload in compiler_artifacts.items():
+        gateway.write_json(base / "intent" / name, payload)
+
+    gateway.bind_intent_artifacts(intent_id, sprint_id)
+
+    for name in compiler_artifacts:
+        assert (base / "intent" / name).read_bytes() == (
+            gateway.SPRINTS_DIR / f"{sprint_id}.{name}"
+        ).read_bytes()
+    bound_requirement = json.loads(
+        (gateway.SPRINTS_DIR / f"{sprint_id}.requirement_ir.json").read_text()
+    )
+    assert bound_requirement["sprint_id"] == sprint_id
+
+
 def test_browser_agent_operator_intent_mode_prefers_strategy_over_research(tmp_path):
     env = dict(os.environ)
     env["SOLAR_INTENT_GATEWAY_DIR"] = str(tmp_path / "intents")

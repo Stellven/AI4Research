@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/intent-fidelity.review.v1.schema.json",
+  "title": "Independent IntentIR semantic review body",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["checks", "decisions", "errors", "warnings"],
+  "properties": {
+    "checks": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "status"],
+        "properties": {
+          "kind": {
+            "enum": [
+              "goals_supported_by_source",
+              "outcomes_supported_by_source",
+              "constraints_supported_by_source",
+              "no_material_omissions",
+              "no_unrequested_execution",
+              "ambiguity_unknown_classification"
+            ]
+          },
+          "status": {"enum": ["pass", "warning", "fail"]}
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "answer", "basis"],
+        "properties": {
+          "question": {"type": "string", "minLength": 1},
+          "answer": {"type": "string", "minLength": 1},
+          "basis": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/error"}
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/warning"}
+    }
+  },
+  "$defs": {
+    "source_spans": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          {"type": "integer", "minimum": 0},
+          {"type": "integer", "minimum": 1}
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "path", "message", "source_spans", "repairable", "required_change"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1},
+        "source_spans": {"$ref": "#/$defs/source_spans"},
+        "repairable": {"type": "boolean"},
+        "required_change": {"type": "string", "minLength": 1}
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "path", "message", "source_spans"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1},
+        "source_spans": {"$ref": "#/$defs/source_spans"}
+      }
+    }
+  }
+}

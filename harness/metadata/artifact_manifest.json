@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.execution_artifact_manifest.v1",
   "manifest_id": "execution-manifest-20260825-091412-a3f8",
-  "run_contract_ref": {"run_contract_id": "run-contract-20260825-091412-a3f8", "sha256": "46c414e9047f7e11b6c6d460ae6eb7c263a87c3cde28bae186a2f3cff6e3bed2"},
+  "run_contract_ref": {"run_contract_id": "run-contract-20260825-091412-a3f8", "sha256": "7e9c4fb27bc280e45cb6066f8216e09d4a2c2595d52f95bdfff7b6e61e437c12"},
   "domain_evidence_ref": {"sha256": "ce86d3b77638618cf759123f4db846698dba25f36c3625e9d8b14872366f969b"},
   "artifacts": [],
   "missing_declared_outputs": [

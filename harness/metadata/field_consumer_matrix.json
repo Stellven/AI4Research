@@ -9,9 +9,24 @@
       "decision": "Select the compatible parser and validation contract or reject the artifact."
     },
     {
+      "path": "artifact_role",
+      "consumers": ["artifact_loader", "audit"],
+      "decision": "Prevent contract examples from being accepted as live runtime evidence."
+    },
+    {
       "path": "intent_ir_id",
       "consumers": ["artifact_ledger", "requirement_compiler", "compilation_trace"],
       "decision": "Correlate one interpretation with its validation, requirements, and trace."
+    },
+    {
+      "path": "generation",
+      "consumers": ["intent_validator", "repair_controller", "artifact_ledger"],
+      "decision": "Keep the original and single repaired IntentIR immutable and prevent stale checks from deciding a newer generation."
+    },
+    {
+      "path": "producer",
+      "consumers": ["audit", "compilation_trace"],
+      "decision": "Record which real model boundary authored the candidate without letting the model grant admission."
     },
     {
       "path": "raw_intent_ref",
@@ -39,14 +54,9 @@
       "decision": "Preserve explicit scope, content, limits, prohibitions, preferences, format, and temporal boundaries."
     },
     {
-      "path": "constraints[].operator",
-      "consumers": ["requirement_compiler", "plan_validator"],
-      "decision": "Distinguish required, prohibited, limited, and preferred behavior."
-    },
-    {
-      "path": "constraints[].values",
-      "consumers": ["requirement_compiler", "requirement_coverage_verifier"],
-      "decision": "Generate deterministic coverage checks for structured values instead of reparsing prose."
+      "path": "constraints[].expression",
+      "consumers": ["requirement_compiler", "plan_validator", "requirement_coverage_verifier"],
+      "decision": "Compile and verify Boolean, set, threshold, selection, and resource-bound rules without reparsing prose."
     },
     {
       "path": "*.source_spans",
@@ -74,12 +84,23 @@
       "decision": "Create discovery requirements rather than invent unavailable facts."
     },
     {
+      "path": "unknowns[].kind",
+      "consumers": ["requirement_compiler", "elastic_planner"],
+      "decision": "Distinguish discoverable facts, selection decisions, and design parameters without misclassifying them as user ambiguities."
+    },
+    {
+      "path": "unknowns[].resolution",
+      "consumers": ["elastic_planner", "requirement_coverage_verifier"],
+      "decision": "Assign the stage that must resolve an unknown and reject a plan that consumes it before that boundary."
+    },
+    {
       "path": "*.derived_from",
       "consumers": ["intent_validator", "requirement_coverage_verifier"],
       "decision": "Verify inferred items are traceable to grounded IntentIR items."
     }
   ],
   "lifecycle_fields": [
+    {"artifact": "intent_acceptance.json", "path": "decision|final_generation|requirement_compiler_handoff_allowed", "consumers": ["requirement_compiler", "audit"], "decision": "Allow only the accepted, hash-bound generation to cross into requirement compilation."},
     {"artifact": "requirement_ir.json", "path": "requirements[].check", "consumers": ["requirement_validator", "binding_gate", "final_verifier"], "decision": "Reject unregistered checks and select the artifact-specific verifier."},
     {"artifact": "requirement_ir.json", "path": "requirements[].checkable", "consumers": ["requirement_validator", "delivery_assembler"], "decision": "Require a registered check or an explicit evaluator-judged scope disposition."},
     {"artifact": "requirement_ir.json", "path": "scope", "consumers": ["plan_validator", "runtime_scope_gate"], "decision": "Admit or reject planned and dispatched effects."},
@@ -102,7 +123,7 @@
     {"artifact": "gate_ledger.json", "path": "gate_result|evaluator_result|repair_generation", "consumers": ["scheduler", "final_verifier"], "decision": "Pass only when both independent decisions accept the same generation."},
     {"artifact": "operator_state_log.json", "path": "events[].to|cause", "consumers": ["scheduler", "recovery_controller"], "decision": "Exclude blocked operators and select the next viable alternative."},
     {"artifact": "evidence_ir.json", "path": "obligations|verdict|exit_code", "consumers": ["delivery_assembler", "promotion_controller", "user_status"], "decision": "Determine the final run truth and mechanically block false green."},
-    {"artifact": "delivery_scope.json", "path": "assumptions|not_machine_checkable|tested|not_tested", "consumers": ["final_delivery", "user"], "decision": "Publish the execution and verification boundary without hiding uncertainty."},
+    {"artifact": "delivery_scope.json", "path": "assumptions|unresolved_parameters|not_machine_checkable|tested|not_tested", "consumers": ["final_delivery", "user"], "decision": "Publish the execution and verification boundary without hiding assumptions, unresolved parameters, or unverifiable work."},
     {"artifact": "promotion_record.json", "path": "decision|registry_changed", "consumers": ["approved_workflow_registry", "audit"], "decision": "Prevent memory or failed runs from silently becoming approved workflows."}
   ],
   "rejection_rule": "Reject any proposed semantic field that drives no consumer decision or integrity check."

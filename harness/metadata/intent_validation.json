@@ -1,9 +1,11 @@
 {
   "schema_version": "solar.intent_validation.v1",
+  "artifact_role": "metadata_contract_example_not_live_execution",
   "validation_id": "intent-validation-20260825-091412-a3f8",
   "intent_ir_ref": {
     "intent_ir_id": "intent-ir-20260825-091412-a3f8",
-    "sha256": "a9d4a3b707cc63cc6202cab28732bc98ee21ff2a94ab43e82bdcdcb22a8e9f1a"
+    "generation": 0,
+    "sha256": "f61ae0efe3f91a70bfbaff9e2e0d5cad647533e46b1a874475d998044748bb5a"
   },
   "attempt": 1,
   "repair_count": 0,
@@ -13,9 +15,12 @@
     {"check_id": "IV2", "kind": "identifier_uniqueness", "status": "pass"},
     {"check_id": "IV3", "kind": "source_span_integrity", "status": "pass"},
     {"check_id": "IV4", "kind": "controlled_value_integrity", "status": "pass"},
-    {"check_id": "IV5", "kind": "derived_reference_integrity", "status": "pass"}
+    {"check_id": "IV5", "kind": "derived_reference_integrity", "status": "pass"},
+    {"check_id": "IV6", "kind": "constraint_expression_integrity", "status": "pass"},
+    {"check_id": "IV7", "kind": "unknown_resolution_integrity", "status": "pass"}
   ],
   "errors": [],
+  "warnings": [],
   "limitations": [
     "Structural validation does not prove that normalized statements preserve the user's meaning."
   ],

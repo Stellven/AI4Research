@@ -1878,11 +1878,12 @@ intake_request() {
     printf '%s\n' "$wf_out"
     return 0
   fi
-  local out rc raw_file autopilot_out autopilot_rc intent_out intent_rc intent_id intent_lane sid_from_out consumer_out consumer_rc consumer_status planner_handoff_status fixed_route planner_selected_workflow
+  local out rc raw_file autopilot_out autopilot_rc intent_out intent_rc intent_id intent_lane intent_readiness_status sid_from_out consumer_out consumer_rc consumer_status planner_handoff_status fixed_route planner_selected_workflow
   intent_out=""
   intent_rc=0
   intent_id=""
   intent_lane=""
+  intent_readiness_status=""
   fixed_route=0
   planner_selected_workflow="${SOLAR_PLANNER_SELECTED_WORKFLOW_ID:-}"
   consumer_out=""
@@ -1903,7 +1904,12 @@ intake_request() {
     if [[ "$intent_rc" == "0" ]]; then
       intent_id=$(python3 -c 'import json,sys; print((json.loads(sys.stdin.read()).get("intent_id") or ""))' <<<"$intent_out" 2>/dev/null || true)
       intent_lane=$(python3 -c 'import json,sys; print((json.loads(sys.stdin.read()).get("lane") or ""))' <<<"$intent_out" 2>/dev/null || true)
+      intent_readiness_status=$(python3 -c 'import json,sys; print((json.loads(sys.stdin.read()).get("readiness_status") or ""))' <<<"$intent_out" 2>/dev/null || true)
     fi
+  fi
+  if [[ "$intent_rc" == "0" && -n "$intent_id" && "$intent_readiness_status" =~ ^(needs_clarification|failed)$ ]]; then
+    printf '%s\n' "$intent_out"
+    return 3
   fi
   if [[ -n "$planner_selected_workflow" && "$planner_selected_workflow" != "research.evidence_to_poc.v1" ]]; then
     err "unsupported planner-selected workflow: $planner_selected_workflow"

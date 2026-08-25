@@ -3,7 +3,11 @@
   "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
   "intent_ir_ref": {
     "intent_ir_id": "intent-ir-20260825-091412-a3f8",
-    "sha256": "a9d4a3b707cc63cc6202cab28732bc98ee21ff2a94ab43e82bdcdcb22a8e9f1a"
+    "sha256": "f61ae0efe3f91a70bfbaff9e2e0d5cad647533e46b1a874475d998044748bb5a"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-raw-intent-20260825-091412-a3f8",
+    "required_decision": "accepted"
   },
   "requirements": [
     {
@@ -73,7 +77,7 @@
       "origin": "user:D2",
       "statement": "Produce a bounded reproducibility-check design for the selected claims without claiming that the experiment was executed.",
       "priority": "must",
-      "source_refs": ["G2", "D2", "C3", "A1"],
+      "source_refs": ["G2", "D2", "C3", "U3"],
       "acceptance": {
         "kind": "artifact_fields",
         "required_values": [
@@ -97,9 +101,7 @@
       "network": "allowed_for_public_research"
     }
   },
-  "assumptions": [
-    {"source_ref": "A1", "statement": "A later resource profile must define and disclose the concrete bounded resource envelope."}
-  ],
+  "assumptions": [],
   "conflict_scan": {"result": "clean", "detail": null},
   "approvals": [],
   "rollback": null
