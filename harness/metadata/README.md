@@ -12,6 +12,30 @@ The governing model is:
 > reference, freeze, schedule, and account for artifacts. No model output
 > directly changes runtime state.
 
+## Directory layout
+
+The examples follow the numbered pipeline-stage structure used by the
+AI4Research schema reference. Each artifact is stored at
+`<stage>/<artifact>/<artifact>.json`.
+
+| Stage directory | Contents |
+| --- | --- |
+| `0-design support metadata/` | Cross-stage architecture, registry, field-consumer, and generalization metadata. |
+| `1-input normalizer output/` | Immutable normalized request capture. |
+| `2-intent compiler output/` | Intent interpretation, validation, fidelity, acceptance, and clarification artifacts. |
+| `3-requirements compiler output/` | Requirement IR, validation, and coverage artifacts. |
+| `4-elastic planner output/` | Strategy and immutable planning/check catalog snapshots. |
+| `5-taskgraph compiler and validator output/` | Plan IR, plan admission, binding, and frozen run authority. |
+| `6-scheduler output/` | Task-graph state, dispatch choice, and lease records. |
+| `7-dispatcher output/` | Exact effect-approval records used during dispatch. |
+| `8-physical operator output/` | Typed worker results, repair records, domain evidence, and artifact inventory. |
+| `9-evaluator and gates output/` | Gate, operator-state, and final evidence verdicts. |
+| `10-final delivery output/` | Delivery scope/manifests, learning records, promotion, and full-chain audit. |
+
+Stage `0` is an explicit extension for the design-support files that apply to
+multiple pipeline stages and therefore do not belong to one producer-output
+stage in the reference structure.
+
 ## Current integration boundary
 
 The current `intent_gateway.py` activates this compiler when
