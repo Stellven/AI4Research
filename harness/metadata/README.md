@@ -116,6 +116,9 @@ but a naturally triggered live model repair has not yet been observed.
 - `generalization_cases.json` challenges the front-end contracts with twelve
   materially different prompts.
 - `architecture_invariants.json` records the non-negotiable cross-stage laws.
+- [`artifact_producer_classification.md`](<0-design support metadata/artifact_producer_classification/artifact_producer_classification.md>)
+  labels every JSON example as step output, evaluator output, or
+  control/support, and names its actual producer.
 
 The methane example is intentionally **not executed**. Runtime-shaped examples
 are labeled as contract examples, graph admission is blocked, EvidenceIR exits
