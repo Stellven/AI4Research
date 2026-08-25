@@ -5,6 +5,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+METADATA_ROOT = ROOT / "harness" / "metadata"
+RAW_INTENT_EXAMPLE = (
+    METADATA_ROOT / "1-input normalizer output" / "raw_intent" / "raw_intent.json"
+)
+INTENT_IR_EXAMPLE = (
+    METADATA_ROOT / "2-intent compiler output" / "intent_ir" / "intent_ir.json"
+)
 LIB = ROOT / "harness" / "lib"
 if str(LIB) not in sys.path:
     sys.path.insert(0, str(LIB))
@@ -13,11 +20,11 @@ import intent_compiler as compiler
 
 
 def _raw() -> dict:
-    return json.loads((ROOT / "harness" / "metadata" / "raw_intent.json").read_text())
+    return json.loads(RAW_INTENT_EXAMPLE.read_text())
 
 
 def _intent() -> dict:
-    payload = json.loads((ROOT / "harness" / "metadata" / "intent_ir.json").read_text())
+    payload = json.loads(INTENT_IR_EXAMPLE.read_text())
     payload["generation"] = 0
     payload["producer"] = {"method": "model", "provider": "codex", "model": "test-model"}
     return payload
