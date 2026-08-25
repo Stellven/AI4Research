@@ -3,20 +3,24 @@
   "validation_id": "requirement-validation-20260825-091412-a3f8",
   "requirement_ir_ref": {
     "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
-    "sha256": "503696165a808014616ca2b79b0f89697456354cd287a822f44ee11113eed542"
+    "sha256": "812618f109a4934989e1f96aa909139f65f49f2952d4c45ad82adbd4db7d837f"
   },
   "dependencies": [
     {"artifact": "intent_validation.json", "required_status": "pass"},
     {"artifact": "intent_fidelity.json", "required_status": "pass"}
   ],
+  "attempt": 1,
+  "repair_count": 0,
   "status": "pass",
   "checks": [
     {"check_id": "RV1", "kind": "requirement_identifier_uniqueness", "status": "pass"},
     {"check_id": "RV2", "kind": "intent_reference_integrity", "status": "pass"},
     {"check_id": "RV3", "kind": "acceptance_specification_presence", "status": "pass"},
-    {"check_id": "RV4", "kind": "required_evidence_presence", "status": "pass"},
-    {"check_id": "RV5", "kind": "verification_method_presence", "status": "pass"},
-    {"check_id": "RV6", "kind": "intent_gate_dependencies", "status": "pass"}
+    {"check_id": "RV4", "kind": "registered_check_reference", "status": "pass"},
+    {"check_id": "RV5", "kind": "checkability_disposition_integrity", "status": "pass"},
+    {"check_id": "RV6", "kind": "scope_and_conflict_integrity", "status": "pass"},
+    {"check_id": "RV7", "kind": "intent_gate_dependencies", "status": "pass"}
   ],
-  "errors": []
+  "errors": [],
+  "failure_policy": "Return defects for one bounded model repair; a second failure clarifies or rejects."
 }

@@ -1,0 +1,19 @@
+{
+  "schema_version": "solar.clarification.v1",
+  "artifact_role": "conditional_contract_example",
+  "emission_rule": "Emit only when an IntentIR ambiguity or conflict blocks compilation.",
+  "main_example": {
+    "emitted": false,
+    "reason": "The methane example contains one non-blocking ambiguity, so RequirementIR records the boundary instead."
+  },
+  "blocking_example": {
+    "clarification_id": "clarification-example-database-choice",
+    "intent_ir_id": "intent-ir-example-database-choice",
+    "item_id": "AMB1",
+    "question": "What workload and decision priorities should determine the best database?",
+    "answer": null,
+    "status": "awaiting_user",
+    "resolved_at": null
+  },
+  "pipeline_effect": "halt_before_requirement_compilation"
+}

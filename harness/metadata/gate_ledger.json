@@ -1,0 +1,13 @@
+{
+  "schema_version": "solar.gate_ledger.v1",
+  "artifact_role": "failure_shape_contract_example_not_a_runtime_verdict",
+  "node_envelope_ref": {"node": "method_comparison", "attempt": 1, "sha256": "4e7581e58a04bebdfadc34cc4655f08af32d9ca828a69e39f53e53c20c8b7109"},
+  "node": "method_comparison",
+  "attempt": 1,
+  "gate_result": "FAIL",
+  "evaluator_result": "refused",
+  "repair_generation": 0,
+  "disagreement": false,
+  "reason": "No execution artifact exists in the metadata-only example.",
+  "node_verdict": "blocked"
+}

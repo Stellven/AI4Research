@@ -1,0 +1,13 @@
+{
+  "schema_version": "solar.experience_record.v1",
+  "experience_record_id": "experience-20260825-091412-a3f8",
+  "intent_hash": "ab9db5b677295f015c2ab66a8714b0b19de524497c5ee4b09305d47f000483c7",
+  "strategy_ref": {"strategy_id": "strategy-20260825-091412-a3f8", "strategy": "compose", "sha256": "e028fb5893ed93149322bba378bfaf6b1abfec41409efe52512b1d8266930dd1"},
+  "evidence_ir_ref": {"evidence_ir_id": "evidence-ir-20260825-091412-a3f8", "sha256": "43d8255447fa529434bfc3b54bb0082f11c5e075222683dab0c0545fb7f6f014"},
+  "node_count": 3,
+  "outcome": "FAILED",
+  "cost": {},
+  "failures": ["NOT_EXECUTED_METADATA_EXAMPLE"],
+  "promotion_eligible": false,
+  "planner_use": "Example evidence only; never authority for routing or promotion."
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": "solar.repair_record.v1",
+  "artifact_role": "conditional_contract_example",
+  "emitted": false,
+  "emission_rule": "Emit when a validator, gate, or evaluator returns defects for the single permitted repair.",
+  "example_shape": {
+    "repair_id": "repair-id",
+    "target_artifact_id": "artifact-id",
+    "generation": 1,
+    "defects": ["machine-readable defect"],
+    "requested_from": "producer-id",
+    "result_artifact_id": null,
+    "status": "requested|completed|failed"
+  },
+  "budget": {"maximum_repairs_per_boundary": 1, "on_exhaustion": "clarify_or_reject"}
+}

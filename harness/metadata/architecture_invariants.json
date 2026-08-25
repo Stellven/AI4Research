@@ -1,0 +1,14 @@
+{
+  "schema_version": "solar.artifact_architecture_invariants.v1",
+  "invariants": [
+    {"id": "INV1", "rule": "Stages exchange content-addressed artifacts; model text never directly mutates runtime state."},
+    {"id": "INV2", "rule": "Every model-authored artifact receives deterministic structural and reference validation."},
+    {"id": "INV3", "rule": "A failed model boundary receives at most one repair before clarification or rejection."},
+    {"id": "INV4", "rule": "No producer is the final verifier of its own output."},
+    {"id": "INV5", "rule": "A node passes only when its deterministic gate and independent evaluator both accept the same artifact generation."},
+    {"id": "INV6", "rule": "Runtime commands read the frozen run contract, never mutable repository contract files."},
+    {"id": "INV7", "rule": "Only typed envelopes can drive failure classification and operator state changes."},
+    {"id": "INV8", "rule": "Independent EvidenceIR is the only path to a green run or workflow promotion."},
+    {"id": "INV9", "rule": "A field exists only when a named consumer makes a decision that can change from its value."}
+  ]
+}

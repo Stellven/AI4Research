@@ -1,5 +1,5 @@
 {
-  "schema_version": "solar.intent_field_consumer_matrix.v1",
+  "schema_version": "solar.artifact_field_consumer_matrix.v2",
   "status": "proposed",
   "integration_status": "target_contract_not_yet_wired",
   "fields": [
@@ -78,6 +78,32 @@
       "consumers": ["intent_validator", "requirement_coverage_verifier"],
       "decision": "Verify inferred items are traceable to grounded IntentIR items."
     }
+  ],
+  "lifecycle_fields": [
+    {"artifact": "requirement_ir.json", "path": "requirements[].check", "consumers": ["requirement_validator", "binding_gate", "final_verifier"], "decision": "Reject unregistered checks and select the artifact-specific verifier."},
+    {"artifact": "requirement_ir.json", "path": "requirements[].checkable", "consumers": ["requirement_validator", "delivery_assembler"], "decision": "Require a registered check or an explicit evaluator-judged scope disposition."},
+    {"artifact": "requirement_ir.json", "path": "scope", "consumers": ["plan_validator", "runtime_scope_gate"], "decision": "Admit or reject planned and dispatched effects."},
+    {"artifact": "strategy.json", "path": "strategy", "consumers": ["plan_validator", "contract_freezer", "experience_compressor"], "decision": "Determine whether work answers directly, reuses, changes, composes, generates, clarifies, or rejects."},
+    {"artifact": "strategy.json", "path": "topology_changes[].required_by", "consumers": ["plan_validator"], "decision": "Reject graph growth not justified by a real obligation."},
+    {"artifact": "plan_ir.json", "path": "nodes[].capsule", "consumers": ["plan_validator", "scheduler"], "decision": "Resolve the typed implementation contract for each logical node."},
+    {"artifact": "plan_ir.json", "path": "nodes[].alternatives", "consumers": ["plan_validator", "scheduler"], "decision": "Validate compatible operators and rank dispatch-time fallbacks."},
+    {"artifact": "plan_ir.json", "path": "nodes[].depends_on", "consumers": ["plan_validator", "scheduler"], "decision": "Prove acyclicity and calculate readiness."},
+    {"artifact": "plan_ir.json", "path": "nodes[].consumes|produces", "consumers": ["plan_validator", "scheduler", "artifact_ledger"], "decision": "Validate every edge and hand downstream nodes content-addressed inputs."},
+    {"artifact": "plan_ir.json", "path": "nodes[].obligation_ids", "consumers": ["binding_gate", "final_verifier"], "decision": "Assign requirement ownership without weakening requirements."},
+    {"artifact": "plan_ir.json", "path": "nodes[].gate", "consumers": ["plan_validator", "gate_executor"], "decision": "Forbid ungated nodes and select the registered gate."},
+    {"artifact": "plan_validation.json", "path": "verdict|defects", "consumers": ["repair_controller", "contract_freezer"], "decision": "Freeze only accepted plans; otherwise authorize one bounded repair."},
+    {"artifact": "binding_trace.json", "path": "bindings", "consumers": ["coverage_gate", "final_verifier", "delivery_assembler"], "decision": "Locate owners, artifacts, and verifiers for every obligation."},
+    {"artifact": "run_contract.frozen.json", "path": "frozen_artifacts[].sha256", "consumers": ["scheduler", "dispatcher", "gate_executor", "final_verifier"], "decision": "Reject runtime reads whose content no longer matches the frozen contract."},
+    {"artifact": "task_graph_state.json", "path": "nodes[].status|blocked_by", "consumers": ["scheduler", "dashboard", "recovery_controller"], "decision": "Select ready work and recover without changing PlanIR."},
+    {"artifact": "dispatch_record.json", "path": "selected_operator|excluded", "consumers": ["dispatcher", "audit"], "decision": "Launch the selected operator and explain every skipped alternative."},
+    {"artifact": "lease_record.json", "path": "lease_id|fencing_token|expires_at", "consumers": ["worker_harness", "recovery_controller"], "decision": "Accept only the current owner and safely requeue expired attempts."},
+    {"artifact": "node_envelope.json", "path": "status|error", "consumers": ["failure_classifier", "scheduler"], "decision": "Classify a typed result without reading stdout or log text."},
+    {"artifact": "node_envelope.json", "path": "artifacts[].sha256", "consumers": ["gate_executor", "artifact_ledger"], "decision": "Verify the exact outputs before gating or downstream use."},
+    {"artifact": "gate_ledger.json", "path": "gate_result|evaluator_result|repair_generation", "consumers": ["scheduler", "final_verifier"], "decision": "Pass only when both independent decisions accept the same generation."},
+    {"artifact": "operator_state_log.json", "path": "events[].to|cause", "consumers": ["scheduler", "recovery_controller"], "decision": "Exclude blocked operators and select the next viable alternative."},
+    {"artifact": "evidence_ir.json", "path": "obligations|verdict|exit_code", "consumers": ["delivery_assembler", "promotion_controller", "user_status"], "decision": "Determine the final run truth and mechanically block false green."},
+    {"artifact": "delivery_scope.json", "path": "assumptions|not_machine_checkable|tested|not_tested", "consumers": ["final_delivery", "user"], "decision": "Publish the execution and verification boundary without hiding uncertainty."},
+    {"artifact": "promotion_record.json", "path": "decision|registry_changed", "consumers": ["approved_workflow_registry", "audit"], "decision": "Prevent memory or failed runs from silently becoming approved workflows."}
   ],
   "rejection_rule": "Reject any proposed semantic field that drives no consumer decision or integrity check."
 }

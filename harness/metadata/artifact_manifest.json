@@ -1,0 +1,15 @@
+{
+  "schema_version": "solar.execution_artifact_manifest.v1",
+  "manifest_id": "execution-manifest-20260825-091412-a3f8",
+  "run_contract_ref": {"run_contract_id": "run-contract-20260825-091412-a3f8", "sha256": "46c414e9047f7e11b6c6d460ae6eb7c263a87c3cde28bae186a2f3cff6e3bed2"},
+  "domain_evidence_ref": {"sha256": "ce86d3b77638618cf759123f4db846698dba25f36c3625e9d8b14872366f969b"},
+  "artifacts": [],
+  "missing_declared_outputs": [
+    "research.comparison.v1",
+    "research.contradiction_matrix.v1",
+    "research.testability_selection.v1",
+    "research.reproducibility_design.v1"
+  ],
+  "integrity_status": "not_evaluable",
+  "reason": "No runtime nodes executed in this metadata-only example."
+}

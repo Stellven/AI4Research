@@ -1,0 +1,27 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-20260825-091412-a3f8",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
+    "sha256": "812618f109a4934989e1f96aa909139f65f49f2952d4c45ad82adbd4db7d837f"
+  },
+  "strategy": "compose",
+  "base_workflow": null,
+  "base_version": null,
+  "parameters": {
+    "execution_mode": "design_only",
+    "required_method_classes": ["satellite", "airborne", "ground_based"]
+  },
+  "topology_changes": [
+    {
+      "change": "Add source-linked method comparison and contradiction analysis.",
+      "required_by": ["R1", "R2", "R3"]
+    },
+    {
+      "change": "Add claim-testability selection before reproducibility design.",
+      "required_by": ["R4", "R5"]
+    }
+  ],
+  "smallest_sufficient_reason": "No approved Workflow Capsule in this metadata example covers both comparison research and bounded design without execution.",
+  "artifact_role": "planner_decision_example_not_executed"
+}

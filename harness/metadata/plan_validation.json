@@ -1,0 +1,33 @@
+{
+  "schema_version": "solar.plan_validation.v1",
+  "validation_id": "plan-validation-20260825-091412-a3f8",
+  "plan_ir_ref": {
+    "plan_ir_id": "plan-ir-20260825-091412-a3f8",
+    "sha256": "085c5f55df241fe2adfb065949d673b679d90b8194a15f4e58287f5ee2c2d52f"
+  },
+  "planning_catalog_ref": {
+    "snapshot_id": "planning-catalog-20260825-example-v1",
+    "sha256": "6a52ec8ade34e3a21305f52fcc5b612d30ad2f0b7fc9ba9709c4baa29754e350"
+  },
+  "check_registry_ref": {
+    "registry_id": "check-registry-metadata-example-v1",
+    "sha256": "be5ad50cadb8e239bf0091d4edf3261ae124c505316515850172caa56a708bfd"
+  },
+  "attempt": 1,
+  "repair_count": 0,
+  "verdict": "accepted",
+  "defects": [],
+  "checks_run": [
+    "registered_capsules",
+    "registered_operator_alternatives",
+    "gate_present_for_every_node",
+    "artifact_edges_resolve",
+    "graph_is_acyclic",
+    "complexity_budget",
+    "obligation_justification",
+    "effect_admissibility"
+  ],
+  "scope": "metadata_contract_example_only",
+  "runtime_admission": "not_admitted",
+  "failure_policy": "Return defects for one bounded planner repair; a second failure clarifies or rejects."
+}

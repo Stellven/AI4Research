@@ -1,0 +1,11 @@
+{
+  "schema_version": "solar.promotion_record.v1",
+  "promotion_record_id": "promotion-20260825-091412-a3f8",
+  "experience_record_ref": {"experience_record_id": "experience-20260825-091412-a3f8", "sha256": "c452eaeff090c3f2953e073a8363c75d4f4fb2885156f0982e64620f2d6c55c9"},
+  "evidence_ir_ref": {"evidence_ir_id": "evidence-ir-20260825-091412-a3f8", "sha256": "43d8255447fa529434bfc3b54bb0082f11c5e075222683dab0c0545fb7f6f014"},
+  "candidate": {"kind": "workflow", "strategy_id": "strategy-20260825-091412-a3f8"},
+  "decision": "not_eligible",
+  "reason": "Independent EvidenceIR is not GREEN.",
+  "registry_changed": false,
+  "promotion_rule": "Experience memory may propose candidates, but only an independently green run can enter the approved registry."
+}

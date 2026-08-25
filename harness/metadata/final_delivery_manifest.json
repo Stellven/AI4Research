@@ -1,0 +1,10 @@
+{
+  "schema_version": "solar.final_delivery_manifest.v1",
+  "delivery_id": "delivery-20260825-091412-a3f8",
+  "evidence_ir_ref": {"evidence_ir_id": "evidence-ir-20260825-091412-a3f8", "sha256": "43d8255447fa529434bfc3b54bb0082f11c5e075222683dab0c0545fb7f6f014"},
+  "delivery_scope_ref": {"delivery_scope_id": "delivery-scope-20260825-091412-a3f8", "sha256": "eed383e80f59c805b39a0234836e00ce35605c172e0440931bc59573af8177fb"},
+  "published": false,
+  "deliverables": [],
+  "reason": "EvidenceIR failed closed because the metadata contract example was not executed.",
+  "publication_rule": "Publish only when independent EvidenceIR is GREEN and every delivered file is content-hashed."
+}

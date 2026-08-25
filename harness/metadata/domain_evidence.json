@@ -1,0 +1,14 @@
+{
+  "schema_version": "solar.domain_evidence_manifest.v1",
+  "artifact_role": "empty_manifest_for_metadata_only_example",
+  "run_contract_ref": {"run_contract_id": "run-contract-20260825-091412-a3f8", "sha256": "46c414e9047f7e11b6c6d460ae6eb7c263a87c3cde28bae186a2f3cff6e3bed2"},
+  "artifacts": [],
+  "execution_status": "not_executed",
+  "registry_rule": "Domain artifact shapes are owned by the checks that read them, not by the control plane.",
+  "missing_expected_artifacts": [
+    "research.comparison.v1",
+    "research.contradiction_matrix.v1",
+    "research.testability_selection.v1",
+    "research.reproducibility_design.v1"
+  ]
+}

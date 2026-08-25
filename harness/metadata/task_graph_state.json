@@ -1,0 +1,14 @@
+{
+  "schema_version": "solar.task_graph_state.v1",
+  "run_contract_ref": {"run_contract_id": "run-contract-20260825-091412-a3f8", "sha256": "46c414e9047f7e11b6c6d460ae6eb7c263a87c3cde28bae186a2f3cff6e3bed2"},
+  "revision": 0,
+  "run_status": "not_admitted",
+  "nodes": {
+    "method_comparison": {"status": "pending", "attempt": 0, "blocked_by": ["runtime_admission"]},
+    "claim_selection": {"status": "pending", "attempt": 0, "blocked_by": ["method_comparison"]},
+    "reproducibility_design": {"status": "pending", "attempt": 0, "blocked_by": ["claim_selection"]}
+  },
+  "ready_nodes": [],
+  "last_event_id": null,
+  "artifact_role": "mutable_execution_ledger_example_not_a_runtime_state"
+}

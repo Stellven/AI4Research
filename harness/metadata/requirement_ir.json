@@ -8,6 +8,7 @@
   "requirements": [
     {
       "requirement_id": "R1",
+      "origin": "user:D1",
       "statement": "Produce a comparison covering satellite, airborne, and ground-based methane-leak measurement methods for oil and gas infrastructure.",
       "priority": "must",
       "source_refs": ["G1", "D1", "C1"],
@@ -15,11 +16,13 @@
         "kind": "coverage",
         "required_values": ["satellite", "airborne", "ground_based"]
       },
-      "required_evidence": ["method_inventory", "source_linked_comparison"],
-      "verification": {"method": "semantic_evidence_review"}
+      "check": "check.method_comparison_coverage.v1",
+      "checkable": true,
+      "disposition": null
     },
     {
       "requirement_id": "R2",
+      "origin": "user:D1",
       "statement": "Assess sensitivity, false positives, weather limitations, coverage limitations, and validation conflicts for the compared methods.",
       "priority": "must",
       "source_refs": ["G1", "D1", "C2"],
@@ -33,11 +36,13 @@
           "validation_conflicts"
         ]
       },
-      "required_evidence": ["dimension_definitions", "source_linked_findings"],
-      "verification": {"method": "semantic_evidence_review"}
+      "check": "check.evaluation_dimension_coverage.v1",
+      "checkable": true,
+      "disposition": null
     },
     {
       "requirement_id": "R3",
+      "origin": "user:derived",
       "statement": "Identify reported validation disagreements and preserve the evidence supporting each side.",
       "priority": "must",
       "source_refs": ["C2", "U1"],
@@ -45,11 +50,13 @@
         "kind": "artifact_fields",
         "required_values": ["claim", "supporting_evidence", "conflicting_evidence"]
       },
-      "required_evidence": ["contradiction_matrix", "source_quotations"],
-      "verification": {"method": "contradiction_coverage_review"}
+      "check": "check.contradiction_coverage.v1",
+      "checkable": true,
+      "disposition": null
     },
     {
       "requirement_id": "R4",
+      "origin": "user:derived",
       "statement": "Define and disclose the criteria used to select the most testable claims.",
       "priority": "must",
       "source_refs": ["G2", "C3", "U2"],
@@ -57,11 +64,13 @@
         "kind": "artifact_fields",
         "required_values": ["selection_criteria", "selected_claims", "excluded_claims"]
       },
-      "required_evidence": ["claim_testability_assessment", "selection_decision"],
-      "verification": {"method": "selection_trace_review"}
+      "check": "check.testability_selection_trace.v1",
+      "checkable": true,
+      "disposition": null
     },
     {
       "requirement_id": "R5",
+      "origin": "user:D2",
       "statement": "Produce a bounded reproducibility-check design for the selected claims without claiming that the experiment was executed.",
       "priority": "must",
       "source_refs": ["G2", "D2", "C3", "A1"],
@@ -76,8 +85,22 @@
           "tested_vs_not_tested"
         ]
       },
-      "required_evidence": ["reproducibility_check_design"],
-      "verification": {"method": "experiment_design_review"}
+      "check": "check.reproducibility_design_completeness.v1",
+      "checkable": true,
+      "disposition": null
     }
-  ]
+  ],
+  "scope": {
+    "research": {
+      "allowed": ["public_source_discovery", "source_linked_comparison", "design_document"],
+      "forbidden": ["domain_experiment_execution", "production_deployment"],
+      "network": "allowed_for_public_research"
+    }
+  },
+  "assumptions": [
+    {"source_ref": "A1", "statement": "A later resource profile must define and disclose the concrete bounded resource envelope."}
+  ],
+  "conflict_scan": {"result": "clean", "detail": null},
+  "approvals": [],
+  "rollback": null
 }

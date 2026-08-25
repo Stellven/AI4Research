@@ -1,0 +1,19 @@
+{
+  "schema_version": "solar.lease_record.v1",
+  "artifact_role": "conditional_contract_example",
+  "emitted": false,
+  "emission_rule": "Emit atomically when the scheduler successfully claims a node attempt for one operator.",
+  "example_shape": {
+    "lease_id": "lease-id",
+    "run_contract_id": "run-contract-id",
+    "node": "node-id",
+    "attempt": 1,
+    "operator_id": "operator-id",
+    "issued_at": "iso8601",
+    "expires_at": "iso8601",
+    "heartbeat_at": "iso8601",
+    "fencing_token": 1,
+    "status": "active"
+  },
+  "consumer_decision": "Accept a result only from the current unexpired lease and fencing token."
+}

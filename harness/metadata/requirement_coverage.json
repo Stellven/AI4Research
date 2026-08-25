@@ -3,7 +3,7 @@
   "coverage_id": "requirement-coverage-20260825-091412-a3f8",
   "requirement_ir_ref": {
     "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
-    "sha256": "503696165a808014616ca2b79b0f89697456354cd287a822f44ee11113eed542"
+    "sha256": "812618f109a4934989e1f96aa909139f65f49f2952d4c45ad82adbd4db7d837f"
   },
   "coverage": [
     {"intent_ref": "G1", "requirement_refs": ["R1", "R2"]},

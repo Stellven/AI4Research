@@ -1,0 +1,16 @@
+{
+  "schema_version": "solar.node_envelope.v1",
+  "artifact_role": "failure_shape_contract_example_not_a_runtime_receipt",
+  "run_contract_ref": {"run_contract_id": "run-contract-20260825-091412-a3f8", "sha256": "46c414e9047f7e11b6c6d460ae6eb7c263a87c3cde28bae186a2f3cff6e3bed2"},
+  "node": "method_comparison",
+  "attempt": 1,
+  "lease_id": "example-lease-not-issued",
+  "status": "failed",
+  "error": {
+    "type": "NOT_EXECUTED_METADATA_EXAMPLE",
+    "detail": "This document defines the envelope boundary; no worker was launched."
+  },
+  "artifacts": [],
+  "self_reported": {},
+  "duration_s": 0
+}

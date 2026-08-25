@@ -1,0 +1,26 @@
+{
+  "schema_version": "solar.binding_trace.v1",
+  "binding_trace_id": "binding-trace-20260825-091412-a3f8",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
+    "sha256": "812618f109a4934989e1f96aa909139f65f49f2952d4c45ad82adbd4db7d837f"
+  },
+  "plan_ir_ref": {
+    "plan_ir_id": "plan-ir-20260825-091412-a3f8",
+    "sha256": "085c5f55df241fe2adfb065949d673b679d90b8194a15f4e58287f5ee2c2d52f"
+  },
+  "check_registry_ref": {
+    "registry_id": "check-registry-metadata-example-v1",
+    "sha256": "be5ad50cadb8e239bf0091d4edf3261ae124c505316515850172caa56a708bfd"
+  },
+  "bindings": {
+    "R1": {"owners": ["method_comparison"], "artifacts": ["research.comparison.v1"], "verifier": "check.method_comparison_coverage.v1"},
+    "R2": {"owners": ["method_comparison"], "artifacts": ["research.comparison.v1"], "verifier": "check.evaluation_dimension_coverage.v1"},
+    "R3": {"owners": ["method_comparison"], "artifacts": ["research.contradiction_matrix.v1"], "verifier": "check.contradiction_coverage.v1"},
+    "R4": {"owners": ["claim_selection"], "artifacts": ["research.testability_selection.v1"], "verifier": "check.testability_selection_trace.v1"},
+    "R5": {"owners": ["reproducibility_design"], "artifacts": ["research.reproducibility_design.v1"], "verifier": "check.reproducibility_design_completeness.v1"}
+  },
+  "verdict": "pass",
+  "uncovered": [],
+  "artifact_role": "mechanical_coverage_example_not_runtime_binding"
+}

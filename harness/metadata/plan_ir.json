@@ -1,0 +1,48 @@
+{
+  "schema_version": "solar.plan_ir.v1",
+  "plan_ir_id": "plan-ir-20260825-091412-a3f8",
+  "strategy_ref": {
+    "strategy_id": "strategy-20260825-091412-a3f8",
+    "sha256": "e028fb5893ed93149322bba378bfaf6b1abfec41409efe52512b1d8266930dd1"
+  },
+  "planning_catalog_ref": {
+    "snapshot_id": "planning-catalog-20260825-example-v1",
+    "sha256": "6a52ec8ade34e3a21305f52fcc5b612d30ad2f0b7fc9ba9709c4baa29754e350"
+  },
+  "nodes": [
+    {
+      "id": "method_comparison",
+      "logical_operator": "source_linked_comparison",
+      "capsule": "cap.example.source_linked_comparison.v1",
+      "alternatives": ["operator.example.research.primary", "operator.example.research.fallback"],
+      "depends_on": [],
+      "consumes": ["solar.requirement_ir.v2"],
+      "produces": ["research.comparison.v1", "research.contradiction_matrix.v1"],
+      "obligation_ids": ["R1", "R2", "R3"],
+      "gate": "gate.example.source_grounding.v1"
+    },
+    {
+      "id": "claim_selection",
+      "logical_operator": "claim_testability_selection",
+      "capsule": "cap.example.claim_testability.v1",
+      "alternatives": ["operator.example.analysis.primary"],
+      "depends_on": ["method_comparison"],
+      "consumes": ["research.comparison.v1"],
+      "produces": ["research.testability_selection.v1"],
+      "obligation_ids": ["R4"],
+      "gate": "gate.example.selection_trace.v1"
+    },
+    {
+      "id": "reproducibility_design",
+      "logical_operator": "bounded_reproducibility_design",
+      "capsule": "cap.example.reproducibility_design.v1",
+      "alternatives": ["operator.example.design.primary"],
+      "depends_on": ["claim_selection"],
+      "consumes": ["research.testability_selection.v1"],
+      "produces": ["research.reproducibility_design.v1"],
+      "obligation_ids": ["R5"],
+      "gate": "gate.example.design_completeness.v1"
+    }
+  ],
+  "artifact_role": "planner_output_example_not_executed"
+}

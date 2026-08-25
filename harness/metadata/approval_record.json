@@ -1,0 +1,16 @@
+{
+  "schema_version": "solar.approval_record.v1",
+  "artifact_role": "conditional_contract_example",
+  "emitted": false,
+  "emission_rule": "Emit only when RequirementIR or PlanIR declares an approval-bound effect.",
+  "example_shape": {
+    "approval_id": "approval-id",
+    "requirement_ids": ["REQ-id"],
+    "effect": "irreversible-effect",
+    "scope_hash": "sha256",
+    "decision": "approved|rejected",
+    "actor": "actor-id",
+    "decided_at": "iso8601"
+  },
+  "current_reason": "The methane design-only example declares no approval-bound effects."
+}

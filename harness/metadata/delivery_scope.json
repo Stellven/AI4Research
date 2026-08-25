@@ -1,0 +1,19 @@
+{
+  "schema_version": "solar.delivery_scope.v1",
+  "delivery_scope_id": "delivery-scope-20260825-091412-a3f8",
+  "intent_ir_ref": {"intent_ir_id": "intent-ir-20260825-091412-a3f8", "sha256": "a9d4a3b707cc63cc6202cab28732bc98ee21ff2a94ab43e82bdcdcb22a8e9f1a"},
+  "evidence_ir_ref": {"evidence_ir_id": "evidence-ir-20260825-091412-a3f8", "sha256": "43d8255447fa529434bfc3b54bb0082f11c5e075222683dab0c0545fb7f6f014"},
+  "assumptions": [
+    "The concrete resource boundary for bounded remains unspecified and must be disclosed in any later design."
+  ],
+  "not_machine_checkable": [],
+  "tested": [],
+  "not_tested": [
+    "Method comparison",
+    "Validation-conflict analysis",
+    "Claim-testability selection",
+    "Reproducibility-check design"
+  ],
+  "publishable": false,
+  "reason": "The metadata contract example was not executed and final evidence failed closed."
+}

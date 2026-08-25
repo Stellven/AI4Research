@@ -1,0 +1,36 @@
+{
+  "schema_version": "solar.planning_catalog_snapshot.v1",
+  "snapshot_id": "planning-catalog-20260825-example-v1",
+  "artifact_role": "metadata_contract_example_not_runtime_registry",
+  "capability_capsules": [
+    {
+      "capsule_id": "cap.example.source_linked_comparison.v1",
+      "inputs": ["solar.requirement_ir.v2"],
+      "outputs": ["research.comparison.v1", "research.contradiction_matrix.v1"],
+      "gate_id": "gate.example.source_grounding.v1"
+    },
+    {
+      "capsule_id": "cap.example.claim_testability.v1",
+      "inputs": ["research.comparison.v1"],
+      "outputs": ["research.testability_selection.v1"],
+      "gate_id": "gate.example.selection_trace.v1"
+    },
+    {
+      "capsule_id": "cap.example.reproducibility_design.v1",
+      "inputs": ["research.testability_selection.v1"],
+      "outputs": ["research.reproducibility_design.v1"],
+      "gate_id": "gate.example.design_completeness.v1"
+    }
+  ],
+  "physical_operators": [
+    {"operator_id": "operator.example.research.primary", "capsule_ids": ["cap.example.source_linked_comparison.v1"], "state": "READY"},
+    {"operator_id": "operator.example.research.fallback", "capsule_ids": ["cap.example.source_linked_comparison.v1"], "state": "READY"},
+    {"operator_id": "operator.example.analysis.primary", "capsule_ids": ["cap.example.claim_testability.v1"], "state": "READY"},
+    {"operator_id": "operator.example.design.primary", "capsule_ids": ["cap.example.reproducibility_design.v1"], "state": "READY"}
+  ],
+  "gates": [
+    "gate.example.source_grounding.v1",
+    "gate.example.selection_trace.v1",
+    "gate.example.design_completeness.v1"
+  ]
+}

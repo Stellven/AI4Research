@@ -1,0 +1,38 @@
+{
+  "schema_version": "solar.check_registry.v1",
+  "registry_id": "check-registry-metadata-example-v1",
+  "artifact_role": "metadata_contract_example_not_runtime_registered",
+  "checks": [
+    {
+      "check_id": "check.method_comparison_coverage.v1",
+      "mode": "deterministic_plus_evaluator",
+      "reads": ["research.comparison.v1"],
+      "decision": "Verify that every required method class is compared with source-linked evidence."
+    },
+    {
+      "check_id": "check.evaluation_dimension_coverage.v1",
+      "mode": "deterministic_plus_evaluator",
+      "reads": ["research.comparison.v1"],
+      "decision": "Verify that every required comparison dimension is addressed."
+    },
+    {
+      "check_id": "check.contradiction_coverage.v1",
+      "mode": "deterministic_plus_evaluator",
+      "reads": ["research.contradiction_matrix.v1"],
+      "decision": "Verify that reported disagreements retain evidence for each represented side."
+    },
+    {
+      "check_id": "check.testability_selection_trace.v1",
+      "mode": "deterministic_plus_evaluator",
+      "reads": ["research.testability_selection.v1"],
+      "decision": "Verify that selected and excluded claims follow disclosed criteria."
+    },
+    {
+      "check_id": "check.reproducibility_design_completeness.v1",
+      "mode": "deterministic_plus_evaluator",
+      "reads": ["research.reproducibility_design.v1"],
+      "decision": "Verify datasets, metrics, baselines, resources, stopping conditions, and the execution boundary."
+    }
+  ],
+  "registration_rule": "A requirement may name only a check_id present in the frozen registry snapshot."
+}

@@ -1,84 +1,66 @@
 {
-  "schema_version": "solar.compilation_trace.v1",
-  "trace_id": "compile-trace-20260825-091412-a3f8",
-  "status": "metadata_contract_verified",
+  "schema_version": "solar.compilation_trace.v2",
+  "trace_id": "artifact-trace-20260825-091412-a3f8",
+  "status": "metadata_contract_assembled",
   "integration_status": "not_wired_to_runtime",
-  "raw_intent_id": "raw-intent-20260825-091412-a3f8",
-  "intent_ir_id": "intent-ir-20260825-091412-a3f8",
-  "requirement_ir_id": "requirement-ir-20260825-091412-a3f8",
   "stages": [
-    {"stage": "input_normalization", "status": "completed"},
-    {"stage": "intent_compilation", "status": "candidate_created"},
-    {"stage": "intent_structural_validation", "status": "pass"},
-    {"stage": "intent_fidelity_review", "status": "pass"},
-    {"stage": "requirement_compilation", "status": "candidate_created"},
-    {"stage": "requirement_validation", "status": "pass"},
-    {"stage": "requirement_coverage", "status": "pass"},
-    {"stage": "runtime_integration", "status": "not_run"}
+    {"stage": "input_normalization", "artifact": "raw_intent.json", "status": "example_present"},
+    {"stage": "intent_compilation", "artifact": "intent_ir.json", "status": "example_present"},
+    {"stage": "intent_validation", "artifacts": ["intent_validation.json", "intent_fidelity.json"], "status": "example_present"},
+    {"stage": "clarification", "artifact": "clarification.json", "status": "not_emitted_non_blocking"},
+    {"stage": "requirement_compilation", "artifacts": ["requirement_ir.json", "requirement_validation.json", "requirement_coverage.json"], "status": "example_present"},
+    {"stage": "elastic_planning", "artifacts": ["strategy.json", "planning_catalog_snapshot.json", "plan_ir.json", "plan_validation.json", "binding_trace.json"], "status": "contract_example_only"},
+    {"stage": "contract_freeze", "artifact": "run_contract.frozen.json", "status": "contract_example_only"},
+    {"stage": "runtime_admission", "status": "not_admitted"},
+    {"stage": "execution", "artifacts": ["task_graph_state.json", "dispatch_record.json", "lease_record.json", "approval_record.json", "node_envelope.json", "repair_record.json", "gate_ledger.json", "operator_state_log.json"], "status": "not_run"},
+    {"stage": "evidence_collection", "artifacts": ["domain_evidence.json", "artifact_manifest.json"], "status": "empty_not_executed"},
+    {"stage": "final_verification", "artifact": "evidence_ir.json", "status": "failed_closed_not_executed"},
+    {"stage": "delivery", "artifacts": ["delivery_scope.json", "final_delivery_manifest.json"], "status": "not_published"},
+    {"stage": "experience_and_promotion", "artifacts": ["experience_record.json", "promotion_record.json"], "status": "recorded_not_eligible"}
   ],
   "artifacts": [
-    {
-      "name": "raw_intent.json",
-      "sha256": "6fe68e156d842726374243d0bc5529e11b693d1a9c297b7601cfefff4ba5345e"
-    },
-    {
-      "name": "README.md",
-      "sha256": "ce8b4e59f56d1fc4d4b016c3b0129836f5b806b3c5b07871394e621562b34e01"
-    },
-    {
-      "name": "artifact_registry.json",
-      "sha256": "ebc371bc552d43a876742608bf22d05458806a0768121b689f0425cbdd55954a"
-    },
-    {
-      "name": "field_consumer_matrix.json",
-      "sha256": "b9b2a98902fc29e4bfb2fb82535aab285ee31c91f2e44e9657113311c4e3958d"
-    },
-    {
-      "name": "generalization_cases.json",
-      "sha256": "e843bf96a2ea918b223bc74ea84086f65a9c857de89379a91d826e993de8bd96"
-    },
-    {
-      "name": "intent_ir.json",
-      "sha256": "a9d4a3b707cc63cc6202cab28732bc98ee21ff2a94ab43e82bdcdcb22a8e9f1a"
-    },
-    {
-      "name": "intent_validation.json",
-      "sha256": "31356c7d83328eef062c8df0e4d4c8de0b4c73efa8dc54981c2462e170e12cd7"
-    },
-    {
-      "name": "intent_fidelity.json",
-      "sha256": "3b0db1916379793ce19a431e5c39665a9ca190140d22ced8be0c9b18f393bf89"
-    },
-    {
-      "name": "requirement_ir.json",
-      "sha256": "503696165a808014616ca2b79b0f89697456354cd287a822f44ee11113eed542"
-    },
-    {
-      "name": "requirement_validation.json",
-      "sha256": "8907bfb26a5d6da109e84b981f73d13da4b757daf9ddef42fe9bfcd16e4d6fb6"
-    },
-    {
-      "name": "requirement_coverage.json",
-      "sha256": "36327578e0266a3dfc8e3b67916a63a6582f00a6fc3bcb315fb70aeb60568069"
-    },
-    {
-      "name": "validate_contract_examples.py",
-      "sha256": "8b13349aa0549db5b029374e1f86c9d09d62d4e3204604b7235fc1f1839a666f"
-    }
+    {"name": "README.md", "sha256": "68bbf0ba2373ec6552bfb1b1c9f200e832925cfb47dc82ca722e5189ceb6bc74"},
+    {"name": "approval_record.json", "sha256": "1d756a64a88f9be8bbe0838fbcc787ee80076f5fb4cfeb2eeb6ae2d750cc98d4"},
+    {"name": "architecture_invariants.json", "sha256": "366414e6c5a5f4d441c6d186bbf452e0052cc2575191ab59c97ae28b20e03eca"},
+    {"name": "artifact_manifest.json", "sha256": "30ff5bc0224239a8acce2e97e8b04a44fe122f2e255e3c4a722366b93f66f32a"},
+    {"name": "artifact_registry.json", "sha256": "4ccdab62e4698bb444228888f601169356fe3e14b4eb1b2634e4dbc69f3ed9e0"},
+    {"name": "binding_trace.json", "sha256": "5eedfebb5df9b60159801b1241c8b7d481168444e2103982d622853142d90ea5"},
+    {"name": "check_registry.json", "sha256": "be5ad50cadb8e239bf0091d4edf3261ae124c505316515850172caa56a708bfd"},
+    {"name": "clarification.json", "sha256": "a4cda0e61d19ad39bc774c50c426db80490d42342d896ae4482677325029bb8e"},
+    {"name": "delivery_scope.json", "sha256": "eed383e80f59c805b39a0234836e00ce35605c172e0440931bc59573af8177fb"},
+    {"name": "dispatch_record.json", "sha256": "cc021636bd58e5ba0f7f20d4154365fa94088378e86da9dd2ef4fd44c33678ce"},
+    {"name": "domain_evidence.json", "sha256": "ce86d3b77638618cf759123f4db846698dba25f36c3625e9d8b14872366f969b"},
+    {"name": "evidence_ir.json", "sha256": "43d8255447fa529434bfc3b54bb0082f11c5e075222683dab0c0545fb7f6f014"},
+    {"name": "experience_record.json", "sha256": "c452eaeff090c3f2953e073a8363c75d4f4fb2885156f0982e64620f2d6c55c9"},
+    {"name": "field_consumer_matrix.json", "sha256": "c15ad75a8897d1e63c90a6ef4fa9133330c74c730d41db25d7f04c4fd84c98d1"},
+    {"name": "final_delivery_manifest.json", "sha256": "4c5d6e9c408461227ae21d7304f49fecb5153e1fe45cd914a176f760597b3d71"},
+    {"name": "gate_ledger.json", "sha256": "0e3c398ca01182438ec436453f6dc27882b54bc2b1daafb35347480ac5e0b099"},
+    {"name": "generalization_cases.json", "sha256": "e843bf96a2ea918b223bc74ea84086f65a9c857de89379a91d826e993de8bd96"},
+    {"name": "intent_fidelity.json", "sha256": "3b0db1916379793ce19a431e5c39665a9ca190140d22ced8be0c9b18f393bf89"},
+    {"name": "intent_ir.json", "sha256": "a9d4a3b707cc63cc6202cab28732bc98ee21ff2a94ab43e82bdcdcb22a8e9f1a"},
+    {"name": "intent_validation.json", "sha256": "494da102b096db8ea9e61318d9146f840d0eb243985e6e1d8284f5d867e444f5"},
+    {"name": "lease_record.json", "sha256": "3c6cab4301832ea4036dd6332c66d86876eb82b67a72a33f351b06088968b896"},
+    {"name": "node_envelope.json", "sha256": "4e7581e58a04bebdfadc34cc4655f08af32d9ca828a69e39f53e53c20c8b7109"},
+    {"name": "operator_state_log.json", "sha256": "015db2ed7583578c6f574ca0494eac3fd79645e3c195e15440b10e750f84d3f0"},
+    {"name": "plan_ir.json", "sha256": "085c5f55df241fe2adfb065949d673b679d90b8194a15f4e58287f5ee2c2d52f"},
+    {"name": "plan_validation.json", "sha256": "24475869bd2fafe53e66fdff313d02e65f897549a6a6ffc5d5ad1236ebb079e5"},
+    {"name": "planning_catalog_snapshot.json", "sha256": "6a52ec8ade34e3a21305f52fcc5b612d30ad2f0b7fc9ba9709c4baa29754e350"},
+    {"name": "promotion_record.json", "sha256": "4d5b4030605da5550ad8b04a066f42a7f5dfd2fdd9ca2c11665e4ec883831443"},
+    {"name": "raw_intent.json", "sha256": "6fe68e156d842726374243d0bc5529e11b693d1a9c297b7601cfefff4ba5345e"},
+    {"name": "repair_record.json", "sha256": "9bc607dc73fa2054a39581fba4aed15cdcdabf7213d616b62cf5c63810e8ba69"},
+    {"name": "requirement_coverage.json", "sha256": "f5a24273144506ffa0b641b0186a52d4c712e5fb9229a95fe0225b3b72659c21"},
+    {"name": "requirement_ir.json", "sha256": "812618f109a4934989e1f96aa909139f65f49f2952d4c45ad82adbd4db7d837f"},
+    {"name": "requirement_validation.json", "sha256": "bb663fb510d64d97ecca5f2f6b3665bc557cdbcc74a33134cd9cb7eb0918566e"},
+    {"name": "run_contract.frozen.json", "sha256": "46c414e9047f7e11b6c6d460ae6eb7c263a87c3cde28bae186a2f3cff6e3bed2"},
+    {"name": "strategy.json", "sha256": "e028fb5893ed93149322bba378bfaf6b1abfec41409efe52512b1d8266930dd1"},
+    {"name": "task_graph_state.json", "sha256": "96335d335cbe5137d7a41cfbdeae740e49357cb32545982427133817552130a6"}
   ],
   "reviewed_decisions": [
-    {
-      "decision_id": "CD1",
-      "decision": "Keep RawIntent, IntentIR, and RequirementIR as separate referenced artifacts."
-    },
-    {
-      "decision_id": "CD2",
-      "decision": "Treat the reproducibility request as design-only because execution was not requested."
-    },
-    {
-      "decision_id": "CD3",
-      "decision": "Keep scheduling, runtime effects, policy classification, planning, and operator binding out of IntentIR."
-    }
+    {"decision_id": "CD1", "decision": "Keep every stage boundary artifact-addressed and independently inspectable."},
+    {"decision_id": "CD2", "decision": "Keep RequirementIR workflow-independent and let the planner own strategy and topology."},
+    {"decision_id": "CD3", "decision": "Keep immutable PlanIR separate from mutable TaskGraph state."},
+    {"decision_id": "CD4", "decision": "Bind physical alternatives before runtime but select one only at dispatch against typed availability."},
+    {"decision_id": "CD5", "decision": "Fail the metadata example closed rather than fabricate execution, evidence, delivery, or promotion."}
   ],
-  "next_stage": "runtime_wiring_in_a_separate_increment"
+  "next_stage": "review_then_formal_schemas_and_runtime_wiring_as_separate_work"
 }

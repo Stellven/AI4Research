@@ -1,69 +1,50 @@
 {
-  "schema_version": "solar.compiler_artifact_registry.v1",
+  "schema_version": "solar.compiler_artifact_registry.v2",
   "status": "proposed",
   "integration_status": "metadata_contract_only_not_wired_to_runtime",
+  "engine_legend": {
+    "DET": "Deterministic producer or validator",
+    "LLM": "Model judgment",
+    "LLM+V": "Model authors the artifact and a deterministic validator may reject it"
+  },
   "artifacts": [
-    {
-      "name": "raw_intent.json",
-      "producer": "input_normalizer",
-      "consumers": ["intent_compiler", "intent_validator", "intent_fidelity_verifier"],
-      "purpose": "Preserve the exact request, source, context references, attachments, and text hash."
-    },
-    {
-      "name": "intent_ir.json",
-      "producer": "intent_compiler",
-      "consumers": ["intent_validator", "intent_fidelity_verifier", "requirement_compiler"],
-      "purpose": "Normalize goals, outcomes, constraints, ambiguities, conflicts, and unknowns with RawIntent grounding."
-    },
-    {
-      "name": "intent_validation.json",
-      "producer": "intent_validator",
-      "consumers": ["intent_acceptance_gate", "requirement_compiler"],
-      "purpose": "Record deterministic reference, identifier, span, and controlled-value checks."
-    },
-    {
-      "name": "intent_fidelity.json",
-      "producer": "intent_fidelity_verifier",
-      "consumers": ["intent_acceptance_gate", "requirement_compiler"],
-      "purpose": "Record whether normalized meaning is supported by the referenced RawIntent."
-    },
-    {
-      "name": "requirement_ir.json",
-      "producer": "requirement_compiler",
-      "consumers": ["requirement_validator", "requirement_coverage_verifier", "elastic_planner"],
-      "purpose": "Compile accepted intent into workflow-independent requirements with acceptance and evidence specifications."
-    },
-    {
-      "name": "requirement_validation.json",
-      "producer": "requirement_validator",
-      "consumers": ["requirement_acceptance_gate", "elastic_planner"],
-      "purpose": "Record requirement reference, acceptance, evidence, verification, and dependency checks."
-    },
-    {
-      "name": "requirement_coverage.json",
-      "producer": "requirement_coverage_verifier",
-      "consumers": ["requirement_acceptance_gate", "elastic_planner"],
-      "purpose": "Prove that every IntentIR item is represented by one or more requirements."
-    },
-    {
-      "name": "compilation_trace.json",
-      "producer": "compiler_controller",
-      "consumers": ["audit_replay", "dashboard"],
-      "purpose": "Bind compiler stages and immutable artifact hashes."
-    }
+    {"name": "raw_intent.json", "producer": "input_normalizer", "engine": "DET", "consumers": ["intent_compiler", "intent_validator", "intent_fidelity_verifier"], "decision": "Preserve the immutable grounding target and request identity."},
+    {"name": "intent_ir.json", "producer": "intent_compiler", "engine": "LLM+V", "consumers": ["intent_validator", "intent_fidelity_verifier", "requirement_compiler"], "decision": "Represent grounded goals, outcomes, constraints, ambiguities, conflicts, and unknowns."},
+    {"name": "intent_validation.json", "producer": "intent_validator", "engine": "DET", "consumers": ["intent_acceptance_gate", "repair_controller"], "decision": "Accept, repair, clarify, or reject the structural IntentIR candidate."},
+    {"name": "intent_fidelity.json", "producer": "independent_intent_reviewer", "engine": "LLM", "consumers": ["intent_acceptance_gate", "requirement_compiler"], "decision": "Reject semantic drift that structural checks cannot detect."},
+    {"name": "clarification.json", "producer": "clarification_gate", "engine": "DET", "consumers": ["user", "intent_compiler", "requirement_compiler"], "decision": "Stop on a material ambiguity or conflict and bind the user's answer."},
+    {"name": "check_registry.json", "producer": "registry_snapshotter", "engine": "DET", "consumers": ["requirement_validator", "binding_gate", "final_verifier"], "decision": "Resolve every machine-checkable obligation to a known check and input artifact contract."},
+    {"name": "requirement_ir.json", "producer": "requirement_compiler", "engine": "LLM+V", "consumers": ["requirement_validator", "coverage_gate", "elastic_planner", "final_verifier"], "decision": "Compile workflow-independent obligations, scope, assumptions, approvals, and rollback semantics."},
+    {"name": "requirement_validation.json", "producer": "requirement_validator", "engine": "DET", "consumers": ["requirement_acceptance_gate", "repair_controller"], "decision": "Reject unresolved references, unregistered checks, invalid scope, or dishonest checkability."},
+    {"name": "requirement_coverage.json", "producer": "requirement_coverage_verifier", "engine": "DET", "consumers": ["requirement_acceptance_gate", "elastic_planner"], "decision": "Reject any dropped IntentIR item before planning."},
+    {"name": "strategy.json", "producer": "elastic_planner", "engine": "LLM+V", "consumers": ["plan_validator", "contract_freezer", "experience_compressor"], "decision": "Choose the smallest sufficient direct, reused, parameterized, extended, composed, generated, clarified, or rejected path."},
+    {"name": "planning_catalog_snapshot.json", "producer": "registry_snapshotter", "engine": "DET", "consumers": ["elastic_planner", "plan_validator", "scheduler"], "decision": "Freeze the capsules, operators, gates, and typed availability visible to planning."},
+    {"name": "plan_ir.json", "producer": "elastic_planner", "engine": "LLM+V", "consumers": ["plan_validator", "binding_gate", "contract_freezer", "scheduler"], "decision": "Define logical nodes, dependencies, artifact ports, capsule bindings, operator alternatives, obligations, and gates."},
+    {"name": "plan_validation.json", "producer": "plan_policy_validator", "engine": "DET", "consumers": ["repair_controller", "contract_freezer"], "decision": "Admit only a registered, acyclic, covered, gated, effect-safe plan."},
+    {"name": "binding_trace.json", "producer": "requirement_binder", "engine": "DET", "consumers": ["coverage_gate", "final_verifier", "delivery_assembler"], "decision": "Map every obligation to owners, expected artifacts, and a registered verifier."},
+    {"name": "run_contract.frozen.json", "producer": "contract_freezer", "engine": "DET", "consumers": ["scheduler", "dispatcher", "gate_executor", "final_verifier"], "decision": "Make every runtime decision resolve against immutable content-hashed inputs."},
+    {"name": "task_graph_state.json", "producer": "scheduler", "engine": "DET", "consumers": ["scheduler", "dashboard", "recovery_controller"], "decision": "Record mutable run and node readiness without mutating PlanIR."},
+    {"name": "dispatch_record.json", "producer": "scheduler", "engine": "DET", "consumers": ["dispatcher", "audit", "recovery_controller"], "decision": "Record the chosen physical operator and why alternatives were skipped."},
+    {"name": "lease_record.json", "producer": "scheduler", "engine": "DET", "consumers": ["dispatcher", "worker_harness", "recovery_controller"], "decision": "Fence node ownership and reject stale or duplicate results."},
+    {"name": "approval_record.json", "producer": "approval_controller", "engine": "DET", "consumers": ["dispatcher", "gate_executor", "audit"], "decision": "Authorize only the exact hashed irreversible or approval-bound effect."},
+    {"name": "node_envelope.json", "producer": "worker_harness", "engine": "DET", "consumers": ["failure_classifier", "gate_executor", "scheduler"], "decision": "Carry typed status, error, output hashes, and attempt identity without log scraping."},
+    {"name": "repair_record.json", "producer": "repair_controller", "engine": "DET", "consumers": ["producer", "gate_executor", "scheduler", "audit"], "decision": "Bind defects and exactly one permitted repair to a new artifact generation."},
+    {"name": "gate_ledger.json", "producer": "gate_executor", "engine": "DET", "consumers": ["scheduler", "final_verifier", "dashboard"], "decision": "Require deterministic gate and independent evaluator agreement on the same generation."},
+    {"name": "operator_state_log.json", "producer": "failure_classifier", "engine": "DET", "consumers": ["scheduler", "audit", "recovery_controller"], "decision": "Drive alternative selection from typed operator availability transitions."},
+    {"name": "domain_evidence.json", "producer": "workflow_nodes", "engine": "LLM+V", "consumers": ["registered_checks", "artifact_manifest", "final_verifier"], "decision": "Expose domain-owned evidence artifacts without embedding domain schemas in the control plane."},
+    {"name": "artifact_manifest.json", "producer": "artifact_ledger", "engine": "DET", "consumers": ["gate_executor", "final_verifier", "delivery_assembler"], "decision": "Inventory declared outputs, content hashes, integrity, and missing artifacts across the run."},
+    {"name": "evidence_ir.json", "producer": "independent_final_verifier", "engine": "DET", "consumers": ["delivery_assembler", "promotion_controller", "user_status"], "decision": "Provide the only mechanical path to GREEN by recomputing every obligation from retained artifacts."},
+    {"name": "delivery_scope.json", "producer": "delivery_assembler", "engine": "DET", "consumers": ["final_delivery", "user"], "decision": "Disclose assumptions, unverifiable obligations, and tested-versus-not-tested boundaries."},
+    {"name": "final_delivery_manifest.json", "producer": "delivery_assembler", "engine": "DET", "consumers": ["dashboard", "user", "audit"], "decision": "Publish only independently green, content-hashed deliverables."},
+    {"name": "experience_record.json", "producer": "experience_compressor", "engine": "LLM+V", "consumers": ["planner_retrieval", "promotion_controller"], "decision": "Retain outcomes, cost, and failures as examples rather than routing authority."},
+    {"name": "promotion_record.json", "producer": "promotion_controller", "engine": "DET", "consumers": ["approved_workflow_registry", "audit"], "decision": "Keep experience memory from entering the registry without independent green evidence."},
+    {"name": "compilation_trace.json", "producer": "artifact_controller", "engine": "DET", "consumers": ["audit_replay", "dashboard"], "decision": "Bind the complete artifact chain, stage outcomes, and immutable file hashes."}
   ],
   "design_support": [
-    {
-      "name": "field_consumer_matrix.json",
-      "purpose": "Require every semantic field to drive a concrete downstream decision or integrity check."
-    },
-    {
-      "name": "generalization_cases.json",
-      "purpose": "Exercise the artifact design across diverse prompt and planner-strategy classes."
-    },
-    {
-      "name": "validate_contract_examples.py",
-      "purpose": "Deterministically validate the committed metadata examples."
-    }
+    {"name": "artifact_registry.json", "decision": "Inventory the artifact model itself, including producers, engines, consumers, and decisions."},
+    {"name": "field_consumer_matrix.json", "decision": "Reject semantic fields that drive no downstream decision."},
+    {"name": "generalization_cases.json", "decision": "Challenge the front-end artifact design with materially different prompts."},
+    {"name": "architecture_invariants.json", "decision": "State the cross-cutting laws every artifact and later implementation must preserve."},
+    {"name": "README.md", "decision": "Explain scope, sequence, and the non-runtime boundary."}
   ]
 }

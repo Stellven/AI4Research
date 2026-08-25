@@ -1,0 +1,21 @@
+{
+  "schema_version": "solar.evidence_ir.v1",
+  "evidence_ir_id": "evidence-ir-20260825-091412-a3f8",
+  "run_contract_ref": {"run_contract_id": "run-contract-20260825-091412-a3f8", "sha256": "46c414e9047f7e11b6c6d460ae6eb7c263a87c3cde28bae186a2f3cff6e3bed2"},
+  "binding_trace_ref": {"binding_trace_id": "binding-trace-20260825-091412-a3f8", "sha256": "5eedfebb5df9b60159801b1241c8b7d481168444e2103982d622853142d90ea5"},
+  "artifact_manifest_ref": {"manifest_id": "execution-manifest-20260825-091412-a3f8", "sha256": "30ff5bc0224239a8acce2e97e8b04a44fe122f2e255e3c4a722366b93f66f32a"},
+  "gate_ledger_refs": [{"node": "method_comparison", "sha256": "0e3c398ca01182438ec436453f6dc27882b54bc2b1daafb35347480ac5e0b099"}],
+  "obligations": {
+    "R1": "NOT_EVALUATED",
+    "R2": "NOT_EVALUATED",
+    "R3": "NOT_EVALUATED",
+    "R4": "NOT_EVALUATED",
+    "R5": "NOT_EVALUATED"
+  },
+  "gate_evaluator_disagreements": 0,
+  "verdict": "FAILED",
+  "failure_reasons": ["NOT_EXECUTED_METADATA_EXAMPLE"],
+  "exit_code": 1,
+  "promotion_eligible": false,
+  "artifact_role": "fail_closed_final_verdict_example"
+}

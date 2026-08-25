@@ -1,0 +1,13 @@
+{
+  "schema_version": "solar.operator_state_log.v1",
+  "artifact_role": "runtime_state_contract_example_not_a_live_log",
+  "events": [],
+  "initial_states": {
+    "operator.example.research.primary": "READY",
+    "operator.example.research.fallback": "READY",
+    "operator.example.analysis.primary": "READY",
+    "operator.example.design.primary": "READY"
+  },
+  "selection_rule": "At dispatch, choose the first compatible alternative in READY state and record why earlier alternatives were excluded.",
+  "failure_input_rule": "Only typed node-envelope status and error fields may change operator state; logs and stdout are not control inputs."
+}

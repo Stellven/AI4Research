@@ -1,0 +1,16 @@
+{
+  "schema_version": "solar.dispatch_record.v1",
+  "artifact_role": "dispatch_contract_example_not_a_dispatch",
+  "run_contract_ref": {"run_contract_id": "run-contract-20260825-091412-a3f8", "sha256": "46c414e9047f7e11b6c6d460ae6eb7c263a87c3cde28bae186a2f3cff6e3bed2"},
+  "node": "method_comparison",
+  "attempt": 0,
+  "decision": "not_made",
+  "selected_operator": null,
+  "candidates": [
+    {"operator_id": "operator.example.research.primary", "state": "READY", "rank": 1},
+    {"operator_id": "operator.example.research.fallback", "state": "READY", "rank": 2}
+  ],
+  "excluded": [],
+  "reason": "The metadata example was not admitted to runtime.",
+  "lease_id": null
+}
