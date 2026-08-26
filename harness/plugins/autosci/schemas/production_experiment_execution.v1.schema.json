@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/autosci/production_experiment_execution.v1.schema.json",
+  "title": "AutoSci bounded production experiment execution",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "command_argv", "runner_sha256", "input_sha256s", "result_path"],
+  "properties": {
+    "contract": {"const": "python_json_file.v1"},
+    "command_argv": {
+      "type": "array",
+      "minItems": 4,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "runner_sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+    "input_sha256s": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+    },
+    "result_path": {"type": "string", "minLength": 1}
+  }
+}

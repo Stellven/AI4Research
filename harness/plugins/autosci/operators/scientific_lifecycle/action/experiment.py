@@ -80,6 +80,10 @@ def design_experiment(node_request: dict[str, Any], context: OperatorContext) ->
         "source_idea_id": require_text(idea.get("idea_id"), "idea.idea_id"),
         "origin_evidence_ids": [str(item) for item in idea.get("origin_evidence_ids") or []],
     }
+    if isinstance(context.payload.get("execution"), dict):
+        plan["execution"] = dict(context.payload["execution"])
+    if isinstance(context.payload.get("criteria_bindings"), list):
+        plan["criteria_bindings"] = list(context.payload["criteria_bindings"])
     if plan["sandbox"]["mode"] not in SANDBOX_MODES or plan["sandbox"]["network"]:
         raise ResearchOperatorError("Experiment plan must use an isolated no-network sandbox", error_type="safety_violation")
     require_list(plan["metrics"], "metrics")
@@ -199,6 +203,8 @@ def run_experiment(node_request: dict[str, Any], context: OperatorContext) -> di
             timeout_seconds=int(plan["resource_limits"]["timeout_seconds"]),
             max_output_bytes=int(plan["resource_limits"]["max_output_bytes"]),
         )
+    except ResearchOperatorError:
+        raise
     except Exception as exc:
         raise service_failure("experiment_executor", exc) from exc
     if not isinstance(raw, dict):

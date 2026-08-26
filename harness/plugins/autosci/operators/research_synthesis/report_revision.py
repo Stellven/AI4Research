@@ -383,6 +383,29 @@ def execute(node_request: dict, context: OperatorContext) -> dict:
         artifact_id="evidence_synthesis",
         expected_node_id="evidence_synthesis",
     )
+    required_upstream = {
+        "report_draft": (original_report, report_ref),
+        "independent_review": (review, review_ref),
+        "source_validation": (validation, validation_ref),
+        "evidence_synthesis": (synthesis, synthesis_ref),
+    }
+    missing_upstream = [
+        artifact_id
+        for artifact_id, (payload, reference) in required_upstream.items()
+        if not payload or reference is None
+    ]
+    if missing_upstream:
+        raise ResearchOperatorError(
+            "Report revision requires hash-bound upstream artifacts: "
+            + ", ".join(missing_upstream),
+            error_type="missing_input",
+        )
+    base_report = original_report.get("report")
+    if not isinstance(base_report, dict) or not str(base_report.get("body") or "").strip():
+        raise ResearchOperatorError(
+            "Report revision requires a non-empty report_draft body",
+            error_type="invalid_input",
+        )
     task_contract = context.payload.get("task_contract") if isinstance(context.payload.get("task_contract"), dict) else {}
     repair_required, blocking_findings, first_verdict = _repair_required(review)
     writer_usage: list[dict[str, Any]] = []

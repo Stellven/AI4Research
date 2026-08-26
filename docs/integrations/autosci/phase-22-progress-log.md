@@ -3850,3 +3850,30 @@ Date: 2026-08-17
 - Four other worktrees still contain tracked, uncommitted user changes. They
   were preserved and excluded from this committed-branch integration audit;
   no report or workbook synchronization is claimed for those changes.
+
+## Physical action operator production-service repair
+
+Date: 2026-08-26
+
+- Registered a production `idea_generator` backed by the existing bounded
+  research-model service. The adapter refuses missing or model-invented source
+  identifiers.
+- Registered a bounded local `experiment_executor` for exact, hash-bound,
+  human-approved Python/JSON experiment contracts. It restricts paths to the
+  workspace and approved write scope, enforces timeout/output limits, verifies
+  runner and input hashes, and derives criterion results from measured metrics.
+- Added the fixed `production_experiment_execution.v1` contract and preserved
+  execution plus criterion bindings in `experiment_plan.v1` output.
+- Repaired the P22-J21 CSV fixture: its header declared `id,text,label`, while
+  its six rows omitted `id`, causing the real runner to read labels as text and
+  produce zero accuracy for both variants.
+- Authorized live validation used OpenRouter
+  `deepseek/deepseek-v3.2` with OpenAI fallback disabled. The real chain passed:
+  model-backed idea generation, hash-bound J21 execution, claim verification,
+  report drafting, artifact review, publication production, and final
+  evaluation (`1 passed in 10.54s`). The measured accuracy uplift was
+  `0.16666666666666663`; the accepted claim is only that uplift was positive.
+- The physical-operator regression suite passed `90 passed, 3 deselected in
+  3.59s`. The focused production-service checks passed `3 passed, 1 deselected
+  in 0.92s`. Credentials were loaded only into the test process and were not
+  printed, archived, or committed.

@@ -36,6 +36,7 @@ except ImportError:  # direct autosci_bridge.py execution loads plugins/autosci 
 FETCH_SERVICE_ID = "autosci-production-bounded-url-fetch"
 DISCOVERY_SERVICE_ID = "autosci-production-literature-discovery"
 MODEL_SERVICE_ID = "autosci-production-research-model"
+IDEA_SERVICE_ID = "autosci-production-idea-generator"
 SERVICE_VERSION = "1.0.0"
 DEFAULT_FETCH_TIMEOUT_SECONDS = 30
 DEFAULT_FETCH_MAX_BYTES = 5 * 1024 * 1024
@@ -1360,7 +1361,45 @@ class ResearchModelService:
             "Use only the supplied validated evidence, preserve source identifiers exactly, never invent sources, "
             f"and write the requested deliverable in language={language}."
         )
-        if node_id == "evidence_synthesis":
+        if node_id == "idea_generate":
+            evidence = kwargs.get("evidence") if isinstance(kwargs.get("evidence"), list) else []
+            allowed_evidence_ids = _explicit_evidence_ids(evidence)
+            if not allowed_evidence_ids:
+                raise ResearchOperatorError(
+                    "Idea generation requires explicit source evidence identifiers",
+                    error_type="missing_input",
+                )
+            user = {
+                "node_id": node_id,
+                "allowed_evidence_ids": allowed_evidence_ids,
+                "evidence": evidence,
+                "constraints": kwargs.get("constraints") if isinstance(kwargs.get("constraints"), dict) else {},
+                "required_output": {
+                    "ideas": [
+                        {
+                            "idea_id": "idea-001",
+                            "title": "specific evidence-grounded idea",
+                            "hypothesis": "falsifiable hypothesis",
+                            "approach": "bounded proposed approach",
+                            "origin_evidence_ids": ["one or more exact allowed_evidence_ids values"],
+                            "risks": ["specific risk"],
+                            "falsifiability": "observable condition that would reject the hypothesis",
+                            "validation_method": "method that measures the hypothesis",
+                            "minimum_experiment": "smallest real experiment that can test the hypothesis",
+                            "novelty_hypothesis": "bounded novelty claim, or empty string",
+                        }
+                    ],
+                    "limitations": [],
+                },
+                "quality_requirements": [
+                    "Generate only ideas supported by the supplied evidence.",
+                    "Copy every origin_evidence_ids value exactly from allowed_evidence_ids.",
+                    "Do not invent source identifiers, results, measurements, or experimental outcomes.",
+                    "Make each idea falsifiable and specify a minimum executable experiment.",
+                    "State material risks and uncertainty in limitations.",
+                ],
+            }
+        elif node_id == "evidence_synthesis":
             sources = [
                 {
                     "source_id": str(item.get("source_id") or ""),
@@ -1751,6 +1790,61 @@ class ResearchModelService:
         raise ResearchOperatorError("; ".join(errors)[:500], error_type="provider_unavailable")
 
 
+def _explicit_evidence_ids(value: Any) -> list[str]:
+    """Collect only identifiers explicitly present in supplied evidence."""
+
+    collected: list[str] = []
+    scalar_keys = {"source_id", "claim_id", "method_id", "paper_id", "evidence_id", "artifact_id"}
+    list_keys = {"evidence_ids", "origin_evidence_ids"}
+
+    def visit(item: Any) -> None:
+        if isinstance(item, dict):
+            for key, nested in item.items():
+                if key in scalar_keys and isinstance(nested, (str, int)) and str(nested).strip():
+                    collected.append(str(nested).strip())
+                elif key in list_keys and isinstance(nested, list):
+                    collected.extend(str(entry).strip() for entry in nested if str(entry).strip())
+                else:
+                    visit(nested)
+        elif isinstance(item, list):
+            for nested in item:
+                visit(nested)
+
+    visit(value)
+    return list(dict.fromkeys(collected))[:500]
+
+
+@dataclass
+class ProductionIdeaGenerator:
+    """Adapt the production research model to the idea-generator service contract."""
+
+    model: ResearchModelService
+    service_id: str = IDEA_SERVICE_ID
+    service_version: str = SERVICE_VERSION
+
+    def __call__(self, *, evidence: list[dict[str, Any]], constraints: dict[str, Any]) -> dict[str, Any]:
+        allowed = set(_explicit_evidence_ids(evidence))
+        if not allowed:
+            raise ResearchOperatorError(
+                "Idea generation requires explicit source evidence identifiers",
+                error_type="missing_input",
+            )
+        response = self.model(node_id="idea_generate", evidence=evidence, constraints=constraints)
+        ideas = response.get("ideas") if isinstance(response.get("ideas"), list) else []
+        if not ideas:
+            raise ResearchOperatorError("Idea model returned no ideas", error_type="provider_contract")
+        for idea in ideas:
+            if not isinstance(idea, dict):
+                raise ResearchOperatorError("Idea model returned a non-object idea", error_type="provider_contract")
+            origin = {str(item).strip() for item in idea.get("origin_evidence_ids") or [] if str(item).strip()}
+            if not origin or not origin.issubset(allowed):
+                raise ResearchOperatorError(
+                    "Idea model returned an origin evidence id outside the supplied evidence",
+                    error_type="provider_contract",
+                )
+        return response
+
+
 def configured_secret_values(*, active_model_providers: set[str] | None = None) -> dict[str, str]:
     """Return configured provider secrets in memory; callers must never serialize them."""
 
@@ -1778,18 +1872,29 @@ def production_services_from_environment(
 
     root = Path(workspace_root).resolve()
     model = ResearchModelService.from_environment(root)
+    idea_generator = ProductionIdeaGenerator(model)
+    from .bounded_experiment import BoundedLocalExperimentExecutor
+
+    experiment_executor = BoundedLocalExperimentExecutor(root)
     active_model_providers = {route.provider for route in model.routes}
     services: dict[str, Any] = {
         "fetch_url": BoundedUrlFetcher(root),
         "discover_sources": LiteratureDiscoveryService(root),
         "model_generate": model,
         "review_model_generate": model,
+        "idea_generator": idea_generator,
+        "experiment_executor": experiment_executor,
         "secret_values": configured_secret_values(active_model_providers=active_model_providers),
         "service_metadata": {
             "fetch_url": {"service_id": FETCH_SERVICE_ID, "version": SERVICE_VERSION},
             "discover_sources": {"service_id": DISCOVERY_SERVICE_ID, "version": SERVICE_VERSION},
             "model_generate": {"service_id": MODEL_SERVICE_ID, "version": SERVICE_VERSION},
             "review_model_generate": {"service_id": MODEL_SERVICE_ID, "version": SERVICE_VERSION},
+            "idea_generator": {"service_id": IDEA_SERVICE_ID, "version": SERVICE_VERSION},
+            "experiment_executor": {
+                "service_id": experiment_executor.service_id,
+                "version": experiment_executor.service_version,
+            },
         },
     }
     services.update(dict(overrides or {}))

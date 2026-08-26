@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import urllib.error
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from harness.plugins.autosci.operators.research_synthesis.base import ResearchOperatorError
 from harness.plugins.autosci.operators.research_synthesis.report_draft import _normalize_report
@@ -18,6 +20,7 @@ from harness.plugins.autosci.services.production_research import (
     _topic_from_snapshot,
     production_services_from_environment,
 )
+from harness.plugins.autosci.services.bounded_experiment import BoundedLocalExperimentExecutor
 
 
 PUBLIC_DNS = lambda *_args, **_kwargs: [(2, 1, 6, "", ("93.184.216.34", 443))]
@@ -425,8 +428,55 @@ def test_production_service_composition_supports_injected_fakes_without_secrets(
     assert services["fetch_url"] is fake
     assert callable(services["discover_sources"])
     assert callable(services["model_generate"])
+    assert callable(services["idea_generator"])
+    assert callable(services["experiment_executor"])
     assert services["secret_values"] == {}
     assert services["service_metadata"]["fetch_url"]["version"] == "1.0.0"
+
+
+def test_bounded_experiment_executor_runs_hash_bound_j21_experiment(tmp_path: Path) -> None:
+    fixture_root = Path(__file__).resolve().parents[2] / "journeys" / "phase22" / "fixtures" / "j21_experiment_build_handoff"
+    input_root = tmp_path / "inputs"
+    output_path = tmp_path / "out" / "experiment_run" / "experiment_result.json"
+    input_root.mkdir()
+    runner = input_root / "run_text_experiment.py"
+    dataset = input_root / "input_samples.csv"
+    shutil.copy2(fixture_root / runner.name, runner)
+    shutil.copy2(fixture_root / dataset.name, dataset)
+    relative_runner = runner.relative_to(tmp_path).as_posix()
+    relative_dataset = dataset.relative_to(tmp_path).as_posix()
+    relative_output = output_path.relative_to(tmp_path).as_posix()
+    criterion = "accuracy_uplift > 0"
+    execution = {
+        "contract": "python_json_file.v1",
+        "command_argv": ["python", relative_runner, relative_dataset, relative_output],
+        "runner_sha256": hashlib.sha256(runner.read_bytes()).hexdigest(),
+        "input_sha256s": {relative_dataset: hashlib.sha256(dataset.read_bytes()).hexdigest()},
+        "result_path": relative_output,
+    }
+    schema_path = Path(__file__).resolve().parents[3] / "harness" / "plugins" / "autosci" / "schemas" / "production_experiment_execution.v1.schema.json"
+    Draft202012Validator(json.loads(schema_path.read_text(encoding="utf-8"))).validate(execution)
+    plan = {
+        "experiment_id": "p22-j21-local-experiment",
+        "execution": execution,
+        "criteria_bindings": [
+            {"criterion": criterion, "metric": "accuracy_uplift", "operator": ">", "value": 0}
+        ],
+    }
+
+    result = BoundedLocalExperimentExecutor(tmp_path)(
+        plan=plan,
+        sandbox={"mode": "process_restricted", "network": False, "write_scope": ["out/experiment_run"]},
+        timeout_seconds=30,
+        max_output_bytes=1_000_000,
+    )
+
+    metrics = {item["name"]: item["value"] for item in result["metrics"]}
+    assert result["outcome"] == "supports"
+    assert result["criteria_results"] == {criterion: True}
+    assert metrics["variant_accuracy"] > metrics["baseline_accuracy"]
+    assert output_path.is_file()
+    assert any(item.startswith("sha256:") for item in result["evidence_ids"])
 
 
 def test_openrouter_is_default_and_openai_key_is_not_bound_when_both_exist(tmp_path: Path, monkeypatch) -> None:

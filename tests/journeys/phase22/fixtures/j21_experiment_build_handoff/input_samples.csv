@@ -1,7 +1,7 @@
 ﻿id,text,label
-pass: normalized verbatim,positive
-PASS - verifier returns positive,positive
-fail: missing reference,negative
-FAIL - no citation,negative
-pass with caveat,positive
-failure without source,negative
+sample-1,pass: normalized verbatim,positive
+sample-2,PASS - verifier returns positive,positive
+sample-3,fail: missing reference,negative
+sample-4,FAIL - no citation,negative
+sample-5,pass with caveat,positive
+sample-6,failure without source,negative
