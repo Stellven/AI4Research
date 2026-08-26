@@ -125,6 +125,51 @@ def test_dispatch_ready_marks_graph_active_panes_busy(tmp_path, monkeypatch):
     assert workers_by_pane["pane-b"]["busy"] is False
 
 
+def test_dispatch_ready_skips_concurrent_tick_for_same_graph(tmp_path, monkeypatch):
+    graph_path = tmp_path / "same-graph.task_graph.json"
+    graph_path.write_text(json.dumps({"sprint_id": "same-graph", "nodes": []}), encoding="utf-8")
+    monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+
+    held = gnd._try_acquire_scheduler_tick_lock(str(graph_path))
+    assert held is not None
+    monkeypatch.setattr(
+        gnd,
+        "_dispatch_ready_unlocked",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("a concurrent scheduler tick must not enter dispatch")
+        ),
+    )
+
+    try:
+        result = gnd.dispatch_ready(str(graph_path))
+    finally:
+        gnd._release_scheduler_tick_lock(held)
+
+    assert result == {
+        "ok": True,
+        "reason": "scheduler_tick_in_progress",
+        "graph": str(graph_path),
+        "enqueue": {},
+        "drain": {},
+    }
+
+
+def test_dispatch_ready_releases_graph_lock_after_tick(tmp_path, monkeypatch):
+    graph_path = tmp_path / "released-graph.task_graph.json"
+    graph_path.write_text(json.dumps({"sprint_id": "released-graph", "nodes": []}), encoding="utf-8")
+    monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+    calls: list[str] = []
+    monkeypatch.setattr(
+        gnd,
+        "_dispatch_ready_unlocked",
+        lambda path, **_kwargs: calls.append(path) or {"ok": True, "tick": len(calls)},
+    )
+
+    assert gnd.dispatch_ready(str(graph_path))["tick"] == 1
+    assert gnd.dispatch_ready(str(graph_path))["tick"] == 2
+    assert calls == [str(graph_path), str(graph_path)]
+
+
 def test_stale_queue_cleanup_does_not_consume_dispatch_budget(monkeypatch):
     items = iter([{"id": "old"}, {"id": "current"}, None])
     calls = []

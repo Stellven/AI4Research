@@ -122,7 +122,46 @@ def _sync_graph_after_route_result(
             actor="operator_runtime",
             event="route_result_recorded",
         )
-        return {**projection, "attempt_convergence": attempt_convergence}
+        scheduler_tick: Dict[str, Any] = {
+            "ok": True,
+            "reason": "graph_dispatcher_unavailable",
+        }
+        evaluator_dispatch: Dict[str, Any] = {
+            "ok": True,
+            "reason": "graph_dispatcher_unavailable",
+        }
+        try:
+            import graph_node_dispatcher  # type: ignore
+
+            # Make result publication an active scheduler edge.  The
+            # graph-scoped non-blocking lock inside dispatch_ready prevents a
+            # simultaneous autopilot tick from dispatching the same node.
+            graph_node_dispatcher.HARNESS_DIR = HARNESS_DIR
+            graph_node_dispatcher.SPRINTS_DIR = sprints_dir
+            scheduler_tick = graph_node_dispatcher.dispatch_ready(str(graph_path))
+            evaluator_dispatch = graph_node_dispatcher.dispatch_node_evals(
+                str(graph_path),
+                max_items=1,
+            )
+        except Exception as dispatch_exc:
+            # result.json is already durable. Keep the operator completion
+            # successful and return an inspectable callback failure for the
+            # polling monitor to recover on its next tick.
+            scheduler_tick = {
+                "ok": False,
+                "reason": "route_result_dispatch_failed",
+                "error": f"{type(dispatch_exc).__name__}: {dispatch_exc}",
+            }
+            evaluator_dispatch = {
+                "ok": False,
+                "reason": "route_result_dispatch_failed",
+            }
+        return {
+            **projection,
+            "attempt_convergence": attempt_convergence,
+            "scheduler_tick": scheduler_tick,
+            "evaluator_dispatch": evaluator_dispatch,
+        }
     except Exception as exc:
         return {
             "ok": False,
@@ -978,7 +1017,12 @@ def write_result(
         "finished_at": finished_at,
         "result_status": status,
     })
-    _sync_graph_after_route_result(sprint_id, result, result_path)
+    graph_callback = _sync_graph_after_route_result(sprint_id, result, result_path)
+    callback_path = result_dir / "graph-callback.json"
+    callback_tmp_path = str(callback_path) + ".tmp"
+    with open(callback_tmp_path, "w", encoding="utf-8") as f:
+        json.dump(graph_callback, f, indent=2, default=str)
+    os.replace(callback_tmp_path, str(callback_path))
     return result_path
 
 

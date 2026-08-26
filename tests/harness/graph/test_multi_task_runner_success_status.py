@@ -150,11 +150,11 @@ def test_quota_recovery_capped_sets_monitor_blocker(tmp_path, monkeypatch):
     changed = multi_task_runner.recover_quota_failed_nodes(graph_path, graph)
     assert changed >= 1
 
-    updated = json.loads(graph_path.read_text(encoding="utf-8"))
+    updated = multi_task_runner.load_graph(graph_path)
     node = next(n for n in updated["nodes"] if n["id"] == "N1")
     assert "monitor_blocker" in node
     assert "recovery_limit_reached" in node["monitor_blocker"]
-    assert node["status"] == "failed"
+    assert multi_task_runner.node_status(updated, "N1") == "failed"
 
 
 def test_quota_recovery_below_cap_allows_retry(tmp_path, monkeypatch):

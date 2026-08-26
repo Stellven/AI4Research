@@ -3173,6 +3173,10 @@ def recover_quota_failed_nodes(graph_path: Path, graph: dict[str, Any]) -> int:
             recovery_count = 0
         max_recoveries = int(os.environ.get("SOLAR_MULTI_TASK_MAX_QUOTA_RECOVERIES_PER_NODE", "4") or "4")
         if (dispatch_id and dispatch_id in recovered_ids) or recovery_count >= max_recoveries:
+            # Persist the terminal status in the runtime state plane before
+            # save_graph strips inline node status from the immutable spec.
+            # Without this, a capped failure silently reloads as pending.
+            set_node_status(graph, node_id, "failed", dispatch_id=dispatch_id or None)
             node["monitor_blocker"] = _recoverable_failure_limit(failure_reason)
             field_prefix = _recoverable_failure_field_prefix(failure_reason)
             node[f"{field_prefix}_reason"] = _recoverable_failure_label(failure_reason)

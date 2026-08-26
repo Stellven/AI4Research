@@ -34,6 +34,34 @@ def test_operator_pool_can_be_enabled_explicitly(monkeypatch) -> None:
     assert gnd._builder_operator_pool_enabled() is True
 
 
+def test_planner_operator_alternatives_are_forwarded_in_declared_order() -> None:
+    cmd = ["python", "pm_dispatch.py", "submit"]
+
+    result = gnd._append_planner_operator_alternatives(
+        cmd,
+        {
+            "alternatives": [
+                "operator.primary",
+                "operator.fallback-1",
+                "",
+                "operator.fallback-2",
+            ]
+        },
+    )
+
+    assert result == [
+        "python",
+        "pm_dispatch.py",
+        "submit",
+        "--operator-alternative",
+        "operator.primary",
+        "--operator-alternative",
+        "operator.fallback-1",
+        "--operator-alternative",
+        "operator.fallback-2",
+    ]
+
+
 def test_operator_pool_submit_is_disabled_when_env_unset(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.delenv("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", raising=False)
     monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)

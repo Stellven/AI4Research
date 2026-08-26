@@ -6,6 +6,7 @@ import sys
 import tempfile
 import time
 import json
+import types
 import pytest
 from pathlib import Path
 
@@ -80,6 +81,69 @@ def test_operator_config_loading():
 
     # Test unknown operator
     assert optime.get_operator_config("nonexistent-operator") is None
+
+
+def test_route_result_actively_ticks_scheduler_and_evaluator(monkeypatch, tmp_path):
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph_path = sprints / "sprint-active.task_graph.json"
+    graph_path.write_text("{}\n", encoding="utf-8")
+    graph = {"sprint_id": "sprint-active", "nodes": [{"id": "N1"}]}
+    calls: list[tuple[str, str]] = []
+
+    fake_scheduler = types.ModuleType("graph_scheduler")
+    fake_scheduler.load_graph = lambda _path: graph  # type: ignore[attr-defined]
+    fake_scheduler.save_graph = lambda _path, _graph: None  # type: ignore[attr-defined]
+    fake_scheduler.sync_status_cache_from_graph = (  # type: ignore[attr-defined]
+        lambda *_args, **_kwargs: {"ok": True, "reason": "parent_not_ready"}
+    )
+    fake_dispatcher = types.ModuleType("graph_node_dispatcher")
+    fake_dispatcher.dispatch_ready = (  # type: ignore[attr-defined]
+        lambda path: calls.append(("ready", path)) or {"ok": True}
+    )
+    fake_dispatcher.dispatch_node_evals = (  # type: ignore[attr-defined]
+        lambda path, max_items=1: calls.append(("eval", path)) or {"ok": True}
+    )
+    monkeypatch.setitem(sys.modules, "graph_scheduler", fake_scheduler)
+    monkeypatch.setitem(sys.modules, "graph_node_dispatcher", fake_dispatcher)
+    monkeypatch.setattr(optime, "_route_sprints_dir", lambda: sprints)
+
+    result = optime._sync_graph_after_route_result(
+        "sprint-active",
+        {"node_id": "N1", "task_id": "T1", "operator_id": "operator-1"},
+    )
+
+    assert result["scheduler_tick"]["ok"] is True
+    assert result["evaluator_dispatch"]["ok"] is True
+    assert calls == [("ready", str(graph_path)), ("eval", str(graph_path))]
+
+
+def test_operator_result_persists_graph_callback_for_gui(monkeypatch):
+    monkeypatch.setattr(
+        optime,
+        "_sync_graph_after_route_result",
+        lambda *_args, **_kwargs: {
+            "ok": False,
+            "reason": "route_result_dispatch_failed",
+            "error": "scheduler unavailable",
+        },
+    )
+
+    result_path = optime.write_result(
+        operator_id=_ENABLED_OPERATOR,
+        task_id="T-callback",
+        sprint_id="sprint-callback",
+        node_id="N1",
+        status="completed",
+        exit_code=0,
+        started_at="2026-08-26T00:00:00Z",
+        finished_at="2026-08-26T00:00:01Z",
+        log_tail="done",
+    )
+
+    callback = json.loads((result_path.parent / "graph-callback.json").read_text(encoding="utf-8"))
+    assert callback["reason"] == "route_result_dispatch_failed"
+    assert callback["error"] == "scheduler unavailable"
 
 
 def test_operator_lease_lifecycle():

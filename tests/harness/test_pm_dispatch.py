@@ -209,6 +209,313 @@ def test_preferred_operator_cannot_bypass_cost_ceiling(monkeypatch):
     assert "preferred_operator_cost_tier_exceeds_ceiling" in reason
 
 
+def test_planner_alternatives_preserve_order_and_exclude_undeclared_operators(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "preferred-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                },
+                "fallback-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                },
+                "undeclared-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(
+        pm_dispatch,
+        "is_dispatchable",
+        lambda op: (
+            (False, "runtime_state=leased")
+            if op["operator_id"] == "preferred-builder"
+            else (True, "")
+        ),
+    )
+
+    operator_id, _operator, exclusions, reason = (
+        pm_dispatch.select_operator_from_ordered_alternatives(
+            ["preferred-builder", "fallback-builder"],
+            role="builder",
+            task_type="implementation",
+        )
+    )
+
+    assert reason == ""
+    assert operator_id == "fallback-builder"
+    assert exclusions == [
+        {
+            "operator_id": "preferred-builder",
+            "reason": "preferred_operator_unavailable: preferred-builder: runtime_state=leased",
+            "stage": "selection",
+        }
+    ]
+
+
+def test_strict_planner_alternative_never_falls_through_to_registry(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "declared-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                },
+                "undeclared-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(
+        pm_dispatch,
+        "is_dispatchable",
+        lambda op: (
+            (False, "runtime_state=leased")
+            if op["operator_id"] == "declared-builder"
+            else (True, "")
+        ),
+    )
+
+    operator_id, operator, exclusions, reason = (
+        pm_dispatch.select_operator_from_ordered_alternatives(
+            ["declared-builder"],
+            role="builder",
+            task_type="implementation",
+        )
+    )
+
+    assert operator_id == ""
+    assert operator == {}
+    assert reason == "operator_alternatives_exhausted"
+    assert [item["operator_id"] for item in exclusions] == ["declared-builder"]
+
+
+def test_submit_lease_race_retries_next_operator(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_DISPATCH_ALLOW_DIRECT", "1")
+    monkeypatch.setattr(pm_dispatch, "HARNESS_DIR", tmp_path)
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", tmp_path / "sprints")
+    monkeypatch.setattr(pm_dispatch, "PM_INBOX_DIR", tmp_path / "run" / "pm-inbox")
+    monkeypatch.setattr(pm_dispatch, "OPERATOR_INBOX_DIR", tmp_path / "run" / "operator-inbox")
+    monkeypatch.setattr(pm_dispatch, "DEFAULT_OPERATOR_PROVIDERS", frozenset())
+    monkeypatch.setattr(pm_dispatch, "load_task_graph_node", lambda *_args: None)
+    monkeypatch.setattr(pm_dispatch, "build_pm_dispatch_text", lambda **kwargs: f"operator={kwargs['operator_id']}")
+    monkeypatch.setattr(
+        pm_dispatch,
+        "_build_pm_operator_envelope",
+        lambda **kwargs: {
+            "task_id": kwargs["task_id"],
+            "operator_id": kwargs["operator_id"],
+            "runtime_mode": "test",
+            "provider_policy": "test",
+        },
+    )
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "builder-primary": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                    "model": "primary",
+                },
+                "builder-fallback": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                    "model": "fallback",
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda _operator: (True, ""))
+    records: list[dict] = []
+    monkeypatch.setattr(pm_dispatch, "write_pm_task_record", lambda _task_id, record: records.append(dict(record)))
+
+    class BusyError(RuntimeError):
+        reason = "operator_busy"
+
+    submitted: list[str] = []
+    fake_operator_runtime = types.ModuleType("operator_runtime")
+
+    def submit(envelope):
+        submitted.append(envelope["operator_id"])
+        if envelope["operator_id"] == "builder-primary":
+            raise BusyError("lease was claimed after selection")
+        return {"lease_id": "lease-fallback", "inbox_path": "fallback/inbox.json"}
+
+    fake_operator_runtime.submit = submit  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "operator_runtime", fake_operator_runtime)
+
+    args = argparse.Namespace(
+        role="builder",
+        objective="implement safely",
+        operator="",
+        operator_alternative=["builder-primary", "builder-fallback"],
+        sprint="sprint-fallback",
+        node="N1",
+        task_type="implementation",
+        context="",
+        dry_run=False,
+    )
+
+    assert pm_dispatch.cmd_submit(args) == 0
+    assert submitted == ["builder-primary", "builder-fallback"]
+    assert records[-1]["operator_id"] == "builder-fallback"
+    assert records[-1]["authorized_operator_alternatives"] == [
+        "builder-primary",
+        "builder-fallback",
+    ]
+    assert records[-1]["operator_selection_exclusions"] == [
+        {
+            "operator_id": "builder-primary",
+            "reason": "operator_busy",
+            "stage": "lease",
+        }
+    ]
+    assert records[-1]["operator_fallbacks"] == [
+        {
+            "from_operator_id": "builder-primary",
+            "to_operator_id": "builder-fallback",
+            "reason": "operator_busy",
+        }
+    ]
+
+
+def test_planner_alternative_exhaustion_is_persisted_for_gui(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_DISPATCH_ALLOW_DIRECT", "1")
+    monkeypatch.setattr(pm_dispatch, "HARNESS_DIR", tmp_path)
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", tmp_path / "sprints")
+    monkeypatch.setattr(pm_dispatch, "PM_INBOX_DIR", tmp_path / "run" / "pm-inbox")
+    monkeypatch.setattr(pm_dispatch, "DEFAULT_OPERATOR_PROVIDERS", frozenset())
+    monkeypatch.setattr(pm_dispatch, "load_task_graph_node", lambda *_args: None)
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                operator_id: {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                }
+                for operator_id in ("builder-primary", "builder-fallback")
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda _operator: (False, "runtime_state=leased"))
+    records: list[dict] = []
+    monkeypatch.setattr(pm_dispatch, "write_pm_task_record", lambda _task_id, record: records.append(dict(record)))
+
+    args = argparse.Namespace(
+        role="builder",
+        objective="implement safely",
+        operator="",
+        operator_alternative=["builder-primary", "builder-fallback"],
+        sprint="sprint-exhausted",
+        node="N1",
+        task_type="implementation",
+        context="",
+        dry_run=False,
+    )
+
+    assert pm_dispatch.cmd_submit(args) == 1
+    assert records[-1]["status"] == "failed_no_dispatchable_operator"
+    assert records[-1]["failure_reason"] == "operator_alternatives_exhausted"
+    assert records[-1]["display_error"]["code"] == "operator_alternatives_exhausted"
+    assert [
+        item["operator_id"] for item in records[-1]["operator_selection_exclusions"]
+    ] == ["builder-primary", "builder-fallback"]
+
+
+def test_missing_operator_runtime_never_bypasses_lease_with_direct_inbox(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_DISPATCH_ALLOW_DIRECT", "1")
+    monkeypatch.setattr(pm_dispatch, "HARNESS_DIR", tmp_path)
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", tmp_path / "sprints")
+    monkeypatch.setattr(pm_dispatch, "PM_INBOX_DIR", tmp_path / "run" / "pm-inbox")
+    monkeypatch.setattr(pm_dispatch, "OPERATOR_INBOX_DIR", tmp_path / "run" / "operator-inbox")
+    monkeypatch.setattr(pm_dispatch, "DEFAULT_OPERATOR_PROVIDERS", frozenset())
+    monkeypatch.setattr(pm_dispatch, "load_task_graph_node", lambda *_args: None)
+    monkeypatch.setattr(pm_dispatch, "build_pm_dispatch_text", lambda **_kwargs: "dispatch")
+    monkeypatch.setattr(pm_dispatch, "_build_pm_operator_envelope", lambda **kwargs: {"operator_id": kwargs["operator_id"]})
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "builder-only": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                }
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda _operator: (True, ""))
+    monkeypatch.setattr(
+        pm_dispatch,
+        "_load_operator_submit",
+        lambda: (_ for _ in ()).throw(ImportError("operator runtime missing")),
+    )
+    records: list[dict] = []
+    monkeypatch.setattr(pm_dispatch, "write_pm_task_record", lambda _task_id, record: records.append(dict(record)))
+
+    args = argparse.Namespace(
+        role="builder",
+        objective="implement safely",
+        operator="",
+        sprint="sprint-no-runtime",
+        node="N1",
+        task_type="implementation",
+        context="",
+        dry_run=False,
+    )
+
+    assert pm_dispatch.cmd_submit(args) == 1
+    assert records[-1]["status"] == "failed_operator_runtime_unavailable"
+    assert not (pm_dispatch.OPERATOR_INBOX_DIR / "builder-only").exists()
+
+
 def test_pm_operator_envelope_carries_strict_filesystem_scope(monkeypatch, tmp_path):
     pm_dispatch = _load_pm_dispatch()
     sprints = tmp_path / "sprints"

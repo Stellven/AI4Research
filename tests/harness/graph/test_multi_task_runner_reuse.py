@@ -293,11 +293,23 @@ def test_compact_tmux_session_creates_anchor_when_no_reusable_target(monkeypatch
     monkeypatch.setattr(multi_task_runner, "tmux_client_records", lambda: [])
     monkeypatch.setattr(multi_task_runner, "ensure_tmux_anchor_window", lambda cwd=None: ("solar-harness-multi-task:@99", True))
     monkeypatch.setattr(multi_task_runner, "prune_idle_tmux_windows", lambda *args, **kwargs: {"killed": [], "kept": []})
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, **_kwargs):
+        calls.append(list(cmd))
+
+        class _Proc:
+            returncode = 0
+
+        return _Proc()
+
+    monkeypatch.setattr(multi_task_runner.subprocess, "run", fake_run)
 
     result = multi_task_runner.compact_tmux_session(target_keep=1, dry_run=False, cwd=tmp_path)
 
     assert result["created_anchor"] is True
     assert result["destination_target"] == "solar-harness-multi-task:@99"
+    assert ["tmux", "select-window", "-t", "solar-harness-multi-task:@99"] in calls
 
 
 def test_detach_and_anchor_selects_anchor(monkeypatch, tmp_path: Path) -> None:

@@ -1432,6 +1432,7 @@ def select_operator_by_role(
     logical_operator: str = "",
     allowed_providers: set[str] | frozenset[str] | None = None,
     observation_identifiers: dict[str, Any] | None = None,
+    strict_preference: bool = False,
 ) -> tuple[str, dict[str, Any], str]:
     """选择最合适的可调度算子。
 
@@ -1455,6 +1456,7 @@ def select_operator_by_role(
     )
 
     candidate_observations: list[dict[str, Any]] = []
+    preferred_failure = ""
 
     def record_selection(selected: str = "", failure: str = "", *, spillover: bool = False) -> None:
         selection_ids = dict(observation_identifiers or {})
@@ -1495,9 +1497,8 @@ def select_operator_by_role(
                 provider = str(op.get("provider") or op.get("vendor") or "unknown")
                 reason = f"preferred_operator_provider_mismatch: {prefer_operator}: {provider}"
                 candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": "provider_mismatch"})
-                record_selection(failure=reason)
-                return "", {}, reason
-            if not _operator_matches_cost_policy(op):
+                preferred_failure = reason
+            elif not _operator_matches_cost_policy(op):
                 reason = (
                     f"preferred_operator_cost_tier_exceeds_ceiling: {prefer_operator}: "
                     f"operator={op.get('cost_tier') or 'medium'} ceiling={_max_cost_tier() or 'unset'}"
@@ -1505,28 +1506,47 @@ def select_operator_by_role(
                 candidate_observations.append(
                     {"operator_id": prefer_operator, "eligible": False, "reason": "cost_policy"}
                 )
-                record_selection(failure=reason)
-                return "", {}, reason
-            task_reject_reason = _operator_reject_reason_for_task(op, norm_role, task_type)
-            if task_reject_reason:
+                preferred_failure = reason
+            elif norm_role not in _operator_roles(op):
+                reason = f"preferred_operator_role_mismatch: {prefer_operator}: {norm_role}"
+                candidate_observations.append(
+                    {"operator_id": prefer_operator, "eligible": False, "reason": "role_mismatch"}
+                )
+                preferred_failure = reason
+            elif pool_mode and prefer_operator not in pool_member_ids:
+                reason = f"preferred_operator_not_in_builder_pool: {prefer_operator}"
+                candidate_observations.append(
+                    {"operator_id": prefer_operator, "eligible": False, "reason": "not_in_builder_pool"}
+                )
+                preferred_failure = reason
+            elif prefer_operator in forbidden_ops:
+                reason = f"preferred_operator_capsule_forbidden: {prefer_operator}"
+                candidate_observations.append(
+                    {"operator_id": prefer_operator, "eligible": False, "reason": "capsule_forbidden"}
+                )
+                preferred_failure = reason
+            elif (task_reject_reason := _operator_reject_reason_for_task(op, norm_role, task_type)):
                 reason = f"preferred_operator_rejected_for_task: {prefer_operator}: {task_reject_reason}"
                 candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": task_reject_reason})
-                record_selection(failure=reason)
-                return "", {}, reason
-            ok, reason = is_dispatchable(op)
-            if ok:
-                candidate_observations.append({"operator_id": prefer_operator, "eligible": True, "score": None, "reason": "preferred"})
-                record_selection(selected=prefer_operator)
-                return prefer_operator, op, ""
+                preferred_failure = reason
             else:
-                failure = f"preferred_operator_unavailable: {prefer_operator}: {reason}"
+                ok, reason = is_dispatchable(op)
+                if ok:
+                    candidate_observations.append({"operator_id": prefer_operator, "eligible": True, "score": None, "reason": "preferred"})
+                    record_selection(selected=prefer_operator)
+                    return prefer_operator, op, ""
+                preferred_failure = f"preferred_operator_unavailable: {prefer_operator}: {reason}"
                 candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": reason})
-                record_selection(failure=failure)
-                return "", {}, failure
-        failure = f"preferred_operator_not_found: {prefer_operator}"
-        candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": "not_found"})
-        record_selection(failure=failure)
-        return "", {}, failure
+        else:
+            preferred_failure = f"preferred_operator_not_found: {prefer_operator}"
+            candidate_observations.append({"operator_id": prefer_operator, "eligible": False, "reason": "not_found"})
+
+        # Planner alternatives are an authorization boundary, not a hint. A
+        # strict probe reports why this exact entry was skipped and must never
+        # fall through to an undeclared registry operator.
+        if strict_preference:
+            record_selection(failure=preferred_failure or "preferred_operator_unavailable")
+            return "", {}, preferred_failure or "preferred_operator_unavailable"
 
     # 2. 按 role 过滤；builder 默认从显式 builder_pool 中挑可用算子。
     candidates: list[tuple[int, str, dict[str, Any]]] = []
@@ -1605,10 +1625,10 @@ def select_operator_by_role(
         }
         if provider_policy and not provider_mode_spillover:
             if pool_mode:
-                failure = f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
+                failure = preferred_failure or f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
                 record_selection(failure=failure)
                 return "", {}, failure
-            failure = f"no_dispatchable_operator_for_role: {norm_role}; provider_mode_role_spillover_disabled"
+            failure = preferred_failure or f"no_dispatchable_operator_for_role: {norm_role}; provider_mode_role_spillover_disabled"
             record_selection(failure=failure)
             return "", {}, failure
         spillover_spec = _role_spillover_spec(policy_mod, policy, norm_role)
@@ -1636,14 +1656,14 @@ def select_operator_by_role(
                 record_selection(selected=best_id, spillover=True)
                 return best_id, best_op, ""
             if spillover_reason:
-                failure = f"no_dispatchable_operator_for_role: {norm_role}; {spillover_reason}"
+                failure = preferred_failure or f"no_dispatchable_operator_for_role: {norm_role}; {spillover_reason}"
                 record_selection(failure=failure, spillover=True)
                 return "", {}, failure
         if pool_mode:
-            failure = f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
+            failure = preferred_failure or f"no_dispatchable_operator_for_role: {norm_role}; builder_pool_depleted"
             record_selection(failure=failure)
             return "", {}, failure
-        failure = f"no_dispatchable_operator_for_role: {norm_role}"
+        failure = preferred_failure or f"no_dispatchable_operator_for_role: {norm_role}"
         record_selection(failure=failure)
         return "", {}, failure
 
@@ -1651,6 +1671,92 @@ def select_operator_by_role(
     _, best_id, best_op = candidates[0]
     record_selection(selected=best_id)
     return best_id, best_op, ""
+
+
+def _normalized_operator_alternatives(values: list[str] | tuple[str, ...] | None) -> list[str]:
+    """Keep planner order while dropping blanks and duplicate operator IDs."""
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for raw in values or []:
+        operator_id = str(raw or "").strip()
+        if not operator_id or operator_id in seen:
+            continue
+        seen.add(operator_id)
+        ordered.append(operator_id)
+    return ordered
+
+
+def select_operator_from_ordered_alternatives(
+    alternatives: list[str] | tuple[str, ...],
+    *,
+    role: str,
+    task_type: str = "",
+    resolved_capsule: dict[str, Any] | None = None,
+    logical_operator: str = "",
+    allowed_providers: set[str] | frozenset[str] | None = None,
+    observation_identifiers: dict[str, Any] | None = None,
+) -> tuple[str, dict[str, Any], list[dict[str, str]], str]:
+    """Select the first dispatchable planner-authorized operator, in order."""
+    exclusions: list[dict[str, str]] = []
+    ordered = _normalized_operator_alternatives(alternatives)
+    for operator_id in ordered:
+        selected_id, operator, reason = select_operator_by_role(
+            role=role,
+            task_type=task_type,
+            prefer_operator=operator_id,
+            resolved_capsule=resolved_capsule,
+            logical_operator=logical_operator,
+            allowed_providers=allowed_providers,
+            observation_identifiers=observation_identifiers,
+            strict_preference=True,
+        )
+        if selected_id:
+            return selected_id, operator, exclusions, ""
+        exclusions.append(
+            {
+                "operator_id": operator_id,
+                "reason": reason or "operator_unavailable",
+                "stage": "selection",
+            }
+        )
+    reason = "operator_alternatives_exhausted" if ordered else "operator_alternatives_empty"
+    return "", {}, exclusions, reason
+
+
+def _capsule_excluding_operators(
+    resolved_capsule: dict[str, Any] | None,
+    excluded_operator_ids: set[str],
+) -> dict[str, Any]:
+    """Return selection constraints that cannot immediately retry a refused operator."""
+    capsule = dict(resolved_capsule or {})
+    constraints = dict(capsule.get("operator_constraints") or {})
+    forbidden = {
+        str(item)
+        for item in constraints.get("forbidden", []) or []
+        if str(item).strip()
+    }
+    forbidden.update(str(item) for item in excluded_operator_ids if str(item).strip())
+    constraints["forbidden"] = sorted(forbidden)
+    constraints["preferred"] = [
+        str(item)
+        for item in constraints.get("preferred", []) or []
+        if str(item) not in forbidden
+    ]
+    capsule["operator_constraints"] = constraints
+    return capsule
+
+
+def _operator_submit_rejection_reason(exc: BaseException) -> str:
+    """Read only the typed refusal reason; exception text is not a control input."""
+    reason = str(getattr(exc, "reason", "") or "").strip()
+    return reason if reason in {"operator_busy", "operator_unavailable"} else ""
+
+
+def _load_operator_submit():
+    """Load the lease-enforcing submit seam; dispatch must fail closed without it."""
+    from operator_runtime import submit  # type: ignore
+
+    return submit
 
 
 # ── Dispatch 文件构建 ──────────────────────────────────────────────────────────
@@ -2576,6 +2682,9 @@ def cmd_submit(args: argparse.Namespace) -> int:
         return 1
 
     prefer_operator = str(args.operator or "").strip()
+    authorized_alternatives = _normalized_operator_alternatives(
+        list(getattr(args, "operator_alternative", []) or [])
+    )
     requested_sprint_id = str(args.sprint or "")
     node_id_for_intent = str(args.node or "N1")
     if os.environ.get("SOLAR_PM_DISPATCH_ALLOW_DIRECT") != "1":
@@ -2696,21 +2805,35 @@ def cmd_submit(args: argparse.Namespace) -> int:
     work_dir = _pm_work_dir_for_sprint(sprint_id, str(getattr(args, "work_dir", "") or ""))
 
     # 1. 选算子
-    operator_id, operator, fallback_reason = select_operator_by_role(
-        role=role,
-        task_type=task_type,
-        prefer_operator=prefer_operator,
-        resolved_capsule=resolved_capsule,
-        logical_operator=logical_operator,
-        observation_identifiers={
-            "sprint_id": sprint_id,
-            "node_id": node_id,
-            "task_id": task_id,
-            "dispatch_id": dispatch_id,
-            "attempt_id": attempt_id,
-            "correlation_id": correlation_id,
-        },
-    )
+    selection_ids = {
+        "sprint_id": sprint_id,
+        "node_id": node_id,
+        "task_id": task_id,
+        "dispatch_id": dispatch_id,
+        "attempt_id": attempt_id,
+        "correlation_id": correlation_id,
+    }
+    operator_selection_exclusions: list[dict[str, str]] = []
+    if authorized_alternatives:
+        operator_id, operator, operator_selection_exclusions, fallback_reason = (
+            select_operator_from_ordered_alternatives(
+                authorized_alternatives,
+                role=role,
+                task_type=task_type,
+                resolved_capsule=resolved_capsule,
+                logical_operator=logical_operator,
+                observation_identifiers=selection_ids,
+            )
+        )
+    else:
+        operator_id, operator, fallback_reason = select_operator_by_role(
+            role=role,
+            task_type=task_type,
+            prefer_operator=prefer_operator,
+            resolved_capsule=resolved_capsule,
+            logical_operator=logical_operator,
+            observation_identifiers=selection_ids,
+        )
     if not operator_id:
         failure_record: dict[str, Any] = {
             "task_id": task_id,
@@ -2728,6 +2851,13 @@ def cmd_submit(args: argparse.Namespace) -> int:
             "expected_artifacts": expected_artifacts,
             "failure_reason": fallback_reason or "no_dispatchable_operator_for_role",
         }
+        if authorized_alternatives:
+            failure_record["authorized_operator_alternatives"] = authorized_alternatives
+            failure_record["operator_selection_exclusions"] = operator_selection_exclusions
+            failure_record["display_error"] = {
+                "code": "operator_alternatives_exhausted",
+                "message": "No planner-authorized operator alternative is currently dispatchable.",
+            }
         if capsule_submit.get("capability_capsule_id"):
             failure_record["capability_capsule_id"] = capsule_submit["capability_capsule_id"]
             failure_record["logical_operator"] = logical_operator
@@ -2826,6 +2956,9 @@ def cmd_submit(args: argparse.Namespace) -> int:
         "runtime_mode": envelope.get("runtime_mode", ""),
         "provider_policy": envelope.get("provider_policy", ""),
     }
+    if authorized_alternatives:
+        record["authorized_operator_alternatives"] = authorized_alternatives
+        record["operator_selection_exclusions"] = operator_selection_exclusions
     if operator.get("borrowed_for_role"):
         record["borrowed_for_role"] = operator.get("borrowed_for_role")
         record["borrowed_from_roles"] = operator.get("borrowed_from_roles", [])
@@ -2846,27 +2979,23 @@ def cmd_submit(args: argparse.Namespace) -> int:
         if str(tools_dir) not in sys.path:
             sys.path.insert(0, str(tools_dir))
 
-        from operator_runtime import submit  # type: ignore
+        submit = _load_operator_submit()
     except Exception as exc:
-        # fallback: 直接写 operator inbox（无 lease，operatord 会拾取）
-        inbox_dir = OPERATOR_INBOX_DIR / operator_id
-        inbox_dir.mkdir(parents=True, exist_ok=True)
-        inbox_path = inbox_dir / f"{task_id}.json"
-        tmp = str(inbox_path) + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(envelope, f, indent=2, ensure_ascii=False)
-        os.replace(tmp, str(inbox_path))
-        record["status"] = "submitted_fallback"
-        record["inbox_path"] = str(inbox_path)
+        # Never bypass operator_runtime: a direct inbox write has no atomic
+        # operator lease and can launch colliding work from concurrent ticks.
+        record["status"] = "failed_operator_runtime_unavailable"
+        record["failed_at"] = _now()
+        record["failure_reason"] = "lease_enforcing_operator_runtime_unavailable"
         record["submit_error"] = str(exc)
-        submit_mode = "direct_inbox"
+        write_pm_task_record(task_id, record)
         _observe(
-            "flow_control.fallback_decision",
+            "operator.admission.failed",
             component="pm_dispatch",
             operation="operator_admission",
             operation_id=admission_operation_id,
-            phase="point",
-            status="fallback",
+            phase="completed",
+            terminal=True,
+            status="failed_operator_runtime_unavailable",
             identifiers={
                 "sprint_id": sprint_id,
                 "node_id": node_id,
@@ -2877,20 +3006,154 @@ def cmd_submit(args: argparse.Namespace) -> int:
                 "span_id": admission_span_id,
             },
             data={
-                "decision": "direct_inbox",
-                "fallback_reason": "operator_runtime_import_failed",
+                "operator_id": operator_id,
+                "decision": "fail_closed",
+                "failure_reason": "lease_enforcing_operator_runtime_unavailable",
                 "failure_class": type(exc).__name__,
             },
             provenance="observed",
         )
+        print(f"ERROR: lease-enforcing operator runtime unavailable: {exc}", file=sys.stderr)
+        return 1
     else:
         try:
-            result = submit(envelope)
-        except Exception as exc:
-            record["status"] = "failed_submit_exception"
+            fallback_limit = max(0, int(os.environ.get("SOLAR_PM_OPERATOR_FALLBACK_LIMIT", "3") or 3))
+        except (TypeError, ValueError):
+            fallback_limit = 3
+        fallback_attempts: list[dict[str, str]] = []
+        excluded_operators: set[str] = set()
+        terminal_submit_error: Exception | None = None
+        result: dict[str, Any] = {}
+
+        while True:
+            try:
+                result = submit(envelope)
+                break
+            except Exception as exc:
+                rejection_reason = _operator_submit_rejection_reason(exc)
+                if not rejection_reason or (
+                    not authorized_alternatives and len(fallback_attempts) >= fallback_limit
+                ):
+                    terminal_submit_error = exc
+                    break
+
+                refused_operator_id = operator_id
+                excluded_operators.add(refused_operator_id)
+                if authorized_alternatives:
+                    operator_selection_exclusions.append(
+                        {
+                            "operator_id": refused_operator_id,
+                            "reason": rejection_reason,
+                            "stage": "lease",
+                        }
+                    )
+                    remaining_alternatives = [
+                        candidate
+                        for candidate in authorized_alternatives
+                        if candidate not in excluded_operators
+                    ]
+                    (
+                        next_operator_id,
+                        next_operator,
+                        newly_excluded,
+                        next_reason,
+                    ) = select_operator_from_ordered_alternatives(
+                        remaining_alternatives,
+                        role=role,
+                        task_type=task_type,
+                        resolved_capsule=resolved_capsule,
+                        logical_operator=logical_operator,
+                        observation_identifiers=selection_ids,
+                    )
+                    operator_selection_exclusions.extend(newly_excluded)
+                else:
+                    fallback_capsule = _capsule_excluding_operators(
+                        resolved_capsule,
+                        excluded_operators,
+                    )
+                    next_operator_id, next_operator, next_reason = select_operator_by_role(
+                        role=role,
+                        task_type=task_type,
+                        prefer_operator="",
+                        resolved_capsule=fallback_capsule,
+                        logical_operator=logical_operator,
+                        observation_identifiers=selection_ids,
+                    )
+                if not next_operator_id:
+                    terminal_submit_error = exc
+                    record["operator_fallback_exhausted_reason"] = next_reason
+                    break
+
+                fallback_attempts.append(
+                    {
+                        "from_operator_id": refused_operator_id,
+                        "to_operator_id": next_operator_id,
+                        "reason": rejection_reason,
+                    }
+                )
+                operator_id = next_operator_id
+                operator = next_operator
+                dispatch_text = build_pm_dispatch_text(
+                    task_id=task_id,
+                    operator_id=operator_id,
+                    operator=operator,
+                    objective=objective,
+                    sprint_id=sprint_id,
+                    node_id=node_id,
+                    result_path=result_path,
+                    context=context,
+                    expected_artifacts=expected_artifacts,
+                    closeout_kind=closeout_kind,
+                )
+                dispatch_file.write_text(dispatch_text, encoding="utf-8")
+                envelope = _build_pm_operator_envelope(
+                    task_id=task_id,
+                    dispatch_id=dispatch_id,
+                    attempt_id=attempt_id,
+                    correlation_id=correlation_id,
+                    sprint_id=sprint_id,
+                    node_id=node_id,
+                    operator_id=operator_id,
+                    operator=operator,
+                    task_type=task_type,
+                    objective=objective,
+                    dispatch_file=dispatch_file,
+                    result_path=result_path,
+                    context=context,
+                    role=role,
+                    work_dir=work_dir,
+                    logical_operator=logical_operator,
+                    task_graph_node=task_graph_node,
+                    capsule_submit=capsule_submit,
+                    expected_artifacts=expected_artifacts,
+                    additional_read_scope=additional_read_scope,
+                )
+                record["operator_id"] = operator_id
+                record["runtime_mode"] = envelope.get("runtime_mode", "")
+                record["provider_policy"] = envelope.get("provider_policy", "")
+
+        if terminal_submit_error is not None:
+            exc = terminal_submit_error
+            record["status"] = (
+                "failed_operator_alternatives_exhausted"
+                if authorized_alternatives and _operator_submit_rejection_reason(exc)
+                else "failed_submit_exception"
+            )
             record["failed_at"] = _now()
-            record["failure_reason"] = f"operator_runtime.submit failed: {exc}"
+            record["failure_reason"] = (
+                "operator_alternatives_exhausted"
+                if record["status"] == "failed_operator_alternatives_exhausted"
+                else f"operator_runtime.submit failed: {exc}"
+            )
             record["submit_error"] = str(exc)
+            if fallback_attempts:
+                record["operator_fallbacks"] = fallback_attempts
+            if authorized_alternatives:
+                record["operator_selection_exclusions"] = operator_selection_exclusions
+                record["display_error"] = {
+                    "code": "operator_alternatives_exhausted",
+                    "message": "All planner-authorized operator alternatives refused dispatch.",
+                }
             write_pm_task_record(task_id, record)
             _observe(
                 "operator.admission.failed",
@@ -2905,6 +3168,8 @@ def cmd_submit(args: argparse.Namespace) -> int:
             )
             print(f"ERROR: operator_runtime.submit failed: {exc}", file=sys.stderr)
             return 1
+        if fallback_attempts:
+            record["operator_fallbacks"] = fallback_attempts
         record["status"] = "submitted"
         record["lease_id"] = result.get("lease_id", "")
         record["inbox_path"] = result.get("inbox_path", "")
@@ -3826,6 +4091,12 @@ def main() -> int:
     s.add_argument("--role", default="builder", help="目标角色 (builder/planner/evaluator/knowledge)")
     s.add_argument("--objective", required=True, help="任务描述（自然语言）")
     s.add_argument("--operator", default="", help="指定物理算子 ID（可选）")
+    s.add_argument(
+        "--operator-alternative",
+        action="append",
+        default=[],
+        help="Planner-authorized physical operator ID, repeated in fallback order",
+    )
     s.add_argument("--sprint", default="", help="关联 sprint ID（可选，默认 pm-adhoc-xxx）")
     s.add_argument("--node", default="N1", help="关联 DAG 节点 ID（默认 N1）")
     s.add_argument(

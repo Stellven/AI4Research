@@ -10038,6 +10038,16 @@ def _graph_node_task_type(node: dict[str, Any]) -> str:
     return "implementation"
 
 
+def _append_planner_operator_alternatives(cmd: list[str], node: dict[str, Any]) -> list[str]:
+    """Bind planner-authorized physical operators to pm_dispatch in declared order."""
+    alternatives = node.get("alternatives") if isinstance(node.get("alternatives"), list) else []
+    for alternative in alternatives:
+        operator_id = str(alternative or "").strip()
+        if operator_id:
+            cmd.extend(["--operator-alternative", operator_id])
+    return cmd
+
+
 def _parse_pm_submit_output(stdout: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
     task_match = re.search(r"task_id\s*=\s*(\S+)", stdout)
@@ -10206,6 +10216,7 @@ def _submit_builder_to_operator_pool(
         "--context",
         context,
     ]
+    _append_planner_operator_alternatives(cmd, node)
     if dry_run:
         cmd.append("--dry-run")
     env = _broker_env(sid)
@@ -14196,8 +14207,8 @@ def _account_eval_dispatch_failures(
     return terminalized
 
 
-def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
-                   max_parallel: int | None = None) -> dict[str, Any]:
+def _dispatch_ready_unlocked(graph_path: str, dry_run: bool = False, ttl: int = 900,
+                             max_parallel: int | None = None) -> dict[str, Any]:
     if _no_dispatch_enabled() and not dry_run:
         return {"ok": False, "reason": "no_dispatch_flag", "graph": graph_path, "enqueue": {}, "drain": {}}
     graph = load_graph(graph_path)
@@ -14339,6 +14350,69 @@ def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
         "drain": drain_result,
         "status_sync": {k: status_sync.get(k) for k in ("ok", "updated", "reason", "error") if k in status_sync},
     }
+
+
+def _scheduler_tick_lock_path(graph_path: str) -> Path:
+    """Return the process-shared lock used to serialize one graph's dispatch tick."""
+    identity = str(Path(graph_path).resolve()).casefold()
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:20]
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "-", Path(graph_path).stem)[:48] or "graph"
+    return HARNESS_DIR / "run" / "scheduler-locks" / f"{stem}-{digest}.lock"
+
+
+def _try_acquire_scheduler_tick_lock(graph_path: str) -> Any | None:
+    """Acquire a non-blocking graph dispatch lock, or return ``None`` on contention."""
+    lock_path = _scheduler_tick_lock_path(graph_path)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(lock_path, "a+b")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
+        return None
+    return handle
+
+
+def _release_scheduler_tick_lock(handle: Any) -> None:
+    try:
+        fcntl.flock(handle, fcntl.LOCK_UN)
+    finally:
+        handle.close()
+
+
+def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
+                   max_parallel: int | None = None) -> dict[str, Any]:
+    """Run one collision-free scheduler tick for a graph.
+
+    Pane and operator leases protect physical capacity.  This graph-scoped lock
+    protects the logical claim: two scheduler processes must not select the
+    same ready node and dispatch it to different physical workers.
+    """
+    if dry_run:
+        return _dispatch_ready_unlocked(
+            graph_path,
+            dry_run=True,
+            ttl=ttl,
+            max_parallel=max_parallel,
+        )
+    handle = _try_acquire_scheduler_tick_lock(graph_path)
+    if handle is None:
+        return {
+            "ok": True,
+            "reason": "scheduler_tick_in_progress",
+            "graph": graph_path,
+            "enqueue": {},
+            "drain": {},
+        }
+    try:
+        return _dispatch_ready_unlocked(
+            graph_path,
+            dry_run=False,
+            ttl=ttl,
+            max_parallel=max_parallel,
+        )
+    finally:
+        _release_scheduler_tick_lock(handle)
 
 
 def _node_policy_passed(graph: dict[str, Any], sid: str, node_id: str) -> bool:

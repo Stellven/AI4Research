@@ -26,7 +26,17 @@ def _prepare_isolated_harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     harness_dir = tmp_path / "harness"
     harness_dir.mkdir()
     shutil.copytree(HARNESS / "config", harness_dir / "config")
-    for name in ("evaluators", "lib", "personas", "plugins", "schemas", "templates", "tools", "workflows"):
+    for name in (
+        "capability-capsules",
+        "evaluators",
+        "lib",
+        "personas",
+        "plugins",
+        "schemas",
+        "templates",
+        "tools",
+        "workflows",
+    ):
         link = harness_dir / name
         try:
             link.symlink_to(HARNESS / name, target_is_directory=True)
@@ -574,9 +584,10 @@ def test_autosci_dispatch_names_the_same_workdir_used_by_eval_snapshot(
 
 
 def test_normal_intake_autosci_graph_dispatches_autosci_evaluator_after_handoff(
-    tmp_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    tmp_path = tmp_path_factory.mktemp("a")
     harness_dir, sprints = _prepare_isolated_harness(tmp_path, monkeypatch)
     graph_path = _capture_and_consume_autosci_intake(harness_dir, sprints, tmp_path)
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
