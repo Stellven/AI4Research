@@ -1,0 +1,131 @@
+{
+  "schema_version": "solar.scheduler_input.v1",
+  "artifact_role": "metadata_contract_example_not_runtime_authority",
+  "scheduler_input_id": "scheduler-input-example-v1",
+  "sprint_id": "sprint-example-v1",
+  "planning_authority": "frozen_execution_plan_v1",
+  "graph": {
+    "graph_id": "graph-example-v1",
+    "nodes": [
+      {
+        "id": "collect_evidence",
+        "goal": "Produce the registered evidence artifact required by downstream synthesis.",
+        "logical_operator": "EvidenceCollector",
+        "dispatch_task_type": "evidence-collection",
+        "depends_on": [],
+        "requirement_ids": [
+          "REQ-001"
+        ],
+        "capsule_binding": {
+          "capsule_ids": [
+            "cap.evidence-collection.v1"
+          ],
+          "composition_id": null,
+          "contract_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "physical_candidates": [
+          {
+            "operator_id": "operator.evidence-primary",
+            "rank": 1,
+            "admission_state": "ELIGIBLE"
+          },
+          {
+            "operator_id": "operator.evidence-fallback",
+            "rank": 2,
+            "admission_state": "ELIGIBLE"
+          }
+        ],
+        "artifact_contract": {
+          "consumes": [
+            "artifact.request.v1"
+          ],
+          "produces": [
+            "artifact.evidence.v1"
+          ]
+        },
+        "evaluation_binding": {
+          "deterministic_gate_ids": [
+            "gate.evidence-schema.v1"
+          ],
+          "semantic_evaluator_ids": [
+            "evaluator.evidence-fidelity.v1"
+          ]
+        },
+        "resource_requirements": {
+          "cpu_cores_min": 1,
+          "memory_mb_min": 512,
+          "gpu_required": false,
+          "network": "optional"
+        },
+        "effects": [
+          "read",
+          "write",
+          "network"
+        ],
+        "priority": 100,
+        "failure_policy": {
+          "max_attempts": 2,
+          "on_exhausted": "fail_run"
+        }
+      },
+      {
+        "id": "produce_delivery",
+        "goal": "Produce the final registered delivery from accepted evidence.",
+        "logical_operator": "DeliveryProducer",
+        "dispatch_task_type": "delivery-production",
+        "depends_on": [
+          "collect_evidence"
+        ],
+        "requirement_ids": [
+          "REQ-002"
+        ],
+        "capsule_binding": {
+          "capsule_ids": [
+            "cap.delivery-plan.v1",
+            "cap.delivery-produce.v1"
+          ],
+          "composition_id": "composition.delivery.v1",
+          "contract_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "physical_candidates": [
+          {
+            "operator_id": "operator.delivery-primary",
+            "rank": 1,
+            "admission_state": "ELIGIBLE"
+          }
+        ],
+        "artifact_contract": {
+          "consumes": [
+            "artifact.evidence.v1"
+          ],
+          "produces": [
+            "artifact.delivery.v1"
+          ]
+        },
+        "evaluation_binding": {
+          "deterministic_gate_ids": [
+            "gate.delivery-schema.v1"
+          ],
+          "semantic_evaluator_ids": [
+            "evaluator.delivery-requirement-coverage.v1"
+          ]
+        },
+        "resource_requirements": {
+          "cpu_cores_min": 1,
+          "memory_mb_min": 512,
+          "gpu_required": false,
+          "network": "forbidden"
+        },
+        "effects": [
+          "read",
+          "write"
+        ],
+        "priority": 50,
+        "failure_policy": {
+          "max_attempts": 2,
+          "on_exhausted": "fail_run"
+        }
+      }
+    ]
+  }
+}
