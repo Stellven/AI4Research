@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.plan_composition_catalog.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_role",
+    "catalog_id",
+    "requirement_ir_ref",
+    "planning_context_ref",
+    "plan_ir_ref",
+    "planning_catalog_ref",
+    "artifact_type_registry_ref",
+    "conversion_registry_ref",
+    "nodes",
+    "verdict"
+  ],
+  "properties": {
+    "schema_version": {"const": "solar.plan_composition_catalog.v1"},
+    "artifact_role": {"const": "planner_candidate_artifact"},
+    "catalog_id": {"type": "string", "minLength": 1},
+    "requirement_ir_ref": {"$ref": "#/$defs/ref"},
+    "planning_context_ref": {"$ref": "#/$defs/ref"},
+    "plan_ir_ref": {"$ref": "#/$defs/ref"},
+    "planning_catalog_ref": {"$ref": "#/$defs/ref"},
+    "artifact_type_registry_ref": {"$ref": "#/$defs/ref"},
+    "conversion_registry_ref": {"$ref": "#/$defs/ref"},
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "node_id",
+          "requirement_ids",
+          "available_inputs",
+          "target_outputs",
+          "required_effects",
+          "network_policy",
+          "execution_trust",
+          "declared_execution_trust",
+          "minimum_execution_trust",
+          "search",
+          "admitted_candidate_ids",
+          "candidate_exclusions",
+          "status",
+          "errors"
+        ],
+        "properties": {
+          "node_id": {"type": "string", "minLength": 1},
+          "requirement_ids": {"$ref": "#/$defs/string_set"},
+          "available_inputs": {"$ref": "#/$defs/string_set"},
+          "target_outputs": {"$ref": "#/$defs/nonempty_string_set"},
+          "required_effects": {"$ref": "#/$defs/effects"},
+          "network_policy": {"enum": ["required", "optional", "forbidden"]},
+          "execution_trust": {"enum": ["any", "evidence_transform", "measured_execution"]},
+          "declared_execution_trust": {"enum": ["any", "evidence_transform", "measured_execution"]},
+          "minimum_execution_trust": {"enum": ["any", "evidence_transform", "measured_execution"]},
+          "search": {
+            "oneOf": [
+              {"$ref": "solar.composition_candidate_search.v1"},
+              {"type": "null"}
+            ]
+          },
+          "admitted_candidate_ids": {"$ref": "#/$defs/string_set"},
+          "candidate_exclusions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["candidate_id", "reason_codes"],
+              "properties": {
+                "candidate_id": {"type": "string", "minLength": 1},
+                "reason_codes": {"$ref": "#/$defs/nonempty_string_set"}
+              }
+            }
+          },
+          "status": {"enum": ["candidates_available", "unsatisfiable", "search_bound_exhausted", "invalid_request"]},
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["code", "message"],
+              "properties": {
+                "code": {"type": "string", "minLength": 1},
+                "message": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        }
+      }
+    },
+    "verdict": {"enum": ["candidates_available", "unsatisfiable", "search_bound_exhausted", "invalid_request"]}
+  },
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256"],
+      "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "string_set": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "nonempty_string_set": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "effects": {
+      "type": "array",
+      "items": {"enum": ["read", "write", "execute", "network"]},
+      "uniqueItems": true
+    }
+  }
+}

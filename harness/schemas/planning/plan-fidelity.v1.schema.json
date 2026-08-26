@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.plan_fidelity.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "fidelity_id", "requirement_ir_ref", "plan_ir_ref", "status", "review_method", "reviewer", "checks", "errors", "warnings"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.plan_fidelity.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "fidelity_id": {"type": "string", "minLength": 1},
+    "requirement_ir_ref": {"type": "object"},
+    "plan_ir_ref": {"type": "object"},
+    "status": {"enum": ["pass", "pass_with_warnings", "fail"]},
+    "review_method": {"const": "independent_model_call"},
+    "reviewer": {
+      "type": "object",
+      "required": ["provider", "model"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1}
+      }
+    },
+    "checks": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "object"}},
+    "errors": {"type": "array", "items": {"type": "object"}},
+    "warnings": {"type": "array", "items": {"type": "object"}}
+  }
+}

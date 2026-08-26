@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.capsule_candidate_catalog.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_role", "candidate_catalog_id", "planning_context_ref", "requirement_ir_ref", "plan_ir_ref", "planning_catalog_ref", "nodes", "verdict"],
+  "properties": {
+    "schema_version": {"const": "solar.capsule_candidate_catalog.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "candidate_catalog_id": {"type": "string", "minLength": 1},
+    "planning_context_ref": {"$ref": "#/$defs/ref"},
+    "requirement_ir_ref": {"$ref": "#/$defs/ref"},
+    "plan_ir_ref": {"$ref": "#/$defs/ref"},
+    "planning_catalog_ref": {"$ref": "#/$defs/ref"},
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["node_id", "requirement_ids", "eligible_candidate_ids", "exclusions"],
+        "properties": {
+          "node_id": {"type": "string", "minLength": 1},
+          "requirement_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "eligible_candidate_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "exclusions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["capsule_id", "reason_codes", "missing_inputs", "unsupported_node_inputs", "missing_outputs"],
+              "properties": {
+                "capsule_id": {"type": "string", "minLength": 1},
+                "reason_codes": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
+                "missing_inputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+                "unsupported_node_inputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+                "missing_outputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+              }
+            }
+          }
+        }
+      }
+    },
+    "verdict": {"enum": ["candidates_available", "unsatisfiable"]}
+  },
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256"],
+      "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    }
+  }
+}

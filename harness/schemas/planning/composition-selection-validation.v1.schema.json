@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.composition_selection_validation.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_role", "validation_id", "selection_ref", "status", "checks", "errors"],
+  "properties": {
+    "schema_version": {"const": "solar.composition_selection_validation.v1"},
+    "artifact_role": {"const": "planner_validation_artifact"},
+    "validation_id": {"type": "string", "minLength": 1},
+    "selection_ref": {
+      "oneOf": [
+        {"$ref": "#/$defs/ref"},
+        {"type": "null"}
+      ]
+    },
+    "status": {"enum": ["pass", "fail"]},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "status", "detail"],
+        "properties": {
+          "check": {"type": "string", "minLength": 1},
+          "status": {"enum": ["pass", "fail"]},
+          "detail": {"type": "string"}
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message", "repairable"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1},
+          "repairable": {"type": "boolean"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256"],
+      "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    }
+  }
+}

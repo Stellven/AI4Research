@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.planning_context.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "planning_context_id", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.planning_context.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "planning_context_id": {"type": "string", "minLength": 1},
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "relative_path", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "relative_path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}
