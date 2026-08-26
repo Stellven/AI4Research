@@ -6,7 +6,13 @@ init_paths() {
     CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
     RECEIPT_PATH="$SOLAR_HOME/install-receipt.json"
     SOLAR_DB="$SOLAR_HOME/db/solar.db"
+    # Bun maintains a runtime transpiler cache separately from its package
+    # cache. Keep both inside the managed install root so
+    # invoking Bun during installation cannot leave state in the user's home.
+    BUN_INSTALL_CACHE_DIR="${BUN_INSTALL_CACHE_DIR:-$SOLAR_HOME/cache/bun}"
+    BUN_RUNTIME_TRANSPILER_CACHE_PATH="${BUN_RUNTIME_TRANSPILER_CACHE_PATH:-$SOLAR_HOME/cache/bun-runtime}"
     export SOURCE_DIR SOLAR_HOME CLAUDE_DIR RECEIPT_PATH SOLAR_DB
+    export BUN_INSTALL_CACHE_DIR BUN_RUNTIME_TRANSPILER_CACHE_PATH
 }
 
 ensure_base_dirs() {

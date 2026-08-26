@@ -32,6 +32,8 @@ for tpl in solar-daemon.plist.template solar-daemon.service.template; do
     if grep -nE "$FORBIDDEN" "$out"; then echo "FAIL: forbidden token in $tpl" >&2; fail=1; fi
     if grep -nF '{{' "$out"; then echo "FAIL: unresolved {{ in $tpl" >&2; fail=1; fi
     grep -q "$SOLAR_HOME/core/daemon/server.ts" "$out" || { echo "FAIL: $tpl missing daemon entrypoint" >&2; fail=1; }
+    grep -q "BUN_RUNTIME_TRANSPILER_CACHE_PATH" "$out" || { echo "FAIL: $tpl missing contained Bun runtime cache" >&2; fail=1; }
+    grep -q "BUN_INSTALL_CACHE_DIR" "$out" || { echo "FAIL: $tpl missing contained Bun install cache" >&2; fail=1; }
     # Structural validity (NOT start): required sections + an absolute exec path.
     case "$tpl" in
         *.service.template)

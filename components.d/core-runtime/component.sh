@@ -12,9 +12,9 @@ component_install() {
     cp "$SOURCE_DIR/package.json" "$SOLAR_HOME/package.json"
     cp "$SOURCE_DIR/bun.lock" "$SOLAR_HOME/bun.lock"
     [ -f "$SOURCE_DIR/tsconfig.json" ] && cp "$SOURCE_DIR/tsconfig.json" "$SOLAR_HOME/tsconfig.json"
-    # Keep bun's package cache inside SOLAR_HOME: the install must not
-    # write to the user's ~/.bun, and uninstall removes it with ~/.solar.
-    (cd "$SOLAR_HOME" && BUN_INSTALL_CACHE_DIR="$SOLAR_HOME/cache/bun" bun install --frozen-lockfile)
+    # init_paths routes Bun's package and runtime caches inside SOLAR_HOME;
+    # uninstall removes both with the managed runtime root.
+    (cd "$SOLAR_HOME" && bun install --frozen-lockfile)
     return 0
 }
 

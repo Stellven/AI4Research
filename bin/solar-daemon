@@ -19,5 +19,7 @@ fi
 
 export SOLAR_HOME
 export SOLAR_DB_PATH="${SOLAR_DB_PATH:-$SOLAR_HOME/db/solar.db}"
+export BUN_INSTALL_CACHE_DIR="${BUN_INSTALL_CACHE_DIR:-$SOLAR_HOME/cache/bun}"
+export BUN_RUNTIME_TRANSPILER_CACHE_PATH="${BUN_RUNTIME_TRANSPILER_CACHE_PATH:-$SOLAR_HOME/cache/bun-runtime}"
 
 exec bun run core/daemon/server.ts "$@"
