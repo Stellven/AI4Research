@@ -1,0 +1,72 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-22-kid-fish-thirst",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-22-kid-fish-thirst",
+    "raw_text_sha256": "a0c27d7ae3d0ceeb39847836308f896abd5a3be774c360fb5c8b9a82209757bf"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Explain whether and how fish experience water-balance needs analogous to thirst.",
+      "source_spans": [
+        [
+          0,
+          25
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "information",
+      "description": "An age-appropriate explanation distinguishing freshwater and saltwater fish.",
+      "source_spans": [
+        [
+          0,
+          25
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Answer directly while explaining relevant freshwater and saltwater differences.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "direct_answer",
+              "freshwater_fish",
+              "saltwater_fish",
+              "child_accessible"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          25
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [],
+  "conflicts": [],
+  "unknowns": []
+}

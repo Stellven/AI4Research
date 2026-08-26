@@ -1,0 +1,107 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-08-research-open-weight-ai",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-08-research-open-weight-ai",
+    "raw_text_sha256": "ea3e8792df726e2d3516c970c98972512b70b3ae0d67131cb28d8e443deeb7cd"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Evaluate evidence that open-weight language models accelerate useful innovation.",
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    },
+    {
+      "goal_id": "G2",
+      "statement": "Evaluate evidence that open-weight language models increase safety risks and identify discriminating measurements.",
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "artifact",
+      "description": "A balanced two-sided evidence assessment with a measurement agenda.",
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Present the strongest evidence for both benefits and risks without collapsing disagreement.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "innovation_evidence",
+              "safety_risk_evidence",
+              "measurements"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_id": "A1",
+      "question": "Useful innovation and safety risk require explicit operational definitions.",
+      "blocking": false,
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unknowns": [
+    {
+      "unknown_id": "U1",
+      "question": "Which measurements would causally distinguish innovation benefits from safety harms?",
+      "kind": "discoverable_fact",
+      "resolution": {
+        "mode": "workflow_discovery",
+        "required_before": "requirement_completion"
+      },
+      "derived_from": [
+        "G1",
+        "C1"
+      ]
+    }
+  ]
+}

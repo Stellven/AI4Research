@@ -1,0 +1,111 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-20-experiment-literature-summary-utility",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-20-experiment-literature-summary-utility",
+    "raw_text_sha256": "a7b482e44c6026c55b7f750ef48ad92d51295b11452d7079691f3f93f0bda71a"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Design and run a controlled study of whether generated summaries improve researcher efficiency without reducing accuracy.",
+      "source_spans": [
+        [
+          0,
+          233
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "action",
+      "description": "Execute or specify a controlled comparison against baseline conditions.",
+      "source_spans": [
+        [
+          0,
+          233
+        ]
+      ]
+    },
+    {
+      "outcome_id": "D2",
+      "class": "artifact",
+      "description": "A study protocol and results framework with outcomes, failure criteria, and bias checks.",
+      "source_spans": [
+        [
+          0,
+          233
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Include baseline conditions, measurable outcomes, failure criteria, and bias checks.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "baseline_conditions",
+              "measurable_outcomes",
+              "failure_criteria",
+              "bias_checks",
+              "speed",
+              "accuracy"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          233
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_id": "A1",
+      "question": "The researcher population, literature domain, summary system, and execution resources are unspecified.",
+      "blocking": false,
+      "source_spans": [
+        [
+          0,
+          233
+        ]
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unknowns": [
+    {
+      "unknown_id": "U1",
+      "question": "Which participant population and question set can measure speed-accuracy tradeoffs fairly?",
+      "kind": "design_parameter",
+      "resolution": {
+        "mode": "workflow_design",
+        "required_before": "experiment_execution"
+      },
+      "derived_from": [
+        "G1",
+        "C1"
+      ]
+    }
+  ]
+}

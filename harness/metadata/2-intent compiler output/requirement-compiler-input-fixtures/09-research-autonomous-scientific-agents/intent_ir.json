@@ -1,0 +1,100 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-09-research-autonomous-scientific-agents",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-09-research-autonomous-scientific-agents",
+    "raw_text_sha256": "6c5a43bf3179abb5562e84763a6806a74c3d54fa4a3dfe69ed3b107db48f84aa"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Map current autonomous scientific-agent capabilities and the remaining need for human supervision.",
+      "source_spans": [
+        [
+          0,
+          232
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "artifact",
+      "description": "A current capability map with evidence, limitations, and supervision boundaries.",
+      "source_spans": [
+        [
+          0,
+          232
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Compare every requested research capability and human-supervision boundary.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "literature_review",
+              "hypothesis_generation",
+              "experimentation",
+              "analysis",
+              "reproducibility",
+              "human_supervision"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          232
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_id": "A1",
+      "question": "Current requires a recorded search cutoff date and autonomous requires an operational definition.",
+      "blocking": false,
+      "source_spans": [
+        [
+          0,
+          232
+        ]
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unknowns": [
+    {
+      "unknown_id": "U1",
+      "question": "Which claimed capabilities have been independently reproduced outside demonstrations?",
+      "kind": "discoverable_fact",
+      "resolution": {
+        "mode": "workflow_discovery",
+        "required_before": "requirement_completion"
+      },
+      "derived_from": [
+        "G1",
+        "C1"
+      ]
+    }
+  ]
+}

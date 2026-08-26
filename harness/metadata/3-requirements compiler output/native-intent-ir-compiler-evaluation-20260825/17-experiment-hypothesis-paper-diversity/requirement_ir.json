@@ -1,0 +1,148 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-fixture-17-experiment-hypothesis-paper-diversity",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-fixture-17-experiment-hypothesis-paper-diversity",
+    "sha256": "9568f377fa744bf84c46f5760e9f920d7d2df523047f1bc0565f19d19484955f"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-raw-intent-fixture-17-experiment-hypothesis-paper-diversity",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: Run a blinded controlled hypothesis-generation evaluation.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "execution_record",
+          "results",
+          "failure_conditions",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.action_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: A statistically qualified comparison using defined novelty and testability metrics.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "deliverable",
+          "completeness",
+          "supporting_evidence",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.artifact_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C1",
+      "statement": "Define metrics, use blinded scoring, and report statistical uncertainty.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "novelty_metric",
+          "testability_metric",
+          "blinded_scoring",
+          "statistical_uncertainty"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: How should paper diversity and blinded scoring reliability be operationalized?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1",
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:A1",
+      "statement": "Resolve or explicitly disclose the assumption for: Paper-selection diversity, research domain, model, sample size, and evaluator pool are unspecified.",
+      "priority": "must",
+      "source_refs": [
+        "A1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "assumption",
+          "impact",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.ambiguity_disclosure.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "controlled_execution",
+        "artifact_generation"
+      ],
+      "forbidden": [
+        "production_deployment_without_approval",
+        "unscoped_external_side_effects"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [
+    {
+      "source_ref": "A1",
+      "statement": "The RequirementIR must disclose how this ambiguity is resolved: Paper-selection diversity, research domain, model, sample size, and evaluator pool are unspecified."
+    }
+  ],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

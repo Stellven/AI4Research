@@ -30,6 +30,7 @@ The directory holding a file is a presentation grouping. The `Producer` and
 | Intent Compiler | `intent_acceptance.json` | `intent_acceptance_gate` | `EVALUATOR_OUTPUT` | Combines validation and fidelity into accept, clarify, or fail. |
 | Intent Compiler | `clarification.json` | `clarification_gate` | `CONTROL_OR_SUPPORT` | Records a blocking question and user resolution; it is an admission-control artifact, not compiler work. |
 | Requirements Compiler | `requirement_ir.json` | `requirement_compiler` | `STEP_OUTPUT` | Workflow-independent obligations compiled from accepted intent. |
+| Requirements Compiler | `requirement_format_evaluation.json` | `requirement_format_evaluator` | `EVALUATOR_OUTPUT` | Deterministic preflight of RequirementIR template shape, references, hashes, and accepted-intent binding; does not replace validation or coverage. |
 | Requirements Compiler | `requirement_validation.json` | `requirement_validator` | `EVALUATOR_OUTPUT` | Validates references, scope, checks, and checkability in `requirement_ir.json`. |
 | Requirements Compiler | `requirement_coverage.json` | `requirement_coverage_verifier` | `EVALUATOR_OUTPUT` | Verifies that accepted IntentIR items were not dropped. |
 | Elastic Planner | `strategy.json` | `elastic_planner` | `STEP_OUTPUT` | Chooses direct response, reuse, parameterization, extension, composition, or generation. |
