@@ -32,10 +32,6 @@
         <string>{{SOLAR_HOME}}</string>
         <key>SOLAR_DB_PATH</key>
         <string>{{SOLAR_HOME}}/db/solar.db</string>
-        <key>BUN_INSTALL_CACHE_DIR</key>
-        <string>{{SOLAR_HOME}}/cache/bun</string>
-        <key>BUN_RUNTIME_TRANSPILER_CACHE_PATH</key>
-        <string>{{SOLAR_HOME}}/cache/bun-runtime</string>
     </dict>
 </dict>
 </plist>

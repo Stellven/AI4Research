@@ -462,10 +462,7 @@ if [ "$core_gate" = "true" ]; then
     # SQLite DB and the first opener's WAL conversion needs an exclusive
     # lock, so a concurrent cold start hits SQLITE_BUSY.
     set -m
-    (cd "$home_dir/.solar" && HOME="$home_dir" \
-        BUN_INSTALL_CACHE_DIR="$home_dir/.solar/cache/bun" \
-        BUN_RUNTIME_TRANSPILER_CACHE_PATH="$home_dir/.solar/cache/bun-runtime" \
-        exec bun run dashboard:web >"$dashboard_log" 2>&1) &
+    (cd "$home_dir/.solar" && HOME="$home_dir" exec bun run dashboard:web >"$dashboard_log" 2>&1) &
     dashboard_pid="$!"
     set +m
 

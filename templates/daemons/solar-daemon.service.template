@@ -9,8 +9,6 @@ WorkingDirectory={{SOLAR_HOME}}
 Environment=HOME={{SOLAR_DAEMON_HOME}}
 Environment=SOLAR_HOME={{SOLAR_HOME}}
 Environment=SOLAR_DB_PATH={{SOLAR_HOME}}/db/solar.db
-Environment=BUN_INSTALL_CACHE_DIR={{SOLAR_HOME}}/cache/bun
-Environment=BUN_RUNTIME_TRANSPILER_CACHE_PATH={{SOLAR_HOME}}/cache/bun-runtime
 Restart=on-failure
 RestartSec=5
 StandardOutput=append:{{SOLAR_HOME}}/logs/daemon-stdout.log

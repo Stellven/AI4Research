@@ -1,7 +1,7 @@
 {
   "schema_version": "solar.compiler_artifact_registry.v2",
   "status": "incremental_implementation",
-  "integration_status": "intent_compiler_live_native_requirement_compiler_connected_other_stages_remain_metadata_only",
+  "integration_status": "intent_compiler_live_dashboard_verified_other_stages_remain_metadata_only",
   "engine_legend": {
     "DET": "Deterministic producer or validator",
     "LLM": "Model judgment",
@@ -15,8 +15,7 @@
     {"name": "intent_acceptance.json", "producer": "intent_acceptance_gate", "engine": "DET", "consumers": ["requirement_compiler", "audit"], "decision": "Provide the single accepted, needs-clarification, or failed admission boundary."},
     {"name": "clarification.json", "producer": "clarification_gate", "engine": "DET", "consumers": ["user", "intent_compiler", "requirement_compiler"], "decision": "Stop on a material ambiguity or conflict and bind the user's answer."},
     {"name": "check_registry.json", "producer": "registry_snapshotter", "engine": "DET", "consumers": ["requirement_validator", "binding_gate", "final_verifier"], "decision": "Resolve every machine-checkable obligation to a known check and input artifact contract."},
-    {"name": "requirement_ir.json", "producer": "requirement_compiler", "engine": "DET", "consumers": ["requirement_format_evaluator", "requirement_validator", "coverage_gate", "elastic_planner", "final_verifier"], "decision": "Compile workflow-independent obligations, scope, assumptions, approvals, and rollback semantics."},
-    {"name": "requirement_format_evaluation.json", "producer": "requirement_format_evaluator", "engine": "DET", "consumers": ["requirement_handoff_gate", "audit"], "decision": "Fail closed on RequirementIR template, identity, source-reference, digest, or accepted-intent binding defects before downstream handoff."},
+    {"name": "requirement_ir.json", "producer": "requirement_compiler", "engine": "LLM+V", "consumers": ["requirement_validator", "coverage_gate", "elastic_planner", "final_verifier"], "decision": "Compile workflow-independent obligations, scope, assumptions, approvals, and rollback semantics."},
     {"name": "requirement_validation.json", "producer": "requirement_validator", "engine": "DET", "consumers": ["requirement_acceptance_gate", "repair_controller"], "decision": "Reject unresolved references, unregistered checks, invalid scope, or dishonest checkability."},
     {"name": "requirement_coverage.json", "producer": "requirement_coverage_verifier", "engine": "DET", "consumers": ["requirement_acceptance_gate", "elastic_planner"], "decision": "Reject any dropped IntentIR item before planning."},
     {"name": "strategy.json", "producer": "elastic_planner", "engine": "LLM+V", "consumers": ["plan_validator", "contract_freezer", "experience_compressor"], "decision": "Choose the smallest sufficient direct, reused, parameterized, extended, composed, generated, clarified, or rejected path."},
