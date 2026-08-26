@@ -1,0 +1,30 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-20-experiment-literature-summary-utility",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-20-experiment-literature-summary-utility-retry-02",
+    "sha256": "ca6c39be89c19a7881e97af453b5db6fd3b582545476310c47598b5492cc186a"
+  },
+  "strategy": "compose",
+  "base_workflow": "scientific_experiment_lifecycle_v1",
+  "base_version": "1",
+  "parameters": {
+    "execution_mode": "approval_gated",
+    "requirement_count": 6
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "Use an approval-gated design, run, verification, and delivery chain.",
+  "artifact_role": "simulated_planner_step_output"
+}

@@ -1,0 +1,171 @@
+{
+  "schema_version": "solar.planning_catalog_snapshot.v1",
+  "snapshot_id": "planning-catalog-live-25-20260826",
+  "artifact_role": "control_or_support_artifact_not_planner_output",
+  "capability_capsules": [
+    {
+      "capsule_id": "cap.research-seed-snapshot",
+      "inputs": [
+        "solar.requirement_ir.v2"
+      ],
+      "outputs": [
+        "research.seed_snapshot.v1"
+      ],
+      "gate_id": "gate.seed_provenance.v1",
+      "registered": true
+    },
+    {
+      "capsule_id": "cap.research-public-source-discovery",
+      "inputs": [
+        "research.seed_snapshot.v1"
+      ],
+      "outputs": [
+        "research.source_discovery.v1"
+      ],
+      "gate_id": "gate.source_provenance.v1",
+      "registered": true
+    },
+    {
+      "capsule_id": "cap.research-source-validation",
+      "inputs": [
+        "research.source_discovery.v1"
+      ],
+      "outputs": [
+        "research.source_validation.v1"
+      ],
+      "gate_id": "gate.source_validation.v1",
+      "registered": true
+    },
+    {
+      "capsule_id": "cap.research-evidence-synthesis",
+      "inputs": [
+        "research.source_validation.v1",
+        "research.seed_snapshot.v1"
+      ],
+      "outputs": [
+        "research.evidence_synthesis.v1"
+      ],
+      "gate_id": "gate.claim_grounding.v1",
+      "registered": true
+    },
+    {
+      "capsule_id": "cap.research-report-draft",
+      "inputs": [
+        "research.evidence_synthesis.v1"
+      ],
+      "outputs": [
+        "research.report.v1"
+      ],
+      "gate_id": "gate.requirement_coverage.v1",
+      "registered": true
+    },
+    {
+      "capsule_id": "cap.research-experiment-design",
+      "inputs": [
+        "solar.requirement_ir.v2"
+      ],
+      "outputs": [
+        "research.experiment_plan.v1"
+      ],
+      "gate_id": "gate.experiment_design_complete.v1",
+      "registered": true
+    },
+    {
+      "capsule_id": "cap.research-experiment-run",
+      "inputs": [
+        "research.experiment_plan.v1"
+      ],
+      "outputs": [
+        "research.experiment_result.v1"
+      ],
+      "gate_id": "gate.explicit_execution_approval.v1",
+      "registered": true
+    },
+    {
+      "capsule_id": "cap.research-claim-verify",
+      "inputs": [
+        "research.experiment_result.v1"
+      ],
+      "outputs": [
+        "research.claim_verdict.v1"
+      ],
+      "gate_id": "gate.statistical_claim_support.v1",
+      "registered": true
+    },
+    {
+      "capsule_id": "cap.unregistered.direct-response",
+      "inputs": [
+        "solar.requirement_ir.v2"
+      ],
+      "outputs": [
+        "solar.direct_response.v1"
+      ],
+      "gate_id": "gate.requirement_coverage.v1",
+      "registered": false
+    }
+  ],
+  "physical_operators": [
+    {
+      "operator_id": "autosci-research-synthesis-seed-fetch-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "mini-codex-gpt53-spark-builder-1",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "mini-codex-gpt55-medium-builder-1",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-research-synthesis-source-discovery-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-research-synthesis-source-validation-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "codex-research-evidence-synthesis-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "codex-research-report-draft-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-experiment-design-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-exec-experiment-design-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-experiment-run-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-exec-experiment-run-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-exec-claim-verification-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-research-poc-claim-verification-worker",
+      "state": "CONFIGURED"
+    },
+    {
+      "operator_id": "autosci-exec-report-delivery-worker",
+      "state": "CONFIGURED"
+    }
+  ],
+  "known_gaps": [
+    {
+      "capsule_id": "cap.unregistered.direct-response",
+      "impact": "The five direct-answer plans are structurally complete but not capability-native dispatchable."
+    }
+  ]
+}

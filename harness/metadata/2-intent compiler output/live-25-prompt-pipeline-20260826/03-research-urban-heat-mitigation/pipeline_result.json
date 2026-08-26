@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "03-research-urban-heat-mitigation",
+  "title": "Identify how well urban heat-mitigation strategies perform in dense cities.",
+  "lane": "delivery",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\03-research-urban-heat-mitigation\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\03-research-urban-heat-mitigation\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\03-research-urban-heat-mitigation\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\03-research-urban-heat-mitigation\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\03-research-urban-heat-mitigation\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\03-research-urban-heat-mitigation\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\03-research-urban-heat-mitigation\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\03-research-urban-heat-mitigation\\requirement_trace.json",
+  "case_id": "03-research-urban-heat-mitigation",
+  "category": "research",
+  "prompt": "Analyze which urban heat-mitigation strategies work best in dense cities. Compare trees, reflective roofs, green roofs, shade structures, and cooling centers using effectiveness, cost, equity, and scalability.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

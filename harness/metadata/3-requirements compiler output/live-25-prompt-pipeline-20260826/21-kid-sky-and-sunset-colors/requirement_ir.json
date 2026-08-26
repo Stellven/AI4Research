@@ -1,0 +1,56 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-21-kid-sky-and-sunset-colors-retry-01",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-21-kid-sky-and-sunset-colors-retry-01",
+    "sha256": "88ada8b02b3d2688f0c515cd911057f95825b2e8e7125936271ba3370fc45809"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-21-kid-sky-and-sunset-colors-retry-01",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: An explanation of why the sky appears blue and why sunsets appear orange.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

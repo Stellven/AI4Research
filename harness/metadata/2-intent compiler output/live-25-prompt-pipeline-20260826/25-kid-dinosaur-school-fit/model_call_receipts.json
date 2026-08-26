@@ -1,0 +1,16 @@
+{
+  "calls": [
+    {
+      "path": "generation-0\\compiler_call\\model_call_receipt.json",
+      "duration_ms": 20390.967,
+      "model": "gpt-5.3-codex-spark",
+      "provider": "codex"
+    },
+    {
+      "path": "generation-0\\reviewer_call\\model_call_receipt.json",
+      "duration_ms": 7640.861,
+      "model": "gpt-5.3-codex-spark",
+      "provider": "codex"
+    }
+  ]
+}

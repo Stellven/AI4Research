@@ -1,0 +1,191 @@
+{
+  "schema_version": "solar.requirement_compiler_fixture_evaluation.v1",
+  "run_id": "current-v1-compiler-evaluation-20260825",
+  "generated_at": "2026-08-25T21:12:58.665863+00:00",
+  "repo_head": "6ba0604b9e784d06cea8682e5aea1c5299df96c2",
+  "source_fixture_catalog": "harness/metadata/2-intent compiler output/requirement-compiler-input-fixtures/fixture_catalog.json",
+  "production_entrypoint": "harness/lib/intent_gateway.py::build_requirement_ir",
+  "compatibility_adapter_used": true,
+  "native_intent_bundle_interface": false,
+  "source_of_truth_templates": {
+    "requirement_ir.json": {
+      "path": "harness/metadata/3-requirements compiler output/requirement_ir/requirement_ir.json",
+      "schema_version": "solar.requirement_ir.v2",
+      "sha256": "8650fa6dc167726324e7d56fd58fb9a291fef43e2f9011870dc90307b73f2a4f"
+    },
+    "requirement_validation.json": {
+      "path": "harness/metadata/3-requirements compiler output/requirement_validation/requirement_validation.json",
+      "schema_version": "solar.requirement_validation.v1",
+      "sha256": "186c7c778532378ef8e202ac8c94e297606d6cfcc39865d3751d8c81aaab824f"
+    },
+    "requirement_coverage.json": {
+      "path": "harness/metadata/3-requirements compiler output/requirement_coverage/requirement_coverage.json",
+      "schema_version": "solar.requirement_coverage.v1",
+      "sha256": "a33c946e24b08894bb7f780984e884a593d847128d8d1eb1ef1f0ba2ac1df945"
+    }
+  },
+  "case_count": 25,
+  "pass_count": 0,
+  "fail_count": 25,
+  "overall_result": "FAIL",
+  "reason_counts": {
+    "BYPASSES_REQUIREMENT_VALIDATION_AND_COVERAGE_GATES": 25,
+    "CURRENT_COMPILER_HAS_NO_NATIVE_INTENT_BUNDLE_INTERFACE": 25,
+    "MISSING_REQUIREMENT_COVERAGE": 25,
+    "MISSING_REQUIREMENT_VALIDATION": 25,
+    "REQUIREMENT_IR_SCHEMA_VERSION_MISMATCH": 25,
+    "REQUIREMENT_IR_TEMPLATE_SHAPE_MISMATCH": 25
+  },
+  "case_results": [
+    {
+      "case_id": "01-research-scientific-reproducibility",
+      "result": "FAIL",
+      "comparison_path": "01-research-scientific-reproducibility/comparison.json",
+      "output_path": "01-research-scientific-reproducibility/requirement_ir.json"
+    },
+    {
+      "case_id": "02-research-ai-assisted-drug-discovery",
+      "result": "FAIL",
+      "comparison_path": "02-research-ai-assisted-drug-discovery/comparison.json",
+      "output_path": "02-research-ai-assisted-drug-discovery/requirement_ir.json"
+    },
+    {
+      "case_id": "03-research-urban-heat-mitigation",
+      "result": "FAIL",
+      "comparison_path": "03-research-urban-heat-mitigation/comparison.json",
+      "output_path": "03-research-urban-heat-mitigation/requirement_ir.json"
+    },
+    {
+      "case_id": "04-research-ai-tutoring",
+      "result": "FAIL",
+      "comparison_path": "04-research-ai-tutoring/comparison.json",
+      "output_path": "04-research-ai-tutoring/requirement_ir.json"
+    },
+    {
+      "case_id": "05-research-grid-storage-batteries",
+      "result": "FAIL",
+      "comparison_path": "05-research-grid-storage-batteries/comparison.json",
+      "output_path": "05-research-grid-storage-batteries/requirement_ir.json"
+    },
+    {
+      "case_id": "06-research-remote-hybrid-work",
+      "result": "FAIL",
+      "comparison_path": "06-research-remote-hybrid-work/comparison.json",
+      "output_path": "06-research-remote-hybrid-work/requirement_ir.json"
+    },
+    {
+      "case_id": "07-research-microplastics-health",
+      "result": "FAIL",
+      "comparison_path": "07-research-microplastics-health/comparison.json",
+      "output_path": "07-research-microplastics-health/requirement_ir.json"
+    },
+    {
+      "case_id": "08-research-open-weight-ai",
+      "result": "FAIL",
+      "comparison_path": "08-research-open-weight-ai/comparison.json",
+      "output_path": "08-research-open-weight-ai/requirement_ir.json"
+    },
+    {
+      "case_id": "09-research-autonomous-scientific-agents",
+      "result": "FAIL",
+      "comparison_path": "09-research-autonomous-scientific-agents/comparison.json",
+      "output_path": "09-research-autonomous-scientific-agents/requirement_ir.json"
+    },
+    {
+      "case_id": "10-research-longevity-interventions",
+      "result": "FAIL",
+      "comparison_path": "10-research-longevity-interventions/comparison.json",
+      "output_path": "10-research-longevity-interventions/requirement_ir.json"
+    },
+    {
+      "case_id": "11-internet-global-solar-capacity",
+      "result": "FAIL",
+      "comparison_path": "11-internet-global-solar-capacity/comparison.json",
+      "output_path": "11-internet-global-solar-capacity/requirement_ir.json"
+    },
+    {
+      "case_id": "12-internet-canadian-city-rentals",
+      "result": "FAIL",
+      "comparison_path": "12-internet-canadian-city-rentals/comparison.json",
+      "output_path": "12-internet-canadian-city-rentals/requirement_ir.json"
+    },
+    {
+      "case_id": "13-internet-vector-database-metrics",
+      "result": "FAIL",
+      "comparison_path": "13-internet-vector-database-metrics/comparison.json",
+      "output_path": "13-internet-vector-database-metrics/requirement_ir.json"
+    },
+    {
+      "case_id": "14-internet-glp1-weight-trials",
+      "result": "FAIL",
+      "comparison_path": "14-internet-glp1-weight-trials/comparison.json",
+      "output_path": "14-internet-glp1-weight-trials/requirement_ir.json"
+    },
+    {
+      "case_id": "15-internet-data-center-regions",
+      "result": "FAIL",
+      "comparison_path": "15-internet-data-center-regions/comparison.json",
+      "output_path": "15-internet-data-center-regions/requirement_ir.json"
+    },
+    {
+      "case_id": "16-experiment-rag-factual-accuracy",
+      "result": "FAIL",
+      "comparison_path": "16-experiment-rag-factual-accuracy/comparison.json",
+      "output_path": "16-experiment-rag-factual-accuracy/requirement_ir.json"
+    },
+    {
+      "case_id": "17-experiment-hypothesis-paper-diversity",
+      "result": "FAIL",
+      "comparison_path": "17-experiment-hypothesis-paper-diversity/comparison.json",
+      "output_path": "17-experiment-hypothesis-paper-diversity/requirement_ir.json"
+    },
+    {
+      "case_id": "18-experiment-prompting-python-reliability",
+      "result": "FAIL",
+      "comparison_path": "18-experiment-prompting-python-reliability/comparison.json",
+      "output_path": "18-experiment-prompting-python-reliability/requirement_ir.json"
+    },
+    {
+      "case_id": "19-experiment-time-series-forecasting",
+      "result": "FAIL",
+      "comparison_path": "19-experiment-time-series-forecasting/comparison.json",
+      "output_path": "19-experiment-time-series-forecasting/requirement_ir.json"
+    },
+    {
+      "case_id": "20-experiment-literature-summary-utility",
+      "result": "FAIL",
+      "comparison_path": "20-experiment-literature-summary-utility/comparison.json",
+      "output_path": "20-experiment-literature-summary-utility/requirement_ir.json"
+    },
+    {
+      "case_id": "21-kid-sky-and-sunset-colors",
+      "result": "FAIL",
+      "comparison_path": "21-kid-sky-and-sunset-colors/comparison.json",
+      "output_path": "21-kid-sky-and-sunset-colors/requirement_ir.json"
+    },
+    {
+      "case_id": "22-kid-fish-thirst",
+      "result": "FAIL",
+      "comparison_path": "22-kid-fish-thirst/comparison.json",
+      "output_path": "22-kid-fish-thirst/requirement_ir.json"
+    },
+    {
+      "case_id": "23-kid-tiny-dragon-bedtime-story",
+      "result": "FAIL",
+      "comparison_path": "23-kid-tiny-dragon-bedtime-story/comparison.json",
+      "output_path": "23-kid-tiny-dragon-bedtime-story/requirement_ir.json"
+    },
+    {
+      "case_id": "24-kid-how-airplanes-fly",
+      "result": "FAIL",
+      "comparison_path": "24-kid-how-airplanes-fly/comparison.json",
+      "output_path": "24-kid-how-airplanes-fly/requirement_ir.json"
+    },
+    {
+      "case_id": "25-kid-dinosaur-school-fit",
+      "result": "FAIL",
+      "comparison_path": "25-kid-dinosaur-school-fit/comparison.json",
+      "output_path": "25-kid-dinosaur-school-fit/requirement_ir.json"
+    }
+  ]
+}

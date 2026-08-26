@@ -14373,6 +14373,21 @@ def _try_acquire_scheduler_tick_lock(graph_path: str) -> Any | None:
     return handle
 
 
+def _acquire_scheduler_tick_lock(graph_path: str) -> Any:
+    """Block until the graph mutation lock is available.
+
+    Scheduler ticks may safely skip a busy graph and retry later.  A terminal
+    evaluator verdict cannot: dropping it would lose the closeout receipt that
+    makes downstream nodes eligible.  Verdict writers therefore wait for the
+    current scheduler tick and then mutate the freshly loaded runtime state.
+    """
+    lock_path = _scheduler_tick_lock_path(graph_path)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(lock_path, "a+b")
+    fcntl.flock(handle, fcntl.LOCK_EX)
+    return handle
+
+
 def _release_scheduler_tick_lock(handle: Any) -> None:
     try:
         fcntl.flock(handle, fcntl.LOCK_UN)
@@ -14892,9 +14907,10 @@ def _finalize_node_pass(
     }
 
 
-def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
-                 eval_json: str = "", dry_run: bool = False, ttl: int = 900,
-                 dispatch_downstream: bool = True, verdict_kind: str = "") -> dict[str, Any]:
+def _node_verdict_unlocked(graph_path: str, node_id: str, verdict: str, reason: str = "",
+                           eval_json: str = "", dry_run: bool = False, ttl: int = 900,
+                           dispatch_downstream: bool = True,
+                           verdict_kind: str = "") -> dict[str, Any]:
     graph = load_graph(graph_path)
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     node = _node_by_id(graph, node_id)
@@ -15266,6 +15282,61 @@ def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
         "coverage_refresh": coverage_refresh,
         "reopened_descendants": reopened_descendants,
     }
+
+
+def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
+                 eval_json: str = "", dry_run: bool = False, ttl: int = 900,
+                 dispatch_downstream: bool = True, verdict_kind: str = "") -> dict[str, Any]:
+    """Persist an evaluator verdict without racing a scheduler graph refresh.
+
+    The verdict and scheduler paths write the same runtime-state sidecar.  Use
+    the scheduler's graph-scoped lock for the read/modify/write transaction so
+    an older scheduler snapshot cannot erase a closeout receipt.  Downstream
+    dispatch happens only after releasing the lock because it acquires this
+    same lock for its own fresh transaction.
+    """
+    if dry_run:
+        return _node_verdict_unlocked(
+            graph_path,
+            node_id,
+            verdict,
+            reason=reason,
+            eval_json=eval_json,
+            dry_run=True,
+            ttl=ttl,
+            dispatch_downstream=dispatch_downstream,
+            verdict_kind=verdict_kind,
+        )
+
+    handle = _acquire_scheduler_tick_lock(graph_path)
+    try:
+        result = _node_verdict_unlocked(
+            graph_path,
+            node_id,
+            verdict,
+            reason=reason,
+            eval_json=eval_json,
+            dry_run=False,
+            ttl=ttl,
+            dispatch_downstream=False,
+            verdict_kind=verdict_kind,
+        )
+    finally:
+        _release_scheduler_tick_lock(handle)
+
+    if (
+        dispatch_downstream
+        and result.get("ok")
+        and result.get("status") == "passed"
+    ):
+        parent = result.get("parent") if isinstance(result.get("parent"), dict) else {}
+        if parent.get("ready"):
+            downstream = {"ok": True, "skipped": "parent_ready"}
+        else:
+            downstream = dispatch_ready(graph_path, dry_run=False, ttl=ttl)
+        result["downstream"] = downstream
+        result["ok"] = bool(downstream.get("ok", True))
+    return result
 
 
 def main() -> int:

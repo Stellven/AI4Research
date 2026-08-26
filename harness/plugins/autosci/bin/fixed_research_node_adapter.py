@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +38,10 @@ from harness.plugins.autosci.services.codex_research import (  # noqa: E402
     CodexResearchModelService,
     SharedInvocationJournal,
 )
-from harness.plugins.autosci.services.production_research import LiteratureDiscoveryService  # noqa: E402
+from harness.plugins.autosci.services.production_research import (  # noqa: E402
+    LiteratureDiscoveryService,
+    ResearchModelService,
+)
 from harness.plugins.autosci.operators.research_synthesis.evidence_synthesis import (  # noqa: E402
     MAX_SYNTHESIS_ATTEMPTS,
 )
@@ -60,9 +64,51 @@ class AdapterError(ValueError):
     pass
 
 
+class _RoleBoundApiResearchModelService:
+    """Add fixed-workflow role/session provenance to an API model service."""
+
+    def __init__(self, backend: ResearchModelService, *, role: str) -> None:
+        self.backend = backend
+        self.role = role
+        self.service_id = backend.service_id
+        self.service_version = backend.service_version
+
+    def __call__(self, **kwargs: Any) -> dict[str, Any]:
+        payload = self.backend(**kwargs)
+        usage_rows = payload.get("provider_usage") if isinstance(payload.get("provider_usage"), list) else []
+        for index, item in enumerate(usage_rows, start=1):
+            if not isinstance(item, dict):
+                continue
+            response_hash = str(item.get("response_sha256") or item.get("request_sha256") or "")
+            item.update(
+                {
+                    "principal_role": self.role,
+                    "session_mode": "ephemeral",
+                    "status": "completed",
+                    "invocation_id": f"{self.role}:{response_hash or index}",
+                    "call_index": index,
+                    "role_call_index": index,
+                }
+            )
+        return payload
+
+
+def _io_path(path: Path) -> Path:
+    """Return a Windows extended-length spelling without changing identity."""
+    absolute = path.absolute()
+    raw = str(absolute)
+    if os.name == "nt" and not raw.startswith("\\\\?\\"):
+        return Path("\\\\?\\" + raw)
+    return absolute
+
+
+def _is_file(path: Path) -> bool:
+    return _io_path(path).is_file()
+
+
 def _sha(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
+    with _io_path(path).open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
@@ -152,7 +198,7 @@ def _dependency_refs(envelope: dict[str, Any], work_dir: Path) -> list[dict[str,
         if not (
             schema.startswith("research_synthesis.")
             or schema.startswith("solar.fixed_research.")
-            or schema == "text/plain"
+            or schema in {"text/plain", "text/markdown"}
         ):
             raise AdapterError(f"dependency artifact has an unexpected schema: {relative}")
         if actual != expected:
@@ -277,6 +323,29 @@ def _codex_services(
     provider = _selected_provider()
     service_cls = CodexResearchModelService
     default_model = "gpt-5.5"
+    if provider in {"openrouter", "openai"}:
+        configured_provider = str(os.environ.get("AUTOSCI_RESEARCH_LLM_PROVIDER") or "").strip().lower()
+        if configured_provider != provider:
+            raise AdapterError(
+                "API research provider selection must match AUTOSCI_RESEARCH_LLM_PROVIDER"
+            )
+        writer_backend = ResearchModelService.from_environment(stage_dir)
+        reviewer_backend = ResearchModelService.from_environment(stage_dir)
+        if not writer_backend.routes or {route.provider for route in writer_backend.routes} != {provider}:
+            raise AdapterError(f"selected API research provider is unavailable: {provider}")
+        writer = _RoleBoundApiResearchModelService(writer_backend, role="writer")
+        reviewer = _RoleBoundApiResearchModelService(reviewer_backend, role="reviewer")
+        services: dict[str, Any] = {
+            "service_metadata": {
+                "model_generate": {"service_id": writer.service_id, "version": writer.service_version},
+                "review_model_generate": {"service_id": reviewer.service_id, "version": reviewer.service_version},
+            },
+        }
+        if node_id in {"evidence_synthesis", "report_draft", "report_revision"}:
+            services["model_generate"] = writer
+        if node_id in {"independent_review", "report_revision"}:
+            services["review_model_generate"] = reviewer
+        return services
     if provider == "claude":
         # Same absolute package path the Codex service is imported by above;
         # the adapter runs as a bare module, so a relative `services.` import
@@ -391,6 +460,8 @@ MAX_CALLS_BY_NODE = {
 _USAGE_PROVIDER_BY_SELECTION = {
     "codex": "codex_subscription",
     "claude": "claude_subscription",
+    "openrouter": "openrouter",
+    "openai": "openai",
 }
 
 
@@ -475,9 +546,22 @@ def _normalize_provider_archives(result: dict[str, Any], work_dir: Path, stage_d
             continue
         raw = Path(str(usage["archive_path"]))
         candidates = [raw] if raw.is_absolute() else [stage_dir / raw, work_dir / raw]
-        archive = next((path.resolve(strict=False) for path in candidates if path.is_file()), None)
+        archive = next((path.absolute() for path in candidates if _is_file(path)), None)
+        if archive is None and os.name == "nt":
+            # On Windows, freshly replaced service-evidence files can briefly
+            # be invisible to a second process while an indexer/AV handle is
+            # closing. Keep the verification bounded and still hash the exact
+            # bytes once visible.
+            for _ in range(10):
+                time.sleep(0.05)
+                archive = next((path.absolute() for path in candidates if _is_file(path)), None)
+                if archive is not None:
+                    break
         if archive is None:
-            raise AdapterError("provider archive_path is missing")
+            raise AdapterError(
+                "provider archive_path is missing: "
+                f"raw={raw}; candidates={[str(path) for path in candidates]}"
+            )
         try:
             relative = archive.relative_to(work_dir)
             archive.relative_to(stage_dir)
@@ -491,7 +575,7 @@ def _normalize_provider_archives(result: dict[str, Any], work_dir: Path, stage_d
             raw_path = Path(str(raw_evidence))
             evidence_candidates = [raw_path] if raw_path.is_absolute() else [stage_dir / raw_path, work_dir / raw_path]
             evidence_path = next(
-                (path.resolve(strict=False) for path in evidence_candidates if path.is_file()),
+                (path.absolute() for path in evidence_candidates if _is_file(path)),
                 None,
             )
             if evidence_path is None:

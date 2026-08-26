@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "intent_id": "16-experiment-rag-factual-accuracy-retry-01",
+  "title": null,
+  "lane": null,
+  "ready": false,
+  "readiness_status": "needs_clarification",
+  "clarification_questions": [
+    {
+      "item_id": "A1",
+      "question": "Which domain benchmark and 100 questions should be used?",
+      "source_spans": [
+        [
+          75,
+          105
+        ]
+      ]
+    }
+  ],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\intent_acceptance.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\requirement_trace.json",
+  "case_id": "16-experiment-rag-factual-accuracy",
+  "category": "experiment",
+  "prompt": "Test whether retrieval-augmented generation improves factual accuracy on a 100-question domain benchmark. Compare no retrieval, keyword retrieval, and embedding retrieval using accuracy, citation validity, latency, and cost.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

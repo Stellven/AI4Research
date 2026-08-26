@@ -1,0 +1,167 @@
+{
+  "schema_version": "solar.live_compiler_pipeline_run.v1",
+  "case_count": 25,
+  "accepted_count": 23,
+  "clarification_count": 2,
+  "terminal_count": 25,
+  "ready_count": 23,
+  "default_compiler_model_for_new_attempts": "gpt-5.6-luna",
+  "default_reviewer_model_for_new_attempts": "gpt-5.6-luna",
+  "models_observed_in_case_receipts": [
+    "gpt-5.3-codex-spark",
+    "gpt-5.6-luna",
+    "gpt-5.6-terra"
+  ],
+  "cases": [
+    {
+      "case_id": "01-research-scientific-reproducibility",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "02-research-ai-assisted-drug-discovery",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "03-research-urban-heat-mitigation",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "04-research-ai-tutoring",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "05-research-grid-storage-batteries",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "06-research-remote-hybrid-work",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "07-research-microplastics-health",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "08-research-open-weight-ai",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "09-research-autonomous-scientific-agents",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "10-research-longevity-interventions",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "11-internet-global-solar-capacity",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "12-internet-canadian-city-rentals",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "13-internet-vector-database-metrics",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "14-internet-glp1-weight-trials",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "15-internet-data-center-regions",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "16-experiment-rag-factual-accuracy",
+      "status": "needs_clarification",
+      "ready": false,
+      "resumed": true
+    },
+    {
+      "case_id": "17-experiment-hypothesis-paper-diversity",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "18-experiment-prompting-python-reliability",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "19-experiment-time-series-forecasting",
+      "status": "needs_clarification",
+      "ready": false,
+      "resumed": true
+    },
+    {
+      "case_id": "20-experiment-literature-summary-utility",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "21-kid-sky-and-sunset-colors",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "22-kid-fish-thirst",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "23-kid-tiny-dragon-bedtime-story",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "24-kid-how-airplanes-fly",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    },
+    {
+      "case_id": "25-kid-dinosaur-school-fit",
+      "status": "accepted",
+      "ready": true,
+      "resumed": true
+    }
+  ]
+}

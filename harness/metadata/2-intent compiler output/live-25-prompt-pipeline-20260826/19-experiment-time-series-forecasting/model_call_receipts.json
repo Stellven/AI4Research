@@ -1,0 +1,16 @@
+{
+  "calls": [
+    {
+      "path": "generation-0\\compiler_call\\model_call_receipt.json",
+      "duration_ms": 64036.028,
+      "model": "gpt-5.6-luna",
+      "provider": "codex"
+    },
+    {
+      "path": "generation-0\\reviewer_call\\model_call_receipt.json",
+      "duration_ms": 8460.478,
+      "model": "gpt-5.6-luna",
+      "provider": "codex"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-24-kid-how-airplanes-fly",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-24-kid-how-airplanes-fly-retry-01",
+    "sha256": "4ea681e3db82f696d35abfedb3cce44d3f5cf90916952f654aa1549199469622"
+  },
+  "strategy": "direct_response",
+  "base_workflow": null,
+  "base_version": null,
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 1
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "A one-node direct response is sufficient; no exact direct-response capability capsule is currently registered.",
+  "artifact_role": "simulated_planner_step_output"
+}

@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "09-research-autonomous-scientific-agents-retry-01",
+  "title": "Map the current state of autonomous scientific-research agents.",
+  "lane": "research",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\09-research-autonomous-scientific-agents-retry-01\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\09-research-autonomous-scientific-agents-retry-01\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\09-research-autonomous-scientific-agents-retry-01\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\09-research-autonomous-scientific-agents-retry-01\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\09-research-autonomous-scientific-agents-retry-01\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\09-research-autonomous-scientific-agents-retry-01\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\09-research-autonomous-scientific-agents-retry-01\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\09-research-autonomous-scientific-agents-retry-01\\requirement_trace.json",
+  "case_id": "09-research-autonomous-scientific-agents",
+  "category": "research",
+  "prompt": "Map the current state of autonomous scientific-research agents. Compare their abilities in literature review, hypothesis generation, experimentation, analysis, and reproducibility. Identify where human supervision remains essential.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

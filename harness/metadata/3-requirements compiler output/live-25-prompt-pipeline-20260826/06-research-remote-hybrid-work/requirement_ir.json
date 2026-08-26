@@ -1,0 +1,58 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-06-research-remote-hybrid-work-retry-02",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-06-research-remote-hybrid-work-retry-02",
+    "sha256": "f25d5a39385d7924c3831379d6239f2c369176ee4f20ff06cc99885a5c0ccbc1"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-06-research-remote-hybrid-work-retry-02",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: A literature review covering the effects of remote and hybrid work on productivity, creativity, employee retention, and well-being, including an explanation of differing study conclusions.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "deliverable",
+          "completeness",
+          "supporting_evidence",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.artifact_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

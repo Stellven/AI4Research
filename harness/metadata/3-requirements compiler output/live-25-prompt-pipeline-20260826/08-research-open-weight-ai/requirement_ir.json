@@ -1,0 +1,92 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-08-research-open-weight-ai-retry-02",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-08-research-open-weight-ai-retry-02",
+    "sha256": "f510231b01e15b15773f7e9f5179fa54a30c585953ac99fa9832844de12742a3"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-08-research-open-weight-ai-retry-02",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: An investigation of whether open-weight language models accelerate useful innovation or primarily increase safety risks, presenting the strongest evidence on both sides and identifying measurements needed to resolve the debate.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:C1",
+      "statement": "Present the strongest evidence on both sides.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "Present the strongest evidence on both sides"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C2",
+      "statement": "Identify measurements needed to resolve the debate.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "identify measurements needed to resolve the debate"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

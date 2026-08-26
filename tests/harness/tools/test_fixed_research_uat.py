@@ -48,6 +48,32 @@ def test_runtime_environment_records_explicit_policy_without_ambient_api_keys(tm
     assert all(key not in env for key in uat.SECRET_ENV_KEYS)
 
 
+def test_runtime_environment_forwards_only_explicit_api_provider_key(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-test-secret")
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-must-not-leak")
+    env = uat._runtime_env(
+        runtime_harness=tmp_path / "runtime",
+        evidence_root=tmp_path / "evidence",
+        workspace_root=tmp_path / "workspace",
+        source_pack=None,
+        authority_root=None,
+        codex_home=tmp_path / "codex",
+        acquisition_mode="live_search",
+        model_provider="openrouter",
+        model="openai/gpt-4.1-nano",
+    )
+
+    assert env["OPENROUTER_API_KEY"] == "openrouter-test-secret"
+    assert "OPENAI_API_KEY" not in env
+    assert env["AUTOSCI_RESEARCH_LLM_PROVIDER"] == "openrouter"
+    assert env["AUTOSCI_RESEARCH_LLM_MODEL"] == "openai/gpt-4.1-nano"
+    assert env["SOLAR_RESEARCH_ACQUISITION_MODE"] == "live_search"
+    assert "OPENROUTER_API_KEY" not in uat._manifest_env(env)
+
+
 def test_driver_rehashes_and_rejects_changed_one_shot_policy(tmp_path: Path) -> None:
     sid = "fixed-driver-policy"
     sprints = tmp_path / "sprints"

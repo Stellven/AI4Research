@@ -1,0 +1,138 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-15-internet-data-center-regions-retry-01",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-15-internet-data-center-regions-retry-01",
+    "sha256": "69203b0c0f5c29d8f7f11881d5e9406d11eb122d9aaaee4d10aad5a80cfe9284"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-15-internet-data-center-regions-retry-01",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: Historical electricity prices, grid carbon intensity, and data-center capacity for ten potential data-center regions, with missing or estimated values flagged.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:C1",
+      "statement": "Prefer government or grid-operator sources.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "government",
+          "grid-operator"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C2",
+      "statement": "Flag missing or estimated values.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "missing",
+          "estimated"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which ten potential data-center regions should be evaluated?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What historical time period should be used for the requested data?",
+      "priority": "must",
+      "source_refs": [
+        "U2",
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

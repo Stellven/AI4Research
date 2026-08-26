@@ -1,0 +1,205 @@
+{
+  "schema_version": "solar.planner_contract_evaluation.v1",
+  "artifact_role": "evaluator_output_not_planner_output",
+  "case_count": 25,
+  "pass_count": 20,
+  "pass_with_known_limitation_count": 5,
+  "fail_count": 0,
+  "dispatchable_count": 18,
+  "checks": [
+    "metadata template field shape",
+    "content-addressed references",
+    "DAG ordering",
+    "requirement obligation coverage",
+    "registered capability binding",
+    "ordered operator availability",
+    "clarification halt enforcement"
+  ],
+  "cases": [
+    {
+      "case_id": "01-research-scientific-reproducibility",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "02-research-ai-assisted-drug-discovery",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "03-research-urban-heat-mitigation",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "04-research-ai-tutoring",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "05-research-grid-storage-batteries",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "06-research-remote-hybrid-work",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "07-research-microplastics-health",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "08-research-open-weight-ai",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "09-research-autonomous-scientific-agents",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "10-research-longevity-interventions",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "11-internet-global-solar-capacity",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "12-internet-canadian-city-rentals",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "13-internet-vector-database-metrics",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "14-internet-glp1-weight-trials",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "15-internet-data-center-regions",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "16-experiment-rag-factual-accuracy",
+      "result": "PASS",
+      "dispatchable": false,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "17-experiment-hypothesis-paper-diversity",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "18-experiment-prompting-python-reliability",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "19-experiment-time-series-forecasting",
+      "result": "PASS",
+      "dispatchable": false,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "20-experiment-literature-summary-utility",
+      "result": "PASS",
+      "dispatchable": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case_id": "21-kid-sky-and-sunset-colors",
+      "result": "PASS_WITH_KNOWN_LIMITATION",
+      "dispatchable": false,
+      "errors": [],
+      "warnings": [
+        "not dispatchable: no registered direct-response capability capsule"
+      ]
+    },
+    {
+      "case_id": "22-kid-fish-thirst",
+      "result": "PASS_WITH_KNOWN_LIMITATION",
+      "dispatchable": false,
+      "errors": [],
+      "warnings": [
+        "not dispatchable: no registered direct-response capability capsule"
+      ]
+    },
+    {
+      "case_id": "23-kid-tiny-dragon-bedtime-story",
+      "result": "PASS_WITH_KNOWN_LIMITATION",
+      "dispatchable": false,
+      "errors": [],
+      "warnings": [
+        "not dispatchable: no registered direct-response capability capsule"
+      ]
+    },
+    {
+      "case_id": "24-kid-how-airplanes-fly",
+      "result": "PASS_WITH_KNOWN_LIMITATION",
+      "dispatchable": false,
+      "errors": [],
+      "warnings": [
+        "not dispatchable: no registered direct-response capability capsule"
+      ]
+    },
+    {
+      "case_id": "25-kid-dinosaur-school-fit",
+      "result": "PASS_WITH_KNOWN_LIMITATION",
+      "dispatchable": false,
+      "errors": [],
+      "warnings": [
+        "not dispatchable: no registered direct-response capability capsule"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-05-research-grid-storage-batteries-retry-02",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-05-research-grid-storage-batteries-retry-02",
+    "sha256": "fa571b5e3ed835d6c5e09c40300331de676cf1494cc8cd487557b373e5d16c2f"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-05-research-grid-storage-batteries-retry-02",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: A comparative evaluation of lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage across energy density, lifetime, safety, material availability, cost, and commercial readiness.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:C1",
+      "statement": "The comparison covers lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "lithium-ion",
+          "sodium-ion",
+          "solid-state",
+          "lithium-sulfur"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C2",
+      "statement": "The evaluation includes energy density, lifetime, safety, material availability, cost, and commercial readiness.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "evaluation criteria",
+          "energy density",
+          "lifetime",
+          "safety",
+          "material availability",
+          "cost",
+          "commercial readiness"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

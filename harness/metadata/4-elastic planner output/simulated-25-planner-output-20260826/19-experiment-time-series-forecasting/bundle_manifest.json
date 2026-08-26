@@ -1,0 +1,12 @@
+{
+  "case_id": "19-experiment-time-series-forecasting",
+  "terminal_status": "planning_not_entered",
+  "artifacts": [
+    {
+      "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\19-experiment-time-series-forecasting\\planning_halt.json",
+      "classification": "CONTROL_OR_SUPPORT"
+    }
+  ],
+  "dispatchable": false,
+  "dispatch_blocker": "Intent acceptance requires clarification; no RequirementIR exists."
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-22-kid-fish-thirst",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-22-kid-fish-thirst-retry-01",
+    "sha256": "683672e05e8f1f9bb4adac17cb0084fc8fbc32dbdf3834b2404668fa378ca343"
+  },
+  "strategy": "direct_response",
+  "base_workflow": null,
+  "base_version": null,
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 2
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "A one-node direct response is sufficient; no exact direct-response capability capsule is currently registered.",
+  "artifact_role": "simulated_planner_step_output"
+}

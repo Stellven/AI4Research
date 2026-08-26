@@ -1,0 +1,27 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-08-research-open-weight-ai",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-08-research-open-weight-ai-retry-02",
+    "sha256": "ee59421daa958d24553d602ce7b50affc80d9044d9a6a509dc93a37ad79c55d7"
+  },
+  "strategy": "compose",
+  "base_workflow": "research.evidence_to_poc.v1",
+  "base_version": "1",
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 3
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2",
+        "R3"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "Use the smallest registered evidence workflow that discovers, validates, synthesizes, and reports sources.",
+  "artifact_role": "simulated_planner_step_output"
+}

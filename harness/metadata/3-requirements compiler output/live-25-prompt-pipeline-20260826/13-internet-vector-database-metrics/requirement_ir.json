@@ -1,0 +1,180 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-13-internet-vector-database-metrics-retry-01",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-13-internet-vector-database-metrics-retry-01",
+    "sha256": "ea9523eea0fbb14cb439e15ebc10acbd83e8e51c0eedb92b02906fa6cf6582ae"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-13-internet-vector-database-metrics-retry-01",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: Raw data for the requested metrics and five selected databases.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: An explanation of limitations affecting comparability.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C1",
+      "statement": "Select exactly five databases.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:C2",
+      "statement": "The selected databases must be open-source vector databases.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "open-source vector databases"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:C3",
+      "statement": "Collect monthly downloads, GitHub stars, contributor counts, release frequency, and reported security incidents.",
+      "priority": "must",
+      "source_refs": [
+        "C3"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "monthly downloads",
+          "GitHub stars",
+          "contributor counts",
+          "release frequency",
+          "reported security incidents"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which five open-source vector databases qualify as leading?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R7",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What monthly time period should the download data cover?",
+      "priority": "must",
+      "source_refs": [
+        "U2",
+        "C3"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

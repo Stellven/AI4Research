@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "intent_id": "19-experiment-time-series-forecasting-retry-01",
+  "title": null,
+  "lane": null,
+  "ready": false,
+  "readiness_status": "needs_clarification",
+  "clarification_questions": [
+    {
+      "item_id": "A1",
+      "question": "Which proposed time-series forecasting method should be evaluated?",
+      "source_spans": [
+        [
+          19,
+          58
+        ]
+      ]
+    }
+  ],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\19-experiment-time-series-forecasting-retry-01\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\19-experiment-time-series-forecasting-retry-01\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\19-experiment-time-series-forecasting-retry-01\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\19-experiment-time-series-forecasting-retry-01\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\19-experiment-time-series-forecasting-retry-01\\intent\\intent_acceptance.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\19-experiment-time-series-forecasting-retry-01\\requirement_trace.json",
+  "case_id": "19-experiment-time-series-forecasting",
+  "category": "experiment",
+  "prompt": "Evaluate whether a proposed time-series forecasting method meaningfully outperforms seasonal naïve, ARIMA, and gradient-boosting baselines. Use multiple datasets, rolling validation, ablation tests, and confidence intervals.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

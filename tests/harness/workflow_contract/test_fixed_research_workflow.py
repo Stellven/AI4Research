@@ -13,6 +13,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -54,6 +55,45 @@ import operator_runtime as opr  # noqa: E402
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def test_fixed_adapter_api_service_adds_role_and_session_provenance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeApiService:
+        service_id = "fake-api-service"
+        service_version = "1"
+        routes = [SimpleNamespace(provider="openrouter")]
+
+        def __call__(self, **_kwargs: object) -> dict[str, object]:
+            return {
+                "provider_usage": [{
+                    "provider": "openrouter",
+                    "request_sha256": "a" * 64,
+                    "response_sha256": "b" * 64,
+                }]
+            }
+
+    monkeypatch.setenv("SOLAR_RESEARCH_MODEL_PROVIDER", "openrouter")
+    monkeypatch.setenv("AUTOSCI_RESEARCH_LLM_PROVIDER", "openrouter")
+    monkeypatch.setattr(
+        fixed_adapter.ResearchModelService,
+        "from_environment",
+        lambda _root: FakeApiService(),
+    )
+
+    services = fixed_adapter._codex_services(node_id="report_draft", stage_dir=tmp_path)
+    result = services["model_generate"](node_id="report_draft")
+    usage = result["provider_usage"][0]
+    assert usage["provider"] == "openrouter"
+    assert usage["principal_role"] == "writer"
+    assert usage["session_mode"] == "ephemeral"
+    assert usage["status"] == "completed"
+    fixed_adapter._verify_model_usage(
+        node_id="report_draft",
+        result={"model_provider_usage": [usage]},
+    )
 
 
 def _pack(root: Path, *, fact: str = "UNIQUE_SENTINEL_FACT_7319") -> Path:

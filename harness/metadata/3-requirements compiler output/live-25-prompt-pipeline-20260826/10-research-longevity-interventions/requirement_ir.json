@@ -1,0 +1,159 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-10-research-longevity-interventions-retry-01",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-10-research-longevity-interventions-retry-01",
+    "sha256": "a7f3caa7dd7c46659c5f325535542d02b8ae47b67ee000f2b24b955545d5f40c"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-10-research-longevity-interventions-retry-01",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: A systematic comparison of exercise, calorie restriction, sleep optimization, metformin, rapamycin, and senolytics as longevity interventions.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: Evidence separated into human and animal evidence.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:D3",
+      "statement": "Produce the requested outcome: Uncertainty reported clearly.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D3"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:C1",
+      "statement": "The comparison must cover exercise, calorie restriction, sleep optimization, metformin, rapamycin, and senolytics.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "exercise",
+          "calorie restriction",
+          "sleep optimization",
+          "metformin",
+          "rapamycin",
+          "senolytics"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:C2",
+      "statement": "Evidence must be separated into human and animal evidence.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "human",
+          "animal"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:C3",
+      "statement": "Uncertainty must be reported clearly.",
+      "priority": "must",
+      "source_refs": [
+        "C3"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

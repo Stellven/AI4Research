@@ -1,0 +1,16 @@
+{
+  "case_id": "23-kid-tiny-dragon-bedtime-story",
+  "terminal_status": "planned",
+  "artifacts": [
+    {
+      "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\23-kid-tiny-dragon-bedtime-story\\strategy.json",
+      "classification": "STEP_OUTPUT"
+    },
+    {
+      "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\23-kid-tiny-dragon-bedtime-story\\plan_ir.json",
+      "classification": "STEP_OUTPUT"
+    }
+  ],
+  "dispatchable": false,
+  "dispatch_blocker": "No registered direct-response capability capsule."
+}

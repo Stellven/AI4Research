@@ -1,0 +1,70 @@
+{
+  "schema_version": "solar.requirement_ir.v1",
+  "intent_id": "intent-ir-fixture-11-internet-global-solar-capacity",
+  "source": {
+    "channel": "synthetic_intent_fixture",
+    "actor_ref": "fixture-catalog"
+  },
+  "source_inputs": {
+    "raw_request": "Find annual global solar-energy capacity additions from 2010 through the latest complete year. Use authoritative sources, reconcile conflicting numbers, and return a CSV-ready table with source links.",
+    "repo_context": [
+      "C:\\Users\\j50058254\\Desktop\\Github repo\\OpenSolar-Canonical"
+    ]
+  },
+  "title": "Assemble a reconciled annual series of global solar-capacity additions from 2010 through t",
+  "problem": "Find annual global solar-energy capacity additions from 2010 through the latest complete year. Use authoritative sources, reconcile conflicting numbers, and return a CSV-ready table with source links.",
+  "objective": "Assemble a reconciled annual series of global solar-capacity additions from 2010 through the latest complete year.",
+  "outcome": "A CSV-ready annual table with source links and reconciliation notes.",
+  "constraints": [
+    "Cover every year from 2010 through the latest complete year.",
+    "Use authoritative sources and reconcile conflicts.",
+    "Return a CSV-ready table."
+  ],
+  "non_goals": [
+    "Do not claim that domain experiment execution occurred."
+  ],
+  "acceptance": [
+    "Preserve and satisfy IntentIR item G1.",
+    "Preserve and satisfy IntentIR item D1.",
+    "Preserve and satisfy IntentIR item C1.",
+    "Preserve and satisfy IntentIR item C2.",
+    "Preserve and satisfy IntentIR item C3."
+  ],
+  "lane": "research",
+  "logical_operators": [
+    "RequirementCompiler",
+    "Planner",
+    "Verifier"
+  ],
+  "planner_hints": {
+    "workflow_candidates": [
+      {
+        "workflow_id": "research.evidence_to_poc.v1",
+        "candidate_kind": "memoized_task_graph",
+        "selection_authority": "planner",
+        "auto_instantiate": false,
+        "execution_profile_hint": "part_a_only",
+        "reason": "no research markers; the generic planner path applies"
+      }
+    ],
+    "selection_authority": "planner",
+    "allowed_outcomes": [
+      "direct_answer",
+      "memoized_task_graph",
+      "new_task_graph"
+    ]
+  },
+  "readiness": {
+    "schema_version": "solar.intent_readiness.v1",
+    "status": "ready",
+    "ready": true,
+    "blocking_count": 0,
+    "unresolved": [],
+    "questions": [],
+    "applied_answers": {},
+    "planning_admitted": true,
+    "next_action": "plan",
+    "policy": "Only ambiguities that block safe route selection or execution are questions."
+  },
+  "compiler_next": "pm_planner_task_graph"
+}

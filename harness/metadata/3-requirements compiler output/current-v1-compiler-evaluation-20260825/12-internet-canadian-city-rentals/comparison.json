@@ -1,0 +1,101 @@
+{
+  "schema_version": "solar.requirement_compiler_template_comparison.v1",
+  "case_id": "12-internet-canadian-city-rentals",
+  "result": "FAIL",
+  "production_entrypoint": "harness/lib/intent_gateway.py::build_requirement_ir",
+  "compatibility_adapter_used": true,
+  "native_intent_bundle_interface": false,
+  "input_intent_ir_id": "intent-ir-fixture-12-internet-canadian-city-rentals",
+  "output_sha256": "5a10d428408f4ac3cc9c4b07606e31289071d9d35840fc718566c0708fe5a0ba",
+  "artifact_inventory": {
+    "expected": [
+      "requirement_coverage.json",
+      "requirement_ir.json",
+      "requirement_validation.json"
+    ],
+    "actual": [
+      "requirement_ir.json"
+    ],
+    "missing": [
+      "requirement_coverage.json",
+      "requirement_validation.json"
+    ],
+    "extra": [],
+    "matches": false
+  },
+  "requirement_ir": {
+    "expected_schema_version": "solar.requirement_ir.v2",
+    "actual_schema_version": "solar.requirement_ir.v1",
+    "schema_version_matches": false,
+    "expected_top_level_fields": [
+      "approvals",
+      "assumptions",
+      "conflict_scan",
+      "intent_ir_ref",
+      "requirement_ir_id",
+      "requirements",
+      "rollback",
+      "schema_version",
+      "scope"
+    ],
+    "actual_top_level_fields": [
+      "acceptance",
+      "compiler_next",
+      "constraints",
+      "intent_id",
+      "lane",
+      "logical_operators",
+      "non_goals",
+      "objective",
+      "outcome",
+      "planner_hints",
+      "problem",
+      "readiness",
+      "schema_version",
+      "source",
+      "source_inputs",
+      "title"
+    ],
+    "missing_fields": [
+      "approvals",
+      "assumptions",
+      "conflict_scan",
+      "intent_ir_ref",
+      "requirement_ir_id",
+      "requirements",
+      "rollback",
+      "scope"
+    ],
+    "extra_fields": [
+      "acceptance",
+      "compiler_next",
+      "constraints",
+      "intent_id",
+      "lane",
+      "logical_operators",
+      "non_goals",
+      "objective",
+      "outcome",
+      "planner_hints",
+      "problem",
+      "readiness",
+      "source",
+      "source_inputs",
+      "title"
+    ],
+    "template_shape_matches": false
+  },
+  "handoff": {
+    "expected_next_gate": "requirement_validation_and_coverage",
+    "actual_compiler_next": "pm_planner_task_graph",
+    "routes_directly_to_planner": true
+  },
+  "reason_codes": [
+    "BYPASSES_REQUIREMENT_VALIDATION_AND_COVERAGE_GATES",
+    "CURRENT_COMPILER_HAS_NO_NATIVE_INTENT_BUNDLE_INTERFACE",
+    "MISSING_REQUIREMENT_COVERAGE",
+    "MISSING_REQUIREMENT_VALIDATION",
+    "REQUIREMENT_IR_SCHEMA_VERSION_MISMATCH",
+    "REQUIREMENT_IR_TEMPLATE_SHAPE_MISMATCH"
+  ]
+}

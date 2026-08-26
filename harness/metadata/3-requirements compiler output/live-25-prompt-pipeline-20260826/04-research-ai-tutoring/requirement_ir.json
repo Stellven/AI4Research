@@ -1,0 +1,337 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-04-research-ai-tutoring",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-04-research-ai-tutoring",
+    "sha256": "1ad9432a65459ad6379c0d843c61499158694a6cfee13bc0ffb13b3a42a4e255"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-04-research-ai-tutoring",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: A comparative evaluation of whether AI tutoring improves student learning relative to human tutoring and conventional educational software.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: A quantified summary of effect sizes for eligible studies, with direction and magnitude of effects.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:D3",
+      "statement": "Produce the requested outcome: A structured quality assessment summary (design validity and risk of bias signals).",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "D3"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:D4",
+      "statement": "Produce the requested outcome: Stratified findings by age group.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "D4"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:D5",
+      "statement": "Produce the requested outcome: Stratified findings by school subject.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "D5"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:D6",
+      "statement": "Produce the requested outcome: A harms review covering likely adverse outcomes, including learner safety/ethics and instructional side effects.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "D6"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R7",
+      "origin": "user:C1",
+      "statement": "Compare AI tutoring with human tutoring and conventional educational software on student learning.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "The evaluation is limited to student-learning outcomes, comparing AI tutoring against human tutoring and conventional educational software."
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R8",
+      "origin": "user:C2",
+      "statement": "Include effect sizes, study quality, age groups, subjects, and harms in the assessment.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "effect sizes",
+          "study quality",
+          "age groups",
+          "subjects",
+          "possible harms"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R9",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What specific eligibility boundaries define AI tutoring, human tutoring, and conventional educational software for inclusion (e.g., adaptive tutors, LMS modules, human-led sessions, blended formats)?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R10",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What study designs and comparability rules determine which populations, outcomes, and control groups are admissible.",
+      "priority": "must",
+      "source_refs": [
+        "U2",
+        "G1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R11",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which effect-size metrics and conversion/aggregation approach should be used when studies use non-equivalent outcome scales.",
+      "priority": "must",
+      "source_refs": [
+        "U3",
+        "G2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R12",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: How should mixed-age or mixed-subject studies be mapped into age-group and subject strata.",
+      "priority": "must",
+      "source_refs": [
+        "U4",
+        "G4",
+        "G5"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R13",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which categories of harms should be included and how should they be prioritized (academic, cognitive, emotional, privacy, fairness).",
+      "priority": "must",
+      "source_refs": [
+        "U5",
+        "G6"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

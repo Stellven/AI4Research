@@ -1,0 +1,67 @@
+{
+  "schema_version": "solar.requirement_ir.v1",
+  "intent_id": "intent-ir-fixture-16-experiment-rag-factual-accuracy",
+  "source": {
+    "channel": "synthetic_intent_fixture",
+    "actor_ref": "fixture-catalog"
+  },
+  "source_inputs": {
+    "raw_request": "Test whether retrieval-augmented generation improves factual accuracy on a 100-question domain benchmark. Compare no retrieval, keyword retrieval, and embedding retrieval using accuracy, citation validity, latency, and cost.",
+    "repo_context": [
+      "C:\\Users\\j50058254\\Desktop\\Github repo\\OpenSolar-Canonical"
+    ]
+  },
+  "title": "Experimentally test whether retrieval improves factual accuracy on a 100-question domain b",
+  "problem": "Test whether retrieval-augmented generation improves factual accuracy on a 100-question domain benchmark. Compare no retrieval, keyword retrieval, and embedding retrieval using accuracy, citation validity, latency, and cost.",
+  "objective": "Experimentally test whether retrieval improves factual accuracy on a 100-question domain benchmark.",
+  "outcome": "Execute a controlled comparison of three retrieval conditions. Results covering accuracy, citation validity, latency, and cost.",
+  "constraints": [
+    "Use the same 100-question benchmark for all conditions.",
+    "Compare all conditions and metrics."
+  ],
+  "non_goals": [],
+  "acceptance": [
+    "Preserve and satisfy IntentIR item G1.",
+    "Preserve and satisfy IntentIR item D1.",
+    "Preserve and satisfy IntentIR item D2.",
+    "Preserve and satisfy IntentIR item C1.",
+    "Preserve and satisfy IntentIR item C2."
+  ],
+  "lane": "research",
+  "logical_operators": [
+    "RequirementCompiler",
+    "Planner",
+    "Verifier"
+  ],
+  "planner_hints": {
+    "workflow_candidates": [
+      {
+        "workflow_id": "research.evidence_to_poc.v1",
+        "candidate_kind": "memoized_task_graph",
+        "selection_authority": "planner",
+        "auto_instantiate": false,
+        "execution_profile_hint": "part_a_only",
+        "reason": "research request with no build or execute intent"
+      }
+    ],
+    "selection_authority": "planner",
+    "allowed_outcomes": [
+      "direct_answer",
+      "memoized_task_graph",
+      "new_task_graph"
+    ]
+  },
+  "readiness": {
+    "schema_version": "solar.intent_readiness.v1",
+    "status": "ready",
+    "ready": true,
+    "blocking_count": 0,
+    "unresolved": [],
+    "questions": [],
+    "applied_answers": {},
+    "planning_admitted": true,
+    "next_action": "plan",
+    "policy": "Only ambiguities that block safe route selection or execution are questions."
+  },
+  "compiler_next": "pm_planner_task_graph"
+}

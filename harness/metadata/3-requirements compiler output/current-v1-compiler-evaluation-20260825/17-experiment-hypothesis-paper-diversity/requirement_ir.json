@@ -1,0 +1,65 @@
+{
+  "schema_version": "solar.requirement_ir.v1",
+  "intent_id": "intent-ir-fixture-17-experiment-hypothesis-paper-diversity",
+  "source": {
+    "channel": "synthetic_intent_fixture",
+    "actor_ref": "fixture-catalog"
+  },
+  "source_inputs": {
+    "raw_request": "Evaluate whether an LLM generates better research hypotheses after reading diverse papers rather than only highly cited papers. Define novelty and testability metrics, run blinded scoring, and report statistical uncertainty.",
+    "repo_context": [
+      "C:\\Users\\j50058254\\Desktop\\Github repo\\OpenSolar-Canonical"
+    ]
+  },
+  "title": "Experimentally compare hypothesis quality after diverse-paper and highly-cited-paper readi",
+  "problem": "Evaluate whether an LLM generates better research hypotheses after reading diverse papers rather than only highly cited papers. Define novelty and testability metrics, run blinded scoring, and report statistical uncertainty.",
+  "objective": "Experimentally compare hypothesis quality after diverse-paper and highly-cited-paper reading conditions.",
+  "outcome": "Run a blinded controlled hypothesis-generation evaluation. A statistically qualified comparison using defined novelty and testability metrics.",
+  "constraints": [
+    "Define metrics, use blinded scoring, and report statistical uncertainty."
+  ],
+  "non_goals": [],
+  "acceptance": [
+    "Preserve and satisfy IntentIR item G1.",
+    "Preserve and satisfy IntentIR item D1.",
+    "Preserve and satisfy IntentIR item D2.",
+    "Preserve and satisfy IntentIR item C1."
+  ],
+  "lane": "research",
+  "logical_operators": [
+    "RequirementCompiler",
+    "Planner",
+    "Verifier"
+  ],
+  "planner_hints": {
+    "workflow_candidates": [
+      {
+        "workflow_id": "research.evidence_to_poc.v1",
+        "candidate_kind": "memoized_task_graph",
+        "selection_authority": "planner",
+        "auto_instantiate": false,
+        "execution_profile_hint": "part_a_only",
+        "reason": "research request with no build or execute intent"
+      }
+    ],
+    "selection_authority": "planner",
+    "allowed_outcomes": [
+      "direct_answer",
+      "memoized_task_graph",
+      "new_task_graph"
+    ]
+  },
+  "readiness": {
+    "schema_version": "solar.intent_readiness.v1",
+    "status": "ready",
+    "ready": true,
+    "blocking_count": 0,
+    "unresolved": [],
+    "questions": [],
+    "applied_answers": {},
+    "planning_admitted": true,
+    "next_action": "plan",
+    "policy": "Only ambiguities that block safe route selection or execution are questions."
+  },
+  "compiler_next": "pm_planner_task_graph"
+}

@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "04-research-ai-tutoring",
+  "title": "Evaluate whether AI tutoring improves student learning compared with human tutoring and co",
+  "lane": "delivery",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\requirement_trace.json",
+  "case_id": "04-research-ai-tutoring",
+  "category": "research",
+  "prompt": "Evaluate whether AI tutoring improves student learning compared with human tutoring and conventional educational software. Examine effect sizes, study quality, age groups, subjects, and possible harms.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

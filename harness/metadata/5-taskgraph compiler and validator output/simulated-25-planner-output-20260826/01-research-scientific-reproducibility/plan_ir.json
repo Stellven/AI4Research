@@ -1,0 +1,286 @@
+{
+  "schema_version": "solar.plan_ir.v1",
+  "plan_ir_id": "plan-ir-01-research-scientific-reproducibility",
+  "strategy_ref": {
+    "strategy_id": "strategy-01-research-scientific-reproducibility",
+    "sha256": "2c20daf4620e3b394fb358dd2edf0f723a5f640c5a7e8e1e86ef5582b67a9926"
+  },
+  "planning_catalog_ref": {
+    "snapshot_id": "planning-catalog-live-25-20260826",
+    "sha256": "db00de4ccc27fd92de8b516abee97a435c7a372e6cda87db97f4b981875d4285"
+  },
+  "nodes": [
+    {
+      "id": "seed_fetch",
+      "logical_operator": "freeze_research_seed",
+      "capsule": "cap.research-seed-snapshot",
+      "alternatives": [
+        "autosci-research-synthesis-seed-fetch-worker"
+      ],
+      "depends_on": [],
+      "consumes": [
+        "solar.requirement_ir.v2"
+      ],
+      "produces": [
+        "research.seed_snapshot.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "gate": "gate.seed_provenance.v1"
+    },
+    {
+      "id": "source_discovery",
+      "logical_operator": "discover_public_sources",
+      "capsule": "cap.research-public-source-discovery",
+      "alternatives": [
+        "autosci-research-synthesis-source-discovery-worker"
+      ],
+      "depends_on": [
+        "seed_fetch"
+      ],
+      "consumes": [
+        "research.seed_snapshot.v1"
+      ],
+      "produces": [
+        "research.source_discovery.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "gate": "gate.source_provenance.v1"
+    },
+    {
+      "id": "source_validation",
+      "logical_operator": "validate_source_set",
+      "capsule": "cap.research-source-validation",
+      "alternatives": [
+        "autosci-research-synthesis-source-validation-worker"
+      ],
+      "depends_on": [
+        "source_discovery"
+      ],
+      "consumes": [
+        "research.source_discovery.v1"
+      ],
+      "produces": [
+        "research.source_validation.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "gate": "gate.source_validation.v1"
+    },
+    {
+      "id": "evidence_synthesis",
+      "logical_operator": "synthesize_validated_evidence",
+      "capsule": "cap.research-evidence-synthesis",
+      "alternatives": [
+        "codex-research-evidence-synthesis-worker"
+      ],
+      "depends_on": [
+        "source_validation"
+      ],
+      "consumes": [
+        "research.source_validation.v1",
+        "research.seed_snapshot.v1"
+      ],
+      "produces": [
+        "research.evidence_synthesis.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "gate": "gate.claim_grounding.v1"
+    },
+    {
+      "id": "report_draft",
+      "logical_operator": "draft_requirement_complete_report",
+      "capsule": "cap.research-report-draft",
+      "alternatives": [
+        "codex-research-report-draft-worker"
+      ],
+      "depends_on": [
+        "evidence_synthesis"
+      ],
+      "consumes": [
+        "research.evidence_synthesis.v1"
+      ],
+      "produces": [
+        "research.report.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "gate": "gate.requirement_coverage.v1"
+    },
+    {
+      "id": "independent_review",
+      "logical_operator": "independently_review_report",
+      "capsule": "cap.research-independent-review",
+      "alternatives": [
+        "codex-research-independent-review-worker"
+      ],
+      "depends_on": [
+        "report_draft",
+        "source_validation"
+      ],
+      "consumes": [
+        "research.report.v1",
+        "research.source_validation.v1"
+      ],
+      "produces": [
+        "research.independent_review.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "gate": "gate.independent_review.v1"
+    },
+    {
+      "id": "report_revision",
+      "logical_operator": "revise_report_from_review",
+      "capsule": "cap.research-report-revision",
+      "alternatives": [
+        "codex-research-report-revision-worker"
+      ],
+      "depends_on": [
+        "source_validation",
+        "evidence_synthesis",
+        "report_draft",
+        "independent_review"
+      ],
+      "consumes": [
+        "research.source_validation.v1",
+        "research.evidence_synthesis.v1",
+        "research.report.v1",
+        "research.independent_review.v1"
+      ],
+      "produces": [
+        "research.revised_report.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "gate": "gate.revision_lineage.v1"
+    },
+    {
+      "id": "final_acceptance",
+      "logical_operator": "recompute_final_acceptance",
+      "capsule": "cap.research-final-acceptance",
+      "alternatives": [
+        "autosci-research-synthesis-final-acceptance-worker"
+      ],
+      "depends_on": [
+        "source_validation",
+        "evidence_synthesis",
+        "report_draft",
+        "independent_review",
+        "report_revision"
+      ],
+      "consumes": [
+        "research.source_validation.v1",
+        "research.evidence_synthesis.v1",
+        "research.report.v1",
+        "research.independent_review.v1",
+        "research.revised_report.v1"
+      ],
+      "produces": [
+        "research.final_acceptance.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "gate": "gate.final_acceptance.v1"
+    }
+  ],
+  "artifact_role": "simulated_planner_step_output_not_executed"
+}

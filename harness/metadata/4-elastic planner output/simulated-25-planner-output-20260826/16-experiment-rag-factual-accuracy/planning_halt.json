@@ -1,0 +1,23 @@
+{
+  "schema_version": "solar.planning_halt.v1",
+  "case_id": "16-experiment-rag-factual-accuracy",
+  "reason": "requirement_compiler_handoff_not_allowed",
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-16-experiment-rag-factual-accuracy-retry-01",
+    "sha256": "b3945779c5163a96a95dc4c4f7ab8f655a90d22fa433dd8489cda8443db89093"
+  },
+  "clarification_questions": [
+    {
+      "item_id": "A1",
+      "question": "Which domain benchmark and 100 questions should be used?",
+      "source_spans": [
+        [
+          75,
+          105
+        ]
+      ]
+    }
+  ],
+  "dispatch_allowed": false,
+  "artifact_role": "control_or_support_artifact_not_planner_output"
+}

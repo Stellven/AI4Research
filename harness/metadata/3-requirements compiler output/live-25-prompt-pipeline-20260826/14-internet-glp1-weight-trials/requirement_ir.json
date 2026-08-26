@@ -1,0 +1,122 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-14-internet-glp1-weight-trials-retry-01",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-14-internet-glp1-weight-trials-retry-01",
+    "sha256": "c1bf9c6f1973aa794370c472c3067a93ed359c36d6d4b2cc662a3746a8864704"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-14-internet-glp1-weight-trials-retry-01",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: A collection of clinical-trial records for GLP-1 medications used for weight management, containing the requested trial fields.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "deliverable",
+          "completeness",
+          "supporting_evidence",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.artifact_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:C1",
+      "statement": "The collected data must concern clinical trials of GLP-1 medications used for weight management.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "clinical-trial data",
+          "GLP-1 medications",
+          "weight management"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C2",
+      "statement": "Each collected trial record must include sample size, treatment duration, average weight change, adverse-event withdrawals, sponsor, and trial-registration link.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "sample size",
+          "treatment duration",
+          "average weight change",
+          "adverse-event withdrawals",
+          "sponsor",
+          "trial-registration link"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which GLP-1 medications and clinical trials satisfy the stated scope?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

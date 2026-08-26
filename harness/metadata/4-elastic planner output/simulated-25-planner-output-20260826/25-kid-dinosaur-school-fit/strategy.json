@@ -1,0 +1,28 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-25-kid-dinosaur-school-fit",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-25-kid-dinosaur-school-fit",
+    "sha256": "f68a26aa9123d02b593cadf6b0d1682a0b169ffa13facfc58a068bee9e7394eb"
+  },
+  "strategy": "direct_response",
+  "base_workflow": null,
+  "base_version": null,
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 4
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2",
+        "R3",
+        "R4"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "A one-node direct response is sufficient; no exact direct-response capability capsule is currently registered.",
+  "artifact_role": "simulated_planner_step_output"
+}

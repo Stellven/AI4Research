@@ -1,0 +1,203 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-03-research-urban-heat-mitigation",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-03-research-urban-heat-mitigation",
+    "sha256": "a96961e4b76af1a8ecc561618700331bf660aae13ed442e61f7bf0ec1c2fc9dd"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-03-research-urban-heat-mitigation",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: A comparative assessment that ranks or profiles the five specified strategies in dense cities across effectiveness, cost, equity, and scalability.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: A recommendation summary of tradeoffs across the four criteria to support selecting the best-performing strategy set.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C1",
+      "statement": "Only the explicitly listed strategies should be compared: trees, reflective roofs, green roofs, shade structures, and cooling centers.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:C2",
+      "statement": "Evaluation must be performed on the four requested criteria: effectiveness, cost, equity, and scalability.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:C3",
+      "statement": "The comparison context is dense cities.",
+      "priority": "must",
+      "source_refs": [
+        "C3"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What operational definition of \"dense cities\" should govern the comparison (e.g., density thresholds or urban form categories)?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R7",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: How should \"works best\" be operationalized across criteria (single weighted score, multi-criteria ranking, or criterion-by-criterion recommendations)?",
+      "priority": "must",
+      "source_refs": [
+        "U2",
+        "G4"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R8",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What cost/effectiveness units and normalizations are expected (for example, per-building, per-area, annualized, and lifecycle timing)?",
+      "priority": "must",
+      "source_refs": [
+        "U3",
+        "G3"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

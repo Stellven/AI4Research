@@ -1,0 +1,77 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-07-research-microplastics-health-retry-02",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-07-research-microplastics-health-retry-02",
+    "sha256": "89d8f48b04bcfde19af0fba01c7345cb80373f5496e6fcdae875c8bb80e403c5"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-07-research-microplastics-health-retry-02",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: An evidence assessment of the connection between microplastic exposure and human-health outcomes, separated into confirmed findings, plausible mechanisms, observational associations, and unsupported claims.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:C1",
+      "statement": "Separate the assessment into confirmed findings, plausible mechanisms, observational associations, and unsupported claims.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "confirmed findings",
+          "plausible mechanisms",
+          "observational associations",
+          "unsupported claims"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

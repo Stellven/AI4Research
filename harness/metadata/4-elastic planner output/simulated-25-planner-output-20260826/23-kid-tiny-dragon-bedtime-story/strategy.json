@@ -1,0 +1,26 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-23-kid-tiny-dragon-bedtime-story",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-23-kid-tiny-dragon-bedtime-story-retry-02",
+    "sha256": "c8dbd69b31d59cfd087c903c4104befbcfbbd317164a7eadf721ac522efed7b0"
+  },
+  "strategy": "direct_response",
+  "base_workflow": null,
+  "base_version": null,
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 2
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "A one-node direct response is sufficient; no exact direct-response capability capsule is currently registered.",
+  "artifact_role": "simulated_planner_step_output"
+}

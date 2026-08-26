@@ -1,0 +1,179 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-12-internet-canadian-city-rentals-retry-01",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-12-internet-canadian-city-rentals-retry-01",
+    "sha256": "4fcbe7ed052beec26bb224ca097620074254be9b4c88e6053e4c7b6af3c8ec8d"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-12-internet-canadian-city-rentals-retry-01",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: A collection of rental prices, median incomes, population growth, and vacancy rates for the 25 largest Canadian cities, with the measurement date, definition, unit, and source recorded for every value.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "deliverable",
+          "completeness",
+          "supporting_evidence",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.artifact_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:C1",
+      "statement": "Rental prices must be current.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C2",
+      "statement": "The collection must cover 25 cities.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:C3",
+      "statement": "The cities must be the 25 largest Canadian cities.",
+      "priority": "must",
+      "source_refs": [
+        "C3"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:C4",
+      "statement": "For every value, record its measurement date, definition, unit, and source.",
+      "priority": "must",
+      "source_refs": [
+        "C4"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "measurement date",
+          "definition",
+          "unit",
+          "source"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which cities are the 25 largest Canadian cities under the selected population-ranking data?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1",
+        "C3"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R7",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What current rental price, median income, population growth, and vacancy-rate values are available for each city?",
+      "priority": "must",
+      "source_refs": [
+        "U2",
+        "G1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

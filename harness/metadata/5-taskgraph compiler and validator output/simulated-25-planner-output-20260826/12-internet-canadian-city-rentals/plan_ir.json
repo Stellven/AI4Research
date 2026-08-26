@@ -1,0 +1,159 @@
+{
+  "schema_version": "solar.plan_ir.v1",
+  "plan_ir_id": "plan-ir-12-internet-canadian-city-rentals",
+  "strategy_ref": {
+    "strategy_id": "strategy-12-internet-canadian-city-rentals",
+    "sha256": "4abf372d429b28b1527ac3407d9df5b8a060e2f894019e2cd7435dadeed4d7ef"
+  },
+  "planning_catalog_ref": {
+    "snapshot_id": "planning-catalog-live-25-20260826",
+    "sha256": "db00de4ccc27fd92de8b516abee97a435c7a372e6cda87db97f4b981875d4285"
+  },
+  "nodes": [
+    {
+      "id": "seed_snapshot",
+      "logical_operator": "freeze_research_seed",
+      "capsule": "cap.research-seed-snapshot",
+      "alternatives": [
+        "autosci-research-synthesis-seed-fetch-worker",
+        "mini-codex-gpt53-spark-builder-1",
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "depends_on": [],
+      "consumes": [
+        "solar.requirement_ir.v2"
+      ],
+      "produces": [
+        "research.seed_snapshot.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7"
+      ],
+      "gate": "gate.seed_provenance.v1"
+    },
+    {
+      "id": "source_discovery",
+      "logical_operator": "discover_public_sources",
+      "capsule": "cap.research-public-source-discovery",
+      "alternatives": [
+        "autosci-research-synthesis-source-discovery-worker",
+        "mini-codex-gpt53-spark-builder-1",
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "depends_on": [
+        "seed_snapshot"
+      ],
+      "consumes": [
+        "research.seed_snapshot.v1"
+      ],
+      "produces": [
+        "research.source_discovery.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7"
+      ],
+      "gate": "gate.source_provenance.v1"
+    },
+    {
+      "id": "source_validation",
+      "logical_operator": "validate_source_set",
+      "capsule": "cap.research-source-validation",
+      "alternatives": [
+        "autosci-research-synthesis-source-validation-worker",
+        "mini-codex-gpt53-spark-builder-1",
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "depends_on": [
+        "source_discovery"
+      ],
+      "consumes": [
+        "research.source_discovery.v1"
+      ],
+      "produces": [
+        "research.source_validation.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7"
+      ],
+      "gate": "gate.source_validation.v1"
+    },
+    {
+      "id": "evidence_synthesis",
+      "logical_operator": "synthesize_validated_evidence",
+      "capsule": "cap.research-evidence-synthesis",
+      "alternatives": [
+        "codex-research-evidence-synthesis-worker",
+        "mini-codex-gpt53-spark-builder-1",
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "depends_on": [
+        "source_validation"
+      ],
+      "consumes": [
+        "research.source_validation.v1",
+        "research.seed_snapshot.v1"
+      ],
+      "produces": [
+        "research.evidence_synthesis.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7"
+      ],
+      "gate": "gate.claim_grounding.v1"
+    },
+    {
+      "id": "report_draft",
+      "logical_operator": "draft_requirement_complete_report",
+      "capsule": "cap.research-report-draft",
+      "alternatives": [
+        "codex-research-report-draft-worker",
+        "mini-codex-gpt53-spark-builder-1",
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "depends_on": [
+        "evidence_synthesis"
+      ],
+      "consumes": [
+        "research.evidence_synthesis.v1"
+      ],
+      "produces": [
+        "research.report.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7"
+      ],
+      "gate": "gate.requirement_coverage.v1"
+    }
+  ],
+  "artifact_role": "simulated_planner_step_output_not_executed"
+}

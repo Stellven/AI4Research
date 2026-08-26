@@ -1,0 +1,26 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-07-research-microplastics-health",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-07-research-microplastics-health-retry-02",
+    "sha256": "a0f7c75860068489713f6790477fe774afb1e53c3d2a0113513bdb625611ec74"
+  },
+  "strategy": "compose",
+  "base_workflow": "research.evidence_to_poc.v1",
+  "base_version": "1",
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 2
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "Use the smallest registered evidence workflow that discovers, validates, synthesizes, and reports sources.",
+  "artifact_role": "simulated_planner_step_output"
+}

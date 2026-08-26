@@ -1,0 +1,282 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-01-research-scientific-reproducibility-retry-02",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-01-research-scientific-reproducibility-retry-02",
+    "sha256": "073eae9f528ae4ee5f9dc0fa79bb9f445f7701f1b75273d8ed0cb367c348f079"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-01-research-scientific-reproducibility-retry-02",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: An investigation of the main causes of irreproducible results in machine-learning research.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: A synthesis of peer-reviewed evidence about the causes of irreproducible results in machine-learning research.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:D3",
+      "statement": "Produce the requested outcome: A distinction between empirical findings and expert opinion.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D3"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:D4",
+      "statement": "Produce the requested outcome: An identification of disagreements in the evidence or expert opinion.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D4"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:D5",
+      "statement": "Produce the requested outcome: Five testable improvements addressing irreproducibility in machine-learning research.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D5"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:C1",
+      "statement": "Use peer-reviewed evidence.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "peer-reviewed"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R7",
+      "origin": "user:C2",
+      "statement": "Distinguish empirical findings from expert opinion.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "empirical findings",
+          "expert opinion"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R8",
+      "origin": "user:C3",
+      "statement": "Propose exactly five testable improvements.",
+      "priority": "must",
+      "source_refs": [
+        "C3"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "constraint_satisfied",
+          "supporting_evidence"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R9",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which causes qualify as the main causes of irreproducible results in machine-learning research?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R10",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which peer-reviewed studies provide relevant evidence?",
+      "priority": "must",
+      "source_refs": [
+        "U2",
+        "C1",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R11",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which disagreements are present among the empirical findings and expert opinions?",
+      "priority": "must",
+      "source_refs": [
+        "U3",
+        "D4"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R12",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which five improvements can be formulated as testable interventions?",
+      "priority": "must",
+      "source_refs": [
+        "U4",
+        "C3",
+        "D5"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

@@ -150,7 +150,10 @@ def recover_stray_workdir(sprints_dir: Any, sid: str) -> Dict[str, Any]:
 def _gate_argv(command: str) -> list[str] | None:
     """Map a contract gate command string to argv; None means bash -lc."""
     try:
-        argv = shlex.split(command)
+        # POSIX shlex treats every backslash as an escape. Contract
+        # substitution emits native Windows paths, so ``sprints\sid`` became
+        # ``sprintssid`` and a valid artifact was evaluated as missing.
+        argv = shlex.split(command, posix=os.name != "nt")
     except ValueError:
         return None
     if not argv:

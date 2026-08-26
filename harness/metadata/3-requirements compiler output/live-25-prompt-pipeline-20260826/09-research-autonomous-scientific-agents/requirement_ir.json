@@ -1,0 +1,167 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-09-research-autonomous-scientific-agents-retry-01",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-09-research-autonomous-scientific-agents-retry-01",
+    "sha256": "1e98f9893e2966e627a770668807cc9c22aa80eb57ef676ebc16acf15a090fe8"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-09-research-autonomous-scientific-agents-retry-01",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: A map of the current state of autonomous scientific-research agents.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: A comparison of agent abilities in literature review, hypothesis generation, experimentation, analysis, and reproducibility.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:D3",
+      "statement": "Produce the requested outcome: Identification of areas where human supervision remains essential.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "D3"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which autonomous scientific-research agents and evidence represent the current state?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What are the abilities of the relevant agents in literature review, hypothesis generation, experimentation, analysis, and reproducibility?",
+      "priority": "must",
+      "source_refs": [
+        "U2",
+        "G2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Where does human supervision remain essential for the relevant agents and research activities?",
+      "priority": "must",
+      "source_refs": [
+        "U3",
+        "G3"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

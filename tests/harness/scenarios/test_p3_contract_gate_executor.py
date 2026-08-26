@@ -39,10 +39,21 @@ if _HARNESS_LIB not in sys.path:
     sys.path.insert(0, _HARNESS_LIB)
 
 import graph_node_dispatcher as gnd  # noqa: E402
+import contract_gate_executor as cge  # noqa: E402
 import workflow_contract as wc  # noqa: E402
 
 WORKFLOWS_DIR = _HARNESS / "config" / "workflows"
 SID = "p3-gate-exec"
+
+
+def test_windows_gate_argv_preserves_native_path_separators(monkeypatch) -> None:
+    monkeypatch.setattr(cge.os, "name", "nt")
+    argv = cge._gate_argv(
+        r"python3 scripts/validate_evidence_to_poc.py --workspace sprints\sprint-123 --node-complete seed_fetch"
+    )
+
+    assert argv is not None
+    assert argv[3] == r"sprints\sprint-123"
 
 
 def _node(gate: dict, node_id: str = "D2", status: str = "reviewing") -> dict:

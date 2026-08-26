@@ -1,0 +1,101 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-02-research-ai-assisted-drug-discovery",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-02-research-ai-assisted-drug-discovery",
+    "sha256": "a430f953baed56e986f0fb89e2f7e562e2f1d7e305ac5028a222a8c6ecc06160"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-02-research-ai-assisted-drug-discovery",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: Provide a structured review that maps use cases of generative AI in early-stage drug discovery to observed outcomes, compares them against claimed benefits, reports major technical limitations, and enumerates the strongest unresolved research questions.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: How should 'strongest' unresolved research questions be ranked (e.g., by scientific impact, feasibility, frequency in literature, or translational urgency)?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G4"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: What counts as 'demonstrated results' versus 'claimed benefits' for comparison (e.g., peer-reviewed benchmarks, preprints, internal studies, or public case reports)?",
+      "priority": "must",
+      "source_refs": [
+        "U2",
+        "G2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

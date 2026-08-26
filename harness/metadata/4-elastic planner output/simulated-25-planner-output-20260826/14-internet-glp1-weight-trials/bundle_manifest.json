@@ -1,0 +1,16 @@
+{
+  "case_id": "14-internet-glp1-weight-trials",
+  "terminal_status": "planned",
+  "artifacts": [
+    {
+      "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\14-internet-glp1-weight-trials\\strategy.json",
+      "classification": "STEP_OUTPUT"
+    },
+    {
+      "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\14-internet-glp1-weight-trials\\plan_ir.json",
+      "classification": "STEP_OUTPUT"
+    }
+  ],
+  "dispatchable": true,
+  "dispatch_blocker": null
+}

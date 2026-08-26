@@ -1,0 +1,128 @@
+{
+  "schema_version": "solar.plan_ir.v1",
+  "plan_ir_id": "plan-ir-20-experiment-literature-summary-utility",
+  "strategy_ref": {
+    "strategy_id": "strategy-20-experiment-literature-summary-utility",
+    "sha256": "a06b33822a8fe2051f19a75ac4f10a9f569d5ccf42adede2598f6dbacc17fb94"
+  },
+  "planning_catalog_ref": {
+    "snapshot_id": "planning-catalog-live-25-20260826",
+    "sha256": "db00de4ccc27fd92de8b516abee97a435c7a372e6cda87db97f4b981875d4285"
+  },
+  "nodes": [
+    {
+      "id": "experiment_design",
+      "logical_operator": "design_bounded_experiment",
+      "capsule": "cap.research-experiment-design",
+      "alternatives": [
+        "autosci-experiment-design-worker",
+        "autosci-exec-experiment-design-worker",
+        "mini-codex-gpt53-spark-builder-1",
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "depends_on": [],
+      "consumes": [
+        "solar.requirement_ir.v2"
+      ],
+      "produces": [
+        "research.experiment_plan.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "gate": "gate.experiment_design_complete.v1"
+    },
+    {
+      "id": "experiment_run",
+      "logical_operator": "run_approved_bounded_experiment",
+      "capsule": "cap.research-experiment-run",
+      "alternatives": [
+        "autosci-experiment-run-worker",
+        "autosci-exec-experiment-run-worker",
+        "mini-codex-gpt53-spark-builder-1",
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "depends_on": [
+        "experiment_design"
+      ],
+      "consumes": [
+        "research.experiment_plan.v1"
+      ],
+      "produces": [
+        "research.experiment_result.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "gate": "gate.explicit_execution_approval.v1"
+    },
+    {
+      "id": "claim_verification",
+      "logical_operator": "verify_experimental_claims",
+      "capsule": "cap.research-claim-verify",
+      "alternatives": [
+        "autosci-exec-claim-verification-worker",
+        "autosci-research-poc-claim-verification-worker"
+      ],
+      "depends_on": [
+        "experiment_run"
+      ],
+      "consumes": [
+        "research.experiment_result.v1"
+      ],
+      "produces": [
+        "research.claim_verdict.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "gate": "gate.statistical_claim_support.v1"
+    },
+    {
+      "id": "final_delivery",
+      "logical_operator": "deliver_requirement_complete_experiment_report",
+      "capsule": "cap.research-report-draft",
+      "alternatives": [
+        "autosci-exec-report-delivery-worker",
+        "codex-research-report-draft-worker",
+        "mini-codex-gpt53-spark-builder-1",
+        "mini-codex-gpt55-medium-builder-1"
+      ],
+      "depends_on": [
+        "claim_verification"
+      ],
+      "consumes": [
+        "research.experiment_result.v1",
+        "research.claim_verdict.v1"
+      ],
+      "produces": [
+        "research.report.v1"
+      ],
+      "obligation_ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "gate": "gate.requirement_coverage.v1"
+    }
+  ],
+  "artifact_role": "simulated_planner_step_output_not_executed"
+}

@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "02-research-ai-assisted-drug-discovery",
+  "title": "Review how generative AI is being used in early-stage drug discovery.",
+  "lane": "research",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\02-research-ai-assisted-drug-discovery\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\02-research-ai-assisted-drug-discovery\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\02-research-ai-assisted-drug-discovery\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\02-research-ai-assisted-drug-discovery\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\02-research-ai-assisted-drug-discovery\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\02-research-ai-assisted-drug-discovery\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\02-research-ai-assisted-drug-discovery\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\02-research-ai-assisted-drug-discovery\\requirement_trace.json",
+  "case_id": "02-research-ai-assisted-drug-discovery",
+  "category": "research",
+  "prompt": "Review how generative AI is being used in early-stage drug discovery. Compare demonstrated results with claimed benefits, identify major technical limitations, and list the strongest unresolved research questions.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

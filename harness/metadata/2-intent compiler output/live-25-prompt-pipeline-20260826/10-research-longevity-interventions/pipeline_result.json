@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "10-research-longevity-interventions-retry-01",
+  "title": "Systematically compare the specified longevity interventions, separate human evidence from",
+  "lane": "research",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\10-research-longevity-interventions-retry-01\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\10-research-longevity-interventions-retry-01\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\10-research-longevity-interventions-retry-01\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\10-research-longevity-interventions-retry-01\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\10-research-longevity-interventions-retry-01\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\10-research-longevity-interventions-retry-01\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\10-research-longevity-interventions-retry-01\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\10-research-longevity-interventions-retry-01\\requirement_trace.json",
+  "case_id": "10-research-longevity-interventions",
+  "category": "research",
+  "prompt": "Systematically compare exercise, calorie restriction, sleep optimization, metformin, rapamycin, and senolytics as longevity interventions. Separate human evidence from animal evidence and report uncertainty clearly.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

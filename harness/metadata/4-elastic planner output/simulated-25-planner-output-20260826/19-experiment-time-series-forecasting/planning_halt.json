@@ -1,0 +1,23 @@
+{
+  "schema_version": "solar.planning_halt.v1",
+  "case_id": "19-experiment-time-series-forecasting",
+  "reason": "requirement_compiler_handoff_not_allowed",
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-19-experiment-time-series-forecasting-retry-01",
+    "sha256": "f96d7a85e097e468e1c17b284e997eba3f2afbea400e76e17265e91bb7d4b587"
+  },
+  "clarification_questions": [
+    {
+      "item_id": "A1",
+      "question": "Which proposed time-series forecasting method should be evaluated?",
+      "source_spans": [
+        [
+          19,
+          58
+        ]
+      ]
+    }
+  ],
+  "dispatch_allowed": false,
+  "artifact_role": "control_or_support_artifact_not_planner_output"
+}

@@ -274,12 +274,15 @@ def _runtime_env(
     runtime_harness: Path,
     evidence_root: Path,
     workspace_root: Path,
-    source_pack: Path,
-    authority_root: Path,
+    source_pack: Path | None,
+    authority_root: Path | None,
     codex_home: Path,
     experiment_policy: str = "",
     policy_actor: str = "",
     policy_statement: str = "",
+    acquisition_mode: str = "source_pack",
+    model_provider: str = "codex",
+    model: str = "",
 ) -> dict[str, str]:
     env = {key: value for key, value in os.environ.items() if key not in SECRET_ENV_KEYS}
     env.update(
@@ -291,9 +294,8 @@ def _runtime_env(
             "SOLAR_INTENT_GATEWAY_DIR": str(evidence_root / "intents"),
             "SOLAR_INTAKE_WORKSPACE_ROOT": str(workspace_root),
             "SOLAR_KNOWLEDGE_RAW_DIR": str(evidence_root / "knowledge-raw"),
-            "SOLAR_RESEARCH_SOURCE_PACK_ROOT": str(authority_root),
-            "SOLAR_RESEARCH_SOURCE_PACK": str(source_pack),
             "SOLAR_RESEARCH_EXECUTION_PROFILE": "part_a_plus_poc",
+            "SOLAR_RESEARCH_ACQUISITION_MODE": acquisition_mode,
             "SOLAR_WORKFLOW_ROUTER": "1",
             "SOLAR_PRODUCT_MODE": "0",
             "SOLAR_INTENT_REWRITE_CMD": "",
@@ -302,8 +304,26 @@ def _runtime_env(
             "SOLAR_MULTI_TASK_OPERATORS": str(runtime_harness / "config/physical-operators.json"),
             "SOLAR_CODEX_SOURCE_HOME": str(codex_home),
             "SOLAR_CODEX_OPERATOR_STATE_ROOT": str(evidence_root / "runtime/codex-state"),
+            "SOLAR_RESEARCH_MODEL_PROVIDER": model_provider,
         }
     )
+    if source_pack is not None and authority_root is not None:
+        env["SOLAR_RESEARCH_SOURCE_PACK_ROOT"] = str(authority_root)
+        env["SOLAR_RESEARCH_SOURCE_PACK"] = str(source_pack)
+    if acquisition_mode in {"live_search", "hybrid"}:
+        env["SOLAR_RESEARCH_RETRIEVAL_POLICY"] = "public_bibliographic_no_key_v1"
+    if model_provider in {"openrouter", "openai"}:
+        key_name = "OPENROUTER_API_KEY" if model_provider == "openrouter" else "OPENAI_API_KEY"
+        key_value = str(os.environ.get(key_name) or "").strip()
+        if not key_value:
+            raise UATError(f"selected model provider has no configured {key_name}")
+        # Forward only the explicitly selected provider credential. It remains
+        # absent from entry manifests and command receipts.
+        env[key_name] = key_value
+        env["AUTOSCI_RESEARCH_LLM_PROVIDER"] = model_provider
+        env["AUTOSCI_RESEARCH_ALLOW_OPENAI_FALLBACK"] = "0"
+        if model:
+            env["AUTOSCI_RESEARCH_LLM_MODEL"] = model
     if experiment_policy:
         env["SOLAR_RESEARCH_EXPERIMENT_POLICY"] = experiment_policy
         env["SOLAR_RESEARCH_EXPERIMENT_POLICY_ACTOR"] = policy_actor
@@ -322,6 +342,12 @@ def _manifest_env(env: dict[str, str]) -> dict[str, str]:
         "SOLAR_RESEARCH_SOURCE_PACK_ROOT",
         "SOLAR_RESEARCH_SOURCE_PACK",
         "SOLAR_RESEARCH_EXECUTION_PROFILE",
+        "SOLAR_RESEARCH_ACQUISITION_MODE",
+        "SOLAR_RESEARCH_RETRIEVAL_POLICY",
+        "SOLAR_RESEARCH_MODEL_PROVIDER",
+        "AUTOSCI_RESEARCH_LLM_PROVIDER",
+        "AUTOSCI_RESEARCH_LLM_MODEL",
+        "AUTOSCI_RESEARCH_ALLOW_OPENAI_FALLBACK",
         "SOLAR_WORKFLOW_ROUTER",
         "SOLAR_PRODUCT_MODE",
         "SOLAR_GATE_LEDGER",
@@ -691,18 +717,44 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
         raise UATError(f"{args.phase} requires a new empty evidence root: {evidence_root}")
     lock = _acquire_lock(evidence_root)
     try:
-        source_pack = Path(args.source_pack).expanduser().resolve(strict=True)
-        authority_root = Path(args.source_authority_root).expanduser().resolve(strict=True)
+        acquisition_mode = str(args.acquisition_mode or "source_pack")
+        source_pack = (
+            Path(args.source_pack).expanduser().resolve(strict=True)
+            if str(args.source_pack or "").strip()
+            else None
+        )
+        authority_root = (
+            Path(args.source_authority_root).expanduser().resolve(strict=True)
+            if str(args.source_authority_root or "").strip()
+            else None
+        )
+        if (source_pack is None) != (authority_root is None):
+            raise UATError("source-pack and source-authority-root must be supplied together")
+        if acquisition_mode in {"source_pack", "hybrid"} and source_pack is None:
+            raise UATError(f"{acquisition_mode} acquisition requires a source pack")
         request_file = _regular_file(Path(args.request_file).expanduser(), "request file")
         workspace_root = Path(args.workspace_root).expanduser().resolve(strict=True)
         if not workspace_root.is_dir():
             raise UATError(f"workspace root must be a directory: {workspace_root}")
+        model_provider = str(args.model_provider or "codex")
         codex_binary_raw = shutil.which("codex")
-        if not codex_binary_raw:
+        if model_provider == "codex" and not codex_binary_raw:
             raise UATError("Codex CLI is unavailable on PATH")
         codex_home = Path(args.codex_home).expanduser().resolve(strict=True)
-        source_authority = validate_source_pack(source_pack, authority_root=authority_root)
-        source_manifest = {key: value for key, value in source_authority.items() if key != "candidates"}
+        if source_pack is not None and authority_root is not None:
+            source_authority = validate_source_pack(source_pack, authority_root=authority_root)
+            source_manifest = {key: value for key, value in source_authority.items() if key != "candidates"}
+        else:
+            source_manifest = {
+                "schema": "solar.fixed_research.source_pack_authority.v1",
+                "status": "not_available",
+                "reason": "live_search run did not supply a source pack",
+                "root": "",
+                "authority_root": "",
+                "files": [],
+                "source_count": 0,
+                "evidence_count": 0,
+            }
         runtime_harness = evidence_root / "runtime-harness"
         _ensure_runtime_harness(runtime_harness)
         _require_quiescent(runtime_harness)
@@ -716,6 +768,9 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
             experiment_policy="evidence_lineage_integrity_v1" if one_shot else "",
             policy_actor=str(getattr(args, "policy_actor", "") or ""),
             policy_statement=str(getattr(args, "policy_statement", "") or ""),
+            acquisition_mode=acquisition_mode,
+            model_provider=str(args.model_provider or "codex"),
+            model=str(args.model or ""),
         )
         uat_dir = evidence_root / "uat"
         intake_argv = _shell_command("intake", "--json", "--file", str(request_file))
@@ -726,7 +781,11 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
             "created_at": _now(),
             "source": _git_source(),
             "registry": _registry_preflight(),
-            "codex_auth": _codex_preflight(Path(codex_binary_raw), codex_home),
+            "codex_auth": (
+                _codex_preflight(Path(str(codex_binary_raw)), codex_home)
+                if model_provider == "codex"
+                else {"status": "not_required", "model_provider": model_provider}
+            ),
             "request": {"path": str(request_file), "sha256": _sha(request_file.read_bytes()), "bytes": request_file.stat().st_size},
             "source_pack": source_manifest,
             "environment": _manifest_env(env),
@@ -1034,11 +1093,14 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="phase", required=True)
     def add_start_arguments(target: argparse.ArgumentParser) -> None:
         target.add_argument("--evidence-root", required=True)
-        target.add_argument("--source-pack", required=True)
-        target.add_argument("--source-authority-root", required=True)
+        target.add_argument("--source-pack")
+        target.add_argument("--source-authority-root")
         target.add_argument("--request-file", required=True)
         target.add_argument("--workspace-root", required=True)
         target.add_argument("--codex-home", default=os.environ.get("CODEX_HOME") or str(Path.home() / ".codex"))
+        target.add_argument("--acquisition-mode", choices=("source_pack", "live_search", "hybrid"), default="source_pack")
+        target.add_argument("--model-provider", choices=("codex", "claude", "openrouter", "openai"), default="codex")
+        target.add_argument("--model", default="")
         target.add_argument("--timeout-seconds", type=int, default=7200)
         target.add_argument("--poll-seconds", type=float, default=2.0)
         target.add_argument("--preflight-only", action="store_true")

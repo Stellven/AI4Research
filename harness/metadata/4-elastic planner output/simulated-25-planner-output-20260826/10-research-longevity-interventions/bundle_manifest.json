@@ -1,0 +1,16 @@
+{
+  "case_id": "10-research-longevity-interventions",
+  "terminal_status": "planned",
+  "artifacts": [
+    {
+      "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\10-research-longevity-interventions\\strategy.json",
+      "classification": "STEP_OUTPUT"
+    },
+    {
+      "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\10-research-longevity-interventions\\plan_ir.json",
+      "classification": "STEP_OUTPUT"
+    }
+  ],
+  "dispatchable": true,
+  "dispatch_blocker": null
+}

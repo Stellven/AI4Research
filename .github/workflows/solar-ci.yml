@@ -114,6 +114,7 @@ jobs:
             tests/harness/graph/test_graph_status_sync.py \
             tests/harness/graph/test_parent_ready_closeout.py \
             tests/harness/graph/test_task_graph_state_io.py \
+            tests/harness/graph/test_graph_dispatch_hygiene.py \
             tests/harness/graph/test_graph_dispatch_lease_busy.py \
             tests/harness/graph/test_graph_dispatch_submit.py \
             tests/harness/graph/test_worker_assignment_reasons.py \

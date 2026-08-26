@@ -207,6 +207,57 @@ def _configured_launch_command(config: dict) -> str:
     return str(config.get("launch_cmd") or "").strip()
 
 
+def _configured_launch_argv(config: dict) -> list[str]:
+    """Return an optional shell-free command declared by a physical operator."""
+    surface = config.get("surface")
+    raw = surface.get("launch_argv") if isinstance(surface, dict) else None
+    if raw is None:
+        raw = config.get("launch_argv")
+    if isinstance(raw, list) and raw and all(isinstance(part, str) and part for part in raw):
+        return list(raw)
+    return []
+
+
+def _is_codex_command_operator(config: dict[str, Any]) -> bool:
+    """Return whether a command-backend profile is backed by Codex CLI."""
+    if str(config.get("backend") or "").strip().lower() != "command":
+        return False
+    haystack = " ".join(
+        str(config.get(key) or "")
+        for key in (
+            "profile",
+            "provider",
+            "base_url",
+            "model_config",
+            "command",
+            "command_path",
+        )
+    ).lower()
+    return "codex" in haystack
+
+
+def _command_operator_environment(config: dict[str, Any]) -> dict[str, str]:
+    """Materialize platform-neutral environment declared by command profiles."""
+    if not _is_codex_command_operator(config):
+        return {}
+    model = str(config.get("model") or "").strip()
+    effort = str(config.get("reasoning_effort") or "").strip()
+    if not effort:
+        match = re.search(
+            r"(?:^|[;,\s])reasoning(?:_effort)?=([A-Za-z0-9_-]+)",
+            str(config.get("model_config") or ""),
+            re.IGNORECASE,
+        )
+        effort = match.group(1) if match else "medium"
+    env = {
+        "CODEX_REASONING_EFFORT": effort,
+        "PYTHONUTF8": "1",
+    }
+    if model:
+        env["CODEX_MODEL"] = model
+    return env
+
+
 def _claude_model_arg(model: str) -> str:
     value = str(model or "sonnet").strip().lower()
     if value in {"glm", "glm-5", "glm-5.1", "zhipu", "zhipu-glm-5.1"}:
@@ -395,7 +446,7 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
         # the sandboxed process has exited successfully.
         staging_dir = result_dir / "declared-outputs"
         staging_dir.mkdir(parents=True, exist_ok=True)
-        staging_path = staging_dir / f"{index:02d}-{path.name}"
+        staging_path = _staging_output_path(staging_dir, index, path)
         if path.is_file():
             shutil.copyfile(path, staging_path)
         else:
@@ -426,6 +477,19 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     env["HARNESS_DIR"] = str(HARNESS_DIR)
     env["SPRINTS_DIR"] = str(HARNESS_DIR / "sprints")
     return env
+
+
+def _staging_output_path(staging_dir: Path, index: int, publish_path: Path) -> Path:
+    """Keep staged output paths below conservative Windows path-length limits."""
+    candidate = staging_dir / f"{index:02d}-{publish_path.name}"
+    if len(str(candidate)) < 240:
+        return candidate
+    digest = hashlib.sha256(str(publish_path).encode("utf-8")).hexdigest()[:16]
+    suffix = publish_path.suffix[-12:] or ".out"
+    shortened = staging_dir / f"{index:02d}-{digest}{suffix}"
+    if len(str(shortened)) < 240:
+        return shortened
+    return staging_dir / str(index)
 
 
 def _publish_staged_outputs(exec_env: dict[str, str]) -> list[str]:
@@ -525,7 +589,11 @@ def _register_worker_process(pid: int, envelope: dict) -> None:
         _info(f"worker registry registration skipped: {exc}")
 
 
-def _build_command(config: dict, envelope: dict) -> list[str]:
+def _build_command(
+    config: dict,
+    envelope: dict,
+    exec_env: dict[str, str] | None = None,
+) -> list[str]:
     """Return the shell command list to execute for this task.
 
     If the envelope carries an explicit ``command`` override, or if a command
@@ -577,11 +645,45 @@ def _build_command(config: dict, envelope: dict) -> list[str]:
         # existing login-shell behavior below.
         return ["bash", "-c", command_text]
 
+    # A physical operator may declare argv directly when shell translation is
+    # undesirable (notably native Windows paths being handed to WSL bash).
+    launch_argv = _configured_launch_argv(config)
+    if backend == "command" and launch_argv:
+        return launch_argv
+
+    # The physical-operator registry is shared with macOS and historically
+    # stores Codex launches as POSIX shell snippets.  On native Windows those
+    # snippets cannot execute (``VAR=x``, ``$HARNESS_DIR``, ``python3``, and
+    # ``/opt/homebrew/bin`` are all POSIX-specific).  Launch the same provider
+    # wrapper directly with the active Python runtime; the wrapper resolves the
+    # installed ``codex.exe`` and consumes the dispatch/envelope environment.
+    if os.name == "nt" and _is_codex_command_operator(config):
+        return [sys.executable, str(HARNESS_DIR / "tools" / "codex_operator.py")]
+
+    configured_command = str(config.get("command") or "").strip()
+    if (
+        os.name == "nt"
+        and backend == "command"
+        and "plugins/autosci/bin/fixed_research_node_adapter.py" in configured_command.replace("\\", "/")
+    ):
+        envelope_path = str((exec_env or {}).get("SOLAR_OPERATOR_ENVELOPE_JSON") or "").strip()
+        if not envelope_path:
+            return [
+                sys.executable,
+                "-c",
+                "import sys; print('fixed research envelope path is unavailable', file=sys.stderr); raise SystemExit(127)",
+            ]
+        return [
+            str(os.environ.get("SOLAR_AUTOSCI_PYTHON") or sys.executable),
+            str(HARNESS_DIR / "plugins" / "autosci" / "bin" / "fixed_research_node_adapter.py"),
+            "--envelope",
+            envelope_path,
+        ]
+
     launch_cmd = _configured_launch_command(config)
     if backend == "command" and launch_cmd:
         return ["bash", "-lc", launch_cmd]
     if backend == "command":
-        configured_command = str(config.get("command") or "").strip()
         if configured_command:
             return ["bash", "-lc", configured_command]
 
@@ -1178,6 +1280,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 child_envelope["parent_span_id"] = task_span_id
                 child_envelope["causation_id"] = observation_ids["dispatch_id"]
             exec_env.update(_materialize_envelope_context(result_dir, child_envelope))
+            exec_env.update(_command_operator_environment(config))
             pm_result_path = _pm_result_path(envelope) if _is_pm_dispatch_task(envelope) else None
             if pm_result_path is not None:
                 try:
@@ -1192,7 +1295,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 except Exception as exc:
                     _info(f"Unable to prepare pm result {pm_result_path}: {exc}")
 
-            cmd = _build_command(config, envelope)
+            cmd = _build_command(config, envelope, exec_env)
             _info(f"Executing: {' '.join(shlex.quote(part) for part in cmd[:8])}")
 
             try:

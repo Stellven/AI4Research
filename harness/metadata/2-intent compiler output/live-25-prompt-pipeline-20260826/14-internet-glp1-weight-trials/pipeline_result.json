@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "14-internet-glp1-weight-trials-retry-01",
+  "title": "Collect clinical-trial data for GLP-1 medications used for weight management.",
+  "lane": "delivery",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\14-internet-glp1-weight-trials-retry-01\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\14-internet-glp1-weight-trials-retry-01\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\14-internet-glp1-weight-trials-retry-01\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\14-internet-glp1-weight-trials-retry-01\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\14-internet-glp1-weight-trials-retry-01\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\14-internet-glp1-weight-trials-retry-01\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\14-internet-glp1-weight-trials-retry-01\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\14-internet-glp1-weight-trials-retry-01\\requirement_trace.json",
+  "case_id": "14-internet-glp1-weight-trials",
+  "category": "internet_data",
+  "prompt": "Collect clinical-trial data for GLP-1 medications used for weight management. Include sample size, treatment duration, average weight change, adverse-event withdrawals, sponsor, and trial-registration link.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

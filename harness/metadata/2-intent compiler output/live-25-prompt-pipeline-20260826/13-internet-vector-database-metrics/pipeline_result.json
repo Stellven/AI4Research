@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "13-internet-vector-database-metrics-retry-01",
+  "title": "Find the requested metrics for five leading open-source vector databases.",
+  "lane": "delivery",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\13-internet-vector-database-metrics-retry-01\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\13-internet-vector-database-metrics-retry-01\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\13-internet-vector-database-metrics-retry-01\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\13-internet-vector-database-metrics-retry-01\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\13-internet-vector-database-metrics-retry-01\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\13-internet-vector-database-metrics-retry-01\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\13-internet-vector-database-metrics-retry-01\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\13-internet-vector-database-metrics-retry-01\\requirement_trace.json",
+  "case_id": "13-internet-vector-database-metrics",
+  "category": "internet_data",
+  "prompt": "Find monthly downloads, GitHub stars, contributor counts, release frequency, and reported security incidents for five leading open-source vector databases. Return the raw data and explain comparability limitations.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

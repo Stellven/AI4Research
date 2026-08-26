@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "07-research-microplastics-health-retry-02",
+  "title": "Assess the evidence connecting microplastic exposure to human-health outcomes.",
+  "lane": "delivery",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\07-research-microplastics-health-retry-02\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\07-research-microplastics-health-retry-02\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\07-research-microplastics-health-retry-02\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\07-research-microplastics-health-retry-02\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\07-research-microplastics-health-retry-02\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\07-research-microplastics-health-retry-02\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\07-research-microplastics-health-retry-02\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\07-research-microplastics-health-retry-02\\requirement_trace.json",
+  "case_id": "07-research-microplastics-health",
+  "category": "research",
+  "prompt": "Assess the evidence connecting microplastic exposure to human-health outcomes. Separate confirmed findings, plausible mechanisms, observational associations, and unsupported claims.",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

@@ -1,0 +1,413 @@
+{
+  "schema_version": "solar.simulated_planner_bundle_run.v1",
+  "case_count": 25,
+  "planner_output_count": 23,
+  "clarification_halt_count": 2,
+  "dispatchable_count": 18,
+  "artifact_classification": {
+    "planner_step_outputs": [
+      "strategy.json",
+      "plan_ir.json"
+    ],
+    "support_outputs": [
+      "planning_catalog_snapshot.json",
+      "planning_halt.json",
+      "bundle_manifest.json"
+    ],
+    "evaluator_outputs_generated": []
+  },
+  "cases": [
+    {
+      "case_id": "01-research-scientific-reproducibility",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\01-research-scientific-reproducibility\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\01-research-scientific-reproducibility\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "02-research-ai-assisted-drug-discovery",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\02-research-ai-assisted-drug-discovery\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\02-research-ai-assisted-drug-discovery\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "03-research-urban-heat-mitigation",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\03-research-urban-heat-mitigation\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\03-research-urban-heat-mitigation\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "04-research-ai-tutoring",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\04-research-ai-tutoring\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\04-research-ai-tutoring\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "05-research-grid-storage-batteries",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\05-research-grid-storage-batteries\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\05-research-grid-storage-batteries\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "06-research-remote-hybrid-work",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\06-research-remote-hybrid-work\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\06-research-remote-hybrid-work\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "07-research-microplastics-health",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\07-research-microplastics-health\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\07-research-microplastics-health\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "08-research-open-weight-ai",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\08-research-open-weight-ai\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\08-research-open-weight-ai\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "09-research-autonomous-scientific-agents",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\09-research-autonomous-scientific-agents\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\09-research-autonomous-scientific-agents\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "10-research-longevity-interventions",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\10-research-longevity-interventions\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\10-research-longevity-interventions\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "11-internet-global-solar-capacity",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\11-internet-global-solar-capacity\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\11-internet-global-solar-capacity\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "12-internet-canadian-city-rentals",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\12-internet-canadian-city-rentals\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\12-internet-canadian-city-rentals\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "13-internet-vector-database-metrics",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\13-internet-vector-database-metrics\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\13-internet-vector-database-metrics\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "14-internet-glp1-weight-trials",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\14-internet-glp1-weight-trials\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\14-internet-glp1-weight-trials\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "15-internet-data-center-regions",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\15-internet-data-center-regions\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\15-internet-data-center-regions\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "16-experiment-rag-factual-accuracy",
+      "terminal_status": "planning_not_entered",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\16-experiment-rag-factual-accuracy\\planning_halt.json",
+          "classification": "CONTROL_OR_SUPPORT"
+        }
+      ],
+      "dispatchable": false,
+      "dispatch_blocker": "Intent acceptance requires clarification; no RequirementIR exists."
+    },
+    {
+      "case_id": "17-experiment-hypothesis-paper-diversity",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\17-experiment-hypothesis-paper-diversity\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\17-experiment-hypothesis-paper-diversity\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "18-experiment-prompting-python-reliability",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\18-experiment-prompting-python-reliability\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\18-experiment-prompting-python-reliability\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "19-experiment-time-series-forecasting",
+      "terminal_status": "planning_not_entered",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\19-experiment-time-series-forecasting\\planning_halt.json",
+          "classification": "CONTROL_OR_SUPPORT"
+        }
+      ],
+      "dispatchable": false,
+      "dispatch_blocker": "Intent acceptance requires clarification; no RequirementIR exists."
+    },
+    {
+      "case_id": "20-experiment-literature-summary-utility",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\20-experiment-literature-summary-utility\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\20-experiment-literature-summary-utility\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": true,
+      "dispatch_blocker": null
+    },
+    {
+      "case_id": "21-kid-sky-and-sunset-colors",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\21-kid-sky-and-sunset-colors\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\21-kid-sky-and-sunset-colors\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": false,
+      "dispatch_blocker": "No registered direct-response capability capsule."
+    },
+    {
+      "case_id": "22-kid-fish-thirst",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\22-kid-fish-thirst\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\22-kid-fish-thirst\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": false,
+      "dispatch_blocker": "No registered direct-response capability capsule."
+    },
+    {
+      "case_id": "23-kid-tiny-dragon-bedtime-story",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\23-kid-tiny-dragon-bedtime-story\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\23-kid-tiny-dragon-bedtime-story\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": false,
+      "dispatch_blocker": "No registered direct-response capability capsule."
+    },
+    {
+      "case_id": "24-kid-how-airplanes-fly",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\24-kid-how-airplanes-fly\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\24-kid-how-airplanes-fly\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": false,
+      "dispatch_blocker": "No registered direct-response capability capsule."
+    },
+    {
+      "case_id": "25-kid-dinosaur-school-fit",
+      "terminal_status": "planned",
+      "artifacts": [
+        {
+          "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\25-kid-dinosaur-school-fit\\strategy.json",
+          "classification": "STEP_OUTPUT"
+        },
+        {
+          "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\25-kid-dinosaur-school-fit\\plan_ir.json",
+          "classification": "STEP_OUTPUT"
+        }
+      ],
+      "dispatchable": false,
+      "dispatch_blocker": "No registered direct-response capability capsule."
+    }
+  ]
+}

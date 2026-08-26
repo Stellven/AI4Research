@@ -1,0 +1,48 @@
+{
+  "schema_version": "solar.requirement_trace.v1",
+  "intent_id": "04-research-ai-tutoring",
+  "created_at": "2026-08-26T19:46:09Z",
+  "artifacts": {
+    "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\raw_intent.json",
+    "input": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\input.json",
+    "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\intent_ir.json",
+    "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\intent_validation.json",
+    "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\intent_fidelity.json",
+    "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\intent\\intent_acceptance.json",
+    "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\requirement_ir.json",
+    "requirement_format_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\04-research-ai-tutoring\\requirement_format_evaluation.json"
+  },
+  "stages": [
+    {
+      "stage": "raw_intent_capture",
+      "status": "ok"
+    },
+    {
+      "stage": "intent_ir_compile",
+      "status": "ok",
+      "provider": "codex"
+    },
+    {
+      "stage": "intent_validation",
+      "status": "pass"
+    },
+    {
+      "stage": "intent_fidelity",
+      "status": "pass"
+    },
+    {
+      "stage": "intent_acceptance",
+      "status": "accepted",
+      "repair_attempted": false
+    },
+    {
+      "stage": "requirement_ir_compile",
+      "status": "ok"
+    },
+    {
+      "stage": "requirement_format_evaluation",
+      "status": "pass",
+      "defect_count": 0
+    }
+  ]
+}

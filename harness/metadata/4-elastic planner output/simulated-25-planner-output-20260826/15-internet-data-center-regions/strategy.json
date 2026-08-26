@@ -1,0 +1,29 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-15-internet-data-center-regions",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-15-internet-data-center-regions-retry-01",
+    "sha256": "abd1e44767e097dfd2f423f258781a6d96db3858ee1a3e2bda202f1cb5b5308b"
+  },
+  "strategy": "compose",
+  "base_workflow": "research.evidence_to_poc.v1",
+  "base_version": "1",
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 5
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "Use the smallest registered evidence workflow that discovers, validates, synthesizes, and reports sources.",
+  "artifact_role": "simulated_planner_step_output"
+}

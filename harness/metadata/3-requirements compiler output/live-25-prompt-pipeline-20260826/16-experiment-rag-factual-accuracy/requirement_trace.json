@@ -1,0 +1,37 @@
+{
+  "schema_version": "solar.requirement_trace.v1",
+  "intent_id": "16-experiment-rag-factual-accuracy-retry-01",
+  "created_at": "2026-08-26T19:55:57Z",
+  "artifacts": {
+    "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\raw_intent.json",
+    "input": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\input.json",
+    "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\intent_ir.json",
+    "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\intent_validation.json",
+    "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\intent_fidelity.json",
+    "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\16-experiment-rag-factual-accuracy-retry-01\\intent\\intent_acceptance.json"
+  },
+  "stages": [
+    {
+      "stage": "raw_intent_capture",
+      "status": "ok"
+    },
+    {
+      "stage": "intent_ir_compile",
+      "status": "ok",
+      "provider": "codex"
+    },
+    {
+      "stage": "intent_validation",
+      "status": "pass"
+    },
+    {
+      "stage": "intent_fidelity",
+      "status": "pass"
+    },
+    {
+      "stage": "intent_acceptance",
+      "status": "needs_clarification",
+      "repair_attempted": true
+    }
+  ]
+}

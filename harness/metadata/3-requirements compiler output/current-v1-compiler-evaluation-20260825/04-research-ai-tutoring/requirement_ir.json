@@ -1,0 +1,68 @@
+{
+  "schema_version": "solar.requirement_ir.v1",
+  "intent_id": "intent-ir-fixture-04-research-ai-tutoring",
+  "source": {
+    "channel": "synthetic_intent_fixture",
+    "actor_ref": "fixture-catalog"
+  },
+  "source_inputs": {
+    "raw_request": "Evaluate whether AI tutoring improves student learning compared with human tutoring and conventional educational software. Examine effect sizes, study quality, age groups, subjects, and possible harms.",
+    "repo_context": [
+      "C:\\Users\\j50058254\\Desktop\\Github repo\\OpenSolar-Canonical"
+    ]
+  },
+  "title": "Evaluate the learning effects and harms of AI tutoring against two comparison conditions.",
+  "problem": "Evaluate whether AI tutoring improves student learning compared with human tutoring and conventional educational software. Examine effect sizes, study quality, age groups, subjects, and possible harms.",
+  "objective": "Evaluate the learning effects and harms of AI tutoring against two comparison conditions.",
+  "outcome": "An evidence-quality-aware comparison of AI tutoring outcomes across learner and subject groups.",
+  "constraints": [
+    "Compare AI tutoring with human tutoring and conventional educational software.",
+    "Assess all requested evidence dimensions."
+  ],
+  "non_goals": [
+    "Do not claim that domain experiment execution occurred."
+  ],
+  "acceptance": [
+    "Preserve and satisfy IntentIR item G1.",
+    "Preserve and satisfy IntentIR item D1.",
+    "Preserve and satisfy IntentIR item C1.",
+    "Preserve and satisfy IntentIR item C2."
+  ],
+  "lane": "research",
+  "logical_operators": [
+    "RequirementCompiler",
+    "Planner",
+    "Verifier"
+  ],
+  "planner_hints": {
+    "workflow_candidates": [
+      {
+        "workflow_id": "research.evidence_to_poc.v1",
+        "candidate_kind": "memoized_task_graph",
+        "selection_authority": "planner",
+        "auto_instantiate": false,
+        "execution_profile_hint": "part_a_only",
+        "reason": "no research markers; the generic planner path applies"
+      }
+    ],
+    "selection_authority": "planner",
+    "allowed_outcomes": [
+      "direct_answer",
+      "memoized_task_graph",
+      "new_task_graph"
+    ]
+  },
+  "readiness": {
+    "schema_version": "solar.intent_readiness.v1",
+    "status": "ready",
+    "ready": true,
+    "blocking_count": 0,
+    "unresolved": [],
+    "questions": [],
+    "applied_answers": {},
+    "planning_admitted": true,
+    "next_action": "plan",
+    "policy": "Only ambiguities that block safe route selection or execution are questions."
+  },
+  "compiler_next": "pm_planner_task_graph"
+}

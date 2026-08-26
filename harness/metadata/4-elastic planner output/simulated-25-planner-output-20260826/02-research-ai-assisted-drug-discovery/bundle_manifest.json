@@ -1,0 +1,16 @@
+{
+  "case_id": "02-research-ai-assisted-drug-discovery",
+  "terminal_status": "planned",
+  "artifacts": [
+    {
+      "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\02-research-ai-assisted-drug-discovery\\strategy.json",
+      "classification": "STEP_OUTPUT"
+    },
+    {
+      "path": "metadata\\5-taskgraph compiler and validator output\\simulated-25-planner-output-20260826\\02-research-ai-assisted-drug-discovery\\plan_ir.json",
+      "classification": "STEP_OUTPUT"
+    }
+  ],
+  "dispatchable": true,
+  "dispatch_blocker": null
+}

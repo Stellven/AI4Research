@@ -987,6 +987,71 @@ class TestBuildCommand:
         )
         assert cmd == ["bash", "-lc", "python3 /tmp/agent.py"]
 
+    def test_command_backend_can_use_shell_free_registry_argv(self):
+        cmd = _od._build_command(
+            {
+                "backend": "command",
+                "launch_cmd": "python3 /tmp/ignored.py",
+                "launch_argv": [sys.executable, "C:\\fixture worker.py"],
+            },
+            {"task_id": "pm-native-argv"},
+        )
+
+        assert cmd == [sys.executable, "C:\\fixture worker.py"]
+
+    def test_windows_codex_command_uses_native_python_wrapper(self, monkeypatch):
+        monkeypatch.setattr(_od.os, "name", "nt")
+        cmd = _od._build_command(
+            {
+                "backend": "command",
+                "provider": "openai",
+                "model": "gpt-5.5",
+                "model_config": "Codex CLI;gpt-5.5;reasoning=high",
+                "command": "CODEX_MODEL=gpt-5.5 python3 $HARNESS_DIR/tools/codex_operator.py",
+                "command_path": "/opt/homebrew/bin/codex",
+            },
+            {"task_id": "pm-windows-codex"},
+        )
+
+        assert cmd == [
+            sys.executable,
+            str(_od.HARNESS_DIR / "tools" / "codex_operator.py"),
+        ]
+
+    def test_windows_fixed_research_worker_uses_native_python_adapter(self, monkeypatch):
+        monkeypatch.setattr(_od.os, "name", "nt")
+        cmd = _od._build_command(
+            {
+                "backend": "command",
+                "command": 'python3 "$HARNESS_DIR/plugins/autosci/bin/fixed_research_node_adapter.py" --envelope "$SOLAR_OPERATOR_ENVELOPE_JSON"',
+            },
+            {"task_id": "fixed-research-a4"},
+            {"SOLAR_OPERATOR_ENVELOPE_JSON": r"C:\run\operator-envelope.json"},
+        )
+
+        assert cmd == [
+            sys.executable,
+            str(_od.HARNESS_DIR / "plugins" / "autosci" / "bin" / "fixed_research_node_adapter.py"),
+            "--envelope",
+            r"C:\run\operator-envelope.json",
+        ]
+
+    def test_codex_command_environment_is_platform_neutral(self):
+        env = _od._command_operator_environment(
+            {
+                "backend": "command",
+                "provider": "openai",
+                "model": "gpt-5.5",
+                "model_config": "Codex CLI;gpt-5.5;reasoning=high;evaluator",
+            }
+        )
+
+        assert env == {
+            "CODEX_MODEL": "gpt-5.5",
+            "CODEX_REASONING_EFFORT": "high",
+            "PYTHONUTF8": "1",
+        }
+
 
 class TestFailureFlowControl:
     def _submit_command_task(self, tmp_path: Path, env: dict, *, task_id: str, command: str) -> None:

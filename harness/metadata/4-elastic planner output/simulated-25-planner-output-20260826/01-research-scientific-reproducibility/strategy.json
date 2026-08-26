@@ -1,0 +1,36 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-01-research-scientific-reproducibility",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-01-research-scientific-reproducibility-retry-02",
+    "sha256": "7bd7e69eb38e3bbf3b5a1961cf618647102d9f7ca366f869738f5fe5f234c56e"
+  },
+  "strategy": "compose",
+  "base_workflow": "research.evidence_to_poc.v1",
+  "base_version": "1",
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 12
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "Use the smallest registered evidence workflow that discovers, validates, synthesizes, and reports sources.",
+  "artifact_role": "simulated_planner_step_output"
+}

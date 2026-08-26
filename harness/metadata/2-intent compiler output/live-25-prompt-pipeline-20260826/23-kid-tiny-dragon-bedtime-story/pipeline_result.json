@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "23-kid-tiny-dragon-bedtime-story-retry-02",
+  "title": "Create a bedtime story.",
+  "lane": "delivery",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\23-kid-tiny-dragon-bedtime-story-retry-02\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\23-kid-tiny-dragon-bedtime-story-retry-02\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\23-kid-tiny-dragon-bedtime-story-retry-02\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\23-kid-tiny-dragon-bedtime-story-retry-02\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\23-kid-tiny-dragon-bedtime-story-retry-02\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\23-kid-tiny-dragon-bedtime-story-retry-02\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\23-kid-tiny-dragon-bedtime-story-retry-02\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\23-kid-tiny-dragon-bedtime-story-retry-02\\requirement_trace.json",
+  "case_id": "23-kid-tiny-dragon-bedtime-story",
+  "category": "child_creative",
+  "prompt": "Can you make up a bedtime story about a tiny dragon who is scared of fire?",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

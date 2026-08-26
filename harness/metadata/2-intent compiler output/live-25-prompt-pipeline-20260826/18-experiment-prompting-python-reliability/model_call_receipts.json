@@ -1,0 +1,28 @@
+{
+  "calls": [
+    {
+      "path": "generation-0\\compiler_call\\model_call_receipt.json",
+      "duration_ms": 32332.907,
+      "model": "gpt-5.6-luna",
+      "provider": "codex"
+    },
+    {
+      "path": "generation-0\\reviewer_call\\model_call_receipt.json",
+      "duration_ms": 15872.737,
+      "model": "gpt-5.6-luna",
+      "provider": "codex"
+    },
+    {
+      "path": "generation-1\\compiler_call\\model_call_receipt.json",
+      "duration_ms": 48501.647,
+      "model": "gpt-5.6-luna",
+      "provider": "codex"
+    },
+    {
+      "path": "generation-1\\reviewer_call\\model_call_receipt.json",
+      "duration_ms": 8953.987,
+      "model": "gpt-5.6-luna",
+      "provider": "codex"
+    }
+  ]
+}

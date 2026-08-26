@@ -1,0 +1,12 @@
+{
+  "case_id": "16-experiment-rag-factual-accuracy",
+  "terminal_status": "planning_not_entered",
+  "artifacts": [
+    {
+      "path": "metadata\\4-elastic planner output\\simulated-25-planner-output-20260826\\16-experiment-rag-factual-accuracy\\planning_halt.json",
+      "classification": "CONTROL_OR_SUPPORT"
+    }
+  ],
+  "dispatchable": false,
+  "dispatch_blocker": "Intent acceptance requires clarification; no RequirementIR exists."
+}

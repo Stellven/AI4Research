@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "intent_id": "25-kid-dinosaur-school-fit",
+  "title": "Determine whether a dinosaur could fit inside the referenced school under the hypothetical",
+  "lane": "delivery",
+  "ready": true,
+  "readiness_status": "accepted",
+  "clarification_questions": [],
+  "rewrite_method": "intent_ir_v3",
+  "raw_intent": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\25-kid-dinosaur-school-fit\\raw_intent.json",
+  "intent_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\25-kid-dinosaur-school-fit\\intent\\intent_ir.json",
+  "intent_validation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\25-kid-dinosaur-school-fit\\intent\\intent_validation.json",
+  "intent_fidelity": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\25-kid-dinosaur-school-fit\\intent\\intent_fidelity.json",
+  "intent_acceptance": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\25-kid-dinosaur-school-fit\\intent\\intent_acceptance.json",
+  "requirement_ir": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\25-kid-dinosaur-school-fit\\requirement_ir.json",
+  "requirement_evaluation": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\25-kid-dinosaur-school-fit\\requirement_format_evaluation.json",
+  "requirement_trace": "C:\\Users\\J50058~1\\AppData\\Local\\Temp\\solar-live-25-prompt-pipeline-20260826\\25-kid-dinosaur-school-fit\\requirement_trace.json",
+  "case_id": "25-kid-dinosaur-school-fit",
+  "category": "child_question",
+  "prompt": "If dinosaurs were alive today, could one fit inside my school?",
+  "gateway_exit_code": 0,
+  "stderr_tail": ""
+}

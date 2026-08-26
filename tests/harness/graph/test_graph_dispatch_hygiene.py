@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import sys
+import threading
 from pathlib import Path
 
 HARNESS_LIB = (Path(__file__).resolve().parents[3] / 'harness') / "lib"
@@ -168,6 +169,44 @@ def test_dispatch_ready_releases_graph_lock_after_tick(tmp_path, monkeypatch):
     assert gnd.dispatch_ready(str(graph_path))["tick"] == 1
     assert gnd.dispatch_ready(str(graph_path))["tick"] == 2
     assert calls == [str(graph_path), str(graph_path)]
+
+
+def test_node_verdict_waits_for_scheduler_tick_before_mutating_graph(tmp_path, monkeypatch):
+    graph_path = tmp_path / "verdict-race.task_graph.json"
+    graph_path.write_text(json.dumps({"sprint_id": "verdict-race", "nodes": []}), encoding="utf-8")
+    monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+    entered = threading.Event()
+    completed = threading.Event()
+
+    def fake_verdict(*_args, **_kwargs):
+        entered.set()
+        return {"ok": True, "status": "passed", "parent": {"ready": True}}
+
+    monkeypatch.setattr(gnd, "_node_verdict_unlocked", fake_verdict)
+    held = gnd._acquire_scheduler_tick_lock(str(graph_path))
+
+    def submit_verdict():
+        try:
+            gnd.node_verdict(
+                str(graph_path),
+                "N1",
+                "pass",
+                dispatch_downstream=False,
+            )
+        finally:
+            completed.set()
+
+    worker = threading.Thread(target=submit_verdict, daemon=True)
+    worker.start()
+    try:
+        assert entered.wait(0.2) is False
+        assert completed.is_set() is False
+    finally:
+        gnd._release_scheduler_tick_lock(held)
+
+    worker.join(timeout=2)
+    assert entered.is_set() is True
+    assert completed.is_set() is True
 
 
 def test_stale_queue_cleanup_does_not_consume_dispatch_budget(monkeypatch):

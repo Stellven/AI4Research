@@ -672,7 +672,15 @@ def test_cmd_submit_reads_task_graph_capsule_metadata(monkeypatch):
         assert envelope["selected_skills"] == ["python_implementation"]
 
 
-def test_capsule_submit_repairs_persisted_empty_grounded_compiler_bridge():
+def test_capsule_submit_repairs_persisted_empty_grounded_compiler_bridge(monkeypatch):
+    import capability_capsules
+
+    monkeypatch.setattr(capability_capsules, "HARNESS_DIR", ROOT)
+    monkeypatch.setattr(
+        capability_capsules,
+        "CAPSULE_REGISTRY_PATH",
+        ROOT / "config" / "capability-capsules.registry.yaml",
+    )
     pm_dispatch = _load_pm_dispatch()
 
     metadata = pm_dispatch._capsule_submit_metadata(

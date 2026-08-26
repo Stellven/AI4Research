@@ -1,0 +1,37 @@
+{
+  "schema_version": "solar.workflow_strategy.v1",
+  "strategy_id": "strategy-04-research-ai-tutoring",
+  "requirement_ir_ref": {
+    "requirement_ir_id": "requirement-ir-04-research-ai-tutoring",
+    "sha256": "cbaeedf316dd75063eabc2b52257d177624bb185f12834cac0bb9d2bec35a6d5"
+  },
+  "strategy": "compose",
+  "base_workflow": "research.evidence_to_poc.v1",
+  "base_version": "1",
+  "parameters": {
+    "execution_mode": "bounded",
+    "requirement_count": 13
+  },
+  "topology_changes": [
+    {
+      "change": "Bind every requirement obligation to the final deliverable gate.",
+      "required_by": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12",
+        "R13"
+      ]
+    }
+  ],
+  "smallest_sufficient_reason": "Use the smallest registered evidence workflow that discovers, validates, synthesizes, and reports sources.",
+  "artifact_role": "simulated_planner_step_output"
+}
