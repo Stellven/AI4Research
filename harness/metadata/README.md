@@ -25,7 +25,7 @@ AI4Research schema reference. Each artifact is stored at
 | `2-intent compiler output/` | Intent interpretation, validation, fidelity, acceptance, and clarification artifacts. |
 | `3-requirements compiler output/` | Requirement IR, validation, and coverage artifacts. |
 | `4-elastic planner output/` | Strategy and immutable planning/check catalog snapshots. |
-| `5-taskgraph compiler and validator output/` | Plan IR, plan admission, binding, and frozen run authority. |
+| `5-taskgraph compiler and validator output/` | Plan IR, plan admission, binding, frozen run authority, and the frozen scheduler input. |
 | `6-scheduler output/` | Task-graph state, dispatch choice, and lease records. |
 | `7-dispatcher output/` | Exact effect-approval records used during dispatch. |
 | `8-physical operator output/` | Typed worker results, repair records, domain evidence, and artifact inventory. |
@@ -78,34 +78,41 @@ but a naturally triggered live model repair has not yet been observed.
 9. `strategy.json` - the Elastic Planner's smallest-sufficient strategy.
 10. `planning_catalog_snapshot.json` and `check_registry.json` - immutable
    planning and verification choices visible to the request.
-11. `plan_ir.json` - logical nodes decorated with capsules, physical-operator
-    alternatives, artifact ports, obligations, dependencies, and gates.
+11. `plan_ir.json` - semantic logical nodes, typed artifact ports, effects,
+    requirement ownership, dependencies, and gate requirements. Capsule,
+    physical-operator, and evaluator bindings are compiled afterward and are
+    frozen into `scheduler_input.json`.
 12. `plan_validation.json` - deterministic plan and policy admission.
 13. `binding_trace.json` - mechanical requirement-to-node/artifact/verifier
     join.
 14. `run_contract.frozen.json` - content-hashed run authority. Runtime must not
     reread mutable repository contracts.
+15. `scheduler_input.json` - the single frozen executable graph handed to the
+    scheduler. It contains dependency, capsule, ordered physical-candidate,
+    artifact, evaluator, resource, effect, priority, and failure contracts. It
+    excludes mutable status, selected operators, attempts, and leases.
 
 ### Runtime control and evidence
 
-15. `task_graph_state.json` - mutable execution ledger separate from PlanIR.
-16. `dispatch_record.json`, `lease_record.json`, and `approval_record.json` -
+16. `task_graph_state.json` - mutable execution ledger separate from PlanIR and
+    `scheduler_input.json`.
+17. `dispatch_record.json`, `lease_record.json`, and `approval_record.json` -
     physical choice, fenced ownership, and exact effect authorization.
-17. `node_envelope.json` - typed worker result boundary.
-18. `repair_record.json` - conditional record of the single permitted repair.
-19. `gate_ledger.json` and `operator_state_log.json` - gate/evaluator agreement
+18. `node_envelope.json` - typed worker result boundary.
+19. `repair_record.json` - conditional record of the single permitted repair.
+20. `gate_ledger.json` and `operator_state_log.json` - gate/evaluator agreement
     and typed operator availability transitions.
-20. `domain_evidence.json` and `artifact_manifest.json` - domain-owned evidence
+21. `domain_evidence.json` and `artifact_manifest.json` - domain-owned evidence
     plus run-wide content identity and completeness.
 
 ### Final truth, delivery, and learning
 
-21. `evidence_ir.json` - independent recomputation and the only path to GREEN.
-22. `delivery_scope.json` and `final_delivery_manifest.json` - honest scope and
+22. `evidence_ir.json` - independent recomputation and the only path to GREEN.
+23. `delivery_scope.json` and `final_delivery_manifest.json` - honest scope and
     content-hashed publication.
-23. `experience_record.json` and `promotion_record.json` - learning without
+24. `experience_record.json` and `promotion_record.json` - learning without
     allowing memory to become registry authority.
-24. `compilation_trace.json` - digest-bound audit of the complete example.
+25. `compilation_trace.json` - digest-bound audit of the complete example.
 
 ## Design-support metadata
 

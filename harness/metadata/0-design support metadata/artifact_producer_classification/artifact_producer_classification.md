@@ -23,6 +23,7 @@ The directory holding a file is a presentation grouping. The `Producer` and
 | Design support | `artifact_registry.json` | Artifact-model registry | `CONTROL_OR_SUPPORT` | Registry of artifact producers, consumers, and decisions. |
 | Design support | `field_consumer_matrix.json` | Architecture governance | `CONTROL_OR_SUPPORT` | Design-time proof that each field has a decision-making consumer. |
 | Design support | `generalization_cases.json` | Test/design author | `CONTROL_OR_SUPPORT` | Prompt cases used to pressure-test the artifact design. |
+| Design support | `pipeline_boundary_contracts.json` | Architecture governance | `CONTROL_OR_SUPPORT` | Producer-consumer contracts at compiler, scheduler, and dispatcher seams. |
 | Input normalizer | `raw_intent.json` | `input_normalizer` | `STEP_OUTPUT` | Immutable normalized capture of the user's request. |
 | Intent Compiler | `intent_ir.json` | `intent_compiler` | `STEP_OUTPUT` | Semantic interpretation of the normalized request. |
 | Intent Compiler | `intent_validation.json` | `intent_validator` | `EVALUATOR_OUTPUT` | Mechanically validates `intent_ir.json`. |
@@ -35,10 +36,11 @@ The directory holding a file is a presentation grouping. The `Producer` and
 | Elastic Planner | `strategy.json` | `elastic_planner` | `STEP_OUTPUT` | Chooses direct response, reuse, parameterization, extension, composition, or generation. |
 | Elastic Planner | `planning_catalog_snapshot.json` | `registry_snapshotter` | `CONTROL_OR_SUPPORT` | Freezes workflows, capsules, operators, gates, and availability visible to planning. |
 | Elastic Planner | `check_registry.json` | `registry_snapshotter` | `CONTROL_OR_SUPPORT` | Freezes registered verification checks available to requirements, planning, and final verification. |
-| TaskGraph compiler and validator | `plan_ir.json` | `elastic_planner` | `STEP_OUTPUT` | Proposed logical graph, artifact ports, capsules, operator alternatives, obligations, and gates. |
+| TaskGraph compiler and validator | `plan_ir.json` | `elastic_planner` | `STEP_OUTPUT` | Proposed semantic graph, typed artifact ports, effects, dependencies, and requirement ownership. |
 | TaskGraph compiler and validator | `plan_validation.json` | `plan_policy_validator` | `EVALUATOR_OUTPUT` | Validates the proposed PlanIR structure, registrations, effects, and complexity. |
 | TaskGraph compiler and validator | `binding_trace.json` | `requirement_binder` | `EVALUATOR_OUTPUT` | Verifies and records requirement-to-node, artifact, and verifier coverage. |
 | TaskGraph compiler and validator | `run_contract.frozen.json` | `contract_freezer` | `CONTROL_OR_SUPPORT` | Immutable execution authority assembled only after plan admission. |
+| TaskGraph compiler and validator | `scheduler_input.json` | `contract_freezer` | `CONTROL_OR_SUPPORT` | Frozen executable graph handed to the scheduler after semantic, capsule, physical, evaluator, and policy admission. |
 | Scheduler | `task_graph_state.json` | `scheduler` | `STEP_OUTPUT` | Mutable node readiness and execution state. |
 | Scheduler | `dispatch_record.json` | `scheduler` | `STEP_OUTPUT` | Physical-operator choice and reasons alternatives were skipped. |
 | Scheduler | `lease_record.json` | `scheduler` | `STEP_OUTPUT` | Fenced ownership decision for one node attempt. |

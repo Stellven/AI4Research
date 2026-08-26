@@ -99,7 +99,7 @@
       "boundary_id": "static_execution_compiler_to_scheduler",
       "producer": "contract_freezer",
       "consumer": "graph_scheduler",
-      "required_artifacts": [
+      "compiler_artifacts": [
         {
           "name": "capsule_plan.json",
           "schema": "harness/schemas/planning/capsule-plan.v1.schema.json",
@@ -116,40 +116,45 @@
           "decision": "Bind each node output and requirement to its deterministic gate and independent evaluator."
         },
         {
-          "name": "task_graph.contract.json",
-          "schema": "harness/schemas/task-graph.schema.json",
-          "decision": "Provide the executable topology and embed the admitted capsule and physical plan for each node."
-        },
-        {
           "name": "run_contract.frozen.json",
           "schema": "harness/schemas/planning/run-contract-frozen.v2.schema.json",
-          "decision": "Hash-bind the RequirementIR, planning decision, PlanIR, CapsulePlan, PhysicalPlan, EvaluationPlan, and executable TaskGraph."
+          "decision": "Hash-bind the RequirementIR, planning decision, PlanIR, CapsulePlan, PhysicalPlan, EvaluationPlan, and scheduler input."
         }
       ],
-      "scheduler_required_graph_fields": [
+      "scheduler_input": {
+        "name": "scheduler_input.json",
+        "schema": "harness/schemas/planning/scheduler-input.v1.schema.json",
+        "contract_template": "harness/metadata/5-taskgraph compiler and validator output/scheduler_input/scheduler_input.json",
+        "decision": "Provide one frozen executable graph containing every dependency, capsule binding, ordered physical candidate, artifact handoff, evaluator binding, resource requirement, effect, priority, and failure policy needed by the scheduler."
+      },
+      "scheduler_required_fields": [
         {
           "path": "planning_authority",
           "required_value": "frozen_execution_plan_v1"
         },
         {
-          "path": "nodes[].planning_authority",
-          "required_value": "frozen_execution_plan_v1"
-        },
-        {
-          "path": "nodes[].depends_on",
+          "path": "graph.nodes[].depends_on",
           "decision": "Calculate readiness without changing topology."
         },
         {
-          "path": "nodes[].capsule_plan_ir",
-          "decision": "Forward the admitted capability contract; never recompile it."
+          "path": "graph.nodes[].capsule_binding",
+          "decision": "Forward the admitted capability contract or composition; never recompile it."
         },
         {
-          "path": "nodes[].physical_plan_ir.execution_candidates",
+          "path": "graph.nodes[].physical_candidates",
           "decision": "Choose the highest-ranked candidate that is currently available."
         },
         {
-          "path": "nodes[].approved_physical_operator_ids",
-          "decision": "Fail closed rather than dispatch an operator outside the frozen candidate set."
+          "path": "graph.nodes[].artifact_contract|evaluation_binding",
+          "decision": "Dispatch and evaluate only the artifact handoffs, gates, and evaluators admitted before runtime."
+        },
+        {
+          "path": "graph.nodes[].resource_requirements|effects",
+          "decision": "Queue or reject work whose currently available operators or policy cannot satisfy the frozen requirements."
+        },
+        {
+          "path": "graph.nodes[].priority|failure_policy",
+          "decision": "Order ready work and apply the declared terminal behavior without redesigning the graph."
         }
       ],
       "scheduler_may_decide": [
@@ -165,7 +170,14 @@
         "physical operators outside the frozen candidate list",
         "new requirement ownership",
         "replacement evaluators or gates"
-      ]
+      ],
+      "mutable_runtime_state_is_separate": [
+        "task_graph_state.json",
+        "dispatch_record.json",
+        "lease_record.json",
+        "node_envelope.json"
+      ],
+      "integrity_rule": "The contract freezer hashes scheduler_input.json into run_contract.frozen.json after all static admission checks. scheduler_input.json does not contain a hash back to the run contract."
     },
     {
       "boundary_id": "scheduler_to_dispatcher",
