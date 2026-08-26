@@ -1,0 +1,132 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-02-research-ai-assisted-drug-discovery",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-02-research-ai-assisted-drug-discovery",
+    "raw_text_sha256": "04aac4fd0963833a655a59baf3ff5c0209e01cd4f49940110a6d8ad45b7ec8f6"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Review current generative-AI applications in early-stage drug discovery.",
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    },
+    {
+      "goal_id": "G2",
+      "statement": "Separate demonstrated results from claimed benefits and identify unresolved questions.",
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "artifact",
+      "description": "A comparative evidence review with limitations and prioritized open research questions.",
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "scope",
+      "statement": "Limit the review to early-stage drug discovery.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "early_stage_drug_discovery"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    },
+    {
+      "constraint_id": "C2",
+      "category": "content",
+      "statement": "Separate demonstrated results, claimed benefits, technical limitations, and unresolved questions.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "demonstrated_results",
+              "claimed_benefits",
+              "technical_limitations",
+              "unresolved_questions"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_id": "A1",
+      "question": "Generative AI and early-stage discovery can be defined at different levels of breadth.",
+      "blocking": false,
+      "source_spans": [
+        [
+          0,
+          213
+        ]
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unknowns": [
+    {
+      "unknown_id": "U1",
+      "question": "Which claimed benefits have been independently demonstrated?",
+      "kind": "discoverable_fact",
+      "resolution": {
+        "mode": "workflow_discovery",
+        "required_before": "requirement_completion"
+      },
+      "derived_from": [
+        "G1",
+        "C1"
+      ]
+    }
+  ]
+}

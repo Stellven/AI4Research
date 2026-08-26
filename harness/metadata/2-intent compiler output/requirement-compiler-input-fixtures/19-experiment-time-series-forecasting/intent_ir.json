@@ -1,0 +1,112 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-19-experiment-time-series-forecasting",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-19-experiment-time-series-forecasting",
+    "raw_text_sha256": "66ce6468edc8c909bc8bb72660384086ea265002928004a89f485be8103f44e0"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Experimentally determine whether a proposed forecasting method meaningfully outperforms three baselines.",
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "action",
+      "description": "Run multi-dataset rolling-validation and ablation experiments.",
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    },
+    {
+      "outcome_id": "D2",
+      "class": "artifact",
+      "description": "A baseline comparison with confidence intervals and practical-significance interpretation.",
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Use all baselines and required evaluation methods.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "seasonal_naive",
+              "ARIMA",
+              "gradient_boosting",
+              "multiple_datasets",
+              "rolling_validation",
+              "ablation_tests",
+              "confidence_intervals"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_id": "A1",
+      "question": "The proposed method, datasets, metrics, horizons, and meaningful-effect threshold are unspecified.",
+      "blocking": false,
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unknowns": [
+    {
+      "unknown_id": "U1",
+      "question": "Which datasets, metrics, and effect threshold should be preregistered?",
+      "kind": "design_parameter",
+      "resolution": {
+        "mode": "workflow_design",
+        "required_before": "experiment_execution"
+      },
+      "derived_from": [
+        "G1",
+        "C1"
+      ]
+    }
+  ]
+}

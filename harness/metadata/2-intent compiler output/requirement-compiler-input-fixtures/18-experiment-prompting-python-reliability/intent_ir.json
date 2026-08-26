@@ -1,0 +1,137 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-18-experiment-prompting-python-reliability",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-18-experiment-prompting-python-reliability",
+    "raw_text_sha256": "27ca2a4dcc172636c2b9f8e1033090e639cb42a790d3b96c3515c04828204ae2"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Experimentally compare Python-program reliability across three prompting strategies.",
+      "source_spans": [
+        [
+          0,
+          234
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "action",
+      "description": "Generate and execute solutions under controlled prompting conditions.",
+      "source_spans": [
+        [
+          0,
+          234
+        ]
+      ]
+    },
+    {
+      "outcome_id": "D2",
+      "class": "artifact",
+      "description": "A comparison of correctness, runtime, and token cost.",
+      "source_spans": [
+        [
+          0,
+          234
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Compare all three prompting strategies.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "chain_of_thought",
+              "structured_planning",
+              "direct_prompting"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          234
+        ]
+      ]
+    },
+    {
+      "constraint_id": "C2",
+      "category": "content",
+      "statement": "Hold tasks and model settings fixed, execute every solution, and measure all outcomes.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "same_tasks",
+              "same_model_settings",
+              "execute_every_solution",
+              "correctness",
+              "runtime",
+              "token_cost"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          234
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_id": "A1",
+      "question": "The model, task suite, sandbox, and number of repeated runs are unspecified.",
+      "blocking": false,
+      "source_spans": [
+        [
+          0,
+          234
+        ]
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unknowns": [
+    {
+      "unknown_id": "U1",
+      "question": "Which task suite and execution sandbox provide a fair reliability comparison?",
+      "kind": "design_parameter",
+      "resolution": {
+        "mode": "workflow_design",
+        "required_before": "experiment_execution"
+      },
+      "derived_from": [
+        "G1",
+        "C1"
+      ]
+    }
+  ]
+}

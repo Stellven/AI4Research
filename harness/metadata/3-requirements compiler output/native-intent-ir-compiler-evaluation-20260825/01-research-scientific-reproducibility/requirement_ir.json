@@ -1,0 +1,167 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-fixture-01-research-scientific-reproducibility",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-fixture-01-research-scientific-reproducibility",
+    "sha256": "7a8c4a1186791522b18c8e0f010e2da82da36761c597d4916d7399326b2d1fc7"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-raw-intent-fixture-01-research-scientific-reproducibility",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: An evidence synthesis separating empirical findings, expert opinion, and disagreements.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: A set of five testable reproducibility improvements.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "G2",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "deliverable",
+          "completeness",
+          "supporting_evidence",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.artifact_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C1",
+      "statement": "Use peer-reviewed evidence and distinguish evidence classes.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "peer_reviewed_evidence",
+          "empirical_findings",
+          "expert_opinion"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:C2",
+      "statement": "Identify disagreements and provide exactly five testable improvements.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "disagreements",
+          "five_improvements",
+          "testable"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which reported causes have the strongest replicated empirical support?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1",
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:A1",
+      "statement": "Resolve or explicitly disclose the assumption for: The publication date range and machine-learning subfields are not specified.",
+      "priority": "must",
+      "source_refs": [
+        "A1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "assumption",
+          "impact",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.ambiguity_disclosure.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [
+    {
+      "source_ref": "A1",
+      "statement": "The RequirementIR must disclose how this ambiguity is resolved: The publication date range and machine-learning subfields are not specified."
+    }
+  ],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

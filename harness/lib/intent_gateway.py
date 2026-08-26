@@ -38,7 +38,9 @@ def slug(value: str, limit: int = 64) -> str:
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # ASCII-safe JSON remains valid UTF-8 and can also be read by Windows
+    # callers that omit an explicit encoding and fall back to CP1252.
+    tmp.write_text(json.dumps(payload, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
     os.replace(tmp, path)
 
 
@@ -802,6 +804,31 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
     }
 
 
+def compile_and_evaluate_requirement_bundle(
+    intent_ir: dict[str, Any], intent_acceptance: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Compile an admitted IntentIR and run the independent deterministic gate."""
+    from intent_compiler import requirement_handoff
+    from requirement_compiler import (
+        compile_requirement_ir,
+        evaluate_requirement_ir_format,
+    )
+
+    handoff = requirement_handoff(intent_ir, intent_acceptance)
+    intent_digest = handoff["intent_ir_sha256"]
+    requirement_ir = compile_requirement_ir(
+        intent_ir,
+        intent_ir_sha256=intent_digest,
+    )
+    evaluation = evaluate_requirement_ir_format(
+        requirement_ir,
+        intent_ir=intent_ir,
+        intent_ir_sha256=intent_digest,
+        intent_acceptance=intent_acceptance,
+    )
+    return requirement_ir, evaluation
+
+
 def capture(args: argparse.Namespace) -> dict[str, Any]:
     raw_text = read_text_arg(args)
     created = now_iso()
@@ -856,8 +883,6 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
     if artifact_compiler_provider:
         from intent_compiler import (
             model_from_environment,
-            project_legacy_rewritten_intent,
-            requirement_handoff,
             run_pipeline,
         )
 
@@ -947,56 +972,69 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
                 "intent_acceptance": str(base / "intent" / "intent_acceptance.json"),
                 "requirement_trace": str(base / "requirement_trace.json"),
             }
-        requirement_handoff(accepted_intent, acceptance)
-        rewritten = project_legacy_rewritten_intent(accepted_intent, raw_text)
-        legacy_hints = deterministic_rewrite(raw_text)
-        rewritten["suggested_lane"] = legacy_hints["suggested_lane"]
-        rewritten["suggested_logical_operators"] = legacy_hints[
-            "suggested_logical_operators"
-        ]
-        rewritten["intent_id"] = intent_id
-        rewritten["model_rewrite"] = {
-            "attempted": True,
-            "status": "accepted",
-            "method": "intent_ir_v3",
-        }
-        requirement_ir = build_requirement_ir(intent_id, raw_intent, rewritten)
-        legacy_readiness = requirement_ir["readiness"]
-        requirement_ir["compatibility_readiness"] = legacy_readiness
-        requirement_ir["readiness"] = {
-            "schema_version": "solar.intent_readiness.v1",
-            "status": "ready",
-            "ready": True,
-            "blocking_count": 0,
-            "unresolved": [],
-            "questions": [],
-            "applied_answers": legacy_readiness.get("applied_answers", {}),
-            "planning_admitted": True,
-            "next_action": "plan",
-            "policy": "Authoritative admission comes from accepted solar.intent_acceptance.v1.",
-        }
-        requirement_ir["compiler_next"] = "pm_planner_task_graph"
-        readiness = requirement_ir["readiness"]
+        requirement_ir, requirement_evaluation = compile_and_evaluate_requirement_bundle(
+            accepted_intent,
+            acceptance,
+        )
+        requirement_ir_path = base / "requirement_ir.json"
+        requirement_evaluation_path = base / "requirement_format_evaluation.json"
         trace["artifacts"].update(
             {
-                "rewritten_intent": str(base / "rewritten_intent.json"),
-                "requirement_ir": str(base / "requirement_ir.json"),
+                "requirement_ir": str(requirement_ir_path),
+                "requirement_format_evaluation": str(requirement_evaluation_path),
             }
         )
-        trace["stages"].append(
-            {"stage": "requirement_ir_compatibility_compile", "status": "ok"}
+        trace["stages"].extend(
+            [
+                {"stage": "requirement_ir_compile", "status": "ok"},
+                {
+                    "stage": "requirement_format_evaluation",
+                    "status": requirement_evaluation["status"],
+                    "defect_count": len(requirement_evaluation["defects"]),
+                },
+            ]
         )
-        write_json(base / "rewritten_intent.json", rewritten)
-        write_json(base / "requirement_ir.json", requirement_ir)
+        write_json(requirement_ir_path, requirement_ir)
+        write_json(requirement_evaluation_path, requirement_evaluation)
+        if requirement_evaluation["status"] != "pass":
+            raw_intent["routing_hints"]["allow_autodispatch"] = False
+            raw_intent["routing_hints"]["readiness_blocked"] = True
+            write_json(base / "raw_intent.json", raw_intent)
+            write_json(base / "requirement_trace.json", trace)
+            return {
+                "ok": True,
+                "intent_id": intent_id,
+                "title": None,
+                "lane": None,
+                "ready": False,
+                "readiness_status": "requirement_evaluation_failed",
+                "clarification_questions": [],
+                "rewrite_method": "intent_ir_v3",
+                "raw_intent": str(base / "raw_intent.json"),
+                "intent_ir": str(base / "intent" / "intent_ir.json"),
+                "intent_validation": str(base / "intent" / "intent_validation.json"),
+                "intent_fidelity": str(base / "intent" / "intent_fidelity.json"),
+                "intent_acceptance": str(base / "intent" / "intent_acceptance.json"),
+                "requirement_ir": str(requirement_ir_path),
+                "requirement_evaluation": str(requirement_evaluation_path),
+                "requirement_trace": str(base / "requirement_trace.json"),
+            }
         write_json(base / "requirement_trace.json", trace)
         if args.sprint_id:
             bind_intent_artifacts(intent_id, args.sprint_id)
+        goals = accepted_intent.get("goals") or []
+        title = (
+            str(goals[0].get("statement") or "")[:90]
+            if goals and isinstance(goals[0], dict)
+            else None
+        )
+        lane = deterministic_rewrite(raw_text)["suggested_lane"]
         return {
             "ok": True,
             "intent_id": intent_id,
-            "title": rewritten.get("title"),
-            "lane": requirement_ir.get("lane"),
-            "ready": readiness["ready"],
+            "title": title,
+            "lane": lane,
+            "ready": True,
             "readiness_status": acceptance["decision"],
             "clarification_questions": acceptance["clarification_questions"],
             "rewrite_method": "intent_ir_v3",
@@ -1005,8 +1043,8 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
             "intent_validation": str(base / "intent" / "intent_validation.json"),
             "intent_fidelity": str(base / "intent" / "intent_fidelity.json"),
             "intent_acceptance": str(base / "intent" / "intent_acceptance.json"),
-            "rewritten_intent": str(base / "rewritten_intent.json"),
-            "requirement_ir": str(base / "requirement_ir.json"),
+            "requirement_ir": str(requirement_ir_path),
+            "requirement_evaluation": str(requirement_evaluation_path),
             "requirement_trace": str(base / "requirement_trace.json"),
         }
     model_result, rewrite_meta = model_rewrite(raw_intent, base / "rewrite_prompt.json")
@@ -1072,23 +1110,37 @@ def bind_intent_artifacts(intent_id: str, sprint_id: str) -> dict[str, Any]:
         raise SystemExit(f"unknown intent_id: {intent_id}")
     mapping = {
         "raw_intent.json": SPRINTS_DIR / f"{sprint_id}.raw_intent.json",
-        "rewritten_intent.json": SPRINTS_DIR / f"{sprint_id}.rewritten_intent.json",
         "requirement_ir.json": SPRINTS_DIR / f"{sprint_id}.requirement_ir.json",
         "requirement_trace.json": SPRINTS_DIR / f"{sprint_id}.requirement_trace.json",
     }
     optional_mapping = {
+        "rewritten_intent.json": SPRINTS_DIR / f"{sprint_id}.rewritten_intent.json",
+        "requirement_format_evaluation.json": SPRINTS_DIR
+        / f"{sprint_id}.requirement_format_evaluation.json",
         "intent/input.json": SPRINTS_DIR / f"{sprint_id}.input.json",
         "intent/intent_ir.json": SPRINTS_DIR / f"{sprint_id}.intent_ir.json",
         "intent/intent_validation.json": SPRINTS_DIR / f"{sprint_id}.intent_validation.json",
         "intent/intent_fidelity.json": SPRINTS_DIR / f"{sprint_id}.intent_fidelity.json",
         "intent/intent_acceptance.json": SPRINTS_DIR / f"{sprint_id}.intent_acceptance.json",
     }
-    immutable_compiler_artifacts = set(optional_mapping)
+    immutable_compiler_artifacts = {
+        name
+        for name in optional_mapping
+        if name.startswith("intent/") or name == "requirement_format_evaluation.json"
+    }
     mapping.update(
         {name: destination for name, destination in optional_mapping.items() if (base / name).exists()}
     )
     for name, dst in mapping.items():
         source_path = base / name
+        if name == "requirement_ir.json":
+            source_requirement = json.loads(source_path.read_text(encoding="utf-8"))
+            if source_requirement.get("schema_version") == "solar.requirement_ir.v2":
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                temporary = dst.with_suffix(dst.suffix + ".tmp")
+                temporary.write_bytes(source_path.read_bytes())
+                os.replace(temporary, dst)
+                continue
         if name in immutable_compiler_artifacts:
             dst.parent.mkdir(parents=True, exist_ok=True)
             temporary = dst.with_suffix(dst.suffix + ".tmp")
@@ -1203,7 +1255,10 @@ def main(argv: list[str] | None = None) -> int:
     else:
         raise SystemExit(f"unknown command: {args.cmd}")
     if getattr(args, "json", False):
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        # Keep machine-readable stdout ASCII-safe. Windows callers commonly
+        # decode subprocess output using their active code page (for example,
+        # CP1252); JSON escapes preserve Unicode across that boundary.
+        print(json.dumps(payload, ensure_ascii=True, indent=2))
     else:
         print(f"intent_id={payload.get('intent_id')} rewrite={payload.get('rewrite_method', 'N/A')}")
     return 0

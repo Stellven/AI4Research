@@ -1,0 +1,359 @@
+{
+  "schema_version": "solar.requirement_compiler_input_fixture_catalog.v1",
+  "source_of_truth": "harness/metadata/2-intent compiler output",
+  "producer": "intent_compiler",
+  "consumer": "requirement_compiler",
+  "case_count": 25,
+  "cases": [
+    {
+      "case_id": "01-research-scientific-reproducibility",
+      "category": "research",
+      "prompt": "Investigate the main causes of irreproducible results in machine-learning research. Synthesize peer-reviewed evidence, distinguish empirical findings from expert opinion, identify disagreements, and propose five testable improvements.",
+      "raw_intent_id": "raw-intent-fixture-01-research-scientific-reproducibility",
+      "raw_text_sha256": "c1a387e190c6b02420ee0682df6825575b13fcd198073f77ac8c150dd5b0cdb2",
+      "intent_ir_id": "intent-ir-fixture-01-research-scientific-reproducibility",
+      "intent_ir_sha256": "7a8c4a1186791522b18c8e0f010e2da82da36761c597d4916d7399326b2d1fc7",
+      "bundle_path": "01-research-scientific-reproducibility",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "02-research-ai-assisted-drug-discovery",
+      "category": "research",
+      "prompt": "Review how generative AI is being used in early-stage drug discovery. Compare demonstrated results with claimed benefits, identify major technical limitations, and list the strongest unresolved research questions.",
+      "raw_intent_id": "raw-intent-fixture-02-research-ai-assisted-drug-discovery",
+      "raw_text_sha256": "04aac4fd0963833a655a59baf3ff5c0209e01cd4f49940110a6d8ad45b7ec8f6",
+      "intent_ir_id": "intent-ir-fixture-02-research-ai-assisted-drug-discovery",
+      "intent_ir_sha256": "eafa6ecde18ef3f9bf03d44a953b4132a1e9c225c51bd5f7ed084ec38d8f3e1b",
+      "bundle_path": "02-research-ai-assisted-drug-discovery",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "03-research-urban-heat-mitigation",
+      "category": "research",
+      "prompt": "Analyze which urban heat-mitigation strategies work best in dense cities. Compare trees, reflective roofs, green roofs, shade structures, and cooling centers using effectiveness, cost, equity, and scalability.",
+      "raw_intent_id": "raw-intent-fixture-03-research-urban-heat-mitigation",
+      "raw_text_sha256": "e8a7678b2dceb98bf8092a9116fcb7bd050b513025c93d6e6612abb623aefaa2",
+      "intent_ir_id": "intent-ir-fixture-03-research-urban-heat-mitigation",
+      "intent_ir_sha256": "ece1325cfbe1dfa91c5046d8cbace99fa62865aa961b2c75671cf58645c5e255",
+      "bundle_path": "03-research-urban-heat-mitigation",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "04-research-ai-tutoring",
+      "category": "research",
+      "prompt": "Evaluate whether AI tutoring improves student learning compared with human tutoring and conventional educational software. Examine effect sizes, study quality, age groups, subjects, and possible harms.",
+      "raw_intent_id": "raw-intent-fixture-04-research-ai-tutoring",
+      "raw_text_sha256": "6e4724f0788d8c66fbdcddd4404ef594bfb329b11d431cfda8a492a67a68d598",
+      "intent_ir_id": "intent-ir-fixture-04-research-ai-tutoring",
+      "intent_ir_sha256": "820dc5e4188ba86ebb9723a29b7434a9392f3e879de8fe79e6bbf9c9884c8ae5",
+      "bundle_path": "04-research-ai-tutoring",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "05-research-grid-storage-batteries",
+      "category": "research",
+      "prompt": "Compare lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage. Evaluate energy density, lifetime, safety, material availability, cost, and commercial readiness.",
+      "raw_intent_id": "raw-intent-fixture-05-research-grid-storage-batteries",
+      "raw_text_sha256": "37b29e8c988a0351fbbf8a53b110c8038b094e669bbe61ead73c1e6efaf3cb42",
+      "intent_ir_id": "intent-ir-fixture-05-research-grid-storage-batteries",
+      "intent_ir_sha256": "9175fde7a7e25079b039eb1e117f426c956595b49be20969f3b724e7f5586964",
+      "bundle_path": "05-research-grid-storage-batteries",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "06-research-remote-hybrid-work",
+      "category": "research",
+      "prompt": "Conduct a literature review on how remote and hybrid work affect productivity, creativity, employee retention, and well-being. Explain why studies reach different conclusions.",
+      "raw_intent_id": "raw-intent-fixture-06-research-remote-hybrid-work",
+      "raw_text_sha256": "d8827d57f63fa469e1f8c5b9e34b7ff0d9b2d2671843313012f49948113109d3",
+      "intent_ir_id": "intent-ir-fixture-06-research-remote-hybrid-work",
+      "intent_ir_sha256": "3638aa31d6549ff4f02156ae0af0a839f9d76b76145849706a9cb0b18a3ca64d",
+      "bundle_path": "06-research-remote-hybrid-work",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "07-research-microplastics-health",
+      "category": "research",
+      "prompt": "Assess the evidence connecting microplastic exposure to human-health outcomes. Separate confirmed findings, plausible mechanisms, observational associations, and unsupported claims.",
+      "raw_intent_id": "raw-intent-fixture-07-research-microplastics-health",
+      "raw_text_sha256": "f0d76af9723fcf0e8b2cf29562fd401fd5aba16d33582ae2cae2a0c300b5a413",
+      "intent_ir_id": "intent-ir-fixture-07-research-microplastics-health",
+      "intent_ir_sha256": "851e18cd01963f533712d3157253df3614bc1656024adefa5db74d0cf2bd6d87",
+      "bundle_path": "07-research-microplastics-health",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "08-research-open-weight-ai",
+      "category": "research",
+      "prompt": "Investigate whether open-weight language models accelerate useful innovation or primarily increase safety risks. Present the strongest evidence on both sides and identify measurements needed to resolve the debate.",
+      "raw_intent_id": "raw-intent-fixture-08-research-open-weight-ai",
+      "raw_text_sha256": "ea3e8792df726e2d3516c970c98972512b70b3ae0d67131cb28d8e443deeb7cd",
+      "intent_ir_id": "intent-ir-fixture-08-research-open-weight-ai",
+      "intent_ir_sha256": "9b569d07b7540677b19e0a24547d70447321985ad4af7eb577fddb9340d6dba2",
+      "bundle_path": "08-research-open-weight-ai",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "09-research-autonomous-scientific-agents",
+      "category": "research",
+      "prompt": "Map the current state of autonomous scientific-research agents. Compare their abilities in literature review, hypothesis generation, experimentation, analysis, and reproducibility. Identify where human supervision remains essential.",
+      "raw_intent_id": "raw-intent-fixture-09-research-autonomous-scientific-agents",
+      "raw_text_sha256": "6c5a43bf3179abb5562e84763a6806a74c3d54fa4a3dfe69ed3b107db48f84aa",
+      "intent_ir_id": "intent-ir-fixture-09-research-autonomous-scientific-agents",
+      "intent_ir_sha256": "e6fe48231c1e4f069f4ed21e05333761f6ed4e2566a32206900c890583a54dda",
+      "bundle_path": "09-research-autonomous-scientific-agents",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "10-research-longevity-interventions",
+      "category": "research",
+      "prompt": "Systematically compare exercise, calorie restriction, sleep optimization, metformin, rapamycin, and senolytics as longevity interventions. Separate human evidence from animal evidence and report uncertainty clearly.",
+      "raw_intent_id": "raw-intent-fixture-10-research-longevity-interventions",
+      "raw_text_sha256": "ce237205f1b7adcec9100df6cf458443985f4999d138d669c008701fac50cecd",
+      "intent_ir_id": "intent-ir-fixture-10-research-longevity-interventions",
+      "intent_ir_sha256": "24232c82f6be497c382a0ebb1ad747e540a217057b79d646f481e2166cb49b9d",
+      "bundle_path": "10-research-longevity-interventions",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "11-internet-global-solar-capacity",
+      "category": "internet_data",
+      "prompt": "Find annual global solar-energy capacity additions from 2010 through the latest complete year. Use authoritative sources, reconcile conflicting numbers, and return a CSV-ready table with source links.",
+      "raw_intent_id": "raw-intent-fixture-11-internet-global-solar-capacity",
+      "raw_text_sha256": "1d2ffcc7b8a1e4959c275b3973a5dbd66d9b282f26ffa7b1953df0a5cadba19e",
+      "intent_ir_id": "intent-ir-fixture-11-internet-global-solar-capacity",
+      "intent_ir_sha256": "586317abc0c46ff3048fa128edc18394ba0d336b832869242faab09203a9f990",
+      "bundle_path": "11-internet-global-solar-capacity",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "12-internet-canadian-city-rentals",
+      "category": "internet_data",
+      "prompt": "Collect current rental prices, median incomes, population growth, and vacancy rates for the 25 largest Canadian cities. Record the measurement date, definition, unit, and source for every value.",
+      "raw_intent_id": "raw-intent-fixture-12-internet-canadian-city-rentals",
+      "raw_text_sha256": "f9361d79b47a0d8d523534b350bebf51e640cef9a1a79be5260adcfd9fe30b55",
+      "intent_ir_id": "intent-ir-fixture-12-internet-canadian-city-rentals",
+      "intent_ir_sha256": "73237d527a16146fc486701865f6b43dfe76e316b7fea48ec22bfd3c4acd832c",
+      "bundle_path": "12-internet-canadian-city-rentals",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "13-internet-vector-database-metrics",
+      "category": "internet_data",
+      "prompt": "Find monthly downloads, GitHub stars, contributor counts, release frequency, and reported security incidents for five leading open-source vector databases. Return the raw data and explain comparability limitations.",
+      "raw_intent_id": "raw-intent-fixture-13-internet-vector-database-metrics",
+      "raw_text_sha256": "294fcd689aac42fe33a634b01d2ad9468eace24aeb4de44b17cd3fe692bfea22",
+      "intent_ir_id": "intent-ir-fixture-13-internet-vector-database-metrics",
+      "intent_ir_sha256": "3945794a6489c1766d6266247c8c29526e7e3642ddbf48d684b1066118627d3e",
+      "bundle_path": "13-internet-vector-database-metrics",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "14-internet-glp1-weight-trials",
+      "category": "internet_data",
+      "prompt": "Collect clinical-trial data for GLP-1 medications used for weight management. Include sample size, treatment duration, average weight change, adverse-event withdrawals, sponsor, and trial-registration link.",
+      "raw_intent_id": "raw-intent-fixture-14-internet-glp1-weight-trials",
+      "raw_text_sha256": "2e1f082fc553fb344c12b1f536a899b2cd60f04659c89c5bcb61aff1b9cd0846",
+      "intent_ir_id": "intent-ir-fixture-14-internet-glp1-weight-trials",
+      "intent_ir_sha256": "42e74974b838bea5068c7ff8900fa447f6809acdedf79c7b8f3d8fd148943806",
+      "bundle_path": "14-internet-glp1-weight-trials",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "15-internet-data-center-regions",
+      "category": "internet_data",
+      "prompt": "Find historical electricity prices, grid carbon intensity, and data-center capacity for ten potential data-center regions. Prefer government or grid-operator sources and flag missing or estimated values.",
+      "raw_intent_id": "raw-intent-fixture-15-internet-data-center-regions",
+      "raw_text_sha256": "f1dd920b51e9a531ba9ace4f39619e1b9190a5ef3dacff432ee9bb937bec35ce",
+      "intent_ir_id": "intent-ir-fixture-15-internet-data-center-regions",
+      "intent_ir_sha256": "da79ae0e994e00be032c40a7089d87e191fda6d4e52c5760aeae89fbf8474402",
+      "bundle_path": "15-internet-data-center-regions",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "16-experiment-rag-factual-accuracy",
+      "category": "experiment",
+      "prompt": "Test whether retrieval-augmented generation improves factual accuracy on a 100-question domain benchmark. Compare no retrieval, keyword retrieval, and embedding retrieval using accuracy, citation validity, latency, and cost.",
+      "raw_intent_id": "raw-intent-fixture-16-experiment-rag-factual-accuracy",
+      "raw_text_sha256": "791bd89f9363da4cda9bcad86a386fd5ab59cf893e31a6766bf5bb701c5a3eeb",
+      "intent_ir_id": "intent-ir-fixture-16-experiment-rag-factual-accuracy",
+      "intent_ir_sha256": "f489b01511a6824039f0b6b33ff3666233beb001a8008e69121240dbc5826f68",
+      "bundle_path": "16-experiment-rag-factual-accuracy",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "17-experiment-hypothesis-paper-diversity",
+      "category": "experiment",
+      "prompt": "Evaluate whether an LLM generates better research hypotheses after reading diverse papers rather than only highly cited papers. Define novelty and testability metrics, run blinded scoring, and report statistical uncertainty.",
+      "raw_intent_id": "raw-intent-fixture-17-experiment-hypothesis-paper-diversity",
+      "raw_text_sha256": "c0e7cd5614b13031952379f331595e1b1f29a04955022230f66e920b79909028",
+      "intent_ir_id": "intent-ir-fixture-17-experiment-hypothesis-paper-diversity",
+      "intent_ir_sha256": "9568f377fa744bf84c46f5760e9f920d7d2df523047f1bc0565f19d19484955f",
+      "bundle_path": "17-experiment-hypothesis-paper-diversity",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "18-experiment-prompting-python-reliability",
+      "category": "experiment",
+      "prompt": "Test whether chain-of-thought prompting, structured planning, or direct prompting produces more reliable Python programs. Use the same tasks and model settings, execute every solution, and compare correctness, runtime, and token cost.",
+      "raw_intent_id": "raw-intent-fixture-18-experiment-prompting-python-reliability",
+      "raw_text_sha256": "27ca2a4dcc172636c2b9f8e1033090e639cb42a790d3b96c3515c04828204ae2",
+      "intent_ir_id": "intent-ir-fixture-18-experiment-prompting-python-reliability",
+      "intent_ir_sha256": "9c7a8612e4696744a958f23fdf04bf1edc0ded46f12139ab833613351976ca5f",
+      "bundle_path": "18-experiment-prompting-python-reliability",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "19-experiment-time-series-forecasting",
+      "category": "experiment",
+      "prompt": "Evaluate whether a proposed time-series forecasting method meaningfully outperforms seasonal naïve, ARIMA, and gradient-boosting baselines. Use multiple datasets, rolling validation, ablation tests, and confidence intervals.",
+      "raw_intent_id": "raw-intent-fixture-19-experiment-time-series-forecasting",
+      "raw_text_sha256": "66ce6468edc8c909bc8bb72660384086ea265002928004a89f485be8103f44e0",
+      "intent_ir_id": "intent-ir-fixture-19-experiment-time-series-forecasting",
+      "intent_ir_sha256": "bef8ae40fc34b705ccc6f6aaf98b17b8dbd9f9b681acefc0a86a34e9acddf612",
+      "bundle_path": "19-experiment-time-series-forecasting",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "20-experiment-literature-summary-utility",
+      "category": "experiment",
+      "prompt": "Test whether automatically generated literature summaries help researchers answer questions faster without reducing accuracy. Design a controlled study with baseline conditions, measurable outcomes, failure criteria, and bias checks.",
+      "raw_intent_id": "raw-intent-fixture-20-experiment-literature-summary-utility",
+      "raw_text_sha256": "a7b482e44c6026c55b7f750ef48ad92d51295b11452d7079691f3f93f0bda71a",
+      "intent_ir_id": "intent-ir-fixture-20-experiment-literature-summary-utility",
+      "intent_ir_sha256": "80e5035a69ff575bc4f7edcac66d5ad0a7feb627dcfbe79e5c5ae709dbd9d0ed",
+      "bundle_path": "20-experiment-literature-summary-utility",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "21-kid-sky-and-sunset-colors",
+      "category": "child_question",
+      "prompt": "Why is the sky blue, but sunsets are orange?",
+      "raw_intent_id": "raw-intent-fixture-21-kid-sky-and-sunset-colors",
+      "raw_text_sha256": "061644e55f6db23a337d5e58553ed2189bcbddf42469c494a4af1c7f06e1170b",
+      "intent_ir_id": "intent-ir-fixture-21-kid-sky-and-sunset-colors",
+      "intent_ir_sha256": "13f099e2229e06dbe80c2d1f4391a132d13a234a15aa1c3ee232f08f7633871b",
+      "bundle_path": "21-kid-sky-and-sunset-colors",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "22-kid-fish-thirst",
+      "category": "child_question",
+      "prompt": "Do fish ever get thirsty?",
+      "raw_intent_id": "raw-intent-fixture-22-kid-fish-thirst",
+      "raw_text_sha256": "a0c27d7ae3d0ceeb39847836308f896abd5a3be774c360fb5c8b9a82209757bf",
+      "intent_ir_id": "intent-ir-fixture-22-kid-fish-thirst",
+      "intent_ir_sha256": "59e1427997b6efab385a862bbf506c025e42c696e104ad1e0bacd2a72024b82a",
+      "bundle_path": "22-kid-fish-thirst",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "23-kid-tiny-dragon-bedtime-story",
+      "category": "child_creative",
+      "prompt": "Can you make up a bedtime story about a tiny dragon who is scared of fire?",
+      "raw_intent_id": "raw-intent-fixture-23-kid-tiny-dragon-bedtime-story",
+      "raw_text_sha256": "7c3b25bb181c66476c625ffcf73e93199d8f5827605c7305914ddc8a9dd764be",
+      "intent_ir_id": "intent-ir-fixture-23-kid-tiny-dragon-bedtime-story",
+      "intent_ir_sha256": "ded32742e4555694a71b92a8e05b49bcab2fd56afb653b3fdd1135c6a08b9c39",
+      "bundle_path": "23-kid-tiny-dragon-bedtime-story",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "24-kid-how-airplanes-fly",
+      "category": "child_question",
+      "prompt": "How do airplanes stay up when they are so heavy?",
+      "raw_intent_id": "raw-intent-fixture-24-kid-how-airplanes-fly",
+      "raw_text_sha256": "1fab4f68518dc553385fc2672252460d680c29358f00e6def076e26053cd8afd",
+      "intent_ir_id": "intent-ir-fixture-24-kid-how-airplanes-fly",
+      "intent_ir_sha256": "d3c15f4d8f5d4dbcf726f2e53caf285071c6ee9cfda70a62427052234fa63137",
+      "bundle_path": "24-kid-how-airplanes-fly",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    },
+    {
+      "case_id": "25-kid-dinosaur-school-fit",
+      "category": "child_question",
+      "prompt": "If dinosaurs were alive today, could one fit inside my school?",
+      "raw_intent_id": "raw-intent-fixture-25-kid-dinosaur-school-fit",
+      "raw_text_sha256": "b0c934fe9cc53657c6d3473f2b7bd95855efd19b74a00677e376aeadb0198c04",
+      "intent_ir_id": "intent-ir-fixture-25-kid-dinosaur-school-fit",
+      "intent_ir_sha256": "47c6f9d78e1a424d696c9d6972827409e7940a5eec36639a7897b8a00cfe625a",
+      "bundle_path": "25-kid-dinosaur-school-fit",
+      "artifacts": [
+        "intent_ir.json"
+      ],
+      "expected_consumer": "requirement_compiler"
+    }
+  ]
+}

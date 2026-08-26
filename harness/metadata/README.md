@@ -36,15 +36,29 @@ Stage `0` is an explicit extension for the design-support files that apply to
 multiple pipeline stages and therefore do not belong to one producer-output
 stage in the reference structure.
 
+## Requirement Compiler input fixtures
+
+The Stage 2 directory includes `requirement-compiler-input-fixtures/`,
+containing 25 synthetic `intent_ir.json` artifacts used as Requirement
+Compiler inputs. Intent validation, fidelity, and acceptance remain separate
+evaluator artifacts and are not included in those compiler-input fixtures.
+
+The corrected Requirement Compiler run is retained under Stage 3 in
+`native-intent-ir-compiler-evaluation-20260825/`. Each trial consumes only
+`intent_ir.json`, emits only `requirement_ir.json`, and records its separate
+deterministic format evaluation. The earlier
+`current-v1-compiler-evaluation-20260825/` run is marked superseded.
+
 ## Current integration boundary
 
 The current `intent_gateway.py` activates this compiler when
 `SOLAR_INTENT_COMPILER_PROVIDER=codex` is present. Compiler and reviewer calls
 are fresh, schema-bound invocations; their optional model selections come from
 `SOLAR_INTENT_COMPILER_MODEL` and `SOLAR_INTENT_REVIEWER_MODEL`. An accepted
-IntentIR is projected through an explicitly temporary compatibility adapter to
-the current Requirements Compiler. `needs_clarification` and `failed` decisions
-stop before RequirementIR. When no semantic compiler provider is configured,
+IntentIR is now passed directly to the native deterministic Requirement
+Compiler, followed by a separate deterministic format and reference evaluator.
+`needs_clarification`, `failed`, and failed RequirementIR evaluations stop
+before downstream handoff. When no semantic compiler provider is configured,
 the existing gateway behavior remains unchanged during this migration.
 
 The connected boundary has been exercised through the real dashboard intake
@@ -72,6 +86,11 @@ but a naturally triggered live model repair has not yet been observed.
    assumptions, approvals, and rollback semantics.
 8. `requirement_validation.json` and `requirement_coverage.json` - registered
    check integrity and complete IntentIR coverage.
+
+The live migration path additionally emits
+`requirement_format_evaluation.json` as a deterministic preflight evaluator
+artifact. It does not replace the full requirement validator or coverage
+verifier described in step 8.
 
 ### Planning and freezing
 

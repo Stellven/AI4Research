@@ -1,0 +1,137 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-16-experiment-rag-factual-accuracy",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-16-experiment-rag-factual-accuracy",
+    "raw_text_sha256": "791bd89f9363da4cda9bcad86a386fd5ab59cf893e31a6766bf5bb701c5a3eeb"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Experimentally test whether retrieval improves factual accuracy on a 100-question domain benchmark.",
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "action",
+      "description": "Execute a controlled comparison of three retrieval conditions.",
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    },
+    {
+      "outcome_id": "D2",
+      "class": "artifact",
+      "description": "Results covering accuracy, citation validity, latency, and cost.",
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Use the same 100-question benchmark for all conditions.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "100_questions",
+              "same_benchmark"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    },
+    {
+      "constraint_id": "C2",
+      "category": "content",
+      "statement": "Compare all conditions and metrics.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "no_retrieval",
+              "keyword_retrieval",
+              "embedding_retrieval",
+              "accuracy",
+              "citation_validity",
+              "latency",
+              "cost"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_id": "A1",
+      "question": "The domain, model, retrieval corpus, and statistical analysis are unspecified.",
+      "blocking": false,
+      "source_spans": [
+        [
+          0,
+          224
+        ]
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unknowns": [
+    {
+      "unknown_id": "U1",
+      "question": "Which domain benchmark and model configuration should be frozen before execution?",
+      "kind": "design_parameter",
+      "resolution": {
+        "mode": "workflow_design",
+        "required_before": "experiment_execution"
+      },
+      "derived_from": [
+        "G1",
+        "C1"
+      ]
+    }
+  ]
+}

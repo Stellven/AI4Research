@@ -1,0 +1,170 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-fixture-16-experiment-rag-factual-accuracy",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-fixture-16-experiment-rag-factual-accuracy",
+    "sha256": "f489b01511a6824039f0b6b33ff3666233beb001a8008e69121240dbc5826f68"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-raw-intent-fixture-16-experiment-rag-factual-accuracy",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: Execute a controlled comparison of three retrieval conditions.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "execution_record",
+          "results",
+          "failure_conditions",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.action_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:D2",
+      "statement": "Produce the requested outcome: Results covering accuracy, citation validity, latency, and cost.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D2"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "deliverable",
+          "completeness",
+          "supporting_evidence",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.artifact_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R3",
+      "origin": "user:C1",
+      "statement": "Use the same 100-question benchmark for all conditions.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "100_questions",
+          "same_benchmark"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R4",
+      "origin": "user:C2",
+      "statement": "Compare all conditions and metrics.",
+      "priority": "must",
+      "source_refs": [
+        "C2"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "no_retrieval",
+          "keyword_retrieval",
+          "embedding_retrieval",
+          "accuracy",
+          "citation_validity",
+          "latency",
+          "cost"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R5",
+      "origin": "user:derived",
+      "statement": "Resolve or explicitly report the unresolved question: Which domain benchmark and model configuration should be frozen before execution?",
+      "priority": "must",
+      "source_refs": [
+        "U1",
+        "G1",
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "finding",
+          "supporting_evidence",
+          "unresolved_status"
+        ]
+      },
+      "check": "check.unknown_resolution_trace.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R6",
+      "origin": "user:A1",
+      "statement": "Resolve or explicitly disclose the assumption for: The domain, model, retrieval corpus, and statistical analysis are unspecified.",
+      "priority": "must",
+      "source_refs": [
+        "A1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "assumption",
+          "impact",
+          "tested_vs_not_tested"
+        ]
+      },
+      "check": "check.ambiguity_disclosure.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "controlled_execution",
+        "artifact_generation"
+      ],
+      "forbidden": [
+        "production_deployment_without_approval",
+        "unscoped_external_side_effects"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [
+    {
+      "source_ref": "A1",
+      "statement": "The RequirementIR must disclose how this ambiguity is resolved: The domain, model, retrieval corpus, and statistical analysis are unspecified."
+    }
+  ],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": "solar.requirement_ir.v2",
+  "requirement_ir_id": "requirement-ir-fixture-22-kid-fish-thirst",
+  "intent_ir_ref": {
+    "intent_ir_id": "intent-ir-fixture-22-kid-fish-thirst",
+    "sha256": "59e1427997b6efab385a862bbf506c025e42c696e104ad1e0bacd2a72024b82a"
+  },
+  "intent_acceptance_ref": {
+    "acceptance_id": "intent-acceptance-raw-intent-fixture-22-kid-fish-thirst",
+    "required_decision": "accepted"
+  },
+  "requirements": [
+    {
+      "requirement_id": "R1",
+      "origin": "user:D1",
+      "statement": "Produce the requested outcome: An age-appropriate explanation distinguishing freshwater and saltwater fish.",
+      "priority": "must",
+      "source_refs": [
+        "G1",
+        "D1"
+      ],
+      "acceptance": {
+        "kind": "artifact_fields",
+        "required_values": [
+          "answer",
+          "supporting_evidence",
+          "limitations"
+        ]
+      },
+      "check": "check.information_outcome_completeness.v1",
+      "checkable": true,
+      "disposition": null
+    },
+    {
+      "requirement_id": "R2",
+      "origin": "user:C1",
+      "statement": "Answer directly while explaining relevant freshwater and saltwater differences.",
+      "priority": "must",
+      "source_refs": [
+        "C1"
+      ],
+      "acceptance": {
+        "kind": "coverage",
+        "required_values": [
+          "direct_answer",
+          "freshwater_fish",
+          "saltwater_fish",
+          "child_accessible"
+        ]
+      },
+      "check": "check.intent_constraint_coverage.v1",
+      "checkable": true,
+      "disposition": null
+    }
+  ],
+  "scope": {
+    "research": {
+      "allowed": [
+        "source_discovery",
+        "source_linked_analysis",
+        "content_generation"
+      ],
+      "forbidden": [
+        "unrequested_domain_experiment_execution",
+        "production_deployment"
+      ],
+      "network": "allowed_if_required_by_requirement"
+    }
+  },
+  "assumptions": [],
+  "conflict_scan": {
+    "result": "clean",
+    "detail": null
+  },
+  "approvals": [],
+  "rollback": null
+}

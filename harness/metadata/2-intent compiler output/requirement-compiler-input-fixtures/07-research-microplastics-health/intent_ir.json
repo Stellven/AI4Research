@@ -1,0 +1,98 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-07-research-microplastics-health",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-07-research-microplastics-health",
+    "raw_text_sha256": "f0d76af9723fcf0e8b2cf29562fd401fd5aba16d33582ae2cae2a0c300b5a413"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Assess the strength and type of evidence connecting microplastic exposure with human-health outcomes.",
+      "source_spans": [
+        [
+          0,
+          181
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "artifact",
+      "description": "An evidence map that classifies claims by support level and evidence type.",
+      "source_spans": [
+        [
+          0,
+          181
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Separate all requested evidence categories.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "confirmed_findings",
+              "plausible_mechanisms",
+              "observational_associations",
+              "unsupported_claims"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          181
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_id": "A1",
+      "question": "Exposure routes, particle definitions, and health outcomes are not bounded.",
+      "blocking": false,
+      "source_spans": [
+        [
+          0,
+          181
+        ]
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unknowns": [
+    {
+      "unknown_id": "U1",
+      "question": "Which human outcomes have causal evidence rather than observational association?",
+      "kind": "discoverable_fact",
+      "resolution": {
+        "mode": "workflow_discovery",
+        "required_before": "requirement_completion"
+      },
+      "derived_from": [
+        "G1",
+        "C1"
+      ]
+    }
+  ]
+}

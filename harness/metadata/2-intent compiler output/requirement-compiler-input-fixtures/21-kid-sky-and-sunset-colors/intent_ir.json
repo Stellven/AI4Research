@@ -1,0 +1,71 @@
+{
+  "schema_version": "solar.intent_ir.v3",
+  "artifact_role": "metadata_contract_example_not_live_execution",
+  "intent_ir_id": "intent-ir-fixture-21-kid-sky-and-sunset-colors",
+  "generation": 0,
+  "raw_intent_ref": {
+    "raw_intent_id": "raw-intent-fixture-21-kid-sky-and-sunset-colors",
+    "raw_text_sha256": "061644e55f6db23a337d5e58553ed2189bcbddf42469c494a4af1c7f06e1170b"
+  },
+  "producer": {
+    "method": "model",
+    "provider": "synthetic_fixture",
+    "model": "codex-authored-intent-fixture-v1"
+  },
+  "goals": [
+    {
+      "goal_id": "G1",
+      "statement": "Explain why daylight skies appear blue while sunsets appear orange.",
+      "source_spans": [
+        [
+          0,
+          44
+        ]
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "outcome_id": "D1",
+      "class": "information",
+      "description": "A clear, age-appropriate causal explanation of atmospheric light scattering.",
+      "source_spans": [
+        [
+          0,
+          44
+        ]
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "C1",
+      "category": "content",
+      "statement": "Explain both sky and sunset colors in accessible language.",
+      "expression": {
+        "op": "contains_all",
+        "args": [
+          {
+            "ref": "requested_deliverable.content"
+          },
+          {
+            "set": [
+              "blue_sky",
+              "orange_sunset",
+              "child_accessible"
+            ]
+          }
+        ]
+      },
+      "source_spans": [
+        [
+          0,
+          44
+        ]
+      ]
+    }
+  ],
+  "ambiguities": [],
+  "conflicts": [],
+  "unknowns": []
+}
