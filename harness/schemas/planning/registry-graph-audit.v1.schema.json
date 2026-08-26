@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.registry_graph_audit.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_role", "catalog_ref", "artifact_registry_ref",
+    "conversion_registry_ref", "controller_inputs", "reachable_types", "issues", "summary", "verdict"
+  ],
+  "properties": {
+    "schema_version": {"const": "solar.registry_graph_audit.v1"},
+    "artifact_role": {"const": "registry_audit_artifact"},
+    "catalog_ref": {"$ref": "#/$defs/ref"},
+    "artifact_registry_ref": {"$ref": "#/$defs/ref"},
+    "conversion_registry_ref": {"$ref": "#/$defs/ref"},
+    "controller_inputs": {"$ref": "#/$defs/string_set"},
+    "reachable_types": {"$ref": "#/$defs/string_set"},
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["code", "severity"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["error", "warning"]}
+        }
+      }
+    },
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capsule_count", "registered_artifact_type_count", "issue_count", "error_count", "warning_count", "issues_by_code"],
+      "properties": {
+        "capsule_count": {"type": "integer", "minimum": 0},
+        "registered_artifact_type_count": {"type": "integer", "minimum": 0},
+        "issue_count": {"type": "integer", "minimum": 0},
+        "error_count": {"type": "integer", "minimum": 0},
+        "warning_count": {"type": "integer", "minimum": 0},
+        "issues_by_code": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}}
+      }
+    },
+    "verdict": {"enum": ["pass", "fail"]}
+  },
+  "$defs": {
+    "ref": {
+      "type": "object", "required": ["sha256"], "additionalProperties": false,
+      "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "string_set": {
+      "type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true
+    }
+  }
+}

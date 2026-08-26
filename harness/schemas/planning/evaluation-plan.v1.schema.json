@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.evaluation_plan.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "evaluation_plan_id", "requirement_ir_ref", "plan_ir_ref", "capsule_plan_ref", "task_graph_ref", "registry_ref", "nodes", "unresolved", "verdict"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.evaluation_plan.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "evaluation_plan_id": {"type": "string", "minLength": 1},
+    "requirement_ir_ref": {"type": "object"},
+    "plan_ir_ref": {"type": "object"},
+    "capsule_plan_ref": {"type": "object"},
+    "task_graph_ref": {"type": "object"},
+    "registry_ref": {"type": "object"},
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["node_id", "placement", "requirement_ids", "produced_artifacts", "checks", "capsule_contract_criteria", "gate_policy", "semantic_review"],
+        "additionalProperties": false,
+        "properties": {
+          "node_id": {"type": "string", "minLength": 1},
+          "placement": {"const": "after_node_output"},
+          "requirement_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "produced_artifacts": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["check_id", "source", "mode", "applies_to_outputs", "decision", "deterministic", "semantic"],
+              "additionalProperties": false,
+              "properties": {
+                "check_id": {"type": "string", "minLength": 1},
+                "source": {"enum": ["requirement", "artifact_auto", "capsule_contract"]},
+                "mode": {"enum": ["deterministic", "semantic", "deterministic_plus_semantic"]},
+                "applies_to_outputs": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
+                "decision": {"type": "string", "minLength": 1},
+                "deterministic": {"type": ["object", "null"]},
+                "semantic": {"type": ["object", "null"]}
+              }
+            }
+          },
+          "capsule_contract_criteria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["source_capsule_id", "kind", "text", "field", "disposition"],
+              "additionalProperties": false,
+              "properties": {
+                "source_capsule_id": {"type": "string", "minLength": 1},
+                "kind": {"type": "string", "minLength": 1},
+                "text": {"type": "string", "minLength": 1},
+                "field": {"type": ["string", "null"]},
+                "disposition": {"enum": ["runtime_proof", "semantic_review"]}
+              }
+            }
+          },
+          "gate_policy": {
+            "type": "object",
+            "required": ["kind", "on_fail", "maximum_repairs"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {"enum": ["llm_eval", "deterministic_command", "none"]},
+              "on_fail": {"type": "string"},
+              "maximum_repairs": {"type": "integer", "minimum": 0, "maximum": 2}
+            }
+          },
+          "semantic_review": {
+            "type": "object",
+            "required": ["required", "evaluator_role", "criteria"],
+            "additionalProperties": false,
+            "properties": {
+              "required": {"type": "boolean"},
+              "evaluator_role": {"const": "evaluator"},
+              "criteria": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+            }
+          }
+        }
+      }
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "node_id", "detail"],
+        "additionalProperties": false,
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "node_id": {"type": "string", "minLength": 1},
+          "detail": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "verdict": {"enum": ["pass", "fail"]}
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.plan_ir.v2",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "plan_ir_id", "generation", "requirement_ir_ref", "planning_decision_ref", "producer", "nodes"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.plan_ir.v2"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "plan_ir_id": {"type": "string", "minLength": 1},
+    "generation": {"type": "integer", "minimum": 0, "maximum": 1},
+    "requirement_ir_ref": {
+      "type": "object",
+      "required": ["requirement_ir_id", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement_ir_id": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "planning_decision_ref": {
+      "type": "object",
+      "required": ["planning_decision_id", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "planning_decision_id": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "producer": {
+      "type": "object",
+      "required": ["method", "provider", "model"],
+      "additionalProperties": false,
+      "properties": {
+        "method": {"enum": ["model", "workflow_registry"]},
+        "provider": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1}
+      }
+    },
+    "nodes": {"type": "array", "minItems": 1, "maxItems": 24, "items": {"$ref": "solar.plan_ir.semantic.v2#/$defs/node"}}
+  }
+}

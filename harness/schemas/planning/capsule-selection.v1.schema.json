@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.capsule_selection.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_role", "selection_id", "generation", "planning_context_ref", "requirement_ir_ref", "plan_ir_ref", "candidate_catalog_ref", "producer", "nodes"],
+  "properties": {
+    "schema_version": {"const": "solar.capsule_selection.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "selection_id": {"type": "string", "minLength": 1},
+    "generation": {"type": "integer", "minimum": 0, "maximum": 1},
+    "planning_context_ref": {"$ref": "#/$defs/ref"},
+    "requirement_ir_ref": {"$ref": "#/$defs/ref"},
+    "plan_ir_ref": {"$ref": "#/$defs/ref"},
+    "candidate_catalog_ref": {"$ref": "#/$defs/ref"},
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "provider", "model"],
+      "properties": {
+        "method": {"const": "model"},
+        "provider": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1}
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["node_id", "selected_capsule_id", "dispatch_task_type", "fallback_capsule_ids", "rationale", "requirement_ids", "eligible_candidate_ids", "candidate_exclusions"],
+        "properties": {
+          "node_id": {"type": "string", "minLength": 1},
+          "selected_capsule_id": {"type": "string", "minLength": 1},
+          "dispatch_task_type": {"type": "string", "minLength": 1},
+          "fallback_capsule_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "rationale": {"type": "string", "minLength": 5},
+          "requirement_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "eligible_candidate_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
+          "candidate_exclusions": {"type": "array", "items": {"type": "object"}}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256"],
+      "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    }
+  }
+}

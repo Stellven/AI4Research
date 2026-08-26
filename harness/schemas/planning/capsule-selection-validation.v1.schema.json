@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.capsule_selection_validation.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_role", "validation_id", "selection_ref", "status", "errors"],
+  "properties": {
+    "schema_version": {"const": "solar.capsule_selection_validation.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "validation_id": {"type": "string", "minLength": 1},
+    "selection_ref": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "object", "additionalProperties": false, "required": ["sha256"], "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}
+      ]
+    },
+    "status": {"enum": ["pass", "fail"]},
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "path", "message", "repairable"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "path": {"type": "string"},
+          "message": {"type": "string", "minLength": 1},
+          "repairable": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

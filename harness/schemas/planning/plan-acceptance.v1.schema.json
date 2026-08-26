@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.plan_acceptance.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "acceptance_id", "decision", "final_generation", "repair", "refs", "reasons", "runtime_handoff_allowed"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.plan_acceptance.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "acceptance_id": {"type": "string", "minLength": 1},
+    "decision": {"enum": ["accepted", "failed", "requirements_gap", "direct_response"]},
+    "final_generation": {"anyOf": [{"type": "integer", "minimum": 0, "maximum": 1}, {"type": "null"}]},
+    "repair": {
+      "type": "object",
+      "required": ["attempted", "maximum_attempts"],
+      "additionalProperties": false,
+      "properties": {
+        "attempted": {"type": "boolean"},
+        "maximum_attempts": {"const": 1}
+      }
+    },
+    "refs": {"type": "object"},
+    "reasons": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "runtime_handoff_allowed": {"type": "boolean"}
+  }
+}

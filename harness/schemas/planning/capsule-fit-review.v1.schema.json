@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.capsule_fit_review.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_role", "review_id", "selection_ref", "review_method", "reviewer", "status", "nodes", "errors", "warnings"],
+  "properties": {
+    "schema_version": {"const": "solar.capsule_fit_review.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "review_id": {"type": "string", "minLength": 1},
+    "selection_ref": {"type": "object", "additionalProperties": false, "required": ["sha256"], "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+    "review_method": {"const": "independent_model_call"},
+    "reviewer": {"type": "object", "additionalProperties": false, "required": ["provider", "model"], "properties": {"provider": {"type": "string", "minLength": 1}, "model": {"type": "string", "minLength": 1}}},
+    "status": {"enum": ["pass", "pass_with_warnings", "fail"]},
+    "nodes": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "errors": {"type": "array", "items": {"type": "object"}},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  }
+}

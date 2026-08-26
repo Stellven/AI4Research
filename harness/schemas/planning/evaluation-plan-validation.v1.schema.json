@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.evaluation_plan_validation.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "validation_id", "evaluation_plan_ref", "registry_ref", "checks", "errors", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.evaluation_plan_validation.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "validation_id": {"type": "string", "minLength": 1},
+    "evaluation_plan_ref": {"type": "object"},
+    "registry_ref": {"type": "object"},
+    "checks": {"type": "array", "items": {"type": "object"}},
+    "errors": {"type": "array", "items": {"type": "object"}},
+    "status": {"enum": ["pass", "fail"]}
+  }
+}

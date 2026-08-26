@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.evaluation_check_registry.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "registry_id", "checks"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.evaluation_check_registry.v1"},
+    "artifact_role": {"const": "runtime_registry"},
+    "registry_id": {"type": "string", "minLength": 1},
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["check_id", "mode", "applies_to", "decision", "deterministic", "semantic"],
+        "additionalProperties": false,
+        "properties": {
+          "check_id": {"type": "string", "minLength": 1},
+          "mode": {"enum": ["deterministic", "semantic", "deterministic_plus_semantic"]},
+          "applies_to": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["kind"],
+                "additionalProperties": false,
+                "properties": {"kind": {"const": "bound_output"}}
+              },
+              {
+                "type": "object",
+                "required": ["kind", "artifact_types", "auto_apply"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {"const": "artifact_type"},
+                  "artifact_types": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"type": "string", "minLength": 1},
+                    "uniqueItems": true
+                  },
+                  "auto_apply": {"type": "boolean"}
+                }
+              }
+            ]
+          },
+          "decision": {"type": "string", "minLength": 1},
+          "deterministic": {
+            "type": ["object", "null"],
+            "properties": {
+              "kind": {"enum": ["python_callable"]},
+              "implementation_ref": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_.]*:[A-Za-z_][A-Za-z0-9_]*$"}
+            },
+            "required": ["kind", "implementation_ref"],
+            "additionalProperties": false
+          },
+          "semantic": {
+            "type": ["object", "null"],
+            "properties": {
+              "rubric": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1},
+                "uniqueItems": true
+              }
+            },
+            "required": ["rubric"],
+            "additionalProperties": false
+          }
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"mode": {"const": "deterministic"}}},
+            "then": {"properties": {"deterministic": {"type": "object"}, "semantic": {"type": "null"}}}
+          },
+          {
+            "if": {"properties": {"mode": {"const": "semantic"}}},
+            "then": {"properties": {"deterministic": {"type": "null"}, "semantic": {"type": "object"}}}
+          },
+          {
+            "if": {"properties": {"mode": {"const": "deterministic_plus_semantic"}}},
+            "then": {"properties": {"deterministic": {"type": "object"}, "semantic": {"type": "object"}}}
+          }
+        ]
+      }
+    }
+  }
+}
