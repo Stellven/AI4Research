@@ -9,15 +9,20 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP"/{bin,config,lib,sprints,personas,templates,run/multi-task,work}
 export SOLAR_INTENT_DB="$TMP/solar.db"
 export SOLAR_GEMINI_CLI_AUTH=auto
+# This regression exercises the legacy multi-task/tmux entrypoint. Planner
+# certificate enforcement is covered separately by the plan-validator suite.
+export SOLAR_PLAN_VALIDATOR=0
 
 cp solar-harness.sh "$TMP/solar-harness.sh"
 cp lib/run-state.sh "$TMP/lib/run-state.sh"
 cp lib/events.sh "$TMP/lib/events.sh"
 cp lib/graph_scheduler.py "$TMP/lib/graph_scheduler.py"
+cp lib/executable_node.py "$TMP/lib/executable_node.py"
 cp lib/plan_validator.py "$TMP/lib/plan_validator.py"
 cp lib/prerequisite_resolver.py "$TMP/lib/prerequisite_resolver.py"
 cp lib/intent_engine_adapter.py "$TMP/lib/intent_engine_adapter.py"
 cp lib/multi_task_runner.py "$TMP/lib/multi_task_runner.py"
+cp lib/task_lifecycle.py "$TMP/lib/task_lifecycle.py"
 cp lib/workflow_contract.py "$TMP/lib/workflow_contract.py"
 cp lib/tvs_render_cli.ts "$TMP/lib/tvs_render_cli.ts"
 cp lib/claude_surface.py "$TMP/lib/claude_surface.py"
@@ -144,10 +149,10 @@ grep -q "new-session" "$TMP/tmux-calls.log" || { echo "FAIL: tmux new-session no
 grep -q "Solar Harness Multi-Task" $TMP/solar-multi-task-test.out || { echo "FAIL: summary not rendered"; exit 1; }
 find "$TMP/run/multi-task" -name runner.sh -print0 | xargs -0 -n1 bash -n
 
-python3 - "$graph" <<'PY'
+python3 - "$TMP/sprints/sprint-20260520-multi-task.task_dag.state.json" <<'PY'
 import json, sys
-graph = json.load(open(sys.argv[1], encoding="utf-8"))
-nodes = {n["id"]: n for n in graph["nodes"]}
+state = json.load(open(sys.argv[1], encoding="utf-8"))
+nodes = state["node_results"]
 for node_id in ("A", "B"):
     n = nodes[node_id]
     assert n.get("status") == "dispatched", (node_id, n)

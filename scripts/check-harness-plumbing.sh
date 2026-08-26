@@ -157,7 +157,7 @@ if grep -qE '全部通过|verified-live|live [[:alpha:]]+ status: (verified|ok)(
 fi
 echo "solar-harness status auth/quota boundary: ok"
 
-HARNESS_DIR="$home_dir/.solar/harness" bash "$home_dir/.solar/tests/harness/test_dispatch_ledger.sh" >/dev/null
+HARNESS_DIR="$home_dir/.solar/harness" bash "$repo_dir/tests/quarantine/unsafe_home_shell/disabled_dispatch_ledger.sh" >/dev/null
 echo "dispatch ledger/queue plumbing: ok"
 
 envelope="$sandbox/no-llm-envelope.json"

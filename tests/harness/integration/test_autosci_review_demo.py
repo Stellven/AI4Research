@@ -25,15 +25,22 @@ def test_product_autosci_review_writes_artifact_review_evidence(tmp_path: Path) 
     )
     run_id = unique_run_id("phase-c-review")
 
-    proc = run_autosci(harness_dir, f"$review {target} --focus method --run-id {run_id}")
+    proc = run_autosci(
+        harness_dir,
+        f"$review {target} --focus method --run-id {run_id}",
+        check=False,
+    )
     summary = load_stdout_json(proc)
 
+    assert proc.returncode != 0
     assert summary["skill"] == "review"
-    assert summary["execution_status"] == "partial"
+    assert summary["execution_status"] == "failed"
     evidence_path = assert_under(summary["evidence_path"], harness_dir)
     payload = json.loads(evidence_path.read_text(encoding="utf-8"))
     actions = payload["outputs"]["skill_run"]["actions"]
     assert [action["action"] for action in actions] == ["review_artifact"]
+    assert actions[0]["status"] == "failed"
+    assert "normalized proof contract must be supported" in actions[0]["reasons"]
 
     review_path = assert_under(actions[0]["evidence_path"], harness_dir)
     review = json.loads(review_path.read_text(encoding="utf-8"))

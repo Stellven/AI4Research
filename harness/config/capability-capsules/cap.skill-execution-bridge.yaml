@@ -109,25 +109,9 @@ verification:
     - skill_dispatch_result exists
 operator_compatibility:
   preferred:
-    - mini-skill-infra-devops-pane-bridge
-    - mini-skill-security-review-pane-bridge
-    - mini-skill-frontend-ui-pane-bridge
-    - mini-skill-agent-building-pane-bridge
-    - mini-skill-repo-refactor-pane-bridge
-    - mini-skill-frontend-accessibility-pane-bridge
-    - mini-skill-api-backend-pane-bridge
-    - mini-skill-data-sheet-analysis-pane-bridge
-    - mini-skill-github-review-pane-bridge
-    - mini-skill-browser-research-pane-bridge
-    - mini-skill-agent-orchestration-pane-bridge
-    - mini-skill-document-artifact-pane-bridge
-    - mini-skill-eval-verification-pane-bridge
-    - mini-skill-pdf-cli-pane-bridge
-    - mini-skill-research-workflow-pane-bridge
-    - mini-skill-planning-workflow-pane-bridge
-    - mini-skill-cli-pane-bridge
-    - mini-skill-workflow-pane-bridge
-    - mini-skill-dispatch-pane-bridge
+    - mini-codex-gpt55-medium-builder-1
+    - mini-codex-gpt53-spark-builder-1
+    - mini-claude-sonnet-builder-2
   forbidden: []
 provenance:
   owner: opensolar
