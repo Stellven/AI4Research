@@ -4102,16 +4102,43 @@ def _ask_final_answer_boundary(
     answer_status: str,
 ) -> dict[str, Any]:
     retrieval_ready = bool(hits)
+    retrieval_source_ids = _unique_strings(
+        [
+            str(value)
+            for hit in hits
+            if isinstance(hit, dict)
+            for value in (
+                hit.get("path"),
+                Path(str(hit.get("path") or "source")).stem,
+                _ask_source_slug(hit.get("path")),
+            )
+            if str(value or "").strip()
+        ]
+    )
+    model_evidence_ids = _unique_strings([str(item) for item in model_output.get("evidence_ids") or []])
+    cited_retrieval_ids = [
+        evidence_id
+        for evidence_id in model_evidence_ids
+        if any(
+            source_id.lower() == evidence_id.lower()
+            or evidence_id.lower().endswith(f":{source_id.lower()}")
+            for source_id in retrieval_source_ids
+        )
+    ]
     model_ready = (
         model_output.get("status") == "completed"
         and bool(str(model_output.get("answer") or "").strip())
-        and bool(model_output.get("evidence_ids"))
+        and bool(model_evidence_ids)
+        and bool(cited_retrieval_ids)
+        and float(model_output.get("confidence") or 0.0) > 0.0
     )
     blocking_reasons: list[str] = []
     if not retrieval_ready:
         blocking_reasons.append("retrieval sources are missing")
     if not model_ready:
-        blocking_reasons.append(f"model synthesis status is `{model_output.get('status') or 'missing'}`, not completed with answer and evidence ids")
+        blocking_reasons.append(
+            f"model synthesis status is `{model_output.get('status') or 'missing'}`, not completed with answer, confidence, and an evidence id linked to a retrieved source"
+        )
     final_answer_ready = retrieval_ready and model_ready
     return {
         "schema": "autosci_ask_final_answer_boundary.v1",
@@ -4127,7 +4154,9 @@ def _ask_final_answer_boundary(
         "model_provider": str(model_output.get("provider") or ""),
         "model_name": str(model_output.get("model") or ""),
         "model_confidence": model_output.get("confidence", "N/A"),
-        "model_evidence_ids": _unique_strings([str(item) for item in model_output.get("evidence_ids") or []]),
+        "retrieval_source_ids": retrieval_source_ids,
+        "model_evidence_ids": model_evidence_ids,
+        "cited_retrieval_source_ids": cited_retrieval_ids,
         "request_sha256": str(model_output.get("request_sha256") or ""),
         "response_sha256": str(model_output.get("response_sha256") or ""),
         "blocking_reasons": blocking_reasons,
@@ -5966,7 +5995,15 @@ def _init_sources_final_fan_in_boundary(
     fan_in_summary = fan_in_summary if isinstance(fan_in_summary, dict) else {}
     semantic_verified = semantic.get("verified") is True
     provider_boundary_completed = source_boundary.get("completed") is True
-    provider_candidates_ready = bool(candidates) and provider_boundary_completed
+    candidate_refs = _unique_strings(
+        [
+            str(candidate.get("source_ref") or candidate.get("url") or candidate.get("paper_url") or candidate.get("candidate_id") or "")
+            for candidate in candidates
+            if isinstance(candidate, dict)
+        ]
+    )
+    coverage_ready = len(candidates) >= 2 and len(candidate_refs) >= 2
+    provider_candidates_ready = coverage_ready and provider_boundary_completed
     fan_in_completed = (
         fan_in_summary.get("ingest_completed") is True
         and str(fan_in_summary.get("status") or "") in {"completed", "ingest_completed"}
@@ -5994,6 +6031,8 @@ def _init_sources_final_fan_in_boundary(
         limitations.append("Init source finality requires completed non-fixture provider source-channel evidence.")
     if not candidates:
         limitations.append("Init source finality requires provider-backed source candidates.")
+    elif not coverage_ready:
+        limitations.append("Init source finality requires at least two distinct provider-backed source candidates.")
     if not fan_in_completed:
         limitations.append("Init source finality requires approved wiki fan-in writeback.")
     if not graph_log_rebuild_ready:
@@ -6014,6 +6053,8 @@ def _init_sources_final_fan_in_boundary(
         "provider_boundary_completed": provider_boundary_completed,
         "provider_boundary_status": str(source_boundary.get("status") or "missing"),
         "candidate_count": len(candidates),
+        "distinct_candidate_ref_count": len(candidate_refs),
+        "coverage_ready": coverage_ready,
         "fan_in_completed": fan_in_completed,
         "written_count": int(fan_in_summary.get("written_count") or 0),
         "graph_log_rebuild_ready": graph_log_rebuild_ready,
@@ -6339,10 +6380,25 @@ def _daily_arxiv_final_provider_delivery_boundary(
         and str(candidate.get("ranking_rationale") or "").strip()
         for candidate in candidates
     )
+    candidate_refs = _unique_strings(
+        [
+            str(candidate.get("source_ref") or candidate.get("url") or candidate.get("paper_url") or candidate.get("candidate_id") or "")
+            for candidate in candidates
+            if isinstance(candidate, dict)
+        ]
+    )
+    coverage_ready = len(candidates) >= 2 and len(candidate_refs) >= 2
     fan_in_completed = fan_in_summary.get("applied") is True and str(fan_in_summary.get("status") or "") == "completed"
     delivery_completed, delivery_evidence = _daily_arxiv_delivery_completed(contract)
     delivery_or_ingest_completed = fan_in_completed or delivery_completed
-    stage_provider_ready = semantic_verified and provider_boundary_completed and bool(candidates) and ranking_ready
+    approval_contract_verified = contract.get("execution_verified") is True
+    stage_provider_ready = (
+        approval_contract_verified
+        and semantic_verified
+        and provider_boundary_completed
+        and coverage_ready
+        and ranking_ready
+    )
     final_ready = stage_provider_ready and delivery_or_ingest_completed
     limitations: list[str] = []
     if contract.get("execution_verified") is not True:
@@ -6353,6 +6409,8 @@ def _daily_arxiv_final_provider_delivery_boundary(
         limitations.append("Daily arXiv finality requires completed non-fixture provider source-channel evidence.")
     if not candidates:
         limitations.append("Daily arXiv finality requires at least one candidate.")
+    elif not coverage_ready:
+        limitations.append("Daily arXiv finality requires at least two distinct ranked candidates before coverage is treated as ready.")
     if not ranking_ready:
         limitations.append("Daily arXiv finality requires ranking score and rationale for every candidate.")
     if not delivery_or_ingest_completed:
@@ -6366,13 +6424,15 @@ def _daily_arxiv_final_provider_delivery_boundary(
         ),
         "stage_provider_ready": stage_provider_ready,
         "final_delivery_ready": final_ready,
-        "approval_contract_verified": contract.get("execution_verified") is True,
+        "approval_contract_verified": approval_contract_verified,
         "approval_state": str(contract.get("approval_state") or "missing"),
         "semantic_runtime_verified": semantic_verified,
         "semantic_runtime_status": str(semantic.get("status") or "missing"),
         "provider_boundary_completed": provider_boundary_completed,
         "provider_boundary_status": str(source_boundary.get("status") or "missing"),
         "candidate_count": candidate_count,
+        "distinct_candidate_ref_count": len(candidate_refs),
+        "coverage_ready": coverage_ready,
         "source_channels": source_channels,
         "ranking_ready": ranking_ready,
         "fan_in_completed": fan_in_completed,
@@ -6560,6 +6620,7 @@ def _run_daily_arxiv_tool(
         proc = subprocess.run(
             command,
             cwd=REPO_HARNESS_DIR.parent,
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -8161,6 +8222,10 @@ def _novelty_final_acceptance_boundary(evaluation: dict[str, Any]) -> dict[str, 
     provenance_status = _external_novelty_provenance_status(evaluation)
     review_status = _review_llm_status(evaluation)
     score = _novelty_score_from_evaluation(evaluation)
+    external = evaluation.get("external_novelty") if isinstance(evaluation.get("external_novelty"), dict) else {}
+    external_source_count = int(evaluation.get("external_source_count") or external.get("source_count") or 0)
+    provenance = external.get("provenance") if isinstance(external.get("provenance"), dict) else {}
+    completed_provider_count = int(provenance.get("completed_provider_count") or 0)
     blocking_reasons: list[str] = []
     if external_status != "completed":
         blocking_reasons.append(f"external_novelty status is `{external_status}`, not `completed`")
@@ -8168,11 +8233,16 @@ def _novelty_final_acceptance_boundary(evaluation: dict[str, Any]) -> dict[str, 
         blocking_reasons.append(f"external_novelty provenance status is `{provenance_status}`, not `passed`")
     if review_status != "completed":
         blocking_reasons.append(f"review_llm status is `{review_status}`, not `completed`")
+    if external_source_count < 2:
+        blocking_reasons.append("fewer than two external prior-work sources were verified")
+    if completed_provider_count < 1:
+        blocking_reasons.append("no completed external novelty provider was verified")
+    if str(evaluation.get("failed_overlap") or "").strip():
+        blocking_reasons.append("the idea overlaps failed-idea memory")
     if score is None:
         blocking_reasons.append("numeric novelty score is missing")
     final_acceptance_ready = not blocking_reasons
     review_llm = evaluation.get("review_llm") if isinstance(evaluation.get("review_llm"), dict) else {}
-    external = evaluation.get("external_novelty") if isinstance(evaluation.get("external_novelty"), dict) else {}
     return {
         "schema": "autosci_novelty_final_acceptance_boundary.v1",
         "status": "final_acceptance_ready" if final_acceptance_ready else "novelty_acceptance_incomplete",
@@ -8180,7 +8250,9 @@ def _novelty_final_acceptance_boundary(evaluation: dict[str, Any]) -> dict[str, 
         "idea_id": str(evaluation.get("idea_id") or "N/A"),
         "external_novelty_status": external_status,
         "external_novelty_provenance_status": provenance_status,
-        "external_source_count": evaluation.get("external_source_count", external.get("source_count", "N/A")),
+        "external_source_count": external_source_count,
+        "completed_provider_count": completed_provider_count,
+        "failed_overlap": str(evaluation.get("failed_overlap") or ""),
         "review_llm_status": review_status,
         "review_mode": str(evaluation.get("review_mode") or "N/A"),
         "review_available": bool(evaluation.get("review_available")),
@@ -8379,6 +8451,10 @@ def _review_final_acceptance_boundary(inputs: dict[str, Any], raw: dict[str, Any
     review_mode = str(review.get("review_mode") or "").strip()
     llm_status = str(review_llm.get("status") or "").strip()
     evidence_ids = _review_evidence_ids(review, review_llm)
+    proof = review.get("proof_contract") if isinstance(review.get("proof_contract"), dict) else {}
+    proof_blockers = [str(item) for item in proof.get("blockers") or [] if str(item).strip()]
+    separation = proof.get("reviewer_separation") if isinstance(proof.get("reviewer_separation"), dict) else {}
+    independence = separation.get("independence") if isinstance(separation.get("independence"), dict) else {}
     invalid_reasons: list[str] = []
     if review_mode != "review_llm":
         invalid_reasons.append(f"review_mode is `{review_mode or 'missing'}`, not `review_llm`")
@@ -8388,6 +8464,10 @@ def _review_final_acceptance_boundary(inputs: dict[str, Any], raw: dict[str, Any
         invalid_reasons.append(f"review_llm status is `{llm_status or 'missing'}`, not `completed`")
     if not evidence_ids:
         invalid_reasons.append("Review LLM evidence ids are missing")
+    if proof.get("verdict") != "supported" or proof_blockers:
+        invalid_reasons.append("persisted review proof is missing, stale, or unsupported")
+    if independence.get("status") != "independent_provider" or independence.get("execution_bound") is not True:
+        invalid_reasons.append("reviewer execution is not bound to an independent provider")
     final_acceptance_ready = not invalid_reasons
     return {
         "schema": "autosci_review_final_acceptance_boundary.v1",
@@ -8406,6 +8486,10 @@ def _review_final_acceptance_boundary(inputs: dict[str, Any], raw: dict[str, Any
         "score": review.get("score", review_llm.get("score")),
         "recommendation": str(review.get("recommendation") or review_llm.get("recommendation") or "inconclusive"),
         "evidence_ids": evidence_ids,
+        "proof_verdict": str(proof.get("verdict") or "missing"),
+        "proof_blockers": proof_blockers,
+        "reviewer_independence_status": str(independence.get("status") or "missing"),
+        "reviewer_independence_execution_bound": bool(independence.get("execution_bound")),
         "blocking_reasons": invalid_reasons,
         "limitations": [] if final_acceptance_ready else [
             "Final review acceptance requires Review LLM evidence from supplied evidence, command bridge, or provider mode."
@@ -8889,6 +8973,8 @@ def _write_novelty_writeback_sidecar(envelope: dict[str, Any], evaluation_eviden
 
     if not evaluation:
         limitations.append("No idea evaluation was available for novelty write-back.")
+    elif not bool((evaluation.get("final_acceptance_boundary") or {}).get("final_acceptance_ready")):
+        limitations.append("Novelty write-back was skipped because the final multi-source and independent-review acceptance boundary is incomplete.")
     elif str(evaluation.get("source_mode") or "") == "missing" or str(evaluation.get("recommendation") or "") == "inconclusive":
         limitations.append("Novelty write-back was skipped because evaluation evidence is inconclusive.")
     elif _external_novelty_status(evaluation) != "completed":
@@ -14388,6 +14474,7 @@ def _survey_final_coverage_boundary(
     citation_map: dict[str, Any],
     *,
     has_source_evidence: bool,
+    requested_limit: int,
 ) -> dict[str, Any]:
     citations = citation_map.get("citations") if isinstance(citation_map.get("citations"), list) else []
     blocking_reasons: list[str] = []
@@ -14395,6 +14482,18 @@ def _survey_final_coverage_boundary(
         blocking_reasons.append("literature/source evidence was not supplied")
     if not citations:
         blocking_reasons.append("source-backed citation entries are missing")
+    traceable_citations = [
+        item
+        for item in citations
+        if isinstance(item, dict)
+        and str(item.get("citation_id") or item.get("title") or "").strip()
+        and str(item.get("source_ref") or item.get("path") or item.get("arxiv_id") or item.get("url") or "").strip()
+    ]
+    minimum_citation_count = 1 if requested_limit == 1 else 2
+    if len(citations) < minimum_citation_count:
+        blocking_reasons.append(f"fewer than {minimum_citation_count} distinct citation entries were supplied")
+    if len(traceable_citations) != len(citations):
+        blocking_reasons.append("one or more citation entries lack a traceable source reference")
     final_coverage_ready = not blocking_reasons
     return {
         "schema": "autosci_survey_final_coverage_boundary.v1",
@@ -14404,6 +14503,9 @@ def _survey_final_coverage_boundary(
         "exhaustive_coverage_verified": False,
         "source_evidence_supplied": has_source_evidence,
         "citation_count": len(citations),
+        "traceable_citation_count": len(traceable_citations),
+        "minimum_citation_count": minimum_citation_count,
+        "requested_limit": requested_limit,
         "citation_ids": _unique_strings([str(item.get("citation_id") or item.get("title") or "") for item in citations if isinstance(item, dict)]),
         "blocking_reasons": blocking_reasons,
         "limitations": [
@@ -15216,7 +15318,11 @@ def _action_write_survey(envelope: dict[str, Any]) -> dict[str, Any]:
         max_papers = 30
     citation_map = _survey_apply_max_papers(citation_map, max_papers)
     has_citations = bool(citation_map.get("citations"))
-    coverage_boundary = _survey_final_coverage_boundary(citation_map, has_source_evidence=has_source_evidence)
+    coverage_boundary = _survey_final_coverage_boundary(
+        citation_map,
+        has_source_evidence=has_source_evidence,
+        requested_limit=max_papers,
+    )
     limitations = [
         "Survey is assembled from local Solar evidence and supplied discovery/paper citation evidence.",
         *list(coverage_boundary.get("limitations") or []),
@@ -22406,10 +22512,24 @@ def _review_llm_evidence_completed(payloads: list[dict[str, Any]]) -> bool:
         if not isinstance(review, dict):
             review = {}
         review_llm = review.get("review_llm") if isinstance(review.get("review_llm"), dict) else {}
+        final_boundary = outputs.get("final_acceptance_boundary") if isinstance(outputs.get("final_acceptance_boundary"), dict) else {}
+        proof = review.get("proof_contract") if isinstance(review.get("proof_contract"), dict) else {}
+        separation = proof.get("reviewer_separation") if isinstance(proof.get("reviewer_separation"), dict) else {}
+        independence = separation.get("independence") if isinstance(separation.get("independence"), dict) else {}
+        proof_ready = (
+            final_boundary.get("final_acceptance_ready") is True
+            or (
+                proof.get("verdict") == "supported"
+                and not list(proof.get("blockers") or [])
+                and independence.get("status") == "independent_provider"
+                and independence.get("execution_bound") is True
+            )
+        )
         if review and (
             str(review.get("review_mode") or "") == "review_llm"
             and review.get("review_available") is True
             and str(review_llm.get("status") or "completed") == "completed"
+            and proof_ready
         ):
             return True
         evaluations = outputs.get("evaluations") if isinstance(outputs.get("evaluations"), list) else []
@@ -22417,10 +22537,12 @@ def _review_llm_evidence_completed(payloads: list[dict[str, Any]]) -> bool:
             if not isinstance(evaluation, dict):
                 continue
             evaluation_review = evaluation.get("review_llm") if isinstance(evaluation.get("review_llm"), dict) else {}
+            evaluation_boundary = evaluation.get("final_acceptance_boundary") if isinstance(evaluation.get("final_acceptance_boundary"), dict) else {}
             if (
                 str(evaluation.get("review_mode") or "") == "review_llm"
                 and evaluation.get("review_available") is True
                 and str(evaluation_review.get("status") or "") == "completed"
+                and evaluation_boundary.get("final_acceptance_ready") is True
             ):
                 return True
     return False
@@ -22430,12 +22552,23 @@ def _external_novelty_evidence_completed(payloads: list[dict[str, Any]]) -> bool
     for payload in payloads:
         if not _evidence_status_completed(payload):
             continue
-        if str(payload.get("schema") or "") in {"external_novelty.v1", "external_novelty_sources.v1", "literature_discovery.v1"}:
-            return True
         outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+        if str(payload.get("schema") or "") in {"external_novelty.v1", "external_novelty_sources.v1", "literature_discovery.v1"}:
+            sources = outputs.get("sources") if isinstance(outputs.get("sources"), list) else outputs.get("candidates")
+            sources = sources if isinstance(sources, list) else []
+            source_ids = _unique_strings(
+                [
+                    str(item.get("source_id") or item.get("id") or item.get("candidate_id") or item.get("paperId") or item.get("url") or "")
+                    for item in sources
+                    if isinstance(item, dict)
+                ]
+            )
+            if len(source_ids) >= 2:
+                return True
         evaluation = outputs.get("evaluation") if isinstance(outputs.get("evaluation"), dict) else {}
         external = evaluation.get("external_novelty") if isinstance(evaluation.get("external_novelty"), dict) else {}
-        if str(external.get("status") or "") == "completed":
+        boundary = evaluation.get("final_acceptance_boundary") if isinstance(evaluation.get("final_acceptance_boundary"), dict) else {}
+        if str(external.get("status") or "") == "completed" and boundary.get("final_acceptance_ready") is True:
             return True
         evaluations = outputs.get("evaluations") if isinstance(outputs.get("evaluations"), list) else []
         for evaluation_item in evaluations:
@@ -22446,7 +22579,8 @@ def _external_novelty_evidence_completed(payloads: list[dict[str, Any]]) -> bool
                 if isinstance(evaluation_item.get("external_novelty"), dict)
                 else {}
             )
-            if str(external_item.get("status") or "") == "completed":
+            item_boundary = evaluation_item.get("final_acceptance_boundary") if isinstance(evaluation_item.get("final_acceptance_boundary"), dict) else {}
+            if str(external_item.get("status") or "") == "completed" and item_boundary.get("final_acceptance_ready") is True:
                 return True
     return False
 
@@ -23318,6 +23452,7 @@ def _run_wiki_lint_report(wiki_root: Path, output_dir: Path) -> tuple[dict[str, 
         proc = subprocess.run(
             command,
             cwd=REPO_HARNESS_DIR.parent,
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -23387,15 +23522,23 @@ def _check_final_quality_boundary(findings: dict[str, Any], model_output: dict[s
     lint_error_count = int(lint_counts.get("error") or 0)
     if lint_error_count:
         local_blocking.append(f"native wiki lint reported {lint_error_count} error issue(s)")
+    model_findings = [item for item in model_output.get("findings") or [] if isinstance(item, dict)]
+    model_provenance_ready = bool(
+        str(model_output.get("source") or "").strip()
+        and str(model_output.get("model") or model_output.get("provider") or "").strip()
+    )
     model_ready = (
         model_output.get("status") == "completed"
         and bool(str(model_output.get("answer") or "").strip())
         and bool(model_output.get("evidence_ids"))
+        and bool(model_findings)
+        and float(model_output.get("confidence") or 0.0) > 0.0
+        and model_provenance_ready
     )
     blocking_reasons = [*local_blocking]
     if not model_ready:
         blocking_reasons.append(
-            f"model quality review status is `{model_output.get('status') or 'missing'}`, not completed with answer and evidence ids"
+            f"model quality review status is `{model_output.get('status') or 'missing'}`, not completed with answer, findings, confidence, provenance, and evidence ids"
         )
     final_quality_ready = not blocking_reasons
     return {
@@ -23409,6 +23552,8 @@ def _check_final_quality_boundary(findings: dict[str, Any], model_output: dict[s
         "model_provider": str(model_output.get("provider") or ""),
         "model_name": str(model_output.get("model") or ""),
         "model_confidence": model_output.get("confidence", "N/A"),
+        "model_finding_count": len(model_findings),
+        "model_provenance_ready": model_provenance_ready,
         "model_evidence_ids": _unique_strings([str(item) for item in model_output.get("evidence_ids") or []]),
         "request_sha256": str(model_output.get("request_sha256") or ""),
         "response_sha256": str(model_output.get("response_sha256") or ""),

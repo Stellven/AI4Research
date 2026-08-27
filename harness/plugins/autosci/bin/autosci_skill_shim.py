@@ -1994,9 +1994,9 @@ def write_ideate_workspace_projection_proof(
     wiki_refs = [
         output_rel(path)
         for path in updated_paths
-        if "/wiki/ideas/" in str(path)
-        or str(path).endswith("/wiki/graph/edges.jsonl")
-        or str(path).endswith("/wiki/index.md")
+        if "/wiki/ideas/" in str(path).replace("\\", "/")
+        or str(path).replace("\\", "/").endswith("/wiki/graph/edges.jsonl")
+        or str(path).replace("\\", "/").endswith("/wiki/index.md")
     ]
     if not wiki_refs:
         return None
