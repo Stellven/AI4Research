@@ -29,6 +29,7 @@ HARNESS_DIR = (Path(__file__).resolve().parents[3] / 'harness')
 sys.path.insert(0, str(HARNESS_DIR / "lib"))
 
 import multi_task_runner as mtr  # noqa: E402
+import node_runstate  # noqa: E402
 import operator_runtime as optime  # noqa: E402
 
 
@@ -116,6 +117,78 @@ def _make_args() -> mock.MagicMock:
     args.model = ""
     args.backend = ""
     return args
+
+
+def test_terminal_attribution_ignores_historical_task_for_same_node(tmp_harness) -> None:
+    sid = "sprint-attribution-correlation"
+    node_id = "N1"
+    node_runstate.record(
+        mtr.SPRINTS_DIR,
+        sid,
+        node_id,
+        "attribution",
+        {
+            "dispatch_id": "task-current",
+            "operator_id": "operator-current",
+            "phase": "running",
+            "status": "running",
+            "role": "builder",
+        },
+    )
+
+    mtr._finalize_terminal_attribution(
+        {
+            "id": "task-historical",
+            "sprint_id": sid,
+            "node_id": node_id,
+            "status": "failed",
+            "exit_code": 1,
+            "operator_id": "operator-historical",
+            "role": "builder",
+        }
+    )
+
+    attribution = node_runstate.read_snapshot(mtr.SPRINTS_DIR, sid, node_id)["build_attribution"]
+    assert attribution["dispatch_id"] == "task-current"
+    assert attribution["operator_id"] == "operator-current"
+    assert attribution["phase"] == "running"
+
+
+def test_terminal_attribution_finalizes_only_correlated_current_task(tmp_harness) -> None:
+    sid = "sprint-attribution-current"
+    node_id = "N1"
+    node_runstate.record(
+        mtr.SPRINTS_DIR,
+        sid,
+        node_id,
+        "attribution",
+        {
+            "dispatch_id": "task-current",
+            "operator_id": "operator-current",
+            "phase": "running",
+            "status": "running",
+            "role": "builder",
+        },
+    )
+
+    mtr._finalize_terminal_attribution(
+        {
+            "id": "task-current",
+            "sprint_id": sid,
+            "node_id": node_id,
+            "status": "completed",
+            "exit_code": 0,
+            "operator_id": "operator-current",
+            "role": "builder",
+        }
+    )
+
+    attribution = node_runstate.read_snapshot(mtr.SPRINTS_DIR, sid, node_id)["build_attribution"]
+    assert attribution["dispatch_id"] == "task-current"
+    assert attribution["operator_id"] == "operator-current"
+    assert attribution["phase"] == "completed"
+    assert attribution["status"] == "completed"
+    assert attribution["exit_code"] == 0
 
 
 def _base_patches(profile):
@@ -284,6 +357,33 @@ class TestSubmitPathRejection:
 
         assert mtr._operator_submit_rejection_reason(OtherSubmitError("bad envelope")) == ""
 
+    def test_providerless_command_bridge_defaults_to_local_auth(self, monkeypatch):
+        """Local Harness command bridges must not require a provider key_ref."""
+        operator = {
+            "operator_id": "autosci-literature-discover-worker",
+            "backend": "command",
+            "command": "python autosci_bridge.py run --action discover_literature",
+            "enabled": True,
+            "available": True,
+        }
+        monkeypatch.setattr(optime, "get_operator_runtime_state", lambda _operator_id: "idle")
+
+        assert mtr.operator_dispatchable(operator) == (True, "ready")
+
+    def test_external_provider_command_still_requires_key_ref(self, monkeypatch):
+        """The local-bridge default must not admit an uncredentialed provider worker."""
+        operator = {
+            "operator_id": "external-provider-worker",
+            "backend": "command",
+            "provider": "openai",
+            "command": "python provider_worker.py",
+            "enabled": True,
+            "available": True,
+        }
+        monkeypatch.setattr(optime, "get_operator_runtime_state", lambda _operator_id: "idle")
+
+        assert mtr.operator_dispatchable(operator) == (False, "key_ref_missing")
+
     @pytest.mark.parametrize("state", ["leased", "running", "draining", "cooldown"])
     def test_non_dispatchable_operator_is_filtered_before_submit(self, monkeypatch, state):
         """Selection must not keep choosing a busy or cooling-down operator."""
@@ -328,7 +428,7 @@ class TestSubmitPathRejection:
         assert "leased" in result["operator_submit_error"]
         mock_tmux.assert_not_called()
 
-    def test_falls_back_to_legacy_on_submit_value_error(
+    def test_unknown_operator_fails_closed_without_legacy_dispatch(
         self,
         tmp_harness,
         sample_node,
@@ -336,7 +436,7 @@ class TestSubmitPathRejection:
         sample_graph,
         monkeypatch,
     ):
-        """ValueError from submit (e.g. unknown operator) → falls back to legacy."""
+        """An admission failure cannot bypass the lease path through legacy tmux."""
         monkeypatch.setattr(mtr, "OPERATORD_SUBMIT_ENABLED", True)
         monkeypatch.setattr(mtr, "OPERATORD_RESULT_TIMEOUT_SEC", 0)
 
@@ -352,8 +452,10 @@ class TestSubmitPathRejection:
 
             result = mtr.launch_node(graph_path, sample_graph, sample_node, _make_args())
 
-        assert result["operator_submit_fallback"] == "legacy"
-        mock_tmux.assert_called_once()
+        assert result["status"] == "submit_rejected"
+        assert result["operator_submit_reason"] == "operator_admission_failed"
+        assert "operator_submit_fallback" not in result
+        mock_tmux.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

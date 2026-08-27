@@ -1261,6 +1261,36 @@ def count_results(results: list[dict[str, Any]], status: str) -> int:
     return sum(1 for item in results if item.get("status") == status)
 
 
+def discover_runtime_completed(skill: str, action_results: list[dict[str, Any]]) -> bool:
+    """Return true when the discover action's validated evidence is complete.
+
+    Route coverage describes how much of the native AutoSci UX is implemented;
+    it is not the outcome of this invocation.  The bridge action has already
+    validated its evidence, so the aggregate should use that runtime result.
+    """
+    if skill != "discover" or len(action_results) != 1:
+        return False
+    action = action_results[0]
+    if action.get("action") != "discover_literature" or action.get("status") != "passed":
+        return False
+    evidence_ref = str(action.get("evidence_path") or "").strip()
+    if not evidence_ref:
+        return False
+    evidence_path = Path(evidence_ref).expanduser()
+    if not evidence_path.is_absolute():
+        evidence_path = OUTPUT_HARNESS / evidence_path
+    try:
+        evidence = load_json(evidence_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return False
+    boundary = (
+        evidence.get("outputs", {})
+        .get("source_provider_boundary", {})
+        .get("final_shortlist_boundary", {})
+    )
+    return evidence.get("status") == "completed" and boundary.get("final_shortlist_ready") is True
+
+
 def write_skill_run_progress(
     progress_path: Path,
     *,
@@ -1524,10 +1554,13 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
     )
     if skill == "ideate" and not args.gate_mode:
         approval_schema_only_gated = False
+    completed_discover_runtime = discover_runtime_completed(skill, action_results)
     if failed_total:
         execution_status = "failed"
     elif bounded_research_smoke or operator_status == "gated" or approval_schema_only_gated:
         execution_status = "gated"
+    elif completed_discover_runtime:
+        execution_status = "completed"
     elif operator_status == "partial" or route.get("coverage_status") == "partial":
         execution_status = "partial"
     else:
@@ -1582,6 +1615,14 @@ def build_payload(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
                 "selected_skill": skill,
                 "autosci_command": str(route.get("autosci_command") or f"/{skill}"),
                 "execution_status": execution_status,
+                "runtime_status_basis": (
+                    "validated_discover_runtime"
+                    if completed_discover_runtime
+                    else "route_and_binding_coverage"
+                ),
+                "managed_run_path": str(out_path.parent.resolve()),
+                "artifact_root": str(AUTOSCI_ARTIFACT_ROOT.resolve()),
+                "harness_root": str(OUTPUT_HARNESS.resolve()),
                 "side_effect_policy": side_effect_policy,
                 "action_count": len(action_results),
                 "passed_count": count_results(action_results, "passed"),
@@ -2061,6 +2102,11 @@ def cmd_run_skill(args: argparse.Namespace) -> int:
         "schema_only_count": skill_run["schema_only_count"],
         "failed_count": skill_run["failed_count"],
         "work_dir": payload["inputs"]["work_dir"],
+        "managed_run_path": skill_run["managed_run_path"],
+        "artifact_root": skill_run["artifact_root"],
+        "harness_root": skill_run["harness_root"],
+        "runtime_status_basis": skill_run["runtime_status_basis"],
+        "route_coverage_status": skill_run["route"]["coverage_status"],
     }
     scheduler_lifecycle = skill_run.get("scheduler_lifecycle") if isinstance(skill_run.get("scheduler_lifecycle"), dict) else {}
     if scheduler_lifecycle:

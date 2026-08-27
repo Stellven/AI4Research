@@ -3,63 +3,98 @@
   "$id": "https://solar.local/schemas/evidence/literature_discovery.v1.schema.json",
   "title": "Solar Evidence ABI - Literature Discovery",
   "type": "object",
-  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "required": [
+    "schema",
+    "task_id",
+    "sprint_id",
+    "node_id",
+    "status",
+    "inputs",
+    "outputs",
+    "artifacts",
+    "provenance",
+    "limitations"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema": {"const": "literature_discovery.v1"},
     "task_id": {"type": "string", "minLength": 1},
     "sprint_id": {"type": "string", "minLength": 1},
     "node_id": {"type": "string", "minLength": 1},
-    "status": {"$ref": "#/$defs/status"},
-    "inputs": {"type": "object", "additionalProperties": true},
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "inputs": {"type": "object"},
     "outputs": {
       "type": "object",
       "required": ["query", "candidates"],
-      "additionalProperties": true,
       "properties": {
         "query": {"type": "string", "minLength": 1},
-        "candidates": {"type": "array", "items": {"$ref": "#/$defs/candidate"}}
-      }
+        "candidates": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/candidate"}
+        }
+      },
+      "additionalProperties": true
     },
-    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
-    "provenance": {"$ref": "#/$defs/provenance"},
-    "limitations": {"type": "array", "items": {"type": "string"}}
-  },
-  "$defs": {
-    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
-    "artifact": {
-      "type": "object",
-      "required": ["type", "path"],
-      "additionalProperties": false,
-      "properties": {
-        "type": {"type": "string", "minLength": 1},
-        "path": {"type": "string", "minLength": 1},
-        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
-      }
+    "artifacts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/artifact"}
     },
     "provenance": {
       "type": "object",
       "required": ["operator_id", "implementation_package", "timestamp"],
-      "additionalProperties": true,
       "properties": {
         "operator_id": {"type": "string", "minLength": 1},
         "implementation_package": {"type": "string", "minLength": 1},
         "timestamp": {"type": "string", "format": "date-time"}
-      }
+      },
+      "additionalProperties": true
+    },
+    "limitations": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "required": ["type", "path"],
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+      },
+      "additionalProperties": false
     },
     "candidate": {
       "type": "object",
-      "required": ["candidate_id", "title", "source_channels", "ranking_score", "ranking_rationale", "dedup_status"],
-      "additionalProperties": true,
+      "required": [
+        "candidate_id",
+        "title",
+        "source_channels",
+        "ranking_score",
+        "ranking_rationale",
+        "dedup_status"
+      ],
       "properties": {
         "candidate_id": {"type": "string", "minLength": 1},
         "title": {"type": "string", "minLength": 1},
-        "source_channels": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "source_channels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
         "ranking_score": {"type": "number"},
         "ranking_rationale": {"type": "string", "minLength": 1},
-        "dedup_status": {"type": "string", "enum": ["new", "known", "duplicate", "unknown"]},
-        "fetch_status": {"type": "string", "enum": ["not_requested", "fetched", "failed", "skipped"]}
-      }
+        "dedup_status": {
+          "type": "string",
+          "enum": ["new", "known", "duplicate", "unknown"]
+        },
+        "fetch_status": {
+          "type": "string",
+          "enum": ["not_requested", "fetched", "failed", "skipped"]
+        }
+      },
+      "additionalProperties": true
     }
   }
 }

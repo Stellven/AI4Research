@@ -200,6 +200,11 @@ def _s2_retry_delay_seconds() -> float:
     return _env_float("AUTOSCI_S2_RETRY_DELAY_SECONDS", S2_DEFAULT_RETRY_DELAY_SECONDS)
 
 
+def _s2_exponential_backoff_seconds(base_delay: float, retry_number: int) -> float:
+    """Return bounded exponential backoff for a one-based retry number."""
+    return max(0.0, float(base_delay)) * (2 ** max(0, int(retry_number) - 1))
+
+
 def _retry_after_seconds(value: str | None) -> float | None:
     raw = str(value or "").strip()
     if not raw:
@@ -351,7 +356,7 @@ def _s2_request(
         except Exception as exc:
             if attempt >= max_retries:
                 raise RuntimeError(f"Semantic Scholar request failed after {attempt + 1} attempt(s): {type(exc).__name__}") from exc
-            delay = retry_delay * (attempt + 1)
+            delay = _s2_exponential_backoff_seconds(retry_delay, attempt + 1)
             if max_retry_wait_seconds is not None:
                 delay = min(delay, max(0.0, float(max_retry_wait_seconds)))
             _record_s2_retry_event(
@@ -382,7 +387,11 @@ def _s2_request(
                 raise RuntimeError(f"{failure} after {attempt + 1} attempt(s)")
             headers = getattr(response, "headers", {}) or {}
             retry_after = _retry_after_seconds(headers.get("Retry-After"))
-            delay = retry_after if retry_after is not None else retry_delay * (attempt + 1)
+            delay = (
+                retry_after
+                if retry_after is not None
+                else _s2_exponential_backoff_seconds(retry_delay, attempt + 1)
+            )
             retry_budget = max(0.0, float(max_retry_wait_seconds)) if max_retry_wait_seconds is not None else None
             if retry_after is not None and retry_budget is not None and retry_after > retry_budget:
                 _record_s2_retry_event(

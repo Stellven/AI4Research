@@ -37,6 +37,11 @@ from typing import Any, Optional
 
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
+SPRINTS_DIR = Path(
+    os.environ.get("SOLAR_HARNESS_SPRINTS_DIR")
+    or os.environ.get("HARNESS_SPRINTS_DIR")
+    or HARNESS_DIR / "sprints"
+)
 PERSONAS_DIR = HARNESS_DIR / "personas"
 OPERATOR_DAEMON_DIR = HARNESS_DIR / "run" / "operator-daemons"
 PHYSICAL_OPERATORS_PATH = Path(
@@ -402,6 +407,7 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
 
     allowed_output_roots = [
         HARNESS_DIR.expanduser().resolve(strict=False),
+        SPRINTS_DIR.expanduser().resolve(strict=False),
         result_dir.expanduser().resolve(strict=False),
     ]
     if work_dir:
@@ -606,6 +612,32 @@ def _build_command(
 
     # Explicit command in the envelope takes highest priority.
     cmd_val = envelope.get("command")
+    # A scheduler envelope normally repeats the registry command.  Perform
+    # native-Windows translation before treating that repeated value as an
+    # arbitrary shell override; otherwise the POSIX snippet expands
+    # ``$HARNESS_DIR`` under the wrong shell and bypasses the native branch
+    # below.
+    effective_command = str(cmd_val or config.get("command") or "").strip()
+    if os.name == "nt" and _is_codex_command_operator(config) and "codex_operator.py" in effective_command:
+        return [sys.executable, str(HARNESS_DIR / "tools" / "codex_operator.py")]
+    if (
+        os.name == "nt"
+        and backend == "command"
+        and "plugins/autosci/bin/fixed_research_node_adapter.py" in effective_command.replace("\\", "/")
+    ):
+        envelope_path = str((exec_env or {}).get("SOLAR_OPERATOR_ENVELOPE_JSON") or "").strip()
+        if not envelope_path:
+            return [
+                sys.executable,
+                "-c",
+                "import sys; print('fixed research envelope path is unavailable', file=sys.stderr); raise SystemExit(127)",
+            ]
+        return [
+            str(os.environ.get("SOLAR_AUTOSCI_PYTHON") or sys.executable),
+            str(HARNESS_DIR / "plugins" / "autosci" / "bin" / "fixed_research_node_adapter.py"),
+            "--envelope",
+            envelope_path,
+        ]
     if cmd_val:
         if isinstance(cmd_val, list):
             return [str(c) for c in cmd_val]
@@ -1279,7 +1311,48 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 child_envelope["span_id"] = worker_span_id
                 child_envelope["parent_span_id"] = task_span_id
                 child_envelope["causation_id"] = observation_ids["dispatch_id"]
-            exec_env.update(_materialize_envelope_context(result_dir, child_envelope))
+            try:
+                exec_env.update(_materialize_envelope_context(result_dir, child_envelope))
+            except Exception as exc:
+                failure = f"operator envelope materialization failed: {type(exc).__name__}: {exc}"
+                _info(failure)
+                log_path.write_text(f"[ERROR] {failure}\n", encoding="utf-8")
+                finished_at = _now_utc()
+                result_path = write_result(
+                    operator_id=operator_id,
+                    task_id=task_id,
+                    sprint_id=sprint_id,
+                    node_id=node_id,
+                    status="failed_envelope_materialization",
+                    exit_code=78,
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    log_tail=f"[ERROR] {failure}",
+                    model_route=model_route,
+                )
+                _info(f"Result written: {result_path}")
+                try:
+                    envelope_path.unlink()
+                except Exception:
+                    pass
+                try:
+                    release_operator_lease(operator_id, reason="failed_envelope_materialization")
+                except Exception:
+                    pass
+                _state["current_proc"] = None
+                _state["current_task_id"] = None
+                _state["current_state"] = "idle"
+                processed += 1
+                write_heartbeat(
+                    operator_id,
+                    "idle",
+                    resolved_persona=resolved_persona,
+                    model_route=model_route,
+                )
+                if once:
+                    break
+                time.sleep(poll_interval)
+                continue
             exec_env.update(_command_operator_environment(config))
             pm_result_path = _pm_result_path(envelope) if _is_pm_dispatch_task(envelope) else None
             if pm_result_path is not None:

@@ -3877,3 +3877,90 @@ Date: 2026-08-26
   3.59s`. The focused production-service checks passed `3 passed, 1 deselected
   in 0.92s`. Credentials were loaded only into the test process and were not
   printed, archived, or committed.
+
+## Scheduler-to-AutoSci artifact-route compatibility repair
+
+Date: 2026-08-27
+
+- Diagnosed a live scheduler-input journey in which the dispatcher correctly
+  delivered `artifact_routes`, `write_scope`, `work_dir`, and `objective`, but
+  the legacy AutoSci bridge read only `output_dir`, `inputs`, and `mode`. The
+  operator consequently defaulted to fixture mode and wrote outside the
+  scheduler-owned artifact route even though it exited successfully.
+- Upgraded the shared Solar-to-AutoSci envelope adapter so one declared
+  scheduler output route becomes the bridge `output_dir`, objective text is
+  preserved as the request (and as the topic for discovery/idea actions),
+  consumed artifact routes remain typed inputs, and scheduler dispatches no
+  longer silently default to fixture mode. Conflicting output destinations,
+  routes outside `write_scope`, and multiple unrepresentable destinations now
+  fail closed.
+- Applied the same normalization to the live AutoSci skill executor. Its five
+  physical workers now use the scheduler `work_dir`, objective, mode, and
+  output route. The 19 direct AutoSci bridge workers inherit the correction
+  from their shared adapter. The fixed-research adapter already enforced its
+  separate declared-output contract and was not changed.
+- Focused contract checks passed `9 passed`, including a real bridge
+  subprocess that wrote `result.json`, evidence JSON, and `evidence.jsonl`
+  inside the scheduler route. Scheduler/operator regressions passed
+  `76 passed`.
+- The wider parity bridge selection produced `36 passed, 9 failed`; those nine
+  failures are unrelated existing workspace conditions: deleted files under
+  `harness/schemas`, one missing `.env.example` parity reference, and a
+  Windows path-separator expectation. No deleted schema or unrelated shared
+  worktree file was restored or overwritten as part of this repair.
+
+## Scheduler evaluator-capacity, closeout-root, and attribution repair
+
+Date: 2026-08-27
+
+- Fixed tmux pane discovery so an exit code of zero with an empty pane-id
+  expansion is not treated as real capacity. This occurred when a similarly
+  prefixed session existed while the requested evaluator pane did not.
+- Fixed scheduler runtime-projection resource binding so verified projections
+  inherit only the workspace containing both their frozen SchedulerInput and
+  declared work directory. The live discovery artifact is now bound and in
+  scope at its scheduler-owned route.
+- Fixed PM graph-evaluator closeout to honor `HARNESS_SPRINTS_DIR` when the
+  `SOLAR_HARNESS_SPRINTS_DIR` alias is absent. A live evaluator produced its
+  required Markdown and JSON verdicts under the configured runtime root; the
+  previous root mismatch incorrectly reported
+  `expected_artifact_outside_sprints_root`.
+- Fixed historical multi-task status scanning so a terminal task can finalize
+  node attribution only when its immutable dispatch id matches the currently
+  attributed task. Retained failures from an earlier run can no longer replace
+  the current AutoSci worker attribution.
+- Live E2E evidence is under
+  `outputs/e2e-battery-grid-storage-20260827/retry-after-contract-binding-fix/`.
+  The discovery worker completed through live/public providers, routing and
+  binding passed, and an independent API-backed evaluator executed. The
+  evaluator truthfully rejected the shortlist as semantically off-topic, so
+  the node entered its bounded repair state; this run is `FAIL`, not a
+  completed journey pass.
+- Combined focused regression validation passed `114 passed in 50.46s`.
+  No schema deletion or unrelated worktree change was restored or overwritten.
+
+## Planner scope, authenticated discovery, and relevance-gate repair
+
+Date: 2026-08-27
+
+- Fast-forwarded local `ai4research-main` to Stellven commit `a666a88cc`, which
+  introduces the production elastic planner and frozen static scheduler
+  boundary. Two locally modified overlap files were isolated and reapplied;
+  no unrelated worktree content was overwritten.
+- Discovery nodes now retain the applicable scope/evidence-coverage
+  RequirementIR identifiers, exact named subjects, required values, and
+  verifier bindings in the runtime objective. Final-report/publication
+  requirements remain owned by downstream nodes.
+- Added a deterministic pre-publication discovery relevance gate. It archives
+  per-candidate decisions, preserves provider provenance, uses planner
+  `Required coverage:` clauses as auditable anchor groups, and fails closed
+  with an empty inconclusive shortlist when too few relevant sources remain.
+- Added secure Semantic Scholar runtime configuration. The ignored local
+  `harness/.env` value is loaded only for non-fixture AutoSci runs, sent only as
+  the documented `x-api-key` header, never serialized, and propagated by the
+  live journey launcher. Missing `Retry-After` now uses exponential backoff;
+  authenticated access was confirmed with HTTP 200 without recording the key.
+- Verification completed: elastic planner `61 passed`; discovery production,
+  native, and relevance suites `39 passed`; API-key/runtime/backoff checks
+  `11 passed`; direct credential-loader checks `2 passed`. The repository's
+  unrelated local schema deletions and runtime artifacts remain unstaged.

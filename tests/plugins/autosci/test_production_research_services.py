@@ -178,7 +178,11 @@ def test_literature_discovery_reuses_backend_and_hashes_multiple_sources(tmp_pat
                     "source_channels": ["semantic_scholar"],
                 }
                 for index, title in enumerate(
-                    ["Tiered compilation", "WebAssembly JIT trade-offs", "Runtime optimization survey"],
+                    [
+                        "Tiered compilation for WebAssembly runtimes",
+                        "WebAssembly JIT compiler trade-offs",
+                        "Runtime compiler optimization survey",
+                    ],
                     start=1,
                 )
             ],
@@ -198,7 +202,9 @@ def test_literature_discovery_reuses_backend_and_hashes_multiple_sources(tmp_pat
     result = discovery(seed_snapshot=snapshot, payload={"task_contract": {"user_intent": "Survey WebAssembly optimizations"}})
 
     assert observed["allow_network_fetch"] is True
-    assert observed["max_retries"] == 1
+    # `max_attempts_per_provider=1` permits the initial request and zero
+    # retries. The previous assertion counted the initial request as a retry.
+    assert observed["max_retries"] == 0
     assert observed["max_retry_wait_seconds"] == 5.0
     assert result["service_id"] == "autosci-production-literature-discovery"
     assert result["query"] == "WebAssembly runtime compiler optimization"
@@ -232,6 +238,8 @@ def test_literature_discovery_falls_back_after_semantic_retry_budget_is_exceeded
         }
 
     discovery = LiteratureDiscoveryService(tmp_path, backend=backend)
+    discovery._arxiv = lambda query: ([], {"provider": "arxiv", "query": query})
+    discovery._europe_pmc = lambda query: ([], {"provider": "europe_pmc", "query": query})
     discovery._openalex = lambda query: (
         [
             {
@@ -248,6 +256,7 @@ def test_literature_discovery_falls_back_after_semantic_retry_budget_is_exceeded
         ],
         {"provider": "openalex", "request_url": "https://api.openalex.org/works", "response_sha256": "a" * 64},
     )
+    discovery._crossref = lambda query: ([], {"provider": "crossref", "query": query})
 
     result = discovery(
         seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "bounded fallback research"}]},
@@ -260,7 +269,7 @@ def test_literature_discovery_falls_back_after_semantic_retry_budget_is_exceeded
     assert {item["provider"] for item in result["candidates"]} == {"openalex"}
     assert [item["provider"] for item in json.loads(
         (tmp_path / result["provider_usage"][0]["archive_path"]).read_text(encoding="utf-8")
-    )["provider_traces"]] == ["semantic_scholar", "openalex"]
+    )["provider_traces"]] == ["semantic_scholar", "arxiv", "europe_pmc", "openalex", "crossref"]
     assert any("no early retry was attempted" in item for item in result["limitations"])
 
 
@@ -272,7 +281,7 @@ def test_literature_discovery_can_require_provider_diversity(tmp_path: Path) -> 
                 {
                     "candidate_id": f"s2-{index}",
                     "paperId": f"s2-{index}",
-                    "title": f"Semantic source {index}",
+                    "title": f"Semantic provider diversity source {index}",
                     "source_ref": f"https://www.semanticscholar.org/paper/s2-{index}",
                     "source_channels": ["search_s2"],
                 }
@@ -282,21 +291,24 @@ def test_literature_discovery_can_require_provider_diversity(tmp_path: Path) -> 
         }
 
     discovery = LiteratureDiscoveryService(tmp_path, backend=backend, limit=4)
+    discovery._arxiv = lambda query: ([], {"provider": "arxiv", "query": query})
+    discovery._europe_pmc = lambda query: ([], {"provider": "europe_pmc", "query": query})
     discovery._openalex = lambda query: (
         [
             {
                 "source_id": "openalex:1",
                 "canonical_id": "https://openalex.org/W1",
-                "title": "Independent OpenAlex source",
+                "title": "Independent provider diversity OpenAlex source",
                 "url": "https://openalex.org/W1",
                 "provider": "openalex",
                 "metadata": {"year": 2026},
                 "provenance": {"provider": "openalex", "query": query},
-                "content_summary": "Independent provider content.",
+                "content_summary": "Independent provider diversity content.",
             }
         ],
         {"provider": "openalex", "request_url": "https://api.openalex.org/works", "response_sha256": "a" * 64},
     )
+    discovery._crossref = lambda query: ([], {"provider": "crossref", "query": query})
 
     result = discovery(
         seed_snapshot={"seeds": [{"seed_kind": "topic", "content": "provider diversity"}]},
@@ -852,11 +864,11 @@ def test_literature_discovery_shares_the_candidate_budget_across_providers(tmp_p
                     {
                         "id": f"https://openalex.org/W{index}",
                         "doi": f"https://doi.org/10.1000/broad{index}",
-                        "title": f"Loosely related survey {index}",
+                        "title": f"Mamba transformer architecture survey {index}",
                         "publication_year": 2025,
                         "primary_location": {"landing_page_url": f"https://openalex.org/W{index}", "source": {}},
                         "authorships": [],
-                        "abstract_inverted_index": {"survey": [0]},
+                        "abstract_inverted_index": {"mamba": [0], "transformer": [1], "architecture": [2]},
                     }
                     for index in range(1, count + 1)
                 ]
@@ -916,11 +928,11 @@ def test_literature_discovery_collapses_the_same_work_seen_under_two_identifiers
             {
                 "id": "https://openalex.org/W3",
                 "doi": "https://doi.org/10.1000/distinct",
-                "title": "A genuinely different state space survey",
+                "title": "A genuinely different BiMamba transformer survey",
                 "publication_year": 2025,
                 "primary_location": {"landing_page_url": "https://openalex.org/W3", "source": {}},
                 "authorships": [],
-                "abstract_inverted_index": {"survey": [0]},
+                "abstract_inverted_index": {"bimamba": [0], "transformer": [1], "survey": [2]},
             },
         ]
     }
@@ -947,7 +959,7 @@ def test_literature_discovery_collapses_the_same_work_seen_under_two_identifiers
     titles = [item["title"] for item in result["candidates"]]
     assert len(titles) == 2
     assert titles[0] == "When Does BiMamba Beat Transformers in JEPA-style Prediction?"
-    assert titles[1] == "A genuinely different state space survey"
+    assert titles[1] == "A genuinely different BiMamba transformer survey"
 
 
 def test_literature_discovery_parses_europe_pmc_life_science_records(tmp_path: Path) -> None:
@@ -970,7 +982,7 @@ def test_literature_discovery_parses_europe_pmc_life_science_records(tmp_path: P
                 {
                     "id": "PMC13295995",
                     "source": "PMC",
-                    "title": "Advances in Fish Gene Editing",
+                    "title": "Advances in CRISPR Off-Target Screening for Fish Gene Editing",
                     "authorString": "Xu J, Cheng F",
                     "pubYear": "2026",
                     "journalInfo": {"journal": {"title": "Animals"}},

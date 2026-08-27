@@ -235,6 +235,23 @@ def _plan_validator_dispatch_guard(graph: dict[str, Any]) -> dict[str, Any] | No
     otherwise."""
     if not _plan_validator_enabled():
         return None
+    if (graph or {}).get("schema_version") == "solar.scheduler_runtime_projection.v1":
+        try:
+            import scheduler_input as _scheduler_input
+
+            verdict = _scheduler_input.verify_runtime_projection(graph or {})
+        except Exception as exc:
+            verdict = {
+                "ok": False,
+                "errors": [f"SCHEDULER_INPUT_UNCHECKABLE:{type(exc).__name__}"],
+            }
+        if verdict.get("ok"):
+            return None
+        return {
+            "ok": False,
+            "reason": "scheduler_input_dispatch_refused",
+            "errors": verdict.get("errors") or [],
+        }
     try:
         import plan_validator as _plan_validator
     except Exception:
@@ -307,6 +324,39 @@ def _graph_is_certified_generic(graph: dict[str, Any]) -> bool:
     return str((graph or {}).get("workflow_contract_id") or "").strip() == _GENERIC_WORKFLOW_CONTRACT_ID
 
 
+def _scheduler_projection_workspace(
+    graph: dict[str, Any],
+    active_workspace: Path,
+) -> Path | None:
+    """Bind a verified SchedulerInput projection to its active workspace.
+
+    SchedulerInput journeys do not copy legacy ``raw_intent.json`` and
+    ``requirement_ir.json`` files into the runtime directory, so the rc.9
+    resolver cannot establish the workspace through those historical files.
+    The frozen input and runtime work directory are equivalent authorities for
+    this graph kind, but only when the projection verifies and both paths are
+    contained by the already-active workspace.
+    """
+    if str((graph or {}).get("schema_version") or "") != "solar.scheduler_runtime_projection.v1":
+        return None
+    try:
+        import scheduler_input as _scheduler_input
+
+        if not _scheduler_input.verify_runtime_projection(graph).get("ok"):
+            return None
+        active = Path(active_workspace).expanduser().resolve(strict=True)
+        scheduler_ref = graph.get("scheduler_input_ref")
+        scheduler_path = Path(str((scheduler_ref or {}).get("path") or "")).expanduser().resolve(strict=True)
+        work_dir = Path(str(graph.get("runtime_work_dir") or "")).expanduser().resolve(strict=True)
+        if not scheduler_path.is_file() or not work_dir.is_dir():
+            return None
+        if not scheduler_path.is_relative_to(active) or not work_dir.is_relative_to(active):
+            return None
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return None
+    return active
+
+
 def _manifest_anchor(
     sid: str, graph: dict[str, Any], node: dict[str, Any]
 ) -> tuple[Path, dict[str, Any], list[str] | None]:
@@ -326,6 +376,30 @@ def _manifest_anchor(
     keep the HARNESS_DIR anchor and graph-carried roots (P2/P3 proven).
     A returned write_scope of None means "use the node's own write_scope"."""
     graph_roots = graph.get("artifact_roots") if isinstance(graph.get("artifact_roots"), dict) else {}
+    if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+        workdir = Path(str(graph.get("runtime_work_dir") or "")).expanduser()
+        if not workdir.is_absolute():
+            return HARNESS_DIR, {}, None
+        roots: dict[str, str] = {"canonical": str(workdir.resolve(strict=False))}
+        bindings = (
+            graph.get("runtime_input_bindings")
+            if isinstance(graph.get("runtime_input_bindings"), dict)
+            else {}
+        )
+        for index, (artifact_type, binding) in enumerate(sorted(bindings.items())):
+            if not isinstance(binding, dict):
+                continue
+            raw_path = str(binding.get("path") or "").strip()
+            if not raw_path:
+                continue
+            safe_name = "".join(
+                character if character.isalnum() else "_"
+                for character in str(artifact_type)
+            ).strip("_")
+            roots[f"input_{index:03d}_{safe_name or 'artifact'}"] = str(
+                Path(raw_path).expanduser().resolve(strict=False).parent
+            )
+        return workdir.resolve(strict=False), roots, None
     contract_id = str(
         (graph or {}).get("workflow_contract_id")
         or (graph or {}).get("workflow_contract")
@@ -988,6 +1062,8 @@ def _capture_eval_artifact_snapshot(
                 harness_dir=HARNESS_DIR,
             )
             if workspace is None:
+                workspace = _scheduler_projection_workspace(graph, active)
+            if workspace is None:
                 violations.append(
                     {
                         "code": "EVAL_SNAPSHOT_WORKSPACE_BINDING_MISMATCH",
@@ -1604,6 +1680,8 @@ _EVAL_STUCK_REASONS = frozenset({
     "insufficient_evaluator_capacity",
     "insufficient_selected_evaluators",
     "multi_evaluator_quorum_not_implemented",
+    "operator_pool_eval_submit_exception",
+    "operator_pool_eval_submit_failed",
 })
 _EVAL_INTEGRITY_BLOCK_REASONS = frozenset({
     "eval_artifact_snapshot_invalid",
@@ -1814,6 +1892,7 @@ DEFINITION_OF_DONE_POLICY = """## DEFINITION OF DONE · 强制完成约束
 
 sys.path.insert(0, str(HARNESS_DIR / "lib"))
 from graph_scheduler import (  # noqa: E402
+    TERMINAL_STATUSES,
     load_graph,
     save_graph,
     auto_enrich_graph,
@@ -4546,6 +4625,63 @@ def _requeue_node_after_operator_closeout(
     record_execution_attempt_closeout_failure(node, closeout, now=_utc_now())
     pane = str(node.get("assigned_to") or "").strip()
     dispatch_id = str(node.get("dispatch_id") or "").strip()
+    failure_policy = node.get("failure_policy") if isinstance(node.get("failure_policy"), dict) else {}
+    try:
+        max_attempts = max(1, int(failure_policy.get("max_attempts") or 1))
+    except (TypeError, ValueError):
+        max_attempts = 1
+    attempt_record = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
+    try:
+        attempt_sequence = max(1, int(attempt_record.get("sequence") or 1))
+    except (TypeError, ValueError):
+        attempt_sequence = 1
+    exhausted_policy = str(failure_policy.get("on_exhausted") or "").strip()
+    if exhausted_policy and attempt_sequence >= max_attempts:
+        if pane and dispatch_id:
+            release_lease(pane, dispatch_id, "scheduler_input_attempt_budget_exhausted")
+        node["failure_policy_exhausted"] = {
+            "attempt": attempt_sequence,
+            "max_attempts": max_attempts,
+            "on_exhausted": exhausted_policy,
+            "reason": str(closeout.get("reason") or "operator_closeout_failed"),
+            "recorded_at": _utc_now(),
+        }
+        set_node_status(graph, node_id, "failed")
+        cancelled: list[str] = []
+        if exhausted_policy == "fail_run":
+            for other in graph.get("nodes") or []:
+                other_id = str(other.get("id") or "")
+                if not other_id or other_id == node_id:
+                    continue
+                other_status = str(node_status(graph, other_id) or "").strip().lower()
+                if other_status not in TERMINAL_STATUSES:
+                    set_node_status(graph, other_id, "cancelled")
+                    cancelled.append(other_id)
+        _append_dispatch_ledger(
+            "scheduler_input_failure_policy_exhausted",
+            sid,
+            pane,
+            dispatch_id,
+            {
+                "node": node_id,
+                "attempt": attempt_sequence,
+                "max_attempts": max_attempts,
+                "on_exhausted": exhausted_policy,
+                "cancelled_nodes": cancelled,
+                "closeout": closeout,
+            },
+        )
+        return {
+            "node": node_id,
+            "pane": pane,
+            "dispatch_id": dispatch_id,
+            "status": "failed",
+            "reason": "failure_policy_attempt_budget_exhausted",
+            "attempt": attempt_sequence,
+            "max_attempts": max_attempts,
+            "on_exhausted": exhausted_policy,
+            "cancelled_nodes": cancelled,
+        }
     operator_cooldown: dict[str, Any] = {}
     if closeout.get("reason") == "failed_contract_closeout":
         operator_cooldown = _cooldown_operator_after_contract_closeout(
@@ -6171,11 +6307,17 @@ def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, A
     user_workspace = None
     if _workspace_binding is not None:
         try:
+            active_workspace = _workspace_binding.read_active_workspace(HARNESS_DIR)
             user_workspace = _workspace_binding.sprint_workspace_root(
                 SPRINTS_DIR,
                 sid,
                 harness_dir=HARNESS_DIR,
             )
+            if user_workspace is None and active_workspace is not None:
+                graph_path = SPRINTS_DIR / f"{sid}.task_graph.json"
+                graph = json.loads(graph_path.read_text(encoding="utf-8"))
+                if isinstance(graph, dict):
+                    user_workspace = _scheduler_projection_workspace(graph, active_workspace)
         except Exception:
             user_workspace = None
     guard = {
@@ -7377,6 +7519,40 @@ Graph: `{graph_path}`
 """
 
 
+def _autosci_partial_coverage_eval_instruction(node: dict[str, Any]) -> str:
+    """Temporarily relax provenance-only failures for partial AutoSci discovery.
+
+    The discover wrapper explicitly declares partial coverage.  Until its
+    managed-run receipt path is repaired, evaluators may accept a source-backed
+    artifact that passes the deterministic scientific gate.  This does not
+    relax artifact bytes, source quality, scope, or secret-safety checks.
+    """
+    capabilities = {
+        str(item).strip()
+        for item in (node.get("required_capabilities") or [])
+        if str(item).strip()
+    }
+    if "cap.research-literature-discover" not in capabilities:
+        return ""
+    return """
+
+## Temporary AutoSci Partial-Coverage Evaluation Policy
+
+- `cap.research-literature-discover` currently has `coverage_status: partial`.
+- A missing Solar-managed run directory or empty wrapper stdout is a provenance warning, not a
+  standalone FAIL, when the deterministic Solar AutoSci scientific gate is PASS, the governed
+  discovery artifact contains real source URLs/DOIs rather than fixtures or synthetic candidates,
+  and the limitation is recorded in the artifact or handoff.
+- A resource-binding sidecar with `bound:false` or `in_scope:false` is also a warning when every
+  governed output exists beneath the node's exact frozen `write_scope` and the guard decision is
+  `allow`. An actual output outside `write_scope` remains a blocking FAIL.
+- Do not relax schema validation, snapshot/digest integrity, deterministic scientific-gate
+  failures, source-backed-content requirements, secret-safety checks, or acceptance coverage.
+- Under this temporary policy, do not FAIL solely because managed-run provenance is absent or the
+  resource-binding resolver cannot recognize an otherwise in-scope frozen output path.
+"""
+
+
 def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[str, Any], pane: str,
                              dispatch_id: str, *, evaluator_role: str = "primary",
                              evaluator_index: int = 1, evaluator_total: int = 1,
@@ -7403,6 +7579,7 @@ def build_eval_dispatch_text(graph: dict[str, Any], graph_path: str, node: dict[
     research_quality_gate_instruction = _deepresearch_quality_gate_eval_instruction(node, eval_json)
     autosci_gate = node.get("autosci_scientific_gate") if isinstance(node.get("autosci_scientific_gate"), dict) else {}
     autosci_scientific_gate_instruction = ""
+    autosci_partial_coverage_instruction = _autosci_partial_coverage_eval_instruction(node)
     if _node_in_autosci_workflow(graph, node):
         autosci_scientific_gate_instruction = f"""
 
@@ -7564,6 +7741,7 @@ solar-harness session evaluate "{sid}" --json
   - `verification_results`: 记录 `checked_artifacts / missing_artifacts / proof_gate`
 {research_quality_gate_instruction}
 {autosci_scientific_gate_instruction}
+{autosci_partial_coverage_instruction}
 
 ## Required Outputs
 
@@ -7651,12 +7829,21 @@ solar-harness session evaluate "{sid}" --json
 
 def _pane_exists(pane: str) -> bool:
     try:
-        return subprocess.run(
+        completed = subprocess.run(
             ["tmux", "display-message", "-p", "-t", pane, "#{pane_id}"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
             timeout=2,
-        ).returncode == 0
+        )
+        # tmux target matching accepts unique session-name prefixes.  Worse,
+        # some missing pane targets return rc=0 with an empty expansion when a
+        # similarly-prefixed session exists (for example ``solar-harness-demo``
+        # while probing ``solar-harness:0.3``).  A real pane always expands to
+        # a non-empty ``%<number>`` id, so require that proof instead of trusting
+        # the process exit code alone.  This prevents phantom worker/evaluator
+        # capacity from entering deterministic dispatch selection.
+        pane_id = completed.stdout.strip()
+        return completed.returncode == 0 and bool(re.fullmatch(r"%\d+", pane_id))
     except Exception:
         return False
 
@@ -8645,6 +8832,12 @@ def _broker_env(sprint_id: str | None = None) -> dict[str, str]:
     preserving the unchanged-dispatch-path guarantee (LR-04).
     """
     env = os.environ.copy()
+    # multi_task_runner historically uses HARNESS_SPRINTS_DIR while the PM
+    # dispatcher uses SOLAR_HARNESS_SPRINTS_DIR.  Pin both child-facing names
+    # to this dispatcher's already-resolved authority so evaluation artifacts
+    # are checked against the same runtime root.
+    env["HARNESS_SPRINTS_DIR"] = str(SPRINTS_DIR)
+    env["SOLAR_HARNESS_SPRINTS_DIR"] = str(SPRINTS_DIR)
     env.setdefault("SOLAR_BROKER_ENABLED", "0")
     if not env.get("SOLAR_PM_DEFAULT_PROVIDERS") and env.get("SOLAR_MULTI_TASK_DEFAULT_PROVIDERS"):
         env["SOLAR_PM_DEFAULT_PROVIDERS"] = env["SOLAR_MULTI_TASK_DEFAULT_PROVIDERS"]
@@ -9875,7 +10068,15 @@ def _operator_pool_role_probe(role: str) -> dict[str, Any]:
     env = _broker_env()
     env["SOLAR_PM_DISPATCH_ALLOW_DIRECT"] = "1"
     try:
-        completed = subprocess.run(cmd, capture_output=True, text=True, timeout=8, env=env)
+        completed = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=8,
+            env=env,
+        )
     except Exception:
         completed = None
     if completed is not None and completed.returncode == 0 and "operator_id" in completed.stdout:
@@ -10000,6 +10201,52 @@ def _evaluator_operator_pool_workers() -> list[dict[str, Any]]:
         },
     )
     return [worker]
+
+
+def _scheduler_input_bound_evaluators(graph: dict[str, Any]) -> list[dict[str, Any]]:
+    """Expose only the exact evaluators frozen into SchedulerInput nodes."""
+    if not isinstance(graph.get("scheduler_input_ref"), dict):
+        return []
+    operator_ids: list[str] = []
+    for node in graph.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        binding = node.get("evaluation_binding")
+        if not isinstance(binding, dict):
+            continue
+        for value in binding.get("semantic_evaluator_ids") or []:
+            operator_id = str(value or "").strip()
+            if operator_id and operator_id not in operator_ids:
+                operator_ids.append(operator_id)
+    workers: list[dict[str, Any]] = []
+    for operator_id in operator_ids:
+        try:
+            import operator_runtime  # type: ignore
+
+            config = operator_runtime.get_operator_config(operator_id)
+        except Exception:
+            config = None
+        if not isinstance(config, dict) or not bool(config.get("enabled", True)):
+            continue
+        state = _operator_runtime_state_for_graph(operator_id)
+        busy = state in {"leased", "running", "draining"}
+        workers.append(
+            {
+                "pane": f"operator-pool:evaluator:{operator_id}",
+                "operator_id": operator_id,
+                "models": [str(config.get("model") or "operator-pool")],
+                "skills": ["review", "testing", "bash"],
+                "busy": busy,
+                "title": f"scheduler-input evaluator {operator_id}",
+                "evaluator_host_role": "operator_pool",
+                "unavailable_reason": "operator_pool_evaluator_busy" if busy else "",
+                "quota_exhausted": [],
+                "rate_limit_operator_blocks": [],
+                "current_command": "",
+                "scheduler_input_binding": True,
+            }
+        )
+    return workers
 
 
 def _graph_queue_dispatch_role(payload: dict[str, Any], node: dict[str, Any], assignment: dict[str, Any]) -> str:
@@ -10224,7 +10471,15 @@ def _submit_builder_to_operator_pool(
     env.setdefault("SOLAR_PM_DISPATCH_SOURCE", "graph_node_dispatcher")
 
     try:
-        completed = subprocess.run(cmd, capture_output=True, text=True, timeout=45, env=env)
+        completed = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=45,
+            env=env,
+        )
     except Exception as exc:
         return {
             "ok": False,
@@ -10451,6 +10706,7 @@ def _submit_eval_to_operator_pool(
     eval_md_path: str = "",
     eval_json_path: str = "",
     artifact_snapshot: dict[str, Any] | None = None,
+    operator_id: str = "",
 ) -> dict[str, Any]:
     dispatch_preview = instruction_file.read_text(encoding="utf-8")
     if len(dispatch_preview) > 60000:
@@ -10509,6 +10765,8 @@ def _submit_eval_to_operator_pool(
         "--context",
         context,
     ]
+    if operator_id:
+        cmd[cmd.index("--sprint"):cmd.index("--sprint")] = ["--operator", operator_id]
     snapshot = artifact_snapshot if isinstance(artifact_snapshot, dict) else {}
     snapshot_path = str(snapshot.get("path") or "")
     snapshot_is_valid = (
@@ -13528,8 +13786,8 @@ def _maybe_execute_contract_gate(graph: dict[str, Any], sid: str, node: dict[str
     }
 
 
-def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
-                        force: bool = False, max_items: int = 0) -> dict[str, Any]:
+def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: int = 900,
+                                  force: bool = False, max_items: int = 0) -> dict[str, Any]:
     graph = load_graph(graph_path)
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     validator_refusal = _plan_validator_dispatch_guard(graph)
@@ -13544,7 +13802,14 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
     dispatched: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     used_evaluator_panes: set[str] = set()
-    evaluators = _order_evaluators_for_graph(graph, _discover_evaluators(dry_run))
+    bound_evaluators = _scheduler_input_bound_evaluators(graph)
+    if bound_evaluators:
+        # A frozen SchedulerInput binding is the complete allowed evaluator
+        # set. Do not probe or append ambient cockpit/global-pool capacity.
+        evaluators = bound_evaluators
+    else:
+        evaluators = _discover_evaluators(dry_run)
+    evaluators = _order_evaluators_for_graph(graph, evaluators)
 
     for node in graph.get("nodes", []):
         if max_items and len(dispatched) >= max_items:
@@ -13629,7 +13894,8 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
             )
             node["evaluation_plan_requested"] = requested_plan
             node["evaluation_plan_runtime"] = runtime_plan
-            node["evaluation_plan"] = runtime_plan
+            if graph.get("schema_version") != "solar.scheduler_runtime_projection.v1":
+                node["evaluation_plan"] = runtime_plan
             node["evaluation_plan_updated_at"] = _utc_now()
 
             dispatch_group_id = f"graph-eval-{sid}-{node_id}-{_utc_now().replace(':', '').replace('-', '')}"
@@ -13816,7 +14082,8 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
         runtime_plan["capacity"] = runtime_capacity
         node["evaluation_plan_requested"] = requested_plan
         node["evaluation_plan_runtime"] = runtime_plan
-        node["evaluation_plan"] = runtime_plan
+        if graph.get("schema_version") != "solar.scheduler_runtime_projection.v1":
+            node["evaluation_plan"] = runtime_plan
         node["evaluation_plan_updated_at"] = _utc_now()
         if not runtime_capacity.get("available_evaluators"):
             reason = "evaluator_temporarily_busy" if runtime_capacity.get("busy_evaluators") else "no_available_evaluator"
@@ -13904,6 +14171,7 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
             planned_assignments.append(
                 {
                     "pane": pane,
+                    "operator_id": str(evaluator.get("operator_id") or ""),
                     "dispatch_id": f"{dispatch_group_id}-q{idx}",
                     "role": role,
                     "index": idx,
@@ -14008,6 +14276,7 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                     eval_md_path=str(assignment["eval_md_path"]),
                     eval_json_path=str(assignment["eval_json_path"]),
                     artifact_snapshot=artifact_snapshot,
+                    operator_id=str(assignment.get("operator_id") or ""),
                 )
                 sent = bool(submit_result.get("ok"))
                 if sent:
@@ -14022,8 +14291,13 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
                 submit_result = {}
                 sent = _send_to_pane(pane, instruction_file, dry_run, sid=sid, dispatch_id=str(assignment["dispatch_id"]))
             if not sent:
-                send_failed = {"assignment": assignment, "instruction_file": str(instruction_file)}
                 reason = str(submit_result.get("reason") or _pane_unavailable_reason(pane) or "eval_send_failed")
+                send_failed = {
+                    "assignment": assignment,
+                    "instruction_file": str(instruction_file),
+                    "reason": reason,
+                    "submit_result": deepcopy(submit_result),
+                }
                 if not str(assignment["pane"]).startswith("operator-pool:"):
                     marker = _mark_pane_recover_retryable if _recoverable_pane_blocker(reason) else _mark_pane_recover_cooldown
                     marker(pane, reason, sid=sid, dispatch_id=str(assignment["dispatch_id"]))
@@ -14057,7 +14331,8 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
             skipped.append({
                 "node": node_id,
                 "pane": str(send_failed["assignment"]["pane"]),
-                "reason": "send_failed",
+                "reason": str(send_failed.get("reason") or "eval_send_failed"),
+                "submit_result": send_failed.get("submit_result") or {},
                 "evaluation_plan": runtime_plan,
             })
             continue
@@ -14091,6 +14366,45 @@ def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
         "skipped": skipped,
         "terminalized": terminalized,
     }
+
+
+def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
+                        force: bool = False, max_items: int = 0) -> dict[str, Any]:
+    """Claim and submit evaluator work as one collision-free graph transaction.
+
+    Operator closeout callbacks and the foreground scheduler can both observe a
+    newly reviewing node.  They must share the same graph lock used by builder
+    dispatch; otherwise both can submit an evaluator before either assignment
+    is durable.
+    """
+    if dry_run:
+        return _dispatch_node_evals_unlocked(
+            graph_path,
+            dry_run=True,
+            ttl=ttl,
+            force=force,
+            max_items=max_items,
+        )
+    handle = _try_acquire_scheduler_tick_lock(graph_path)
+    if handle is None:
+        return {
+            "ok": True,
+            "reason": "scheduler_tick_in_progress",
+            "graph": graph_path,
+            "dispatched": [],
+            "skipped": [],
+            "terminalized": [],
+        }
+    try:
+        return _dispatch_node_evals_unlocked(
+            graph_path,
+            dry_run=False,
+            ttl=ttl,
+            force=force,
+            max_items=max_items,
+        )
+    finally:
+        _release_scheduler_tick_lock(handle)
 
 
 def _account_eval_dispatch_failures(

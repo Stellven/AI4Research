@@ -81,7 +81,11 @@ PM_INBOX_DIR = HARNESS_DIR / "run" / "pm-inbox"
 OPERATOR_INBOX_DIR = HARNESS_DIR / "run" / "operator-inbox"
 OPERATOR_RESULTS_DIR = HARNESS_DIR / "run" / "operator-results"
 OPERATOR_STATUS_DIR = HARNESS_DIR / "run" / "operator-status"
-SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR", HARNESS_DIR / "sprints"))
+SPRINTS_DIR = Path(
+    os.environ.get("SOLAR_HARNESS_SPRINTS_DIR")
+    or os.environ.get("HARNESS_SPRINTS_DIR")
+    or HARNESS_DIR / "sprints"
+)
 REPO_HARNESS_DIR = Path(__file__).resolve().parents[1]
 
 # ── 角色别名映射 ───────────────────────────────────────────────────────────────
@@ -4079,7 +4083,17 @@ def cmd_route_preflight(args: argparse.Namespace) -> int:
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
+def _configure_utf8_console() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (OSError, ValueError):
+                pass
+
 def main() -> int:
+    _configure_utf8_console()
     p = argparse.ArgumentParser(
         prog="pm_dispatch",
         description="PM 入口：默认只捕获 RawIntent；直接派发需显式 SOLAR_PM_DISPATCH_ALLOW_DIRECT=1",

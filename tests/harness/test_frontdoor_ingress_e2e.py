@@ -112,8 +112,12 @@ def test_three_ingresses_share_frontdoor_artifact_shape(tmp_path):
     # Source channel is preserved per ingress, but the shared frontdoor metadata
     # (research_artifact, require_research_artifact routing hint) is identical.
     for channel, intent_id in intent_ids.items():
-        raw = json.loads((tmp_path / "intents" / intent_id / "raw_intent.json").read_text())
-        ir = json.loads((tmp_path / "intents" / intent_id / "requirement_ir.json").read_text())
+        raw = json.loads(
+            (tmp_path / "intents" / intent_id / "raw_intent.json").read_text(encoding="utf-8")
+        )
+        ir = json.loads(
+            (tmp_path / "intents" / intent_id / "requirement_ir.json").read_text(encoding="utf-8")
+        )
         assert raw["source"]["channel"] == channel
         assert raw["routing_hints"]["require_research_artifact"] is True, (
             "Frontdoor MUST flip require_research_artifact to True whenever research metadata is provided"
@@ -241,12 +245,16 @@ def test_research_artifact_round_trips_to_compiled_package(tmp_path, channel):
         f"{channel} ingest with research must consume successfully; got status={result['status']}"
     )
 
-    ir = json.loads((tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text())
+    ir = json.loads(
+        (tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text(encoding="utf-8")
+    )
     assert ir["source_inputs"]["research_artifact"]["conversation_id"] == research["conversation_id"]
     assert ir["source_inputs"]["research_artifact"]["project_name"] == research["project_name"]
 
-    product_brief = (tmp_path / "sprints" / f"{sprint_id}.product-brief.md").read_text()
-    prd = (tmp_path / "sprints" / f"{sprint_id}.prd.md").read_text()
+    product_brief = (
+        tmp_path / "sprints" / f"{sprint_id}.product-brief.md"
+    ).read_text(encoding="utf-8")
+    prd = (tmp_path / "sprints" / f"{sprint_id}.prd.md").read_text(encoding="utf-8")
     for doc_name, doc in (("product-brief.md", product_brief), ("prd.md", prd)):
         assert "## Research Artifact Inputs" in doc, (
             f"{channel}: {doc_name} missing Research Artifact Inputs section"

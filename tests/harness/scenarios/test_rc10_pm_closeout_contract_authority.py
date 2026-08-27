@@ -17,6 +17,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 import types
 from pathlib import Path
@@ -62,6 +64,35 @@ def sprints(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def _names(paths: list[Path]) -> list[str]:
     return [path.name for path in paths]
+
+
+def test_pm_dispatch_honors_runtime_harness_sprints_dir_without_solar_alias(
+    tmp_path: Path,
+) -> None:
+    runtime_root = tmp_path / "runtime"
+    harness_root = tmp_path / "harness"
+    env = dict(os.environ)
+    env.pop("SOLAR_HARNESS_SPRINTS_DIR", None)
+    env["HARNESS_DIR"] = str(harness_root)
+    env["HARNESS_SPRINTS_DIR"] = str(runtime_root)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                f"sys.path.insert(0, {str(HARNESS / 'tools')!r}); "
+                "import pm_dispatch; print(pm_dispatch.SPRINTS_DIR)"
+            ),
+        ],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert Path(completed.stdout.strip()) == runtime_root
 
 
 def test_logical_verifier_graph_node_requires_handoff_not_eval_sidecars(sprints: Path) -> None:

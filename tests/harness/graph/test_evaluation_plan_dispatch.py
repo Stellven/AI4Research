@@ -302,6 +302,57 @@ def test_build_eval_dispatch_text_requires_research_gate_for_deepresearch_node(m
     assert "DeepResearch deterministic artifact gate is **not required**" not in text
 
 
+def test_discover_evaluator_temporarily_treats_missing_managed_run_as_warning(monkeypatch, tmp_path) -> None:
+    sid = "sid-autosci-discover-partial"
+    node = {
+        "id": "node-discover",
+        "goal": "Discover source-backed literature",
+        "required_capabilities": ["cap.research-literature-discover"],
+        "write_scope": [str(tmp_path / "literature_discovery.v1.json")],
+        "autosci_scientific_gate": {
+            "json_path": str(tmp_path / "scientific-gate.json"),
+            "verdict": "PASS",
+            "sha256": "a" * 64,
+        },
+    }
+    _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid, "node-discover")
+
+    text = gnd.build_eval_dispatch_text(
+        {"sprint_id": sid},
+        "/tmp/graph.json",
+        node,
+        "operator-pool:evaluator.0",
+        "did-discover",
+    )
+
+    assert "## Temporary AutoSci Partial-Coverage Evaluation Policy" in text
+    assert "missing Solar-managed run directory or empty wrapper stdout" in text
+    assert "provenance warning, not a" in text
+    assert "do not FAIL solely because managed-run provenance is absent" in text
+    assert "An actual output outside `write_scope` remains a blocking FAIL" in text
+    assert "Do not relax schema validation" in text
+
+
+def test_temporary_discover_policy_does_not_relax_other_evaluators(monkeypatch, tmp_path) -> None:
+    sid = "sid-non-discover"
+    node = {
+        "id": "node-report",
+        "goal": "Draft a report",
+        "required_capabilities": ["cap.research-report-draft"],
+    }
+    _patch_eval_dispatch_paths(monkeypatch, tmp_path, sid, "node-report")
+
+    text = gnd.build_eval_dispatch_text(
+        {"sprint_id": sid},
+        "/tmp/graph.json",
+        node,
+        "operator-pool:evaluator.0",
+        "did-report",
+    )
+
+    assert "Temporary AutoSci Partial-Coverage Evaluation Policy" not in text
+
+
 def test_synthesis_only_node_does_not_inherit_grounded_report_bundle_proofs() -> None:
     node = {
         "id": "R2",

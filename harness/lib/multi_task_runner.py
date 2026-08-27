@@ -17,6 +17,7 @@ import sys
 import time
 import unicodedata
 import uuid
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,17 @@ from executable_node import (
 
 _READLINE: Any | None = None
 _READLINE_CHECKED = False
+
+
+def _configure_utf8_console() -> None:
+    """Keep the Windows CLI from crashing when the active code page is CP1252."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (OSError, ValueError):
+                pass
 
 
 def _screen_readline() -> Any | None:
@@ -647,7 +659,18 @@ def operator_dispatchable(operator: dict[str, Any]) -> tuple[bool, str]:
             pass
         return False, f"quota_guard_state={operator.get('quota_guard_state')}"
     key_ref = str(operator.get("key_ref") or "").strip()
-    if str(operator.get("auth_mode") or "").lower() not in {"none", "local", "subscription"} and not key_ref:
+    auth_mode = str(operator.get("auth_mode") or "").strip().lower()
+    backend = str(operator.get("backend") or "").strip().lower()
+    provider = str(operator.get("provider") or operator.get("vendor") or "").strip()
+    command = str(operator.get("command") or "").strip()
+    # A provider-less command operator is a local Harness bridge.  It may call
+    # provider-aware code behind that bridge, but the physical operator itself
+    # does not own an API credential.  External-provider command operators must
+    # continue to declare either a credential reference or a credential-free
+    # auth mode explicitly.
+    if not auth_mode and backend == "command" and command and not provider:
+        auth_mode = "local"
+    if auth_mode not in {"none", "local", "subscription"} and not key_ref:
         return False, "key_ref_missing"
     
     # Check dynamic status override from operator_runtime if available
@@ -1175,6 +1198,57 @@ def _operator_backend_runnable(operator: dict[str, Any]) -> bool:
 
 
 def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
+    frozen_candidates = node.get("physical_candidates")
+    if isinstance(frozen_candidates, list) and frozen_candidates:
+        observations: list[dict[str, Any]] = []
+        selected: dict[str, Any] | None = None
+        for candidate in sorted(
+            (item for item in frozen_candidates if isinstance(item, dict)),
+            key=lambda item: (int(item.get("rank") or 0), str(item.get("operator_id") or "")),
+        ):
+            operator_id = str(candidate.get("operator_id") or "").strip()
+            operator = resolve_operator(operator_id)
+            ok, reason = operator_dispatchable(operator)
+            if ok and not _operator_backend_runnable(operator):
+                ok, reason = False, "backend_cli_unavailable"
+            if ok and operator_in_failure_cooldown(operator_id):
+                ok, reason = False, "runtime_failure_cooldown"
+            observation = {
+                "operator_id": operator_id,
+                "state": "READY" if ok else "UNAVAILABLE",
+                "rank": int(candidate.get("rank") or 0),
+            }
+            if reason:
+                observation["reason"] = reason
+            observations.append(observation)
+            if ok and selected is None:
+                selected = dict(operator)
+                selected["scheduler_candidate_rank"] = observation["rank"]
+                selected["scheduler_candidate_observations"] = observations
+                break
+        if selected is not None:
+            # Record lower-ranked entries as not evaluated; no scheduler may
+            # replace the first ready frozen candidate with a preferred model.
+            seen = {item["operator_id"] for item in observations}
+            for candidate in sorted(
+                (item for item in frozen_candidates if isinstance(item, dict)),
+                key=lambda item: (int(item.get("rank") or 0), str(item.get("operator_id") or "")),
+            ):
+                operator_id = str(candidate.get("operator_id") or "").strip()
+                if operator_id not in seen:
+                    observations.append({
+                        "operator_id": operator_id,
+                        "state": "NOT_EVALUATED_AFTER_SELECTION",
+                        "rank": int(candidate.get("rank") or 0),
+                    })
+            selected["scheduler_candidate_observations"] = observations
+            return selected, ""
+        node["scheduler_candidate_observations"] = observations
+        reasons = ",".join(
+            f"{item['operator_id']}={item.get('reason', item['state'])}" for item in observations
+        )
+        return None, f"frozen_physical_candidates_unavailable:{reasons}"
+
     preferred = str(node.get("preferred_operator") or "").strip()
     if preferred:
         operator = resolve_operator(preferred)
@@ -1752,6 +1826,11 @@ def select_profile(node: dict[str, Any], profile_override: str = "", model_overr
         operator, fallback_reason = select_operator(node, selected)
         if operator:
             selected = apply_operator_to_profile(selected, operator, fallback_reason)
+            if operator.get("scheduler_candidate_observations"):
+                selected["scheduler_candidate_observations"] = deepcopy(operator["scheduler_candidate_observations"])
+                selected["scheduler_candidate_rank"] = operator.get("scheduler_candidate_rank")
+        elif node.get("physical_candidates"):
+            raise ValueError(fallback_reason or "frozen_physical_candidates_unavailable")
         elif node.get("preferred_operator"):
             selected["operator_id"] = str(node.get("preferred_operator") or "")
             selected["operator_fallback_reason"] = fallback_reason or "preferred_operator_unavailable"
@@ -1939,6 +2018,19 @@ def _unregister_scheduler_pid(pid: int | None = None) -> None:
 
 
 def _pid_is_alive(pid: int) -> bool:
+    if os.name == "nt":
+        # ``os.kill(pid, 0)`` maps to CTRL_C_EVENT on Windows and interrupts
+        # the entire console group.  Query the process handle instead.
+        import _winapi
+
+        try:
+            handle = _winapi.OpenProcess(0x1000, False, int(pid))
+        except OSError:
+            return False
+        try:
+            return _winapi.GetExitCodeProcess(handle) == 259
+        finally:
+            _winapi.CloseHandle(handle)
     try:
         os.kill(int(pid), 0)
         return True
@@ -2449,6 +2541,15 @@ def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
         attr = snap.get("build_attribution") if isinstance(snap.get("build_attribution"), dict) else {}
         if not attr:
             attr = snap.get("attribution") if isinstance(snap.get("attribution"), dict) else {}
+        row_dispatch_id = str(row.get("id") or row.get("task_id") or "").strip()
+        attributed_dispatch_id = str(attr.get("dispatch_id") or "").strip()
+        # list_task_rows() scans retained history as well as the current run.
+        # A terminal status for an older task sharing the same sprint/node must
+        # never replace the active attempt's attribution.  Correlate by the
+        # immutable dispatch id before finalizing; the current task was already
+        # recorded at launch by _record_node_attribution().
+        if attributed_dispatch_id and row_dispatch_id != attributed_dispatch_id:
+            return
         if attr.get("phase") == "completed" and attr.get("status") == status and attr.get("exit_code") == row.get("exit_code"):
             return
         node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
@@ -2462,7 +2563,7 @@ def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
             "operator_id": row.get("operator_id"),
             "profile": row.get("profile"),
             "role": row.get("role"),
-            "dispatch_id": row.get("id"),
+            "dispatch_id": row_dispatch_id,
         })
     except Exception:
         pass
@@ -3085,6 +3186,35 @@ def graph_files(explicit: list[str]) -> list[Path]:
     return sorted(SPRINTS_DIR.glob("*.task_graph.json"), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def prepare_scheduler_input_args(args: argparse.Namespace) -> list[str]:
+    """Validate frozen SchedulerInput files and append compatibility projections."""
+    inputs = list(getattr(args, "scheduler_input", []) or [])
+    if not inputs:
+        return list(getattr(args, "graph", []) or [])
+    import scheduler_input
+
+    output_dir = Path(getattr(args, "scheduler_runtime_dir", "") or SPRINTS_DIR)
+    artifact_bindings: dict[str, str] = {}
+    for raw_binding in list(getattr(args, "artifact_binding", []) or []):
+        artifact_type, separator, path = str(raw_binding).partition("=")
+        if not separator or not artifact_type.strip() or not path.strip():
+            raise ValueError(f"invalid --artifact-binding (expected TYPE=PATH): {raw_binding}")
+        artifact_bindings[artifact_type.strip()] = path.strip()
+    graphs = list(getattr(args, "graph", []) or [])
+    for source in inputs:
+        graph_path = scheduler_input.prepare_runtime_graph(
+            source,
+            output_dir,
+            run_contract_path=(getattr(args, "run_contract", "") or None),
+            artifact_bindings=artifact_bindings,
+        )
+        graph_value = str(graph_path)
+        if graph_value not in graphs:
+            graphs.append(graph_value)
+    args.graph = graphs
+    return graphs
+
+
 def output_log_failure_kind(task_id_value: str) -> str:
     if not task_id_value:
         return ""
@@ -3479,6 +3609,26 @@ Persona file: `{persona_path}`
 
 {lines(node.get("write_scope"))}
 {structured_validation}
+## Frozen Artifact Contract
+
+Consumes:
+{lines((node.get("artifact_contract") or {}).get("consumes"))}
+
+Produces:
+{lines((node.get("artifact_contract") or {}).get("produces"))}
+
+## Frozen Evaluation Binding
+
+{lines(node.get("evaluation_binding"))}
+
+## Requirement Trace
+
+{lines(node.get("requirement_ids"))}
+
+## Capability Capsule Binding
+
+{lines(node.get("capsule_binding"))}
+
 ## Required Skills
 
 {lines(node.get("required_skills"))}
@@ -3862,6 +4012,16 @@ def _operator_submit_rejection_reason(error: Exception) -> str:
     if reason in {"operator_busy", "operator_unavailable"}:
         return reason
     text = str(error or "").strip().lower()
+    if any(
+        marker in text
+        for marker in (
+            "admission_failed:",
+            "unknown operator",
+            "task envelope missing required keys",
+            "persona",
+        )
+    ):
+        return "operator_admission_failed"
     if "duplicate active lease" in text:
         return "operator_busy"
     if "not dispatchable" in text and any(
@@ -3929,7 +4089,7 @@ def _build_operator_envelope(
         "sprint_id": sid,
         "node_id": node_id,
         "operator_id": str(profile.get("operator_id") or "").strip(),
-        "task_type": str(profile.get("role") or "builder"),
+        "task_type": str(node.get("dispatch_task_type") or profile.get("role") or "builder"),
         "objective": str(node.get("goal") or node.get("title") or node_id),
         "command": profile.get("command"),
         "backend": profile.get("backend"),
@@ -3941,6 +4101,15 @@ def _build_operator_envelope(
         "graph_path": payload.get("graph"),
         "work_dir": payload.get("work_dir"),
         "approval_mode": profile.get("approval_mode"),
+        "requirement_ids": deepcopy(node.get("requirement_ids") or []),
+        "capsule_binding": deepcopy(node.get("capsule_binding") or {}),
+        "capability_capsule_id": node.get("capability_capsule_id"),
+        "artifact_contract": deepcopy(node.get("artifact_contract") or {}),
+        "artifact_routes": deepcopy(node.get("artifact_routes") or {}),
+        "evaluation_binding": deepcopy(node.get("evaluation_binding") or {}),
+        "resource_requirements": deepcopy(node.get("resource_requirements") or {}),
+        "effects": deepcopy(node.get("effects") or []),
+        "physical_candidate_rank": profile.get("scheduler_candidate_rank"),
     }
 
 
@@ -4000,6 +4169,16 @@ def _plan_validator_launch_refusal(graph: dict[str, Any]) -> dict[str, Any] | No
     schedule_once guard, so the check must run again BEFORE any dispatch/
     status/runstate write (G2b fix-round 2 finding 1). Returns a refusal
     record ({reason, errors}) or None when dispatch may proceed."""
+    if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+        try:
+            import scheduler_input
+
+            verdict = scheduler_input.verify_runtime_projection(graph)
+        except Exception as guard_exc:
+            verdict = {"ok": False, "errors": [f"SCHEDULER_INPUT_UNCHECKABLE:{type(guard_exc).__name__}"]}
+        if verdict.get("ok"):
+            return None
+        return {"reason": "scheduler_input_dispatch_refused", "errors": verdict.get("errors") or []}
     try:
         import plan_validator  # type: ignore
 
@@ -4049,6 +4228,17 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         }
     sid = sprint_id_for(graph, graph_path)
     node_id = str(node.get("id") or "")
+    authoritative_node = next(
+        (
+            candidate
+            for candidate in (graph.get("nodes") or [])
+            if isinstance(candidate, dict) and str(candidate.get("id") or "") == node_id
+        ),
+        None,
+    )
+    if authoritative_node is None:
+        raise ValueError(f"unknown graph node: {node_id}")
+    node = authoritative_node
     profile = select_profile(node, getattr(args, "profile", "") or "", getattr(args, "model", "") or "", getattr(args, "backend", "") or "")
     capability = capability_for_profile(profile)
     dispatch_id = task_id(sid, node_id)
@@ -4060,7 +4250,7 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
     # Default the agent's working directory to a clean per-sprint workspace so produced
     # deliverables land predictably (and the dashboard's SPRINTS_DIR scan finds them),
     # instead of wherever multi-task happened to be launched (os.getcwd()).
-    sprint_workdir = SPRINTS_DIR / sid / "workdir"
+    sprint_workdir = Path(str(graph.get("runtime_work_dir") or (SPRINTS_DIR / sid / "workdir")))
     sprint_workdir.mkdir(parents=True, exist_ok=True)
 
     dispatch = build_dispatch_text(graph_path, graph, node, dispatch_id, window, profile)
@@ -4121,7 +4311,6 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
             payload["dispatch_mode"] = "operatord"
             payload["result_path"] = str(result_path)
             payload["updated_at"] = now_iso()
-            json_write(status_path(task_dir), payload)
             activate_execution_attempt(
                 node,
                 task_id=dispatch_id,
@@ -4136,6 +4325,20 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
                 result_path=str(result_path),
                 now=str(payload.get("updated_at") or ""),
             )
+            if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+                import scheduler_input
+
+                payload.update(
+                    scheduler_input.write_dispatch_records(
+                        HARNESS_DIR / "run" / "scheduler",
+                        graph=graph,
+                        node=node,
+                        profile=profile,
+                        submit_result=submit_result,
+                        dispatch_id=dispatch_id,
+                    )
+                )
+            json_write(status_path(task_dir), payload)
             set_node_status(graph, node_id, "dispatched", pane=f"operator:{operator_id}", dispatch_id=dispatch_id)
             save_graph(graph_path, graph)
             set_last_launch()
@@ -4179,6 +4382,11 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
                 payload["operator_submit_error"] = str(exc)
                 payload["updated_at"] = now_iso()
                 json_write(status_path(task_dir), payload)
+                if rejection_reason == "operator_admission_failed":
+                    node["blocking_reason"] = str(exc)
+                    node["next_action"] = "repair scheduler input or capsule admission contract"
+                    set_node_status(graph, node_id, "needs_human_review")
+                    save_graph(graph_path, graph)
                 _record_node_attribution(
                     sid,
                     node_id,
@@ -4426,7 +4634,10 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
             if refusal is not None:
                 skipped.append({"graph": str(graph_path), **refusal})
                 continue
-            candidates = ready_nodes(graph)
+            candidates = sorted(
+                ready_nodes(graph),
+                key=lambda item: (-int(item.get("priority") or 0), str(item.get("id") or "")),
+            )
         except Exception as exc:
             skipped.append({"graph": str(graph_path), "reason": "graph_error", "error": str(exc)})
             continue
@@ -5774,7 +5985,9 @@ def cancel(task_id_value: str) -> int:
         return 1
     task_id_value = str(status.get("id") or task_id_value)
     window = str(status.get("window") or "")
-    subprocess.run(["tmux", "kill-window", "-t", f"{SESSION}:{window}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    tmux_bin = shutil.which("tmux")
+    if tmux_bin and window:
+        subprocess.run([tmux_bin, "kill-window", "-t", f"{SESSION}:{window}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     status["status"] = "cancelled"
     status["updated_at"] = now_iso()
     json_write(RUN_DIR / task_id_value / "status.json", status)
@@ -5832,6 +6045,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd")
     screen = sub.add_parser("screen", help="interactive split terminal screen with status and natural-language input")
     screen.add_argument("--graph", action="append", default=[], help="task_graph.json path; can repeat")
+    screen.add_argument("--scheduler-input", action="append", default=[], help="frozen scheduler_input.json path; can repeat")
+    screen.add_argument("--scheduler-runtime-dir", default="", help="directory for runtime graph/state projections")
+    screen.add_argument("--run-contract", default="", help="optional run_contract.frozen.json binding")
+    screen.add_argument("--artifact-binding", action="append", default=[], help="runtime input artifact TYPE=PATH; can repeat")
     screen.add_argument("--max-workers", type=int, default=DEFAULT_MAX_WORKERS)
     screen.add_argument("--interval", type=int, default=DEFAULT_INTERVAL)
     screen.add_argument("--cooldown-sec", type=int, default=DEFAULT_COOLDOWN)
@@ -5846,6 +6063,10 @@ def build_parser() -> argparse.ArgumentParser:
     screen.add_argument("--no-clear", action="store_true")
     start = sub.add_parser("start", help="start tmux-backed DAG worker scheduler")
     start.add_argument("--graph", action="append", default=[], help="task_graph.json path; can repeat")
+    start.add_argument("--scheduler-input", action="append", default=[], help="frozen scheduler_input.json path; can repeat")
+    start.add_argument("--scheduler-runtime-dir", default="", help="directory for runtime graph/state projections")
+    start.add_argument("--run-contract", default="", help="optional run_contract.frozen.json binding")
+    start.add_argument("--artifact-binding", action="append", default=[], help="runtime input artifact TYPE=PATH; can repeat")
     start.add_argument("--max-workers", type=int, default=DEFAULT_MAX_WORKERS)
     start.add_argument("--interval", type=int, default=DEFAULT_INTERVAL)
     start.add_argument("--cooldown-sec", type=int, default=DEFAULT_COOLDOWN)
@@ -5861,6 +6082,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = sub.add_parser("status", help="show current scheduler summary")
     status.add_argument("--graph", action="append", default=[])
+    status.add_argument("--scheduler-input", action="append", default=[])
+    status.add_argument("--scheduler-runtime-dir", default="")
+    status.add_argument("--run-contract", default="")
+    status.add_argument("--artifact-binding", action="append", default=[])
     status.add_argument("--no-clear", action="store_true")
     status.add_argument("--renderer", choices=["tvs", "plain"], default=os.environ.get("SOLAR_MULTI_TASK_RENDERER", "tvs"))
 
@@ -5898,11 +6123,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _configure_utf8_console()
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
         argv = ["screen"]
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.cmd in {None, "start", "screen", "status"}:
+        try:
+            prepare_scheduler_input_args(args)
+        except (OSError, ValueError) as exc:
+            parser.error(str(exc))
 
     if args.cmd == "logs":
         return attach_or_log(args.task_id, attach=False)

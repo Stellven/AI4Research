@@ -65,6 +65,15 @@ RUNTIME_NODE_SPEC_FIELDS = {
     "updated_at",
     "worker_match_details",
 }
+SCHEDULER_RUNTIME_STATIC_NODE_FIELDS = {
+    "id", "goal", "logical_operator", "dispatch_task_type", "task_type",
+    "depends_on", "requirement_ids", "capsule_binding", "capability_capsule_id",
+    "required_capabilities", "physical_candidates", "artifact_contract",
+    "artifact_routes", "evaluation_binding", "evaluation_plan",
+    "resource_requirements", "effects", "priority", "failure_policy",
+    "max_repair_attempts", "on_failure_exhausted", "read_scope", "write_scope",
+    "acceptance",
+}
 REPAIR_ACTIVE_STATUSES = {
     "failed_review",
     "reviewing",
@@ -287,6 +296,12 @@ def _state_path_for_graph(graph: dict[str, Any], graph_path: str | Path | None =
         base_dir = Path(graph_path).expanduser().parent
     else:
         base_dir = SPRINTS_DIR
+    configured = str(graph.get("runtime_state_filename") or "").strip()
+    if configured:
+        candidate = Path(configured)
+        if candidate.name != configured or candidate.suffix.lower() != ".json":
+            raise ValueError("runtime_state_filename must be a safe JSON basename")
+        return base_dir / candidate
     return base_dir / f"{sid}.task_dag.state.json"
 
 
@@ -346,7 +361,12 @@ def _attach_runtime_planes(
         # closeout authority such as closeout_receipt.  Downstream evaluators
         # then reject a valid published ancestor because its digest chain
         # appears incomplete after the first save/load round trip.
-        for field in RUNTIME_NODE_SPEC_FIELDS:
+        fields = (
+            result.keys()
+            if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+            else RUNTIME_NODE_SPEC_FIELDS
+        )
+        for field in fields:
             if field in result:
                 ids[node_id][field] = deepcopy(result[field])
 
@@ -382,6 +402,112 @@ def _runtime_state_from_graph(graph: dict[str, Any], *, graph_path: Path | None 
     events = base_state.get("events")
     if not isinstance(events, list):
         base_state["events"] = []
+    if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+        prior_revision = base_state.get("revision")
+        try:
+            revision = int(prior_revision) + 1
+        except (TypeError, ValueError):
+            revision = 1
+        ids = _node_map(graph)
+        runtime_results: dict[str, dict[str, Any]] = {}
+        for node_id, node in ids.items():
+            runtime_result = {
+                key: deepcopy(value)
+                for key, value in node.items()
+                if key not in SCHEDULER_RUNTIME_STATIC_NODE_FIELDS
+            }
+            prior_result = base_state["node_results"].get(node_id)
+            if isinstance(prior_result, dict):
+                for key, value in prior_result.items():
+                    runtime_result.setdefault(key, deepcopy(value))
+            status = str(node_status(graph, node_id) or "pending").strip().lower()
+            runtime_result["status"] = status
+
+            # Runtime projection merges the prior ledger so attempt history and
+            # evaluator evidence survive.  Status-scoped routing fields are not
+            # history, though: retaining them after the node advances makes a
+            # healthy reviewing/terminal node still look worker-blocked and
+            # keeps a dead builder lease visible to the coordinator and GUI.
+            if status not in {"queued", "blocked", "worker_blocked"}:
+                runtime_result.pop("blocking_reason", None)
+                runtime_result.pop("worker_match_details", None)
+                runtime_result.pop("queued_pane", None)
+            elif status != "worker_blocked":
+                runtime_result.pop("worker_match_details", None)
+
+            if status not in {"assigned", "dispatched", "in_progress", "running"}:
+                runtime_result.pop("assigned_to", None)
+                runtime_result.pop("dispatch_id", None)
+            runtime_results[node_id] = runtime_result
+        base_state["node_results"] = runtime_results
+        # These maps describe live claims, not historical dispatches. Rebuild
+        # them from the cleaned current projection instead of carrying entries
+        # forward from base_state forever.
+        projection_leases: dict[str, Any] = {}
+        projection_dispatch_ids: dict[str, str] = {}
+        for node_id, result in runtime_results.items():
+            status = str(result.get("status") or "").strip().lower()
+            if status not in {"assigned", "dispatched", "in_progress", "running"}:
+                continue
+            dispatch_id = str(result.get("dispatch_id") or "").strip()
+            assigned_to = str(result.get("assigned_to") or "").strip()
+            if dispatch_id:
+                projection_dispatch_ids[node_id] = dispatch_id
+            if assigned_to:
+                projection_leases[node_id] = {
+                    "pane": assigned_to,
+                    "dispatch_id": dispatch_id,
+                }
+        base_state["leases"] = projection_leases
+        base_state["dispatch_ids"] = projection_dispatch_ids
+        state_nodes: dict[str, Any] = {}
+        ready: list[str] = []
+        terminal = True
+        any_failed = False
+        any_active = False
+        for node_id, node in ids.items():
+            status = node_status(graph, node_id) or "pending"
+            terminal = terminal and status in TERMINAL_STATUSES
+            any_failed = any_failed or status in DEPENDENCY_BLOCK_STATUSES
+            any_active = any_active or status in ACTIVE_STATUSES
+            blocked_by = [
+                dep for dep in _internal_depends_on(node)
+                if dep in ids and not _is_passed(graph, dep)
+            ]
+            execution_attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
+            try:
+                attempt = max(0, int(execution_attempt.get("sequence") or 0))
+            except (TypeError, ValueError):
+                attempt = 0
+            state_nodes[node_id] = {
+                "status": status,
+                "attempt": attempt,
+                "blocked_by": blocked_by,
+            }
+            if status in READY_STATUSES and not blocked_by:
+                ready.append(node_id)
+        if terminal:
+            run_status = "failed" if any_failed else "completed"
+        elif any_active:
+            run_status = "running"
+        else:
+            run_status = "queued"
+        base_state.update(
+            {
+                "artifact_role": "mutable_execution_ledger",
+                "run_contract_ref": deepcopy(graph.get("run_contract_ref") or {}),
+                "scheduler_input_ref": deepcopy(graph.get("scheduler_input_ref") or {}),
+                "revision": revision,
+                "run_status": run_status,
+                "nodes": state_nodes,
+                "ready_nodes": sorted(ready),
+                "last_event_id": (
+                    base_state["events"][-1].get("id")
+                    if base_state.get("events") and isinstance(base_state["events"][-1], dict)
+                    else None
+                ),
+            }
+        )
     return base_state
 
 
@@ -392,6 +518,11 @@ def _graph_spec_payload(graph: dict[str, Any]) -> dict[str, Any]:
     spec.pop("gate_results", None)
     for node in spec.get("nodes") or []:
         if not isinstance(node, dict):
+            continue
+        if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+            for key in list(node):
+                if key not in SCHEDULER_RUNTIME_STATIC_NODE_FIELDS:
+                    node.pop(key, None)
             continue
         for key in RUNTIME_NODE_SPEC_FIELDS:
             node.pop(key, None)

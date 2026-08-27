@@ -1,0 +1,102 @@
+{
+  "schema_version": "solar.scheduler_input.v1",
+  "artifact_role": "runtime_execution_authority",
+  "scheduler_input_id": "scheduler-input-live-reproducibility-report-v11",
+  "sprint_id": "scheduler-live-reproducibility-report-v11",
+  "planning_authority": "frozen_execution_plan_v1",
+  "graph": {
+    "graph_id": "graph-live-reproducibility-report-v11",
+    "nodes": [
+      {
+        "id": "evidence_summary",
+        "goal": "Create a concise JSON evidence summary for a report about the main causes of irreproducible machine-learning research. Clearly separate empirical findings, expert opinion, and disagreements. Write the declared output artifact and the required handoff.",
+        "logical_operator": "EvidenceSynthesizer",
+        "dispatch_task_type": "research",
+        "depends_on": [],
+        "requirement_ids": ["R1", "R2", "R3", "R4"],
+        "capsule_binding": {
+          "capsule_ids": ["cap.research-evidence-synthesis"],
+          "composition_id": null,
+          "contract_sha256": "e1ab115d6eae62f69b0b8835d28fc1708ce3bd024c9cb7a720b3f116541bbca6"
+        },
+        "physical_candidates": [
+          {
+            "operator_id": "mini-codex-gpt53-spark-builder-1",
+            "rank": 1,
+            "admission_state": "ELIGIBLE"
+          },
+          {
+            "operator_id": "mini-codex-gpt55-medium-builder-1",
+            "rank": 2,
+            "admission_state": "ELIGIBLE"
+          }
+        ],
+        "artifact_contract": {
+          "consumes": ["solar.requirement_ir.v2"],
+          "produces": ["research.reproducibility_evidence_summary.v1"]
+        },
+        "evaluation_binding": {
+          "deterministic_gate_ids": ["gate.json_parse.v1"],
+          "semantic_evaluator_ids": ["mini-codex-gpt55-medium-evaluator-1"]
+        },
+        "resource_requirements": {
+          "cpu_cores_min": 1,
+          "memory_mb_min": 512,
+          "gpu_required": false,
+          "network": "optional"
+        },
+        "effects": ["read", "write"],
+        "priority": 100,
+        "failure_policy": {
+          "max_attempts": 2,
+          "on_exhausted": "fail_run"
+        }
+      },
+      {
+        "id": "human_report",
+        "goal": "Read the accepted evidence-summary artifact and write a genuinely human-readable Markdown report. Explain the main causes, identify disagreements and uncertainty, and propose five testable improvements. Write the declared output artifact and the required handoff.",
+        "logical_operator": "ReportWriter",
+        "dispatch_task_type": "report-writing",
+        "depends_on": ["evidence_summary"],
+        "requirement_ids": ["R1", "R2", "R3", "R4", "R5"],
+        "capsule_binding": {
+          "capsule_ids": ["cap.research-report-draft"],
+          "composition_id": null,
+          "contract_sha256": "a86e05bd7ff97000a721f1c62f96e5238414c29d87cce2a2ac6ecfc878791eda"
+        },
+        "physical_candidates": [
+          {
+            "operator_id": "mini-codex-gpt53-spark-builder-1",
+            "rank": 1,
+            "admission_state": "ELIGIBLE"
+          },
+          {
+            "operator_id": "mini-codex-gpt55-medium-builder-1",
+            "rank": 2,
+            "admission_state": "ELIGIBLE"
+          }
+        ],
+        "artifact_contract": {
+          "consumes": ["research.reproducibility_evidence_summary.v1"],
+          "produces": ["research.reproducibility_report.v1"]
+        },
+        "evaluation_binding": {
+          "deterministic_gate_ids": ["gate.markdown_nonempty.v1"],
+          "semantic_evaluator_ids": ["mini-codex-gpt55-medium-evaluator-1"]
+        },
+        "resource_requirements": {
+          "cpu_cores_min": 1,
+          "memory_mb_min": 512,
+          "gpu_required": false,
+          "network": "optional"
+        },
+        "effects": ["read", "write"],
+        "priority": 50,
+        "failure_policy": {
+          "max_attempts": 2,
+          "on_exhausted": "fail_run"
+        }
+      }
+    ]
+  }
+}

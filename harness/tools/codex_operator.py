@@ -284,6 +284,30 @@ def _write_pm_result(task_dir: Path, output_file: Path, output: str, exit_code: 
     )
 
 
+def _forwarded_cli_output(combined: str, output_file: Path, max_chars: int = 20000) -> str:
+    """Return bounded closeout text; the complete provider stream stays on disk.
+
+    Codex can emit multi-megabyte event streams. Forwarding that entire stream
+    through a nested Windows venv-launcher pipe can block the operator before
+    operatord has a chance to write ``result.json``.
+    """
+    final_message = ""
+    try:
+        if output_file.is_file():
+            final_message = output_file.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        final_message = ""
+    selected = final_message or combined.strip()
+    if len(selected) > max_chars:
+        selected = selected[-max_chars:]
+    if len(combined) > len(selected):
+        return (
+            "[codex-cli-output truncated; full stream retained in codex-cli-output.log]\n"
+            + selected
+        )
+    return selected
+
+
 def _timeout_seconds() -> float:
     raw = (
         os.environ.get("CODEX_OPERATOR_TIMEOUT_SECONDS")
@@ -573,6 +597,13 @@ def _path_filesystem_type(path: Path) -> str:
         return ""
 
 
+def _default_operator_state_root() -> Path:
+    """Return a per-user state root on Unix and a per-process root on Windows."""
+    getuid = getattr(os, "getuid", None)
+    identity = str(getuid()) if callable(getuid) else f"pid-{os.getpid()}"
+    return Path(tempfile.gettempdir()) / f"solar-codex-operator-state-{identity}"
+
+
 def _filesystem_isolated_command(
     command: list[str],
     *,
@@ -598,7 +629,7 @@ def _filesystem_isolated_command(
     harness_dir = Path(env["HARNESS_DIR"]).expanduser().resolve(strict=False)
     state_root = Path(
         env.get("SOLAR_CODEX_OPERATOR_STATE_ROOT")
-        or f"/tmp/solar-codex-operator-state-{os.getuid()}"
+        or _default_operator_state_root()
     ).expanduser()
     state_root.mkdir(mode=0o700, parents=True, exist_ok=True)
     state_root.chmod(0o700)
@@ -756,6 +787,38 @@ def _pm_result_ready(started_wall: float) -> bool:
         return False
 
 
+def _path_has_fresh_output(path: Path, started_wall: float) -> bool:
+    try:
+        if path.is_file():
+            stat = path.stat()
+            return stat.st_size > 0 and stat.st_mtime >= started_wall
+        if path.is_dir():
+            return any(
+                child.is_file()
+                and child.stat().st_size > 0
+                and child.stat().st_mtime >= started_wall
+                for child in path.rglob("*")
+            )
+    except OSError:
+        return False
+    return False
+
+
+def _declared_closeout_ready(output_file: Path, started_wall: float) -> bool:
+    """True once the model has durably completed its declared node contract."""
+    if not _path_has_fresh_output(output_file, started_wall):
+        return False
+    handoff = str(os.environ.get("HANDOFF") or "").strip()
+    if not handoff or not _path_has_fresh_output(Path(handoff).expanduser(), started_wall):
+        return False
+    try:
+        write_scope = json.loads(os.environ.get("SOLAR_OPERATOR_WRITE_SCOPE_JSON") or "[]")
+    except (TypeError, ValueError):
+        return False
+    declared = [Path(str(value)).expanduser() for value in write_scope if str(value).strip()]
+    return bool(declared) and all(_path_has_fresh_output(path, started_wall) for path in declared)
+
+
 def _terminate_process_group(proc: subprocess.Popen[str]) -> None:
     try:
         os.killpg(proc.pid, signal.SIGTERM)
@@ -786,6 +849,11 @@ def _register_codex_process_group(pid: int) -> bool:
     try:
         import run_process_registry as registry
 
+        signal_scope = (
+            "process_group"
+            if callable(getattr(os, "getpgid", None)) and callable(getattr(os, "getsid", None))
+            else "pid"
+        )
         registry.register(
             "harness",
             "operator-task-child",
@@ -797,7 +865,7 @@ def _register_codex_process_group(pid: int) -> bool:
                 "backend": "codex",
             },
             harness_dir=harness_dir,
-            signal_scope="process_group",
+            signal_scope=signal_scope,
         )
         return True
     except Exception as exc:
@@ -847,6 +915,9 @@ def main() -> int:
         return 78
     timeout_seconds = _timeout_seconds()
     pm_result_grace = float(os.environ.get("CODEX_PM_RESULT_GRACE_SECONDS", "20"))
+    declared_closeout_grace = float(
+        os.environ.get("CODEX_DECLARED_CLOSEOUT_GRACE_SECONDS", "10")
+    )
     invocation_id = str(uuid.uuid4())
     dispatch_id = os.environ.get("DISPATCH_ID") or os.environ.get("TASK_ID") or "dispatch-unknown"
     attempt_id = os.environ.get("ATTEMPT_ID") or "1"
@@ -982,6 +1053,7 @@ def main() -> int:
             pass
 
         pm_ready_since: float | None = None
+        declared_ready_since: float | None = None
         first_output_observed = False
         while True:
             if not first_output_observed:
@@ -1040,6 +1112,37 @@ def main() -> int:
                         first_output_observed=first_output_observed,
                     )
                     return 0
+            if _declared_closeout_ready(output_file, started_wall):
+                declared_ready_since = declared_ready_since or time.monotonic()
+                if (time.monotonic() - declared_ready_since) >= declared_closeout_grace:
+                    print(
+                        "codex_operator: declared artifact, handoff, and final message ready; "
+                        f"terminating lingering codex exec after {declared_closeout_grace:.0f}s grace"
+                    )
+                    _terminate_process_group(proc)
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        try:
+                            os.killpg(proc.pid, signal.SIGKILL)
+                        except Exception:
+                            proc.kill()
+                        proc.wait(timeout=5)
+                    combined = (
+                        cli_log.read_text(encoding="utf-8", errors="replace")
+                        if cli_log.exists()
+                        else ""
+                    )
+                    _write_pm_result(task_dir, output_file, combined, 0)
+                    _write_skill_bridge_result(task_dir, skill_bridge_evidence, 0)
+                    _complete_invocation(
+                        "declared_closeout_ready",
+                        0,
+                        first_output_observed=first_output_observed,
+                    )
+                    return 0
+            else:
+                declared_ready_since = None
             if timeout_seconds > 0 and elapsed >= timeout_seconds:
                 _terminate_process_group(proc)
                 _observe(
@@ -1078,8 +1181,9 @@ def main() -> int:
             time.sleep(1)
 
     combined = cli_log.read_text(encoding="utf-8", errors="replace") if cli_log.exists() else ""
-    if combined:
-        print(combined, end="" if combined.endswith("\n") else "\n", flush=True)
+    forwarded = _forwarded_cli_output(combined, output_file)
+    if forwarded:
+        print(forwarded, end="" if forwarded.endswith("\n") else "\n", flush=True)
     if proc.returncode == 0:
         _write_pm_result(task_dir, output_file, combined, int(proc.returncode))
     exit_code = int(proc.returncode or 0)

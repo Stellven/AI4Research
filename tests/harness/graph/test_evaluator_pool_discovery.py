@@ -9,6 +9,30 @@ sys.path.insert(0, str(ROOT / "lib"))
 import graph_node_dispatcher as gnd  # noqa: E402
 
 
+class _TmuxProbe:
+    def __init__(self, returncode: int, stdout: str) -> None:
+        self.returncode = returncode
+        self.stdout = stdout
+
+
+def test_pane_exists_requires_concrete_tmux_pane_id(monkeypatch) -> None:
+    monkeypatch.setattr(
+        gnd.subprocess,
+        "run",
+        lambda *args, **kwargs: _TmuxProbe(0, ""),
+    )
+
+    assert gnd._pane_exists("solar-harness:0.3") is False
+
+    monkeypatch.setattr(
+        gnd.subprocess,
+        "run",
+        lambda *args, **kwargs: _TmuxProbe(0, "%17\n"),
+    )
+
+    assert gnd._pane_exists("solar-harness:0.3") is True
+
+
 def test_discover_evaluators_includes_lab_evaluator_lane(monkeypatch) -> None:
     pane_rows = "\n".join(
         [

@@ -39,6 +39,11 @@ from pathlib import Path
 from typing import Any
 
 BRIDGE = Path(__file__).resolve().parent / "autosci_bridge.py"
+PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
+
+from adapters.solar_envelope_to_autosci import normalize_envelope
 
 # stage -> (AutoSci skill invocation, bridge action)
 STAGES: dict[str, tuple[str, str]] = {
@@ -438,8 +443,10 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
     envelope = json.loads(envelope_path.read_text(encoding="utf-8"))
     if not isinstance(envelope, dict):
         raise ExecutorError("operator envelope must be a JSON object")
+    envelope = normalize_envelope(envelope, action=action)
 
-    work_dir = Path(args.work_dir).expanduser() if args.work_dir else envelope_path.parent
+    declared_work_dir = args.work_dir or str(envelope.get("work_dir") or "")
+    work_dir = Path(declared_work_dir).expanduser() if declared_work_dir else envelope_path.parent
     run_id = uuid.uuid4().hex[:12]
     record_path = work_dir / "autosci-runtime" / f"{stage}-{run_id}.runtime.json"
 

@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = (Path(__file__).resolve().parents[2] / 'harness')
 GATEWAY = ROOT / "lib" / "intent_gateway.py"
 CONSUMER = ROOT / "lib" / "intent_consumer.py"
+REPO = ROOT.parent
 
 
 def _env(tmp_path):
@@ -67,12 +68,14 @@ def test_consumer_compiles_rawintent_to_sprint_package(tmp_path):
     assert (tmp_path / "sprints" / f"{sprint_id}.prd.md").exists()
     assert (tmp_path / "sprints" / f"{sprint_id}.contract.md").exists()
     assert (tmp_path / "sprints" / f"{sprint_id}.task_graph.json").exists()
-    ir = json.loads((tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text())
+    ir = json.loads(
+        (tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text(encoding="utf-8")
+    )
     workspace_ir = json.loads(
-        (tmp_path / "workspace" / ".pm" / "requirement_ir.json").read_text()
+        (tmp_path / "workspace" / ".pm" / "requirement_ir.json").read_text(encoding="utf-8")
     )
     trace = json.loads(
-        (tmp_path / "sprints" / f"{sprint_id}.requirement_trace.json").read_text()
+        (tmp_path / "sprints" / f"{sprint_id}.requirement_trace.json").read_text(encoding="utf-8")
     )
     assert ir["intent_id"] == intent_id
     assert ir["sprint_id"] == sprint_id
@@ -82,6 +85,73 @@ def test_consumer_compiles_rawintent_to_sprint_package(tmp_path):
     assert ir["requirements"][0]["source_text"] != "N/A"
     assert trace["requirement_ir_id"] == ir["id"]
     assert len(trace["items"]) == len(ir["requirements"])
+
+
+def test_consumer_accepts_native_intent_ir_bundle_without_rewritten_artifact(tmp_path):
+    env = _env(tmp_path)
+    intent_id = "intent-native-bundle"
+    base = tmp_path / "intents" / intent_id
+    semantic_dir = base / "intent"
+    semantic_dir.mkdir(parents=True)
+    fixture_dir = (
+        REPO
+        / "harness"
+        / "metadata"
+        / "2-intent compiler output"
+        / "requirement-compiler-input-fixtures"
+        / "01-research-scientific-reproducibility"
+    )
+    requirement_dir = (
+        REPO
+        / "harness"
+        / "metadata"
+        / "3-requirements compiler output"
+        / "native-intent-ir-compiler-evaluation-20260825"
+        / "01-research-scientific-reproducibility"
+    )
+    intent_ir = json.loads((fixture_dir / "intent_ir.json").read_text(encoding="utf-8"))
+    requirement_ir = json.loads((requirement_dir / "requirement_ir.json").read_text(encoding="utf-8"))
+    raw = {
+        "schema_version": "solar.raw_intent.v1",
+        "intent_id": intent_id,
+        "source": {"channel": "test", "actor": "user"},
+        "raw": {
+            "text": (
+                "Investigate the main causes of irreproducible results in machine-learning "
+                "research and propose five testable improvements."
+            )
+        },
+        "routing_hints": {"allow_autodispatch": False},
+        "trust": {"source_trust": "test"},
+    }
+    (base / "raw_intent.json").write_text(json.dumps(raw), encoding="utf-8")
+    (semantic_dir / "intent_ir.json").write_text(json.dumps(intent_ir), encoding="utf-8")
+    (base / "requirement_ir.json").write_text(json.dumps(requirement_ir), encoding="utf-8")
+
+    assert not (base / "rewritten_intent.json").exists()
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(CONSUMER),
+            "consume",
+            "--intent-id",
+            intent_id,
+            "--sprint-id",
+            "sprint-native-bundle",
+            "--dry-run",
+            "--no-auto-dispatch-planner",
+            "--json",
+        ],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+
+    result = json.loads(proc.stdout)["results"][0]
+    assert result["status"] == "dry_run"
+    assert result["sprint_id"] == "sprint-native-bundle"
+    assert result["planner_handoff"]["reason"] == "auto_dispatch_disabled"
 
 
 def test_cli_intake_preserves_research_when_software_artifacts_are_explicit_non_goals(tmp_path):
@@ -102,9 +172,15 @@ def test_cli_intake_preserves_research_when_software_artifacts_are_explicit_non_
     )
     result = json.loads(proc.stdout)["results"][0]
     sprint_id = result["sprint_id"]
-    raw = json.loads((tmp_path / "intents" / intent_id / "raw_intent.json").read_text())
-    ir = json.loads((tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text())
-    graph = json.loads((tmp_path / "sprints" / f"{sprint_id}.task_graph.json").read_text())
+    raw = json.loads(
+        (tmp_path / "intents" / intent_id / "raw_intent.json").read_text(encoding="utf-8")
+    )
+    ir = json.loads(
+        (tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text(encoding="utf-8")
+    )
+    graph = json.loads(
+        (tmp_path / "sprints" / f"{sprint_id}.task_graph.json").read_text(encoding="utf-8")
+    )
     roles = {node["logical_operator"] for node in graph["nodes"]}
 
     assert raw["routing_hints"]["mode"] == "research"
@@ -291,9 +367,13 @@ def test_consumer_injects_research_artifact_refs_into_compiled_package(tmp_path)
     )
     result = json.loads(proc.stdout)["results"][0]
     sprint_id = result["sprint_id"]
-    ir = json.loads((tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text())
-    product_brief = (tmp_path / "sprints" / f"{sprint_id}.product-brief.md").read_text()
-    prd = (tmp_path / "sprints" / f"{sprint_id}.prd.md").read_text()
+    ir = json.loads(
+        (tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text(encoding="utf-8")
+    )
+    product_brief = (
+        tmp_path / "sprints" / f"{sprint_id}.product-brief.md"
+    ).read_text(encoding="utf-8")
+    prd = (tmp_path / "sprints" / f"{sprint_id}.prd.md").read_text(encoding="utf-8")
     assert ir["source_inputs"]["research_artifact"]["path"] == "/tmp/frontdoor-research.json"
     assert "## Research Artifact Inputs" in product_brief
     assert "conv-frontdoor-002" in product_brief

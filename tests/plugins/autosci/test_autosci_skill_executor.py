@@ -427,6 +427,74 @@ def test_an_explicitly_declared_mode_is_preserved(
     assert captured["mode"] == "fixture"
 
 
+def test_scheduler_contract_drives_live_skill_workdir_request_and_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = _home(tmp_path, monkeypatch)
+    work_dir = tmp_path / "scheduler-workdir"
+    output_dir = work_dir / "artifacts" / "idea-eval"
+    output_dir.mkdir(parents=True)
+    envelope_path = tmp_path / "scheduler-envelope.json"
+    envelope_path.write_text(
+        json.dumps(
+            {
+                "task_id": "task-scheduler",
+                "sprint_id": "sprint-scheduler",
+                "node_id": "idea-eval",
+                "objective": "Evaluate hypotheses about retrieval diversity.",
+                "work_dir": str(work_dir),
+                "write_scope": [str(output_dir)],
+                "artifact_routes": {
+                    "consumes": {},
+                    "produces": {"artifact.idea-evaluation.v1": str(output_dir)},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    recorded: dict = {}
+
+    def fake_run_skill(*, stage: str, request: str, record_path: Path, timeout_seconds: int):
+        recorded.update(
+            stage=stage,
+            request=request,
+            record_path=record_path,
+            timeout_seconds=timeout_seconds,
+        )
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        record_path.write_text("{}", encoding="utf-8")
+        return {
+            "exit_code": 0,
+            "timed_out": False,
+            "autosci_home": str(home),
+            "stage_argument": request,
+            "stage_argument_source": "request",
+            "stage_argument_candidates": [],
+        }
+
+    captured: dict = {}
+
+    def fake_bridge(*, action: str, envelope_path: Path):
+        captured.update(json.loads(Path(envelope_path).read_text(encoding="utf-8")))
+        return subprocess.CompletedProcess(args=[], returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(ex, "run_skill", fake_run_skill)
+    monkeypatch.setattr(ex, "wiki_fingerprint", lambda _home: {})
+    monkeypatch.setattr(ex, "autosci_progress", lambda _home: {})
+    monkeypatch.setattr(ex, "invoke_bridge", fake_bridge)
+
+    args = ex._parser().parse_args(
+        ["--stage", "idea_evaluation", "--envelope", str(envelope_path)]
+    )
+    ex.execute(args)
+
+    assert recorded["request"] == "Evaluate hypotheses about retrieval diversity."
+    assert Path(recorded["record_path"]).is_relative_to(work_dir)
+    assert captured["output_dir"] == str(output_dir)
+    assert captured["mode"] == "solar_native"
+
+
 def test_a_timed_out_skill_is_never_reported_as_a_successful_stage(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

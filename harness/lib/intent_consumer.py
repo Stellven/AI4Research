@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Consume RawIntent artifacts into compiled Solar-Harness work packages.
+"""Consume RawIntent artifacts into Planner handoff packages.
 
 The gateway captures raw user intent. This consumer is the next hop: it turns
-an intent directory into a requirement-compiler sprint package. Trusted entry
-points can then get a best-effort Planner handoff through pm_dispatch/runtime;
-raw natural language is never sent directly to tmux panes.
+an intent directory into an immutable RequirementIR sprint package. Trusted
+entry points can then get a best-effort Planner handoff through
+pm_dispatch/runtime; raw natural language is never sent directly to operators.
+The Planner emits PlanIR, and the deterministic static execution compiler—not
+the Planner or scheduler—binds that PlanIR into frozen scheduler authority.
 """
 from __future__ import annotations
 
@@ -54,14 +56,80 @@ def intent_dir(intent_id: str) -> Path:
     return INTENTS_DIR / intent_id
 
 
+def _semantic_intent_compatibility_view(
+    raw: dict[str, Any],
+    intent_ir: dict[str, Any],
+    requirement_ir: dict[str, Any],
+) -> dict[str, Any]:
+    """Project the accepted semantic bundle into the legacy PM request view.
+
+    ``rewritten_intent.json`` belonged to the pre-IntentIR gateway.  The native
+    pipeline intentionally no longer emits it, but the current PM request
+    compiler still consumes its small title/objective/constraint view.  Build
+    that view deterministically in memory; do not create a fake stage artifact.
+    """
+    goals = [
+        str(item.get("statement") or "").strip()
+        for item in intent_ir.get("goals") or []
+        if isinstance(item, dict) and str(item.get("statement") or "").strip()
+    ]
+    constraints = [
+        str(item.get("statement") or "").strip()
+        for item in intent_ir.get("constraints") or []
+        if isinstance(item, dict) and str(item.get("statement") or "").strip()
+    ]
+    acceptance = [
+        str(item.get("statement") or "").strip()
+        for item in requirement_ir.get("requirements") or []
+        if isinstance(item, dict) and str(item.get("statement") or "").strip()
+    ]
+    raw_text = str(((raw.get("raw") or {}).get("text") or "")).strip()
+    title = goals[0] if goals else raw_text
+    return {
+        "schema_version": "solar.intent_planner_compatibility_view.v1",
+        "title": title[:90],
+        "objective": "\n".join(goals) or raw_text,
+        "problem": raw_text,
+        "constraints": constraints,
+        "acceptance": acceptance,
+    }
+
+
 def load_intent(intent_id: str) -> tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any]]:
     base = intent_dir(intent_id)
     raw_path = base / "raw_intent.json"
     rewritten_path = base / "rewritten_intent.json"
+    semantic_intent_path = base / "intent" / "intent_ir.json"
     ir_path = base / "requirement_ir.json"
-    if not raw_path.exists() or not rewritten_path.exists() or not ir_path.exists():
-        raise SystemExit(f"intent artifacts incomplete: {intent_id}")
-    return base, read_json(raw_path), read_json(rewritten_path), read_json(ir_path)
+    missing = [
+        path.name
+        for path in (raw_path, ir_path)
+        if not path.exists()
+    ]
+    if missing:
+        raise SystemExit(f"intent artifacts incomplete: {intent_id}; missing={','.join(missing)}")
+
+    raw = read_json(raw_path)
+    requirement_ir = read_json(ir_path)
+    if rewritten_path.exists():
+        planning_view = read_json(rewritten_path)
+    elif semantic_intent_path.exists():
+        intent_ir = read_json(semantic_intent_path)
+        expected_intent_id = str((requirement_ir.get("intent_ir_ref") or {}).get("intent_ir_id") or "")
+        actual_intent_id = str(intent_ir.get("intent_ir_id") or "")
+        if expected_intent_id and expected_intent_id != actual_intent_id:
+            raise SystemExit(
+                "intent artifacts incompatible: "
+                f"{intent_id}; requirement IntentIR ref={expected_intent_id!r} "
+                f"but bundle contains {actual_intent_id!r}"
+            )
+        planning_view = _semantic_intent_compatibility_view(raw, intent_ir, requirement_ir)
+    else:
+        raise SystemExit(
+            "intent artifacts incomplete: "
+            f"{intent_id}; missing=rewritten_intent.json|intent/intent_ir.json"
+        )
+    return base, raw, planning_view, requirement_ir
 
 
 def list_pending(limit: int = 20, oldest_first: bool = True) -> list[str]:
@@ -262,25 +330,31 @@ def planner_handoff_policy(
 
 def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
     base = str(SPRINTS_DIR / sprint_id)
+    planning_dir = str(SPRINTS_DIR / sprint_id / "planning")
+    compiled_dir = str(SPRINTS_DIR / sprint_id / "compiled")
     objective = textwrap.dedent(
         f"""\
-        请接手 {sprint_id}：RawIntent 已经通过 Intent Gateway 和 Requirement Compiler 生成需求编译包。
+        请接手 {sprint_id}：RawIntent 已经通过 Intent Compiler 和 Requirement Compiler，权威输入是 RequirementIR v2。
 
-        先读取：
-        - {base}.product-brief.md
-        - {base}.prd.md
-        - {base}.contract.md
-        - {base}.task_graph.json
+        权威输入：
         - {base}.requirement_ir.json
-        - {base}.handoff.md
 
-        你的任务：
-        1. 基于 compiled requirement package 产出 design.md 和 plan.md。
-        2. 如有必要，细化或修正 task_graph.json，但不得绕过 compiled contracts。
-        3. 不要直接跳 Builder；保持 RawIntent -> Requirement Compiler -> Planner -> task_graph -> Builder 主链。
-        4. 如果 compiled package 缺失关键字段，先写明 blocker 和修正建议。
-        5. 检查 requirement_ir.planner_hints.workflow_candidates，并在 direct_answer、memoized_task_graph、new_task_graph 中明确选择一种；候选模板不能自行生效。
-        6. 只有选择 memoized_task_graph 时，才可把选中的 workflow_id 交给 TaskGraph compiler；必须保留节点合同、capability capsule、physical operator 候选和 fallback。
+        Planner 步骤输出到 {planning_dir}：
+        - planning_decision.json
+        - plan_ir.json（必须符合 solar.plan_ir.v2）
+
+        Planner 的独立 evaluator 输出到同一目录：
+        - plan_validation.json
+        - plan_fidelity.json
+        - binding_trace.json
+
+        规则：
+        1. PlanIR 只定义语义节点、依赖、typed artifact ports、effects、execution trust 和 requirement ownership。
+        2. 不要读取、细化或输出旧 task_graph.json；不要在 PlanIR 中选择 physical operator、lease、attempt 或运行状态。
+        3. plan_validation、plan_fidelity 和 binding_trace 是 evaluator artifacts，不得由 Planner 自评代写。
+        4. 只有三个 evaluator verdict 均通过后，协调器才可调用 static_execution_compiler.py，把 bundle 编译到 {compiled_dir}。
+        5. scheduler 只接收 {compiled_dir}\\scheduler_input.json；它不得直接接收 RequirementIR 或 PlanIR。
+        6. 如果 RequirementIR 缺失关键字段或存在 requirements_gap，生成明确的 planning decision 并停止 runtime handoff。
         """
     ).strip()
     # P5 G2: teach the planner the compile rules it will be checked against
@@ -494,6 +568,9 @@ def status(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="intent_consumer.py")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -519,7 +596,10 @@ def main(argv: list[str] | None = None) -> int:
         payload = status(args)
 
     if getattr(args, "json", False):
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        # Keep the machine-readable CLI surface safe even when a Windows
+        # parent process decodes pipes with CP1252. JSON consumers recover the
+        # original Unicode values from the escapes.
+        print(json.dumps(payload, ensure_ascii=True, indent=2))
     else:
         if args.cmd == "consume":
             print(f"consumed={payload['count']} ok={payload['ok']}")

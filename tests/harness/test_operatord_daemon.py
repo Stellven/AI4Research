@@ -1018,6 +1018,23 @@ class TestBuildCommand:
             str(_od.HARNESS_DIR / "tools" / "codex_operator.py"),
         ]
 
+    def test_windows_codex_envelope_command_still_uses_native_python_wrapper(self, monkeypatch):
+        monkeypatch.setattr(_od.os, "name", "nt")
+        config = {
+            "backend": "command",
+            "provider": "openai",
+            "model": "gpt-5.3-codex-spark",
+            "model_config": "Codex CLI;gpt-5.3-codex-spark;reasoning=medium",
+            "command": 'CODEX_MODEL=gpt-5.3-codex-spark python3 "$HARNESS_DIR/tools/codex_operator.py"',
+        }
+
+        cmd = _od._build_command(config, {"task_id": "scheduler-task", "command": config["command"]})
+
+        assert cmd == [
+            sys.executable,
+            str(_od.HARNESS_DIR / "tools" / "codex_operator.py"),
+        ]
+
     def test_windows_fixed_research_worker_uses_native_python_adapter(self, monkeypatch):
         monkeypatch.setattr(_od.os, "name", "nt")
         cmd = _od._build_command(

@@ -255,6 +255,27 @@ def test_operatord_stages_and_atomically_publishes_replaceable_outputs(tmp_path,
     assert canonical.read_text(encoding="utf-8") == '{"version": "worker"}\n'
 
 
+def test_operatord_shortens_long_windows_staging_paths(tmp_path):
+    operatord = _load_module("operatord_contract_long_staging", ROOT / "tools" / "operatord.py")
+    staging_dir = tmp_path / "declared-outputs"
+    publish_path = tmp_path / ("very-long-sprint-and-node-name-" * 4 + "handoff.md")
+
+    original = staging_dir / f"00-{publish_path.name}"
+    assert len(str(original)) >= 240
+
+    staged = operatord._staging_output_path(staging_dir, 0, publish_path)
+
+    assert len(str(staged)) < 240
+    assert staged.parent == staging_dir
+    assert staged.name.startswith("00-")
+    assert staged.suffix == ".md"
+
+    deep_staging_dir = Path("C:/") / ("x" * 215) / "declared-outputs"
+    minimal = operatord._staging_output_path(deep_staging_dir, 0, publish_path)
+    assert minimal.name == "0"
+    assert len(str(minimal)) < 240
+
+
 def test_operatord_refuses_to_publish_empty_staged_output(tmp_path, monkeypatch):
     operatord = _load_module("operatord_contract_empty_publish", ROOT / "tools" / "operatord.py")
     harness = tmp_path / "harness"
@@ -333,6 +354,35 @@ def test_operatord_refuses_expected_artifact_outside_authorized_roots(tmp_path, 
                 "expected_artifacts": [str(tmp_path / "outside" / "escape.md")],
             },
         )
+
+
+def test_operatord_allows_control_plane_outputs_in_custom_runtime_root(tmp_path, monkeypatch):
+    operatord = _load_module("operatord_contract_custom_runtime", ROOT / "tools" / "operatord.py")
+    harness = tmp_path / "harness"
+    runtime_root = tmp_path / "runtime"
+    result_dir = harness / "run" / "operator-results" / "evaluator" / "task"
+    result_dir.mkdir(parents=True)
+    monkeypatch.setattr(operatord, "HARNESS_DIR", harness)
+    monkeypatch.setattr(operatord, "SPRINTS_DIR", runtime_root)
+    eval_md = runtime_root / "sprint-1.N1-eval.md"
+    eval_json = runtime_root / "sprint-1.N1-eval.json"
+    pm_result = runtime_root / "sprint-1.N1-eval.pm-result.md"
+
+    env = operatord._materialize_envelope_context(
+        result_dir,
+        {
+            "task_id": "pm-sprint-1-N1-abc",
+            "sprint_id": "sprint-1",
+            "node_id": "N1",
+            "work_dir": str(runtime_root / "sprint-1" / "workdir"),
+            "result_path": str(pm_result),
+            "expected_artifacts": [str(eval_md), str(eval_json)],
+        },
+    )
+
+    assert pm_result.is_file()
+    publish_map = json.loads(env["SOLAR_OPERATOR_OUTPUT_PUBLISH_MAP_JSON"])
+    assert {item["publish_path"] for item in publish_map} == {str(eval_md), str(eval_json)}
 
 
 def test_codex_operator_explains_precreated_output_placeholders(tmp_path, monkeypatch):
@@ -498,6 +548,34 @@ def test_codex_operator_uses_resolved_cross_platform_binary(tmp_path):
     assert command[0] == str(binary)
     assert command[1] == "exec"
     assert "--skip-git-repo-check" in command
+
+
+def test_codex_operator_default_state_root_is_cross_platform(monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_state_root", ROOT / "tools" / "codex_operator.py")
+    monkeypatch.delattr(codex_operator.os, "getuid", raising=False)
+
+    root = codex_operator._default_operator_state_root()
+
+    assert root.parent == Path(codex_operator.tempfile.gettempdir())
+    assert root.name == f"solar-codex-operator-state-pid-{os.getpid()}"
+
+
+def test_codex_operator_registers_windows_child_by_pid(tmp_path, monkeypatch):
+    codex_operator = _load_module("codex_operator_contract_windows_registry", ROOT / "tools" / "codex_operator.py")
+    calls = []
+
+    class FakeRegistry:
+        @staticmethod
+        def register(*args, **kwargs):
+            calls.append((args, kwargs))
+
+    monkeypatch.setitem(sys.modules, "run_process_registry", FakeRegistry)
+    monkeypatch.delattr(codex_operator.os, "getpgid", raising=False)
+    monkeypatch.delattr(codex_operator.os, "getsid", raising=False)
+    monkeypatch.setenv("HARNESS_DIR", str(tmp_path / "harness"))
+
+    assert codex_operator._register_codex_process_group(12345) is True
+    assert calls[0][1]["signal_scope"] == "pid"
 
 
 def test_codex_operator_projects_auth_on_macos(tmp_path, monkeypatch):
@@ -846,3 +924,39 @@ def test_codex_operator_treats_malformed_extra_flags_as_search_disabled(tmp_path
 
     assert cmd[:2] == ["codex", "exec"]
     assert "--search" not in cmd
+
+
+def test_codex_operator_bounds_forwarded_provider_stream(tmp_path):
+    codex_operator = _load_module(
+        "codex_operator_contract_bounded_closeout",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    output_file = tmp_path / "codex-last-message.md"
+    output_file.write_text("final human-readable message", encoding="utf-8")
+
+    forwarded = codex_operator._forwarded_cli_output("event\n" * 500000, output_file)
+
+    assert "full stream retained in codex-cli-output.log" in forwarded
+    assert forwarded.endswith("final human-readable message")
+    assert len(forwarded) < 21000
+
+
+def test_codex_operator_detects_complete_declared_closeout(tmp_path, monkeypatch):
+    codex_operator = _load_module(
+        "codex_operator_contract_declared_closeout",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    output_file = tmp_path / "codex-last-message.md"
+    handoff = tmp_path / "handoff.md"
+    artifact_dir = tmp_path / "artifact"
+    artifact_dir.mkdir()
+    output_file.write_text("done", encoding="utf-8")
+    handoff.write_text("handoff", encoding="utf-8")
+    (artifact_dir / "result.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("HANDOFF", str(handoff))
+    monkeypatch.setenv("SOLAR_OPERATOR_WRITE_SCOPE_JSON", json.dumps([str(artifact_dir)]))
+
+    assert codex_operator._declared_closeout_ready(output_file, 0.0) is True
+
+    (artifact_dir / "result.json").write_text("", encoding="utf-8")
+    assert codex_operator._declared_closeout_ready(output_file, 0.0) is False

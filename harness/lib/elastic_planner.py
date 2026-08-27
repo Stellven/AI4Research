@@ -938,8 +938,13 @@ meaning, audience, domain, or scope from them; use only admitted semantic conten
 Use only logical_operator values in the supplied registry. PlanIR describes meaning, dependencies,
 typed artifact handoffs, requirement ownership, resource needs, and verification needs. It must not
 name a capability capsule, model, profile, pane, or physical operator. Every RequirementIR identifier
-must be owned by at least one node, but support nodes may have an empty requirement_ids list. Assign a
-requirement only to a node whose produced artifact can actually be judged by that requirement's check.
+must be owned by at least one node. Support nodes may have an empty requirement_ids list only when they
+cannot be traced to an accepted requirement. A source- or literature-discovery node must own the
+scope/evidence-coverage requirements that define what evidence it must retrieve; do not assign it a
+final-answer, publication, or delivery requirement. Preserve the exact named subjects, comparison
+dimensions, constraints, and required coverage values from those requirements in the discovery node's
+objective so the physical operator receives the full research query, not a generic topic summary. Assign
+a requirement only to a node whose produced artifact can actually be judged by that requirement's check.
 Keep implementation-only support steps out of PlanIR. A single logical node may be implemented by a
 multi-capsule chain, so declare that node's external input/output boundary and let capsule composition
 insert internal artifacts such as a report plan. Add a separate logical node only when it represents a
@@ -1263,6 +1268,7 @@ def compile_plan_candidate(
         PLAN_BODY_SCHEMA,
         work_dir / "plan_call",
     )
+    body = _preserve_discovery_requirement_scope(requirement_ir, body)
     return _wrap_plan_ir(
         requirement_ir,
         decision,
@@ -1274,6 +1280,105 @@ def compile_plan_candidate(
             "model": model.model or "configured_default",
         },
     )
+
+
+def _is_discovery_node(node: dict[str, Any]) -> bool:
+    logical_operator = str(node.get("logical_operator") or "").lower()
+    capabilities = {
+        str(value).strip().lower()
+        for value in ((node.get("operator_requirements") or {}).get("capabilities") or [])
+        if str(value).strip()
+    }
+    return (
+        "discover" in logical_operator
+        or "source_discovery" in capabilities
+        or "literature_discovery" in capabilities
+    )
+
+
+def _is_scope_coverage_requirement(requirement: dict[str, Any]) -> bool:
+    acceptance = requirement.get("acceptance")
+    acceptance = acceptance if isinstance(acceptance, dict) else {}
+    kind = str(acceptance.get("kind") or "").strip().lower()
+    check = _requirement_verifier(requirement).lower()
+    return kind in {"evidence_coverage", "scope_coverage"} or any(
+        token in check
+        for token in ("constraint_coverage", "evidence_coverage", "scope_coverage")
+    )
+
+
+def _scope_requirement_text(requirement: dict[str, Any]) -> str:
+    statement = _requirement_text(requirement).strip()
+    acceptance = requirement.get("acceptance")
+    acceptance = acceptance if isinstance(acceptance, dict) else {}
+    required_values = [
+        str(value).strip()
+        for value in acceptance.get("required_values") or []
+        if str(value).strip()
+    ]
+    if required_values:
+        coverage = "; ".join(required_values)
+        return f"{statement} Required coverage: {coverage}" if statement else f"Required coverage: {coverage}"
+    return statement
+
+
+def _preserve_discovery_requirement_scope(
+    requirement_ir: dict[str, Any],
+    body: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep accepted research scope intact at the Planner-to-operator boundary.
+
+    Requirement ownership remains precise: discovery receives only requirements
+    whose acceptance contract defines scope/evidence coverage. Final-answer and
+    publication requirements stay on their downstream artifact owners.
+    """
+
+    preserved = copy.deepcopy(body)
+    scope_requirements = [
+        row for row in requirements(requirement_ir) if _is_scope_coverage_requirement(row)
+    ]
+    if not scope_requirements:
+        return preserved
+
+    for node in preserved.get("nodes") or []:
+        if not isinstance(node, dict) or not _is_discovery_node(node):
+            continue
+        scope_ids = [_requirement_id(row) for row in scope_requirements]
+        node["requirement_ids"] = list(
+            dict.fromkeys(
+                [str(value) for value in node.get("requirement_ids") or []]
+                + scope_ids
+            )
+        )
+        scope_lines = [
+            f"- [{_requirement_id(row)}] {_scope_requirement_text(row)}"
+            for row in scope_requirements
+            if _scope_requirement_text(row)
+        ]
+        objective = str(node.get("objective") or "").strip()
+        if scope_lines and "Authoritative discovery scope:" not in objective:
+            node["objective"] = (
+                f"{objective}\n\nAuthoritative discovery scope:\n"
+                + "\n".join(scope_lines)
+            ).strip()
+
+        scope_verifiers = list(
+            dict.fromkeys(
+                _requirement_verifier(row)
+                for row in scope_requirements
+                if _requirement_verifier(row)
+            )
+        )
+        for output in node.get("produces") or []:
+            if not isinstance(output, dict):
+                continue
+            output["verifier_ids"] = list(
+                dict.fromkeys(
+                    [str(value) for value in output.get("verifier_ids") or []]
+                    + scope_verifiers
+                )
+            )
+    return preserved
 
 
 def _wrap_plan_ir(
@@ -1992,6 +2097,10 @@ validation owns those. An efficient plan may use one node for several requiremen
 and verifier contract truthfully covers them. Fail execution-trust weakening: a request for experiments
 on real datasets, reproduced measurements, or scientific effect validation requires measured_execution;
 fixture, adapter, lineage-only, schema-only, and exit-code-only paths are not equivalent evidence.
+For source or literature discovery, fail a genericized objective that drops named subjects, comparison
+dimensions, constraints, or required coverage values from the RequirementIR. The discovery node must
+retain the applicable scope/evidence-coverage requirement IDs and checks, but must not claim ownership
+of a final-answer, publication, or delivery requirement merely because it supplies upstream evidence.
 Judge unrequested effects by the semantic action added to the plan, such as a domain experiment,
 deployment, external mutation, or publication. The generic `execute` effect means registered operator
 code must run; it does not itself mean scientific experiment execution and is not an unrequested effect.

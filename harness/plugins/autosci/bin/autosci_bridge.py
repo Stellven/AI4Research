@@ -69,6 +69,7 @@ from adapters.autosci_to_workflow_evolution import convert as convert_workflow_e
 from adapters.autosci_to_publication_bundle import convert as convert_publication_bundle
 from adapters.autosci_to_scientific_report import convert as convert_scientific_report
 from adapters.solar_envelope_to_autosci import load_envelope, normalize_envelope
+from runtime_env import load_local_provider_env
 from claim_scope import compare_claim_evidence_scope
 from backends.artifact_review import review_artifact
 from backends.idea_source import build_idea_candidates
@@ -1420,6 +1421,8 @@ def _run_root_tool_json(
             cwd=REPO_HARNESS_DIR.parent,
             env=env,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=False,
@@ -6848,6 +6851,11 @@ def _production_discovery_artifacts(result: dict[str, Any], workspace_root: Path
         archive = workspace_root / raw_path if raw_path else Path()
         if raw_path and archive.is_file():
             artifacts.append(_artifact("public_provider_discovery_archive_json", archive))
+    relevance_gate = result.get("relevance_gate") if isinstance(result.get("relevance_gate"), dict) else {}
+    audit_path = str(relevance_gate.get("audit_path") or "").strip()
+    audit = workspace_root / audit_path if audit_path else Path()
+    if audit_path and audit.is_file():
+        artifacts.append(_artifact("public_provider_discovery_relevance_audit_json", audit))
     return artifacts
 
 
@@ -6937,13 +6945,18 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
                 provider_result,
                 limit=int(inputs.get("limit") or payload.get("shortlist_count") or 10),
             )
+            artifacts.extend(_production_discovery_artifacts(provider_result, service_workspace))
+            limitations.extend(str(item) for item in provider_result.get("limitations") or [] if str(item).strip())
             if provider_candidates:
                 candidates = provider_candidates
                 native_mode = "topic_public_provider_fallback"
                 status = "completed"
-                artifacts.extend(_production_discovery_artifacts(provider_result, service_workspace))
                 limitations.append("Native topic discovery returned no shortlist; bounded production public-provider fallback supplied traceable candidates.")
-                limitations.extend(str(item) for item in provider_result.get("limitations") or [] if str(item).strip())
+            elif str(provider_result.get("status") or "") == "inconclusive":
+                status = "inconclusive"
+                limitations.append(
+                    "Production public-provider fallback returned no publishable shortlist after deterministic relevance filtering."
+                )
         except Exception as exc:
             limitations.append(f"Production public-provider discovery fallback failed: {type(exc).__name__}: {exc}")
     return {
@@ -24046,7 +24059,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     if args.action not in ACTIONS:
         print(f"ERROR: unsupported action: {args.action}", file=sys.stderr)
         return 2
-    envelope = load_envelope(args.envelope)
+    envelope = load_envelope(args.envelope, action=args.action)
+    if str(envelope.get("mode") or "").strip().lower() != "fixture":
+        load_local_provider_env(REPO_HARNESS_DIR / ".env")
     if getattr(args, "gate_mode", None):
         envelope.setdefault("inputs", {})["gate_mode"] = str(args.gate_mode)
     evidence = ACTIONS[args.action](envelope)

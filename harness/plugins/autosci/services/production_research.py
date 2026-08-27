@@ -11,6 +11,7 @@ import hashlib
 import html
 import ipaddress
 import json
+import math
 import os
 import re
 import socket
@@ -43,6 +44,20 @@ DEFAULT_FETCH_MAX_BYTES = 5 * 1024 * 1024
 DEFAULT_FETCH_MAX_REDIRECTS = 5
 DEFAULT_EXTRACTED_TEXT_CHARS = 120_000
 MIN_DISCOVERY_PROVIDERS = 2
+_RELEVANCE_GENERIC_TERMS = {
+    "about", "analysis", "analyze", "assessment", "based", "collect", "compare", "comparison",
+    "current", "data", "demonstrate", "describe", "discuss", "effect", "evaluate", "evidence",
+    "finding", "findings", "identify", "investigate", "literature", "main", "method", "methods",
+    "deliverable", "deliverables", "paper", "papers", "produce", "relevant", "report", "research",
+    "result", "results", "review", "source", "sources", "study", "studies", "synthesize", "systematic",
+    "using", "work",
+}
+_RELEVANCE_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "between", "by", "can", "could", "do", "does",
+    "for", "from", "how", "in", "into", "is", "it", "its", "of", "on", "or", "our", "that",
+    "the", "their", "these", "this", "through", "to", "use", "used", "versus", "we", "what",
+    "when", "where", "which", "with", "without",
+}
 _XML_ENTITY_DECLARATION_RE = re.compile(rb"<!(?:DOCTYPE|ENTITY)\b", re.IGNORECASE)
 _ARXIV_NAMESPACES = {
     "atom": "http://www.w3.org/2005/Atom",
@@ -531,6 +546,187 @@ def _candidate_title_key(candidate: dict[str, Any]) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(candidate.get("title") or "").lower()).strip()
 
 
+def _relevance_stem(token: str) -> str:
+    """Apply a deliberately small, deterministic English inflection fold."""
+
+    value = str(token or "").lower().strip()
+    if len(value) > 5 and value.endswith("ies"):
+        return value[:-3] + "y"
+    if len(value) > 5 and value.endswith(("ches", "shes", "sses", "xes", "zes")):
+        return value[:-2]
+    if len(value) > 4 and value.endswith("s") and not value.endswith(("ss", "us", "is")):
+        return value[:-1]
+    return value
+
+
+def _relevance_terms(value: Any, *, remove_generic: bool) -> set[str]:
+    terms: set[str] = set()
+    for raw in re.findall(r"[a-z0-9]+", str(value or "").lower()):
+        if len(raw) < 2 or raw in _RELEVANCE_STOPWORDS:
+            continue
+        term = _relevance_stem(raw)
+        if remove_generic and term in _RELEVANCE_GENERIC_TERMS:
+            continue
+        terms.add(term)
+    return terms
+
+
+def _candidate_relevance_text(candidate: dict[str, Any]) -> str:
+    metadata = candidate.get("metadata") if isinstance(candidate.get("metadata"), dict) else {}
+    return " ".join(
+        str(value or "")
+        for value in (
+            candidate.get("title"),
+            candidate.get("content_summary"),
+            metadata.get("venue"),
+            " ".join(str(item) for item in metadata.get("fields_of_study") or []),
+        )
+    )
+
+
+def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
+    """Extract planner-preserved `Required coverage:` clauses as anchor groups.
+
+    Terms already present in the node's base objective are broad topic terms,
+    not discriminating coverage anchors. Removing them is what keeps generic
+    `battery energy storage` papers from satisfying a chemistry list merely by
+    repeating `battery` and `storage`.
+    """
+
+    text = str(query or "")
+    marker = re.search(r"Authoritative discovery scope\s*:", text, re.IGNORECASE)
+    if not marker:
+        return []
+    base_terms = _relevance_terms(text[: marker.start()], remove_generic=True)
+    groups: list[dict[str, Any]] = []
+    for match in re.finditer(r"Required coverage\s*:\s*([^\r\n]+)", text[marker.end() :], re.IGNORECASE):
+        clause = str(match.group(1) or "").strip().rstrip(".;")
+        terms = _relevance_terms(clause, remove_generic=True) - base_terms
+        # These are grammatical glue inside chemistry names, not useful
+        # discriminators by themselves. `solid` and `sulfur` remain anchors.
+        terms -= {"ion", "state"}
+        if terms:
+            groups.append(
+                {
+                    "group_id": f"coverage-{len(groups) + 1}",
+                    "clause": clause,
+                    "anchor_terms": sorted(terms),
+                }
+            )
+    return groups
+
+
+def apply_discovery_relevance_gate(
+    query: str,
+    candidates: list[dict[str, Any]],
+    *,
+    minimum_relevant_candidates: int | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Reject candidates that do not share enough topic signal with the query.
+
+    This is intentionally lexical rather than model-backed: the result is
+    deterministic, cheap, and every decision can be reproduced from the saved
+    query terms and candidate record. Generic research/deliverable words do not
+    count as relevance. A rich query requires two topic matches; a short query
+    requires one. If filtering leaves only a small fraction of a larger result
+    set, the entire shortlist remains incomplete instead of publishing a weak
+    partial list as final.
+    """
+
+    query_terms = _relevance_terms(query, remove_generic=True)
+    coverage_groups = _coverage_anchor_groups(query)
+    required_overlap = 2 if len(query_terms) >= 4 else 1
+    raw_count = len(candidates)
+    if minimum_relevant_candidates is None:
+        # One result is enough when the provider only returned one. For a
+        # larger pool, require a meaningful retained subset before finality.
+        minimum_relevant_candidates = max(1, min(3, math.ceil(raw_count * 0.30)))
+    minimum_relevant_candidates = max(1, int(minimum_relevant_candidates))
+
+    accepted: list[dict[str, Any]] = []
+    decisions: list[dict[str, Any]] = []
+    for candidate in candidates:
+        candidate_terms = _relevance_terms(_candidate_relevance_text(candidate), remove_generic=False)
+        matched = sorted(query_terms & candidate_terms)
+        coverage_matches = [
+            {
+                "group_id": str(group["group_id"]),
+                "matched_anchor_terms": sorted(set(group["anchor_terms"]) & candidate_terms),
+            }
+            for group in coverage_groups
+        ]
+        unmatched_coverage_groups = [
+            str(item["group_id"])
+            for item in coverage_matches
+            if not item["matched_anchor_terms"]
+        ]
+        topic_threshold_met = bool(query_terms) and len(matched) >= required_overlap
+        is_relevant = topic_threshold_met and not unmatched_coverage_groups
+        decision = {
+            "candidate_id": str(candidate.get("source_id") or candidate.get("canonical_id") or ""),
+            "canonical_id": str(candidate.get("canonical_id") or candidate.get("url") or ""),
+            "title": str(candidate.get("title") or ""),
+            "provider": str(candidate.get("provider") or "unknown"),
+            "accepted": is_relevant,
+            "matched_query_terms": matched,
+            "matched_term_count": len(matched),
+            "required_term_count": required_overlap,
+            "coverage_group_matches": coverage_matches,
+            "unmatched_coverage_groups": unmatched_coverage_groups,
+            "reason": (
+                "topic_and_coverage_threshold_met"
+                if is_relevant and coverage_groups
+                else "topic_term_threshold_met"
+                if is_relevant
+                else "required_coverage_anchor_missing"
+                if topic_threshold_met and unmatched_coverage_groups
+                else "query_has_no_specific_topic_terms"
+                if not query_terms
+                else "insufficient_topic_term_overlap"
+            ),
+        }
+        decisions.append(decision)
+        if is_relevant:
+            item = dict(candidate)
+            item["relevance_gate"] = {
+                "status": "accepted",
+                "matched_query_terms": matched,
+                "required_term_count": required_overlap,
+                "coverage_group_matches": coverage_matches,
+            }
+            accepted.append(item)
+
+    gate_passed = bool(query_terms) and len(accepted) >= minimum_relevant_candidates
+    audit = {
+        "schema": "autosci_discovery_relevance_audit.v1",
+        "status": "passed" if gate_passed else "incomplete",
+        "query": str(query),
+        "query_terms": sorted(query_terms),
+        "gate_mode": "required_coverage" if coverage_groups else "topic_overlap",
+        "authoritative_coverage_required": bool(coverage_groups),
+        "coverage_anchor_groups": coverage_groups,
+        "required_term_count_per_candidate": required_overlap,
+        "minimum_relevant_candidates": minimum_relevant_candidates,
+        "input_candidate_count": raw_count,
+        "accepted_candidate_count": len(accepted),
+        "rejected_candidate_count": raw_count - len(accepted),
+        "decisions": decisions,
+        "blocking_reasons": (
+            []
+            if gate_passed
+            else ["query_has_no_specific_topic_terms"]
+            if not query_terms
+            else [
+                f"only {len(accepted)} candidate(s) met the deterministic relevance threshold; "
+                f"{minimum_relevant_candidates} required"
+            ]
+        ),
+    }
+    # Do not leak a weak partial shortlist to a consumer that treats any
+    # non-empty candidate list as final-ready. The audit retains those records.
+    return (accepted if gate_passed else []), audit
+
+
 def _select_candidates(
     seeded: list[dict[str, Any]],
     discovered: list[dict[str, Any]],
@@ -663,7 +859,11 @@ class LiteratureDiscoveryService:
             "method": "GET",
             "url": url,
             "attempt": attempt,
-            "credential_mode": "public_no_key",
+            "credential_mode": (
+                "api_key"
+                if provider == "semantic_scholar" and os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "").strip()
+                else "public_no_key"
+            ),
             "requested_at": self.clock(),
         }
         request_path = root / f"{attempt_id}-request.json"
@@ -1194,14 +1394,45 @@ class LiteratureDiscoveryService:
             answered[provider] = "completed" if found else "empty"
             if found:
                 contributed.add(provider)
-        deduped = _select_candidates(seeded, candidates, limit=self.limit + 1)
-        for candidate in deduped:
-            candidate["candidate_sha256"] = stable_json_sha256(candidate)
-            candidate["query"] = query
-        if not deduped:
+        selected = _select_candidates(seeded, candidates, limit=self.limit + 1)
+        if not selected:
             raise ResearchOperatorError(
                 "All configured public discovery providers returned no traceable sources",
                 error_type="provider_unavailable",
+            )
+        minimum_relevant_raw = (
+            task_contract.get("minimum_relevant_candidates")
+            if task_contract.get("minimum_relevant_candidates") is not None
+            else payload.get("minimum_live_sources")
+        )
+        try:
+            minimum_relevant = int(minimum_relevant_raw) if minimum_relevant_raw is not None else None
+        except (TypeError, ValueError):
+            minimum_relevant = None
+        deduped, relevance_audit = apply_discovery_relevance_gate(
+            query,
+            selected,
+            minimum_relevant_candidates=minimum_relevant,
+        )
+        relevance_audit_hash = stable_json_sha256(relevance_audit)
+        relevance_audit_path = (
+            self.workspace_root
+            / "service-evidence"
+            / "discovery"
+            / "relevance"
+            / f"{relevance_audit_hash}.json"
+        )
+        relevance_audit_sha = _write_json(relevance_audit_path, relevance_audit)
+        relevance_audit["audit_path"] = _display_path(relevance_audit_path, self.workspace_root)
+        relevance_audit["audit_sha256"] = relevance_audit_sha
+        for candidate in deduped:
+            candidate["candidate_sha256"] = stable_json_sha256(candidate)
+            candidate["query"] = query
+        if relevance_audit["status"] != "passed":
+            limitations.append(
+                "Deterministic relevance gate left the discovery shortlist incomplete: "
+                + "; ".join(str(item) for item in relevance_audit.get("blocking_reasons") or [])
+                + f". Audit: {relevance_audit['audit_path']}"
             )
         response_payload = {
             "schema": "autosci_source_discovery_service.v1",
@@ -1212,6 +1443,7 @@ class LiteratureDiscoveryService:
             "provider_traces": traces,
             "provider_attempts": list(self._attempts),
             "candidate_count": len(deduped),
+            "relevance_gate": relevance_audit,
             "candidate_hashes": [str(item["candidate_sha256"]) for item in deduped],
             "candidate_records": [
                 {
@@ -1229,7 +1461,7 @@ class LiteratureDiscoveryService:
         response_hash = stable_json_sha256(response_payload)
         archive_path = self.workspace_root / "service-evidence" / "discovery" / f"{response_hash}.json"
         archive_hash = _write_json(archive_path, response_payload)
-        providers = sorted({str(item.get("provider") or "unknown") for item in deduped})
+        providers = sorted({str(item.get("provider") or "unknown") for item in selected})
         attempted_providers = sorted(set(self._attempt_paths) | set(providers) | set(answered))
         return {
             "service_id": self.service_id,
@@ -1238,7 +1470,9 @@ class LiteratureDiscoveryService:
             "response_sha256": response_hash,
             "trace": "production:" + "+".join(providers),
             "query": query,
+            "status": "completed" if relevance_audit["status"] == "passed" else "inconclusive",
             "candidates": deduped,
+            "relevance_gate": relevance_audit,
             "provider_usage": [
                 {
                     "provider": provider,

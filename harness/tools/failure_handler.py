@@ -13,6 +13,11 @@ PLAN_INVALID = "PLAN_INVALID"
 EXECUTION_FAILED = "EXECUTION_FAILED"
 VERIFICATION_FAILED = "VERIFICATION_FAILED"
 UNKNOWN_FAILURE = "UNKNOWN_FAILURE"
+NO_FAILURE = "NO_FAILURE"
+OPERATOR_TIMEOUT = "OPERATOR_TIMEOUT"
+OPERATOR_TRANSIENT = "OPERATOR_TRANSIENT"
+OPERATOR_PERMANENT = "OPERATOR_PERMANENT"
+OPERATOR_UNSUPPORTED = "OPERATOR_UNSUPPORTED"
 
 
 @dataclass(frozen=True)
@@ -29,6 +34,8 @@ def classify(event: Mapping[str, Any]) -> str:
 
 
 def classify_detail(event: Mapping[str, Any]) -> FailureClassification:
+    if str(event.get("schema_version") or "") == "solar.node_envelope.v1":
+        return _classify_node_envelope(event)
     event_type = str(event.get("event_type") or event.get("type") or "")
     payload = _payload(event)
 
@@ -56,6 +63,33 @@ def classify_detail(event: Mapping[str, Any]) -> FailureClassification:
         event_type,
         severity="warn",
     )
+
+
+def _classify_node_envelope(envelope: Mapping[str, Any]) -> FailureClassification:
+    """Classify only typed envelope fields; diagnostics never drive routing."""
+
+    status = str(envelope.get("status") or "")
+    error = envelope.get("error")
+    typed_error = dict(error) if isinstance(error, Mapping) else {}
+    error_type = str(typed_error.get("type") or "")
+    detail = str(typed_error.get("detail") or error_type or status or "operator envelope")
+    if status == "completed" and not error_type:
+        return FailureClassification(NO_FAILURE, "operator_completed", "solar.node_envelope.v1", severity="info")
+    if error_type == "timeout":
+        failure_type = OPERATOR_TIMEOUT
+    elif error_type in {
+        "external_dependency_pending",
+        "provider_environment_failure",
+        "provider_unavailable",
+        "rate_limit",
+        "transient_provider_failure",
+    } or typed_error.get("retryable") is True:
+        failure_type = OPERATOR_TRANSIENT
+    elif error_type in {"unknown_node", "unsupported_request"}:
+        failure_type = OPERATOR_UNSUPPORTED
+    else:
+        failure_type = OPERATOR_PERMANENT
+    return FailureClassification(failure_type, detail[:500], "solar.node_envelope.v1")
 
 
 def emit_failure_event(
@@ -124,6 +158,11 @@ def _is_verification_failed(event_type: str, payload: Mapping[str, Any]) -> bool
 __all__ = [
     "EXECUTION_FAILED",
     "FailureClassification",
+    "NO_FAILURE",
+    "OPERATOR_PERMANENT",
+    "OPERATOR_TIMEOUT",
+    "OPERATOR_TRANSIENT",
+    "OPERATOR_UNSUPPORTED",
     "PLAN_INVALID",
     "UNKNOWN_FAILURE",
     "VERIFICATION_FAILED",

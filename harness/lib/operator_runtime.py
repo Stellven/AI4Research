@@ -243,6 +243,20 @@ def _coerce_pid(value: Any) -> Optional[int]:
 def _pid_exists(pid: Optional[int]) -> bool:
     if pid is None:
         return False
+    if os.name == "nt":
+        # On Windows ``os.kill(pid, 0)`` emits CTRL_C_EVENT to the target
+        # console group; it is not a harmless existence probe.  That can
+        # interrupt the scheduler and every colocated operator.
+        import _winapi
+
+        try:
+            handle = _winapi.OpenProcess(0x1000, False, int(pid))
+        except OSError:
+            return False
+        try:
+            return _winapi.GetExitCodeProcess(handle) == 259
+        finally:
+            _winapi.CloseHandle(handle)
     try:
         os.kill(pid, 0)
         return True
@@ -833,6 +847,7 @@ def submit(task_envelope: Dict[str, Any]) -> Dict[str, Any]:
         "inbox_path": str(inbox_path),
         "status": "submitted",
         "submitted_at": submitted_at,
+        "expires_at": lease["expires_at"],
         "daemon_pid": daemon_pid,
     }
     return result

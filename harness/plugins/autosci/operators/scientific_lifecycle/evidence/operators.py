@@ -99,6 +99,8 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
             allow_network_fetch=bool(payload.get("allow_network_fetch", True)),
             no_citation_expand=bool(payload.get("no_citation_expand", False)),
             fixture_fallback=False,
+            max_retries=payload.get("max_retries"),
+            max_retry_wait_seconds=payload.get("max_retry_wait_seconds"),
         )
     except Exception as exc:
         evidence = evidence_document(

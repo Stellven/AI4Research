@@ -35,6 +35,46 @@ def _requirement_ir() -> dict:
     }
 
 
+def _battery_research_requirement_ir() -> dict:
+    return {
+        "schema_version": "solar.requirement_ir.v2",
+        "requirement_ir_id": "req-battery-research",
+        "requirements": [
+            {
+                "requirement_id": "R1",
+                "statement": "Produce the final grid-storage battery comparison report.",
+                "acceptance": {
+                    "kind": "artifact_fields",
+                    "required_values": ["answer", "supporting_evidence", "limitations"],
+                },
+                "check": "check.information_outcome_completeness.v1",
+            },
+            {
+                "requirement_id": "R2",
+                "statement": "Compare the four specified battery chemistries for grid storage.",
+                "acceptance": {
+                    "kind": "coverage",
+                    "required_values": [
+                        "lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries"
+                    ],
+                },
+                "check": "check.intent_constraint_coverage.v1",
+            },
+            {
+                "requirement_id": "R3",
+                "statement": "Evaluate every requested comparison criterion.",
+                "acceptance": {
+                    "kind": "coverage",
+                    "required_values": [
+                        "energy density, lifetime, safety, material availability, cost, and commercial readiness"
+                    ],
+                },
+                "check": "check.intent_constraint_coverage.v1",
+            },
+        ],
+    }
+
+
 def _catalog() -> dict:
     catalog = planner.build_planning_catalog_snapshot()
     assert "ImplementationWorker" in {
@@ -874,6 +914,8 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
     ]
     assert "implementation-only support steps out of PlanIR" in payload["instruction"]
     assert "type `collection`" in payload["instruction"]
+    assert "source- or literature-discovery node must own" in payload["instruction"]
+    assert "full research query, not a generic topic summary" in payload["instruction"]
     experiment_check = next(
         row
         for row in payload["evaluation_check_abis"]
@@ -895,6 +937,84 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
         }
     assert "operator_compatibility" not in prompt
     assert len(prompt.encode("utf-8")) < 60000
+
+
+def test_discovery_plan_preserves_scope_requirements_in_runtime_goal(tmp_path: Path) -> None:
+    requirement_ir = _battery_research_requirement_ir()
+    decision = {
+        "planning_decision_id": "planning-decision-battery",
+        "decision": "generate",
+    }
+    body = {
+        "nodes": [
+            {
+                "node_id": "discover",
+                "logical_operator": "ScientificLiteratureDiscoverer",
+                "objective": "Collect literature for a grid-storage battery comparison.",
+                "depends_on": [],
+                "consumes": ["schema:request-envelope.schema.json"],
+                "produces": [
+                    {
+                        "artifact_type": "schema:schemas/evidence/literature_discovery.v1.schema.json",
+                        "verifier_ids": ["check.scientific.literature_discovery.v1"],
+                        "materialization": {
+                            "kind": "file",
+                            "path": "literature_discovery.json",
+                        },
+                    }
+                ],
+                "requirement_ids": [],
+                "operator_requirements": {
+                    "capabilities": ["source_discovery"],
+                    "network": "required",
+                    "execution_trust": "measured_execution",
+                    "minimum_context_tokens": 2000,
+                    "effects": ["read", "write", "execute", "network"],
+                },
+                "gate_requirement": "literature_is_source_backed_and_in_scope",
+            }
+        ]
+    }
+    model = ScriptedModel(plan_bodies=[body])
+
+    plan_ir = planner.compile_plan_candidate(
+        requirement_ir,
+        decision,
+        _catalog(),
+        {"requirement_ir": requirement_ir},
+        planner.evaluation_planning.load_evaluation_check_registry(),
+        model,
+        tmp_path,
+    )
+
+    node = plan_ir["nodes"][0]
+    assert node["requirement_ids"] == ["R2", "R3"]
+    assert "R1" not in node["requirement_ids"]
+    assert "lithium-ion, sodium-ion, solid-state, and lithium-sulfur" in node["objective"]
+    assert "energy density, lifetime, safety, material availability" in node["objective"]
+    assert "commercial readiness" in node["objective"]
+    assert node["objective"].count("Authoritative discovery scope:") == 1
+    assert "check.intent_constraint_coverage.v1" in node["produces"][0]["verifier_ids"]
+
+    graph = planner._generated_task_graph_proposal(
+        requirement_ir,
+        plan_ir,
+        {
+            "nodes": [
+                {
+                    "node_id": "discover",
+                    "selected_capsule_id": "cap.research-retrieval",
+                    "dispatch_task_type": "research",
+                    "fallback_capsule_ids": [],
+                    "rationale": "Source-backed discovery capsule.",
+                }
+            ]
+        },
+        sprint_id="sprint-battery-scope",
+    )
+    runtime_node = graph["nodes"][0]
+    assert runtime_node["requirement_ids"] == ["R2", "R3"]
+    assert runtime_node["goal"] == node["objective"]
 
 
 def test_fidelity_prompt_does_not_confuse_runtime_execute_with_experiment() -> None:

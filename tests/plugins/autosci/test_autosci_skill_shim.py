@@ -768,6 +768,14 @@ def test_autosci_skill_shim_discover_runtime_attaches_provider_runtime_proof(tmp
     assert proc.returncode == 0, proc.stderr
     summary = json.loads(proc.stdout)
     payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
+    assert summary["status"] == "completed"
+    assert summary["execution_status"] == "completed"
+    assert summary["runtime_status_basis"] == "validated_discover_runtime"
+    assert summary["route_coverage_status"] == "partial"
+    assert Path(summary["managed_run_path"]) == tmp_path / "artifacts/autosci/runs/shim-discover-provider-runtime-proof"
+    assert Path(summary["artifact_root"]) == tmp_path / "artifacts/autosci"
+    assert Path(summary["harness_root"]) == tmp_path
+    assert payload["outputs"]["skill_run"]["route"]["coverage_status"] == "partial"
     action = payload["outputs"]["skill_run"]["actions"][0]
     discovery = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
     assert discovery["status"] == "completed"
