@@ -872,6 +872,36 @@ def _apply_failure_runtime_override(
     )
 
 
+_TERMINAL_EXCEPTION_RE = re.compile(
+    r"^(?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*(?:Error|Exception):\s*"
+)
+
+
+def _failure_runtime_override_skip_reason(failure_text: str) -> str:
+    """Keep local closeout/orchestration failures from poisoning operator health.
+
+    A worker log can contain a recoverable provider error before a later local
+    scheduler, path, or configuration exception.  Failure flow-control scans
+    the whole tail, so without this causal guard that stale provider text can
+    put an otherwise healthy operator into cooldown.  A terminal provider
+    exception still reaches the normal classifier.
+    """
+    terminal_exception = ""
+    for line in reversed(str(failure_text or "").splitlines()):
+        candidate = line.strip()
+        if _TERMINAL_EXCEPTION_RE.match(candidate):
+            terminal_exception = candidate
+            break
+    if not terminal_exception:
+        return ""
+
+    import operator_flow_control as ofc  # noqa: E402
+
+    if ofc.classify_failure_state(terminal_exception):
+        return ""
+    return "terminal_local_failure"
+
+
 # ---------------------------------------------------------------------------
 # Subcommand: daemon
 # ---------------------------------------------------------------------------
@@ -1770,47 +1800,57 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             log_tail = "\n".join(log_lines[-50:])
             flow_control_decision: dict[str, Any] | None = None
             if result_status != "completed" and log_tail.strip():
-                try:
-                    flow_control_decision = _apply_failure_runtime_override(
-                        operator_id=operator_id,
-                        config=config,
-                        envelope=envelope,
-                        task_dir=result_dir,
-                        failure_text=log_tail,
-                    )
-                except Exception as exc:
-                    log_lines.append(f"[WARN] failure flow control hook failed: {exc}")
+                skip_reason = _failure_runtime_override_skip_reason(log_tail)
+                if skip_reason:
+                    flow_control_decision = {
+                        "runtime_state": "",
+                        "task_control": None,
+                        "skipped": True,
+                        "reason": skip_reason,
+                    }
+                    log_lines.append(f"[flow-control] skipped={skip_reason}")
                 else:
-                    runtime_state = str((flow_control_decision or {}).get("runtime_state") or "").strip()
-                    if runtime_state:
-                        log_lines.append(f"[flow-control] runtime_state={runtime_state}")
-                    task_control = (flow_control_decision or {}).get("task_control")
-                    action = (
-                        str(task_control.get("action") or "defer")
-                        if isinstance(task_control, dict)
-                        else "operator_blocked_no_defer"
-                        if runtime_state in {"cooldown", "auth_expired"}
-                        else "no_retry"
-                    )
-                    flow_operation_id = _observation_id(
-                        "operation", observation_ids.get("dispatch_id"), observation_ids.get("attempt_id"), "flow-control"
-                    )
-                    _observe(
-                        "flow_control.decision",
-                        component="operatord",
-                        operator=operator_id,
-                        operation="flow_control",
-                        operation_id=flow_operation_id,
-                        phase="point",
-                        status=runtime_state or "unclassified",
-                        identifiers={
-                            **observation_ids,
-                            "span_id": _observation_id("span", flow_operation_id),
-                            "parent_span_id": worker_span_id,
-                        },
-                        data={"runtime_state": runtime_state or "unclassified", "decision": action},
-                        provenance="observed",
-                    )
+                    try:
+                        flow_control_decision = _apply_failure_runtime_override(
+                            operator_id=operator_id,
+                            config=config,
+                            envelope=envelope,
+                            task_dir=result_dir,
+                            failure_text=log_tail,
+                        )
+                    except Exception as exc:
+                        log_lines.append(f"[WARN] failure flow control hook failed: {exc}")
+                    else:
+                        runtime_state = str((flow_control_decision or {}).get("runtime_state") or "").strip()
+                        if runtime_state:
+                            log_lines.append(f"[flow-control] runtime_state={runtime_state}")
+                        task_control = (flow_control_decision or {}).get("task_control")
+                        action = (
+                            str(task_control.get("action") or "defer")
+                            if isinstance(task_control, dict)
+                            else "operator_blocked_no_defer"
+                            if runtime_state in {"cooldown", "auth_expired"}
+                            else "no_retry"
+                        )
+                        flow_operation_id = _observation_id(
+                            "operation", observation_ids.get("dispatch_id"), observation_ids.get("attempt_id"), "flow-control"
+                        )
+                        _observe(
+                            "flow_control.decision",
+                            component="operatord",
+                            operator=operator_id,
+                            operation="flow_control",
+                            operation_id=flow_operation_id,
+                            phase="point",
+                            status=runtime_state or "unclassified",
+                            identifiers={
+                                **observation_ids,
+                                "span_id": _observation_id("span", flow_operation_id),
+                                "parent_span_id": worker_span_id,
+                            },
+                            data={"runtime_state": runtime_state or "unclassified", "decision": action},
+                            provenance="observed",
+                        )
                 log_tail = "\n".join(log_lines[-50:])
             result_path = write_result(
                 operator_id=operator_id,

@@ -1024,6 +1024,37 @@ class TestSendToPaneLiteral:
         assert node.get("eval_retry_reason") is None
         assert node.get("last_eval_closeout_failure") is None
 
+    def test_empty_eval_json_does_not_satisfy_eval_requirement(self, tmp_harness):
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        node = graph["nodes"][0]
+        node["status"] = "reviewing"
+        graph["node_results"]["N1"] = {"status": "reviewing"}
+        (sprints / f"{sid}.N1-handoff.md").write_text("# Handoff\n", encoding="utf-8")
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_json.write_text("", encoding="utf-8")
+
+        assert gnd._eval_json_ready(eval_json) is False
+        assert gnd._node_eval_needed(graph, sid, node) is True
+
+    def test_eval_markdown_backfill_replaces_invalid_json(self, tmp_harness):
+        tmp_path, sprints, sid, graph = tmp_harness
+        import graph_node_dispatcher as gnd
+
+        eval_json = sprints / f"{sid}.N1-eval.json"
+        eval_json.write_text("{not-json", encoding="utf-8")
+        (sprints / f"{sid}.N1-eval.md").write_text(
+            "# Independent evaluation\n\n## Verdict\n\nFAIL\n",
+            encoding="utf-8",
+        )
+
+        recovered = gnd._maybe_backfill_eval_json_from_md(sid, "N1")
+
+        assert recovered == eval_json
+        assert json.loads(eval_json.read_text(encoding="utf-8"))["verdict"] == "FAIL"
+        assert gnd._eval_json_ready(eval_json) is True
+
     def test_eval_reconcile_retries_current_failed_contract_closeout_with_empty_precreated_json(
         self, tmp_harness, monkeypatch
     ):

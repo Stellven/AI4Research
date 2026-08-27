@@ -39,6 +39,48 @@ def test_all_graphs_terminal_rejects_reviewing_and_pending(tmp_path):
     assert multi_task_runner._all_graphs_terminal([str(graph)]) is False
 
 
+def test_terminal_graph_waits_for_active_operator_pool_evaluator(monkeypatch, tmp_path):
+    graph = _graph(tmp_path, ["passed"])
+    payload = multi_task_runner.json.loads(graph.read_text(encoding="utf-8"))
+    payload["nodes"][0].update(
+        {
+            "eval_assignments": [
+                {
+                    "pane": "operator:eval-worker",
+                    "dispatch_id": "eval-dispatch-1",
+                    "pm_task_id": "pm-eval-1",
+                    "dispatched_at": "2026-08-27T18:15:45Z",
+                }
+            ],
+            "eval_dispatched_at": "2026-08-27T18:15:45Z",
+        }
+    )
+    graph.write_text(multi_task_runner.json.dumps(payload) + "\n", encoding="utf-8")
+    pm_inbox = tmp_path / "run" / "pm-inbox"
+    pm_inbox.mkdir(parents=True)
+    pm_record = pm_inbox / "pm-eval-1.json"
+    pm_record.write_text(
+        multi_task_runner.json.dumps({"task_id": "pm-eval-1", "status": "running"}) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(multi_task_runner, "HARNESS_DIR", tmp_path)
+
+    state = multi_task_runner._graph_runner_state(graph)
+
+    assert state["all_terminal"] is True
+    assert state["has_pending_evaluation"] is True
+    assert state["has_active"] is True
+    assert multi_task_runner._all_graphs_terminal([str(graph)]) is False
+
+    pm_record.write_text(
+        multi_task_runner.json.dumps({"task_id": "pm-eval-1", "status": "completed"}) + "\n",
+        encoding="utf-8",
+    )
+    state = multi_task_runner._graph_runner_state(graph)
+    assert state["has_pending_evaluation"] is False
+    assert multi_task_runner._all_graphs_terminal([str(graph)]) is True
+
+
 def test_detect_stale_scheduler_runners_reports_required_fields(monkeypatch, tmp_path):
     graph = _graph(tmp_path, ["passed"])
     sched_dir = tmp_path / "run" / "multi-task" / "schedulers"

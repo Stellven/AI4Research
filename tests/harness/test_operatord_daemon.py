@@ -1094,6 +1094,14 @@ class TestBuildCommand:
 
 
 class TestFailureFlowControl:
+    def test_terminal_provider_rate_limit_exception_is_not_treated_as_local(self):
+        assert (
+            _od._failure_runtime_override_skip_reason(
+                "request failed\nRuntimeError: HTTP 429 too many requests"
+            )
+            == ""
+        )
+
     def _submit_command_task(self, tmp_path: Path, env: dict, *, task_id: str, command: str) -> None:
         envelope = {
             "task_id": task_id,
@@ -1198,6 +1206,44 @@ class TestFailureFlowControl:
         result = json.loads(result_path.read_text(encoding="utf-8"))
         assert "usage limit for GPT-5.3-Codex-Spark" in result["log_tail"]
         assert "[flow-control] runtime_state=cooldown" in result["log_tail"]
+
+    def test_terminal_local_failure_does_not_cooldown_operator_after_earlier_429(self, tmp_path):
+        env = _setup_command_harness(tmp_path)
+        self._submit_command_task(
+            tmp_path,
+            env,
+            task_id="T-local-path-after-429",
+            command=_command_text(
+                [
+                    _worker_python(),
+                    "-c",
+                    (
+                        "print('HTTP 429 from an earlier recoverable provider request', flush=True); "
+                        "open('definitely-missing-local-artifact.json', encoding='utf-8')"
+                    ),
+                ]
+            ),
+        )
+
+        daemon_proc = self._run_command_daemon_once(env)
+        assert daemon_proc.returncode == 0, daemon_proc.stderr
+
+        status_path = tmp_path / "run" / "operator-status" / "test-command-builder.json"
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+        assert status["runtime_state"] == "idle"
+        result_path = (
+            tmp_path
+            / "run"
+            / "operator-results"
+            / "test-command-builder"
+            / "T-local-path-after-429"
+            / "result.json"
+        )
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        assert result["status"] == "failed"
+        assert "FileNotFoundError:" in result["log_tail"]
+        assert "[flow-control] skipped=terminal_local_failure" in result["log_tail"]
+        assert "[flow-control] runtime_state=cooldown" not in result["log_tail"]
 
     def test_failed_auth_task_sets_auth_expired(self, tmp_path):
         env = _setup_command_harness(tmp_path)

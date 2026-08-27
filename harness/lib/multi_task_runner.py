@@ -2120,6 +2120,74 @@ def _scheduler_process_rows() -> list[dict[str, Any]]:
     return found
 
 
+_EVAL_PM_ACTIVE_STATUSES = frozenset({"submitted", "submitted_fallback", "leased", "running", "pending"})
+_EVAL_PM_TERMINAL_STATUSES = frozenset({"completed", "failed", "failed_contract_closeout", "cancelled", "canceled"})
+_EVAL_PENDING_GRACE_SEC = int(os.environ.get("SOLAR_GRAPH_EVAL_RECOVER_SEC", "600") or "600")
+
+
+def _node_has_pending_evaluation(node: dict[str, Any]) -> bool:
+    """Return true while an evaluator assignment still has live ownership.
+
+    Evaluators submitted through operatord do not appear in ``active_tasks()``,
+    which only reads the multi-task/tmux status directory.  The graph's
+    evaluator assignment is therefore the durable bridge used by the
+    foreground runner.  Exact PM state or pane lease wins; the bounded grace
+    window covers the small interval before those runtime records appear.
+    """
+    assignments = node.get("eval_assignments")
+    if not isinstance(assignments, list):
+        assignments = []
+    if not assignments and str(node.get("eval_dispatch_id") or "").strip():
+        assignments = [
+            {
+                "pane": node.get("eval_assigned_to"),
+                "dispatch_id": node.get("eval_dispatch_id"),
+                "pm_task_id": node.get("eval_pm_task_id"),
+                "dispatched_at": node.get("eval_dispatched_at"),
+            }
+        ]
+
+    for assignment in assignments:
+        if not isinstance(assignment, dict):
+            continue
+        pm_task_id = str(assignment.get("pm_task_id") or "").strip()
+        pm_status = ""
+        if pm_task_id and Path(pm_task_id).name == pm_task_id:
+            pm_record = HARNESS_DIR / "run" / "pm-inbox" / f"{pm_task_id}.json"
+            try:
+                payload = json.loads(pm_record.read_text(encoding="utf-8"))
+                pm_status = str(payload.get("status") or "").strip().lower()
+            except (OSError, json.JSONDecodeError, AttributeError):
+                pm_status = ""
+            if pm_status in _EVAL_PM_ACTIVE_STATUSES:
+                return True
+            if pm_status in _EVAL_PM_TERMINAL_STATUSES:
+                continue
+
+        pane = str(assignment.get("pane") or "").strip()
+        dispatch_id = str(assignment.get("dispatch_id") or "").strip()
+        if pane and dispatch_id and not pane.startswith("operator:"):
+            try:
+                from pane_lease import read_lease
+
+                lease = read_lease(pane) or {}
+                if (
+                    str(lease.get("dispatch_id") or "") == dispatch_id
+                    and str(lease.get("expires_at") or "") > _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                ):
+                    return True
+            except Exception:
+                pass
+
+        dispatched_at = str(
+            assignment.get("dispatched_at") or node.get("eval_dispatched_at") or ""
+        )
+        dispatched_ts = parse_iso(dispatched_at)
+        if dispatched_ts is not None and (time.time() - dispatched_ts) < _EVAL_PENDING_GRACE_SEC:
+            return True
+    return False
+
+
 def _graph_runner_state(graph_path: Path) -> dict[str, Any]:
     try:
         graph = load_graph(graph_path.expanduser())
@@ -2137,13 +2205,19 @@ def _graph_runner_state(graph_path: Path) -> dict[str, Any]:
     statuses = [str(node_status(graph, node_id) or "pending").lower() for node_id in node_ids]
     ready = [str(node.get("id") or "") for node in ready_nodes(graph)]
     all_terminal = bool(statuses) and all(status in _SCHED_GRAPH_TERMINAL for status in statuses)
-    has_active = any(status in _SCHED_GRAPH_ACTIVE for status in statuses)
+    has_pending_evaluation = any(
+        _node_has_pending_evaluation(node)
+        for node in graph.get("nodes", [])
+        if isinstance(node, dict)
+    )
+    has_active = any(status in _SCHED_GRAPH_ACTIVE for status in statuses) or has_pending_evaluation
     return {
         "ok": True,
         "graph": str(graph_path.expanduser()),
         "sid": sprint_id_for(graph, graph_path),
         "all_terminal": all_terminal,
         "has_active": has_active,
+        "has_pending_evaluation": has_pending_evaluation,
         "ready_nodes": ready,
         "reason": "completed_graph_runner" if (all_terminal and not has_active and not ready) else "graph_not_terminal",
         "statuses": statuses,
@@ -3224,6 +3298,29 @@ def graph_files(explicit: list[str]) -> list[Path]:
     return sorted(SPRINTS_DIR.glob("*.task_graph.json"), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def _activate_scheduler_runtime_root(runtime_dir: str | Path) -> Path:
+    """Keep every scheduler participant on the projection's runtime root.
+
+    ``--scheduler-runtime-dir`` historically changed only where SchedulerInput
+    wrote its graph and state projection.  The runner, dispatcher, evaluator
+    broker, and status writer continued resolving handoffs and sidecars from
+    the import-time ``HARNESS_SPRINTS_DIR`` instead.  Pin both supported child
+    environment names and refresh already-imported scheduler modules so the
+    whole run uses one artifact root.
+    """
+    runtime_root = Path(runtime_dir).expanduser().resolve()
+    os.environ["HARNESS_SPRINTS_DIR"] = str(runtime_root)
+    os.environ["SOLAR_HARNESS_SPRINTS_DIR"] = str(runtime_root)
+
+    global SPRINTS_DIR
+    SPRINTS_DIR = runtime_root
+    for module_name in ("graph_scheduler", "graph_node_dispatcher"):
+        module = sys.modules.get(module_name)
+        if module is not None:
+            setattr(module, "SPRINTS_DIR", runtime_root)
+    return runtime_root
+
+
 def prepare_scheduler_input_args(args: argparse.Namespace) -> list[str]:
     """Validate frozen SchedulerInput files and append compatibility projections."""
     inputs = list(getattr(args, "scheduler_input", []) or [])
@@ -3231,7 +3328,9 @@ def prepare_scheduler_input_args(args: argparse.Namespace) -> list[str]:
         return list(getattr(args, "graph", []) or [])
     import scheduler_input
 
-    output_dir = Path(getattr(args, "scheduler_runtime_dir", "") or SPRINTS_DIR)
+    output_dir = _activate_scheduler_runtime_root(
+        getattr(args, "scheduler_runtime_dir", "") or SPRINTS_DIR
+    )
     artifact_bindings: dict[str, str] = {}
     for raw_binding in list(getattr(args, "artifact_binding", []) or []):
         artifact_type, separator, path = str(raw_binding).partition("=")

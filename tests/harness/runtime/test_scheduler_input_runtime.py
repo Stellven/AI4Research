@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import sys
 import types
 from copy import deepcopy
@@ -665,6 +666,36 @@ def test_runtime_input_binding_is_hashed_routed_and_tamper_evident(tmp_path: Pat
     assert scheduler_input.verify_runtime_projection(graph)["errors"] == [
         "RUNTIME_INPUT_ARTIFACT_HASH_MISMATCH:artifact.request.v1"
     ]
+
+
+def test_runner_scheduler_runtime_dir_aligns_all_runtime_consumers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    runtime_root = (tmp_path / "custom-runtime").resolve()
+    stale_root = tmp_path / "stale-sprints"
+    monkeypatch.setattr(multi_task_runner, "SPRINTS_DIR", stale_root)
+    monkeypatch.setattr(graph_scheduler, "SPRINTS_DIR", stale_root)
+    monkeypatch.setattr(graph_node_dispatcher, "SPRINTS_DIR", stale_root)
+    monkeypatch.setenv("HARNESS_SPRINTS_DIR", str(stale_root))
+    monkeypatch.setenv("SOLAR_HARNESS_SPRINTS_DIR", str(stale_root))
+    args = types.SimpleNamespace(
+        scheduler_input=[str(source)],
+        scheduler_runtime_dir=str(runtime_root),
+        artifact_binding=[],
+        run_contract="",
+        graph=[],
+    )
+
+    graphs = multi_task_runner.prepare_scheduler_input_args(args)
+
+    assert graphs == [str(runtime_root / "sprint-test.task_graph.json")]
+    assert multi_task_runner.SPRINTS_DIR == runtime_root
+    assert graph_scheduler.SPRINTS_DIR == runtime_root
+    assert graph_node_dispatcher.SPRINTS_DIR == runtime_root
+    assert os.environ["HARNESS_SPRINTS_DIR"] == str(runtime_root)
+    assert os.environ["SOLAR_HARNESS_SPRINTS_DIR"] == str(runtime_root)
 
 
 def test_request_envelope_controller_input_routes_to_operator_dispatch_envelope(

@@ -4288,6 +4288,11 @@ def _active_multi_task_status_for(
         if str(status.get("node_id") or "") != node_id:
             continue
         row_task_id = str(status.get("id") or status.get("task_id") or "").strip()
+        if not row_task_id:
+            # Anonymous status cannot become execution authority or prove that
+            # a dispatch is still active; accepting it would make exact result
+            # reconciliation impossible.
+            continue
         if expected_task_id and row_task_id != expected_task_id:
             continue
         # A submitted status is no longer active once its exact durable result
@@ -5258,6 +5263,48 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
         active_multi_task = _active_multi_task_status_for(sid, node_id, node)
         if active_multi_task and status in {"pending", "queued", "blocked", "assigned", "dispatched", "in_progress", "running", ""}:
             dispatch_id = str(active_multi_task.get("id") or active_multi_task.get("dispatch_id") or "").strip()
+            operator_id = str(active_multi_task.get("operator_id") or "").strip()
+            result_path = str(active_multi_task.get("result_path") or "").strip()
+            current_attempt = current_execution_attempt(node)
+            source = str((current_attempt or {}).get("source") or "").strip()
+            if not source.startswith("multi_task_"):
+                submit_mode = str(
+                    active_multi_task.get("submit_mode")
+                    or active_multi_task.get("dispatch_mode")
+                    or ""
+                ).strip().lower()
+                source = (
+                    "multi_task_operatord"
+                    if submit_mode == "operatord" or bool(result_path)
+                    else "multi_task_tmux"
+                )
+            requires_operator_result = (
+                bool((current_attempt or {}).get("requires_operator_result"))
+                if current_attempt is not None
+                else source == "multi_task_operatord"
+            )
+            # Recovery must attach the exact durable task identity before the
+            # graph is marked dispatched.  Otherwise a terminal status on the
+            # next tick looks like an expired pane lease and the same node can
+            # be launched a second time before evaluation starts.
+            activate_execution_attempt(
+                node,
+                task_id=dispatch_id,
+                dispatch_id=dispatch_id,
+                operator_id=operator_id,
+                source=source,
+                logical_role=str(active_multi_task.get("role") or "builder"),
+                status=str(
+                    active_multi_task.get("effective_status")
+                    or active_multi_task.get("status")
+                    or "submitted"
+                ),
+                requires_operator_result=requires_operator_result,
+                sprint_id=sid,
+                node_id=node_id,
+                result_path=result_path,
+                now=str(active_multi_task.get("updated_at") or _utc_now()),
+            )
             window = str(active_multi_task.get("window") or "").strip()
             pane = f"multi-task:{window}" if window else "multi-task"
             set_node_status(graph, node_id, "dispatched", pane=pane, dispatch_id=dispatch_id or None)
@@ -5761,6 +5808,22 @@ def _eval_json_file(sid: str, node_id: str) -> Path:
     return SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-eval.json"
 
 
+def _eval_json_ready(path: str | Path) -> bool:
+    """True only for a non-empty, parseable evaluator verdict sidecar."""
+    candidate = Path(path)
+    try:
+        if not candidate.is_file() or candidate.stat().st_size <= 0:
+            return False
+    except OSError:
+        return False
+    payload = _read_json_file_safe(candidate)
+    verdict = str(payload.get("verdict") or payload.get("status") or "").strip().lower()
+    return verdict in {
+        "pass", "passed", "ok", "success", "succeeded",
+        "fail", "failed", "error", "errored",
+    }
+
+
 def _eval_snapshot_file(sid: str, node_id: str) -> Path:
     return SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-eval-snapshot.json"
 
@@ -5819,7 +5882,7 @@ def _maybe_backfill_eval_json_from_md(sid: str, node_id: str) -> Path | None:
     it never mints a PASS sidecar from a non-substantive eval .md.
     """
     eval_json = _eval_json_file(sid, node_id)
-    if eval_json.exists():
+    if _eval_json_ready(eval_json):
         return eval_json
     eval_md = _eval_md_file(sid, node_id)
     if not eval_md.exists():
@@ -13143,7 +13206,7 @@ def _node_eval_needed(graph: dict[str, Any], sid: str, node: dict[str, Any], for
     # A self-graded eval.json (executing agent wrote its own manual_node_eval, no independent report)
     # does NOT satisfy the eval requirement -- the node still needs a real evaluator dispatched.
     if (
-        _eval_json_file(sid, node_id).exists()
+        _eval_json_ready(_eval_json_file(sid, node_id))
         and not force
         and not repair_mode
         and not _node_eval_self_graded(sid, node_id)

@@ -654,7 +654,7 @@ def test_multi_task_launch_persists_canonical_legacy_attempt(
     monkeypatch.setattr(mtr, "SPRINTS_DIR", sprints)
     monkeypatch.setattr(mtr, "RUN_DIR", run_dir)
     monkeypatch.setattr(mtr, "OPERATORD_SUBMIT_ENABLED", False)
-    monkeypatch.setattr(mtr, "_plan_validator_launch_refusal", lambda _graph: None)
+    monkeypatch.setattr(mtr, "_plan_validator_launch_refusal", lambda *_args: None)
     monkeypatch.setattr(mtr, "select_profile", lambda *_args, **_kwargs: profile)
     monkeypatch.setattr(mtr, "capability_for_profile", lambda _profile: {"provider": "test", "status": "ready"})
     monkeypatch.setattr(mtr, "build_dispatch_text", lambda *_args, **_kwargs: "# dispatch\n")
@@ -670,7 +670,10 @@ def test_multi_task_launch_persists_canonical_legacy_attempt(
         dry_run=False,
     )
 
-    persisted = json.loads(graph_path.read_text(encoding="utf-8"))
+    # Runtime ownership fields live in the task-graph state sidecar; use the
+    # production loader to inspect the hydrated graph rather than the frozen
+    # spec plane alone.
+    persisted = mtr.load_graph(graph_path)
     attempt = persisted["nodes"][0]["execution_attempt"]
     assert attempt["task_id"] == payload["id"]
     assert attempt["source"] == "multi_task_tmux"
