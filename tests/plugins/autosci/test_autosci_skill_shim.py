@@ -4295,7 +4295,8 @@ def test_autosci_skill_shim_paper_plan_blocks_final_acceptance_without_compile(t
     assert proof_entry["native_skill"] == "paper-plan"
     assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
     assert proof_entry["collection_mode"] == "manual_review"
-    assert str(Path(action["evidence_path"]).relative_to(tmp_path)) in proof_entry["evidence_refs"]
+    expected_ref = Path(action["evidence_path"]).relative_to(tmp_path).as_posix()
+    assert expected_ref in [str(ref).replace("\\", "/") for ref in proof_entry["evidence_refs"]]
     source_proof = json.loads((tmp_path / artifacts["provider_source_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
     source_proof_entry = source_proof["proofs"][0]
     assert source_proof_entry["native_skill"] == "paper-plan"
@@ -4620,6 +4621,9 @@ def test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff(tm
                             "arxiv_id": "2601.00003",
                             "source_ref": "https://arxiv.org/abs/2601.00003",
                             "source_channels": ["search_s2"],
+                            "bibtex": "@article{skillgen2026, title={SkillGen Draft Evidence}, year={2026}}",
+                            "bibtex_verified": True,
+                            "bibtex_provenance": "semantic_scholar:arxiv:2601.00003",
                         }
                     ],
                 },
@@ -4743,9 +4747,11 @@ def test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff(tm
         "paper_draft_section_evidence_map_json",
     } <= set(artifacts)
     references_bib = (tmp_path / artifacts["paper_references_bib"]).read_text(encoding="utf-8")
-    assert "[UNCONFIRMED]" in references_bib
+    assert "[UNCONFIRMED]" not in references_bib
     bibtex_coverage = json.loads((tmp_path / artifacts["paper_draft_bibtex_coverage_json"]).read_text(encoding="utf-8"))
     assert bibtex_coverage["entry_count"] == 1
+    assert bibtex_coverage["verified_count"] == 1
+    assert bibtex_coverage["unconfirmed_count"] == 0
     assert bibtex_coverage["references_bib_path"] == artifacts["paper_references_bib"]
     section_map = json.loads((tmp_path / artifacts["paper_draft_section_evidence_map_json"]).read_text(encoding="utf-8"))
     assert section_map["citation_count"] == 1
@@ -4756,13 +4762,16 @@ def test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff(tm
     assert boundary["final_manuscript_ready"] is True
     assert boundary["publication_ready_claim_allowed"] is True
     assert boundary["citation_count"] == 1
+    assert boundary["verified_bibtex_count"] == 1
+    assert boundary["unconfirmed_bibtex_count"] == 0
     assert boundary["review_llm_completed"] is True
     assert boundary["compile_handoff_verified"] is True
     proof = json.loads((tmp_path / artifacts["review_model_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
     proof_entry = proof["proofs"][0]
     assert proof_entry["native_skill"] == "paper-draft"
     assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
-    assert str(Path(action["evidence_path"]).relative_to(tmp_path)) in proof_entry["evidence_refs"]
+    expected_ref = Path(action["evidence_path"]).relative_to(tmp_path).as_posix()
+    assert expected_ref in [str(ref).replace("\\", "/") for ref in proof_entry["evidence_refs"]]
     source_proof = json.loads((tmp_path / artifacts["provider_source_runtime_proof_manifest_json"]).read_text(encoding="utf-8"))
     source_proof_entry = source_proof["proofs"][0]
     assert source_proof_entry["native_skill"] == "paper-draft"
@@ -4783,6 +4792,30 @@ def test_autosci_skill_shim_paper_draft_includes_verified_compile_pdf_handoff(tm
         "paper_references_bib",
         "paper_draft_section_evidence_map_json",
     } <= bundle_file_types
+
+
+def test_paper_draft_final_boundary_rejects_unverified_bibtex() -> None:
+    sys.path.insert(0, str(SHIM.parent))
+    bridge = __import__("autosci_bridge")
+    boundary = bridge._paper_draft_final_manuscript_boundary(
+        {
+            "citations": [
+                {
+                    "citation_id": "arxiv:2601.00003",
+                    "title": "Unverified Reference",
+                    "bibtex": "@article{unverified, title={Unverified Reference}}",
+                    "bibtex_verified": False,
+                }
+            ]
+        },
+        {"completed": True, "status": "completed", "evidence_ids": ["review:paper"]},
+        {"verified": True, "status": "completed", "pdf_paths": ["paper.pdf"]},
+        has_source_evidence=True,
+    )
+    assert boundary["status"] == "paper_draft_final_manuscript_incomplete"
+    assert boundary["publication_ready_claim_allowed"] is False
+    assert boundary["verified_bibtex_count"] == 0
+    assert "one or more citations lack explicitly verified BibTeX evidence" in boundary["blocking_reasons"]
 
 
 def test_autosci_skill_shim_runs_paper_compile_fix_diagnostics(tmp_path: Path) -> None:
@@ -8219,15 +8252,17 @@ print(json.dumps({
         "--run-id",
         "shim-refine-review-command",
     )
-    assert proc.returncode == 0, proc.stderr
+    assert proc.returncode == 2, proc.stderr
     summary = json.loads(proc.stdout)
     payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
     action = payload["outputs"]["skill_run"]["actions"][0]
     evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
     report = evidence["outputs"]["evolution"]["review"]["refine_loop_report"]
     assert report["review_evidence_completed"] is True
-    assert report["termination_reason"] == "target_score_reached"
-    assert report["score_history"][-1] >= 0.5
+    assert report["termination_reason"] == "quality_target_not_reached"
+    assert report["status"] == "incomplete"
+    assert report["score_history"][-1] < 0.5
+    assert report["unresolved_issues"]
     assert report["auto_review_rounds"][0]["path"].endswith("refine_review_round_01.json")
     artifact_types = {artifact["type"] for artifact in evidence["artifacts"]}
     assert {"refine_review_round_json", "review_model_runtime_proof_manifest_json"}.issubset(artifact_types)
@@ -8578,7 +8613,8 @@ def test_autosci_skill_shim_exp_eval_merges_experiment_code_and_review_llm_evide
     proof_entry = proof["proofs"][0]
     assert proof_entry["native_skill"] == "exp-eval"
     assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
-    assert str(Path(action["evidence_path"]).relative_to(tmp_path)) in proof_entry["evidence_refs"]
+    expected_ref = Path(action["evidence_path"]).relative_to(tmp_path).as_posix()
+    assert expected_ref in [str(ref).replace("\\", "/") for ref in proof_entry["evidence_refs"]]
     boundary = verdict["final_verdict_boundary"]
     assert boundary["status"] == "final_verdict_incomplete"
     assert boundary["experiment_result_ready"] is True

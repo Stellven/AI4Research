@@ -82,9 +82,13 @@ class ResearchLeaseAdapter:
         self.claim_timeout_seconds = max(0.1, float(claim_timeout_seconds))
         self.abandoned_claim_seconds = max(1.0, float(abandoned_claim_seconds))
         self.operator_runtime = (
-            operator_runtime_api
-            if operator_runtime_api is not None
-            else _load_matching_operator_runtime(self.harness_root)
+            None
+            if operator_runtime_api is False
+            else (
+                operator_runtime_api
+                if operator_runtime_api is not None
+                else _load_matching_operator_runtime(self.harness_root)
+            )
         )
         self.operator_registry_path = (
             Path(operator_registry_path).resolve()

@@ -10405,7 +10405,17 @@ def _action_run_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
         # including its execution lease.  A caller may instead supply already
         # completed runtime evidence; that path is valid, but it has no local
         # executor lease and must not fabricate one merely to build a package.
-        if executor_result.get("executed") is True:
+        executed_argv = _normalize_command(
+            [str(item) for item in executor_result.get("command") or []]
+        )
+        planned_argv = _normalize_command(
+            [str(item) for item in plan.get("command_argv") or []]
+        )
+        if (
+            executor_result.get("executed") is True
+            and planned_argv
+            and executed_argv == planned_argv
+        ):
             evidence.setdefault("artifacts", []).append(
                 _write_experiment_poc_handoff_package(
                     envelope,
@@ -10604,7 +10614,7 @@ def _action_run_pilot_experiment(envelope: dict[str, Any]) -> dict[str, Any]:
             result_artifact_type="pilot_run_result",
             blocked_evidence_id="pilot-runtime:blocked",
             default_evidence_prefix="pilot-runtime",
-            runner_operator_id="autosci-pilot-experiment-runner",
+            runner_operator_id="autosci-experiment-run-worker",
             executor_label="Pilot experiment",
         )
     semantic = _approval_semantic_runtime(contract, "run_pilot_experiment")
@@ -12359,6 +12369,13 @@ def _paper_draft_final_manuscript_boundary(
     has_source_evidence: bool,
 ) -> dict[str, Any]:
     citations = citation_map.get("citations") if isinstance(citation_map.get("citations"), list) else []
+    verified_citations = [
+        item
+        for item in citations
+        if isinstance(item, dict)
+        and str(item.get("bibtex") or "").strip()
+        and item.get("bibtex_verified") is True
+    ]
     review_completed = bool(review_boundary.get("completed"))
     compile_verified = bool(compile_handoff.get("verified")) and str(compile_handoff.get("status") or "") == "completed"
     pdf_paths = [str(item) for item in compile_handoff.get("pdf_paths") or [] if str(item).strip()]
@@ -12367,6 +12384,8 @@ def _paper_draft_final_manuscript_boundary(
         blocking_reasons.append("source evidence was not supplied")
     if not citations:
         blocking_reasons.append("source-backed citation map is missing")
+    elif len(verified_citations) != len(citations):
+        blocking_reasons.append("one or more citations lack explicitly verified BibTeX evidence")
     if not review_completed:
         blocking_reasons.append("completed Review LLM boundary evidence is missing")
     if not compile_verified:
@@ -12382,6 +12401,8 @@ def _paper_draft_final_manuscript_boundary(
         "manuscript_scope": "evidence_linked_local_final_candidate" if final_ready else "draft_scaffold",
         "source_evidence_supplied": has_source_evidence,
         "citation_count": len(citations),
+        "verified_bibtex_count": len(verified_citations),
+        "unconfirmed_bibtex_count": len(citations) - len(verified_citations),
         "citation_ids": _unique_strings([
             str(item.get("citation_id") or item.get("title") or "")
             for item in citations
@@ -12396,11 +12417,11 @@ def _paper_draft_final_manuscript_boundary(
         "blocking_reasons": blocking_reasons,
         "limitations": (
             [
-                "Final manuscript readiness is bounded to supplied source evidence, Review LLM proof, and verified compile/PDF handoff."
+                "Final manuscript readiness is bounded to supplied source evidence, explicitly verified BibTeX, Review LLM proof, and verified compile/PDF handoff."
             ]
             if final_ready
             else [
-                "Final manuscript readiness requires source evidence, a source-backed citation map, completed Review LLM proof, and verified compile/PDF handoff."
+                "Final manuscript readiness requires source evidence, a source-backed citation map with explicitly verified BibTeX, completed Review LLM proof, and verified compile/PDF handoff."
             ]
         ),
     }
@@ -12421,8 +12442,8 @@ def _write_paper_draft_bibtex_artifacts(
         title = str(citation.get("title") or key)
         source_ref = str(citation.get("source_ref") or citation.get("arxiv_id") or "")
         bibtex = str(citation.get("bibtex") or "").strip()
-        verified = bool(bibtex)
-        if not bibtex:
+        verified = bool(bibtex) and citation.get("bibtex_verified") is True
+        if not verified:
             bibtex = (
                 f"% [UNCONFIRMED] Source-backed citation without verified BibTeX fetch evidence.\n"
                 f"@misc{{{key},\n"
@@ -14279,7 +14300,7 @@ def _citation_entry(entry: dict[str, Any], *, source: str, evidence_id: str, fal
         source_ref = f"https://arxiv.org/abs/{arxiv_id}"
     citation_id = _citation_id_from_entry(entry, fallback)
     channels = entry.get("source_channels") if isinstance(entry.get("source_channels"), list) else []
-    return {
+    citation = {
         "citation_id": citation_id,
         "title": title,
         "source_ref": source_ref or "N/A",
@@ -14287,6 +14308,12 @@ def _citation_entry(entry: dict[str, Any], *, source: str, evidence_id: str, fal
         "evidence_id": evidence_id,
         "source_channels": [str(item) for item in channels if str(item).strip()],
     }
+    bibtex = str(entry.get("bibtex") or "").strip()
+    if bibtex:
+        citation["bibtex"] = bibtex
+        citation["bibtex_verified"] = entry.get("bibtex_verified") is True
+        citation["bibtex_provenance"] = str(entry.get("bibtex_provenance") or "").strip()
+    return citation
 
 
 def _citation_entries_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -17039,11 +17066,36 @@ def _tokenize_command_text(raw: str) -> list[str]:
     if not raw:
         return []
     try:
-        tokens = shlex.split(raw)
+        tokens = shlex.split(raw, posix=os.name != "nt")
     except ValueError:
         return [raw]
+    tokens = [token[1:-1] if len(token) >= 2 and token[0] == token[-1] and token[0] in {"'", '"'} else token for token in tokens]
     if not tokens:
         return []
+
+    if os.name == "nt":
+        recovered: list[str] = []
+        index = 0
+        while index < len(tokens):
+            token = tokens[index]
+            if re.match(r"^[A-Za-z]:[\\/]", token):
+                end = index + 1
+                candidate = token
+                while end < len(tokens) and not tokens[end].startswith("-"):
+                    if Path(candidate).is_file() and (
+                        end >= len(tokens)
+                        or tokens[end].startswith("-")
+                        or re.match(r"^[A-Za-z]:[\\/]", tokens[end])
+                    ):
+                        break
+                    candidate = " ".join(tokens[index : end + 1])
+                    end += 1
+                recovered.append(candidate)
+                index = end
+                continue
+            recovered.append(token)
+            index += 1
+        tokens = recovered
 
     # Some environments place repositories under paths with spaces.
     # If the split broke the executable path, recover by joining prefix tokens
@@ -17182,35 +17234,52 @@ def _strict_execution_argv(
     """Authorize only one normalized, token-for-token argv at the execution edge.
 
     Normalization is deliberately limited to resolving the executable token on
-    both sides. Runner paths, argument order, prefixes, templates, and output
-    paths must remain byte-for-byte identical after that normalization.
+    both sides. Runner paths, argument order, prefixes, and output paths must
+    remain byte-for-byte identical after that normalization. A command may be
+    supplied either by the experiment plan or by an exact full-command
+    allowlist entry; executable-only and prefix authorizations are never
+    accepted at this execution edge.
     """
     normalized_selected = _normalize_command([str(item) for item in selected])
     normalized_planned = _normalize_command(
         [str(item) for item in plan.get("command_argv") or []]
     )
-    if not normalized_planned:
-        return False, "experiment plan has no approved command_argv", normalized_selected
-    if normalized_selected != normalized_planned:
+    expected = normalized_planned or normalized_selected
+    experiment_id = str(plan.get("experiment_id") or "experiment-unresolved")
+
+    for payload in _allowlist_payloads(contract):
+        for key in ("commands", "allowed_commands"):
+            candidates = payload.get(key)
+            if not isinstance(candidates, list):
+                continue
+            for candidate in candidates:
+                normalized_candidate = _normalize_command(
+                    _format_command(candidate, {"experiment_id": experiment_id})
+                )
+                if normalized_candidate == normalized_selected:
+                    source = "plan" if normalized_selected == normalized_planned else "exact full-command allowlist"
+                    return True, f"normalized token-for-token {source} and {key} match", normalized_selected
+
+    if normalized_planned and normalized_selected != normalized_planned:
         return (
             False,
-            "selected argv differs from the normalized experiment-plan command_argv",
+            "selected argv differs from the normalized experiment-plan command_argv and has no exact full-command authorization",
             normalized_selected,
         )
 
     for payload in _allowlist_payloads(contract):
         candidates = payload.get("command_argvs")
-        if not isinstance(candidates, list):
-            continue
-        for candidate in candidates:
-            if not isinstance(candidate, list):
-                continue
-            normalized_candidate = _normalize_command([str(item) for item in candidate])
-            if normalized_candidate == normalized_planned:
-                return True, "normalized token-for-token plan and command_argvs match", normalized_selected
+        if isinstance(candidates, list):
+            for candidate in candidates:
+                if not isinstance(candidate, list):
+                    continue
+                normalized_candidate = _normalize_command([str(item) for item in candidate])
+                if normalized_candidate == expected:
+                    source = "plan and command_argvs" if normalized_planned else "selected argv and command_argvs"
+                    return True, f"normalized token-for-token {source} match", normalized_selected
     return (
         False,
-        "normalized experiment-plan argv has no token-for-token command_argvs authorization",
+        "selected argv has no token-for-token full-command authorization",
         normalized_selected,
     )
 
@@ -18277,6 +18346,8 @@ def _execute_experiment_if_approved(
         }
     lease_adapter = ResearchLeaseAdapter(
         HARNESS_DIR,
+        operator_runtime_api=False,
+        operator_registry_path=REPO_HARNESS_DIR / "config" / "physical-operators.json",
         claim_timeout_seconds=2,
         abandoned_claim_seconds=2,
     )
@@ -18438,8 +18509,6 @@ def _execute_experiment_if_approved(
             "evidence_ids": [f"{default_evidence_prefix}:{_slug(experiment_id)}"],
             "logs": [f"{executor_label} command executed without parseable experiment payload."],
         }
-    result_collected = False if is_remote_cli_record else (bool(result_record) or bool(proc.stdout.strip()))
-
     result_collected = False if is_remote_cli_record else (bool(result_record) or bool(proc.stdout.strip()))
     runtime_result_path = _configured_output_path(
         envelope,
@@ -21497,8 +21566,9 @@ def _refine_review_records(payloads: list[dict[str, Any]]) -> list[dict[str, Any
         outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
         review = outputs.get("review") if isinstance(outputs.get("review"), dict) else payload.get("review") if isinstance(payload.get("review"), dict) else {}
         review_llm = review.get("review_llm") if isinstance(review.get("review_llm"), dict) else {}
-        actionable = review.get("actionable_items") or review.get("issues") or []
-        weaknesses = review.get("weaknesses") or []
+        findings = outputs.get("findings") if isinstance(outputs.get("findings"), list) else []
+        actionable = review.get("actionable_items") or review.get("issues") or findings
+        weaknesses = review.get("weaknesses") or findings
         records.append(
             {
                 "round": index,
@@ -21552,16 +21622,15 @@ def _refine_loop_report(
     elif target_reached:
         termination_reason = "target_score_reached"
         status = "completed"
-    elif refine_applied:
-        termination_reason = "approved_after_artifact_applied"
-        status = "completed"
     elif len(records) >= max_rounds:
         termination_reason = "max_rounds_reached"
-        status = "completed"
+        status = "incomplete"
+    elif refine_applied:
+        termination_reason = "quality_target_not_reached"
+        status = "incomplete"
     else:
         termination_reason = "needs_more_rounds_or_approval"
         status = "incomplete"
-    write = (refine_application or {}).get("write") if isinstance((refine_application or {}).get("write"), dict) else {}
     action_items: list[dict[str, Any]] = []
     for record in records:
         for item in record.get("actionable_items") or []:
@@ -21569,16 +21638,8 @@ def _refine_loop_report(
                 action_items.append({**item, "round": record.get("round")})
             else:
                 action_items.append({"round": record.get("round"), "issue": str(item)})
-    fixed_issues = [
-        {
-            "round": item.get("round"),
-            "issue": str(item.get("issue") or item.get("description") or item.get("item") or "review action item"),
-            "fix_applied": "approved_after_artifact",
-            "evidence_refs": _unique_strings([str(write.get("after_artifact") or ""), str(write.get("target_path") or "")]),
-        }
-        for item in action_items
-    ] if refine_applied else []
-    unresolved_issues = [] if refine_applied else action_items
+    fixed_issues: list[dict[str, Any]] = []
+    unresolved_issues = [] if target_reached else action_items
     report = {
         "schema": "autosci_refine_loop_report.v1",
         "status": status,
@@ -21614,7 +21675,9 @@ def _refine_loop_report(
         "rounds": records,
         "fixed_issues": fixed_issues,
         "unresolved_issues": unresolved_issues,
-        "limitations": [] if status == "completed" else ["Refine loop requires completed Review LLM evidence and approved after_artifact application before final completion."],
+        "limitations": [] if status == "completed" else [
+            "Applying an approved after_artifact records a revision, but refinement remains incomplete until independent review reaches the requested quality score."
+        ],
     }
     path = _write_json_sidecar(_refine_loop_report_path(envelope), report)
     return {"type": "refine_loop_report_json", "path": path, "report": report}
@@ -21840,6 +21903,14 @@ def _control_workflow_raw(envelope: dict[str, Any], action: str, scope: str) -> 
         if action == "refine_artifact"
         else None
     )
+    refine_loop_report = (
+        refine_loop_artifact.get("report")
+        if isinstance(refine_loop_artifact, dict) and isinstance(refine_loop_artifact.get("report"), dict)
+        else {}
+    )
+    refine_quality_complete = bool(
+        refine_applied and refine_loop_report.get("status") == "completed"
+    )
     contract_missing = contract.get("missing") if isinstance(contract.get("missing"), list) else []
     control_runtime_semantic: dict[str, Any] = {}
     control_runtime_verified = False
@@ -21852,27 +21923,31 @@ def _control_workflow_raw(envelope: dict[str, Any], action: str, scope: str) -> 
     application_state = "applied" if refine_applied else "proposed_only"
     collected = {
         "failed_nodes": []
-        if refine_applied
+        if (action != "refine_artifact" or refine_quality_complete)
         else [
             {
                 "node_id": f"node-{action.replace('_', '-')}",
                 "logical_operator": "ScientificWorkflowEvolver",
                 "status": "blocked",
-                "gate": "approval_gate",
+                "gate": "quality_gate" if refine_applied else "approval_gate",
             }
         ],
         "gate_rejection_reasons": [
             {
-                "gate_id": "approval_gate",
-                "status": "passed" if refine_applied else "blocked",
+                "gate_id": "quality_gate" if refine_applied else "approval_gate",
+                "status": "passed" if refine_quality_complete else "blocked",
                 "reasons": [
                     (
-                        "Approved refine side effect was applied from verified after_artifact evidence."
-                        if refine_applied
+                        "Approved refine side effect was applied and the independent quality target was reached."
+                        if refine_quality_complete
                         else (
-                            "Approved external control runtime evidence was verified separately; local protected control side effects were not executed by the bridge."
-                            if control_runtime_verified
-                            else "Approval-gated control side effects were not executed."
+                            "Approved refine side effect was applied, but independent review did not reach the requested quality target."
+                            if refine_applied
+                            else (
+                                "Approved external control runtime evidence was verified separately; local protected control side effects were not executed by the bridge."
+                                if control_runtime_verified
+                                else "Approval-gated control side effects were not executed."
+                            )
                         )
                     ),
                     f"Approval contract missing: {', '.join(str(item) for item in contract_missing) if contract_missing else 'N/A'}",
@@ -21888,11 +21963,15 @@ def _control_workflow_raw(envelope: dict[str, Any], action: str, scope: str) -> 
         "insufficient_schemas": [],
         "poor_operator_bindings": [],
         "human_intervention_points": []
-        if refine_applied
+        if (action != "refine_artifact" or refine_quality_complete)
         else [
             {
-                "id": f"{action}.approval",
-                "description": "Human approval is required before credentials, destructive reset, or persistent config changes.",
+                "id": f"{action}.quality" if refine_applied else f"{action}.approval",
+                "description": (
+                    "A further approved revision is required because independent review did not reach the requested quality target."
+                    if refine_applied
+                    else "Human approval is required before credentials, destructive reset, or persistent config changes."
+                ),
             }
         ],
         "runtime_errors": [],
@@ -21988,7 +22067,7 @@ def _control_workflow_raw(envelope: dict[str, Any], action: str, scope: str) -> 
         "collected": collected,
         "proposed_changes": proposed_changes,
         "review": {
-            "human_accept_reject_required": not refine_applied,
+            "human_accept_reject_required": action == "refine_artifact" and not refine_quality_complete,
             "protected_core_edits_applied": refine_applied,
             "application_state": application_state,
             "approval_ref": str(contract.get("approval_ref") or "N/A"),
@@ -22003,6 +22082,7 @@ def _control_workflow_raw(envelope: dict[str, Any], action: str, scope: str) -> 
         "patch_candidates_path": _rel(paths["patch_candidates"]),
         "artifacts": artifacts,
         "limitations": limitations,
+        "status": "inconclusive" if action == "refine_artifact" and not refine_quality_complete else "completed",
     }
     if policy_decision:
         raw["policy_decision"] = policy_decision

@@ -1752,11 +1752,11 @@ def write_paper_draft_workspace_projection_proof(
         for path in workspace_summary.get("updated_paths", [])
         if str(path).strip()
     ]
-    wiki_refs = [
-        output_rel(path)
-        for path in updated_paths
-        if "/wiki/outputs/" in str(path) or str(path).endswith("/wiki/index.md")
-    ]
+    wiki_refs = []
+    for path in updated_paths:
+        normalized = str(path).replace("\\", "/")
+        if "/wiki/outputs/" in normalized or normalized.endswith("/wiki/index.md"):
+            wiki_refs.append(output_rel(path))
     if not wiki_refs:
         return None
     work_dir = str(payload.get("inputs", {}).get("work_dir") or "").strip()
