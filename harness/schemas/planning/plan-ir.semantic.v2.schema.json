@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.plan_ir.semantic.v2",
+  "$defs": {
+    "artifact_output": {
+      "type": "object",
+      "required": ["artifact_type", "verifier_ids", "materialization"],
+      "additionalProperties": false,
+      "properties": {
+        "artifact_type": {"type": "string", "minLength": 1},
+        "verifier_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "materialization": {
+          "type": "object",
+          "required": ["kind", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"enum": ["file", "directory"]},
+            "path": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "operator_requirements": {
+      "type": "object",
+      "required": ["capabilities", "network", "execution_trust", "minimum_context_tokens", "effects"],
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "network": {"enum": ["required", "optional", "forbidden"]},
+        "execution_trust": {"enum": ["any", "evidence_transform", "measured_execution"]},
+        "minimum_context_tokens": {"type": "integer", "minimum": 0},
+        "effects": {
+          "type": "array",
+          "items": {"enum": ["read", "write", "execute", "network", "cost", "risk"]},
+          "uniqueItems": true
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["node_id", "logical_operator", "objective", "depends_on", "consumes", "produces", "requirement_ids", "operator_requirements", "gate_requirement"],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$"},
+        "logical_operator": {"type": "string", "minLength": 1},
+        "objective": {"type": "string", "minLength": 5},
+        "depends_on": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "consumes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "produces": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/artifact_output"}},
+        "requirement_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "operator_requirements": {"$ref": "#/$defs/operator_requirements"},
+        "gate_requirement": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "type": "object",
+  "required": ["nodes"],
+  "additionalProperties": false,
+  "properties": {
+    "nodes": {"type": "array", "minItems": 1, "maxItems": 24, "items": {"$ref": "#/$defs/node"}}
+  }
+}

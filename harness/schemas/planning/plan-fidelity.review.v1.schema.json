@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.plan_fidelity.review.v1",
+  "type": "object",
+  "required": ["checks", "errors", "warnings"],
+  "additionalProperties": false,
+  "properties": {
+    "checks": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["kind", "status", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {"enum": ["requirement_preservation", "smallest_sufficient_plan", "dependency_soundness", "no_unrequested_effects"]},
+          "status": {"enum": ["pass", "warning", "fail"]},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "path", "message", "repairable", "requirement_ids"],
+        "additionalProperties": false,
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1},
+          "repairable": {"type": "boolean"},
+          "requirement_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "path", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

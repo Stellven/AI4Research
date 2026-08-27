@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.planning_catalog_snapshot.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_role", "workflows", "logical_operators", "capsules", "registries", "enabled_physical_operator_ids", "catalog_sha256"],
+  "properties": {
+    "schema_version": {"const": "solar.planning_catalog_snapshot.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "workflows": {"type": "array", "items": {"type": "object"}},
+    "logical_operators": {"type": "array", "items": {"type": "object"}},
+    "capsules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capsule_id", "version", "status", "description", "task_types", "consumes", "produces", "contract", "effects", "verification", "implementation", "operator_compatibility", "manifest_sha256"],
+        "properties": {
+          "capsule_id": {"type": "string", "minLength": 1},
+          "version": {"type": "string", "minLength": 1},
+          "status": {"const": "stable"},
+          "description": {"type": "string"},
+          "task_types": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "consumes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "produces": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "contract": {"type": "object"},
+          "effects": {"type": "object"},
+          "verification": {"type": "object"},
+          "implementation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["declared", "trust_class", "execute", "required_skills"],
+            "properties": {
+              "declared": {"type": "boolean"},
+              "trust_class": {"enum": ["measured_execution", "evidence_transform", "fixture_or_adapter_only", "unspecified"]},
+              "execute": {"type": "array", "items": {"type": "string"}},
+              "required_skills": {"type": "array", "items": {"type": "string"}}
+            }
+          },
+          "operator_compatibility": {"type": "object"},
+          "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "registries": {"type": "object"},
+    "enabled_physical_operator_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "catalog_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

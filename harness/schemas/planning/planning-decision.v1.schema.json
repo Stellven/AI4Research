@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.planning_decision.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "planning_decision_id", "generation", "requirement_ir_ref", "planning_context_ref", "producer", "decision", "rationale", "requirement_ids", "workflow_ref", "workflow_inputs", "workflow_bindings", "requirements_gap"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.planning_decision.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "planning_decision_id": {"type": "string", "minLength": 1},
+    "generation": {"type": "integer", "minimum": 0, "maximum": 1},
+    "requirement_ir_ref": {
+      "type": "object",
+      "required": ["requirement_ir_id", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement_ir_id": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "planning_context_ref": {
+      "type": "object",
+      "required": ["planning_context_id", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "planning_context_id": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "producer": {
+      "type": "object",
+      "required": ["method", "provider", "model"],
+      "additionalProperties": false,
+      "properties": {
+        "method": {"const": "model"},
+        "provider": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1}
+      }
+    },
+    "decision": {"enum": ["direct_response", "exact_reuse", "generate"]},
+    "rationale": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "requirement_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "workflow_ref": {"$ref": "solar.planning_decision.semantic.v1#/properties/workflow_ref"},
+    "workflow_inputs": {"$ref": "solar.planning_decision.semantic.v1#/properties/workflow_inputs"},
+    "workflow_bindings": {"$ref": "solar.planning_decision.semantic.v1#/properties/workflow_bindings"},
+    "requirements_gap": {"$ref": "solar.planning_decision.semantic.v1#/properties/requirements_gap"}
+  }
+}

@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.scheduler_input.v1",
+  "title": "Solar Scheduler Input",
+  "description": "Frozen executable graph produced before runtime. The scheduler may select only dependency-ready nodes and pre-admitted physical candidates; mutable status, leases, and dispatch decisions are separate artifacts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_role",
+    "scheduler_input_id",
+    "sprint_id",
+    "planning_authority",
+    "graph"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "solar.scheduler_input.v1"
+    },
+    "artifact_role": {
+      "enum": [
+        "runtime_execution_authority",
+        "metadata_contract_example_not_runtime_authority"
+      ]
+    },
+    "scheduler_input_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sprint_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "planning_authority": {
+      "const": "frozen_execution_plan_v1"
+    },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "graph_id",
+        "nodes"
+      ],
+      "properties": {
+        "graph_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "goal",
+        "logical_operator",
+        "dispatch_task_type",
+        "depends_on",
+        "requirement_ids",
+        "capsule_binding",
+        "physical_candidates",
+        "artifact_contract",
+        "evaluation_binding",
+        "resource_requirements",
+        "effects",
+        "priority",
+        "failure_policy"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "goal": {
+          "type": "string",
+          "minLength": 1
+        },
+        "logical_operator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dispatch_task_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "requirement_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "capsule_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capsule_ids",
+            "contract_sha256"
+          ],
+          "properties": {
+            "capsule_ids": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "composition_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contract_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "physical_candidates": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Pre-admitted candidates. The scheduler evaluates current availability in ascending rank order and may not select an operator absent from this list.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "operator_id",
+              "rank",
+              "admission_state"
+            ],
+            "properties": {
+              "operator_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "rank": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "admission_state": {
+                "const": "ELIGIBLE"
+              }
+            }
+          }
+        },
+        "artifact_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "consumes",
+            "produces"
+          ],
+          "properties": {
+            "consumes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "produces": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "evaluation_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deterministic_gate_ids",
+            "semantic_evaluator_ids"
+          ],
+          "properties": {
+            "deterministic_gate_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "semantic_evaluator_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            }
+          },
+          "anyOf": [
+            {
+              "properties": {
+                "deterministic_gate_ids": {
+                  "minItems": 1
+                }
+              }
+            },
+            {
+              "properties": {
+                "semantic_evaluator_ids": {
+                  "minItems": 1
+                }
+              }
+            }
+          ]
+        },
+        "resource_requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_cores_min",
+            "memory_mb_min",
+            "gpu_required",
+            "network"
+          ],
+          "properties": {
+            "cpu_cores_min": {
+              "type": "number",
+              "minimum": 0
+            },
+            "memory_mb_min": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "gpu_required": {
+              "type": "boolean"
+            },
+            "network": {
+              "enum": [
+                "required",
+                "optional",
+                "forbidden"
+              ]
+            }
+          }
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "read",
+              "write",
+              "execute",
+              "network",
+              "irreversible"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Higher values run before lower values when multiple dependency-ready nodes compete for capacity."
+        },
+        "failure_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Runtime attempt budget and terminal behavior. This does not authorize the scheduler to redesign or semantically repair the node.",
+          "required": [
+            "max_attempts",
+            "on_exhausted"
+          ],
+          "properties": {
+            "max_attempts": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "on_exhausted": {
+              "enum": [
+                "fail_run",
+                "block_dependents",
+                "continue_independent"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "$comment": "Cross-field validation before scheduler handoff must additionally prove unique node ids, acyclicity, dependency resolution, unique candidate ranks, capsule/operator/check registration, requirement trace resolution, and effect-policy admission. The frozen run contract records this artifact's digest; this artifact does not point back to the run contract, avoiding a circular hash dependency. The scheduler must not accept mutable node status, a selected operator, lease identity, or attempt identity in this artifact."
+}

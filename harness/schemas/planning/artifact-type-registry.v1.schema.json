@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.artifact_type_registry.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_types"],
+  "properties": {
+    "schema_version": {"const": "solar.artifact_type_registry.v1"},
+    "artifact_types": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_type", "controller_input"],
+        "properties": {
+          "artifact_type": {"type": "string", "minLength": 1},
+          "controller_input": {"type": "boolean"},
+          "minimum_execution_trust": {
+            "enum": ["any", "evidence_transform", "measured_execution"]
+          },
+          "description": {"type": "string"}
+        }
+      }
+    }
+  }
+}

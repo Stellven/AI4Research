@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.direct_response_review.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "review_id", "response_ref", "review_method", "reviewer", "status", "checks", "errors", "warnings"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.direct_response_review.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "review_id": {"type": "string", "minLength": 1},
+    "response_ref": {"type": "object"},
+    "review_method": {"const": "independent_model_call"},
+    "reviewer": {"type": "object"},
+    "status": {"enum": ["pass", "pass_with_warnings", "fail"]},
+    "checks": {"type": "array", "minItems": 3, "maxItems": 3},
+    "errors": {"type": "array"},
+    "warnings": {"type": "array"}
+  }
+}

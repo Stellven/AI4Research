@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.direct_response_review.semantic.v1",
+  "type": "object",
+  "required": ["checks", "errors", "warnings"],
+  "additionalProperties": false,
+  "properties": {
+    "checks": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["kind", "status", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {"enum": ["requirement_coverage", "answer_fidelity", "factual_restraint"]},
+          "status": {"enum": ["pass", "fail"]},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message", "repairable"],
+        "additionalProperties": false,
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1},
+          "repairable": {"type": "boolean"}
+        }
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  }
+}

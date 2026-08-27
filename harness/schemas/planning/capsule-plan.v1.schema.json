@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.capsule_plan_ir.v1",
+  "type": "object",
+  "required": ["schema_version", "sprint_id", "request_type", "lane_hint", "artifact_types", "effect_union", "proof_obligations", "nodes", "unsatisfiable_nodes", "verdict"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {"const": "solar.capsule_plan_ir.v1"},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "request_type": {"type": "string"},
+    "lane_hint": {"type": "string"},
+    "artifact_types": {"type": "object"},
+    "effect_union": {"type": "object"},
+    "proof_obligations": {"type": "array"},
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["schema_version", "node_id", "logical_operator", "selected", "stages"],
+        "properties": {
+          "schema_version": {"const": "solar.capsule_plan_node.v1"},
+          "node_id": {"type": "string", "minLength": 1},
+          "logical_operator": {"type": "string", "minLength": 1},
+          "selected": {"type": "boolean"},
+          "capability_capsule_id": {"type": "string", "minLength": 1},
+          "approved_fallback_capsule_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "capsule_selection_rationale": {"type": "string"},
+          "dispatch_task_type": {"type": "string", "minLength": 1},
+          "role": {"type": "string", "minLength": 1},
+          "artifact_types": {"type": "object"},
+          "effect_union": {"type": "object"},
+          "proof_obligations": {"type": "array"},
+          "stages": {"type": "array"},
+          "unsatisfiable": {"type": "object"}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"selected": {"const": true}}},
+            "then": {
+              "required": ["capability_capsule_id", "dispatch_task_type", "role", "artifact_types", "effect_union", "proof_obligations"],
+              "properties": {"stages": {"minItems": 1}}
+            },
+            "else": {
+              "required": ["unsatisfiable"],
+              "properties": {"stages": {"maxItems": 0}}
+            }
+          }
+        ]
+      }
+    },
+    "unsatisfiable_nodes": {"type": "array"},
+    "verdict": {"enum": ["pass", "fail"]}
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.physical_plan_ir.v2",
+  "type": "object",
+  "required": ["schema_version", "sprint_id", "capsule_plan_ref", "availability_boundary", "nodes", "unsatisfiable_nodes", "verdict"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.physical_plan_ir.v2"},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "capsule_plan_ref": {"type": "object"},
+    "availability_boundary": {"type": "object"},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["schema_version", "node_id", "logical_operator", "capability_capsule_id", "selected_operator_id", "execution_candidates", "execution_excluded", "attached_capsules", "verifier_plans"],
+        "properties": {
+          "schema_version": {"const": "solar.physical_plan_node.v1"},
+          "node_id": {"type": "string", "minLength": 1},
+          "logical_operator": {"type": "string", "minLength": 1},
+          "capability_capsule_id": {"type": "string", "minLength": 1},
+          "selected_operator_id": {"type": "string"},
+          "execution_candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["operator_id", "rank", "rank_score", "admission_state"],
+              "properties": {
+                "operator_id": {"type": "string", "minLength": 1},
+                "rank": {"type": "integer", "minimum": 1},
+                "rank_score": {"type": "integer"},
+                "admission_state": {"const": "READY"}
+              }
+            }
+          },
+          "execution_excluded": {"type": "array"},
+          "attached_capsules": {"type": "array"},
+          "verifier_plans": {"type": "array"}
+        }
+      }
+    },
+    "unsatisfiable_nodes": {"type": "array"},
+    "verdict": {"enum": ["pass", "fail"]}
+  }
+}

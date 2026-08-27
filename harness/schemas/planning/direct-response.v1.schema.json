@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.direct_response.v1",
+  "type": "object",
+  "required": ["schema_version", "artifact_role", "response_id", "generation", "requirement_ir_ref", "planning_decision_ref", "producer", "answer", "requirement_ids", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "solar.direct_response.v1"},
+    "artifact_role": {"const": "runtime_artifact"},
+    "response_id": {"type": "string", "minLength": 1},
+    "generation": {"type": "integer", "minimum": 0, "maximum": 1},
+    "requirement_ir_ref": {"type": "object"},
+    "planning_decision_ref": {"type": "object"},
+    "producer": {"type": "object"},
+    "answer": {"type": "string", "minLength": 1},
+    "requirement_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+  }
+}

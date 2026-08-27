@@ -1,0 +1,197 @@
+{
+  "schema_version": "solar.pipeline_boundary_contracts.v1",
+  "artifact_role": "design_metadata_not_runtime_authority",
+  "invariant": "Each stage writes a typed artifact. Runtime executes only an accepted frozen TaskGraph and never reconstructs Planner decisions.",
+  "boundaries": [
+    {
+      "boundary_id": "requirement_compiler_to_elastic_planner",
+      "producer": "requirement_compiler",
+      "consumer": "elastic_planner",
+      "required_artifact": {
+        "name": "requirement_ir.json",
+        "schema_version": "solar.requirement_ir.v2",
+        "contract_template": "harness/metadata/3-requirements compiler output/requirement_ir/requirement_ir.json",
+        "admission_artifact": "requirement_validation.json"
+      },
+      "planner_consumed_fields": [
+        {
+          "path": "requirement_ir_id",
+          "decision": "Bind every downstream artifact to one immutable RequirementIR identity."
+        },
+        {
+          "path": "intent_ir_ref",
+          "decision": "Prove which accepted IntentIR produced the requirements."
+        },
+        {
+          "path": "intent_acceptance_ref",
+          "decision": "Reject planning when Intent Compiler admission is not accepted."
+        },
+        {
+          "path": "requirements[]",
+          "decision": "Choose strategy, assign requirement owners, and verify final coverage."
+        },
+        {
+          "path": "requirements[].check",
+          "decision": "Bind each requirement to a registered evaluator or report an honest unsupported check."
+        },
+        {
+          "path": "requirements[].checkable",
+          "decision": "Separate mechanically checked obligations from explicitly evaluator-judged scope."
+        },
+        {
+          "path": "scope",
+          "decision": "Admit or reject network, execution, write, deployment, and other effects."
+        },
+        {
+          "path": "assumptions",
+          "decision": "Require planned deliverables to disclose accepted assumptions."
+        },
+        {
+          "path": "conflict_scan",
+          "decision": "Stop before planning when unresolved requirement conflicts remain."
+        },
+        {
+          "path": "approvals|rollback",
+          "decision": "Require authorization and compensation semantics for irreversible effects."
+        }
+      ],
+      "forbidden_requirement_content": [
+        "workflow topology",
+        "scheduler status",
+        "lease identity",
+        "physical worker selection"
+      ]
+    },
+    {
+      "boundary_id": "elastic_planner_to_static_execution_compiler",
+      "producer": "elastic_planner",
+      "consumer": "static_execution_compiler",
+      "required_artifacts": [
+        {
+          "name": "planning_decision.json",
+          "schema": "harness/schemas/planning/planning-decision.v1.schema.json",
+          "decision": "Answer directly, reuse a registered workflow, or generate a PlanIR."
+        },
+        {
+          "name": "plan_ir.json",
+          "schema": "harness/schemas/planning/plan-ir.v2.schema.json",
+          "decision": "Define semantic logical nodes, dependencies, typed artifact ports, effects, execution trust, and requirement ownership."
+        },
+        {
+          "name": "plan_validation.json",
+          "schema": "harness/schemas/planning/plan-validation.v2.schema.json",
+          "decision": "Reject mechanically invalid, uncovered, or unexecutable semantic plans."
+        },
+        {
+          "name": "plan_fidelity.json",
+          "schema": "harness/schemas/planning/plan-fidelity.v1.schema.json",
+          "decision": "Reject plans that changed the accepted request meaning or added unjustified work."
+        },
+        {
+          "name": "binding_trace.json",
+          "schema": "harness/schemas/planning/binding-trace.v2.schema.json",
+          "decision": "Prove where every requirement will be produced and checked."
+        }
+      ],
+      "separation_rule": "PlanIR describes what must happen. It does not select runtime workers or carry mutable execution state."
+    },
+    {
+      "boundary_id": "static_execution_compiler_to_scheduler",
+      "producer": "contract_freezer",
+      "consumer": "graph_scheduler",
+      "compiler_artifacts": [
+        {
+          "name": "capsule_plan.json",
+          "schema": "harness/schemas/planning/capsule-plan.v1.schema.json",
+          "decision": "Bind each logical node to one admitted capability capsule or proven capsule composition."
+        },
+        {
+          "name": "physical_plan.json",
+          "schema": "harness/schemas/planning/physical-plan.v2.schema.json",
+          "decision": "Provide an ordered, pre-admitted physical-operator candidate list and typed exclusions for every executable node."
+        },
+        {
+          "name": "evaluation_plan.json",
+          "schema": "harness/schemas/planning/evaluation-plan.v1.schema.json",
+          "decision": "Bind each node output and requirement to its deterministic gate and independent evaluator."
+        },
+        {
+          "name": "run_contract.frozen.json",
+          "schema": "harness/schemas/planning/run-contract-frozen.v2.schema.json",
+          "decision": "Hash-bind the RequirementIR, planning decision, PlanIR, CapsulePlan, PhysicalPlan, EvaluationPlan, and scheduler input."
+        }
+      ],
+      "scheduler_input": {
+        "name": "scheduler_input.json",
+        "schema": "harness/schemas/planning/scheduler-input.v1.schema.json",
+        "contract_template": "harness/metadata/5-taskgraph compiler and validator output/scheduler_input/scheduler_input.json",
+        "decision": "Provide one frozen executable graph containing every dependency, capsule binding, ordered physical candidate, artifact handoff, evaluator binding, resource requirement, effect, priority, and failure policy needed by the scheduler."
+      },
+      "scheduler_required_fields": [
+        {
+          "path": "planning_authority",
+          "required_value": "frozen_execution_plan_v1"
+        },
+        {
+          "path": "graph.nodes[].depends_on",
+          "decision": "Calculate readiness without changing topology."
+        },
+        {
+          "path": "graph.nodes[].capsule_binding",
+          "decision": "Forward the admitted capability contract or composition; never recompile it."
+        },
+        {
+          "path": "graph.nodes[].physical_candidates",
+          "decision": "Choose the highest-ranked candidate that is currently available."
+        },
+        {
+          "path": "graph.nodes[].artifact_contract|evaluation_binding",
+          "decision": "Dispatch and evaluate only the artifact handoffs, gates, and evaluators admitted before runtime."
+        },
+        {
+          "path": "graph.nodes[].resource_requirements|effects",
+          "decision": "Queue or reject work whose currently available operators or policy cannot satisfy the frozen requirements."
+        },
+        {
+          "path": "graph.nodes[].priority|failure_policy",
+          "decision": "Order ready work and apply the declared terminal behavior without redesigning the graph."
+        }
+      ],
+      "scheduler_may_decide": [
+        "which dependency-satisfied node is ready",
+        "which frozen physical candidate is currently available",
+        "when to issue or renew a fenced lease",
+        "when a node must remain queued because no approved candidate is available"
+      ],
+      "scheduler_must_not_decide": [
+        "workflow strategy",
+        "new logical nodes or dependencies",
+        "new capability capsules",
+        "physical operators outside the frozen candidate list",
+        "new requirement ownership",
+        "replacement evaluators or gates"
+      ],
+      "mutable_runtime_state_is_separate": [
+        "task_graph_state.json",
+        "dispatch_record.json",
+        "lease_record.json",
+        "node_envelope.json"
+      ],
+      "integrity_rule": "The contract freezer hashes scheduler_input.json into run_contract.frozen.json after all static admission checks. scheduler_input.json does not contain a hash back to the run contract."
+    },
+    {
+      "boundary_id": "scheduler_to_dispatcher",
+      "producer": "graph_scheduler",
+      "consumer": "graph_node_dispatcher",
+      "required_payload_fields": [
+        "assignment.operator_id",
+        "capsule_plan_ir",
+        "physical_plan_ir",
+        "node identity",
+        "attempt identity",
+        "lease and fencing identity"
+      ],
+      "dispatcher_rule": "Dispatch only the scheduler-selected operator when it is present in the frozen physical candidate set; never repair or recompile a missing plan at dispatch time."
+    }
+  ]
+}

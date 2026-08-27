@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.artifact_conversion_registry.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "conversions"],
+  "properties": {
+    "schema_version": {"const": "solar.artifact_conversion_registry.v1"},
+    "conversions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["conversion_id", "source_type", "target_type", "capsule_id", "approval_status"],
+        "properties": {
+          "conversion_id": {"type": "string", "minLength": 1},
+          "source_type": {"type": "string", "minLength": 1},
+          "target_type": {"type": "string", "minLength": 1},
+          "capsule_id": {"type": "string", "minLength": 1},
+          "approval_status": {"enum": ["approved", "proposed", "rejected"]},
+          "loss_model": {"enum": ["lossless", "lossy", "unknown"]}
+        }
+      }
+    }
+  }
+}
