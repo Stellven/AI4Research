@@ -160,7 +160,12 @@ def test_busy_evaluator_dispatch_is_backpressure_not_a_failed_dispatch(monkeypat
     monkeypatch.setattr(gnd, "load_graph", lambda path: graph)
     monkeypatch.setattr(gnd, "save_graph", lambda path, data: saved.setdefault("graph", data))
     monkeypatch.setattr(gnd, "_node_eval_needed", lambda *args, **kwargs: True)
-    monkeypatch.setattr(gnd, "_emit_node_proof_sidecars", lambda sid, node: emitted.append((sid, node["id"])) or {"patch_diff": "/tmp/patch.diff"})
+    monkeypatch.setattr(
+        gnd,
+        "_emit_node_proof_sidecars",
+        lambda sid, node, graph=None: emitted.append((sid, node["id"]))
+        or {"patch_diff": "/tmp/patch.diff"},
+    )
     monkeypatch.setattr(
         gnd,
         "_discover_evaluators",

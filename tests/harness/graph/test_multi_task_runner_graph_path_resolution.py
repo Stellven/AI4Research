@@ -68,6 +68,7 @@ def test_worker_activity_projection_flags_missing_session_history():
 
 def test_monitor_summary_reports_idle_ready_graph_inside_status_snapshot(monkeypatch):
     monkeypatch.setattr(multi_task_runner, "tmux_session_exists", lambda: True)
+    monkeypatch.setattr(multi_task_runner, "list_task_rows", lambda: [])
     monkeypatch.setattr(multi_task_runner, "task_inventory", lambda tasks: {
         "total": 0,
         "active": 0,

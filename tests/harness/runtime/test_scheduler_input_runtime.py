@@ -130,6 +130,153 @@ def test_projection_keeps_source_immutable_and_state_separate(tmp_path: Path) ->
     assert "execution_attempt" not in static_graph["nodes"][0]
 
 
+def test_prepare_runtime_graph_resumes_without_resetting_existing_state(tmp_path: Path) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    runtime_dir = tmp_path / "runtime"
+    graph_path = scheduler_input.prepare_runtime_graph(source, runtime_dir)
+    graph = graph_scheduler.load_graph(graph_path)
+    graph_scheduler.set_node_status(graph, "collect", "passed")
+    graph_scheduler.save_graph(graph_path, graph)
+    state_path = runtime_dir / "sprint-test.task_graph_state.json"
+    graph_before = graph_path.read_bytes()
+    state_before = state_path.read_bytes()
+
+    resumed_path = scheduler_input.prepare_runtime_graph(source, runtime_dir)
+
+    assert resumed_path == graph_path
+    assert graph_path.read_bytes() == graph_before
+    assert state_path.read_bytes() == state_before
+    resumed = graph_scheduler.load_graph(resumed_path)
+    assert graph_scheduler.node_status(resumed, "collect") == "passed"
+
+
+def test_prepare_runtime_graph_rejects_conflicting_input_without_overwrite(tmp_path: Path) -> None:
+    first_source = tmp_path / "first.scheduler_input.json"
+    second_source = tmp_path / "second.scheduler_input.json"
+    first = _scheduler_input()
+    second = deepcopy(first)
+    second["graph"]["nodes"][0]["goal"] = "A conflicting frozen goal"
+    _write(first_source, first)
+    _write(second_source, second)
+    runtime_dir = tmp_path / "runtime"
+    graph_path = scheduler_input.prepare_runtime_graph(first_source, runtime_dir)
+    state_path = runtime_dir / "sprint-test.task_graph_state.json"
+    graph_before = graph_path.read_bytes()
+    state_before = state_path.read_bytes()
+
+    with pytest.raises(scheduler_input.SchedulerInputError, match="SCHEDULER_RUNTIME_INPUT_CONFLICT"):
+        scheduler_input.prepare_runtime_graph(second_source, runtime_dir)
+
+    assert graph_path.read_bytes() == graph_before
+    assert state_path.read_bytes() == state_before
+
+
+@pytest.mark.parametrize("missing_name", ["graph", "state"])
+def test_prepare_runtime_graph_rejects_incomplete_runtime_pair(
+    tmp_path: Path,
+    missing_name: str,
+) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    runtime_dir = tmp_path / "runtime"
+    graph_path = scheduler_input.prepare_runtime_graph(source, runtime_dir)
+    state_path = runtime_dir / "sprint-test.task_graph_state.json"
+    missing_path = graph_path if missing_name == "graph" else state_path
+    missing_path.unlink()
+    surviving_path = state_path if missing_name == "graph" else graph_path
+    survivor_before = surviving_path.read_bytes()
+
+    with pytest.raises(scheduler_input.SchedulerInputError, match="SCHEDULER_RUNTIME_PAIR_INCOMPLETE"):
+        scheduler_input.prepare_runtime_graph(source, runtime_dir)
+
+    assert not missing_path.exists()
+    assert surviving_path.read_bytes() == survivor_before
+
+
+def test_prepare_runtime_graph_rejects_tampered_state_without_overwrite(tmp_path: Path) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    runtime_dir = tmp_path / "runtime"
+    graph_path = scheduler_input.prepare_runtime_graph(source, runtime_dir)
+    state_path = runtime_dir / "sprint-test.task_graph_state.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["scheduler_input_ref"]["sha256"] = "0" * 64
+    _write(state_path, state)
+    graph_before = graph_path.read_bytes()
+    state_before = state_path.read_bytes()
+
+    with pytest.raises(scheduler_input.SchedulerInputError, match="SCHEDULER_RUNTIME_STATE_INVALID"):
+        scheduler_input.prepare_runtime_graph(source, runtime_dir)
+
+    assert graph_path.read_bytes() == graph_before
+    assert state_path.read_bytes() == state_before
+
+
+def test_projection_verifier_rejects_root_and_extra_node_authority_drift(tmp_path: Path) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    graph_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime")
+    original = json.loads(graph_path.read_text(encoding="utf-8"))
+
+    planning_drift = deepcopy(original)
+    planning_drift["planning_authority"] = "legacy_mutable_plan"
+    assert scheduler_input.verify_runtime_projection(planning_drift)["errors"] == [
+        "SCHEDULER_RUNTIME_ROOT_TAMPERED"
+    ]
+
+    contract_drift = deepcopy(original)
+    contract_drift["run_contract_ref"]["sha256"] = "0" * 64
+    assert scheduler_input.verify_runtime_projection(contract_drift)["errors"] == [
+        "RUN_CONTRACT_REFERENCE_TAMPERED"
+    ]
+
+    node_drift = deepcopy(original)
+    node_drift["nodes"][0]["preferred_profile"] = "legacy-recovery-profile"
+    assert scheduler_input.verify_runtime_projection(node_drift)["errors"] == [
+        "SCHEDULER_RUNTIME_PROJECTION_TAMPERED"
+    ]
+
+    state_drift = deepcopy(original)
+    state_drift["runtime_state_filename"] = "other-sprint.task_graph_state.json"
+    assert scheduler_input.verify_runtime_projection(state_drift)["errors"] == [
+        "SCHEDULER_RUNTIME_ROOT_TAMPERED"
+    ]
+
+    extra_root = deepcopy(original)
+    extra_root["legacy_runtime_authority"] = {"enabled": True}
+    assert scheduler_input.verify_runtime_projection(extra_root)["errors"] == [
+        "SCHEDULER_RUNTIME_ROOT_FIELDS_TAMPERED"
+    ]
+
+
+def test_projection_state_overlay_drops_unallowlisted_legacy_routing_keys(tmp_path: Path) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    graph_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime")
+    graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    state_path = graph_path.parent / graph["runtime_state_filename"]
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["node_results"]["collect"].update({
+        "status": "pending",
+        "execution_attempt": {"sequence": 1, "task_id": "dispatch-1"},
+        "scheduler_candidate_observations": [
+            {"operator_id": "operator-primary", "state": "UNAVAILABLE", "rank": 1},
+            {"operator_id": "operator-fallback", "state": "READY", "rank": 2},
+        ],
+        "preferred_profile": "legacy-recovery-profile",
+        "quota_failure_reason": "force-generic-fallback",
+    })
+    _write(state_path, state)
+
+    loaded = graph_scheduler.load_graph(graph_path)
+
+    assert loaded["nodes"][0]["execution_attempt"]["task_id"] == "dispatch-1"
+    assert loaded["nodes"][0]["scheduler_candidate_observations"][1]["state"] == "READY"
+    assert "preferred_profile" not in loaded["nodes"][0]
+    assert "quota_failure_reason" not in loaded["nodes"][0]
+
+
 def test_verified_runtime_projection_inherits_containing_active_workspace(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -182,14 +329,108 @@ def test_resource_sidecar_uses_verified_runtime_projection_workspace(
     monkeypatch.setattr(graph_node_dispatcher, "SPRINTS_DIR", runtime_dir)
     monkeypatch.setattr(graph_node_dispatcher, "_workspace_binding", binding)
 
-    graph_node_dispatcher._emit_guard_resource_sidecars(sid, node)
+    graph_node_dispatcher._emit_guard_resource_sidecars(sid, node, graph)
 
     sidecar = json.loads(
         (runtime_dir / f"{sid}.{node['id']}-resource_binding.json").read_text(encoding="utf-8")
     )
-    assert sidecar["workspace_root"] == str(workspace.resolve())
+    assert sidecar["workspace_root"] == graph["runtime_work_dir"]
+    assert sidecar["staging_root"] == graph["runtime_work_dir"]
+    assert sidecar["runtime_graph_path"] == str(graph_path.resolve())
     assert sidecar["bound"] is True
     assert sidecar["in_scope"] is True
+
+
+def test_resource_binding_from_different_runtime_root_is_not_accepted(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    first_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime-a")
+    second_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime-b")
+    first = graph_scheduler.load_graph(first_path)
+    second = graph_scheduler.load_graph(second_path)
+    Path(first["runtime_work_dir"]).mkdir(parents=True)
+    Path(second["runtime_work_dir"]).mkdir(parents=True)
+    node = first["nodes"][0]
+    sid = first["sprint_id"]
+
+    graph_node_dispatcher._emit_guard_resource_sidecars(sid, node, first)
+    foreign_sidecar = first_path.parent / f"{sid}.{node['id']}-resource_binding.json"
+    local_sidecar = second_path.parent / f"{sid}.{node['id']}-resource_binding.json"
+    local_sidecar.write_bytes(foreign_sidecar.read_bytes())
+
+    presence = graph_node_dispatcher._proof_artifact_presence(
+        sid,
+        second["nodes"][0],
+        graph=second,
+    )
+
+    assert presence["resource_binding"] is False
+
+
+def test_projection_does_not_fall_back_to_legacy_same_sprint_sidecar(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    runtime_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime")
+    graph = graph_scheduler.load_graph(runtime_path)
+    Path(graph["runtime_work_dir"]).mkdir(parents=True)
+    node = graph["nodes"][0]
+    sid = graph["sprint_id"]
+
+    legacy_root = tmp_path / "legacy-sprints"
+    legacy_root.mkdir()
+    legacy_resource = legacy_root / f"{sid}.{node['id']}-resource_binding.json"
+    _write(
+        legacy_resource,
+        {
+            "node_id": node["id"],
+            "workspace_root": str(legacy_root),
+            "staging_root": str(legacy_root / sid / "workdir"),
+            "bound": True,
+            "in_scope": True,
+        },
+    )
+    monkeypatch.setattr(graph_node_dispatcher, "SPRINTS_DIR", legacy_root)
+
+    presence = graph_node_dispatcher._proof_artifact_presence(sid, node, graph=graph)
+
+    assert presence["resource_binding"] is False
+
+
+def test_unverified_projection_does_not_use_legacy_resource_binding(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    graph_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime")
+    graph = graph_scheduler.load_graph(graph_path)
+    node = graph["nodes"][0]
+    sid = graph["sprint_id"]
+    graph["planning_authority"] = "tampered"
+
+    legacy_root = tmp_path / "legacy-sprints"
+    legacy_root.mkdir()
+    _write(
+        legacy_root / f"{sid}.{node['id']}-resource_binding.json",
+        {
+            "node_id": node["id"],
+            "workspace_root": str(legacy_root),
+            "staging_root": str(legacy_root / sid / "workdir"),
+            "bound": True,
+            "in_scope": True,
+        },
+    )
+    monkeypatch.setattr(graph_node_dispatcher, "SPRINTS_DIR", legacy_root)
+
+    presence = graph_node_dispatcher._proof_artifact_presence(sid, node, graph=graph)
+
+    assert presence["guard_decision"] is False
+    assert presence["resource_binding"] is False
 
 
 def test_runtime_projection_clears_stale_worker_block_and_live_claim(tmp_path: Path) -> None:
@@ -350,6 +591,47 @@ def test_dispatch_and_lease_records_are_runtime_artifacts(tmp_path: Path) -> Non
     assert dispatch["excluded"][0]["operator_id"] == "operator-primary"
     assert lease["fencing_token"] == 1
     assert lease["expires_at"] == "2026-08-26T12:15:00Z"
+
+
+def test_dispatch_record_paths_bound_long_user_ids_deterministically(tmp_path: Path) -> None:
+    value = _scheduler_input()
+    source = tmp_path / "scheduler_input.json"
+    _write(source, value)
+    graph_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime")
+    graph = graph_scheduler.load_graph(graph_path)
+    graph["sprint_id"] = "e2e-battery-live-v8-20260827-" + "planner-sprint-" * 12
+    node = graph["nodes"][0]
+    node["id"] = "discovery-ingest-and-evidence-normalization-" + "node-" * 18
+    dispatch_id = "dispatch-research-operator-registry-" + "attempt-" * 18
+    profile = {"operator_id": "discovery_ingest_worker"}
+    submit_result = {"operator_id": "discovery_ingest_worker", "lease_id": "lease-1"}
+
+    first = scheduler_input.write_dispatch_records(
+        tmp_path / "scheduler-records",
+        graph=graph,
+        node=node,
+        profile=profile,
+        submit_result=submit_result,
+        dispatch_id=dispatch_id,
+    )
+    second = scheduler_input.write_dispatch_records(
+        tmp_path / "scheduler-records",
+        graph=graph,
+        node=node,
+        profile=profile,
+        submit_result=submit_result,
+        dispatch_id=dispatch_id,
+    )
+
+    assert first == second
+    dispatch_path = Path(first["dispatch_record"])
+    assert dispatch_path.is_file()
+    components = dispatch_path.relative_to(tmp_path / "scheduler-records").parts[:-1]
+    assert len(components) == 3
+    assert all(len(component) <= 24 for component in components)
+    assert components[0].startswith("e2e-battery")
+    assert components[1].startswith("discovery-i")
+    assert components[2].startswith("dispatch-re")
 
 
 def test_source_digest_is_raw_file_digest(tmp_path: Path) -> None:
@@ -527,7 +809,13 @@ def test_launch_attaches_attempt_to_authoritative_graph_node(
     monkeypatch.setattr(multi_task_runner, "capability_for_profile", lambda _profile: {"status": "ok", "provider": "test"})
     monkeypatch.setattr(multi_task_runner, "build_dispatch_text", lambda *_args, **_kwargs: "dispatch")
     monkeypatch.setattr(multi_task_runner, "set_last_launch", lambda: None)
-    monkeypatch.setattr(scheduler_input, "write_dispatch_records", lambda *_args, **_kwargs: {})
+    dispatch_record_roots: list[Path] = []
+
+    def capture_dispatch_record_root(output_root, **_kwargs):
+        dispatch_record_roots.append(Path(output_root))
+        return {}
+
+    monkeypatch.setattr(scheduler_input, "write_dispatch_records", capture_dispatch_record_root)
     monkeypatch.setattr(
         __import__("operator_runtime"),
         "submit",
@@ -552,6 +840,7 @@ def test_launch_attaches_attempt_to_authoritative_graph_node(
     assert authoritative["execution_attempt"]["sequence"] == 1
     assert authoritative["execution_attempt"]["operator_id"] == "operator-primary"
     assert "execution_attempt" not in ready_copy
+    assert dispatch_record_roots == [graph_path.parent / "scheduler-records"]
 
 
 def test_cancel_terminalizes_task_when_tmux_is_unavailable(

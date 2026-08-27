@@ -201,6 +201,7 @@ DEFAULT_PROFILE_CONFIG: dict[str, Any] = {
 
 sys.path.insert(0, str(HARNESS_DIR / "lib"))
 from graph_scheduler import (  # noqa: E402
+    enter_node_human_review,
     load_graph,
     node_status,
     ready_nodes,
@@ -527,6 +528,31 @@ def capability_for_profile(profile: dict[str, Any], include_probe: bool = True) 
         else:
             status = "error"
             evidence = "command missing"
+    elif backend == "research_operator_registry":
+        binding = profile.get("runtime_binding")
+        if not isinstance(binding, dict):
+            status = "error"
+            evidence = "runtime_binding missing"
+        else:
+            registry = str(binding.get("registry") or "").strip()
+            node_id = str(binding.get("node_id") or "").strip()
+            implementation_id = str(binding.get("implementation_operator_id") or "").strip()
+            adapter = HARNESS_DIR / "tools" / "research_operator_registry_adapter.py"
+            if registry and node_id and implementation_id and adapter.is_file():
+                evidence = f"registry={registry} node={node_id} adapter={adapter}"
+            else:
+                status = "error"
+                missing = [
+                    name
+                    for name, value in (
+                        ("registry", registry),
+                        ("node_id", node_id),
+                        ("implementation_operator_id", implementation_id),
+                        ("adapter", str(adapter) if adapter.is_file() else ""),
+                    )
+                    if not value
+                ]
+                evidence = "missing " + ", ".join(missing)
     else:
         status = "error"
         evidence = f"unknown backend={backend}"
@@ -663,12 +689,14 @@ def operator_dispatchable(operator: dict[str, Any]) -> tuple[bool, str]:
     backend = str(operator.get("backend") or "").strip().lower()
     provider = str(operator.get("provider") or operator.get("vendor") or "").strip()
     command = str(operator.get("command") or "").strip()
-    # A provider-less command operator is a local Harness bridge.  It may call
-    # provider-aware code behind that bridge, but the physical operator itself
-    # does not own an API credential.  External-provider command operators must
-    # continue to declare either a credential reference or a credential-free
-    # auth mode explicitly.
+    # Provider-less command and research-registry operators are local Harness
+    # bridges. They may call provider-aware code behind that bridge, but the
+    # physical operator itself does not own an API credential. External-provider
+    # operators must continue to declare either a credential reference or a
+    # credential-free auth mode explicitly.
     if not auth_mode and backend == "command" and command and not provider:
+        auth_mode = "local"
+    if not auth_mode and backend == "research_operator_registry" and not provider:
         auth_mode = "local"
     if auth_mode not in {"none", "local", "subscription"} and not key_ref:
         return False, "key_ref_missing"
@@ -813,6 +841,8 @@ def apply_operator_to_profile(profile: dict[str, Any], operator: dict[str, Any],
         selected["base_url"] = str(operator.get("base_url"))
     if operator.get("key_ref"):
         selected["key_ref"] = str(operator.get("key_ref"))
+    if operator.get("runtime_binding"):
+        selected["runtime_binding"] = deepcopy(operator.get("runtime_binding"))
     return selected
 
 
@@ -1762,7 +1792,13 @@ def role_from_node(node: dict[str, Any]) -> str:
 def select_profile(node: dict[str, Any], profile_override: str = "", model_override: str = "", backend_override: str = "") -> dict[str, Any]:
     config = load_profiles()
     profiles = config.get("profiles") or {}
-    requested_profile = profile_override or str(node.get("preferred_profile") or node.get("profile") or "")
+    frozen_candidates = isinstance(node.get("physical_candidates"), list)
+    # Frozen physical assignments are the execution authority. Legacy profile
+    # and quota-recovery hints may remain on a projected node as history, but
+    # they must never bypass re-evaluation of the ranked candidate list.
+    requested_profile = profile_override or (
+        "" if frozen_candidates else str(node.get("preferred_profile") or node.get("profile") or "")
+    )
     profile_name = normalize_profile_name(requested_profile, profiles)
     if not profile_name:
         role = role_from_node(node)
@@ -1772,8 +1808,10 @@ def select_profile(node: dict[str, Any], profile_override: str = "", model_overr
             raise ValueError(f"no multi-task profile for role={role} within SOLAR_MULTI_TASK_DEFAULT_PROVIDERS={providers}")
     profile_name = normalize_profile_name(profile_name or str((config.get("defaults") or {}).get("profile") or "builder"), profiles)
     quota_fallback_from = ""
-    quota_blocked = {normalize_profile_name(v, profiles) for v in _as_string_list(node.get("quota_blocked_profiles"))}
-    if not profile_override and profile_name in profiles and node.get("quota_failure_reason"):
+    quota_blocked = set() if frozen_candidates else {
+        normalize_profile_name(v, profiles) for v in _as_string_list(node.get("quota_blocked_profiles"))
+    }
+    if not frozen_candidates and not profile_override and profile_name in profiles and node.get("quota_failure_reason"):
         profile = dict(profiles[profile_name])
         profile["name"] = profile_name
         suitable, reason = profile_suitable_for_node(profile_name, profile, node)
@@ -1789,7 +1827,7 @@ def select_profile(node: dict[str, Any], profile_override: str = "", model_overr
                 if fallback:
                     quota_fallback_from = profile_name
                     profile_name = fallback
-    if not profile_override and profile_name in quota_blocked:
+    if not frozen_candidates and not profile_override and profile_name in quota_blocked:
         fallback = select_quota_fallback_profile(node, profile_name, profiles)
         if fallback:
             quota_fallback_from = profile_name
@@ -1800,14 +1838,14 @@ def select_profile(node: dict[str, Any], profile_override: str = "", model_overr
     selected["name"] = profile_name
     selected["role"] = str(selected.get("role") or role_from_node(node))
     selected["persona"] = str(selected.get("persona") or selected["role"])
-    node_model = "" if quota_fallback_from else str(node.get("preferred_model") or "")
+    node_model = "" if frozen_candidates or quota_fallback_from else str(node.get("preferred_model") or "")
     selected["backend"] = str(backend_override or selected.get("backend") or (config.get("defaults") or {}).get("backend") or "claude-cli")
     selected["model"] = profile_model_with_compatible_override(selected, model_override, node_model)
     selected["approval_mode"] = str(selected.get("approval_mode") or "auto_edit")
     if quota_fallback_from:
         selected["quota_fallback_from"] = quota_fallback_from
         selected["quota_fallback_reason"] = "quota_exhausted"
-    if not profile_override and not backend_override and not model_override:
+    if not frozen_candidates and not profile_override and not backend_override and not model_override:
         capability = capability_for_profile(selected)
         if str(capability.get("status") or "") != "ok":
             fallback = select_capability_fallback_profile(node, profile_name, profiles)
@@ -1822,14 +1860,14 @@ def select_profile(node: dict[str, Any], profile_override: str = "", model_overr
                 fallback_profile["capability_fallback_from"] = profile_name
                 fallback_profile["capability_fallback_reason"] = str(capability.get("status") or "unavailable")
                 selected = fallback_profile
-    if not (requested_profile and (node.get("quota_failure_reason") or node.get("auth_failure_reason"))):
+    if frozen_candidates or not (requested_profile and (node.get("quota_failure_reason") or node.get("auth_failure_reason"))):
         operator, fallback_reason = select_operator(node, selected)
         if operator:
             selected = apply_operator_to_profile(selected, operator, fallback_reason)
             if operator.get("scheduler_candidate_observations"):
                 selected["scheduler_candidate_observations"] = deepcopy(operator["scheduler_candidate_observations"])
                 selected["scheduler_candidate_rank"] = operator.get("scheduler_candidate_rank")
-        elif node.get("physical_candidates"):
+        elif frozen_candidates:
             raise ValueError(fallback_reason or "frozen_physical_candidates_unavailable")
         elif node.get("preferred_operator"):
             selected["operator_id"] = str(node.get("preferred_operator") or "")
@@ -3277,7 +3315,19 @@ def output_log_has_auth_failure(task_id_value: str) -> bool:
 
 
 def recover_quota_failed_nodes(graph_path: Path, graph: dict[str, Any]) -> int:
-    profiles = load_profiles().get("profiles") or {}
+    if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+        try:
+            import scheduler_input
+
+            verification = scheduler_input.verify_runtime_projection(
+                graph,
+                graph_path=graph_path,
+            )
+        except Exception:
+            return 0
+        if not verification.get("ok"):
+            return 0
+    profiles: dict[str, Any] | None = None
     changed = 0
     for node in graph_nodes(graph):
         node_id = str(node.get("id") or "")
@@ -3288,14 +3338,99 @@ def recover_quota_failed_nodes(graph_path: Path, graph: dict[str, Any]) -> int:
         if str(current_status or "").lower() != "failed":
             continue
         dispatch_id = str(node.get("dispatch_id") or node.get("quota_failure_task_id") or "").strip()
+        failure_reason = output_log_failure_kind(dispatch_id)
+        if failure_reason not in {"auth_expired", "quota_exhausted"}:
+            continue
+        frozen_candidates = isinstance(node.get("physical_candidates"), list)
+        if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1" or frozen_candidates:
+            # SchedulerInput owns both fallback order and attempt budget. Never
+            # use the legacy profile ladder to authorize a frozen retry.
+            failure_policy = (
+                node.get("failure_policy")
+                if isinstance(node.get("failure_policy"), dict)
+                else {}
+            )
+            try:
+                max_attempts = max(1, int(failure_policy.get("max_attempts") or 1))
+            except (TypeError, ValueError):
+                max_attempts = 1
+            attempt_record = (
+                node.get("execution_attempt")
+                if isinstance(node.get("execution_attempt"), dict)
+                else {}
+            )
+            try:
+                attempt_sequence = max(1, int(attempt_record.get("sequence") or 1))
+            except (TypeError, ValueError):
+                attempt_sequence = 1
+            exhausted_policy = str(failure_policy.get("on_exhausted") or "block_dependents")
+            field_prefix = _recoverable_failure_field_prefix(failure_reason)
+            node[f"{field_prefix}_reason"] = _recoverable_failure_label(failure_reason)
+            node[f"{field_prefix}_task_id"] = dispatch_id
+            node[f"{field_prefix}_recovered_at"] = now_iso()
+            if attempt_sequence >= max_attempts:
+                node["failure_policy_exhausted"] = {
+                    "attempt": attempt_sequence,
+                    "max_attempts": max_attempts,
+                    "on_exhausted": exhausted_policy,
+                    "reason": _recoverable_failure_label(failure_reason),
+                    "recorded_at": now_iso(),
+                }
+                node["blocking_reason"] = (
+                    f"failure_policy_attempt_budget_exhausted:{attempt_sequence}/{max_attempts}"
+                )
+                set_node_status(graph, node_id, "failed", dispatch_id=dispatch_id or None)
+                if exhausted_policy == "fail_run":
+                    for other in graph_nodes(graph):
+                        other_id = str(other.get("id") or "")
+                        if not other_id or other_id == node_id:
+                            continue
+                        other_status = str(node_status(graph, other_id) or "").lower()
+                        if other_status not in {
+                            "passed", "failed", "skipped", "cancelled", "needs_human_review"
+                        }:
+                            set_node_status(graph, other_id, "cancelled")
+                result = graph.setdefault("node_results", {}).setdefault(node_id, {})
+                result["blocking_reason"] = node["blocking_reason"]
+                result["failure_policy_exhausted"] = deepcopy(node["failure_policy_exhausted"])
+            else:
+                # Re-open the same planner node. The next select_profile call
+                # re-evaluates only physical_candidates in ascending rank.
+                prior_status = str(current_status or "failed")
+                if isinstance(graph.get("node_results"), dict):
+                    graph["node_results"].pop(node_id, None)
+                node["status"] = "pending"
+                node["updated_at"] = now_iso()
+                for key in (
+                    "assigned_to",
+                    "dispatch_id",
+                    "pane",
+                    "blocking_reason",
+                    "monitor_blocker",
+                    "scheduler_candidate_observations",
+                ):
+                    node.pop(key, None)
+                if _gs_ledger_transition is not None:
+                    try:
+                        _gs_ledger_transition(
+                            graph,
+                            node_id,
+                            prior_status,
+                            "pending",
+                            "recover_quota_failed_nodes",
+                            note="frozen_candidate_retry",
+                        )
+                    except Exception:
+                        pass
+            changed += 1
+            continue
+        if profiles is None:
+            profiles = load_profiles().get("profiles") or {}
         status = read_task_status(RUN_DIR / dispatch_id / "status.json") if dispatch_id else None
         profile_name = normalize_profile_name(
             str((status or {}).get("profile") or node.get("preferred_profile") or node.get("profile") or ""),
             profiles,
         )
-        failure_reason = output_log_failure_kind(dispatch_id)
-        if failure_reason not in {"auth_expired", "quota_exhausted"}:
-            continue
         recovered_ids = set(_as_string_list(node.get("quota_recovery_task_ids")))
         try:
             recovery_count = int(node.get("quota_recovery_count") or 0)
@@ -3522,7 +3657,12 @@ def build_dispatch_text(graph_path: Path, graph: dict[str, Any], node: dict[str,
                         profile: dict[str, Any]) -> str:
     sid = sprint_id_for(graph, graph_path)
     node_id = str(node.get("id") or "")
-    handoff = SPRINTS_DIR / f"{sid}.{node_id}-handoff.md"
+    handoff_root = (
+        Path(graph_path).parent
+        if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+        else SPRINTS_DIR
+    )
+    handoff = handoff_root / f"{sid}.{node_id}-handoff.md"
     harness = HARNESS_DIR / "solar-harness.sh"
     persona_path, persona_body = persona_text(str(profile.get("persona") or "builder"))
 
@@ -4046,6 +4186,20 @@ def _operator_submit_rejection_reason(error: Exception) -> str:
     return ""
 
 
+def _requires_leased_operator_dispatch(graph: dict[str, Any], node: dict[str, Any]) -> bool:
+    """Return whether this node is forbidden from using the legacy tmux path.
+
+    A scheduler runtime projection and a node carrying the planner's frozen
+    physical-candidate list both require dispatch through operatord so lease
+    ownership remains authoritative.  An unclassified submit failure must not
+    silently bypass that contract by launching an unleased legacy worker.
+    """
+    return (
+        graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+        or isinstance(node.get("physical_candidates"), list)
+    )
+
+
 def _profile_attribution_operator_id(profile: dict[str, Any]) -> str:
     """Return a durable operator label for status/runstate without changing submit routing.
 
@@ -4110,6 +4264,7 @@ def _build_operator_envelope(
         "resource_requirements": deepcopy(node.get("resource_requirements") or {}),
         "effects": deepcopy(node.get("effects") or []),
         "physical_candidate_rank": profile.get("scheduler_candidate_rank"),
+        "runtime_binding": deepcopy(profile.get("runtime_binding") or {}),
     }
 
 
@@ -4135,7 +4290,8 @@ def _record_node_attribution(sid: str, node_id: str, payload: dict[str, Any], ta
     try:
         import node_runstate
 
-        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+        runstate_root = Path(str(payload.get("node_runstate_root") or SPRINTS_DIR))
+        node_runstate.record(runstate_root, sid, node_id, "attribution", {
             "dispatch_id": payload.get("id"),
             "backend": payload.get("backend"),
             "vendor": payload.get("operator_vendor") or payload.get("provider"),
@@ -4162,7 +4318,10 @@ def _plan_validator_env_on() -> bool:
     return str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _plan_validator_launch_refusal(graph: dict[str, Any]) -> dict[str, Any] | None:
+def _plan_validator_launch_refusal(
+    graph: dict[str, Any],
+    graph_path: str | Path | None = None,
+) -> dict[str, Any] | None:
     """Validator dispatch guard shared by schedule_once and launch_node.
 
     launch_node() is a public dispatch surface: a direct caller skips the
@@ -4173,7 +4332,7 @@ def _plan_validator_launch_refusal(graph: dict[str, Any]) -> dict[str, Any] | No
         try:
             import scheduler_input
 
-            verdict = scheduler_input.verify_runtime_projection(graph)
+            verdict = scheduler_input.verify_runtime_projection(graph, graph_path=graph_path)
         except Exception as guard_exc:
             verdict = {"ok": False, "errors": [f"SCHEDULER_INPUT_UNCHECKABLE:{type(guard_exc).__name__}"]}
         if verdict.get("ok"):
@@ -4215,10 +4374,92 @@ def _plan_validator_launch_refusal(graph: dict[str, Any]) -> dict[str, Any] | No
     return {"reason": "plan_validator_dispatch_refused", "errors": errors}
 
 
+def _scheduler_preflight_failure_record(
+    graph_path: Path,
+    graph: dict[str, Any],
+    *,
+    reason: str,
+    node_id: str = "",
+    error: str = "",
+    errors: list[Any] | None = None,
+) -> str:
+    """Persist one scheduler refusal beside the runtime graph for GUI pickup."""
+    sid = sprint_id_for(graph, graph_path)
+    identity = str(node_id or "graph")
+    safe_identity = re.sub(r"[^A-Za-z0-9_.-]+", "-", identity).strip("-.")[:32] or "graph"
+    suffix = uuid.uuid5(uuid.NAMESPACE_URL, f"{graph_path.resolve()}:{identity}").hex[:10]
+    record_path = graph_path.parent / "scheduler-records" / "preflight" / f"{safe_identity}-{suffix}.json"
+    payload = {
+        "schema_version": "solar.scheduler_preflight_failure.v1",
+        "artifact_role": "mutable_scheduler_failure_evidence",
+        "status": "blocked" if not node_id else "queued",
+        "reason": str(reason),
+        "error": str(error),
+        "errors": [str(item) for item in (errors or [])],
+        "sprint_id": sid,
+        "node_id": str(node_id),
+        "graph_path": str(graph_path.resolve()),
+        "recorded_at": now_iso(),
+    }
+    json_write(record_path, payload)
+    return str(record_path)
+
+
+def _persist_frozen_preflight_queue(
+    graph_path: Path,
+    graph: dict[str, Any],
+    node: dict[str, Any],
+    exc: Exception,
+) -> dict[str, Any]:
+    """Keep a temporarily unavailable frozen node queued with durable evidence."""
+    node_id = str(node.get("id") or "")
+    detail = str(exc) or type(exc).__name__
+    blocking_reason = f"frozen_scheduler_preflight_unavailable:{detail}"
+    authoritative = next(
+        (
+            item for item in graph.get("nodes") or []
+            if isinstance(item, dict) and str(item.get("id") or "") == node_id
+        ),
+        None,
+    )
+    observations = deepcopy(node.get("scheduler_candidate_observations") or [])
+    if isinstance(authoritative, dict):
+        authoritative["blocking_reason"] = blocking_reason
+        if observations:
+            authoritative["scheduler_candidate_observations"] = observations
+        set_node_status(graph, node_id, "queued")
+        result = graph.setdefault("node_results", {}).setdefault(node_id, {})
+        result["blocking_reason"] = blocking_reason
+        if observations:
+            result["scheduler_candidate_observations"] = observations
+        save_graph(graph_path, graph)
+    failure_record = _scheduler_preflight_failure_record(
+        graph_path,
+        graph,
+        reason="frozen_scheduler_preflight_unavailable",
+        node_id=node_id,
+        error=detail,
+    )
+    return {
+        "reason": "frozen_scheduler_preflight_unavailable",
+        "error": detail,
+        "blocking_reason": blocking_reason,
+        "failure_record": failure_record,
+    }
+
+
 def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], args: argparse.Namespace,
                 dry_run: bool = False) -> dict[str, Any]:
-    refusal = _plan_validator_launch_refusal(graph)
+    refusal = _plan_validator_launch_refusal(graph, graph_path)
     if refusal is not None:
+        refusal = dict(refusal)
+        refusal["failure_record"] = _scheduler_preflight_failure_record(
+            graph_path,
+            graph,
+            reason=str(refusal.get("reason") or "scheduler_input_dispatch_refused"),
+            node_id=str(node.get("id") or ""),
+            errors=list(refusal.get("errors") or []),
+        )
         return {
             "status": "plan_validator_dispatch_refused",
             "graph": str(graph_path),
@@ -4245,7 +4486,12 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
     requested_window = short_window(f"{dispatch_id}-{profile.get('role')}-{node_id}")
     window = requested_window
     task_dir = RUN_DIR / dispatch_id
-    handoff = SPRINTS_DIR / f"{sid}.{node_id}-handoff.md"
+    runtime_root = (
+        Path(graph_path).parent
+        if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+        else SPRINTS_DIR
+    )
+    handoff = runtime_root / f"{sid}.{node_id}-handoff.md"
     task_dir.mkdir(parents=True, exist_ok=True)
     # Default the agent's working directory to a clean per-sprint workspace so produced
     # deliverables land predictably (and the dashboard's SPRINTS_DIR scan finds them),
@@ -4284,6 +4530,7 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         "quota_fallback_from": profile.get("quota_fallback_from") or node.get("quota_fallback_from") or "",
         "quota_fallback_reason": profile.get("quota_fallback_reason") or node.get("quota_fallback_reason") or "",
         "graph": str(graph_path),
+        "node_runstate_root": str(runtime_root),
         "sprint_id": sid,
         "node_id": node_id,
         "title": str(node.get("goal") or node.get("title") or node_id)[:120],
@@ -4330,7 +4577,7 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
 
                 payload.update(
                     scheduler_input.write_dispatch_records(
-                        HARNESS_DIR / "run" / "scheduler",
+                        Path(graph_path).parent / "scheduler-records",
                         graph=graph,
                         node=node,
                         profile=profile,
@@ -4387,6 +4634,49 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
                     node["next_action"] = "repair scheduler input or capsule admission contract"
                     set_node_status(graph, node_id, "needs_human_review")
                     save_graph(graph_path, graph)
+                _record_node_attribution(
+                    sid,
+                    node_id,
+                    payload,
+                    task_dir,
+                    "submit_rejected",
+                )
+                return payload
+            if _requires_leased_operator_dispatch(graph, node):
+                # Frozen scheduler assignments may only execute under an
+                # operatord lease.  The exception was not a classified
+                # busy/unavailable race, so retrying another candidate is not
+                # justified and legacy tmux would create an unleased dispatch.
+                blocking_reason = (
+                    f"operator_submit_failed:{type(exc).__name__}:{str(exc) or 'no detail'}"
+                )
+                next_action = "inspect operator submit configuration and retry after repair"
+                payload["status"] = "submit_rejected"
+                payload["submit_mode"] = "operatord"
+                payload["dispatch_mode"] = "operatord"
+                payload["operator_submit_reason"] = "operator_submit_failed"
+                payload["operator_submit_error"] = str(exc)
+                payload["blocking_reason"] = blocking_reason
+                payload["next_action"] = next_action
+                payload["updated_at"] = now_iso()
+                json_write(status_path(task_dir), payload)
+                node["blocking_reason"] = blocking_reason
+                node["next_action"] = next_action
+                enter_node_human_review(
+                    graph,
+                    node_id,
+                    reason=blocking_reason,
+                    next_action=next_action,
+                    writer="multi_task_runner.operator_submit",
+                )
+                node_result = graph.setdefault("node_results", {}).setdefault(node_id, {})
+                node_result.update({
+                    "blocking_reason": blocking_reason,
+                    "next_action": next_action,
+                    "operator_submit_reason": "operator_submit_failed",
+                    "operator_submit_error": str(exc),
+                })
+                save_graph(graph_path, graph)
                 _record_node_attribution(
                     sid,
                     node_id,
@@ -4630,8 +4920,15 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
         try:
             graph = load_graph(graph_path)
             summaries.append(status_summary_for_graph(graph_path))
-            refusal = _plan_validator_launch_refusal(graph)
+            refusal = _plan_validator_launch_refusal(graph, graph_path)
             if refusal is not None:
+                refusal = dict(refusal)
+                refusal["failure_record"] = _scheduler_preflight_failure_record(
+                    graph_path,
+                    graph,
+                    reason=str(refusal.get("reason") or "scheduler_input_dispatch_refused"),
+                    errors=list(refusal.get("errors") or []),
+                )
                 skipped.append({"graph": str(graph_path), **refusal})
                 continue
             candidates = sorted(
@@ -4662,7 +4959,14 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
                 profile = select_profile(node, getattr(args, "profile", "") or "", getattr(args, "model", "") or "", getattr(args, "backend", "") or "")
                 capability = capability_for_profile(profile)
             except Exception as exc:
-                skipped.append({"graph": str(graph_path), "node": node.get("id"), "reason": "capability_error", "error": str(exc)})
+                if _requires_leased_operator_dispatch(graph, node):
+                    skipped.append({
+                        "graph": str(graph_path),
+                        "node": node.get("id"),
+                        **_persist_frozen_preflight_queue(graph_path, graph, node, exc),
+                    })
+                else:
+                    skipped.append({"graph": str(graph_path), "node": node.get("id"), "reason": "capability_error", "error": str(exc)})
                 continue
             parallel_guard = profile_parallel_limit_reached(profile, parallel_counts)
             if not parallel_guard.get("ok"):

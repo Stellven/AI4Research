@@ -403,6 +403,34 @@ def test_discovery_ingest_emits_multiple_real_papers_and_claims_read_all(
     assert "10 percent" in claim_text
 
 
+@pytest.mark.parametrize("separator", ["/", "\\"])
+def test_discovery_ingest_honors_explicit_directory_scope_with_json_suffix(
+    workspace: Path,
+    separator: str,
+) -> None:
+    request, services = request_for("discovery_ingest", workspace)
+    request["write_scope"] = [f"outputs/research_paper.v1.schema.json{separator}"]
+
+    result = execute_operator(request, services=services, workspace_root=workspace)
+
+    assert result["status"] == "completed", result
+    assert len(result["output_artifacts"]) == 2
+    assert all(
+        item["path"].replace("\\", "/").startswith("outputs/research_paper.v1.schema.json/")
+        for item in result["output_artifacts"]
+    )
+
+
+def test_discovery_ingest_rejects_untrailed_json_file_scope(workspace: Path) -> None:
+    request, services = request_for("discovery_ingest", workspace)
+    request["write_scope"] = ["outputs/research_paper.v1.schema.json"]
+
+    result = execute_operator(request, services=services, workspace_root=workspace)
+
+    assert result["status"] == "failed"
+    assert "requires a directory write scope" in result["errors"][0]["message"]
+
+
 @pytest.mark.parametrize(
     ("title", "text", "expected_status", "expected_basis", "expected_count"),
     [

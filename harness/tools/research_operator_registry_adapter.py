@@ -1,0 +1,413 @@
+#!/usr/bin/env python3
+"""Execute a frozen research-registry operator through its typed worker boundary."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+
+HARNESS_DIR = Path(__file__).resolve().parents[1]
+REPO_ROOT = HARNESS_DIR.parent
+RUN_DIR = Path(
+    os.environ.get("SOLAR_MULTI_TASK_RUN_DIR")
+    or HARNESS_DIR / "run" / "multi-task"
+)
+SPRINTS_DIR = Path(
+    os.environ.get("SPRINTS_DIR")
+    or os.environ.get("HARNESS_SPRINTS_DIR")
+    or HARNESS_DIR / "sprints"
+)
+for entry in (str(HARNESS_DIR / "lib"), str(HARNESS_DIR), str(REPO_ROOT)):
+    if entry not in sys.path:
+        sys.path.insert(0, entry)
+
+from physical_operator_worker import run_physical_operator  # noqa: E402
+from research_orchestration.runtime import default_production_resolver  # noqa: E402
+import scheduler_input  # noqa: E402
+
+
+class RegistryAdapterError(ValueError):
+    """A fail-closed registry dispatch error."""
+
+
+_ALLOWED_REGISTRIES = {
+    "plugins.autosci.operators.scientific_lifecycle.evidence.registry": "operator_id",
+    "plugins.autosci.operators.scientific_lifecycle.registry": "implementation_operator_id",
+}
+_PAYLOAD_KEYS = {
+    "discovery_ingest": "discovery_evidence",
+    "claim_extract": "paper_evidence",
+    "idea_evaluate": "idea_candidate",
+    "experiment_design": "idea_candidate",
+}
+
+
+def _read_object(path: Path, *, label: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RegistryAdapterError(f"{label} is not readable JSON: {path}") from exc
+    if not isinstance(payload, dict):
+        raise RegistryAdapterError(f"{label} must be a JSON object: {path}")
+    return payload
+
+
+def _expected_schema(contract_value: str) -> str:
+    name = Path(str(contract_value).replace("schema:", "")).name
+    return name.removesuffix(".schema.json")
+
+
+def _resolved_path(value: Any, *, label: str, strict: bool = False) -> Path:
+    raw = str(value or "").strip()
+    if not raw:
+        raise RegistryAdapterError(f"{label} is missing")
+    try:
+        return Path(raw).expanduser().resolve(strict=strict)
+    except OSError as exc:
+        raise RegistryAdapterError(f"{label} is not a valid path: {raw}") from exc
+
+
+def _require_within(path: Path, root: Path, *, label: str) -> None:
+    try:
+        path.relative_to(root)
+    except ValueError as exc:
+        raise RegistryAdapterError(f"{label} escapes scheduler runtime_work_dir") from exc
+
+
+def _verified_dispatch_authority(
+    envelope: dict[str, Any],
+    *,
+    configured_binding: dict[str, str],
+) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
+    graph_path = _resolved_path(envelope.get("graph_path"), label="graph_path", strict=True)
+    runtime_root = graph_path.parent
+    graph = _read_object(graph_path, label="runtime graph")
+    verification = scheduler_input.verify_runtime_projection(graph, graph_path=graph_path)
+    if not verification.get("ok"):
+        errors = ",".join(str(item) for item in verification.get("errors") or [])
+        raise RegistryAdapterError(f"runtime graph verification failed: {errors or 'unknown'}")
+
+    sprint_id = str(graph.get("sprint_id") or "")
+    node_id = str(envelope.get("node_id") or "")
+    expected_graph_path = runtime_root / f"{sprint_id}.task_graph.json"
+    work_dir = _resolved_path(graph.get("runtime_work_dir"), label="runtime_work_dir", strict=True)
+    expected_work_dir = runtime_root / sprint_id / "workdir"
+    if graph_path != expected_graph_path or work_dir != expected_work_dir.resolve():
+        raise RegistryAdapterError("graph_path and runtime_work_dir do not match the scheduler projection layout")
+    if _resolved_path(envelope.get("work_dir"), label="work_dir", strict=True) != work_dir:
+        raise RegistryAdapterError("envelope work_dir does not match the verified runtime graph")
+    if str(envelope.get("sprint_id") or "") != sprint_id:
+        raise RegistryAdapterError("envelope sprint_id does not match the verified runtime graph")
+
+    matching = [
+        item for item in graph.get("nodes") or []
+        if isinstance(item, dict) and str(item.get("id") or "") == node_id
+    ]
+    if len(matching) != 1:
+        raise RegistryAdapterError(f"envelope node_id is not unique in the verified runtime graph: {node_id}")
+    node = matching[0]
+    operator_id = str(envelope.get("operator_id") or "")
+    candidates = [item for item in node.get("physical_candidates") or [] if isinstance(item, dict)]
+    selected = [item for item in candidates if str(item.get("operator_id") or "") == operator_id]
+    if len(selected) != 1:
+        raise RegistryAdapterError("envelope operator_id is not a frozen physical candidate for the graph node")
+    supplied_rank = envelope.get("physical_candidate_rank")
+    if supplied_rank is not None and supplied_rank != selected[0].get("rank"):
+        raise RegistryAdapterError("envelope physical_candidate_rank does not match the frozen graph node")
+
+    exact_fields = {
+        "artifact_contract": node.get("artifact_contract") or {},
+        "artifact_routes": node.get("artifact_routes") or {},
+        "capsule_binding": node.get("capsule_binding") or {},
+        "resource_requirements": node.get("resource_requirements") or {},
+        "write_scope": node.get("write_scope") or [],
+    }
+    for field, expected in exact_fields.items():
+        if envelope.get(field) != expected:
+            raise RegistryAdapterError(f"envelope {field} does not match the frozen graph node")
+    if envelope.get("runtime_binding") != configured_binding:
+        raise RegistryAdapterError("envelope runtime_binding does not match the configured operator")
+
+    routes = node.get("artifact_routes") if isinstance(node.get("artifact_routes"), dict) else {}
+    input_bindings = (
+        graph.get("runtime_input_bindings")
+        if isinstance(graph.get("runtime_input_bindings"), dict)
+        else {}
+    )
+    for route_kind in ("consumes", "produces"):
+        route_map = routes.get(route_kind) if isinstance(routes.get(route_kind), dict) else {}
+        for artifact_type, raw_route in route_map.items():
+            if _expected_schema(str(artifact_type)) == "request-envelope":
+                continue
+            route = Path(str(raw_route))
+            route = route if route.is_absolute() else work_dir / route
+            resolved_route = route.resolve()
+            if route_kind == "consumes" and not resolved_route.is_relative_to(work_dir):
+                binding = input_bindings.get(str(artifact_type))
+                bound_path = (
+                    _resolved_path(binding.get("path"), label=f"runtime input {artifact_type}", strict=True)
+                    if isinstance(binding, dict)
+                    else None
+                )
+                if bound_path is None or resolved_route != bound_path:
+                    raise RegistryAdapterError(
+                        f"consumes route {artifact_type} is not an exact verified runtime input binding"
+                    )
+            else:
+                _require_within(resolved_route, work_dir, label=f"{route_kind} route {artifact_type}")
+
+    handoff_path = _resolved_path(envelope.get("handoff_path"), label="handoff_path")
+    expected_handoff = runtime_root / f"{sprint_id}.{node_id}-handoff.md"
+    if handoff_path != expected_handoff.resolve():
+        raise RegistryAdapterError("handoff_path does not match the configured sprint/node handoff")
+    return graph, node, work_dir, handoff_path
+
+
+def _validated_binding(envelope: dict[str, Any]) -> dict[str, str]:
+    operator_id = str(envelope.get("operator_id") or "").strip()
+    operators = _read_object(
+        HARNESS_DIR / "config" / "physical-operators.json",
+        label="physical operator registry",
+    ).get("operators")
+    operator = operators.get(operator_id) if isinstance(operators, dict) else None
+    if not isinstance(operator, dict) or str(operator.get("backend") or "") != "research_operator_registry":
+        raise RegistryAdapterError(f"operator is not an admitted research registry operator: {operator_id or '<missing>'}")
+    configured = operator.get("runtime_binding")
+    supplied = envelope.get("runtime_binding")
+    if not isinstance(configured, dict) or not isinstance(supplied, dict) or supplied != configured:
+        raise RegistryAdapterError(f"runtime_binding does not match configured operator {operator_id}")
+    registry_name = str(configured.get("registry") or "")
+    implementation_key = _ALLOWED_REGISTRIES.get(registry_name)
+    if implementation_key is None:
+        raise RegistryAdapterError(f"research registry is not allowlisted: {registry_name or '<missing>'}")
+    node_id = str(configured.get("node_id") or "")
+    implementation_id = str(configured.get("implementation_operator_id") or "")
+    if node_id not in _PAYLOAD_KEYS or not implementation_id:
+        raise RegistryAdapterError(f"research registry node is not allowlisted: {node_id or '<missing>'}")
+    registry = importlib.import_module(registry_name)
+    entries = registry.registration_entries()
+    matches = [item for item in entries if str(item.get("node_id") or "") == node_id]
+    if len(matches) != 1 or str(matches[0].get(implementation_key) or "") != implementation_id:
+        raise RegistryAdapterError(
+            f"configured implementation_operator_id is not registered for {registry_name}:{node_id}"
+        )
+    return {
+        "operator_id": operator_id,
+        "registry": registry_name,
+        "node_id": node_id,
+        "implementation_operator_id": implementation_id,
+        "payload_key": _PAYLOAD_KEYS[node_id],
+    }
+
+
+def _matching_input_documents(
+    graph: dict[str, Any],
+    node: dict[str, Any],
+    work_dir: Path,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    contract = node.get("artifact_contract") if isinstance(node.get("artifact_contract"), dict) else {}
+    routes = node.get("artifact_routes") if isinstance(node.get("artifact_routes"), dict) else {}
+    consume_routes = routes.get("consumes") if isinstance(routes.get("consumes"), dict) else {}
+    documents: list[dict[str, Any]] = []
+    source_paths: list[str] = []
+    input_bindings = (
+        graph.get("runtime_input_bindings")
+        if isinstance(graph.get("runtime_input_bindings"), dict)
+        else {}
+    )
+    for artifact_type in contract.get("consumes") or []:
+        expected = _expected_schema(str(artifact_type))
+        raw_route = str(consume_routes.get(artifact_type) or "").strip()
+        if not raw_route or expected in {"", "request-envelope"}:
+            continue
+        route = Path(raw_route)
+        route = route if route.is_absolute() else work_dir / route
+        candidates = [route] if route.is_file() else sorted(route.rglob("*.json")) if route.is_dir() else []
+        for candidate in candidates:
+            resolved_candidate = candidate.resolve()
+            if not resolved_candidate.is_relative_to(work_dir):
+                binding = input_bindings.get(str(artifact_type))
+                bound_path = (
+                    _resolved_path(binding.get("path"), label=f"runtime input {artifact_type}", strict=True)
+                    if isinstance(binding, dict)
+                    else None
+                )
+                if bound_path is None or resolved_candidate != bound_path:
+                    raise RegistryAdapterError("consumed artifact is outside verified scheduler authority")
+            try:
+                document = _read_object(resolved_candidate, label="input artifact")
+            except RegistryAdapterError:
+                continue
+            if str(document.get("schema") or "") != expected:
+                continue
+            documents.append(document)
+            source_paths.append(str(resolved_candidate))
+    return documents, source_paths
+
+
+def _run_contract_ref(graph: dict[str, Any], envelope: dict[str, Any]) -> dict[str, str]:
+    ref = graph.get("run_contract_ref") if isinstance(graph.get("run_contract_ref"), dict) else {}
+    return {
+        "run_contract_id": str(ref.get("run_contract_id") or ref.get("scheduler_input_id") or envelope.get("sprint_id") or ""),
+        "sha256": str(ref.get("sha256") or ""),
+    }
+
+
+def _lease_id(envelope: dict[str, Any]) -> str:
+    task_id = str(envelope.get("task_id") or "").strip()
+    if not task_id or Path(task_id).name != task_id or task_id in {".", ".."}:
+        raise RegistryAdapterError("task_id is not a safe scheduler dispatch identifier")
+    status_path = RUN_DIR / task_id / "status.json"
+    if not status_path.is_file():
+        raise RegistryAdapterError("scheduler lease status is missing for registry dispatch")
+    status = _read_object(status_path, label="scheduler task status")
+    exact_fields = {
+        "id": task_id,
+        "task_id": task_id,
+        "sprint_id": str(envelope.get("sprint_id") or ""),
+        "node_id": str(envelope.get("node_id") or ""),
+        "operator_id": str(envelope.get("operator_id") or ""),
+        "graph": str(_resolved_path(envelope.get("graph_path"), label="graph_path", strict=True)),
+    }
+    for field, expected in exact_fields.items():
+        if str(status.get(field) or "") != expected:
+            raise RegistryAdapterError(f"scheduler lease status {field} does not match dispatch envelope")
+    lease_id = str(status.get("lease_id") or "").strip()
+    if not lease_id:
+        raise RegistryAdapterError("scheduler lease status has no lease_id")
+    return lease_id
+
+
+def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
+    expected = _validated_binding(envelope)
+    operator_id = expected["operator_id"]
+    graph, node, work_dir, handoff_path = _verified_dispatch_authority(
+        envelope,
+        configured_binding={
+            "registry": expected["registry"],
+            "node_id": expected["node_id"],
+            "implementation_operator_id": expected["implementation_operator_id"],
+        },
+    )
+    documents, source_paths = _matching_input_documents(graph, node, work_dir)
+    if not documents:
+        raise RegistryAdapterError("no artifact matching the frozen consume contract was found")
+    payload = {
+        expected["payload_key"]: documents[0],
+        "source_artifacts": [
+            {"path": path, "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
+            for path in source_paths
+        ],
+        "task_contract": {"user_intent": str(node.get("goal") or "")},
+    }
+    if expected["node_id"] == "discovery_ingest":
+        payload["max_sources"] = min(10, len(documents[0].get("outputs", {}).get("candidates") or []))
+
+    external_inputs = {
+        str(_resolved_path(item.get("path"), label=f"runtime input {artifact_type}", strict=True))
+        for artifact_type, item in (graph.get("runtime_input_bindings") or {}).items()
+        if isinstance(item, dict)
+    }
+    read_scope = sorted({
+        path if path in external_inputs else str(Path(path).parent) + os.sep
+        for path in source_paths
+    })
+    write_scope = [str(item) for item in node.get("write_scope") or [] if str(item).strip()]
+    network_mode = str((node.get("resource_requirements") or {}).get("network") or "optional")
+    request = {
+        "schema": "research_node_request.v1",
+        "task_id": str(envelope.get("task_id") or ""),
+        "run_id": str(graph.get("sprint_id") or ""),
+        "workflow_id": "scheduler_frozen_research_registry_v1",
+        "node_id": expected["node_id"],
+        "logical_operator": {
+            "operator_id": str(node.get("id") or expected["node_id"]),
+            "operator_kind": "logical",
+            "capabilities": list((node.get("capsule_binding") or {}).get("capsule_ids") or []),
+        },
+        "physical_operator": {
+            "operator_id": operator_id,
+            "operator_kind": "physical",
+            "capabilities": list((node.get("capsule_binding") or {}).get("capsule_ids") or []),
+        },
+        "typed_inputs": {"input_schema": f"{expected['node_id']}.scheduler.v1", "payload": payload},
+        # Cross-node scheduler task ids differ. Inline hash-recorded documents
+        # preserve provenance without pretending they share one task identity.
+        "input_artifact_refs": [],
+        "authorization": {
+            "scope_id": f"{graph.get('sprint_id')}:{node.get('id')}",
+            "approved_capabilities": list((node.get("capsule_binding") or {}).get("capsule_ids") or []),
+            "allow_network": network_mode != "forbidden",
+            "allow_live_provider": network_mode != "forbidden",
+            "secret_refs": [],
+        },
+        "read_scope": read_scope,
+        "write_scope": write_scope,
+        "timeout_retry_policy": {"timeout_seconds": 900, "max_attempts": 1, "retry_on": []},
+    }
+    resolver = default_production_resolver(workspace_root=work_dir)
+    resolver_operator_id = f"{expected['node_id']}_worker"
+
+    def execute_registered(request: dict[str, Any]) -> dict[str, Any]:
+        if resolver_operator_id == operator_id:
+            return resolver.execute(request)
+        registry_request = dict(request)
+        registry_request["physical_operator"] = {
+            **dict(request.get("physical_operator") or {}),
+            "operator_id": resolver_operator_id,
+        }
+        return resolver.execute(registry_request)
+
+    receipt = run_physical_operator(
+        request,
+        operator_id=operator_id,
+        runner=execute_registered,
+        envelope_path=receipt_path,
+        attempt=1,
+        lease_id=_lease_id(envelope),
+        run_contract_ref=_run_contract_ref(graph, envelope),
+    )
+    if handoff_path and receipt.get("status") == "completed":
+        artifact_paths = [
+            work_dir / str(item.get("path") or "")
+            for item in receipt.get("artifacts") or []
+            if isinstance(item, dict) and str(item.get("path") or "").strip()
+        ]
+        primary_result = artifact_paths[0].resolve() if artifact_paths else None
+        handoff_path.parent.mkdir(parents=True, exist_ok=True)
+        handoff_path.write_text(
+            "# Research registry operator handoff\n\n"
+            f"- operator: `{operator_id}`\n"
+            f"- registry node: `{expected['node_id']}`\n"
+            f"- Result: `{primary_result or 'N/A'}`\n"
+            f"- receipt: `{receipt_path}`\n"
+            f"- artifacts: `{len(receipt.get('artifacts') or [])}`\n",
+            encoding="utf-8",
+        )
+    return receipt
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--envelope", required=True, type=Path)
+    args = parser.parse_args(argv)
+    receipt_path = args.envelope.with_name("node_envelope.json")
+    try:
+        receipt = execute(_read_object(args.envelope, label="operator envelope"), receipt_path=receipt_path)
+    except (OSError, RegistryAdapterError, ValueError) as exc:
+        failure = {"ok": False, "reason": "research_operator_registry_dispatch_failed", "error": str(exc)[:500]}
+        print(json.dumps(failure, ensure_ascii=False))
+        return 2
+    print(json.dumps({"ok": receipt.get("status") == "completed", "receipt": receipt}, ensure_ascii=False))
+    return 0 if receipt.get("status") == "completed" else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

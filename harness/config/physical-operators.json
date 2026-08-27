@@ -4431,15 +4431,20 @@
     },
     "autosci-claim-extract-worker": {
       "display_name": "AutoSci claim extract worker",
-      "owner_host": "stub_docker_sandbox",
+      "owner_host": "research_operator_registry",
       "role": "scientific-claim-extractor",
       "persona": "scientific-claim-extractor",
-      "backend": "command",
-      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action extract_claims --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "backend": "research_operator_registry",
       "enabled": true,
       "available": true,
       "health_status": "ok",
       "max_concurrency": 1,
+      "execution_trust": "evidence_transform",
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+        "node_id": "claim_extract",
+        "implementation_operator_id": "autosci-evidence-claim-extract"
+      },
       "compat_maps_to": {
         "host_type": "local_command_worker"
       },
@@ -5123,7 +5128,7 @@
       "runtime_binding": {
         "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
         "node_id": "discovery_ingest",
-        "implementation_operator_id": "autosci-discovery-ingest-physical"
+        "implementation_operator_id": "autosci-evidence-discovery-ingest"
       },
       "deprecated": false
     },

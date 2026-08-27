@@ -63,10 +63,21 @@ def require_request_identity(context: OperatorContext, expected_node_id: str) ->
 def output_target(context: OperatorContext, filename: str) -> Path:
     if not context.write_scope:
         raise ResearchOperatorError("No write scope declared", error_type="scope_violation")
-    raw = context.write_scope[0]
-    candidate = Path(raw)
-    path_text = raw if candidate.suffix.lower() == ".json" else f"{raw.rstrip('/\\')}/{filename}"
-    return validate_scoped_path(path_text, context.write_scope, workspace_root=context.workspace_root)
+    raw = str(context.write_scope[0])
+    explicit_directory_scope = raw.endswith(("/", "\\"))
+    normalized = raw.rstrip("/\\") if explicit_directory_scope else raw
+    candidate = Path(normalized)
+    path_text = (
+        normalized
+        if not explicit_directory_scope and candidate.suffix.lower() == ".json"
+        else f"{normalized}/{filename}"
+    )
+    scoped_paths = (
+        [f"{normalized}/", *context.write_scope[1:]]
+        if explicit_directory_scope
+        else context.write_scope
+    )
+    return validate_scoped_path(path_text, scoped_paths, workspace_root=context.workspace_root)
 
 
 def load_evidence_inputs(
@@ -277,14 +288,17 @@ def execute_batch_spec(
         if not context.write_scope:
             raise ResearchOperatorError("No write scope declared", error_type="scope_violation")
         raw_scope = str(context.write_scope[0])
-        if Path(raw_scope.rstrip("/\\")).suffix:
+        explicit_directory_scope = raw_scope.endswith(("/", "\\"))
+        normalized_scope = raw_scope.rstrip("/\\") if explicit_directory_scope else raw_scope
+        if not explicit_directory_scope and Path(normalized_scope).suffix:
             raise ResearchOperatorError(
                 "Batch evidence output requires a directory write scope",
                 error_type="scope_violation",
             )
+        scoped_paths = [f"{normalized_scope}/", *context.write_scope[1:]]
         target_dir = validate_scoped_path(
-            raw_scope,
-            context.write_scope,
+            normalized_scope,
+            scoped_paths,
             workspace_root=context.workspace_root,
         )
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -314,7 +328,7 @@ def execute_batch_spec(
             filename = f"research_paper.{index:03d}.v1.json"
             target = validate_scoped_path(
                 target_dir / filename,
-                context.write_scope,
+                scoped_paths,
                 workspace_root=context.workspace_root,
             )
             artifact, digest = write_evidence(

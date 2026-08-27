@@ -6288,7 +6288,35 @@ def _write_semantically_stable_sidecar(path: Path, payload: dict[str, Any]) -> d
     return persisted
 
 
-def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, Any]:
+def _verified_projection_sidecar_context(
+    graph: dict[str, Any] | None,
+) -> tuple[Path, Path, str] | None:
+    if not isinstance(graph, dict) or graph.get("schema_version") != "solar.scheduler_runtime_projection.v1":
+        return None
+    runtime = graph.get("_solar_runtime") if isinstance(graph.get("_solar_runtime"), dict) else {}
+    graph_path = Path(str(runtime.get("graph_path") or "")).expanduser()
+    if not graph_path.is_file():
+        return None
+    try:
+        import scheduler_input as _scheduler_input
+
+        if not _scheduler_input.verify_runtime_projection(graph, graph_path=graph_path).get("ok"):
+            return None
+        runtime_root = graph_path.resolve().parent
+        work_dir = Path(str(graph.get("runtime_work_dir") or "")).expanduser().resolve(strict=True)
+        if work_dir != (runtime_root / str(graph.get("sprint_id") or "") / "workdir").resolve():
+            return None
+        scheduler_ref = graph.get("scheduler_input_ref") if isinstance(graph.get("scheduler_input_ref"), dict) else {}
+        return runtime_root, work_dir, str(scheduler_ref.get("sha256") or "")
+    except (OSError, TypeError, ValueError):
+        return None
+
+
+def _emit_guard_resource_sidecars(
+    sid: str,
+    node: dict[str, Any],
+    graph: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Deterministic guard (secret scan) + resource binding for the general builder/operator path.
 
     Replaces the bespoke understand_anything S1 closeout (which hardcoded node S1 and wrote a
@@ -6304,8 +6332,27 @@ def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, A
     targets = _collect_guard_scan_targets(sid, node)
     scanned = [str(t) for t in targets]
     matches = _scan_paths_for_secrets(targets)
-    user_workspace = None
-    if _workspace_binding is not None:
+    projection = _verified_projection_sidecar_context(graph)
+    if (
+        isinstance(graph, dict)
+        and graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+        and projection is None
+    ):
+        return {
+            "node_id": node_id,
+            "decision": "block",
+            "detector": "builtin_secret_patterns",
+            "matches": [],
+            "scanned_paths": scanned,
+            "reason": "scheduler_runtime_projection_unverified",
+        }
+    sidecar_root = projection[0] if projection else SPRINTS_DIR
+    staging_root = projection[1] if projection else SPRINTS_DIR / sid / "workdir"
+    # A scheduler runtime projection owns an isolated staging workspace.  Do
+    # not let a same-named legacy sprint (or the active repository workspace)
+    # replace that authority when recording the evaluator's binding.
+    user_workspace = staging_root if projection is not None else None
+    if projection is None and _workspace_binding is not None:
         try:
             active_workspace = _workspace_binding.read_active_workspace(HARNESS_DIR)
             user_workspace = _workspace_binding.sprint_workspace_root(
@@ -6331,7 +6378,9 @@ def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, A
         "node_id": node_id,
         "resource": "resource.repo-workspace",
         "workspace_root": str(user_workspace or ""),
-        "staging_root": str(SPRINTS_DIR / sid / "workdir"),
+        "staging_root": str(staging_root),
+        "runtime_graph_path": str(sidecar_root / f"{sid}.task_graph.json") if projection else "",
+        "scheduler_input_sha256": projection[2] if projection else "",
         "write_scope": [str(x) for x in (node.get("write_scope") or [])],
         "scanned_paths": scanned,
         "in_scope": bool(user_workspace),
@@ -6339,11 +6388,11 @@ def _emit_guard_resource_sidecars(sid: str, node: dict[str, Any]) -> dict[str, A
     }
     try:
         guard = _write_semantically_stable_sidecar(
-            SPRINTS_DIR / f"{sid}.{nid}-guard_decision.json",
+            sidecar_root / f"{sid}.{nid}-guard_decision.json",
             guard,
         )
         _write_semantically_stable_sidecar(
-            SPRINTS_DIR / f"{sid}.{nid}-resource_binding.json",
+            sidecar_root / f"{sid}.{nid}-resource_binding.json",
             resource,
         )
     except Exception:
@@ -6460,15 +6509,26 @@ Source artifacts:
         return None
 
 
-def _emit_node_proof_sidecars(sid: str, node: dict[str, Any]) -> dict[str, str]:
+def _emit_node_proof_sidecars(
+    sid: str,
+    node: dict[str, Any],
+    graph: dict[str, Any] | None = None,
+) -> dict[str, str]:
     emitted: dict[str, str] = {}
     patch_diff = _emit_node_patch_diff_sidecar(sid, node)
     if patch_diff:
         emitted["patch_diff"] = str(patch_diff)
-    guard = _emit_guard_resource_sidecars(sid, node)
-    if guard:
-        emitted["guard_decision"] = str(_expected_node_sidecar_file(sid, str(node.get("id") or ""), "guard_decision"))
-        emitted["resource_binding"] = str(_expected_node_sidecar_file(sid, str(node.get("id") or ""), "resource_binding"))
+    projection = _verified_projection_sidecar_context(graph)
+    is_projection = (
+        isinstance(graph, dict)
+        and graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+    )
+    sidecar_root = projection[0] if projection else SPRINTS_DIR
+    guard = _emit_guard_resource_sidecars(sid, node, graph)
+    if guard and not (is_projection and projection is None):
+        safe_node = _safe_node_id(str(node.get("id") or ""))
+        emitted["guard_decision"] = str(sidecar_root / f"{sid}.{safe_node}-guard_decision.json")
+        emitted["resource_binding"] = str(sidecar_root / f"{sid}.{safe_node}-resource_binding.json")
     bridged = _emit_bridged_artifact_sidecar(sid, node)
     if bridged:
         emitted["bridged_artifact"] = str(bridged)
@@ -6515,7 +6575,12 @@ def _proof_support_artifacts_block(sid: str, node: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Path = "") -> dict[str, bool]:
+def _proof_artifact_presence(
+    sid: str,
+    node: dict[str, Any],
+    eval_json: str | Path = "",
+    graph: dict[str, Any] | None = None,
+) -> dict[str, bool]:
     node_id = str(node.get("id") or "")
     artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
     handoff = _existing_node_handoff(sid, node, {"nodes": [node]})
@@ -6533,13 +6598,48 @@ def _proof_artifact_presence(sid: str, node: dict[str, Any], eval_json: str | Pa
     # Deterministic guard/resource sidecars (lib/ previously had no lookup — tools/ did).
     # guard_decision counts as present ONLY when the real scan returned decision == "allow";
     # a "block" (secret found) leaves it absent so the proof gate fails the node.
-    guard_sidecar = _node_sidecar_file(sid, node_id, "guard_decision")
+    projection = _verified_projection_sidecar_context(graph)
+    is_projection = (
+        isinstance(graph, dict)
+        and graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+    )
+    sidecar_root = projection[0] if projection else SPRINTS_DIR
+    safe_node = _safe_node_id(node_id)
+    projected_guard = sidecar_root / f"{sid}.{safe_node}-guard_decision.json"
+    guard_sidecar = (
+        projected_guard
+        if projection is not None
+        else (
+            None
+            if is_projection
+            else _node_sidecar_file(sid, node_id, "guard_decision")
+        )
+    )
     guard_payload = _read_json_file_safe(guard_sidecar) if guard_sidecar else {}
     presence["guard_decision"] = bool(guard_sidecar) and str(guard_payload.get("decision") or "").lower() == "allow"
-    resource_sidecar = _node_sidecar_file(sid, node_id, "resource_binding")
+    projected_resource = sidecar_root / f"{sid}.{safe_node}-resource_binding.json"
+    resource_sidecar = (
+        projected_resource
+        if projection is not None
+        else (
+            None
+            if is_projection
+            else _node_sidecar_file(sid, node_id, "resource_binding")
+        )
+    )
     resource_payload = _read_json_file_safe(resource_sidecar) if resource_sidecar else {}
+    projection_binding_matches = (
+        projection is None
+        or (
+            str(resource_payload.get("staging_root") or "") == str(projection[1])
+            and str(resource_payload.get("runtime_graph_path") or "")
+            == str(projection[0] / f"{sid}.task_graph.json")
+            and str(resource_payload.get("scheduler_input_sha256") or "") == projection[2]
+        )
+    )
     presence["resource_binding"] = bool(
         resource_sidecar
+        and projection_binding_matches
         and resource_payload.get("bound") is True
         and resource_payload.get("in_scope") is True
         and str(resource_payload.get("workspace_root") or "").strip()
@@ -6650,9 +6750,14 @@ def _proof_field_presence(presence: dict[str, Any], field: str) -> bool | None:
     return None
 
 
-def _evaluate_proof_obligations(sid: str, node: dict[str, Any], eval_json: str | Path = "") -> dict[str, Any]:
+def _evaluate_proof_obligations(
+    sid: str,
+    node: dict[str, Any],
+    eval_json: str | Path = "",
+    graph: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     obligations = _node_proof_obligations(sid, node)
-    presence = _proof_artifact_presence(sid, node, eval_json=eval_json)
+    presence = _proof_artifact_presence(sid, node, eval_json=eval_json, graph=graph)
     # "all_outputs_present" reaches the presence map only from a written
     # manifest, i.e. only on the contracted path — its presence is the signal
     # that manifest-completeness gating applies (legacy uncontracted pinned).
@@ -6820,7 +6925,7 @@ def _run_node_proof_seam(
                 )
         except Exception:
             pass
-    _emit_node_proof_sidecars(sid, node)
+    _emit_node_proof_sidecars(sid, node, graph)
     manifest_summary: dict[str, Any] = {
         "required": _graph_is_contracted(graph),
         "ok": not _graph_is_contracted(graph),
@@ -6907,7 +7012,7 @@ def _run_node_proof_seam(
                 "reason": "artifact_manifest_invalid",
                 "manifest": manifest_summary,
             }
-    proof = _evaluate_proof_obligations(sid, node, eval_json=eval_json)
+    proof = _evaluate_proof_obligations(sid, node, eval_json=eval_json, graph=graph)
     proof["manifest"] = manifest_summary
     if _node_in_autosci_workflow(graph, node):
         scientific_gate = _validate_autosci_scientific_gate(node)
@@ -13908,7 +14013,7 @@ def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: i
                 # the evaluator's byte set. Creating them after the snapshot
                 # would make the snapshot self-invalidating on certified
                 # AutoSci graphs.
-                _emit_node_proof_sidecars(sid, node)
+                _emit_node_proof_sidecars(sid, node, graph)
                 artifact_snapshot = _capture_eval_artifact_snapshot(sid, node, graph)
                 if not artifact_snapshot.get("ok"):
                     skipped.append(
@@ -14041,7 +14146,7 @@ def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: i
             graph = load_graph(graph_path)
             break
         if not dry_run:
-            _emit_node_proof_sidecars(sid, node)
+            _emit_node_proof_sidecars(sid, node, graph)
         gate_result = (
             None
             if uses_autosci_double_gate
@@ -14521,6 +14626,20 @@ def _account_eval_dispatch_failures(
     return terminalized
 
 
+def _enrich_dispatch_graph_if_mutable(
+    graph: dict[str, Any],
+    graph_path: str,
+) -> dict[str, Any]:
+    """Run legacy enrichment only when the planner has not frozen the graph."""
+    frozen_authority = str(graph.get("planning_authority") or "").strip() == "frozen_execution_plan_v1"
+    if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1" or frozen_authority:
+        return graph
+    try:
+        return auto_enrich_graph(graph, graph_path=graph_path)
+    except Exception:
+        return graph
+
+
 def _dispatch_ready_unlocked(graph_path: str, dry_run: bool = False, ttl: int = 900,
                              max_parallel: int | None = None) -> dict[str, Any]:
     if _no_dispatch_enabled() and not dry_run:
@@ -14579,10 +14698,11 @@ def _dispatch_ready_unlocked(graph_path: str, dry_run: bool = False, ttl: int = 
             "enqueue": {"ok": True, "enqueued": []},
             "drain": {"ok": True, "processed": 0, "results": []},
         }
-    try:
-        graph = auto_enrich_graph(graph, graph_path=graph_path)
-    except Exception:
-        pass
+    # SchedulerInput is already the frozen execution authority. The legacy
+    # enrichment pass rewrites planner-owned node fields and therefore makes a
+    # valid runtime projection fail its digest-backed verification immediately
+    # before enqueue. Only mutable legacy graphs may be enriched here.
+    graph = _enrich_dispatch_graph_if_mutable(graph, graph_path)
     workers = _discover_workers(dry_run)
     workers.extend(_fixed_research_operator_workers(graph))
     workers.extend(_autosci_contract_operator_workers(graph))

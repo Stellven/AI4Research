@@ -481,7 +481,7 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     env["TASK_DIR"] = str(result_dir)
     env["OUTPUT_LOG"] = str(result_dir / "output.log")
     env["HARNESS_DIR"] = str(HARNESS_DIR)
-    env["SPRINTS_DIR"] = str(HARNESS_DIR / "sprints")
+    env["SPRINTS_DIR"] = str(SPRINTS_DIR)
     return env
 
 
@@ -657,6 +657,22 @@ def _build_command(
         return [
             str(os.environ.get("SOLAR_AUTOSCI_PYTHON") or sys.executable),
             str(HARNESS_DIR / "plugins" / "autosci" / "bin" / "fixed_research_node_adapter.py"),
+            "--envelope",
+            envelope_path,
+        ]
+    if backend == "research_operator_registry":
+        envelope_path = str((exec_env or {}).get("SOLAR_OPERATOR_ENVELOPE_JSON") or "").strip()
+        adapter = HARNESS_DIR / "tools" / "research_operator_registry_adapter.py"
+        if not envelope_path or not adapter.is_file():
+            reason = "registry envelope path is unavailable" if not envelope_path else "registry adapter is unavailable"
+            return [
+                sys.executable,
+                "-c",
+                f"import sys; print({reason!r}, file=sys.stderr); raise SystemExit(127)",
+            ]
+        return [
+            str(os.environ.get("SOLAR_AUTOSCI_PYTHON") or sys.executable),
+            str(adapter),
             "--envelope",
             envelope_path,
         ]
@@ -1351,6 +1367,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                     finished_at=finished_at,
                     log_tail=f"[ERROR] {failure}",
                     model_route=model_route,
+                    graph_path=envelope.get("graph_path"),
                 )
                 _info(f"Result written: {result_path}")
                 try:
@@ -1806,6 +1823,7 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 finished_at=finished_at,
                 log_tail=log_tail,
                 model_route=model_route,
+                graph_path=envelope.get("graph_path"),
             )
             _info(f"Result written: {result_path}")
             _observe(

@@ -3998,3 +3998,46 @@ Date: 2026-08-27
   clean-clone rerun. Discovery/relevance service verification passed
   `32 passed`, and SchedulerInput runtime verification passed `23 passed`.
   No schema deletion or runtime-generated file is included in this repair.
+
+## Frozen SchedulerInput authority and live operator routing repair
+
+Date: 2026-08-27
+
+- Compared planner-boundary commits `c5e98346b` and `eef1ee952` with the
+  current `solar.scheduler_input.v1` schema and metadata example. The latter
+  commit supersedes the former nested physical-plan boundary: SchedulerInput
+  is the immutable planner authority, while leases, status, observations, and
+  results belong only in the mutable runtime ledger.
+- Removed scheduler escape paths that could diverge from that authority.
+  Frozen graphs are not auto-enriched, candidates are tried only in ascending
+  declared rank, legacy profile/quota fallbacks cannot introduce an unlisted
+  operator, and unclassified lease submission errors fail closed. Candidate
+  exhaustion and projection refusal now persist GUI-readable preflight
+  evidence under the runtime root.
+- Bound operator callbacks, sidecars, result updates, and scheduler records to
+  the exact runtime graph. Parallel runs using the same sprint ID under
+  `C:/sr/v13-live/` and `C:/sr/v14-live/` showed no cross-root artifact,
+  evaluator, or sidecar references. The v13 run selected the planner's rank-1
+  discovery, ingestion, and claim-extraction operators.
+- Rebound `autosci-claim-extract-worker` from the legacy fixture-defaulting
+  bridge to the typed research registry. It now consumes the frozen upstream
+  paper route, writes a direct `research_claims.v1` artifact, preserves the
+  planner-facing operator identity, and records the direct result in handoff.
+  The regression artifact contains grounded battery evidence and no
+  `sample_paper.md` content.
+- Made SchedulerInput restart non-destructive. A matching verified graph/state
+  pair resumes byte-for-byte; incomplete, conflicting, or tampered pairs fail
+  closed instead of resetting completed work. The live restart that exposed
+  the defect reinitialized v14 state before this repair, so that reset run is
+  retained as diagnostic evidence rather than claimed as a completed journey.
+- Verification after integration passed `87 passed` across SchedulerInput,
+  submit-path, lease, and registry tests. The clean current-HEAD graph suite
+  passed `360 passed`; the claim-registry suite passed `20 passed`. The live
+  v14 discovery and ingestion evaluators independently passed before the
+  restart diagnostic. No pre-existing schema deletion, credential, runtime
+  artifact, or operator-state lock is part of this change.
+- Remaining design limitation: controller-added external input bindings are
+  hash-checked and route-constrained but are not cryptographically rooted in a
+  separate immutable controller authority artifact. That authority boundary
+  requires a follow-up contract revision; the scheduler does not fabricate
+  one in this repair.

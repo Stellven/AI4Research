@@ -39,6 +39,49 @@ MUTABLE_NODE_FIELDS = {
     "result",
     "updated_at",
 }
+RUNTIME_PROJECTION_NODE_FIELDS = {
+    "assigned_to",
+    "attempt",
+    "candidate_observations",
+    "blocking_reason",
+    "closeout_receipt",
+    "dispatch_id",
+    "eval_json",
+    "evaluation_results",
+    "evaluation_state",
+    "execution_attempt",
+    "execution_attempt_error",
+    "failure_policy_exhausted",
+    "gate_status",
+    "human_review",
+    "lease_id",
+    "queued_pane",
+    "repair_attempts",
+    "result",
+    "result_path",
+    "selected_operator",
+    "scheduler_candidate_observations",
+    "status",
+    "updated_at",
+    "worker_match_details",
+}
+RUNTIME_PROJECTION_ROOT_FIELDS = {
+    "schema_version",
+    "sprint_id",
+    "graph_id",
+    "planning_authority",
+    "scheduler_input_ref",
+    "run_contract_ref",
+    "runtime_input_bindings",
+    "runtime_state_filename",
+    "runtime_work_dir",
+    "nodes",
+}
+RUNTIME_PROJECTION_ROOT_MUTABLE_FIELDS = {
+    "_solar_runtime",
+    "gate_results",
+    "node_results",
+}
 
 # Controller-owned request data is delivered inside the immutable physical
 # operator envelope.  It is an artifact-type identity in PlanIR/SchedulerInput,
@@ -49,6 +92,19 @@ CONTROLLER_DISPATCH_ROUTES = {
     "schema:request-envelope.schema.json": "dispatch/envelope.json",
 }
 
+# Scheduler records nest sprint, node, and dispatch IDs. Keep each component
+# short enough that the full path remains usable by non-long-path-aware Windows
+# processes even when the repository and pytest roots are already deep.
+_MAX_RECORD_COMPONENT_LENGTH = 24
+_WINDOWS_RESERVED_PATH_NAMES = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+}
+
 
 class SchedulerInputError(ValueError):
     """A frozen scheduler input is malformed or cannot be trusted."""
@@ -56,6 +112,23 @@ class SchedulerInputError(ValueError):
 
 def _now() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _bounded_record_component(value: Any, *, fallback: str) -> str:
+    """Return a deterministic, readable path component safe on Windows."""
+    raw = str(value or fallback).strip()
+    safe = "".join(
+        character if character.isalnum() or character in {"-", "_", "."} else "_"
+        for character in raw
+    ).strip(" .")
+    safe = safe if safe not in {"", ".", ".."} else fallback
+    reserved = safe.split(".", 1)[0].upper() in _WINDOWS_RESERVED_PATH_NAMES
+    if safe == raw and not reserved and len(safe) <= _MAX_RECORD_COMPONENT_LENGTH:
+        return safe
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12]
+    prefix_length = _MAX_RECORD_COMPONENT_LENGTH - len(digest) - 1
+    prefix = safe[:prefix_length].rstrip(" ._-") or fallback[:prefix_length]
+    return f"{prefix}-{digest}"
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -302,6 +375,77 @@ def _runtime_input_bindings(bindings: dict[str, str] | None) -> dict[str, dict[s
     return resolved
 
 
+def _resume_existing_runtime_graph(
+    graph_path: Path,
+    state_path: Path,
+    *,
+    scheduler_input_id: str,
+    scheduler_input_sha256: str,
+    run_contract_ref: dict[str, Any],
+    runtime_input_bindings: dict[str, dict[str, str]],
+) -> Path | None:
+    """Resume a matching runtime pair without destroying its mutable ledger."""
+    graph_exists = graph_path.exists()
+    state_exists = state_path.exists()
+    if not graph_exists and not state_exists:
+        return None
+    if graph_exists != state_exists:
+        raise SchedulerInputError("SCHEDULER_RUNTIME_PAIR_INCOMPLETE")
+
+    graph = _read_json(graph_path)
+    verification = verify_runtime_projection(graph, graph_path=graph_path)
+    if not verification.get("ok"):
+        errors = ",".join(str(item) for item in verification.get("errors") or [])
+        raise SchedulerInputError(f"SCHEDULER_RUNTIME_PROJECTION_INVALID:{errors}")
+
+    source_ref = (
+        graph.get("scheduler_input_ref")
+        if isinstance(graph.get("scheduler_input_ref"), dict)
+        else {}
+    )
+    if (
+        str(source_ref.get("scheduler_input_id") or "") != scheduler_input_id
+        or str(source_ref.get("sha256") or "") != scheduler_input_sha256
+    ):
+        raise SchedulerInputError("SCHEDULER_RUNTIME_INPUT_CONFLICT")
+    if graph.get("run_contract_ref") != run_contract_ref:
+        raise SchedulerInputError("SCHEDULER_RUNTIME_RUN_CONTRACT_CONFLICT")
+    if graph.get("runtime_input_bindings") != runtime_input_bindings:
+        raise SchedulerInputError("SCHEDULER_RUNTIME_ARTIFACT_BINDINGS_CONFLICT")
+
+    state = _read_json(state_path)
+    node_ids = {
+        str(node.get("id") or "")
+        for node in graph.get("nodes") or []
+        if isinstance(node, dict)
+    }
+    state_nodes = state.get("nodes") if isinstance(state.get("nodes"), dict) else {}
+    node_results = (
+        state.get("node_results")
+        if isinstance(state.get("node_results"), dict)
+        else {}
+    )
+    ready_nodes = state.get("ready_nodes") if isinstance(state.get("ready_nodes"), list) else None
+    revision = state.get("revision")
+    state_valid = (
+        state.get("schema_version") == "solar.task_graph_state.v1"
+        and state.get("artifact_role") == "mutable_execution_ledger"
+        and state.get("scheduler_input_ref") == source_ref
+        and state.get("run_contract_ref") == graph.get("run_contract_ref")
+        and set(state_nodes) == node_ids
+        and set(node_results) == node_ids
+        and ready_nodes is not None
+        and all(isinstance(node_id, str) and node_id in node_ids for node_id in ready_nodes)
+        and isinstance(revision, int)
+        and not isinstance(revision, bool)
+        and revision >= 0
+        and isinstance(state.get("events"), list)
+    )
+    if not state_valid:
+        raise SchedulerInputError("SCHEDULER_RUNTIME_STATE_INVALID")
+    return graph_path
+
+
 def prepare_runtime_graph(
     scheduler_input_path: str | Path,
     output_dir: str | Path,
@@ -330,13 +474,14 @@ def prepare_runtime_graph(
         "scheduler_input_id": value["scheduler_input_id"],
         "sha256": digest,
     }
+    run_contract_ref = _run_contract_ref(run_contract_path, source, digest)
     graph = {
         "schema_version": "solar.scheduler_runtime_projection.v1",
         "sprint_id": sprint_id,
         "graph_id": value["graph"]["graph_id"],
         "planning_authority": value["planning_authority"],
         "scheduler_input_ref": source_ref,
-        "run_contract_ref": _run_contract_ref(run_contract_path, source, digest),
+        "run_contract_ref": run_contract_ref,
         "runtime_input_bindings": input_bindings,
         "runtime_state_filename": state_name,
         "runtime_work_dir": str(work_dir.resolve()),
@@ -364,14 +509,34 @@ def prepare_runtime_graph(
         "updated_at": _now(),
         "events": [],
     }
+    resumed = _resume_existing_runtime_graph(
+        graph_path,
+        destination / state_name,
+        scheduler_input_id=str(value["scheduler_input_id"]),
+        scheduler_input_sha256=digest,
+        run_contract_ref=run_contract_ref,
+        runtime_input_bindings=input_bindings,
+    )
+    if resumed is not None:
+        return resumed
     _atomic_json_write(graph_path, graph)
     _atomic_json_write(destination / state_name, state)
     return graph_path
 
 
-def verify_runtime_projection(graph: dict[str, Any]) -> dict[str, Any]:
+def verify_runtime_projection(
+    graph: dict[str, Any],
+    *,
+    graph_path: str | Path | None = None,
+) -> dict[str, Any]:
     if graph.get("schema_version") != "solar.scheduler_runtime_projection.v1":
         return {"ok": False, "errors": ["NOT_SCHEDULER_RUNTIME_PROJECTION"]}
+    root_fields = set(graph)
+    if (
+        not RUNTIME_PROJECTION_ROOT_FIELDS.issubset(root_fields)
+        or bool(root_fields - RUNTIME_PROJECTION_ROOT_FIELDS - RUNTIME_PROJECTION_ROOT_MUTABLE_FIELDS)
+    ):
+        return {"ok": False, "errors": ["SCHEDULER_RUNTIME_ROOT_FIELDS_TAMPERED"]}
     reference = graph.get("scheduler_input_ref") if isinstance(graph.get("scheduler_input_ref"), dict) else {}
     source = Path(str(reference.get("path") or "")).expanduser()
     if not source.is_file():
@@ -383,9 +548,44 @@ def verify_runtime_projection(graph: dict[str, Any]) -> dict[str, Any]:
         value = load_and_validate(source, require_runtime_authority=True)
     except SchedulerInputError as exc:
         return {"ok": False, "errors": [str(exc)]}
+    expected_source_ref = {
+        "path": str(source.resolve()),
+        "scheduler_input_id": value["scheduler_input_id"],
+        "sha256": actual,
+    }
+    if reference != expected_source_ref:
+        return {"ok": False, "errors": ["SCHEDULER_INPUT_REFERENCE_TAMPERED"]}
+    if (
+        graph.get("sprint_id") != value["sprint_id"]
+        or graph.get("graph_id") != value["graph"]["graph_id"]
+        or graph.get("planning_authority") != value["planning_authority"]
+        or graph.get("runtime_state_filename")
+        != f"{value['sprint_id']}.task_graph_state.json"
+    ):
+        return {"ok": False, "errors": ["SCHEDULER_RUNTIME_ROOT_TAMPERED"]}
+    run_contract_ref = graph.get("run_contract_ref")
+    if not isinstance(run_contract_ref, dict):
+        return {"ok": False, "errors": ["RUN_CONTRACT_REFERENCE_INVALID"]}
+    try:
+        expected_run_contract_ref = _run_contract_ref(
+            run_contract_ref.get("path"),
+            source.resolve(),
+            actual,
+        )
+    except (OSError, SchedulerInputError):
+        return {"ok": False, "errors": ["RUN_CONTRACT_REFERENCE_INVALID"]}
+    if run_contract_ref != expected_run_contract_ref:
+        return {"ok": False, "errors": ["RUN_CONTRACT_REFERENCE_TAMPERED"]}
     work_dir = Path(str(graph.get("runtime_work_dir") or ""))
     if not work_dir.is_absolute():
         return {"ok": False, "errors": ["SCHEDULER_RUNTIME_WORK_DIR_INVALID"]}
+    if str(graph_path or "").strip():
+        resolved_graph_path = Path(str(graph_path)).expanduser().resolve()
+        runtime_root = resolved_graph_path.parent
+        expected_graph_path = runtime_root / f"{value['sprint_id']}.task_graph.json"
+        expected_work_dir = runtime_root / str(value["sprint_id"]) / "workdir"
+        if resolved_graph_path != expected_graph_path or work_dir.resolve() != expected_work_dir.resolve():
+            return {"ok": False, "errors": ["SCHEDULER_RUNTIME_ROOT_BINDING_INVALID"]}
     input_bindings = (
         graph.get("runtime_input_bindings")
         if isinstance(graph.get("runtime_input_bindings"), dict)
@@ -410,9 +610,18 @@ def verify_runtime_projection(graph: dict[str, Any]) -> dict[str, Any]:
     if len(actual_nodes) != len(expected):
         return {"ok": False, "errors": ["SCHEDULER_RUNTIME_PROJECTION_TAMPERED"]}
     for expected_node, actual_node in zip(expected, actual_nodes):
-        if not isinstance(actual_node, dict) or any(
+        extra_keys = (
+            set(actual_node) - set(expected_node)
+            if isinstance(actual_node, dict)
+            else set()
+        )
+        if (
+            not isinstance(actual_node, dict)
+            or bool(extra_keys - RUNTIME_PROJECTION_NODE_FIELDS)
+            or any(
             actual_node.get(key) != expected_value
             for key, expected_value in expected_node.items()
+            )
         ):
             return {"ok": False, "errors": ["SCHEDULER_RUNTIME_PROJECTION_TAMPERED"]}
     return {"ok": True, "errors": []}
@@ -428,7 +637,12 @@ def write_dispatch_records(
     dispatch_id: str,
 ) -> dict[str, str]:
     """Persist the scheduler decision and lease in a GUI-readable location."""
-    root = Path(output_root) / str(graph.get("sprint_id") or "unknown") / str(node.get("id") or "unknown") / dispatch_id
+    root = (
+        Path(output_root)
+        / _bounded_record_component(graph.get("sprint_id"), fallback="unknown-sprint")
+        / _bounded_record_component(node.get("id"), fallback="unknown-node")
+        / _bounded_record_component(dispatch_id, fallback="unknown-dispatch")
+    )
     candidates = deepcopy(profile.get("scheduler_candidate_observations") or [])
     selected = str(submit_result.get("operator_id") or profile.get("operator_id") or "")
     execution_attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}

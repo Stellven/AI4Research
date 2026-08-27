@@ -63,6 +63,7 @@ def _sync_graph_after_route_result(
     sprint_id: str,
     result_payload: Dict[str, Any] | None = None,
     result_path: Path | None = None,
+    graph_path: str | Path | None = None,
 ) -> Dict[str, Any]:
     """Converge terminal graph proof after result.json becomes durable.
 
@@ -80,18 +81,60 @@ def _sync_graph_after_route_result(
     if not sid:
         return {"ok": True, "reason": "missing_sprint_id"}
     sprints_dir = _route_sprints_dir()
-    graph_path = sprints_dir / f"{sid}.task_graph.json"
-    if not graph_path.is_file():
-        return {"ok": True, "reason": "graph_missing", "graph_path": str(graph_path)}
+    selected_graph_path = (
+        Path(graph_path).expanduser().resolve()
+        if str(graph_path or "").strip()
+        else sprints_dir / f"{sid}.task_graph.json"
+    )
+    if not selected_graph_path.is_file():
+        return {"ok": True, "reason": "graph_missing", "graph_path": str(selected_graph_path)}
     try:
         import graph_scheduler  # type: ignore
+
+        raw_graph = json.loads(selected_graph_path.read_text(encoding="utf-8"))
+        if raw_graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+            import scheduler_input  # type: ignore
+
+            runtime_root = selected_graph_path.parent.resolve()
+            expected_path = runtime_root / f"{sid}.task_graph.json"
+            expected_work_dir = runtime_root / sid / "workdir"
+            runtime_work_dir = Path(str(raw_graph.get("runtime_work_dir") or "")).resolve()
+            verification = scheduler_input.verify_runtime_projection(
+                raw_graph,
+                graph_path=selected_graph_path,
+            )
+            node_id = str((result_payload or {}).get("node_id") or "")
+            node_ids = {
+                str(item.get("id") or "")
+                for item in raw_graph.get("nodes") or []
+                if isinstance(item, dict)
+            }
+            if (
+                not verification.get("ok")
+                or str(raw_graph.get("sprint_id") or "") != sid
+                or selected_graph_path != expected_path
+                or runtime_work_dir != expected_work_dir.resolve()
+                or not node_id
+                or node_id not in node_ids
+            ):
+                return {
+                    "ok": False,
+                    "reason": "route_result_graph_authority_invalid",
+                    "graph_path": str(selected_graph_path),
+                    "errors": list(verification.get("errors") or []),
+                }
 
         # operator_runtime may be imported before tests or an installed runner
         # override HARNESS_DIR.  Keep the scheduler on the same runtime roots as
         # the result artifact rather than its import-time defaults.
         graph_scheduler.HARNESS_DIR = HARNESS_DIR
-        graph_scheduler.SPRINTS_DIR = sprints_dir
-        graph = graph_scheduler.load_graph(graph_path)
+        graph_runtime_root = (
+            selected_graph_path.parent
+            if raw_graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+            else sprints_dir
+        )
+        graph_scheduler.SPRINTS_DIR = graph_runtime_root
+        graph = graph_scheduler.load_graph(selected_graph_path)
         attempt_convergence: Dict[str, Any] = {
             "matched": False,
             "reason": "result_payload_missing",
@@ -113,12 +156,12 @@ def _sync_graph_after_route_result(
                     result_path=result_path or "",
                 )
                 if attempt_convergence.get("matched"):
-                    graph_scheduler.save_graph(graph_path, graph)
+                    graph_scheduler.save_graph(selected_graph_path, graph)
             else:
                 attempt_convergence = {"matched": False, "reason": "node_missing"}
         projection = graph_scheduler.sync_status_cache_from_graph(
             graph,
-            graph_path,
+            selected_graph_path,
             actor="operator_runtime",
             event="route_result_recorded",
         )
@@ -137,10 +180,10 @@ def _sync_graph_after_route_result(
             # graph-scoped non-blocking lock inside dispatch_ready prevents a
             # simultaneous autopilot tick from dispatching the same node.
             graph_node_dispatcher.HARNESS_DIR = HARNESS_DIR
-            graph_node_dispatcher.SPRINTS_DIR = sprints_dir
-            scheduler_tick = graph_node_dispatcher.dispatch_ready(str(graph_path))
+            graph_node_dispatcher.SPRINTS_DIR = graph_runtime_root
+            scheduler_tick = graph_node_dispatcher.dispatch_ready(str(selected_graph_path))
             evaluator_dispatch = graph_node_dispatcher.dispatch_node_evals(
-                str(graph_path),
+                str(selected_graph_path),
                 max_items=1,
             )
         except Exception as dispatch_exc:
@@ -166,7 +209,7 @@ def _sync_graph_after_route_result(
         return {
             "ok": False,
             "reason": "route_result_sync_failed",
-            "graph_path": str(graph_path),
+            "graph_path": str(selected_graph_path),
             "error": f"{type(exc).__name__}: {exc}",
         }
 
@@ -975,6 +1018,7 @@ def write_result(
     finished_at: str,
     log_tail: str,
     model_route: Optional[Dict[str, Any]] = None,
+    graph_path: str | Path | None = None,
 ) -> Path:
     """Write the result.json artifact for a completed task.
 
@@ -1003,6 +1047,8 @@ def write_result(
         for key in ("requested_model", "routing_model", "effective_provider", "effective_model"):
             if str(route.get(key) or "").strip():
                 result[key] = str(route[key])
+    if str(graph_path or "").strip():
+        result["graph_path"] = str(Path(graph_path).expanduser().resolve())
 
     result_path = result_dir / "result.json"
     tmp_path = str(result_path) + ".tmp"
@@ -1032,7 +1078,12 @@ def write_result(
         "finished_at": finished_at,
         "result_status": status,
     })
-    graph_callback = _sync_graph_after_route_result(sprint_id, result, result_path)
+    graph_callback = _sync_graph_after_route_result(
+        sprint_id,
+        result,
+        result_path,
+        graph_path=graph_path,
+    )
     callback_path = result_dir / "graph-callback.json"
     callback_tmp_path = str(callback_path) + ".tmp"
     with open(callback_tmp_path, "w", encoding="utf-8") as f:

@@ -65,6 +65,20 @@ RUNTIME_NODE_SPEC_FIELDS = {
     "updated_at",
     "worker_match_details",
 }
+SCHEDULER_RUNTIME_MUTABLE_NODE_FIELDS = RUNTIME_NODE_SPEC_FIELDS | {
+    "attempt",
+    "candidate_observations",
+    "evaluation_results",
+    "evaluation_state",
+    "execution_attempt",
+    "execution_attempt_error",
+    "failure_policy_exhausted",
+    "lease_id",
+    "repair_attempts",
+    "result_path",
+    "selected_operator",
+    "scheduler_candidate_observations",
+}
 SCHEDULER_RUNTIME_STATIC_NODE_FIELDS = {
     "id", "goal", "logical_operator", "dispatch_task_type", "task_type",
     "depends_on", "requirement_ids", "capsule_binding", "capability_capsule_id",
@@ -362,7 +376,7 @@ def _attach_runtime_planes(
         # then reject a valid published ancestor because its digest chain
         # appears incomplete after the first save/load round trip.
         fields = (
-            result.keys()
+            SCHEDULER_RUNTIME_MUTABLE_NODE_FIELDS
             if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
             else RUNTIME_NODE_SPEC_FIELDS
         )
@@ -414,12 +428,13 @@ def _runtime_state_from_graph(graph: dict[str, Any], *, graph_path: Path | None 
             runtime_result = {
                 key: deepcopy(value)
                 for key, value in node.items()
-                if key not in SCHEDULER_RUNTIME_STATIC_NODE_FIELDS
+                if key in SCHEDULER_RUNTIME_MUTABLE_NODE_FIELDS
             }
             prior_result = base_state["node_results"].get(node_id)
             if isinstance(prior_result, dict):
                 for key, value in prior_result.items():
-                    runtime_result.setdefault(key, deepcopy(value))
+                    if key in SCHEDULER_RUNTIME_MUTABLE_NODE_FIELDS:
+                        runtime_result.setdefault(key, deepcopy(value))
             status = str(node_status(graph, node_id) or "pending").strip().lower()
             runtime_result["status"] = status
 
@@ -2505,6 +2520,114 @@ def _role_penalty(node_role: str, worker_role: str) -> int | None:
     return compatibility.get(normalized_node, {"builder": 0}).get(normalized_worker)
 
 
+_FROZEN_PLANNING_AUTHORITY = "frozen_execution_plan_v1"
+
+
+def _is_frozen_scheduler_node(graph: dict[str, Any], node: dict[str, Any]) -> bool:
+    """Return whether runtime must preserve the node's frozen physical plan."""
+    authority = str(node.get("planning_authority") or graph.get("planning_authority") or "").strip()
+    return authority == _FROZEN_PLANNING_AUTHORITY
+
+
+def _frozen_candidate_rank(candidate: dict[str, Any]) -> int:
+    try:
+        return int(candidate.get("rank") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _assign_frozen_worker(node: dict[str, Any], workers: list[dict[str, Any]]) -> dict[str, Any]:
+    """Select only the first currently available frozen physical candidate.
+
+    Static admission has already checked skills, capabilities, effects, and
+    policy. Runtime therefore checks only exact operator identity and current
+    availability; it must not replace the frozen choice with legacy relaxed
+    role/capability/model matching.
+    """
+    node_id = str(node.get("id") or "")
+    candidates = sorted(
+        (item for item in (node.get("physical_candidates") or []) if isinstance(item, dict)),
+        key=lambda item: (_frozen_candidate_rank(item), str(item.get("operator_id") or "")),
+    )
+    observations: list[dict[str, Any]] = []
+
+    for candidate in candidates:
+        operator_id = str(candidate.get("operator_id") or "").strip()
+        rank = _frozen_candidate_rank(candidate)
+        exact_workers = sorted(
+            (
+                worker
+                for worker in workers
+                if str(worker.get("operator_id") or "").strip() == operator_id
+                and str(worker.get("pane") or "").strip()
+            ),
+            key=lambda worker: (int(worker.get("load", 0) or 0), str(worker.get("pane") or "")),
+        )
+        selected_worker: dict[str, Any] | None = None
+        reasons: list[str] = []
+        for worker in exact_workers:
+            unavailable_reason = _worker_unavailable_reason(worker)
+            if unavailable_reason:
+                reasons.append(unavailable_reason)
+                continue
+            if _worker_quota_exhausted(worker):
+                reasons.append("quota_exhausted")
+                continue
+            if _worker_busy(worker):
+                reasons.append("worker_capacity_exhausted")
+                continue
+            selected_worker = worker
+            break
+
+        if selected_worker is None:
+            reason = "operator_not_present" if not exact_workers else ",".join(dict.fromkeys(reasons))
+            observations.append({
+                "operator_id": operator_id,
+                "rank": rank,
+                "state": "UNAVAILABLE",
+                "reason": reason or "operator_unavailable",
+            })
+            continue
+
+        observations.append({
+            "operator_id": operator_id,
+            "rank": rank,
+            "state": "READY",
+        })
+        observed_ids = {item["operator_id"] for item in observations}
+        for remaining in candidates:
+            remaining_id = str(remaining.get("operator_id") or "").strip()
+            if remaining_id in observed_ids:
+                continue
+            observations.append({
+                "operator_id": remaining_id,
+                "rank": _frozen_candidate_rank(remaining),
+                "state": "NOT_EVALUATED_AFTER_SELECTION",
+            })
+        return {
+            "assigned": [{
+                "node": node_id,
+                "pane": selected_worker.get("pane"),
+                "operator_id": operator_id,
+                "candidate_rank": rank,
+                "dispatch_role": node_dispatch_role(node),
+                "worker_role": _worker_role(selected_worker),
+                "frozen_candidate": True,
+                "candidate_observations": observations,
+            }],
+            "queued": [],
+        }
+
+    return {
+        "assigned": [],
+        "queued": [{
+            "node": node_id,
+            "reason": "frozen_physical_candidates_unavailable",
+            "details": {"candidate_observations": observations},
+        }],
+    }
+
+
 # Capabilities that are PROVISIONED AT DISPATCH rather than advertised by a worker: resource/guard
 # capsule capabilities (graph_node_dispatcher binds resource_binding + guard_decision per node) and
 # eval-asserted compliance (the eval gate enforces scope_compliance). Requiring a worker to advertise
@@ -2701,38 +2824,56 @@ def assign_ready(graph: dict[str, Any], workers: list[dict[str, Any]],
                  max_parallel: int | None = None,
                  graph_path: str | Path | None = None,
                  source: str | Path | None = None) -> dict[str, Any]:
-    graph = auto_enrich_graph(graph, graph_path=graph_path, source=source)
+    if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+        import scheduler_input
+
+        verification = scheduler_input.verify_runtime_projection(graph, graph_path=graph_path)
+        if not verification.get("ok"):
+            raise ValueError(
+                "scheduler runtime projection refused: "
+                + ",".join(str(item) for item in verification.get("errors") or [])
+            )
+    frozen_graph = str(graph.get("planning_authority") or "").strip() == _FROZEN_PLANNING_AUTHORITY
+    if not frozen_graph:
+        graph = auto_enrich_graph(graph, graph_path=graph_path, source=source)
     blocked = blocked_external_prerequisites(graph)
     if blocked:
         return {"ok": True, "assigned": [], "queued": [], "batch": [], "blocked_prerequisites": blocked}
     ready = ready_nodes(graph)
-    try:
-        from apo_plan_compiler import compile_execution_plan_for_node  # noqa: WPS433
+    if frozen_graph:
+        ready = sorted(
+            ready,
+            key=lambda node: (-int(node.get("priority") or 0), str(node.get("id") or "")),
+        )
+    legacy_ready = [node for node in ready if not _is_frozen_scheduler_node(graph, node)]
+    if legacy_ready:
+        try:
+            from apo_plan_compiler import compile_execution_plan_for_node  # noqa: WPS433
 
-        for node in ready:
-            if isinstance(node.get("effect_union"), dict) and isinstance(node.get("proof_obligations"), list):
-                continue
-            try:
-                compiled = compile_execution_plan_for_node(
-                    node,
-                    request_type=str(graph.get("request_type") or node.get("type") or ""),
-                    lane_hint=str(graph.get("lane") or ""),
-                    registry_path=HARNESS_DIR / "config" / "capability-capsules.registry.yaml",
-                    operators_path=HARNESS_DIR / "config" / "physical-operators.json",
-                )
-                capsule_plan = compiled.get("capsule_plan") or {}
-                physical_plan = compiled.get("physical_plan") or {}
-                if isinstance(capsule_plan, dict):
-                    node["capsule_plan_ir"] = capsule_plan
-                    node["effect_union"] = capsule_plan.get("effect_union", {})
-                    node["proof_obligations"] = capsule_plan.get("proof_obligations", [])
-                    node["artifact_types"] = capsule_plan.get("artifact_types", {})
-                if isinstance(physical_plan, dict):
-                    node["physical_plan_ir"] = physical_plan
-            except Exception:
-                continue
-    except Exception:
-        pass
+            for node in legacy_ready:
+                if isinstance(node.get("effect_union"), dict) and isinstance(node.get("proof_obligations"), list):
+                    continue
+                try:
+                    compiled = compile_execution_plan_for_node(
+                        node,
+                        request_type=str(graph.get("request_type") or node.get("type") or ""),
+                        lane_hint=str(graph.get("lane") or ""),
+                        registry_path=HARNESS_DIR / "config" / "capability-capsules.registry.yaml",
+                        operators_path=HARNESS_DIR / "config" / "physical-operators.json",
+                    )
+                    capsule_plan = compiled.get("capsule_plan") or {}
+                    physical_plan = compiled.get("physical_plan") or {}
+                    if isinstance(capsule_plan, dict):
+                        node["capsule_plan_ir"] = capsule_plan
+                        node["effect_union"] = capsule_plan.get("effect_union", {})
+                        node["proof_obligations"] = capsule_plan.get("proof_obligations", [])
+                        node["artifact_types"] = capsule_plan.get("artifact_types", {})
+                    if isinstance(physical_plan, dict):
+                        node["physical_plan_ir"] = physical_plan
+                except Exception:
+                    continue
+        except Exception:
+            pass
     effective_max_parallel = max_parallel if max_parallel is not None else _effective_graph_max_parallel(None)
     max_selected = effective_max_parallel if effective_max_parallel and effective_max_parallel > 0 else len(ready)
     selected_nodes: list[dict[str, Any]] = []
@@ -2750,7 +2891,11 @@ def assign_ready(graph: dict[str, Any], workers: list[dict[str, Any]],
                 "details": {"selected_nodes": [str(item.get("id") or "") for item in selected_nodes]},
             })
             continue
-        result = assign_workers([node], _workers_with_used_panes_marked_busy(workers, used_panes))
+        available_workers = _workers_with_used_panes_marked_busy(workers, used_panes)
+        if _is_frozen_scheduler_node(graph, node):
+            result = _assign_frozen_worker(node, available_workers)
+        else:
+            result = assign_workers([node], available_workers)
         if result.get("assigned"):
             item = result["assigned"][0]
             assigned.append(item)
@@ -2771,8 +2916,8 @@ def assign_ready(graph: dict[str, Any], workers: list[dict[str, Any]],
     result["work_conserving"] = True
     result["ready_width"] = len(ready)
     result["capability_enrichment"] = {
-        "changed_nodes": _changed_nodes(graph),
-        "auto": True,
+        "changed_nodes": [] if frozen_graph else _changed_nodes(graph),
+        "auto": not frozen_graph,
     }
     return result
 
@@ -3618,6 +3763,15 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
     This is the compatibility bridge: graph scheduler decides what is safe to
     run, while the existing queue/coordinator still performs the actual wake.
     """
+    if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+        import scheduler_input
+
+        verification = scheduler_input.verify_runtime_projection(graph, graph_path=graph_path)
+        if not verification.get("ok"):
+            raise ValueError(
+                "scheduler runtime projection refused: "
+                + ",".join(str(item) for item in verification.get("errors") or [])
+            )
     sys.path.insert(0, str(HARNESS_DIR / "lib"))
     if dry_run:
         enqueue = None
@@ -3628,7 +3782,9 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
         from pane_lease import acquire  # noqa: WPS433
     else:
         acquire = None
-    graph = auto_enrich_graph(graph, graph_path=graph_path)
+    frozen_graph = str(graph.get("planning_authority") or "").strip() == _FROZEN_PLANNING_AUTHORITY
+    if not frozen_graph:
+        graph = auto_enrich_graph(graph, graph_path=graph_path)
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
     assignment = assign_ready(graph, workers, max_parallel=max_parallel, graph_path=graph_path)
     queued: list[dict[str, Any]] = list(assignment.get("queued", []))
@@ -3649,38 +3805,10 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
             })
             continue
         dispatch_id = f"graph-{sid}-{node_id}-{datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}"
-        try:
-            from apo_plan_compiler import (  # noqa: WPS433
-                compile_execution_plan_for_node,
-                materialize_execution_plan_artifacts,
-            )
-
-            compiled_plan = compile_execution_plan_for_node(
-                node,
-                request_type=str(graph.get("request_type") or node.get("type") or ""),
-                lane_hint=str(graph.get("lane") or ""),
-                registry_path=HARNESS_DIR / "config" / "capability-capsules.registry.yaml",
-                operators_path=HARNESS_DIR / "config" / "physical-operators.json",
-            )
-            capsule_plan_ir = dict(compiled_plan.get("capsule_plan") or {})
-            _enforce_contract_capsule_authority(graph, node, capsule_plan_ir)
-            physical_plan_ir = dict(compiled_plan.get("physical_plan") or {})
-            plan_artifacts = materialize_execution_plan_artifacts(
-                sid,
-                node_id,
-                capsule_plan=capsule_plan_ir,
-                physical_plan=physical_plan_ir,
-                base_dir=SPRINTS_DIR,
-            )
-            # Store APO supply-chain planning artifact for evidence ledger and downstream
-            plan_artifacts["task_classification"] = compiled_plan.get("task_classification") or {}
-            plan_artifacts["logical_workflow"] = compiled_plan.get("logical_workflow") or {}
-            plan_artifacts["skill_plan"] = compiled_plan.get("skill_plan") or {}
-            plan_artifacts["mcp_plan"] = compiled_plan.get("mcp_plan") or {}
-            plan_artifacts["capsule_plan_artifact"] = compiled_plan.get("capsule_plan_artifact") or {}
-            plan_artifacts["selection_rationale"] = compiled_plan.get("selection_rationale") or {}
-            plan_artifacts["evidence_policy"] = compiled_plan.get("evidence_policy") or {}
-        except Exception:
+        frozen_node = _is_frozen_scheduler_node(graph, node)
+        if frozen_node:
+            capsule_binding = node.get("capsule_binding") if isinstance(node.get("capsule_binding"), dict) else {}
+            capsule_ids = [str(value) for value in capsule_binding.get("capsule_ids") or [] if str(value)]
             compiled_plan = {
                 "logical_plan_node": {
                     "node_id": node.get("id"),
@@ -3693,37 +3821,104 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
                 "schema_version": "solar.capsule_plan_node.v1",
                 "node_id": node_id,
                 "logical_operator": str(node.get("logical_operator") or ""),
-                "selected": False,
-                "stages": [],
+                "selected": bool(capsule_ids),
+                "capability_capsule_id": capsule_ids[0] if capsule_ids else "",
+                "capsule_ids": capsule_ids,
+                "composition_id": capsule_binding.get("composition_id"),
+                "contract_sha256": capsule_binding.get("contract_sha256"),
+                "capsule_authority": "frozen_scheduler_input",
             }
             physical_plan_ir = {
                 "schema_version": "solar.physical_plan_node.v1",
                 "node_id": node_id,
                 "logical_operator": str(node.get("logical_operator") or ""),
-                "selected_operator_id": "",
-                "execution_candidates": [],
-                "attached_capsules": [],
+                "selected_operator_id": str(item.get("operator_id") or ""),
+                "execution_candidates": deepcopy(node.get("physical_candidates") or []),
+                "attached_capsules": capsule_ids,
                 "verifier_plans": [],
+                "plan_authority": "frozen_scheduler_input",
             }
-            plan_artifacts = materialize_execution_plan_artifacts(
-                sid,
-                node_id,
-                capsule_plan=capsule_plan_ir,
-                physical_plan=physical_plan_ir,
-                base_dir=SPRINTS_DIR,
-            )
+            plan_artifacts = {
+                "authority": "frozen_scheduler_input",
+                "scheduler_input_ref": deepcopy(graph.get("scheduler_input_ref") or {}),
+            }
+        else:
+            try:
+                from apo_plan_compiler import (  # noqa: WPS433
+                    compile_execution_plan_for_node,
+                    materialize_execution_plan_artifacts,
+                )
+
+                compiled_plan = compile_execution_plan_for_node(
+                    node,
+                    request_type=str(graph.get("request_type") or node.get("type") or ""),
+                    lane_hint=str(graph.get("lane") or ""),
+                    registry_path=HARNESS_DIR / "config" / "capability-capsules.registry.yaml",
+                    operators_path=HARNESS_DIR / "config" / "physical-operators.json",
+                )
+                capsule_plan_ir = dict(compiled_plan.get("capsule_plan") or {})
+                _enforce_contract_capsule_authority(graph, node, capsule_plan_ir)
+                physical_plan_ir = dict(compiled_plan.get("physical_plan") or {})
+                plan_artifacts = materialize_execution_plan_artifacts(
+                    sid,
+                    node_id,
+                    capsule_plan=capsule_plan_ir,
+                    physical_plan=physical_plan_ir,
+                    base_dir=SPRINTS_DIR,
+                )
+                # Store APO supply-chain planning artifact for evidence ledger and downstream
+                plan_artifacts["task_classification"] = compiled_plan.get("task_classification") or {}
+                plan_artifacts["logical_workflow"] = compiled_plan.get("logical_workflow") or {}
+                plan_artifacts["skill_plan"] = compiled_plan.get("skill_plan") or {}
+                plan_artifacts["mcp_plan"] = compiled_plan.get("mcp_plan") or {}
+                plan_artifacts["capsule_plan_artifact"] = compiled_plan.get("capsule_plan_artifact") or {}
+                plan_artifacts["selection_rationale"] = compiled_plan.get("selection_rationale") or {}
+                plan_artifacts["evidence_policy"] = compiled_plan.get("evidence_policy") or {}
+            except Exception:
+                compiled_plan = {
+                    "logical_plan_node": {
+                        "node_id": node.get("id"),
+                        "logical_operator": node.get("logical_operator"),
+                        "goal": node.get("goal"),
+                        "depends_on": list(node.get("depends_on", []) or []),
+                    }
+                }
+                capsule_plan_ir = {
+                    "schema_version": "solar.capsule_plan_node.v1",
+                    "node_id": node_id,
+                    "logical_operator": str(node.get("logical_operator") or ""),
+                    "selected": False,
+                    "stages": [],
+                }
+                physical_plan_ir = {
+                    "schema_version": "solar.physical_plan_node.v1",
+                    "node_id": node_id,
+                    "logical_operator": str(node.get("logical_operator") or ""),
+                    "selected_operator_id": "",
+                    "execution_candidates": [],
+                    "attached_capsules": [],
+                    "verifier_plans": [],
+                }
+                plan_artifacts = materialize_execution_plan_artifacts(
+                    sid,
+                    node_id,
+                    capsule_plan=capsule_plan_ir,
+                    physical_plan=physical_plan_ir,
+                    base_dir=SPRINTS_DIR,
+                )
         node["logical_plan_node"] = dict(compiled_plan.get("logical_plan_node") or {})
         node["capsule_plan_ir"] = capsule_plan_ir
         node["physical_plan_ir"] = physical_plan_ir
         if capsule_plan_ir.get("capability_capsule_id"):
             node["capability_native"] = True
             node["capability_capsule_id"] = str(capsule_plan_ir.get("capability_capsule_id") or "")
-        artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
-        artifacts["capsule_plan_ir"] = plan_artifacts["capsule_plan_ir_path"]
-        artifacts["physical_plan_ir"] = plan_artifacts["physical_plan_ir_path"]
-        if physical_plan_ir.get("selected_operator_id"):
-            artifacts["selected_operator_id"] = str(physical_plan_ir.get("selected_operator_id") or "")
-        node["artifacts"] = artifacts
+        if not frozen_node:
+            artifacts = node.get("artifacts") if isinstance(node.get("artifacts"), dict) else {}
+            artifacts["capsule_plan_ir"] = plan_artifacts["capsule_plan_ir_path"]
+            artifacts["physical_plan_ir"] = plan_artifacts["physical_plan_ir_path"]
+            if physical_plan_ir.get("selected_operator_id"):
+                artifacts["selected_operator_id"] = str(physical_plan_ir.get("selected_operator_id") or "")
+            node["artifacts"] = artifacts
 
         lease_result = {"acquired": True, "reason": "lease_disabled"}
         if pane.startswith("operator-pool:"):
@@ -3783,6 +3978,17 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
 
     blocked_workers: list[dict[str, Any]] = []
     for item in queued:
+        if item.get("reason") == "frozen_physical_candidates_unavailable":
+            node_id = str(item.get("node") or "")
+            if node_id and node_id in nodes_by_id:
+                set_node_status(graph, node_id, "queued")
+                graph.setdefault("node_results", {}).setdefault(node_id, {})
+                graph["node_results"][node_id]["blocking_reason"] = item["reason"]
+                graph["node_results"][node_id]["candidate_observations"] = (
+                    item.get("details", {}).get("candidate_observations", [])
+                )
+                graph["node_results"][node_id]["updated_at"] = _now()
+            continue
         if item.get("reason") != "no_matching_worker":
             continue
         node_id = str(item.get("node") or "")
