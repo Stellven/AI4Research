@@ -410,7 +410,9 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
 
     monitored = _execute_twice(tmp_path, _request("experiment_monitor", refs=ran["output_artifacts"]), services={})
     results.append(monitored)
-    assert _artifact(tmp_path, monitored)["outputs"]["status_report"]["state"] == "completed"
+    status_report = _artifact(tmp_path, monitored)["outputs"]["status_report"]
+    assert status_report["state"] == "completed"
+    assert "Experiment is designed but no result evidence is present." not in status_report["observations"]
 
     claims_ref = _external_ref(tmp_path, "claim_extract", "research_claims.v1", {
         "claims": [{
@@ -426,12 +428,6 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
     assert verdict["verdict"] == "supported"
     assert verdict["support_classification"] == "supported"
 
-    planned = _execute_twice(
-        tmp_path,
-        _request("report_plan", refs=verified["output_artifacts"], payload={"topic": "Bounded treatment outcome"}),
-        services={},
-    )
-    results.append(planned)
     method_ref = _external_ref(tmp_path, "method_extract", "research_method.v1", {
         "methods": [{
             "method_id": "method-001",
@@ -444,6 +440,23 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
             "confidence": 1.0,
         }]
     })
+    planned = _execute_twice(
+        tmp_path,
+        _request(
+            "report_plan",
+            refs=[*verified["output_artifacts"], method_ref],
+            payload={"topic": "Bounded treatment outcome"},
+        ),
+        services={},
+    )
+    results.append(planned)
+    report_plan = _artifact(tmp_path, planned)["outputs"]["report_plan"]
+    methods_section = next(
+        section
+        for section in report_plan["sections"]
+        if section["section_id"] == "methods"
+    )
+    assert methods_section["evidence_ids"] == ["claim-source-001"]
     drafted = _execute_twice(
         tmp_path,
         _request("report_draft", refs=[*planned["output_artifacts"], *verified["output_artifacts"], method_ref]),
@@ -537,6 +550,86 @@ def test_experiment_design_defaults_sandbox_to_experiment_result_scope(tmp_path:
     assert plan["sandbox"]["write_scope"] == [
         "artifacts/scientific/scientific_research_lifecycle_full_v1/07_experiment_result/experiment_result.v1.json"
     ]
+
+
+def test_experiment_design_accepts_a_governed_claim_without_inventing_an_idea(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    claims = _external_ref(tmp_path, "claims", "research_claims.v1", {
+        "claims": [{
+            "claim_id": "claim-reranker-001",
+            "text": "Reranker A improves ranking quality over reranker B.",
+            "source_anchor": "paper-reranker#results",
+            "testability": "testable",
+            "verification_status": "unverified",
+            "acceptance_criteria": ["quality_uplift_positive"],
+            "evidence_ids": ["paper-reranker"],
+        }]
+    })
+
+    result = execute_operator(
+        _request(
+            "experiment_design",
+            refs=[claims],
+            payload={
+                "metrics": ["quality_uplift"],
+                "variables": ["reranker", "ranking_quality"],
+                "procedure": ["Compare both rerankers on the declared dataset."],
+                "success_criteria": ["quality_uplift is positive"],
+            },
+        ),
+        services={},
+    )
+
+    plan = _artifact(tmp_path, result)["outputs"]["experiment_plan"]
+    assert plan["source_target_kind"] == "claim"
+    assert plan["source_claim_id"] == "claim-reranker-001"
+    assert plan["hypothesis"] == "Reranker A improves ranking quality over reranker B."
+    assert plan["origin_evidence_ids"] == ["paper-reranker"]
+    assert plan["claim_acceptance_criteria"] == ["quality_uplift_positive"]
+    assert "source_idea_id" not in plan
+
+
+def test_claim_verification_records_resolved_retained_paper_evidence(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    paper = _external_ref(tmp_path, "paper", "research_paper.v1", {
+        "paper": {
+            "paper_id": "paper-reranker",
+            "title": "Reranker evaluation",
+            "source_type": "markdown",
+            "source_ref": "paper.md",
+            "parse_status": "parsed",
+            "sections": [{
+                "section_id": "results",
+                "title": "Results",
+                "text": "Reranker A improves ranking quality over reranker B.",
+                "source_anchor": "paper-reranker#results",
+            }],
+        }
+    })
+    claims = _external_ref(tmp_path, "claims", "research_claims.v1", {
+        "claims": [{
+            "claim_id": "claim-reranker-001",
+            "text": "Reranker A improves ranking quality over reranker B.",
+            "source_anchor": "paper-reranker#results",
+            "testability": "testable",
+            "verification_status": "unverified",
+            "evidence_ids": ["paper-reranker"],
+        }]
+    })
+
+    verified = execute_operator(_request("claim_verify", refs=[paper, claims]), services={})
+    verdict = _artifact(tmp_path, verified)["outputs"]["verdicts"][0]
+
+    assert verdict["source_grounding"] == {
+        "paper_evidence_supplied": True,
+        "resolved": True,
+        "resolved_paper_ids": ["paper-reranker"],
+        "source_anchor_resolved": True,
+    }
 
 
 def _explicit_test_method() -> dict:

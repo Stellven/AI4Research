@@ -29,33 +29,95 @@ DEFAULT_EXPERIMENT_RESULT_SCOPE = (
 )
 
 
-def _first_idea(context: OperatorContext) -> dict[str, Any]:
+def _first_test_target(context: OperatorContext) -> dict[str, Any]:
     documents = load_documents(
         context,
-        schemas=("idea_candidate.v1", "idea_evaluation.v1"),
-        payload_keys=("idea", "idea_candidate"),
+        schemas=("idea_candidate.v1", "idea_evaluation.v1", "research_claims.v1"),
+        payload_keys=("idea", "idea_candidate", "research_claims", "claims"),
     )
+    requested_claim_id = str(context.payload.get("selected_claim_id") or "").strip()
     for document in documents:
         outputs = document.get("outputs") if isinstance(document.get("outputs"), dict) else document
         if isinstance(outputs, dict):
             if isinstance(outputs.get("idea"), dict):
-                return outputs["idea"]
+                idea = outputs["idea"]
+                return {
+                    "target_id": require_text(idea.get("idea_id"), "idea.idea_id"),
+                    "target_kind": "idea",
+                    "hypothesis": require_text(idea.get("hypothesis"), "idea.hypothesis"),
+                    "minimum_experiment": require_text(
+                        idea.get("minimum_experiment"), "idea.minimum_experiment"
+                    ),
+                    "origin_evidence_ids": [
+                        str(item) for item in idea.get("origin_evidence_ids") or []
+                    ],
+                }
             for item in outputs.get("ideas") or []:
                 if isinstance(item, dict):
-                    return item
-    raise ResearchOperatorError("No idea candidate was available", error_type="missing_input")
+                    return {
+                        "target_id": require_text(item.get("idea_id"), "idea.idea_id"),
+                        "target_kind": "idea",
+                        "hypothesis": require_text(item.get("hypothesis"), "idea.hypothesis"),
+                        "minimum_experiment": require_text(
+                            item.get("minimum_experiment"), "idea.minimum_experiment"
+                        ),
+                        "origin_evidence_ids": [
+                            str(value) for value in item.get("origin_evidence_ids") or []
+                        ],
+                    }
+            claims = [item for item in outputs.get("claims") or [] if isinstance(item, dict)]
+            eligible = [
+                item
+                for item in claims
+                if str(item.get("testability") or "unknown") in {"testable", "partially_testable"}
+            ] or claims
+            if requested_claim_id:
+                eligible = [
+                    item for item in eligible if str(item.get("claim_id") or "") == requested_claim_id
+                ]
+            if eligible:
+                claim = eligible[0]
+                claim_id = require_text(claim.get("claim_id"), "claim.claim_id")
+                claim_text = require_text(claim.get("text"), "claim.text")
+                criteria = [
+                    str(item).strip()
+                    for item in claim.get("acceptance_criteria") or []
+                    if str(item).strip()
+                ]
+                minimum = str(context.payload.get("minimum_experiment") or "").strip()
+                if not minimum:
+                    minimum = (
+                        "Measure the declared metrics for the supplied claim against the declared "
+                        "baselines and evaluate its acceptance criteria."
+                    )
+                return {
+                    "target_id": claim_id,
+                    "target_kind": "claim",
+                    "hypothesis": claim_text,
+                    "minimum_experiment": minimum,
+                    "origin_evidence_ids": [
+                        str(item) for item in claim.get("evidence_ids") or [] if str(item).strip()
+                    ],
+                    "acceptance_criteria": criteria,
+                }
+    raise ResearchOperatorError(
+        "No idea candidate or governed research claim was available",
+        error_type="missing_input",
+    )
 
 
 def design_experiment(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
-    idea = _first_idea(context)
-    hypothesis = require_text(idea.get("hypothesis"), "idea.hypothesis")
-    minimum = require_text(idea.get("minimum_experiment"), "idea.minimum_experiment")
+    target = _first_test_target(context)
+    hypothesis = target["hypothesis"]
+    minimum = target["minimum_experiment"]
     requested_sandbox = context.payload.get("sandbox") if isinstance(context.payload.get("sandbox"), dict) else {}
     sandbox_write_scope = list(requested_sandbox.get("write_scope") or [])
     if not sandbox_write_scope:
         sandbox_write_scope = [DEFAULT_EXPERIMENT_RESULT_SCOPE]
     plan = {
-        "experiment_id": str(context.payload.get("experiment_id") or f"exp-{idea.get('idea_id', 'candidate')}"),
+        "experiment_id": str(
+            context.payload.get("experiment_id") or f"exp-{target['target_id']}"
+        ),
         "objective": str(context.payload.get("objective") or minimum),
         "hypothesis": hypothesis,
         "variables": [str(item) for item in context.payload.get("variables") or ["intervention", "outcome"]],
@@ -77,9 +139,16 @@ def design_experiment(node_request: dict[str, Any], context: OperatorContext) ->
             ),
             "max_output_bytes": int((context.payload.get("resource_limits") or {}).get("max_output_bytes") or 1_000_000),
         },
-        "source_idea_id": require_text(idea.get("idea_id"), "idea.idea_id"),
-        "origin_evidence_ids": [str(item) for item in idea.get("origin_evidence_ids") or []],
+        "source_target_id": target["target_id"],
+        "source_target_kind": target["target_kind"],
+        "origin_evidence_ids": list(target["origin_evidence_ids"]),
     }
+    if target["target_kind"] == "idea":
+        plan["source_idea_id"] = target["target_id"]
+    else:
+        plan["source_claim_id"] = target["target_id"]
+        if target.get("acceptance_criteria"):
+            plan["claim_acceptance_criteria"] = list(target["acceptance_criteria"])
     if isinstance(context.payload.get("execution"), dict):
         plan["execution"] = dict(context.payload["execution"])
     if isinstance(context.payload.get("criteria_bindings"), list):
@@ -249,19 +318,25 @@ def monitor_experiment(node_request: dict[str, Any], context: OperatorContext) -
     state = "unknown"
     observations: list[str] = []
     evidence_ids: list[str] = []
+    result_seen = False
+    plan_seen = False
     for document in documents:
         outputs = document.get("outputs") if isinstance(document.get("outputs"), dict) else document
         result = outputs.get("result") if isinstance(outputs, dict) else None
         plan = outputs.get("experiment_plan") if isinstance(outputs, dict) else None
         if isinstance(result, dict):
+            result_seen = True
             experiment_id = str(result.get("experiment_id") or experiment_id)
             state = "failed" if result.get("outcome") == "failed" else "completed"
             observations.append(f"Experiment outcome: {result.get('outcome', 'unknown')}")
             evidence_ids.extend(str(item) for item in result.get("evidence_ids") or [])
         elif isinstance(plan, dict):
-            experiment_id = str(plan.get("experiment_id") or experiment_id)
-            state = "planned"
-            observations.append("Experiment is designed but no result evidence is present.")
+            plan_seen = True
+            if not result_seen:
+                experiment_id = str(plan.get("experiment_id") or experiment_id)
+                state = "planned"
+    if plan_seen and not result_seen:
+        observations.append("Experiment is designed but no result evidence is present.")
     status_provider = context.services.get("experiment_status_provider")
     if callable(status_provider) and state != "completed":
         try:

@@ -2,11 +2,13 @@ import json
 import sys
 from pathlib import Path
 
+import yaml
 from jsonschema import Draft202012Validator
 
 
 ROOT = Path(__file__).resolve().parents[2]
 LIB = ROOT / "harness" / "lib"
+CAPSULE_DIR = ROOT / "harness" / "capability-capsules"
 if str(LIB) not in sys.path:
     sys.path.insert(0, str(LIB))
 
@@ -122,7 +124,151 @@ def test_experiment_run_contract_requires_hash_bound_approval_input() -> None:
     )
 
     assert capsule["consumes"] == [EXPERIMENT_APPROVAL, EXPERIMENT_PLAN]
-    assert capsule["produces"] == [EXPERIMENT_RESULT, "schema:schemas/evidence/experiment_status.v1.schema.json"]
+    assert capsule["produces"] == [EXPERIMENT_RESULT]
+    assert capsule["operator_compatibility"]["selectable_preferred"] == [
+        "experiment_run_worker"
+    ]
+    assert capsule["implementation"]["trust_class"] == "measured_execution"
+
+
+def test_claim_verification_contract_requires_claims_and_retained_papers() -> None:
+    capsule = next(
+        row for row in _catalog()["capsules"] if row["capsule_id"] == "cap.research-claim-verify"
+    )
+
+    assert capsule["consumes"] == [CLAIMS, PAPER]
+    assert capsule["produces"] == [CLAIM_VERDICT]
+    assert capsule["operator_compatibility"]["selectable_preferred"] == [
+        "claim_verify_worker"
+    ]
+
+    missing_papers = composition.search_composition_candidates(
+        _catalog(), available_inputs=[CLAIMS], target_outputs=[CLAIM_VERDICT]
+    )
+    grounded = composition.search_composition_candidates(
+        _catalog(), available_inputs=[CLAIMS, PAPER], target_outputs=[CLAIM_VERDICT]
+    )
+
+    assert missing_papers["verdict"] == "unsatisfiable"
+    assert grounded["verdict"] == "candidates_found"
+    assert [step["capsule_id"] for step in grounded["candidates"][0]["steps"]] == [
+        "cap.research-claim-verify"
+    ]
+
+
+def test_governed_claim_can_compose_directly_to_experiment_plan() -> None:
+    search = composition.search_composition_candidates(
+        _catalog(), available_inputs=[CLAIMS], target_outputs=[EXPERIMENT_PLAN]
+    )
+
+    assert search["verdict"] == "candidates_found"
+    assert [step["capsule_id"] for step in search["candidates"][0]["steps"]] == [
+        "cap.research-claim-experiment-design"
+    ]
+
+
+def test_experiment_plan_can_compose_through_approval_to_measured_execution() -> None:
+    search = composition.search_composition_candidates(
+        _catalog(),
+        available_inputs=[EXPERIMENT_PLAN],
+        target_outputs=[EXPERIMENT_APPROVAL],
+    )
+
+    assert search["verdict"] == "candidates_found"
+    assert [step["capsule_id"] for step in search["candidates"][0]["steps"]] == [
+        "cap.research-native-experiment-approval"
+    ]
+    capsule = next(
+        row
+        for row in _catalog()["capsules"]
+        if row["capsule_id"] == "cap.research-native-experiment-approval"
+    )
+    assert capsule["operator_compatibility"]["selectable_preferred"] == [
+        "experiment_approval_gate_worker"
+    ]
+
+
+def test_measured_claim_verification_requires_paper_claim_and_result() -> None:
+    catalog = _catalog()
+    missing_result = composition.search_composition_candidates(
+        catalog,
+        available_inputs=[CLAIMS, PAPER],
+        target_outputs=[CLAIM_VERDICT],
+    )
+    measured = composition.search_composition_candidates(
+        catalog,
+        available_inputs=[CLAIMS, PAPER, EXPERIMENT_RESULT],
+        target_outputs=[CLAIM_VERDICT],
+    )
+
+    assert missing_result["verdict"] == "candidates_found"
+    assert [step["capsule_id"] for step in missing_result["candidates"][0]["steps"]] == [
+        "cap.research-claim-verify"
+    ]
+    measured_candidates = [
+        candidate
+        for candidate in measured["candidates"]
+        if [step["capsule_id"] for step in candidate["steps"]]
+        == ["cap.research-measured-claim-verify"]
+    ]
+    assert measured_candidates
+    capsule = next(
+        row
+        for row in catalog["capsules"]
+        if row["capsule_id"] == "cap.research-measured-claim-verify"
+    )
+    assert capsule["consumes"] == sorted([CLAIMS, EXPERIMENT_RESULT, PAPER])
+    assert capsule["operator_compatibility"]["selectable_preferred"] == [
+        "claim_verify_worker"
+    ]
+
+
+def test_native_experiment_monitor_requires_no_network_authority() -> None:
+    catalog = _catalog()
+    search = composition.search_composition_candidates(
+        catalog,
+        available_inputs=[EXPERIMENT_PLAN, EXPERIMENT_RESULT],
+        target_outputs=["schema:schemas/evidence/experiment_status.v1.schema.json"],
+        allowed_effects=["read", "write", "execute"],
+    )
+
+    assert search["verdict"] == "candidates_found"
+    monitor = next(
+        candidate
+        for candidate in search["candidates"]
+        if [step["capsule_id"] for step in candidate["steps"]]
+        == ["cap.research-experiment-monitor"]
+    )
+    assert "network" not in monitor["aggregate_effects"]
+    capsule = yaml.safe_load(
+        (CAPSULE_DIR / "cap.research-experiment-monitor.yaml").read_text(encoding="utf-8")
+    )
+    assert capsule["metadata"]["name"] == "Post-run Experiment Result Verification"
+    assert "does not observe a live process" in capsule["metadata"]["description"]
+
+
+def test_report_composition_carries_method_evidence_into_plan_and_draft() -> None:
+    catalog = _catalog()
+    report = "schema:schemas/evidence/scientific_report.v1.schema.json"
+    search = composition.search_composition_candidates(
+        catalog,
+        available_inputs=[CLAIM_VERDICT, METHODS],
+        target_outputs=[report],
+        allowed_effects=["read", "write", "execute"],
+    )
+
+    assert search["verdict"] == "candidates_found"
+    candidate = next(
+        row
+        for row in search["candidates"]
+        if [step["capsule_id"] for step in row["steps"]]
+        == [
+            "cap.research-method-aware-report-plan",
+            "cap.scientific-method-aware-report-draft",
+        ]
+    )
+    for step in candidate["steps"]:
+        assert METHODS in step["consumes"]
 
 
 def test_composer_honors_multi_input_hyperedges() -> None:
@@ -188,6 +334,76 @@ def test_composer_honors_multi_input_hyperedges() -> None:
     assert [row["capsule_id"] for row in complete["candidates"][0]["steps"]] == [
         "cap.join",
         "cap.finish",
+    ]
+
+
+def test_composer_rejects_mixed_lifecycle_instances_but_accepts_one_input_bundle() -> None:
+    artifact_registry = {
+        "schema_version": "solar.artifact_type_registry.v1",
+        "artifact_types": [
+            {"artifact_type": "type.request", "controller_input": True},
+            {
+                "artifact_type": "type.plan",
+                "controller_input": True,
+                "lineage_family": "experiment",
+            },
+            {
+                "artifact_type": "type.result",
+                "controller_input": True,
+                "lineage_family": "experiment",
+            },
+            {
+                "artifact_type": "type.status",
+                "controller_input": False,
+                "lineage_family": "experiment",
+            },
+        ],
+    }
+    catalog = {
+        "capsules": [
+            {
+                "capsule_id": "cap.design",
+                "consumes": ["type.request"],
+                "produces": ["type.plan"],
+                "verification": {"self_checks": ["check.plan"]},
+                "implementation": {"declared": True},
+                "operator_compatibility": {"selectable_preferred": ["designer"]},
+            },
+            {
+                "capsule_id": "cap.monitor",
+                "consumes": ["type.plan", "type.result"],
+                "produces": ["type.status"],
+                "verification": {"self_checks": ["check.status"]},
+                "implementation": {"declared": True},
+                "operator_compatibility": {"selectable_preferred": ["monitor"]},
+            },
+        ]
+    }
+    conversions = {
+        "schema_version": "solar.artifact_conversion_registry.v1",
+        "conversions": [],
+    }
+
+    mixed = composition.search_composition_candidates(
+        catalog,
+        available_inputs=["type.request", "type.result"],
+        target_outputs=["type.status"],
+        artifact_registry=artifact_registry,
+        conversion_registry=conversions,
+    )
+    one_bundle = composition.search_composition_candidates(
+        catalog,
+        available_inputs=["type.plan", "type.result"],
+        target_outputs=["type.status"],
+        artifact_registry=artifact_registry,
+        conversion_registry=conversions,
+    )
+
+    assert mixed["verdict"] == "unsatisfiable"
+    assert mixed["candidates"] == []
+    assert one_bundle["verdict"] == "candidates_found"
+    assert [step["capsule_id"] for step in one_bundle["candidates"][0]["steps"]] == [
+        "cap.monitor"
     ]
 
 
@@ -354,14 +570,14 @@ def test_real_ab_design_composition_is_exact_and_auditable() -> None:
     assert ids == [
         "cap.research-paper-ingest",
         "cap.research-claim-extract",
-        "cap.research-method-extract",
-        "cap.research-idea-generate",
-        "cap.research-experiment-design",
+        "cap.research-claim-experiment-design",
     ]
-    idea_edge = next(row for row in result["hyperedges"] if row["capsule_id"] == "cap.research-idea-generate")
-    assert idea_edge["consumes"] == [CLAIMS, METHODS]
-    design_edge = next(row for row in result["hyperedges"] if row["capsule_id"] == "cap.research-experiment-design")
-    assert design_edge["consumes"] == [IDEAS]
+    design_edge = next(
+        row
+        for row in result["hyperedges"]
+        if row["capsule_id"] == "cap.research-claim-experiment-design"
+    )
+    assert design_edge["consumes"] == [CLAIMS]
     assert all(row["edge_kind"] == "capability_capsule" for row in steps)
     assert result["candidates"][0]["aggregate_effects"] == [
         "execute",
@@ -371,53 +587,47 @@ def test_real_ab_design_composition_is_exact_and_auditable() -> None:
     ]
 
 
-def test_real_ab_execution_frontier_requires_unavailable_general_approval() -> None:
+def test_real_ab_execution_frontier_reaches_native_approval_and_measured_run() -> None:
     result = composition.search_composition_candidates(
         _catalog(),
         available_inputs=[REQUEST_ENVELOPE],
         target_outputs=[EXPERIMENT_RESULT],
         max_depth=12,
     )
+    approval_edge = next(
+        row
+        for row in result["hyperedges"]
+        if row["capsule_id"] == "cap.research-native-experiment-approval"
+    )
     run_edge = next(
         row for row in result["hyperedges"] if row["capsule_id"] == "cap.research-experiment-run"
     )
 
+    assert approval_edge["consumes"] == [EXPERIMENT_PLAN]
+    assert approval_edge["produces"] == [EXPERIMENT_APPROVAL]
     assert run_edge["consumes"] == [EXPERIMENT_APPROVAL, EXPERIMENT_PLAN]
-    assert result["verdict"] == "unsatisfiable"
-    assert result["unreachable_targets"] == [EXPERIMENT_RESULT]
-    assert result["candidates"] == []
-    experiment_run = next(
-        row
-        for row in result["blocking_frontiers"]
-        if row["capsule_id"] == "cap.research-experiment-run"
+    assert result["verdict"] == "candidates_found"
+    assert any(
+        [step["capsule_id"] for step in candidate["steps"]][-2:]
+        == ["cap.research-native-experiment-approval", "cap.research-experiment-run"]
+        for candidate in result["candidates"]
     )
-    assert experiment_run["missing_inputs"] == [
-        {
-            "artifact_type": EXPERIMENT_APPROVAL,
-            "reason_code": "NO_ELIGIBLE_PRODUCER",
-        }
-    ]
 
 
-def test_real_experiment_requirement_rejects_fixture_bridge_trust() -> None:
+def test_real_experiment_requirement_uses_measured_capsule_path() -> None:
     result = composition.search_composition_candidates(
         _catalog(),
-        available_inputs=[REQUEST_ENVELOPE, EXPERIMENT_APPROVAL],
+        available_inputs=[EXPERIMENT_PLAN, EXPERIMENT_APPROVAL],
         target_outputs=[EXPERIMENT_RESULT],
         max_depth=12,
         required_trust_by_output={EXPERIMENT_RESULT: ["measured_execution"]},
     )
 
-    exclusion = next(
-        row
-        for row in result["excluded_capsules"]
-        if row["capsule_id"] == "cap.research-experiment-run"
-        and row["reason_codes"] == ["EXECUTION_TRUST_UNSATISFIED"]
-    )
-    assert result["verdict"] == "unsatisfiable"
-    assert result["candidates"] == []
-    assert exclusion["trust_class"] == "fixture_or_adapter_only"
-    assert exclusion["trust_required_for"] == [EXPERIMENT_RESULT]
+    assert result["verdict"] == "candidates_found"
+    assert result["candidates"]
+    selected = result["candidates"][0]
+    assert selected["steps"][-1]["capsule_id"] == "cap.research-experiment-run"
+    assert selected["steps"][-1]["produces"] == [EXPERIMENT_RESULT]
 
 
 def test_requirement_only_ab_frontier_fails_without_fake_adapter() -> None:

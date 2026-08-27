@@ -19,6 +19,8 @@ contract:
     required:
       - name: research_claims
         schema_ref: schemas/evidence/research_claims.v1.schema.json
+      - name: research_paper
+        schema_ref: schemas/evidence/research_paper.v1.schema.json
     optional:
       - name: experiment_result
         schema_ref: schemas/evidence/experiment_result.v1.schema.json
@@ -44,6 +46,8 @@ composition:
   consumes:
     - schema_ref: schemas/evidence/research_claims.v1.schema.json
       purpose: Source-anchored claims under assessment; experiment evidence is optional at runtime.
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: Retained source content used to resolve each claim's paper identifier or source anchor.
   produces:
     - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       purpose: Claim verdict evidence.
@@ -89,9 +93,13 @@ verification:
     - Failing fixture emits refuted, blocked, not_testable, or inconclusive verdict.
 operator_compatibility:
   preferred:
-    - autosci-claim-verify-worker
+    - claim_verify_worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:
   owner: opensolar
   source_phase: phase2_autosci_solar_native_capsules
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.action.delivery:verify_claim
+  required_services: []

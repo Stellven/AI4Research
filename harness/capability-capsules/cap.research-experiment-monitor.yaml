@@ -1,24 +1,28 @@
 capability_capsule_id: cap.research-experiment-monitor
 capsule_kind: capability
 metadata:
-  name: Scientific Experiment Monitor
-  description: Inspect running or completed scientific experiments and emit bounded status evidence.
+  name: Post-run Experiment Result Verification
+  description: Verify retained completed experiment results and emit post-run status evidence; this capsule does not observe a live process.
 applicability:
   task_types:
     - scientific-research
     - experiment-monitor
   positive_signals:
-    - experiment status
-    - monitor run
-    - resume experiment
+    - verify completed experiment status
+    - collect retained result status
+    - post-run result verification
   negative_signals:
     - design experiment
     - verify claim
+    - monitor running experiment
+    - resume experiment
 contract:
   inputs:
     required:
-      - name: experiment_id
-        description: Experiment identifier or run artifact reference.
+      - name: experiment_plan
+        schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+      - name: experiment_result
+        schema_ref: schemas/evidence/experiment_result.v1.schema.json
     optional:
       - name: status_scope
         description: Monitor, collect, resume, or diagnose.
@@ -30,19 +34,20 @@ contract:
       - name: collected_result
         schema_ref: schemas/evidence/experiment_result.v1.schema.json
   preconditions:
-    - check: experiment_ref_present
-      description: Experiment identifier or run artifacts are available.
+    - check: completed_result_present
+      description: A retained completed experiment result and its plan are available.
   postconditions:
     - check: status_reported
       description: Status report includes state, observations, next actions, and evidence ids.
   invariants:
     - Does not claim successful completion without result evidence.
+    - Does not claim to observe, resume, or control a live experiment process.
 composition:
   consumes:
     - schema_ref: schemas/evidence/experiment_plan.v1.schema.json
       purpose: Plan being monitored.
     - schema_ref: schemas/evidence/experiment_result.v1.schema.json
-      purpose: Optional collected result evidence.
+      purpose: Retained completed result evidence under post-run verification.
   produces:
     - schema_ref: schemas/evidence/experiment_status.v1.schema.json
       purpose: Experiment status evidence.
@@ -58,13 +63,13 @@ effects:
   write:
     - artifacts/scientific/experiment_status/
   execute:
-    - plugins/autosci/bin/autosci_bridge.py
+    - plugins/autosci/operators/scientific_lifecycle/action/experiment.py
   network:
-    - optional status API only when physical operator permits
+    - forbidden
   cost:
-    - bounded monitoring cost
+    - bounded post-run verification cost
   risk:
-    - stale or partial status can mislead downstream verdicts
+    - stale or incomplete retained results can mislead downstream verdicts
 bindings:
   skills:
     required: []
@@ -79,16 +84,21 @@ verification:
   self_check:
     - Validate emitted evidence against experiment_status.v1.schema.json.
     - Confirm completed state is backed by evidence ids or next action to collect result.
+    - Confirm the output is described as post-run verification, not live monitoring.
   external_verifier:
     required: false
   pass_conditions:
-    - Fixture monitor emits valid experiment_status.v1 evidence.
+    - Retained completed local experiment evidence emits valid experiment_status.v1 evidence.
     - Unknown or stale state is marked blocked or unknown, not completed.
 operator_compatibility:
   preferred:
-    - autosci-experiment-monitor-worker
+    - experiment_monitor_worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:
   owner: opensolar
   source_phase: phase2_autosci_solar_native_capsules
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.action.experiment:monitor_experiment
+  required_services: []

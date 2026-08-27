@@ -79,6 +79,14 @@ OPERATOR_SPECS: dict[str, OperatorSpec] = {
         operators.extract_claims,
         version="1.2.0",
     ),
+    "claim_select_one": _spec(
+        "claim_select_one",
+        "autosci-evidence-claim-select-one",
+        "research_claims.v1",
+        "selected_research_claim.v1.json",
+        operators.select_one_testable_claim,
+        version="1.0.0",
+    ),
     "method_extract": _spec(
         "method_extract",
         "autosci-evidence-method-extract",

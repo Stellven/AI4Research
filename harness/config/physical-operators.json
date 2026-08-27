@@ -5171,9 +5171,7 @@
       "resource_requirements": {
         "required_services": [],
         "required_authorizations": [],
-        "required_artifact_types": [
-          "schema:schemas/evidence/idea_candidate.v1.schema.json"
-        ],
+        "required_artifact_types": [],
         "network": "forbidden",
         "compute_profiles": []
       },
@@ -5181,6 +5179,147 @@
         "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
         "node_id": "experiment_design",
         "implementation_operator_id": "autosci-experiment-design-physical"
+      },
+      "deprecated": false
+    },
+    "experiment_run_worker": {
+      "display_name": "Native AutoSci bounded measured experiment run",
+      "owner_host": "research_operator_registry",
+      "role": "builder",
+      "persona": "scientific-experiment-runner",
+      "backend": "research_operator_registry",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "measured_execution",
+      "resource_requirements": {
+        "required_services": [
+          "experiment_executor"
+        ],
+        "required_authorizations": [
+          "execute_experiment"
+        ],
+        "required_artifact_types": [
+          "schema:schemas/evidence/experiment_plan.v1.schema.json",
+          "schema:schemas/evidence/experiment_approval.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": [
+          "local_python"
+        ]
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "experiment_run",
+        "implementation_operator_id": "autosci-experiment-run-physical"
+      },
+      "deprecated": false
+    },
+    "experiment_approval_gate_worker": {
+      "display_name": "Native AutoSci exact-plan experiment approval gate",
+      "owner_host": "research_operator_registry",
+      "role": "evaluator",
+      "persona": "scientific-experiment-approver",
+      "backend": "research_operator_registry",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [
+          "execute_experiment"
+        ],
+        "required_artifact_types": [
+          "schema:schemas/evidence/experiment_plan.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "experiment_approval_gate",
+        "implementation_operator_id": "autosci-experiment-approval-gate-physical"
+      },
+      "deprecated": false
+    },
+    "experiment_monitor_worker": {
+      "display_name": "Native AutoSci post-run experiment result verification",
+      "owner_host": "research_operator_registry",
+      "role": "builder",
+      "persona": "scientific-experiment-runner",
+      "backend": "research_operator_registry",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/experiment_plan.v1.schema.json",
+          "schema:schemas/evidence/experiment_result.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "experiment_monitor",
+        "implementation_operator_id": "autosci-experiment-monitor-physical"
+      },
+      "deprecated": false
+    },
+    "claim_select_one_worker": {
+      "display_name": "Native AutoSci single testable claim selector",
+      "owner_host": "research_operator_registry",
+      "role": "builder",
+      "persona": "scientific-claim-selector",
+      "backend": "research_operator_registry",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/research_paper.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "claim_select_one",
+        "implementation_operator_id": "autosci-evidence-claim-select-one"
+      },
+      "deprecated": false
+    },
+    "claim_verify_worker": {
+      "display_name": "Native AutoSci source-grounded claim verification",
+      "owner_host": "research_operator_registry",
+      "role": "evaluator",
+      "persona": "scientific-claim-verifier",
+      "backend": "research_operator_registry",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/research_claims.v1.schema.json",
+          "schema:schemas/evidence/research_paper.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "claim_verify",
+        "implementation_operator_id": "autosci-claim-verification-physical"
       },
       "deprecated": false
     },

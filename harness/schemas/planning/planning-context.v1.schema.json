@@ -18,7 +18,8 @@
         "properties": {
           "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
           "relative_path": {"type": "string", "minLength": 1},
-          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "artifact_type": {"type": "string", "minLength": 1}
         }
       }
     }

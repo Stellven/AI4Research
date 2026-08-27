@@ -18,7 +18,11 @@ from harness.plugins.autosci.operators.scientific_lifecycle.evidence import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMAS = REPO_ROOT / "harness" / "schemas" / "evidence"
 NODE_IDS = tuple(OPERATOR_SPECS)
-VERSION_OVERRIDES = {"claim_extract": "1.2.0", "method_extract": "1.3.0"}
+VERSION_OVERRIDES = {
+    "claim_extract": "1.2.0",
+    "claim_select_one": "1.0.0",
+    "method_extract": "1.3.0",
+}
 
 
 def paper_evidence() -> dict:
@@ -234,7 +238,14 @@ def request_for(node_id: str, workspace: Path) -> tuple[dict, dict]:
         discovery_path = workspace / "inputs" / "literature-discovery.json"
         discovery_path.write_text(json.dumps(discovery_evidence(workspace)), encoding="utf-8")
         payload = {"max_sources": 2, "allow_network_fetch": False}
-    elif node_id in {"paper_analyze", "content_analyze", "memory_update_initial", "claim_extract", "method_extract"}:
+    elif node_id in {
+        "paper_analyze",
+        "content_analyze",
+        "memory_update_initial",
+        "claim_extract",
+        "claim_select_one",
+        "method_extract",
+    }:
         payload = {"paper_evidence": paper_evidence()}
     elif node_id == "memory_update_final":
         payload = {"source_evidence": final_source_evidence()}
@@ -370,7 +381,7 @@ def test_direct_source_content_change_invalidates_idempotent_ingest_reuse(worksp
 
 def test_package_local_registration_is_unique_and_resolvable() -> None:
     entries = registration_entries()
-    assert len(entries) == len(NODE_IDS) == 13
+    assert len(entries) == len(NODE_IDS) == 14
     assert len({item["node_id"] for item in entries}) == len(entries)
     assert len({item["operator_id"] for item in entries}) == len(entries)
     assert all(
@@ -401,6 +412,35 @@ def test_discovery_ingest_emits_multiple_real_papers_and_claims_read_all(
     claim_text = " ".join(item["text"] for item in claim_artifact["outputs"]["claims"])
     assert "20 percent" in claim_text
     assert "10 percent" in claim_text
+
+
+def test_claim_select_one_emits_exactly_one_disclosed_testable_choice(
+    workspace: Path,
+) -> None:
+    request, services = request_for("claim_select_one", workspace)
+    paper = paper_evidence()
+    paper["outputs"]["paper"]["sections"][1]["text"] = (
+        "The bounded parser improves reliability across source documents. "
+        "The bounded parser reduces latency by 20 percent compared with the baseline."
+    )
+    request["typed_inputs"]["payload"] = {"paper_evidence": paper}
+
+    result = execute_operator(request, services=services, workspace_root=workspace)
+    artifact = validate_result_and_artifact(result, workspace)
+
+    claims = artifact["outputs"]["claims"]
+    assert len(claims) == 1
+    assert claims[0]["testability"] == "testable"
+    assert artifact["outputs"]["selection"] == {
+        "selected_claim_id": claims[0]["claim_id"],
+        "candidate_count": 2,
+        "criteria": [
+            "prefer testable over partially_testable, unknown, and not_testable",
+            "prefer more retained evidence identifiers",
+            "prefer the more specific claim text when earlier criteria tie",
+            "break remaining ties by stable claim identifier",
+        ],
+    }
 
 
 @pytest.mark.parametrize("separator", ["/", "\\"])

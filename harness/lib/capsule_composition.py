@@ -380,6 +380,11 @@ def search_composition_candidates(
     known_types = {
         str(row.get("artifact_type") or "") for row in artifact_registry.get("artifact_types") or []
     }
+    lineage_family_by_type = {
+        str(row.get("artifact_type") or ""): str(row.get("lineage_family") or "")
+        for row in artifact_registry.get("artifact_types") or []
+        if isinstance(row, dict) and str(row.get("lineage_family") or "")
+    }
     requested = set(available_inputs) | set(target_outputs)
     unknown = sorted(requested - known_types)
     if unknown:
@@ -470,15 +475,32 @@ def search_composition_candidates(
                 changed = changed or len(relevant_types) > before
     edges = [edge for edge in all_edges if edge["edge_id"] in relevant_edges]
     initial = frozenset(available_inputs)
+    initial_lineage = frozenset(
+        (
+            artifact_type,
+            f"input:{lineage_family_by_type[artifact_type]}",
+        )
+        for artifact_type in initial
+        if artifact_type in lineage_family_by_type
+    )
     targets = set(target_outputs)
-    queue: deque[tuple[frozenset[str], tuple[dict[str, Any], ...], frozenset[str]]] = deque(
-        [(initial, tuple(), frozenset())]
+    queue: deque[
+        tuple[
+            frozenset[str],
+            tuple[dict[str, Any], ...],
+            frozenset[str],
+            frozenset[tuple[str, str]],
+        ]
+    ] = deque(
+        [(initial, tuple(), frozenset(), initial_lineage)]
     )
     # Artifact availability alone is not a sufficient state identity: two
     # different capsule paths may produce the same types and remain legitimate
     # semantic alternatives. Preserve distinct bounded edge-set signatures,
     # while still collapsing order-only permutations of independent steps.
-    visited: set[tuple[frozenset[str], frozenset[str]]] = {(initial, frozenset())}
+    visited: set[
+        tuple[frozenset[str], frozenset[str], frozenset[tuple[str, str]]]
+    ] = {(initial, frozenset(), initial_lineage)}
     candidates: list[dict[str, Any]] = []
     explored = 0
     bound_exhausted = False
@@ -487,10 +509,19 @@ def search_composition_candidates(
         if explored >= max_states:
             bound_exhausted = True
             break
-        artifacts, steps, used_edges = queue.popleft()
+        artifacts, steps, used_edges, lineage_state = queue.popleft()
         explored += 1
         reachable_union.update(artifacts)
         if targets.issubset(artifacts):
+            lineage_by_type = dict(lineage_state)
+            target_tokens_by_family: dict[str, set[str]] = {}
+            for artifact_type in targets:
+                family = lineage_family_by_type.get(artifact_type)
+                token = lineage_by_type.get(artifact_type)
+                if family and token:
+                    target_tokens_by_family.setdefault(family, set()).add(token)
+            if any(len(tokens) > 1 for tokens in target_tokens_by_family.values()):
+                continue
             candidates.append(
                 {
                     "candidate_id": f"composition-{len(candidates) + 1:03d}",
@@ -513,11 +544,40 @@ def search_composition_candidates(
             edge_id = edge["edge_id"]
             if edge_id in used_edges or not set(edge["consumes"]).issubset(artifacts):
                 continue
+            lineage_by_type = dict(lineage_state)
+            consumed_tokens_by_family: dict[str, set[str]] = {}
+            for artifact_type in edge["consumes"]:
+                family = lineage_family_by_type.get(artifact_type)
+                token = lineage_by_type.get(artifact_type)
+                if family and token:
+                    consumed_tokens_by_family.setdefault(family, set()).add(token)
+            if any(len(tokens) > 1 for tokens in consumed_tokens_by_family.values()):
+                continue
+            next_lineage = dict(lineage_by_type)
+            lineage_conflict = False
+            for artifact_type in edge["produces"]:
+                family = lineage_family_by_type.get(artifact_type)
+                if not family:
+                    continue
+                consumed_tokens = consumed_tokens_by_family.get(family, set())
+                token = (
+                    next(iter(consumed_tokens))
+                    if consumed_tokens
+                    else f"producer:{edge_id}:{family}"
+                )
+                existing = next_lineage.get(artifact_type)
+                if existing and existing != token:
+                    lineage_conflict = True
+                    break
+                next_lineage[artifact_type] = token
+            if lineage_conflict:
+                continue
             next_artifacts = frozenset(set(artifacts) | set(edge["produces"]))
             if next_artifacts == artifacts:
                 continue
             next_used_edges = used_edges | {edge_id}
-            state_signature = (next_artifacts, next_used_edges)
+            next_lineage_state = frozenset(next_lineage.items())
+            state_signature = (next_artifacts, next_used_edges, next_lineage_state)
             if state_signature in visited:
                 continue
             visited.add(state_signature)
@@ -529,7 +589,14 @@ def search_composition_candidates(
                 "produces": edge["produces"],
                 "effects": edge.get("effects") or [],
             }
-            queue.append((next_artifacts, steps + (step,), next_used_edges))
+            queue.append(
+                (
+                    next_artifacts,
+                    steps + (step,),
+                    next_used_edges,
+                    next_lineage_state,
+                )
+            )
 
     unreachable = sorted(targets - reachable_union)
     blocking_frontiers: list[dict[str, Any]] = []

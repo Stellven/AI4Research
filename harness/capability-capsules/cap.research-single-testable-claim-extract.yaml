@@ -1,0 +1,94 @@
+capability_capsule_id: cap.research-single-testable-claim-extract
+capsule_kind: capability
+metadata:
+  name: Single Testable Research Claim Selection
+  description: Extract source-anchored claims and deterministically retain exactly one testable claim using disclosed ranking criteria.
+applicability:
+  task_types:
+    - scientific-research
+    - claim-extraction
+    - claim-selection
+  positive_signals:
+    - select one testable claim
+    - choose exactly one claim
+    - retain the most testable claim
+  negative_signals:
+    - list all claims
+    - verify claim
+    - run experiment
+contract:
+  inputs:
+    required:
+      - name: source_evidence
+        schema_ref: schemas/evidence/research_paper.v1.schema.json
+  outputs:
+    required:
+      - name: selected_research_claim
+        schema_ref: schemas/evidence/research_claims.v1.schema.json
+  preconditions:
+    - check: source_evidence_present
+      description: Retained paper evidence includes source-anchored claim-like text.
+  postconditions:
+    - check: exactly_one_claim_selected
+      description: The output contains exactly one unverified source-anchored claim and a disclosed selection trace.
+  invariants:
+    - Does not generate a synthetic claim when no source claim is available.
+    - Does not mark the selected claim verified.
+    - Selection criteria and candidate count remain visible in the output evidence.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: Retained source evidence from which claim candidates are extracted.
+  produces:
+    - schema_ref: schemas/evidence/research_claims.v1.schema.json
+      purpose: Exactly one selected, source-anchored, unverified research claim.
+  compatible_with:
+    - cap.research-claim-experiment-design
+    - cap.research-measured-claim-verify
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+    - retained research paper evidence
+  write:
+    - artifacts/scientific/selected_research_claim/
+  execute:
+    - plugins/autosci/operators/scientific_lifecycle/evidence/operators.py
+  network:
+    - none
+  cost:
+    - bounded local extraction and ranking
+  risk:
+    - deterministic testability ranking may not select the most scientifically important claim
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.claim_extract
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/research_paper.v1.schema.json
+    - schemas/evidence/research_claims.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against research_claims.v1.schema.json.
+    - Confirm outputs.claims contains exactly one entry.
+    - Confirm the selection trace identifies the retained claim and criteria.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Exactly one source-anchored unverified claim is emitted.
+    - Selection criteria and candidate count are retained.
+operator_compatibility:
+  preferred:
+    - claim_select_one_worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_generalization_battery
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.evidence.operators:select_one_testable_claim
+  required_services: []

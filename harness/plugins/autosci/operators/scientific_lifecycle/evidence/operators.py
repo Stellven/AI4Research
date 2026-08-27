@@ -525,11 +525,11 @@ def graph_update(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]
     }
 
 
-def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
+def _extract_claim_rows(context: OperatorContext, *, limit: int) -> list[dict[str, Any]]:
     papers = _papers_from(context)
     claims: list[dict[str, Any]] = []
     claims_by_text: dict[str, dict[str, Any]] = {}
-    limit = max(1, min(int(context.payload.get("limit") or 12), 50))
+    limit = max(1, min(int(limit), 50))
     cue = re.compile(r"\b(?:show|shows|demonstrat|improv|reduc|increas|achiev|outperform|result|found|find)\w*\b", re.IGNORECASE)
     for paper in papers:
         for _title, text, anchor in _section_texts(paper):
@@ -561,6 +561,14 @@ def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, An
             break
     if not claims:
         raise _product_error("No claim-like source sentences were found; synthetic claims were not generated")
+    return claims
+
+
+def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
+    claims = _extract_claim_rows(
+        context,
+        limit=int(context.payload.get("limit") or 12),
+    )
     evidence = evidence_document(
         context,
         spec,
@@ -571,6 +579,53 @@ def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, An
         "evidence": evidence,
         "outcome_class": SUCCESS,
         "summary": f"Extracted {len(claims)} source-anchored unverified claim(s).",
+    }
+
+
+def select_one_testable_claim(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
+    """Select exactly one source-anchored claim using disclosed stable criteria."""
+
+    claims = _extract_claim_rows(context, limit=50)
+    rank = {"testable": 0, "partially_testable": 1, "unknown": 2, "not_testable": 3}
+
+    def selection_key(claim: dict[str, Any]) -> tuple[int, int, int, str]:
+        evidence_ids = [str(item) for item in claim.get("evidence_ids") or [] if str(item).strip()]
+        return (
+            rank.get(str(claim.get("testability") or "unknown"), 2),
+            -len(evidence_ids),
+            -len(str(claim.get("text") or "")),
+            str(claim.get("claim_id") or ""),
+        )
+
+    selected = min(claims, key=selection_key)
+    evidence = evidence_document(
+        context,
+        spec,
+        {
+            "claims": [selected],
+            "selection": {
+                "selected_claim_id": str(selected["claim_id"]),
+                "candidate_count": len(claims),
+                "criteria": [
+                    "prefer testable over partially_testable, unknown, and not_testable",
+                    "prefer more retained evidence identifiers",
+                    "prefer the more specific claim text when earlier criteria tie",
+                    "break remaining ties by stable claim identifier",
+                ],
+            },
+        },
+        limitations=[
+            "The operator selects one claim by disclosed deterministic testability and evidence criteria; "
+            "it does not assert that the selected claim is the most scientifically important claim."
+        ],
+    )
+    return {
+        "evidence": evidence,
+        "outcome_class": SUCCESS,
+        "summary": (
+            f"Selected exactly one {selected['testability']} claim from {len(claims)} "
+            "source-anchored candidate(s)."
+        ),
     }
 
 

@@ -480,13 +480,19 @@ def materialize_planning_context(
     for name, payload in sorted(artifacts.items()):
         relative_path = "requirement_ir.json" if name == "requirement_ir" else f"inputs/{name}.json"
         write_json(output_dir / relative_path, payload)
-        rows.append(
-            {
-                "name": name,
-                "relative_path": relative_path,
-                "sha256": sha256_payload(payload),
-            }
-        )
+        row = {
+            "name": name,
+            "relative_path": relative_path,
+            "sha256": sha256_payload(payload),
+        }
+        explicit_artifact_type = payload.get("artifact_type")
+        if explicit_artifact_type is not None:
+            if not isinstance(explicit_artifact_type, str) or not explicit_artifact_type.strip():
+                raise ElasticPlannerError(
+                    f"planning input {name!r} has an invalid explicit artifact_type"
+                )
+            row["artifact_type"] = explicit_artifact_type.strip()
+        rows.append(row)
     context = {
         "schema_version": "solar.planning_context.v1",
         "artifact_role": "runtime_artifact",
@@ -496,6 +502,32 @@ def materialize_planning_context(
     _assert_schema(context, CONTEXT_SCHEMA, "planning_context")
     write_json(output_dir / "planning_context.json", context)
     return context, artifacts
+
+
+def _planning_input_artifact_types(
+    planning_inputs: dict[str, dict[str, Any]],
+) -> set[str]:
+    """Return only explicitly normalized upstream artifact identities.
+
+    A schema version, filename, or fixture label is not an artifact identity.
+    The input normalizer must state the exact registry identity when an
+    attachment is intended to cross the Planner boundary as a typed input.
+    """
+    return {
+        str(payload.get("artifact_type") or "").strip()
+        for payload in planning_inputs.values()
+        if isinstance(payload, dict)
+        and isinstance(payload.get("artifact_type"), str)
+        and str(payload.get("artifact_type") or "").strip()
+    }
+
+
+def _planning_context_artifact_types(planning_context: dict[str, Any]) -> set[str]:
+    return {
+        str(row.get("artifact_type") or "").strip()
+        for row in planning_context.get("artifacts") or []
+        if isinstance(row, dict) and str(row.get("artifact_type") or "").strip()
+    }
 
 
 def _decision_prompt(
@@ -991,7 +1023,9 @@ is irrelevant.
         "upstream_artifacts": planning_inputs,
         "planning_decision": decision,
         "logical_operators": catalog.get("logical_operators", []),
-        "controller_input_artifact_types": sorted(_CONTROLLER_INPUT_TYPES),
+        "controller_input_artifact_types": sorted(
+            _CONTROLLER_INPUT_TYPES | _planning_input_artifact_types(planning_inputs)
+        ),
         # PlanIR needs semantic ABI information, not physical bindings, full
         # verification prose, manifest paths, or operator availability detail.
         # The complete snapshot remains frozen for deterministic validation and
@@ -1047,7 +1081,13 @@ is irrelevant.
                     "Treat capsule exclusion reason codes literally: UNREQUESTED_<EFFECT>_EFFECT means the "
                     "node must declare <effect> in operator_requirements.effects when that capsule or chain is "
                     "needed for its exact artifact contract. Do not remove the required output or replace the "
-                    "logical operation merely to avoid declaring the implementation's real effect."
+                    "logical operation merely to avoid declaring the implementation's real effect. "
+                    "Correct every listed defect together. "
+                    "Do not delete or bypass an established dependency merely because its artifact identity is "
+                    "not capsule-producible. Instead, keep the logical operation and dependency order while "
+                    "replacing invalid consumed/produced artifact identities with exact identities from a viable "
+                    "capsule chain. A dependency may be folded into another logical node only when the previous "
+                    "support artifact is produced and consumed inside every admitted capsule composition."
                 ),
                 "previous": previous,
                 "defects": defects or [],
@@ -1580,6 +1620,126 @@ def _dependency_folded_into_admitted_composition(
     return True
 
 
+def _dependency_expanded_into_repaired_subgraph(
+    *,
+    removed_dependency_id: str,
+    repaired_node_id: str,
+    previous_nodes: dict[str, dict[str, Any]],
+    repaired_nodes: dict[str, dict[str, Any]],
+) -> bool:
+    """Prove that repair decomposed one broad node without weakening it.
+
+    The replacement must be made entirely of new ancestors of the downstream
+    node, preserve every typed output and owned requirement, retain the old
+    inputs and upstream ordering, and keep measured execution when the removed
+    node required it.  Merely renaming or deleting a dependency cannot pass.
+    """
+    removed = previous_nodes.get(removed_dependency_id)
+    if removed is None or removed_dependency_id in repaired_nodes:
+        return False
+
+    downstream = repaired_nodes.get(repaired_node_id)
+    if downstream is None:
+        return False
+    downstream_ancestors = _ancestors(repaired_node_id, repaired_nodes)
+    replacement_ids = downstream_ancestors - set(previous_nodes)
+    if not replacement_ids:
+        return False
+    replacements = [repaired_nodes[node_id] for node_id in sorted(replacement_ids)]
+
+    removed_outputs = {
+        str((output or {}).get("artifact_type") or "")
+        for output in removed.get("produces") or []
+        if isinstance(output, dict)
+        and str((output or {}).get("artifact_type") or "")
+    }
+    if not removed_outputs:
+        return False
+    produced_by_replacements = {
+        str((output or {}).get("artifact_type") or "")
+        for replacement in replacements
+        for output in replacement.get("produces") or []
+        if isinstance(output, dict)
+        and str((output or {}).get("artifact_type") or "")
+    }
+    downstream_inputs = {
+        str(value) for value in downstream.get("consumes") or [] if str(value)
+    }
+    if not removed_outputs.issubset(produced_by_replacements):
+        return False
+    if not removed_outputs.issubset(downstream_inputs):
+        return False
+
+    removed_inputs = {
+        str(value) for value in removed.get("consumes") or [] if str(value)
+    }
+    replacement_inputs = {
+        str(value)
+        for replacement in replacements
+        for value in replacement.get("consumes") or []
+        if str(value)
+    }
+    if not removed_inputs.issubset(replacement_inputs):
+        return False
+
+    removed_upstream = {
+        str(value) for value in removed.get("depends_on") or [] if str(value)
+    }
+    output_producer_ids = {
+        node_id
+        for node_id in replacement_ids
+        if removed_outputs
+        & {
+            str((output or {}).get("artifact_type") or "")
+            for output in repaired_nodes[node_id].get("produces") or []
+            if isinstance(output, dict)
+        }
+    }
+    if not output_producer_ids:
+        return False
+    for producer_id in output_producer_ids:
+        if not removed_upstream.issubset(_ancestors(producer_id, repaired_nodes)):
+            return False
+
+    removed_requirements = {
+        str(value) for value in removed.get("requirement_ids") or [] if str(value)
+    }
+    replacement_requirements = {
+        str(value)
+        for replacement in replacements
+        for value in replacement.get("requirement_ids") or []
+        if str(value)
+    }
+    if not removed_requirements.issubset(replacement_requirements):
+        return False
+
+    removed_trust = str(
+        (removed.get("operator_requirements") or {}).get("execution_trust")
+        or "any"
+    )
+    trust_rank = capsule_composition.PLANNER_EXECUTION_TRUST_RANK
+    if removed_trust not in trust_rank:
+        return False
+    strongest_replacement_trust = max(
+        (
+            str(
+                (repaired_nodes[node_id].get("operator_requirements") or {}).get(
+                    "execution_trust"
+                )
+                or "any"
+            )
+            for node_id in output_producer_ids
+        ),
+        key=lambda value: trust_rank.get(value, -1),
+    )
+    if (
+        strongest_replacement_trust not in trust_rank
+        or trust_rank[strongest_replacement_trust] < trust_rank[removed_trust]
+    ):
+        return False
+    return True
+
+
 def _repair_preservation_errors(
     previous_plan: dict[str, Any] | None,
     repaired_plan: dict[str, Any],
@@ -1616,12 +1776,20 @@ def _repair_preservation_errors(
         unsafe_removed_dependencies = [
             dependency_id
             for dependency_id in removed_dependencies
-            if not _dependency_folded_into_admitted_composition(
-                removed_dependency_id=dependency_id,
-                repaired_node_id=node_id,
-                previous_nodes=previous_nodes,
-                repaired_nodes=repaired_nodes,
-                composition_catalog=composition_catalog,
+            if not (
+                _dependency_folded_into_admitted_composition(
+                    removed_dependency_id=dependency_id,
+                    repaired_node_id=node_id,
+                    previous_nodes=previous_nodes,
+                    repaired_nodes=repaired_nodes,
+                    composition_catalog=composition_catalog,
+                )
+                or _dependency_expanded_into_repaired_subgraph(
+                    removed_dependency_id=dependency_id,
+                    repaired_node_id=node_id,
+                    previous_nodes=previous_nodes,
+                    repaired_nodes=repaired_nodes,
+                )
             )
         ]
         if unsafe_removed_dependencies:
@@ -1712,6 +1880,7 @@ def validate_plan_ir(
     composition_catalog: dict[str, Any] | None = None,
     evaluation_registry: dict[str, Any] | None = None,
     previous_plan: dict[str, Any] | None = None,
+    upstream_artifact_types: set[str] | None = None,
 ) -> dict[str, Any]:
     evaluation_registry = (
         evaluation_registry or evaluation_planning.load_evaluation_check_registry()
@@ -1777,6 +1946,9 @@ def validate_plan_ir(
         if isinstance(row, dict) and str(row.get("capsule_id") or "")
     }
     materialized_by: dict[tuple[str, str], str] = {}
+    admitted_upstream_types = _CONTROLLER_INPUT_TYPES | set(
+        upstream_artifact_types or set()
+    )
     for index, node in enumerate(node_rows):
         node_id = str(node.get("node_id") or "")
         logical = str(node.get("logical_operator") or "")
@@ -2008,7 +2180,7 @@ def validate_plan_ir(
         ancestors = _ancestors(str(node.get("node_id") or ""), nodes)
         for artifact_type in node.get("consumes") or []:
             artifact_type = str(artifact_type)
-            if artifact_type in _CONTROLLER_INPUT_TYPES:
+            if artifact_type in admitted_upstream_types:
                 continue
             producer = produced_by.get(artifact_type)
             if not producer:
@@ -2025,7 +2197,8 @@ def validate_plan_ir(
                             f"No node produces consumed artifact_type {artifact_type!r}. "
                             "consumes must copy an upstream produces.artifact_type exactly, "
                             "not a materialization path. "
-                            f"Available upstream artifact_type values: {available}."
+                            f"Available upstream artifact_type values: "
+                            f"{sorted(set(available) | admitted_upstream_types)}."
                         ),
                     )
                 )
@@ -2130,9 +2303,14 @@ of a final-answer, publication, or delivery requirement merely because it suppli
 Judge unrequested effects by the semantic action added to the plan, such as a domain experiment,
 deployment, external mutation, or publication. The generic `execute` effect means registered operator
 code must run; it does not itself mean scientific experiment execution and is not an unrequested effect.
-PlanIR is logical, not a listing of capsule internals. Treat an implementation-only intermediate such
-as report planning as unnecessary when capsule composition can insert it inside one logical report node.
-Do not reject that internal step later merely because it has no direct RequirementIR owner.
+PlanIR is logical, not a listing of capsule internals. Do not call a support node unnecessary solely
+because it has no direct RequirementIR owner or because capsule composition could internalize it.
+A support node is semantically necessary when it produces a distinct artifact consumed downstream or
+changes authorization, execution status, claim evaluation, or final synthesis. It is redundant only
+when removing it leaves the artifact, effect, verification, and dependency contract unchanged and no
+downstream node consumes a unique output from it. An implementation-only step may instead remain
+inside one logical node's capsule composition; do not reject that internal step merely because it has
+no direct RequirementIR owner.
 Honor the declared artifact ABI. A downstream evidence-bearing artifact can carry the semantic content
 needed by the next node. In particular, claim_verdict.v1 carries verified claim_text and evidence_ids;
 do not demand a redundant raw-claims input when the report node consumes that verdict artifact.
@@ -2475,6 +2653,9 @@ def run_semantic_planning_pipeline(
                 plan_ir,
                 catalog,
                 evaluation_registry=evaluation_check_registry,
+                upstream_artifact_types=_planning_context_artifact_types(
+                    planning_context
+                ),
             )
             if validation.get("status") == "pass":
                 binding_trace = build_binding_trace(requirement_ir, plan_ir)
@@ -2557,6 +2738,9 @@ def run_semantic_planning_pipeline(
                     composition_catalog,
                     evaluation_registry=evaluation_check_registry,
                     previous_plan=previous if generation == 1 else None,
+                    upstream_artifact_types=_planning_context_artifact_types(
+                        planning_context
+                    ),
                 )
                 write_json(output_dir / f"generation-{generation}" / "plan_validation.json", validation)
                 binding_trace = None
@@ -2688,6 +2872,21 @@ def _node_composition_row(
         target_outputs, artifact_registry
     )
     trust_rank = capsule_composition.PLANNER_EXECUTION_TRUST_RANK
+    minimum_trust_by_output = {
+        artifact_type: capsule_composition.minimum_execution_trust_for_artifacts(
+            [artifact_type], artifact_registry
+        )
+        for artifact_type in target_outputs
+    }
+    required_trust_by_output = {
+        artifact_type: sorted(
+            trust_class
+            for trust_class, rank in trust_rank.items()
+            if trust_class != "any" and rank >= trust_rank[minimum]
+        )
+        for artifact_type, minimum in minimum_trust_by_output.items()
+        if minimum != "any"
+    }
     effective_trust = (
         minimum_trust
         if trust_rank[minimum_trust] > trust_rank[declared_trust]
@@ -2725,11 +2924,7 @@ def _node_composition_row(
             artifact_registry=artifact_registry,
             conversion_registry=conversion_registry,
             allowed_effects=sorted(allowed_effects),
-            required_trust_by_output=(
-                {artifact_type: [effective_trust] for artifact_type in target_outputs}
-                if effective_trust != "any"
-                else None
-            ),
+            required_trust_by_output=required_trust_by_output or None,
         )
     except capsule_composition.CapsuleCompositionError as exc:
         errors.append({"code": "COMPOSITION_REQUEST_INVALID", "message": str(exc)})
@@ -2749,12 +2944,37 @@ def _node_composition_row(
             }
             if not required_capsule_inputs.issubset(consumed_by_steps):
                 reasons.append("DECLARED_NODE_INPUTS_UNUSED")
-            if not steps or not set(target_outputs).issubset(
-                set((steps[-1] or {}).get("produces") or [])
-            ):
-                # Keeping the logical node's declared outputs on one terminal
-                # capsule gives it one unambiguous completion/evaluation point.
-                reasons.append("TERMINAL_OUTPUTS_SPLIT")
+            capsule_by_id = {
+                str(row.get("capsule_id") or ""): row
+                for row in catalog.get("capsules") or []
+                if isinstance(row, dict)
+            }
+            candidate_trust = max(
+                (
+                    trust_rank.get(
+                        str(
+                            (
+                                capsule_by_id.get(
+                                    str((step or {}).get("capsule_id") or ""), {}
+                                ).get("implementation")
+                                or {}
+                            ).get("trust_class")
+                            or "unspecified"
+                        ),
+                        0,
+                    )
+                    for step in steps
+                ),
+                default=0,
+            )
+            if candidate_trust < trust_rank[declared_trust]:
+                reasons.append("DECLARED_EXECUTION_TRUST_UNSATISFIED")
+            # The composition search already proves that every target output is
+            # produced by the ordered chain.  Earlier outputs remain part of the
+            # logical node's result envelope, so requiring the final capsule to
+            # reproduce all of them rejects valid execute-then-monitor and
+            # plan-then-draft compositions.  Completion is the end of the whole
+            # admitted chain; evaluation checks the collected output set.
             if reasons:
                 exclusions.append(
                     {
@@ -4520,11 +4740,14 @@ def compile_scheduler_input(
         physical_node = physical_nodes.get(node_id) or {}
         evaluation_node = evaluation_nodes.get(node_id) or {}
         stages = capsule_node.get("stages") or []
-        capsule_ids = [
-            str(row.get("capability_capsule_id") or "")
-            for row in stages
-            if isinstance(row, dict) and str(row.get("capability_capsule_id") or "")
-        ]
+        capsule_ids = list(
+            dict.fromkeys(
+                str(row.get("capability_capsule_id") or "")
+                for row in stages
+                if isinstance(row, dict)
+                and str(row.get("capability_capsule_id") or "")
+            )
+        )
         if not capsule_ids:
             capsule_id = str(
                 capsule_node.get("capability_capsule_id")

@@ -18,6 +18,7 @@
           "minimum_execution_trust": {
             "enum": ["any", "evidence_transform", "measured_execution"]
           },
+          "lineage_family": {"type": "string", "minLength": 1},
           "description": {"type": "string"}
         }
       }

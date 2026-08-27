@@ -37,11 +37,17 @@ def _outputs(document: dict[str, Any]) -> dict[str, Any]:
 def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     documents = load_documents(
         context,
-        schemas=("research_claims.v1", "experiment_result.v1", "code_evidence_map.v1"),
-        payload_keys=("claims", "experiment_result"),
+        schemas=(
+            "research_claims.v1",
+            "research_paper.v1",
+            "experiment_result.v1",
+            "code_evidence_map.v1",
+        ),
+        payload_keys=("claims", "research_paper", "experiment_result"),
     )
     claims: list[dict[str, Any]] = []
     results: list[dict[str, Any]] = []
+    papers: list[dict[str, Any]] = []
     for document in documents:
         if document.get("claim_id"):
             claims.append(document)
@@ -56,15 +62,36 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
         raw_result = values.get("result") if isinstance(values, dict) else None
         if isinstance(raw_result, dict):
             results.append(raw_result)
+        raw_paper = values.get("paper") if isinstance(values, dict) else None
+        if isinstance(raw_paper, dict):
+            papers.append(raw_paper)
     require_list(claims, "claims")
     experiment = results[0] if results else {}
     outcome = str(experiment.get("outcome") or "inconclusive")
     experiment_evidence = [str(item) for item in experiment.get("evidence_ids") or [] if str(item).strip()]
     criteria_results = experiment.get("criteria_results") if isinstance(experiment.get("criteria_results"), dict) else {}
+    paper_ids = {
+        str(paper.get("paper_id") or "").strip()
+        for paper in papers
+        if str(paper.get("paper_id") or "").strip()
+    }
+    paper_anchors = {
+        str(section.get("source_anchor") or "").strip()
+        for paper in papers
+        for section in paper.get("sections") or []
+        if isinstance(section, dict) and str(section.get("source_anchor") or "").strip()
+    }
     verdicts: list[dict[str, Any]] = []
     for claim in claims:
         claim_id = require_text(claim.get("claim_id"), "claim_id")
         criteria = [str(item) for item in claim.get("acceptance_criteria") or [] if str(item).strip()]
+        claim_evidence_ids = {
+            str(item).strip() for item in claim.get("evidence_ids") or [] if str(item).strip()
+        }
+        source_anchor = str(claim.get("source_anchor") or "").strip()
+        resolved_paper_ids = sorted(claim_evidence_ids & paper_ids)
+        anchor_resolved = bool(source_anchor and source_anchor in paper_anchors)
+        literature_grounded = bool(resolved_paper_ids or anchor_resolved)
         matched = bool(criteria) and all(criteria_results.get(item) is True for item in criteria)
         rejected = any(criteria_results.get(item) is False for item in criteria)
         scope_comparison = compare_claim_evidence_scope(claim, experiment)
@@ -84,6 +111,19 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
         evidence_ids = sorted(set([*experiment_evidence, *[str(item) for item in claim.get("evidence_ids") or [] if str(item).strip()]]))
         if not evidence_ids:
             evidence_ids = [f"missing-evidence:{claim_id}"]
+        limitations = [] if support_class != "insufficient_evidence" else [
+            *(scope_risks or ["Missing or incomplete acceptance-criteria evidence."])
+        ]
+        if papers and not literature_grounded:
+            limitations.append(
+                "The claim's paper identifier or source anchor does not resolve in the retained paper evidence."
+            )
+            if support_class == "supported":
+                verdict, support_class, confidence = "insufficient", "insufficient_evidence", 0.3
+                basis = (
+                    "Measured evidence is positive, but the claim's literature source does not resolve "
+                    "in the retained paper evidence."
+                )
         verdicts.append({
             "claim_id": claim_id,
             "claim_text": str(claim.get("text") or "").strip(),
@@ -92,11 +132,17 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
             "confidence": confidence,
             "basis": basis,
             "evidence_ids": evidence_ids,
-            "limitations": [] if support_class != "insufficient_evidence" else [*(scope_risks or ["Missing or incomplete acceptance-criteria evidence."])],
+            "limitations": limitations,
             "acceptance_criteria_checked": criteria,
             "evidence_outcome": "insufficient_evidence" if support_class == "insufficient_evidence" else outcome,
             "overclaim_risks": scope_risks,
             "scope_comparison": scope_comparison,
+            "source_grounding": {
+                "paper_evidence_supplied": bool(papers),
+                "resolved": literature_grounded,
+                "resolved_paper_ids": resolved_paper_ids,
+                "source_anchor_resolved": anchor_resolved,
+            },
         })
     return completed_result(
         context,
@@ -130,8 +176,30 @@ def _grounded_evidence_ids(verdict: dict[str, Any]) -> list[str]:
     ]
 
 
+def _method_evidence(context: OperatorContext) -> tuple[list[dict[str, Any]], list[str]]:
+    documents = load_documents(
+        context,
+        schemas=("research_method.v1",),
+        payload_keys=("research_method",),
+        required=False,
+    )
+    methods: list[dict[str, Any]] = []
+    limitations: list[str] = []
+    for document in documents:
+        values = _outputs(document)
+        if isinstance(values.get("methods"), list):
+            methods.extend(item for item in values["methods"] if isinstance(item, dict))
+        limitations.extend(
+            str(item)
+            for item in document.get("limitations") or []
+            if str(item).strip()
+        )
+    return methods, limitations
+
+
 def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     verdicts = _verdicts(context)
+    methods, method_limitations = _method_evidence(context)
     reportable = [
         item for item in verdicts
         if _grounded_evidence_ids(item) and str(item.get("claim_text") or "").strip()
@@ -139,12 +207,36 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
     if not reportable:
         raise ResearchOperatorError("No source-grounded claims are available for the report", error_type="insufficient_evidence")
     topic = require_text(context.payload.get("topic") or context.payload.get("title"), "report topic")
-    evidence_ids = sorted({evidence_id for item in reportable for evidence_id in _grounded_evidence_ids(item)})
+    claim_evidence_ids = {
+        evidence_id
+        for item in reportable
+        for evidence_id in _grounded_evidence_ids(item)
+    }
+    method_evidence_ids = {
+        str(evidence_id)
+        for method in methods
+        for evidence_id in method.get("evidence_ids") or []
+        if str(evidence_id).strip()
+    }
+    evidence_ids = sorted(claim_evidence_ids | method_evidence_ids)
     sections = [
         {"section_id": "summary", "title": f"Summary: {topic}", "purpose": "Answer the requested topic.", "evidence_ids": evidence_ids},
         {"section_id": "findings", "title": "Source-grounded findings", "purpose": "Present claims with their unchanged verification classification.", "evidence_ids": evidence_ids},
-        {"section_id": "limitations", "title": "Limitations", "purpose": "List unsupported and insufficient claims.", "evidence_ids": evidence_ids},
     ]
+    if methods or method_limitations:
+        sections.append({
+            "section_id": "methods",
+            "title": "Methods and comparison basis",
+            "purpose": (
+                "Compare or explain the source-grounded methods retained for this report."
+                if methods
+                else "State that structured method evidence was insufficient."
+            ),
+            "evidence_ids": sorted(method_evidence_ids),
+        })
+    sections.append(
+        {"section_id": "limitations", "title": "Limitations", "purpose": "List unsupported and insufficient claims.", "evidence_ids": evidence_ids},
+    )
     plan = {
         "report_id": str(context.payload.get("report_id") or "scientific-report"),
         "title": topic,
@@ -198,6 +290,48 @@ def _report_plan_and_verdicts(context: OperatorContext) -> tuple[dict[str, Any],
     return plan, verdicts, methods, method_limitations
 
 
+def _render_method_section(
+    methods: list[dict[str, Any]], method_limitations: list[str]
+) -> tuple[str, list[str]]:
+    rows: list[str] = []
+    evidence_ids: set[str] = set()
+    if methods:
+        for method in methods:
+            name = require_text(method.get("name"), "method name")
+            summary = require_text(method.get("summary"), "method summary")
+            procedure = [
+                str(item).strip()
+                for item in method.get("procedure") or []
+                if str(item).strip()
+            ]
+            method_evidence_ids = [
+                str(item).strip()
+                for item in method.get("evidence_ids") or []
+                if str(item).strip()
+            ]
+            evidence_ids.update(method_evidence_ids)
+            extraction_basis = require_text(
+                method.get("extraction_basis"), "method extraction basis"
+            )
+            rows.extend(
+                [
+                    f"### {name}",
+                    f"- Summary: {summary}",
+                    "- Procedure:",
+                    *[
+                        f"  {index}. {step}"
+                        for index, step in enumerate(procedure, start=1)
+                    ],
+                    f"- Evidence IDs: {', '.join(method_evidence_ids) or 'unavailable'}",
+                    f"- Extraction basis: {extraction_basis}",
+                ]
+            )
+    else:
+        rows.append("Method evidence status: insufficient_evidence.")
+        rows.extend(f"- Method limitation: {item}" for item in method_limitations)
+    return "\n".join(rows).strip(), sorted(evidence_ids)
+
+
 def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     plan, verdicts, methods, method_limitations = _report_plan_and_verdicts(context)
     supported_ids = set(str(item) for item in plan.get("supported_claim_ids") or [])
@@ -212,40 +346,34 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         section_id = require_text(section.get("section_id"), "section_id")
         section_title = require_text(section.get("title"), "section title")
         evidence_ids = [str(item) for item in section.get("evidence_ids") or [] if str(item).strip()]
-        if section_id == "limitations" and not methods_rendered:
-            method_rows = ["\n## Methods"]
-            if methods:
-                for method in methods:
-                    name = require_text(method.get("name"), "method name")
-                    summary = require_text(method.get("summary"), "method summary")
-                    procedure = [str(item).strip() for item in method.get("procedure") or [] if str(item).strip()]
-                    evidence_ids_for_method = [str(item).strip() for item in method.get("evidence_ids") or [] if str(item).strip()]
-                    extraction_basis = require_text(method.get("extraction_basis"), "method extraction basis")
-                    method_rows.extend([
-                        f"\n### {name}",
-                        f"- Summary: {summary}",
-                        "- Procedure:",
-                        *[f"  {index}. {step}" for index, step in enumerate(procedure, start=1)],
-                        f"- Evidence IDs: {', '.join(evidence_ids_for_method) or 'unavailable'}",
-                        f"- Extraction basis: {extraction_basis}",
-                    ])
-            else:
-                method_rows.append("Method evidence status: insufficient_evidence.")
-                method_rows.extend(f"- Method limitation: {item}" for item in method_limitations)
-            markdown_parts.extend(method_rows)
-            sections.append({
-                "section_id": "methods",
-                "title": "Methods",
-                "body": "\n".join(method_rows[1:]).strip(),
-                "evidence_ids": sorted({
-                    str(evidence_id)
-                    for method in methods
-                    for evidence_id in method.get("evidence_ids") or []
-                    if str(evidence_id).strip()
-                }),
-            })
+        if section_id == "methods":
+            body, method_section_evidence_ids = _render_method_section(
+                methods, method_limitations
+            )
+            evidence_ids = sorted(set(evidence_ids) | set(method_section_evidence_ids))
             methods_rendered = True
-        if section_id == "findings":
+        elif section_id == "limitations" and not methods_rendered and (methods or method_limitations):
+            method_body, method_section_evidence_ids = _render_method_section(
+                methods, method_limitations
+            )
+            markdown_parts.extend(["\n## Methods", method_body])
+            sections.append(
+                {
+                    "section_id": "methods",
+                    "title": "Methods",
+                    "body": method_body,
+                    "evidence_ids": method_section_evidence_ids,
+                }
+            )
+            methods_rendered = True
+            rows = [
+                f"- {item['claim_id']}: {item['support_classification']} — {item['basis']}"
+                for item in reportable
+                if item.get("support_classification") != "supported"
+            ]
+            rows.extend(f"- Method limitation: {item}" for item in method_limitations)
+            body = "\n".join(rows) or "- No additional limitations recorded."
+        elif section_id == "findings":
             body = "\n".join(
                 f"- {item['claim_id']} ({item['support_classification']}): {item['claim_text']} "
                 f"Evidence: {', '.join(str(value) for value in item.get('evidence_ids') or [])}."

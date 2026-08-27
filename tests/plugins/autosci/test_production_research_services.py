@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
+from harness.lib.research_orchestration.runtime import default_production_resolver
 from harness.plugins.autosci.operators.research_synthesis.base import ResearchOperatorError
 from harness.plugins.autosci.operators.research_synthesis.report_draft import _normalize_report
 from harness.plugins.autosci.services.production_research import (
@@ -489,6 +490,278 @@ def test_bounded_experiment_executor_runs_hash_bound_j21_experiment(tmp_path: Pa
     assert metrics["variant_accuracy"] > metrics["baseline_accuracy"]
     assert output_path.is_file()
     assert any(item.startswith("sha256:") for item in result["evidence_ids"])
+
+
+def test_bounded_experiment_executor_rejects_tampered_input_before_execution(tmp_path: Path) -> None:
+    fixture_root = Path(__file__).resolve().parents[2] / "journeys" / "phase22" / "fixtures" / "j21_experiment_build_handoff"
+    input_root = tmp_path / "inputs"
+    input_root.mkdir()
+    runner = input_root / "run_text_experiment.py"
+    dataset = input_root / "input_samples.csv"
+    shutil.copy2(fixture_root / runner.name, runner)
+    shutil.copy2(fixture_root / dataset.name, dataset)
+    result_path = tmp_path / "out" / "experiment_run" / "experiment_result.json"
+    runner_rel = runner.relative_to(tmp_path).as_posix()
+    dataset_rel = dataset.relative_to(tmp_path).as_posix()
+    result_rel = result_path.relative_to(tmp_path).as_posix()
+    approved_dataset_hash = hashlib.sha256(dataset.read_bytes()).hexdigest()
+    dataset.write_text("id,text,label\ntampered,pass: altered,negative\n", encoding="utf-8")
+    plan = {
+        "experiment_id": "p22-j21-local-experiment",
+        "execution": {
+            "contract": "python_json_file.v1",
+            "command_argv": ["python", runner_rel, dataset_rel, result_rel],
+            "runner_sha256": hashlib.sha256(runner.read_bytes()).hexdigest(),
+            "input_sha256s": {dataset_rel: approved_dataset_hash},
+            "result_path": result_rel,
+        },
+        "criteria_bindings": [
+            {"criterion": "accuracy_uplift > 0", "metric": "accuracy_uplift", "operator": ">", "value": 0}
+        ],
+    }
+
+    with pytest.raises(ResearchOperatorError) as caught:
+        BoundedLocalExperimentExecutor(tmp_path)(
+            plan=plan,
+            sandbox={"mode": "process_restricted", "network": False, "write_scope": ["out/experiment_run"]},
+            timeout_seconds=30,
+            max_output_bytes=1_000_000,
+        )
+
+    assert caught.value.error_type == "approval_mismatch"
+    assert not result_path.exists()
+
+
+def test_production_registry_executes_and_monitors_a_real_bounded_experiment(tmp_path: Path) -> None:
+    fixture_root = Path(__file__).resolve().parents[2] / "journeys" / "phase22" / "fixtures" / "j21_experiment_build_handoff"
+    input_root = tmp_path / "inputs"
+    input_root.mkdir()
+    runner = input_root / "run_text_experiment.py"
+    dataset = input_root / "input_samples.csv"
+    shutil.copy2(fixture_root / runner.name, runner)
+    shutil.copy2(fixture_root / dataset.name, dataset)
+    result_path = tmp_path / "out" / "experiment_run" / "raw_result.json"
+    runner_rel = runner.relative_to(tmp_path).as_posix()
+    dataset_rel = dataset.relative_to(tmp_path).as_posix()
+    result_rel = result_path.relative_to(tmp_path).as_posix()
+    criterion = "accuracy_uplift > 0"
+    plan = {
+        "experiment_id": "p22-j21-local-experiment",
+        "objective": "Measure whether the normalized variant improves classification accuracy.",
+        "hypothesis": "The normalized variant improves classification accuracy over baseline.",
+        "variables": ["normalization_mode", "classification_accuracy"],
+        "metrics": ["baseline_accuracy", "variant_accuracy", "accuracy_uplift"],
+        "procedure": ["Run baseline and normalized variants on the same retained CSV rows."],
+        "approval_required": True,
+        "expected_artifacts": [result_rel],
+        "sandbox": {
+            "mode": "process_restricted",
+            "network": False,
+            "write_scope": ["out/experiment_run"],
+        },
+        "resource_limits": {"timeout_seconds": 30, "max_output_bytes": 1_000_000},
+        "execution": {
+            "contract": "python_json_file.v1",
+            "command_argv": ["python", runner_rel, dataset_rel, result_rel],
+            "runner_sha256": hashlib.sha256(runner.read_bytes()).hexdigest(),
+            "input_sha256s": {dataset_rel: hashlib.sha256(dataset.read_bytes()).hexdigest()},
+            "result_path": result_rel,
+        },
+        "criteria_bindings": [
+            {"criterion": criterion, "metric": "accuracy_uplift", "operator": ">", "value": 0}
+        ],
+    }
+    plan_document = {
+        "schema": "experiment_plan.v1",
+        "task_id": "task-real-bounded-experiment",
+        "sprint_id": "run-real-bounded-experiment",
+        "node_id": "experiment_design",
+        "status": "completed",
+        "inputs": {},
+        "outputs": {"experiment_plan": plan},
+        "artifacts": [],
+        "provenance": {
+            "operator_id": "test-plan-producer",
+            "implementation_package": "tests.plugins.autosci",
+            "timestamp": "2026-08-27T12:00:00Z",
+        },
+        "limitations": ["Small retained dataset used to prove the bounded execution path."],
+    }
+    plan_path = input_root / "experiment_plan.v1.json"
+    plan_path.write_text(json.dumps(plan_document, sort_keys=True), encoding="utf-8")
+    plan_ref = {
+        "artifact_id": "experiment_plan",
+        "path": plan_path.relative_to(tmp_path).as_posix(),
+        "schema": "experiment_plan.v1",
+        "sha256": hashlib.sha256(plan_path.read_bytes()).hexdigest(),
+    }
+
+    def write_input_evidence(name: str, schema: str, outputs: dict) -> dict:
+        path = input_root / f"{name}.json"
+        document = {
+            "schema": schema,
+            "task_id": "task-real-bounded-experiment",
+            "sprint_id": "run-real-bounded-experiment",
+            "node_id": name,
+            "status": "completed",
+            "inputs": {},
+            "outputs": outputs,
+            "artifacts": [],
+            "provenance": {
+                "operator_id": "test-evidence-producer",
+                "implementation_package": "tests.plugins.autosci",
+                "timestamp": "2026-08-27T12:00:00Z",
+            },
+            "limitations": [],
+        }
+        path.write_text(json.dumps(document, sort_keys=True), encoding="utf-8")
+        return {
+            "artifact_id": name,
+            "path": path.relative_to(tmp_path).as_posix(),
+            "schema": schema,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+
+    paper_ref = write_input_evidence(
+        "research_paper",
+        "research_paper.v1",
+        {
+            "paper": {
+                "paper_id": "paper-bounded-normalization",
+                "title": "Bounded normalization experiment basis",
+                "source_type": "markdown",
+                "source_ref": "inputs/input_samples.csv",
+                "parse_status": "parsed",
+                "sections": [
+                    {
+                        "section_id": "hypothesis",
+                        "title": "Hypothesis",
+                        "text": "The normalized variant improves classification accuracy over baseline.",
+                        "source_anchor": "paper-bounded-normalization#hypothesis",
+                    }
+                ],
+            }
+        },
+    )
+    claims_ref = write_input_evidence(
+        "research_claims",
+        "research_claims.v1",
+        {
+            "claims": [
+                {
+                    "claim_id": "claim-bounded-normalization",
+                    "text": "The normalized variant improves classification accuracy over baseline.",
+                    "source_anchor": "paper-bounded-normalization#hypothesis",
+                    "testability": "testable",
+                    "verification_status": "unverified",
+                    "evidence_ids": ["paper-bounded-normalization"],
+                    "acceptance_criteria": [criterion],
+                }
+            ]
+        },
+    )
+
+    def request(
+        node_id: str,
+        operator_id: str,
+        *,
+        refs: list[dict],
+        read_scope: list[str],
+        write_scope: list[str],
+    ) -> dict:
+        return {
+            "schema": "research_node_request.v1",
+            "task_id": "task-real-bounded-experiment",
+            "run_id": "run-real-bounded-experiment",
+            "workflow_id": "planner-measured-execution-proof",
+            "node_id": node_id,
+            "logical_operator": {"operator_id": f"logical-{node_id}", "operator_kind": "logical"},
+            "physical_operator": {"operator_id": operator_id, "operator_kind": "physical"},
+            "typed_inputs": {
+                "input_schema": f"{node_id}.input.v1",
+                "payload": {"evidence_timestamp": "2026-08-27T12:00:00Z"},
+            },
+            "input_artifact_refs": refs,
+            "authorization": {
+                "scope_id": "real-bounded-experiment-proof",
+                "approved_capabilities": ["write_artifact", "execute_experiment"],
+                "approval_ref": "approval-real-bounded-experiment",
+                "allow_network": False,
+                "allow_live_provider": False,
+                "secret_refs": [],
+            },
+            "read_scope": read_scope,
+            "write_scope": write_scope,
+            "timeout_retry_policy": {"timeout_seconds": 30, "max_attempts": 1, "retry_on": []},
+        }
+
+    resolver = default_production_resolver(workspace_root=tmp_path)
+    approval_result = resolver.execute(
+        request(
+            "experiment_approval_gate",
+            "experiment_approval_gate_worker",
+            refs=[plan_ref],
+            read_scope=["inputs"],
+            write_scope=["out/approval", "out/experiment_run"],
+        )
+    )
+    assert approval_result["status"] == "completed"
+    approval_ref = approval_result["output_artifacts"][0]
+
+    run_result = resolver.execute(
+        request(
+            "experiment_run",
+            "experiment_run_worker",
+            refs=[plan_ref, approval_ref],
+            read_scope=["inputs", "out/approval"],
+            write_scope=["out/experiment_run"],
+        )
+    )
+    assert run_result["status"] == "completed"
+    measured_ref = run_result["output_artifacts"][0]
+    measured = json.loads((tmp_path / measured_ref["path"]).read_text(encoding="utf-8"))["outputs"]["result"]
+    measured_values = {item["name"]: item["value"] for item in measured["metrics"]}
+    assert measured["outcome"] == "supports"
+    assert measured["criteria_results"] == {criterion: True}
+    assert measured_values["variant_accuracy"] > measured_values["baseline_accuracy"]
+    assert result_path.is_file()
+    assert any(item.startswith("sha256:") for item in measured["evidence_ids"])
+
+    monitor_result = resolver.execute(
+        request(
+            "experiment_monitor",
+            "experiment_monitor_worker",
+            refs=[plan_ref, measured_ref],
+            read_scope=["inputs", "out/experiment_run"],
+            write_scope=["out/monitor"],
+        )
+    )
+    assert monitor_result["status"] == "completed"
+    status_ref = monitor_result["output_artifacts"][0]
+    status = json.loads((tmp_path / status_ref["path"]).read_text(encoding="utf-8"))["outputs"]["status_report"]
+    assert status["state"] == "completed"
+    assert status["experiment_id"] == plan["experiment_id"]
+    assert status["evidence_ids"] == measured["evidence_ids"]
+    assert "Experiment is designed but no result evidence is present." not in status["observations"]
+
+    claim_result = resolver.execute(
+        request(
+            "claim_verify",
+            "claim_verify_worker",
+            refs=[paper_ref, claims_ref, measured_ref],
+            read_scope=["inputs", "out/experiment_run"],
+            write_scope=["out/claim_verify"],
+        )
+    )
+    assert claim_result["status"] == "completed"
+    claim_ref = claim_result["output_artifacts"][0]
+    verdict = json.loads((tmp_path / claim_ref["path"]).read_text(encoding="utf-8"))["outputs"]["verdicts"][0]
+    assert verdict["verdict"] == "supported"
+    assert verdict["acceptance_criteria_checked"] == [criterion]
+    assert verdict["source_grounding"]["resolved"] is True
+    assert verdict["source_grounding"]["resolved_paper_ids"] == [
+        "paper-bounded-normalization"
+    ]
 
 
 def test_openrouter_is_default_and_openai_key_is_not_bound_when_both_exist(tmp_path: Path, monkeypatch) -> None:

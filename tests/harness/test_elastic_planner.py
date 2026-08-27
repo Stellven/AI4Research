@@ -991,6 +991,13 @@ def test_plan_repair_prompt_explains_unrequested_capsule_effect() -> None:
     assert payload["defects"][0]["closest_exclusions"][0]["reason_codes"] == [
         "UNREQUESTED_EXECUTE_EFFECT"
     ]
+    assert "Do not delete or bypass an established dependency" in payload[
+        "repair_instruction"
+    ]
+    assert "replacing invalid consumed/produced artifact identities" in payload[
+        "repair_instruction"
+    ]
+    assert payload["previous"]["nodes"]
 
 
 def test_discovery_plan_preserves_scope_requirements_in_runtime_goal(tmp_path: Path) -> None:
@@ -1084,6 +1091,8 @@ def test_fidelity_prompt_does_not_confuse_runtime_execute_with_experiment() -> N
     assert "generic `execute` effect" in instruction
     assert "does not itself mean scientific experiment execution" in instruction
     assert "claim_verdict.v1 carries verified claim_text and evidence_ids" in instruction
+    assert "Do not call a support node unnecessary solely" in instruction
+    assert "changes authorization, execution status, claim evaluation, or final synthesis" in instruction
 
 
 def test_uncovered_requirement_fails_without_default_owner_mapping() -> None:
@@ -1179,6 +1188,52 @@ def test_compatible_auto_artifact_gate_can_coexist_with_requirement_check() -> N
     assert "VERIFIER_NOT_OWNED" not in {
         row["code"] for row in validation["errors"]
     }
+
+
+def test_plan_prompt_exposes_only_explicit_typed_upstream_artifacts() -> None:
+    requirement_ir = _requirement_ir()
+    explicit_type = "schema:schemas/evidence/research_claims.v1.schema.json"
+    prompt = planner._plan_prompt(
+        requirement_ir,
+        _decision(requirement_ir),
+        _catalog(),
+        {
+            "requirement_ir": requirement_ir,
+            "supplied_claim": {
+                "artifact_type": explicit_type,
+                "schema_version": "research_claims.v1",
+            },
+            "untyped_attachment": {"schema_version": "experiment_plan.v1"},
+        },
+        planner.evaluation_planning.load_evaluation_check_registry(),
+        generation=0,
+    )
+
+    admitted = json.loads(prompt)["controller_input_artifact_types"]
+    assert explicit_type in admitted
+    assert "experiment_plan.v1" not in admitted
+
+
+def test_plan_validation_accepts_explicit_upstream_artifact_without_producer() -> None:
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir)
+    plan_ir = _wrapped_plan(requirement_ir, decision, _plan_body())
+    external_type = "artifact.explicit_upstream_input"
+    plan_ir["nodes"][0]["consumes"].append(external_type)
+
+    validation = planner.validate_plan_ir(
+        requirement_ir,
+        decision,
+        plan_ir,
+        _catalog(),
+        upstream_artifact_types={external_type},
+    )
+
+    assert not any(
+        row["code"] == "ARTIFACT_INPUT_UNRESOLVED"
+        and external_type in row["message"]
+        for row in validation["errors"]
+    )
 
 
 def test_collection_capsule_requires_directory_materialization() -> None:
@@ -1505,6 +1560,10 @@ def test_upstream_artifact_bundle_is_visible_and_hash_bound(tmp_path: Path) -> N
             "schema_version": "solar.requirement_acceptance.v1",
             "decision": "accepted",
         },
+        "supplied_claim": {
+            "artifact_type": "schema:schemas/evidence/research_claims.v1.schema.json",
+            "schema_version": "research_claims.v1",
+        },
     }
     result = planner.run_semantic_planning_pipeline(
         _requirement_ir(),
@@ -1521,7 +1580,14 @@ def test_upstream_artifact_bundle_is_visible_and_hash_bound(tmp_path: Path) -> N
         "intent_ir",
         "requirement_acceptance",
         "requirement_ir",
+        "supplied_claim",
     }
+    supplied_claim_row = next(
+        row for row in context["artifacts"] if row["name"] == "supplied_claim"
+    )
+    assert supplied_claim_row["artifact_type"] == (
+        "schema:schemas/evidence/research_claims.v1.schema.json"
+    )
     assert result["planning_decision"]["planning_context_ref"]["sha256"] == (
         sha256_payload(context)
     )
@@ -1679,6 +1745,82 @@ def test_whole_request_physical_plan_fails_before_runtime_when_no_candidate(tmp_
     assert physical["nodes"][0]["execution_excluded"][0]["operator_id"] == "planner-only"
 
 
+def test_measured_experiment_capsule_freezes_native_run_worker_before_runtime() -> None:
+    graph = {
+        "sprint_id": "sprint-measured-experiment",
+        "dag_variant": "generated",
+        "nodes": [
+            {
+                "id": "run_experiment",
+                "logical_operator": "ScientificExperimentRunner",
+                "capability_capsule_id": "cap.research-experiment-run",
+                "dispatch_task_type": "experiment-run",
+                "allowed_operators": {"role": "builder"},
+                "semantic_artifact_contract": {
+                    "consumes": [
+                        "schema:schemas/evidence/experiment_plan.v1.schema.json",
+                        "schema:schemas/evidence/experiment_approval.v1.schema.json",
+                    ],
+                    "produces": [
+                        "schema:schemas/evidence/experiment_result.v1.schema.json"
+                    ],
+                },
+            }
+        ],
+    }
+
+    execution = apo.compile_whole_request_execution_plan(graph)
+
+    assert execution["verdict"] == "pass"
+    physical = execution["physical_plan"]["nodes"][0]
+    assert physical["selected_operator_id"] == "experiment_run_worker"
+    assert [row["operator_id"] for row in physical["execution_candidates"]] == [
+        "experiment_run_worker"
+    ]
+    excluded = {
+        row["operator_id"]: row["reasons"] for row in physical["execution_excluded"]
+    }
+    assert "EXECUTION_TRUST_UNSATISFIED" in excluded[
+        "autosci-experiment-run-worker"
+    ]
+    assert "EXECUTION_TRUST_UNSATISFIED" in excluded[
+        "autosci-exec-experiment-run-worker"
+    ]
+
+
+def test_single_claim_capsule_freezes_native_selector_before_runtime() -> None:
+    graph = {
+        "sprint_id": "sprint-single-claim-selection",
+        "dag_variant": "generated",
+        "nodes": [
+            {
+                "id": "select_one_testable_claim",
+                "logical_operator": "ScientificClaimExtractor",
+                "capability_capsule_id": "cap.research-single-testable-claim-extract",
+                "dispatch_task_type": "claim-extraction",
+                "allowed_operators": {"role": "builder"},
+                "semantic_artifact_contract": {
+                    "consumes": [
+                        "schema:schemas/evidence/research_paper.v1.schema.json"
+                    ],
+                    "produces": [
+                        "schema:schemas/evidence/research_claims.v1.schema.json"
+                    ],
+                },
+            }
+        ],
+    }
+
+    execution = apo.compile_whole_request_execution_plan(graph)
+
+    assert execution["verdict"] == "pass"
+    physical = execution["physical_plan"]["nodes"][0]
+    assert physical["selected_operator_id"] == "claim_select_one_worker"
+    assert [row["operator_id"] for row in physical["execution_candidates"]] == [
+        "claim_select_one_worker"
+    ]
+
+
 def test_whole_request_capsule_plan_fails_before_runtime_when_capsule_is_unknown() -> None:
     graph = {
         "sprint_id": "sprint-capsule-unsat",
@@ -1770,11 +1912,14 @@ def test_planning_catalog_freezes_canonical_capsule_contracts() -> None:
     assert experiment["contract"]["required_outputs"][0]["schema_ref"] == (
         "schemas/evidence/experiment_plan.v1.schema.json"
     )
-    assert experiment_run["implementation"]["trust_class"] == "fixture_or_adapter_only"
+    assert experiment_run["implementation"]["trust_class"] == "measured_execution"
+    assert experiment_run["operator_compatibility"]["selectable_preferred"] == [
+        "experiment_run_worker"
+    ]
     assert retrieval["manifest_sha256"]
 
 
-def test_composition_catalog_rejects_fixture_bridge_for_measured_execution() -> None:
+def test_composition_catalog_admits_native_worker_for_measured_execution() -> None:
     node = {
         "node_id": "run_real_experiment",
         "logical_operator": "ScientificExperimentRunner",
@@ -1809,16 +1954,13 @@ def test_composition_catalog_rejects_fixture_bridge_for_measured_execution() -> 
         conversion_registry=composition.load_conversion_registry(),
     )
 
-    trust_exclusion = next(
-        item
-        for item in row["search"]["excluded_capsules"]
-        if item["capsule_id"] == "cap.research-experiment-run"
-        and item["reason_codes"] == ["EXECUTION_TRUST_UNSATISFIED"]
-    )
     assert row["execution_trust"] == "measured_execution"
-    assert row["status"] == "unsatisfiable"
-    assert row["admitted_candidate_ids"] == []
-    assert trust_exclusion["trust_class"] == "fixture_or_adapter_only"
+    assert row["status"] == "candidates_available"
+    assert row["admitted_candidate_ids"]
+    selected = row["search"]["candidates"][0]
+    assert [step["capsule_id"] for step in selected["steps"]] == [
+        "cap.research-experiment-run"
+    ]
 
 
 def test_output_policy_prevents_model_from_weakening_measured_result_trust() -> None:
@@ -1870,6 +2012,171 @@ def test_output_policy_prevents_model_from_weakening_measured_result_trust() -> 
             ),
         }
     ]
+
+
+def test_composition_may_retain_outputs_from_multiple_ordered_steps() -> None:
+    request = "schema:request-envelope.schema.json"
+    result = "schema:schemas/evidence/experiment_result.v1.schema.json"
+    status = "schema:schemas/evidence/experiment_status.v1.schema.json"
+    catalog = {
+        "capsules": [
+            {
+                "capsule_id": "cap.execute",
+                "consumes": [request],
+                "produces": [result],
+                "effects": {"execute": ["run"]},
+                "verification": {"self_checks": ["check.result"]},
+                "implementation": {"declared": True, "trust_class": "measured_execution"},
+                "operator_compatibility": {"selectable_preferred": ["runner"]},
+            },
+            {
+                "capsule_id": "cap.monitor",
+                "consumes": [result],
+                "produces": [status],
+                "effects": {"execute": ["monitor"]},
+                "verification": {"self_checks": ["check.status"]},
+                "implementation": {"declared": True, "trust_class": "evidence_transform"},
+                "operator_compatibility": {"selectable_preferred": ["monitor"]},
+            },
+        ]
+    }
+    node = {
+        "node_id": "execute_and_monitor",
+        "logical_operator": "ScientificExperimentRunner",
+        "objective": "Execute and monitor one bounded experiment.",
+        "depends_on": [],
+        "consumes": [request],
+        "produces": [
+            {"artifact_type": result},
+            {"artifact_type": status},
+        ],
+        "requirement_ids": ["REQ-EXECUTE"],
+        "operator_requirements": {
+            "effects": ["execute"],
+            "network": "forbidden",
+            "execution_trust": "measured_execution",
+        },
+    }
+
+    row = planner._node_composition_row(
+        node,
+        catalog,
+        artifact_registry=composition.load_artifact_type_registry(),
+        conversion_registry={
+            "schema_version": "solar.artifact_conversion_registry.v1",
+            "conversions": [],
+        },
+    )
+
+    assert row["status"] == "candidates_available"
+    assert row["candidate_exclusions"] == []
+    trust_policy = row["search"]["execution_trust_policy"]["required_by_output"]
+    assert trust_policy == [
+        {
+            "artifact_type": result,
+            "allowed_trust_classes": ["measured_execution"],
+        }
+    ]
+    candidate = row["search"]["candidates"][0]
+    assert [step["capsule_id"] for step in candidate["steps"]] == [
+        "cap.execute",
+        "cap.monitor",
+    ]
+
+
+def _expanded_poc_repair() -> tuple[dict, dict]:
+    claims = "type.claims"
+    plan = "type.plan"
+    result = "type.result"
+    verdict = "type.verdict"
+    report = "type.report"
+    previous = {
+        "nodes": [
+            {
+                "node_id": "research",
+                "logical_operator": "ResearchSynthesizer",
+                "depends_on": [],
+                "requirement_ids": ["REQ-RESEARCH"],
+                "produces": [{"artifact_type": claims}],
+            },
+            {
+                "node_id": "poc_execution",
+                "logical_operator": "ScientificExperimentRunner",
+                "depends_on": ["research"],
+                "consumes": [claims],
+                "produces": [
+                    {"artifact_type": result},
+                    {"artifact_type": verdict},
+                ],
+                "requirement_ids": ["REQ-POC"],
+                "operator_requirements": {"execution_trust": "measured_execution"},
+            },
+            {
+                "node_id": "final_report",
+                "logical_operator": "ScientificReportDrafter",
+                "depends_on": ["research", "poc_execution"],
+                "consumes": [claims, result, verdict],
+                "produces": [{"artifact_type": report}],
+                "requirement_ids": ["REQ-REPORT"],
+            },
+        ]
+    }
+    repaired = {
+        "nodes": [
+            copy.deepcopy(previous["nodes"][0]),
+            {
+                "node_id": "design",
+                "logical_operator": "ScientificExperimentDesigner",
+                "depends_on": ["research"],
+                "consumes": [claims],
+                "produces": [{"artifact_type": plan}],
+                "requirement_ids": [],
+            },
+            {
+                "node_id": "execute",
+                "logical_operator": "ScientificExperimentRunner",
+                "depends_on": ["research", "design"],
+                "consumes": [claims, plan],
+                "produces": [{"artifact_type": result}],
+                "requirement_ids": ["REQ-POC"],
+                "operator_requirements": {"execution_trust": "measured_execution"},
+            },
+            {
+                "node_id": "verify",
+                "logical_operator": "ScientificClaimVerifier",
+                "depends_on": ["research", "execute"],
+                "consumes": [claims, result],
+                "produces": [{"artifact_type": verdict}],
+                "requirement_ids": [],
+            },
+            {
+                "node_id": "final_report",
+                "logical_operator": "ScientificReportDrafter",
+                "depends_on": ["research", "execute", "verify"],
+                "consumes": [claims, result, verdict],
+                "produces": [{"artifact_type": report}],
+                "requirement_ids": ["REQ-REPORT"],
+            },
+        ]
+    }
+    return previous, repaired
+
+
+def test_plan_repair_may_expand_one_broad_node_into_typed_subgraph() -> None:
+    previous, repaired = _expanded_poc_repair()
+
+    assert planner._repair_preservation_errors(previous, repaired) == []
+
+
+def test_plan_repair_expansion_must_preserve_requirement_and_execution_trust() -> None:
+    previous, repaired = _expanded_poc_repair()
+    execute = next(row for row in repaired["nodes"] if row["node_id"] == "execute")
+    execute["requirement_ids"] = []
+    execute["operator_requirements"]["execution_trust"] = "evidence_transform"
+
+    errors = planner._repair_preservation_errors(previous, repaired)
+
+    assert [row["code"] for row in errors] == ["REPAIR_DEPENDENCY_WEAKENED"]
 
 
 def test_planning_catalog_self_hash_detects_capsule_contract_tampering(tmp_path: Path) -> None:
@@ -2272,6 +2579,22 @@ def test_generated_capsule_selection_freezes_one_runtime_authority(tmp_path: Pat
     assert result["run_contract_frozen"]["scheduler_input_ref"]["sha256"] == (
         planner.sha256_payload(scheduler_input)
     )
+
+    repeated_capsule_plan = copy.deepcopy(result["capsule_plan"])
+    first_stage = copy.deepcopy(repeated_capsule_plan["nodes"][0]["stages"][0])
+    repeated_capsule_plan["nodes"][0]["stages"].append(first_stage)
+    normalized_scheduler_input = planner.compile_scheduler_input(
+        result["task_graph_contract"],
+        repeated_capsule_plan,
+        result["physical_plan"],
+        result["evaluation_plan"],
+        sprint_id="sprint-elastic-test-deduplicated",
+    )
+    normalized_capsule_ids = normalized_scheduler_input["graph"]["nodes"][0][
+        "capsule_binding"
+    ]["capsule_ids"]
+    assert normalized_capsule_ids == list(dict.fromkeys(normalized_capsule_ids))
+
     assert planner.verify_frozen_execution_chain(
         tmp_path / "semantic", tmp_path / "execution"
     ) == []
@@ -2334,9 +2657,7 @@ def test_generated_multicapsule_node_expands_and_freezes_static_graph(
     assert [row["capsule_id"] for row in first_candidate["steps"]] == [
         "cap.research-paper-ingest",
         "cap.research-claim-extract",
-        "cap.research-method-extract",
-        "cap.research-idea-generate",
-        "cap.research-experiment-design",
+        "cap.research-claim-experiment-design",
     ]
 
     result = planner.compile_and_freeze_execution_bundle(
@@ -2353,7 +2674,7 @@ def test_generated_multicapsule_node_expands_and_freezes_static_graph(
     assert result["composition_fit_review"]["status"] == "pass"
     graph = result["task_graph_contract"]
     assert graph["dag_variant"] == "elastic_generated_composed"
-    assert len(graph["nodes"]) == 5
+    assert len(graph["nodes"]) == 3
     assert graph["nodes"][-1]["id"] == "design_reproducibility_experiment"
     assert graph["nodes"][-1]["requirement_ids"] == ["REQ-001", "REQ-002"]
     assert all(node["max_repair_attempts"] == 0 for node in graph["nodes"])
@@ -2365,8 +2686,8 @@ def test_generated_multicapsule_node_expands_and_freezes_static_graph(
     assert result["capsule_plan"]["nodes"][0]["artifact_types"][
         "required_inputs"
     ] == ["schema:request-envelope.schema.json"]
-    assert len(result["evaluation_plan"]["nodes"]) == 5
-    assert len(result["scheduler_input"]["graph"]["nodes"]) == 5
+    assert len(result["evaluation_plan"]["nodes"]) == 3
+    assert len(result["scheduler_input"]["graph"]["nodes"]) == 3
     assert all(
         row["capsule_binding"]["capsule_ids"]
         for row in result["scheduler_input"]["graph"]["nodes"]

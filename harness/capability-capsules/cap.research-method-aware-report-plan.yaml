@@ -1,0 +1,90 @@
+capability_capsule_id: cap.research-method-aware-report-plan
+capsule_kind: capability
+metadata:
+  name: Method-aware Scientific Report Plan
+  description: Plan a scientific report while preserving structured method evidence as a required report input.
+applicability:
+  task_types:
+    - scientific-research
+    - report-planning
+  positive_signals:
+    - compare research methods
+    - preserve method evidence
+    - method-aware report plan
+  negative_signals:
+    - execute experiment
+    - report without method evidence
+contract:
+  inputs:
+    required:
+      - name: claim_verdict
+        schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      - name: research_method
+        schema_ref: schemas/evidence/research_method.v1.schema.json
+  outputs:
+    required:
+      - name: scientific_report_plan
+        schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+  preconditions:
+    - check: method_evidence_present
+      description: Claim verdicts and structured method evidence are both available.
+  postconditions:
+    - check: report_plan_evidenced
+      description: The report plan assigns method evidence to a methods section.
+  invariants:
+    - Does not discard supplied method evidence.
+    - Does not draft unsupported claims as findings.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      purpose: Verdict-backed findings.
+    - schema_ref: schemas/evidence/research_method.v1.schema.json
+      purpose: Source-grounded methods that the report must compare or explain.
+  produces:
+    - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+      purpose: Method-aware report plan.
+  compatible_with:
+    - cap.scientific-method-aware-report-draft
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+    - typed scientific evidence artifacts
+    - schemas/evidence/research_method.v1.schema.json
+    - schemas/evidence/scientific_report_plan.v1.schema.json
+  write:
+    - artifacts/scientific/scientific_report_plan/
+  execute:
+    - plugins/autosci/operators/scientific_lifecycle/action/delivery.py
+  network:
+    - none
+  cost:
+    - bounded planning cost
+  risk:
+    - method evidence can be overstated if its limitations are omitted
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.report_plan
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/research_method.v1.schema.json
+    - schemas/evidence/scientific_report_plan.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against scientific_report_plan.v1.schema.json.
+    - Confirm method evidence IDs are assigned to the methods section.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - Structured method evidence remains connected to the report plan.
+operator_compatibility:
+  preferred:
+    - autosci-report-plan-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_method_handoff

@@ -1,0 +1,103 @@
+capability_capsule_id: cap.research-measured-claim-verify
+capsule_kind: capability
+metadata:
+  name: Measured Scientific Claim Verification
+  description: Evaluate governed claims against retained paper evidence and measured experiment results.
+applicability:
+  task_types:
+    - scientific-research
+    - measured-claim-verification
+  positive_signals:
+    - verify claim from measured results
+    - compare experiment result to claim
+    - evaluate proof of concept
+  negative_signals:
+    - literature-only claim review
+    - extract claim
+contract:
+  inputs:
+    required:
+      - name: research_claims
+        schema_ref: schemas/evidence/research_claims.v1.schema.json
+      - name: research_paper
+        schema_ref: schemas/evidence/research_paper.v1.schema.json
+      - name: experiment_result
+        schema_ref: schemas/evidence/experiment_result.v1.schema.json
+  outputs:
+    required:
+      - name: claim_verdict
+        schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+  preconditions:
+    - check: measured_claim_evidence_present
+      description: Claims, retained paper evidence, and a measured result from the same bounded lifecycle are available.
+  postconditions:
+    - check: measured_verdicts_emitted
+      description: Each verdict records checked criteria, measured evidence, source grounding, confidence, and limitations.
+  invariants:
+    - Does not infer experimental support without measured result evidence.
+    - Does not promote a claim whose paper identifier or source anchor is unresolved.
+    - Preserves refuted, inconclusive, and scope-mismatched outcomes.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_claims.v1.schema.json
+      purpose: Governed testable claims and their explicit acceptance criteria.
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: Retained source evidence used to resolve claim grounding.
+    - schema_ref: schemas/evidence/experiment_result.v1.schema.json
+      purpose: Measured metrics and recomputed criteria for the selected claim.
+  produces:
+    - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      purpose: Literature-grounded verdicts based on measured experiment evidence.
+  compatible_with:
+    - cap.research-report-plan
+    - cap.scientific-report-draft
+  incompatible_with: []
+  requires_after:
+    - cap.research-experiment-run
+effects:
+  read:
+    - governed claims, retained papers, and measured experiment results
+  write:
+    - artifacts/scientific/claim_verdict/
+  execute:
+    - plugins/autosci/operators/scientific_lifecycle/action/delivery.py
+  network:
+    - forbidden
+  cost:
+    - bounded deterministic evidence comparison
+  risk:
+    - scope mismatch or incomplete criteria can make measured evidence insufficient
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.claim_verify
+      - autosci.experiment_evaluate
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/research_claims.v1.schema.json
+    - schemas/evidence/research_paper.v1.schema.json
+    - schemas/evidence/experiment_result.v1.schema.json
+    - schemas/evidence/claim_verdict.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against claim_verdict.v1.schema.json.
+    - Confirm every supported verdict consumed explicit measured criteria and resolved paper evidence.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - Passing measured criteria and resolved paper evidence may emit a supported verdict.
+    - Missing, failing, inconclusive, or scope-mismatched evidence cannot emit a supported verdict.
+operator_compatibility:
+  preferred:
+    - claim_verify_worker
+  forbidden:
+    - BackendFullWorkflowRunner
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.action.delivery:verify_claim
+  required_services: []
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_capsule_completion

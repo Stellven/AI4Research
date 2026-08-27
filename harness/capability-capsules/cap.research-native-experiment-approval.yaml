@@ -1,0 +1,92 @@
+capability_capsule_id: cap.research-native-experiment-approval
+capsule_kind: capability
+metadata:
+  name: Scientific Experiment Approval
+  description: Evaluate one exact bounded experiment plan against the current authorization and emit hash-bound approval evidence.
+applicability:
+  task_types:
+    - scientific-research
+    - experiment-approval
+  positive_signals:
+    - approve experiment
+    - authorize bounded execution
+    - verify experiment safety
+  negative_signals:
+    - design experiment
+    - execute experiment
+contract:
+  inputs:
+    required:
+      - name: experiment_plan
+        schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+  outputs:
+    required:
+      - name: experiment_approval
+        schema_ref: schemas/evidence/experiment_approval.v1.schema.json
+  preconditions:
+    - check: experiment_plan_present
+      description: A bounded experiment plan declares sandbox, write scope, and resource limits.
+  postconditions:
+    - check: exact_plan_decision_emitted
+      description: Approval evidence records the exact plan hash, authorization reference, decision, and reasons.
+  invariants:
+    - Does not execute the experiment.
+    - Rejects networked, out-of-scope, or unauthorized execution plans.
+    - Approval applies only to the exact plan hash.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+      purpose: Exact bounded plan being considered for execution.
+  produces:
+    - schema_ref: schemas/evidence/experiment_approval.v1.schema.json
+      purpose: Hash-bound approval or rejection evidence for that exact plan.
+  compatible_with:
+    - cap.research-experiment-run
+  incompatible_with: []
+  requires_after:
+    - cap.research-experiment-design
+    - cap.research-claim-experiment-design
+effects:
+  read:
+    - bounded experiment plan and current authorization
+  write:
+    - artifacts/scientific/experiment_approval/
+  execute:
+    - plugins/autosci/operators/scientific_lifecycle/action/experiment.py
+  network:
+    - forbidden
+  cost:
+    - negligible deterministic validation cost
+  risk:
+    - stale or mismatched authorization must not approve execution
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.experiment_approval
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/experiment_plan.v1.schema.json
+    - schemas/evidence/experiment_approval.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against experiment_approval.v1.schema.json.
+    - Confirm plan_sha256 matches the exact consumed plan and reasons reflect the current authorization.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - An authorized bounded local plan emits approved evidence bound to its exact hash.
+    - An unsafe or unauthorized plan emits rejection or awaiting-human evidence and does not execute.
+operator_compatibility:
+  preferred:
+    - experiment_approval_gate_worker
+  forbidden:
+    - BackendFullWorkflowRunner
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.action.experiment:approve_experiment
+  required_services: []
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_capsule_completion
