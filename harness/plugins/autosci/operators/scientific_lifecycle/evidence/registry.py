@@ -11,7 +11,7 @@ from typing import Any
 
 from ...research_synthesis.base import ResearchOperatorError
 from . import operators
-from .base import OperatorSpec, execute_spec
+from .base import OperatorSpec, execute_batch_spec, execute_spec
 
 
 _VERSION = "1.1.0"
@@ -45,6 +45,13 @@ OPERATOR_SPECS: dict[str, OperatorSpec] = {
     ),
     "paper_ingest": _spec(
         "paper_ingest", "autosci-evidence-paper-ingest", "research_paper.v1", "research_paper.v1.json", operators.ingest_source
+    ),
+    "discovery_ingest": _spec(
+        "discovery_ingest",
+        "autosci-evidence-discovery-ingest",
+        "research_paper.v1",
+        "research_papers",
+        operators.ingest_discovered_sources,
     ),
     "material_ingest": _spec(
         "material_ingest", "autosci-evidence-material-ingest", "research_paper.v1", "research_material.v1.json", operators.ingest_source
@@ -119,6 +126,13 @@ def execute_operator(
     workspace_root: Path | None = None,
 ) -> dict[str, Any]:
     spec = get_operator_spec(str(node_request.get("node_id") or ""))
+    if spec.node_id == "discovery_ingest":
+        return execute_batch_spec(
+            spec,
+            node_request,
+            services=services,
+            workspace_root=workspace_root,
+        )
     return execute_spec(spec, node_request, services=services, workspace_root=workspace_root)
 
 
@@ -164,6 +178,12 @@ def execute_evidence_import(node_request, *, services=None, workspace_root=None)
 
 def execute_paper_ingest(node_request, *, services=None, workspace_root=None):
     return _execute_named("paper_ingest", node_request, services=services, workspace_root=workspace_root)
+
+
+def execute_discovery_ingest(node_request, *, services=None, workspace_root=None):
+    request = dict(node_request)
+    request["node_id"] = "discovery_ingest"
+    return execute_operator(request, services=services, workspace_root=workspace_root)
 
 
 def execute_material_ingest(node_request, *, services=None, workspace_root=None):

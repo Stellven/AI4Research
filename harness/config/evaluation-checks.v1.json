@@ -1,0 +1,263 @@
+{
+  "schema_version": "solar.evaluation_check_registry.v1",
+  "artifact_role": "runtime_registry",
+  "registry_id": "solar-evaluation-checks-v1",
+  "checks": [
+    {
+      "check_id": "not_machine_checkable",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Require an independent reviewer and an explicit disclosure that this obligation was not machine-checked.",
+      "deterministic": null,
+      "semantic": {"rubric": ["Judge the obligation against the produced artifact and state the non-machine-checkable boundary explicitly."]}
+    },
+    {
+      "check_id": "check.patch.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review whether the produced patch implements the bound requirement without unrelated changes.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The patch implements the bound requirement and does not introduce unrelated changes."]}
+    },
+    {
+      "check_id": "check.tests.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review the supplied test evidence for the bound requirement.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The artifact contains attributable test evidence that exercises the bound requirement."]}
+    },
+    {
+      "check_id": "check.review.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Independently review the bound output against its requirement.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The output satisfies the bound requirement and cites the evidence used for the verdict."]}
+    },
+    {
+      "check_id": "check.patch_within_scope",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review whether the patch remains within the declared scope.",
+      "deterministic": null,
+      "semantic": {"rubric": ["Every changed path is necessary for the bound requirement and remains within the declared write scope."]}
+    },
+    {
+      "check_id": "tests_executed_exit_0",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review attributable evidence that the declared tests executed successfully.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The artifact records the exact test command, exit code zero, and result summary without relying on an unsupported claim."]}
+    },
+    {
+      "check_id": "structured_output_parses",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review evidence that the declared structured output parsed successfully.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The artifact identifies the parser or validator used and records a successful parse result."]}
+    },
+    {
+      "check_id": "check.acceptance_evidence_recorded",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review whether acceptance evidence is concrete and attributable.",
+      "deterministic": null,
+      "semantic": {"rubric": ["Acceptance evidence names the checked artifacts, commands, results, and remaining limitations."]}
+    },
+    {
+      "check_id": "check.coverage_reviewed",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Independently review whether every requirement owned by the node was evaluated against attributable output evidence.",
+      "deterministic": null,
+      "semantic": {"rubric": ["Every requirement owned by the node is explicitly evaluated against the produced artifacts, with gaps or unsupported coverage reported rather than passed."]}
+    },
+    {
+      "check_id": "check.source_packs_verified",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review whether research sources are attributable and their validation boundary is disclosed.",
+      "deterministic": null,
+      "semantic": {"rubric": ["Source records are attributable, traceable, and do not claim scientific truth from metadata validation alone."]}
+    },
+    {
+      "check_id": "check.grounded_report_bundle_written",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review whether the grounded report bundle answers the requirement with linked evidence.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The report answers the bound requirement and links material claims to retained evidence."]}
+    },
+    {
+      "check_id": "check.claim_evidence_resolved",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review whether claim-to-evidence relationships are explicit and support the stated claims.",
+      "deterministic": null,
+      "semantic": {"rubric": ["Every material claim identifies supporting, qualifying, or contradicting evidence without inventing support."]}
+    },
+    {
+      "check_id": "check.design_plan_written",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Review whether the design plan is complete enough for the bounded requested work.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The design names objectives, inputs, outputs, dependencies, evaluation, risks, and the execution boundary."]}
+    },
+    {
+      "check_id": "check.scientific.literature_discovery.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/literature_discovery.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate literature-discovery evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.literature_discovery_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.research_paper.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/research_paper.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate normalized research-paper evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.paper_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.research_memory_update.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/research_memory_update.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate research-memory evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.memory_update_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.research_graph_update.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/research_graph_update.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate research-graph evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.graph_update_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.research_claims.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/research_claims.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate research-claims evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.claims_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.research_method.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/research_method.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate research-method evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.method_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.code_evidence_map.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/code_evidence_map.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate code-evidence mapping against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.code_evidence_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.idea_candidate.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/idea_candidate.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate idea-candidate evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.idea_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.idea_evaluation.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/idea_evaluation.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate idea-evaluation evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.idea_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.experiment_plan.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/experiment_plan.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate experiment-plan evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.experiment_plan_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.experiment_approval.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/experiment_approval.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate that experiment approval is exact, explicit, and safety-bounded before execution.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.experiment_approval_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.experiment_result.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/experiment_result.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate experiment-result evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.experiment_result_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.experiment_status.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/experiment_status.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate experiment-status evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.experiment_status_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.claim_verdict.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/claim_verdict.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate claim-verdict evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.claim_verdict_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.artifact_review.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/artifact_review.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate artifact-review evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.artifact_review_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.scientific_report_plan.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/scientific_report_plan.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate scientific-report-plan evidence against its registered schema and evidence-link contract.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.report_plan_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.scientific_report.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/scientific_report.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate scientific-report evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.report_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.publication_bundle.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/publication_bundle.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate publication-bundle evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.publication_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.workflow_evolution.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/workflow_evolution.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate workflow-evolution evidence against the existing scientific gate.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.workflow_evolution_gate:evaluate"},
+      "semantic": null
+    }
+  ]
+}

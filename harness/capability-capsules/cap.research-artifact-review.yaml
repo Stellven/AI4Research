@@ -42,18 +42,16 @@ composition:
   consumes:
     - schema_ref: schemas/evidence/scientific_report.v1.schema.json
       purpose: Source report evidence when reviewing drafts.
-    - schema_ref: schemas/evidence/publication_bundle.v1.schema.json
-      purpose: Source publication bundle when reviewing compiled outputs.
   produces:
     - schema_ref: schemas/evidence/artifact_review.v1.schema.json
       purpose: Review verdict, checklist status, risks, and evidence-linked notes.
   compatible_with:
-    - cap.research-report-draft
     - cap.research-publication-produce
     - cap.research-claim-verify
   incompatible_with:
     - cap.research-experiment-run
-  requires_after: []
+  requires_after:
+    - cap.scientific-report-draft
 effects:
   read:
     - scientific artifacts and evidence refs

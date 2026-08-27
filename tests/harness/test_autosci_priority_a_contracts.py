@@ -98,7 +98,7 @@ REQUIRED_CAPABILITY_CAPSULES = {
     "cap.research-experiment-monitor",
     "cap.research-claim-verify",
     "cap.research-report-plan",
-    "cap.research-report-draft",
+    "cap.scientific-report-draft",
     "cap.research-artifact-review",
     "cap.research-publication-produce",
     "cap.research-workflow-evolve",

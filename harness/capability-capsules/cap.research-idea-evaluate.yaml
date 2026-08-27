@@ -42,8 +42,6 @@ composition:
   consumes:
     - schema_ref: schemas/evidence/idea_candidate.v1.schema.json
       purpose: Candidate idea evidence.
-    - schema_ref: schemas/evidence/literature_discovery.v1.schema.json
-      purpose: Optional novelty context.
   produces:
     - schema_ref: schemas/evidence/idea_evaluation.v1.schema.json
       purpose: Idea review evidence.
@@ -61,7 +59,7 @@ effects:
   write:
     - artifacts/scientific/idea_evaluation/
   execute:
-    - plugins/autosci/bin/autosci_bridge.py
+    - plugins/autosci/operators/scientific_lifecycle/action/idea.py
   network:
     - optional literature lookup when physical operator permits
   cost:
@@ -85,13 +83,17 @@ verification:
   external_verifier:
     required: false
   pass_conditions:
-    - Fixture evaluation emits valid idea_evaluation.v1 evidence.
+    - Evaluation emits valid idea_evaluation.v1 evidence.
     - Insufficient novelty evidence is marked inconclusive or as a risk.
 operator_compatibility:
   preferred:
-    - autosci-idea-evaluate-worker
+    - idea_evaluate_worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:
   owner: opensolar
   source_phase: phase2_autosci_solar_native_capsules
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.action.idea:evaluate_ideas
+  required_services: []

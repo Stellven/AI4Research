@@ -4534,6 +4534,17 @@
       "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action run_experiment --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
       "enabled": true,
       "available": true,
+      "execution_trust": "fixture_or_adapter_only",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/experiment_plan.v1.schema.json",
+          "schema:schemas/evidence/experiment_approval.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
       "health_status": "ok",
       "max_concurrency": 1,
       "compat_maps_to": {
@@ -5090,6 +5101,84 @@
       },
       "deprecated": false
     },
+    "discovery_ingest_worker": {
+      "display_name": "Native AutoSci discovered-source batch ingestion",
+      "owner_host": "research_operator_registry",
+      "role": "builder",
+      "persona": "scientific-paper-ingestor",
+      "backend": "research_operator_registry",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/literature_discovery.v1.schema.json"
+        ],
+        "network": "optional",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+        "node_id": "discovery_ingest",
+        "implementation_operator_id": "autosci-discovery-ingest-physical"
+      },
+      "deprecated": false
+    },
+    "idea_evaluate_worker": {
+      "display_name": "Native AutoSci scientific idea evaluation action",
+      "owner_host": "research_operator_registry",
+      "role": "builder",
+      "persona": "lab-evaluator",
+      "backend": "research_operator_registry",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/idea_candidate.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "idea_evaluate",
+        "implementation_operator_id": "autosci-idea-evaluation-physical"
+      },
+      "deprecated": false
+    },
+    "experiment_design_worker": {
+      "display_name": "Native AutoSci bounded experiment design action",
+      "owner_host": "research_operator_registry",
+      "role": "builder",
+      "persona": "scientific-experiment-designer",
+      "backend": "research_operator_registry",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/idea_candidate.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "experiment_design",
+        "implementation_operator_id": "autosci-experiment-design-physical"
+      },
+      "deprecated": false
+    },
     "autosci-exec-experiment-run-worker": {
       "display_name": "Part B experiment execution via the AutoSci $exp-run skill",
       "owner_host": "local_command",
@@ -5099,6 +5188,17 @@
       "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_skill_executor.py\" --stage experiment_run --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
       "enabled": true,
       "available": true,
+      "execution_trust": "fixture_or_adapter_only",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "artifact.experiment_plan",
+          "artifact.runtime_records"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
       "health_status": "ok",
       "max_concurrency": 1,
       "compat_maps_to": {

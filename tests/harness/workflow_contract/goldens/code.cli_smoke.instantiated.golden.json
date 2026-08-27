@@ -192,6 +192,7 @@
       "evaluator_gate": {
         "kind": "llm_eval",
         "on_capacity_unavailable": "wait",
+        "on_fail": "fail",
         "on_human_review": "block_dependents",
         "role": "evaluator",
         "verdict_kinds": [
@@ -204,6 +205,7 @@
       "goal": "S3 \u00b7 Review",
       "id": "S3",
       "logical_operator": "Verifier",
+      "max_repair_attempts": 0,
       "node_kind": "verify",
       "on_human_review": "block_dependents",
       "outputs": [
@@ -258,7 +260,7 @@
   "sprint_id": "sprint-golden",
   "title": "Code smoke / CLI artifact",
   "validator_command": "python3 -m pytest sprints/golden-sid/workdir/tests -q",
-  "workflow_contract_hash": "sha256:f37a9c2deb55a318f2fe6f56f736d02c891620f93e8c9e99dba9b205b02ed791",
+  "workflow_contract_hash": "sha256:02c5cad5572a359faba61a4243221e0935151fa90d62aa4328c4069651a690db",
   "workflow_contract_id": "code.cli_smoke",
   "workflow_contract_version": "1.0"
 }

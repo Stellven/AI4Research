@@ -182,6 +182,7 @@
       "evaluator_gate": {
         "kind": "llm_eval",
         "role": "evaluator",
+        "on_fail": "fail",
         "on_capacity_unavailable": "wait",
         "on_human_review": "block_dependents",
         "verdict_kinds": ["content", "mechanical", "infrastructure"]

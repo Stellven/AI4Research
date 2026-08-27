@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import hashlib
 
 import jsonschema
 import pytest
@@ -53,6 +54,45 @@ def paper_evidence() -> dict:
         },
         "artifacts": [],
         "provenance": {"operator_id": "fixture", "implementation_package": "tests", "timestamp": "2026-08-05T00:00:00Z"},
+        "limitations": [],
+    }
+
+
+def discovery_evidence(workspace: Path) -> dict:
+    return {
+        "schema": "literature_discovery.v1",
+        "task_id": "task-evidence",
+        "sprint_id": "run-evidence",
+        "node_id": "literature_discover",
+        "status": "completed",
+        "inputs": {"query": "bounded evidence"},
+        "outputs": {
+            "query": "bounded evidence",
+            "candidates": [
+                {
+                    "candidate_id": "paper-001",
+                    "title": "Bounded Evidence Operators",
+                    "source_channels": ["local"],
+                    "ranking_score": 0.9,
+                    "ranking_rationale": "A real scoped source used by the operator test.",
+                    "dedup_status": "new",
+                    "fetch_status": "not_requested",
+                    "source_ref": "inputs/paper.md",
+                },
+                {
+                    "candidate_id": "paper-002",
+                    "title": "Bounded Evidence Replication",
+                    "source_channels": ["local"],
+                    "ranking_score": 0.8,
+                    "ranking_rationale": "A second real scoped source used to prove cardinality.",
+                    "dedup_status": "new",
+                    "fetch_status": "not_requested",
+                    "source_ref": "inputs/paper-two.md",
+                },
+            ],
+        },
+        "artifacts": [],
+        "provenance": {"operator_id": "test-input", "implementation_package": "tests"},
         "limitations": [],
     }
 
@@ -133,6 +173,12 @@ def workspace(tmp_path: Path) -> Path:
         "## Results\nThe bounded parser improves latency by 20 percent compared with the baseline.\n",
         encoding="utf-8",
     )
+    (inputs / "paper-two.md").write_text(
+        "# Bounded Evidence Replication\n\n## Methods\n"
+        "We evaluate the same parser with a second retained source and compare exact output hashes.\n\n"
+        "## Results\nThe replicated run reduces parsing failures by 10 percent compared with the baseline.\n",
+        encoding="utf-8",
+    )
     (code / "parser.py").write_text(
         "def bounded_parser_improves_latency():\n    return '20 percent faster'\n",
         encoding="utf-8",
@@ -169,7 +215,6 @@ def request_for(node_id: str, workspace: Path) -> tuple[dict, dict]:
     if node_id == "evidence_import":
         imported = workspace / "inputs" / "imported.json"
         imported.write_text('{"schema":"external.test.v1","value":"bounded"}', encoding="utf-8")
-        import hashlib
         payload = {
             "task_contract": {
                 "supplied_evidence": [{
@@ -185,6 +230,10 @@ def request_for(node_id: str, workspace: Path) -> tuple[dict, dict]:
         services["discover_literature"] = discovery_service
     elif node_id in {"paper_ingest", "material_ingest"}:
         payload = {"source": "inputs/paper.md", "allow_network_fetch": False}
+    elif node_id == "discovery_ingest":
+        discovery_path = workspace / "inputs" / "literature-discovery.json"
+        discovery_path.write_text(json.dumps(discovery_evidence(workspace)), encoding="utf-8")
+        payload = {"max_sources": 2, "allow_network_fetch": False}
     elif node_id in {"paper_analyze", "content_analyze", "memory_update_initial", "claim_extract", "method_extract"}:
         payload = {"paper_evidence": paper_evidence()}
     elif node_id == "memory_update_final":
@@ -207,6 +256,15 @@ def request_for(node_id: str, workspace: Path) -> tuple[dict, dict]:
         "authorization": {"secret_refs": []},
         "issued_at": "2026-08-05T00:00:00Z",
     }
+    if node_id == "discovery_ingest":
+        discovery_path = workspace / "inputs" / "literature-discovery.json"
+        request["input_artifact_refs"] = [{
+            "artifact_id": "evidence.literature_discover",
+            "path": "inputs/literature-discovery.json",
+            "schema": "literature_discovery.v1",
+            "sha256": hashlib.sha256(discovery_path.read_bytes()).hexdigest(),
+        }]
+        request["write_scope"] = ["outputs/discovery_ingest/"]
     return request, services
 
 
@@ -238,6 +296,7 @@ def test_each_evidence_operator_executes_real_positive_path(node_id: str, worksp
 def test_each_evidence_operator_rejects_missing_required_input_as_product_failure(node_id: str, workspace: Path) -> None:
     request, _services = request_for(node_id, workspace)
     request["typed_inputs"] = {"payload": {}}
+    request["input_artifact_refs"] = []
     result = execute_operator(request, workspace_root=workspace)
     assert result["status"] == "failed"
     assert result["status_is_terminal"] is True
@@ -253,7 +312,8 @@ def test_each_evidence_operator_is_idempotent_for_same_identity_version_and_inpu
     assert first["status"] == second["status"] == "completed"
     assert first["output_artifacts"][0]["sha256"] == second["output_artifacts"][0]["sha256"]
     assert first["hashes"] == second["hashes"]
-    assert "Idempotent replay" in second["limitations"][0]
+    if node_id != "discovery_ingest":
+        assert "Idempotent replay" in second["limitations"][0]
 
 
 def test_discovery_provider_failure_is_classified_as_environment_failure(workspace: Path) -> None:
@@ -310,7 +370,7 @@ def test_direct_source_content_change_invalidates_idempotent_ingest_reuse(worksp
 
 def test_package_local_registration_is_unique_and_resolvable() -> None:
     entries = registration_entries()
-    assert len(entries) == len(NODE_IDS) == 12
+    assert len(entries) == len(NODE_IDS) == 13
     assert len({item["node_id"] for item in entries}) == len(entries)
     assert len({item["operator_id"] for item in entries}) == len(entries)
     assert all(
@@ -321,6 +381,26 @@ def test_package_local_registration_is_unique_and_resolvable() -> None:
     for node_id in NODE_IDS:
         resolved = resolve_entrypoint(node_id)
         assert resolved.operator_spec is OPERATOR_SPECS[node_id]
+
+
+def test_discovery_ingest_emits_multiple_real_papers_and_claims_read_all(
+    workspace: Path,
+) -> None:
+    request, services = request_for("discovery_ingest", workspace)
+    result = execute_operator(request, services=services, workspace_root=workspace)
+    assert result["status"] == "completed", result
+    assert len(result["output_artifacts"]) == 2
+    assert len({item["artifact_id"] for item in result["output_artifacts"]}) == 2
+
+    claim_request, _ = request_for("claim_extract", workspace)
+    claim_request["typed_inputs"] = {"payload": {"limit": 12}}
+    claim_request["input_artifact_refs"] = result["output_artifacts"]
+    claim_request["read_scope"] = ["outputs/discovery_ingest/"]
+    claim_result = execute_operator(claim_request, workspace_root=workspace)
+    claim_artifact = validate_result_and_artifact(claim_result, workspace)
+    claim_text = " ".join(item["text"] for item in claim_artifact["outputs"]["claims"])
+    assert "20 percent" in claim_text
+    assert "10 percent" in claim_text
 
 
 @pytest.mark.parametrize(

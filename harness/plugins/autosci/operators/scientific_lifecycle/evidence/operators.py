@@ -260,6 +260,87 @@ def ingest_source(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any
     }
 
 
+def ingest_discovered_sources(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
+    """Ingest traceable discovery candidates without inventing missing sources."""
+
+    documents = load_evidence_inputs(
+        context,
+        "literature_discovery.v1",
+        payload_keys=("literature_discovery", "discovery_evidence"),
+    )
+    if not documents:
+        raise _product_error("Discovery ingestion requires literature_discovery.v1 input")
+    candidates = [
+        candidate
+        for document in documents
+        for candidate in document.get("outputs", {}).get("candidates") or []
+        if isinstance(candidate, dict)
+    ]
+    if not candidates:
+        raise _product_error("Discovery evidence contains no candidates")
+    requested_limit = context.payload.get("max_sources")
+    limit = min(
+        len(candidates),
+        max(1, min(int(requested_limit), 200)) if requested_limit is not None else 200,
+    )
+    evidence_items: list[dict[str, Any]] = []
+    limitations: list[str] = []
+    for candidate in candidates[:limit]:
+        source = next(
+            (
+                str(candidate.get(key) or "").strip()
+                for key in ("source_ref", "url", "pdf_url", "doi", "arxiv_id")
+                if str(candidate.get(key) or "").strip()
+            ),
+            "",
+        )
+        candidate_id = str(candidate.get("candidate_id") or "unresolved")
+        if not source:
+            limitations.append(
+                f"Skipped {candidate_id}: discovery supplied no fetchable source reference."
+            )
+            continue
+        child_request = dict(context.node_request)
+        child_request["typed_inputs"] = {
+            "payload": {
+                **context.payload,
+                "source": source,
+                "paper_id": candidate_id,
+                "title": str(candidate.get("title") or candidate_id),
+            }
+        }
+        child_context = OperatorContext.from_request(
+            child_request,
+            services=context.services,
+            workspace_root=context.workspace_root,
+        )
+        raw = ingest_source(child_context, spec)
+        if raw.get("outcome_class") == SUCCESS and raw.get("evidence", {}).get("status") == "completed":
+            evidence_items.append(
+                {
+                    "evidence": raw["evidence"],
+                    "summary": raw.get("summary"),
+                }
+            )
+        else:
+            limitations.append(
+                f"Failed to ingest {candidate_id}: "
+                f"{str(raw.get('error') or raw.get('summary') or 'unknown ingestion failure')[:240]}"
+            )
+    if not evidence_items:
+        return {
+            "evidence_items": [],
+            "error_type": "product_failure",
+            "error": "No discovered candidate produced parsed paper evidence",
+            "limitations": limitations,
+        }
+    return {
+        "evidence_items": evidence_items,
+        "limitations": limitations,
+        "summary": f"Ingested {len(evidence_items)} of {min(len(candidates), limit)} selected candidates.",
+    }
+
+
 def _first_evidence(context: OperatorContext, schemas: tuple[str, ...], keys: tuple[str, ...]) -> dict[str, Any]:
     values = load_evidence_inputs(context, *schemas, payload_keys=keys)
     if not values:
@@ -267,12 +348,25 @@ def _first_evidence(context: OperatorContext, schemas: tuple[str, ...], keys: tu
     return values[0]
 
 
+def _papers_from(context: OperatorContext) -> list[dict[str, Any]]:
+    documents = load_evidence_inputs(
+        context,
+        "research_paper.v1",
+        payload_keys=("paper_evidence", "research_paper"),
+    )
+    papers = [
+        paper
+        for document in documents
+        for paper in [document.get("outputs", {}).get("paper")]
+        if isinstance(paper, dict) and str(paper.get("parse_status") or "") != "failed"
+    ]
+    if not papers:
+        raise _product_error("research_paper.v1 input has no parsed outputs.paper object")
+    return papers
+
+
 def _paper_from(context: OperatorContext) -> dict[str, Any]:
-    document = _first_evidence(context, ("research_paper.v1",), ("paper_evidence", "research_paper"))
-    paper = document.get("outputs", {}).get("paper")
-    if not isinstance(paper, dict):
-        raise _product_error("research_paper.v1 input has no outputs.paper object")
-    return paper
+    return _papers_from(context)[0]
 
 
 def _section_texts(paper: dict[str, Any]) -> list[tuple[str, str, str]]:
@@ -430,32 +524,35 @@ def graph_update(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]
 
 
 def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
-    paper = _paper_from(context)
+    papers = _papers_from(context)
     claims: list[dict[str, Any]] = []
     claims_by_text: dict[str, dict[str, Any]] = {}
     limit = max(1, min(int(context.payload.get("limit") or 12), 50))
     cue = re.compile(r"\b(?:show|shows|demonstrat|improv|reduc|increas|achiev|outperform|result|found|find)\w*\b", re.IGNORECASE)
-    for _title, text, anchor in _section_texts(paper):
-        sentences = _source_sentences(text, minimum_length=30)
-        selected = [item for item in sentences if len(item) >= 30 and cue.search(item)]
-        for sentence in selected:
-            normalized_sentence = " ".join(sentence.split()).casefold()
-            existing = claims_by_text.get(normalized_sentence)
-            if existing is not None:
-                if anchor not in existing["evidence_ids"]:
-                    existing["evidence_ids"].append(anchor)
-                continue
-            claim = {
-                "claim_id": f"claim-{len(claims) + 1:03d}",
-                "text": sentence,
-                "claim_type": "result",
-                "source_anchor": anchor,
-                "testability": "testable" if re.search(r"\d|%|compared|than", sentence, re.IGNORECASE) else "partially_testable",
-                "verification_status": "unverified",
-                "evidence_ids": [anchor],
-            }
-            claims.append(claim)
-            claims_by_text[normalized_sentence] = claim
+    for paper in papers:
+        for _title, text, anchor in _section_texts(paper):
+            sentences = _source_sentences(text, minimum_length=30)
+            selected = [item for item in sentences if len(item) >= 30 and cue.search(item)]
+            for sentence in selected:
+                normalized_sentence = " ".join(sentence.split()).casefold()
+                existing = claims_by_text.get(normalized_sentence)
+                if existing is not None:
+                    if anchor not in existing["evidence_ids"]:
+                        existing["evidence_ids"].append(anchor)
+                    continue
+                claim = {
+                    "claim_id": f"claim-{len(claims) + 1:03d}",
+                    "text": sentence,
+                    "claim_type": "result",
+                    "source_anchor": anchor,
+                    "testability": "testable" if re.search(r"\d|%|compared|than", sentence, re.IGNORECASE) else "partially_testable",
+                    "verification_status": "unverified",
+                    "evidence_ids": [anchor],
+                }
+                claims.append(claim)
+                claims_by_text[normalized_sentence] = claim
+                if len(claims) >= limit:
+                    break
             if len(claims) >= limit:
                 break
         if len(claims) >= limit:
@@ -476,7 +573,7 @@ def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, An
 
 
 def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
-    paper = _paper_from(context)
+    papers = _papers_from(context)
     methods: list[dict[str, Any]] = []
     methods_by_text: dict[str, dict[str, Any]] = {}
     method_heading = re.compile(r"method|approach|experiment|implementation|procedure|setup|protocol", re.IGNORECASE)
@@ -498,6 +595,7 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
         anchor: str,
         extraction_basis: str,
         confidence: float,
+        source_paper_id: str,
     ) -> None:
         summary = " ".join(procedure)[:500]
         normalized_summary = " ".join(summary.split()).casefold()
@@ -505,13 +603,15 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
         if existing is not None:
             if anchor not in existing["evidence_ids"]:
                 existing["evidence_ids"].append(anchor)
+            if source_paper_id not in existing["source_papers"]:
+                existing["source_papers"].append(source_paper_id)
             return
         method = {
             "method_id": f"method-{len(methods) + 1:03d}",
             "name": name,
             "summary": summary,
             "procedure": procedure,
-            "source_papers": [str(paper.get("paper_id") or "paper-unresolved")],
+            "source_papers": [source_paper_id],
             "evidence_ids": [anchor],
             "extraction_basis": extraction_basis,
             "confidence": confidence,
@@ -519,32 +619,38 @@ def extract_methods(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
         methods.append(method)
         methods_by_text[normalized_summary] = method
 
-    for title, text, anchor in _section_texts(paper):
-        if not method_heading.search(title):
-            continue
-        procedure = _source_sentences(text, minimum_length=15)[:12]
-        if not procedure:
-            continue
-        record_method(
-            name=title,
-            procedure=procedure,
-            anchor=anchor,
-            extraction_basis="explicit_method_heading",
-            confidence=1.0,
-        )
-    if not methods:
+    for paper in papers:
+        source_paper_id = str(paper.get("paper_id") or "paper-unresolved")
         for title, text, anchor in _section_texts(paper):
-            sentences = _source_sentences(text, minimum_length=20)
-            grounded = [item for item in sentences if description_cue.search(item)][:8]
-            if not grounded:
+            if not method_heading.search(title):
+                continue
+            procedure = _source_sentences(text, minimum_length=15)[:12]
+            if not procedure:
                 continue
             record_method(
-                name=f"Method description in {title}",
-                procedure=grounded,
+                name=title,
+                procedure=procedure,
                 anchor=anchor,
-                extraction_basis="method_description_without_heading",
-                confidence=0.6,
+                extraction_basis="explicit_method_heading",
+                confidence=1.0,
+                source_paper_id=source_paper_id,
             )
+    if not methods:
+        for paper in papers:
+            source_paper_id = str(paper.get("paper_id") or "paper-unresolved")
+            for title, text, anchor in _section_texts(paper):
+                sentences = _source_sentences(text, minimum_length=20)
+                grounded = [item for item in sentences if description_cue.search(item)][:8]
+                if not grounded:
+                    continue
+                record_method(
+                    name=f"Method description in {title}",
+                    procedure=grounded,
+                    anchor=anchor,
+                    extraction_basis="method_description_without_heading",
+                    confidence=0.6,
+                    source_paper_id=source_paper_id,
+                )
     if not methods:
         limitation = (
             "Method evidence is insufficient: no explicit method heading or source-grounded method description "

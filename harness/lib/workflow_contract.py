@@ -89,6 +89,7 @@ CODE_FILE_SUFFIXES = {
     ".go", ".rs", ".java", ".kt", ".scala", ".swift",
     ".c", ".cc", ".cpp", ".h", ".hpp", ".rb", ".php", ".pl", ".lua",
 }
+PATCH_ARTIFACT_SUFFIXES = {".diff", ".patch"}
 
 # Structured-data / rendered-report deliverables. Their presence in write_scope
 # marks a node as artifact-authoring even when a code file is ALSO declared —
@@ -408,11 +409,38 @@ def load_capsule_registry(config_dir: Optional[os.PathLike] = None) -> Dict[str,
     if yaml is None:  # pragma: no cover
         raise RuntimeError("PyYAML is required to load the capsule registry")
     directory = Path(config_dir) if config_dir else default_config_dir()
-    capsule_dir = directory / "capability-capsules"
     registry: Dict[str, Dict[str, Any]] = {}
-    if not capsule_dir.is_dir():
-        return registry
-    for path in sorted(capsule_dir.glob("*.yaml")):
+    manifest_paths: List[Path] = []
+
+    # The YAML registry is the canonical inventory. Some capsule manifests are
+    # intentionally stored beside harness/config while others live in
+    # harness/capability-capsules; scanning only the former silently hid valid
+    # registered capsules from Plan Validator.
+    inventory_path = directory / "capability-capsules.registry.yaml"
+    if inventory_path.is_file():
+        try:
+            inventory = yaml.safe_load(inventory_path.read_text(encoding="utf-8"))
+        except Exception:
+            inventory = {}
+        capsule_groups = (inventory or {}).get("capsules") if isinstance(inventory, dict) else {}
+        capability_entries = (
+            (capsule_groups or {}).get("capability", [])
+            if isinstance(capsule_groups, dict)
+            else []
+        )
+        for entry in capability_entries or []:
+            if not isinstance(entry, dict):
+                continue
+            relative = str(entry.get("manifest_path") or "").strip()
+            if relative:
+                manifest_paths.append((inventory_path.parent / relative).resolve())
+
+    # Preserve compatibility for installations that predate the inventory.
+    capsule_dir = directory / "capability-capsules"
+    if capsule_dir.is_dir():
+        manifest_paths.extend(sorted(capsule_dir.glob("*.yaml")))
+
+    for path in sorted(set(manifest_paths)):
         try:
             manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
         except Exception:
@@ -570,6 +598,18 @@ def classify_node_kind(node: Dict[str, Any], capsule_is_code: Optional[bool] = N
     on shape + declared narrowing alone.
     """
     result = _shape_node_kind(node.get("write_scope"))
+    # A registry-admitted code capsule may materialize its primary result as a
+    # patch artifact rather than a source file.  Treat .diff/.patch as code only
+    # when the capsule itself declares patch production; the suffix alone can
+    # never elevate an unrelated artifact node.
+    suffixes = [
+        Path(str(value).rstrip("/")).suffix.lower()
+        for value in node.get("write_scope") or []
+    ]
+    if capsule_is_code is True and any(
+        suffix in PATCH_ARTIFACT_SUFFIXES for suffix in suffixes
+    ):
+        result = "code"
     declared = node.get("node_kind")
     if declared in NODE_KINDS:
         # narrow only: keep declared when it is at or below the shape's level.

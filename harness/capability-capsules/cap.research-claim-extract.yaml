@@ -18,7 +18,7 @@ contract:
   inputs:
     required:
       - name: source_evidence
-        description: Paper, idea, method, or experiment evidence containing claims.
+        description: A normalized research_paper.v1 artifact containing source sections and anchors.
     optional:
       - name: extraction_policy
         description: Claim granularity and testability policy.
@@ -42,8 +42,6 @@ composition:
   consumes:
     - schema_ref: schemas/evidence/research_paper.v1.schema.json
       purpose: Paper-derived claims.
-    - schema_ref: schemas/evidence/idea_candidate.v1.schema.json
-      purpose: Hypothesis-derived claims.
   produces:
     - schema_ref: schemas/evidence/research_claims.v1.schema.json
       purpose: Source-anchored claims.

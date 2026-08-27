@@ -212,6 +212,11 @@ REQUEST_GOVERNANCE_FIELDS = (
     "source_policy",
     "research_deliverable_contract",
     "pass_conditions",
+    "planning_authority",
+    "requirement_ir_ref",
+    "plan_ir_ref",
+    "capsule_plan_ref",
+    "physical_plan_ref",
 )
 
 # canonical_executable_node is the single source for the GOVERNED node subset
@@ -322,9 +327,10 @@ def validate_plan(
                     "planner fields; derived contracts may not override their source",
                 ))
 
-        # Owner decision (REVIEW-FIXROUND2 finding 2, option B): operator
-        # selection is runtime-owned, so a planner may not pre-pin it. The
-        # governed channel for operator constraints is allowed_operators.
+        # The active operator selection is runtime-owned, so a planner may not
+        # pre-pin the legacy mutable selector fields. Frozen plans instead use
+        # a certificate-governed approved candidate list; the scheduler may
+        # choose only within that list as transient availability changes.
         forbidden = [field for field in OPERATOR_SELECTION_RUNTIME_FIELDS if field in node]
         if forbidden:
             errors.append(wc.compile_error(

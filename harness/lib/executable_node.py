@@ -3,8 +3,8 @@
 Planner graphs remain shape-free, but every node needs one immutable semantic
 identity.  This module normalizes the planner-authored fields into the single
 view consumed by validation, scheduling, physical binding, attribution, and
-presentation.  It deliberately does *not* choose a physical operator; that is
-runtime-owned and may change with auth, quota, leases, and availability.
+presentation. The planner may freeze an approved ordered candidate set, but
+the runtime alone chooses which approved candidate is active for a dispatch.
 """
 from __future__ import annotations
 
@@ -67,6 +67,21 @@ _GOVERNED_SOURCE_FIELDS = frozenset({
     "on_human_review",
     "requirement_ids",
     "acceptance_ids",
+    "planning_authority",
+    "approved_physical_operator_ids",
+    "capsule_plan_ir",
+    "physical_plan_ir",
+    "semantic_artifact_contract",
+    "operator_requirements",
+})
+
+_FROZEN_PLAN_FIELDS = frozenset({
+    "planning_authority",
+    "approved_physical_operator_ids",
+    "capsule_plan_ir",
+    "physical_plan_ir",
+    "semantic_artifact_contract",
+    "operator_requirements",
 })
 
 
@@ -169,8 +184,8 @@ def canonical_executable_node(node: Mapping[str, Any]) -> dict[str, Any]:
     """Build the immutable planner/runtime contract for one graph node.
 
     Runtime state (status, pane, dispatch id, leases, attempts, selected
-    operator) is intentionally excluded.  A physical operator is selected
-    later against this contract.
+    operator) is intentionally excluded. A physical operator is selected later
+    from the contract's approved candidates when frozen planning is active.
     """
     allowed = node.get("allowed_operators") if isinstance(node.get("allowed_operators"), Mapping) else {}
     gate = node.get("evaluator_gate") if isinstance(node.get("evaluator_gate"), Mapping) else {}
@@ -186,11 +201,19 @@ def canonical_executable_node(node: Mapping[str, Any]) -> dict[str, Any]:
             "fail": 0,
             "repair_once_then_fail": 1,
         }.get(str(gate.get("on_fail") or ""))
+    frozen_execution = (
+        str(node.get("planning_authority") or "") == "frozen_execution_plan_v1"
+    )
+    governed_source_fields = (
+        _GOVERNED_SOURCE_FIELDS
+        if frozen_execution
+        else _GOVERNED_SOURCE_FIELDS - _FROZEN_PLAN_FIELDS
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         # Presence is evidence too: adding a default-valued governed field
         # after certification must still invalidate the plan certificate.
-        "declared_fields": sorted(field for field in _GOVERNED_SOURCE_FIELDS if field in node),
+        "declared_fields": sorted(field for field in governed_source_fields if field in node),
         "node_id": str(node.get("id") or "").strip(),
         "goal": str(node.get("goal") or ""),
         "description": str(node.get("description") or ""),
@@ -219,4 +242,30 @@ def canonical_executable_node(node: Mapping[str, Any]) -> dict[str, Any]:
         "on_human_review": node.get("on_human_review"),
         "requirement_ids": _as_string_list(node.get("requirement_ids")),
         "acceptance_ids": _as_string_list(node.get("acceptance_ids")),
+        "planning_authority": (
+            "frozen_execution_plan_v1" if frozen_execution else ""
+        ),
+        "approved_physical_operator_ids": _as_string_list(
+            node.get("approved_physical_operator_ids") if frozen_execution else []
+        ),
+        "capsule_plan_ir": deepcopy(
+            node.get("capsule_plan_ir")
+            if frozen_execution and isinstance(node.get("capsule_plan_ir"), Mapping)
+            else {}
+        ),
+        "physical_plan_ir": deepcopy(
+            node.get("physical_plan_ir")
+            if frozen_execution and isinstance(node.get("physical_plan_ir"), Mapping)
+            else {}
+        ),
+        "semantic_artifact_contract": deepcopy(
+            node.get("semantic_artifact_contract")
+            if frozen_execution and isinstance(node.get("semantic_artifact_contract"), Mapping)
+            else {}
+        ),
+        "operator_requirements": deepcopy(
+            node.get("operator_requirements")
+            if frozen_execution and isinstance(node.get("operator_requirements"), Mapping)
+            else {}
+        ),
     }

@@ -35,7 +35,13 @@
     "max_repair_attempts",
     "on_human_review",
     "requirement_ids",
-    "acceptance_ids"
+    "acceptance_ids",
+    "planning_authority",
+    "approved_physical_operator_ids",
+    "capsule_plan_ir",
+    "physical_plan_ir",
+    "semantic_artifact_contract",
+    "operator_requirements"
   ],
   "properties": {
     "schema_version": {
@@ -103,6 +109,15 @@
     "acceptance_ids": {
       "type": "array",
       "items": {"type": "string"}
-    }
+    },
+    "planning_authority": {"type": "string"},
+    "approved_physical_operator_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "capsule_plan_ir": {"type": "object"},
+    "physical_plan_ir": {"type": "object"},
+    "semantic_artifact_contract": {"type": "object"},
+    "operator_requirements": {"type": "object"}
   }
 }

@@ -226,19 +226,133 @@ def _existing_success(target: Path, spec: OperatorSpec, input_hash: str) -> dict
     return None
 
 
-def write_evidence(context: OperatorContext, target: Path, payload: dict[str, Any]) -> tuple[dict[str, str], str]:
+def write_evidence(
+    context: OperatorContext,
+    target: Path,
+    payload: dict[str, Any],
+    *,
+    artifact_id: str | None = None,
+) -> tuple[dict[str, str], str]:
     body = (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
     _write_bytes(target, body)
     digest = sha256_bytes(_read_bytes(target))
+    resolved_artifact_id = artifact_id or f"evidence.{context.node_request['node_id']}"
     return (
         {
-            "artifact_id": f"evidence.{context.node_request['node_id']}",
+            "artifact_id": resolved_artifact_id,
             "path": display_path(target, context.workspace_root),
             "schema": str(payload["schema"]),
             "sha256": digest,
         },
         digest,
     )
+
+
+def execute_batch_spec(
+    spec: OperatorSpec,
+    node_request: dict[str, Any],
+    *,
+    services: dict[str, Any] | None = None,
+    workspace_root: Path | None = None,
+) -> dict[str, Any]:
+    """Execute one bounded operator that emits many artifacts of one schema.
+
+    The first write scope must be a directory. Every emitted file is separately
+    hash-addressed and schema-gated downstream; no synthetic collection wrapper
+    is introduced merely to carry cardinality.
+    """
+
+    context = OperatorContext.from_request(
+        node_request,
+        services=services,
+        workspace_root=workspace_root or Path.cwd(),
+    )
+    try:
+        require_request_identity(context, spec.node_id)
+        if not context.secret_verification_complete:
+            raise ResearchOperatorError(
+                "Authorized secret refs require matching in-memory secret_values",
+                error_type="secret_verification_unavailable",
+            )
+        if not context.write_scope:
+            raise ResearchOperatorError("No write scope declared", error_type="scope_violation")
+        raw_scope = str(context.write_scope[0])
+        if Path(raw_scope.rstrip("/\\")).suffix:
+            raise ResearchOperatorError(
+                "Batch evidence output requires a directory write scope",
+                error_type="scope_violation",
+            )
+        target_dir = validate_scoped_path(
+            raw_scope,
+            context.write_scope,
+            workspace_root=context.workspace_root,
+        )
+        target_dir.mkdir(parents=True, exist_ok=True)
+        input_hash = input_fingerprint(context, spec)
+        raw = spec.handler(context, spec)
+        evidence_items = [
+            item for item in raw.get("evidence_items") or [] if isinstance(item, dict)
+        ]
+        if not evidence_items:
+            raise ResearchOperatorError(
+                str(raw.get("error") or "Batch operator produced no accepted evidence"),
+                error_type=str(raw.get("error_type") or "product_failure"),
+            )
+        artifacts: list[dict[str, Any]] = []
+        hashes: list[dict[str, str]] = []
+        evidence_refs: list[dict[str, str]] = []
+        for index, item in enumerate(evidence_items, start=1):
+            typed = enrich_evidence(
+                dict(item["evidence"]),
+                context=context,
+                spec=spec,
+                input_hash=input_hash,
+                outcome_class=SUCCESS,
+            )
+            artifact_id = f"evidence.{spec.node_id}.{index:03d}"
+            typed.setdefault("provenance", {})["artifact_id"] = artifact_id
+            filename = f"research_paper.{index:03d}.v1.json"
+            target = validate_scoped_path(
+                target_dir / filename,
+                context.write_scope,
+                workspace_root=context.workspace_root,
+            )
+            artifact, digest = write_evidence(
+                context,
+                target,
+                typed,
+                artifact_id=artifact_id,
+            )
+            artifacts.append(artifact)
+            hashes.append({"hash_id": artifact_id, "algorithm": "sha256", "value": digest})
+            evidence_refs.append(
+                evidence_ref(
+                    f"ev.{spec.node_id}.{index:03d}",
+                    spec.output_schema,
+                    str(item.get("summary") or "Ingested one discovered source."),
+                    artifact_id,
+                )
+            )
+        return build_node_result(
+            context,
+            status="completed",
+            output_artifacts=artifacts,
+            evidence=evidence_refs,
+            hashes=hashes,
+            model_provider_usage=list(raw.get("provider_usage") or []),
+            limitations=list(raw.get("limitations") or []),
+        )
+    except ResearchOperatorError as exc:
+        return build_node_result(
+            context,
+            status="failed",
+            errors=[{
+                "error_id": f"operator.{spec.node_id}.product_failure",
+                "error_type": PRODUCT_FAILURE,
+                "message": f"{exc.error_type}: {str(exc)}"[:500],
+            }],
+            limitations=["The batch operator stopped before producing accepted evidence."],
+        )
 
 
 def execute_spec(

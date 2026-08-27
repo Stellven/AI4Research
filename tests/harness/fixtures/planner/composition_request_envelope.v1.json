@@ -1,0 +1,15 @@
+{
+  "schema_version": "solar.request_envelope.v1",
+  "request_id": "request-composition-ab-fixture",
+  "raw_text": "Review the supplied paper and related literature, extract testable claims and methods, then design a bounded experiment.",
+  "source": "planner-composition-test",
+  "classification": {
+    "legacy_request_type": "research",
+    "canonical_request_type": "research"
+  },
+  "attachments": {
+    "source_ref": "tests/plugins/autosci/fixtures/sample_paper.md"
+  },
+  "repo_context": {},
+  "created_at": "2026-08-26T00:00:00Z"
+}

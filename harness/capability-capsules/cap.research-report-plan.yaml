@@ -24,8 +24,8 @@ contract:
         description: Report audience or publication venue constraints.
   outputs:
     required:
-      - name: scientific_report
-        schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      - name: scientific_report_plan
+        schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
     optional:
       - name: evidence_gap_list
         description: Unsupported or inconclusive claims to avoid presenting as findings.
@@ -42,20 +42,18 @@ composition:
   consumes:
     - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       purpose: Verdict-backed findings.
-    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
-      purpose: Optional prior report context.
   produces:
-    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+    - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
       purpose: Planned report evidence.
   compatible_with:
-    - cap.research-report-draft
+    - cap.scientific-report-draft
     - cap.research-publication-produce
   incompatible_with: []
   requires_after: []
 effects:
   read:
     - typed scientific evidence artifacts
-    - schemas/evidence/scientific_report.v1.schema.json
+    - schemas/evidence/scientific_report_plan.v1.schema.json
   write:
     - artifacts/scientific/scientific_report_plan/
   execute:
@@ -74,16 +72,16 @@ bindings:
       - autosci.paper_plan
   mcp_capabilities: {}
   data_refs:
-    - schemas/evidence/scientific_report.v1.schema.json
+    - schemas/evidence/scientific_report_plan.v1.schema.json
   secret_refs: []
 verification:
   self_check:
-    - Validate emitted evidence against scientific_report.v1.schema.json.
+    - Validate emitted evidence against scientific_report_plan.v1.schema.json.
     - Confirm unsupported_claims is present and section evidence ids are populated.
   external_verifier:
     required: false
   pass_conditions:
-    - Fixture report plan emits valid scientific_report.v1 evidence.
+    - Fixture report plan emits valid scientific_report_plan.v1 evidence.
     - Evidence gaps remain visible in unsupported_claims or limitations.
 operator_compatibility:
   preferred:

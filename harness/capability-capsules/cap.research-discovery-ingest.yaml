@@ -1,0 +1,96 @@
+capability_capsule_id: cap.research-discovery-ingest
+capsule_kind: capability
+metadata:
+  name: Scientific Discovery Batch Ingest
+  description: Fetch and normalize the traceable source references selected by literature discovery into independently schema-valid paper evidence.
+applicability:
+  task_types:
+    - scientific-research
+    - literature-ingestion
+  positive_signals:
+    - ingest discovered papers
+    - fetch literature shortlist
+    - prepare discovered source evidence
+  negative_signals:
+    - discover papers
+    - write report
+contract:
+  inputs:
+    required:
+      - name: literature_discovery
+        schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+  outputs:
+    required:
+      - name: research_papers
+        type: collection
+        cardinality: many
+        schema_ref: schemas/evidence/research_paper.v1.schema.json
+  preconditions:
+    - check: traceable_candidates_present
+      description: At least one selected discovery candidate has a URL, DOI, arXiv identifier, or scoped local source reference.
+  postconditions:
+    - check: paper_evidence_emitted
+      description: Every emitted file independently conforms to research_paper.v1 and retains its source reference.
+  invariants:
+    - Does not synthesize source text when fetching or parsing fails.
+    - Failed candidates remain explicit limitations and are not emitted as parsed evidence.
+    - The number of attempted candidates is bounded by the supplied planning limit and the operator safety ceiling.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+      purpose: Ranked and deduplicated source candidates.
+  produces:
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: One independently validated paper artifact per successfully ingested candidate.
+  compatible_with:
+    - cap.research-claim-extract
+    - cap.research-method-extract
+    - cap.research-paper-analyze
+  incompatible_with: []
+  requires_after:
+    - cap.research-literature-discover
+effects:
+  read:
+    - literature discovery evidence
+    - selected local or remote source references
+  write:
+    - artifacts/scientific/research_papers/
+  execute:
+    - plugins/autosci/operators/scientific_lifecycle/evidence/registry.py
+  network:
+    - source retrieval only when the selected candidates are remote and policy permits
+  cost:
+    - bounded by the selected candidate count
+  risk:
+    - providers may omit full text or return unparseable sources
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.paper_ingest
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/literature_discovery.v1.schema.json
+    - schemas/evidence/research_paper.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate every emitted file against research_paper.v1.schema.json.
+    - Confirm every parsed paper retains a source_ref and at least one non-empty section.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - At least one selected candidate produces valid parsed paper evidence.
+    - Failed candidates are counted and described without fabricating replacement content.
+operator_compatibility:
+  preferred:
+    - discovery_ingest_worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_composition_v1
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.evidence.registry:execute_discovery_ingest
+  required_services: []

@@ -213,6 +213,20 @@
         },
         "enabled": {"type": "boolean"},
         "available": {"type": "boolean"},
+        "execution_trust": {
+          "enum": ["unspecified", "fixture_or_adapter_only", "evidence_transform", "measured_execution"]
+        },
+        "resource_requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required_services": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+            "required_authorizations": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+            "required_artifact_types": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+            "network": {"enum": ["required", "optional", "forbidden"]},
+            "compute_profiles": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+          }
+        },
         "profile": {"type": "string"},
         "role": {"type": "string"},
         "provider": {"type": "string"},

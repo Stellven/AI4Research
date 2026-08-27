@@ -43,15 +43,13 @@ contract:
 composition:
   consumes:
     - schema_ref: schemas/evidence/research_claims.v1.schema.json
-      purpose: Claims under verification.
-    - schema_ref: schemas/evidence/experiment_result.v1.schema.json
-      purpose: Experimental support or refutation evidence.
+      purpose: Source-anchored claims under assessment; experiment evidence is optional at runtime.
   produces:
     - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       purpose: Claim verdict evidence.
   compatible_with:
     - cap.research-report-plan
-    - cap.research-report-draft
+    - cap.scientific-report-draft
     - cap.research-memory-update
   incompatible_with: []
   requires_after:

@@ -19,6 +19,8 @@ contract:
     required:
       - name: experiment_plan
         schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+      - name: experiment_approval
+        schema_ref: schemas/evidence/experiment_approval.v1.schema.json
     optional:
       - name: execution_mode
         description: fixture, dry-run, bounded-local, benchmark, or approved-external.
@@ -44,6 +46,8 @@ composition:
   consumes:
     - schema_ref: schemas/evidence/experiment_plan.v1.schema.json
       purpose: Reviewed experiment plan.
+    - schema_ref: schemas/evidence/experiment_approval.v1.schema.json
+      purpose: Hash-bound approval for the exact experiment plan.
   produces:
     - schema_ref: schemas/evidence/experiment_result.v1.schema.json
       purpose: Experiment result evidence.
@@ -94,6 +98,8 @@ operator_compatibility:
     - autosci-experiment-run-worker
   forbidden:
     - BackendFullWorkflowRunner
+implementation:
+  trust_class: fixture_or_adapter_only
 provenance:
   owner: opensolar
   source_phase: phase2_autosci_solar_native_capsules

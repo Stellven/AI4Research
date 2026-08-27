@@ -40,10 +40,8 @@ contract:
     - Real external execution requires explicit later approval.
 composition:
   consumes:
-    - schema_ref: schemas/evidence/research_claims.v1.schema.json
-      purpose: Claim under test.
-    - schema_ref: schemas/evidence/idea_evaluation.v1.schema.json
-      purpose: Evaluated idea under test.
+    - schema_ref: schemas/evidence/idea_candidate.v1.schema.json
+      purpose: Idea candidate containing the hypothesis and minimum experiment.
   produces:
     - schema_ref: schemas/evidence/experiment_plan.v1.schema.json
       purpose: Experiment design evidence.
@@ -60,7 +58,7 @@ effects:
   write:
     - artifacts/scientific/experiment_plan/
   execute:
-    - plugins/autosci/bin/autosci_bridge.py
+    - plugins/autosci/operators/scientific_lifecycle/action/experiment.py
   network:
     - none by default
   cost:
@@ -83,13 +81,17 @@ verification:
   external_verifier:
     required: true
   pass_conditions:
-    - Fixture experiment design emits valid experiment_plan.v1 evidence.
+    - Experiment design emits valid experiment_plan.v1 evidence.
     - Execution scope and approval need are visible before any run node.
 operator_compatibility:
   preferred:
-    - autosci-experiment-design-worker
+    - experiment_design_worker
   forbidden:
     - BackendFullWorkflowRunner
 provenance:
   owner: opensolar
   source_phase: phase2_autosci_solar_native_capsules
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.action.experiment:design_experiment
+  required_services: []

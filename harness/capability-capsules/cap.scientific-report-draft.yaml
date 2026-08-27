@@ -1,4 +1,4 @@
-capability_capsule_id: cap.research-report-draft
+capability_capsule_id: cap.scientific-report-draft
 capsule_kind: capability
 metadata:
   name: Scientific Report Draft
@@ -17,8 +17,10 @@ applicability:
 contract:
   inputs:
     required:
-      - name: report_plan_or_evidence_refs
-        description: Report plan or typed evidence artifacts used for drafting.
+      - name: scientific_report_plan
+        schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+      - name: claim_verdict
+        schema_ref: schemas/evidence/claim_verdict.v1.schema.json
     optional:
       - name: style_constraints
         description: Audience, venue, or formatting guidance.
@@ -39,7 +41,7 @@ contract:
     - Unsupported claims remain explicit and are not presented as successful findings.
 composition:
   consumes:
-    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+    - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
       purpose: Planned report evidence.
     - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       purpose: Verdict-backed claims.
@@ -50,10 +52,12 @@ composition:
     - cap.research-publication-produce
     - cap.research-memory-update
   incompatible_with: []
-  requires_after: []
+  requires_after:
+    - cap.research-report-plan
 effects:
   read:
     - typed scientific evidence and report plans
+    - schemas/evidence/scientific_report_plan.v1.schema.json
     - schemas/evidence/scientific_report.v1.schema.json
   write:
     - artifacts/scientific/scientific_report/
@@ -73,6 +77,7 @@ bindings:
       - autosci.paper_draft
   mcp_capabilities: {}
   data_refs:
+    - schemas/evidence/scientific_report_plan.v1.schema.json
     - schemas/evidence/scientific_report.v1.schema.json
   secret_refs: []
 verification:

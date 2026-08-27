@@ -6,6 +6,7 @@ LogicalPlan -> CapsulePlan -> PhysicalPlan
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -27,7 +28,9 @@ from executable_node import (
     canonical_executable_node,
     physical_role as executable_physical_role,
 )
-from physical_operator_catalog import is_operator_statically_selectable
+from physical_operator_catalog import (
+    static_operator_rejection_reasons,
+)
 
 HOME = Path.home()
 HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
@@ -35,6 +38,12 @@ LOGICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "logical-operators.json"
 PHYSICAL_OPERATORS_PATH = HARNESS_DIR / "config" / "physical-operators.json"
 ARTIFACT_ADAPTER_REGISTRY_PATH = HARNESS_DIR / "config" / "artifact-adapter-capsules.registry.yaml"
 EFFECT_KEYS = ("read", "write", "execute", "network", "cost", "risk")
+PHYSICAL_EXECUTION_TRUST_CLASSES = {
+    "unspecified",
+    "fixture_or_adapter_only",
+    "evidence_transform",
+    "measured_execution",
+}
 SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR = {
     "ScientificLiteratureDiscoverer": "autosci-literature-discover-worker",
     "ScientificPaperIngestor": "autosci-paper-ingest-worker",
@@ -165,12 +174,19 @@ def _operator_constraints_for_logical_operator(
     constraints: Dict[str, Any],
 ) -> Dict[str, Any]:
     normalized = dict(constraints or {})
+    # An explicitly selected capsule owns its implementation compatibility.
+    # Composition support stages inherit the parent logical operator for
+    # semantic/audit continuity; using that inherited name to prepend a worker
+    # would otherwise override the support capsule's real implementation.
+    if _dedupe([str(item) for item in list(normalized.get("preferred") or [])]):
+        normalized["preferred"] = _dedupe(
+            [str(item) for item in list(normalized.get("preferred") or [])]
+        )
+        return normalized
     exact_operator = SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR.get(str(logical_operator or ""))
     if not exact_operator:
         return normalized
-    preferred = [exact_operator]
-    preferred.extend(str(item) for item in list(normalized.get("preferred") or []))
-    normalized["preferred"] = _dedupe(preferred)
+    normalized["preferred"] = [exact_operator]
     return normalized
 
 
@@ -196,7 +212,12 @@ def _artifact_type_from_contract_item(item: Any) -> str:
 
 def _artifact_type_from_composition_item(item: Any) -> str:
     if isinstance(item, dict):
-        return str(item.get("type") or "").strip()
+        explicit = str(item.get("type") or "").strip()
+        if explicit:
+            return explicit
+        schema_ref = str(item.get("schema_ref") or "").strip()
+        if schema_ref:
+            return f"schema:{schema_ref}"
     if isinstance(item, str):
         return item.strip()
     return ""
@@ -296,12 +317,26 @@ def _initial_node_artifacts(node: Dict[str, Any], request_type: str = "") -> Lis
     task_type = str(node.get("type") or request_type or "").strip().lower()
     if task_type in {"planning", "implementation", "debugging", "refactor", "verification", "review", "requirements", "research"}:
         available.append("artifact.requirement_ir")
+    if isinstance(node.get("semantic_artifact_contract"), dict):
+        # Nodes emitted by the accepted semantic Planner boundary execute under
+        # the frozen request contract even when a support/audit node owns no
+        # end-user requirement directly.
+        available.append("artifact.requirement_ir")
     if node.get("requirement_ids"):
         available.append("artifact.requirement_ir")
     if node.get("design_md") or node.get("design_path"):
         available.append("artifact.design_md")
     if node.get("eval_json"):
         available.append("artifact.eval_json")
+    available.extend(str(value) for value in node.get("inputs") or [] if str(value))
+    semantic_contract = (
+        node.get("semantic_artifact_contract")
+        if isinstance(node.get("semantic_artifact_contract"), dict)
+        else {}
+    )
+    available.extend(
+        str(value) for value in semantic_contract.get("consumes") or [] if str(value)
+    )
     return _dedupe(available)
 
 
@@ -472,17 +507,29 @@ def _select_adapter_entry(
     }
 
 
-def _capsule_type_bundle(manifest: Dict[str, Any]) -> Dict[str, Any]:
+def _capsule_type_bundle(
+    manifest: Dict[str, Any],
+    *,
+    strict_composition_abi: bool = False,
+) -> Dict[str, Any]:
     contract = manifest.get("contract") if isinstance(manifest.get("contract"), dict) else {}
     composition = manifest.get("composition") if isinstance(manifest.get("composition"), dict) else {}
     effects = manifest.get("effects") if isinstance(manifest.get("effects"), dict) else {}
     contract_types = _contract_artifact_types(contract)
     composition_types = _composition_artifact_types(composition)
+    artifact_types = {**contract_types, **composition_types}
+    # `contract.inputs/outputs` preserve descriptive field names used by old
+    # capsules.  Planner-authored semantic nodes carry an explicit typed
+    # artifact contract, so their composition ABI must own runtime admission.
+    # Legacy and fixed workflow nodes do not carry that contract; treating
+    # composition hints as new hard inputs there would invent adapter work that
+    # is not part of their frozen controller-owned execution path.
+    if strict_composition_abi and composition_types.get("consumes"):
+        artifact_types["required_inputs"] = list(composition_types["consumes"])
+    if strict_composition_abi and composition_types.get("produces"):
+        artifact_types["required_outputs"] = list(composition_types["produces"])
     return {
-        "artifact_types": {
-            **contract_types,
-            **composition_types,
-        },
+        "artifact_types": artifact_types,
         "effect_profile": _effect_profile(effects),
         "proof_obligations": _proof_obligations(manifest),
     }
@@ -501,6 +548,7 @@ def _make_stage(
     artifact_types: Optional[Dict[str, Any]] = None,
     effect_profile: Optional[Dict[str, Any]] = None,
     proof_obligations: Optional[List[Dict[str, Any]]] = None,
+    required_execution_trust: str = "unspecified",
 ) -> Dict[str, Any]:
     return {
         "stage_id": stage_id,
@@ -514,6 +562,7 @@ def _make_stage(
         "artifact_types": dict(artifact_types or {}),
         "effect_profile": dict(effect_profile or {}),
         "proof_obligations": list(proof_obligations or []),
+        "required_execution_trust": required_execution_trust,
     }
 
 
@@ -573,11 +622,31 @@ def build_capsule_plan_node(
             "request_type": request_type,
             "lane_hint": lane_hint,
             "selected": False,
+            "unsatisfiable": {
+                "code": "UNSATISFIABLE_CAPSULE",
+                "message": "No registered capability capsule matches this logical node.",
+                "declared_capsule_id": declared_capsule_id or None,
+            },
             "stages": [],
         }
 
     capsule_id = str(base_plan.get("capability_capsule_id") or "")
     manifest = _capsule_manifest(capsule_id, registry_path=registry_path)
+    if not capsule_id or not manifest:
+        return {
+            "schema_version": "solar.capsule_plan_node.v1",
+            "node_id": str(node.get("id") or ""),
+            "logical_operator": logical_operator,
+            "request_type": request_type,
+            "lane_hint": lane_hint,
+            "selected": False,
+            "unsatisfiable": {
+                "code": "UNSATISFIABLE_CAPSULE",
+                "message": "The declared capability capsule is not registered.",
+                "declared_capsule_id": capsule_id or None,
+            },
+            "stages": [],
+        }
     bindings = manifest.get("bindings", {})
     verification = manifest.get("verification", {})
     op_constraints = _operator_constraints_for_logical_operator(
@@ -590,11 +659,15 @@ def build_capsule_plan_node(
     # ResearchScout may run as builder work and an evaluator may be hosted by
     # a compatible builder pane without changing its logical identity.
     role = executable_physical_role(node)
+    strict_composition_abi = isinstance(node.get("semantic_artifact_contract"), dict)
 
     stages: List[Dict[str, Any]] = []
     for index, guard_id in enumerate(bindings.get("required_guard_capsules", []) or [], start=1):
         guard_manifest = _capsule_manifest(str(guard_id), registry_path=registry_path)
-        guard_bundle = _capsule_type_bundle(guard_manifest)
+        guard_bundle = _capsule_type_bundle(
+            guard_manifest,
+            strict_composition_abi=strict_composition_abi,
+        )
         stages.append(
             _make_stage(
                 stage_id=f"{node.get('id')}:guard:{index}",
@@ -613,7 +686,10 @@ def build_capsule_plan_node(
 
     for index, resource_id in enumerate(bindings.get("required_resource_capsules", []) or [], start=1):
         resource_manifest = _capsule_manifest(str(resource_id), registry_path=registry_path)
-        resource_bundle = _capsule_type_bundle(resource_manifest)
+        resource_bundle = _capsule_type_bundle(
+            resource_manifest,
+            strict_composition_abi=strict_composition_abi,
+        )
         stages.append(
             _make_stage(
                 stage_id=f"{node.get('id')}:resource:{index}",
@@ -630,7 +706,10 @@ def build_capsule_plan_node(
             )
         )
 
-    capability_bundle = _capsule_type_bundle(manifest)
+    capability_bundle = _capsule_type_bundle(
+        manifest,
+        strict_composition_abi=strict_composition_abi,
+    )
     stages.append(
         _make_stage(
             stage_id=f"{node.get('id')}:capability",
@@ -644,6 +723,10 @@ def build_capsule_plan_node(
             artifact_types=capability_bundle["artifact_types"],
             effect_profile=capability_bundle["effect_profile"],
             proof_obligations=capability_bundle["proof_obligations"],
+            required_execution_trust=str(
+                (manifest.get("implementation") or {}).get("trust_class")
+                or "unspecified"
+            ),
         )
     )
 
@@ -653,7 +736,10 @@ def build_capsule_plan_node(
             if str(verifier_id) == capsule_id:
                 continue
             verifier_manifest = _capsule_manifest(str(verifier_id), registry_path=registry_path)
-            verifier_bundle = _capsule_type_bundle(verifier_manifest)
+            verifier_bundle = _capsule_type_bundle(
+                verifier_manifest,
+                strict_composition_abi=strict_composition_abi,
+            )
             verifier_kind = str(verifier_manifest.get("capsule_kind") or "capability")
             dispatch_mode = "execute" if verifier_kind == "capability" else "attached"
             verifier_role = logical_role_for_operator("Verifier") if dispatch_mode == "execute" else role
@@ -730,6 +816,14 @@ def build_capsule_plan_node(
         "goal": str(node.get("goal") or ""),
         "selected": True,
         "capability_capsule_id": capsule_id,
+        "approved_fallback_capsule_ids": [
+            str(value)
+            for value in node.get("approved_fallback_capsule_ids", []) or []
+            if str(value)
+        ],
+        "capsule_selection_rationale": str(
+            node.get("capsule_selection_rationale") or ""
+        ),
         "dispatch_task_type": task_type,
         "role": role,
         "required_guard_capsules": list(bindings.get("required_guard_capsules", []) or []),
@@ -738,6 +832,7 @@ def build_capsule_plan_node(
         "artifact_types": node_artifact_types,
         "effect_union": effect_union,
         "proof_obligations": proof_obligations,
+        "operator_requirements": dict(node.get("operator_requirements") or {}),
         "stages": stages,
     }
 
@@ -757,6 +852,14 @@ def build_capsule_plan_ir(
             registry_path=registry_path,
         )
         for node in task_graph.get("nodes", []) or []
+    ]
+    unsatisfiable = [
+        {
+            "node_id": str(node.get("node_id") or ""),
+            **dict(node.get("unsatisfiable") or {}),
+        }
+        for node in nodes
+        if not bool(node.get("selected"))
     ]
     return {
         "schema_version": "solar.capsule_plan_ir.v1",
@@ -786,6 +889,8 @@ def build_capsule_plan_ir(
             if isinstance(obligation, dict)
         ],
         "nodes": nodes,
+        "unsatisfiable_nodes": unsatisfiable,
+        "verdict": "fail" if unsatisfiable else "pass",
     }
 
 
@@ -805,8 +910,40 @@ def enumerate_physical_candidates(
     operator_constraints: Optional[Dict[str, Any]] = None,
     prefer_operator: str = "",
     require_dispatchable: bool = False,
+    require_task_class_fit: bool = False,
     operators_path: Optional[Path] = None,
+    required_execution_trust: str = "unspecified",
 ) -> List[Dict[str, Any]]:
+    return enumerate_physical_candidate_decisions(
+        role=role,
+        task_type=task_type,
+        logical_operator=logical_operator,
+        operator_constraints=operator_constraints,
+        prefer_operator=prefer_operator,
+        require_dispatchable=require_dispatchable,
+        require_task_class_fit=require_task_class_fit,
+        operators_path=operators_path,
+        required_execution_trust=required_execution_trust,
+    )["candidates"]
+
+
+def enumerate_physical_candidate_decisions(
+    *,
+    role: str,
+    task_type: str = "",
+    logical_operator: str = "",
+    operator_constraints: Optional[Dict[str, Any]] = None,
+    prefer_operator: str = "",
+    require_dispatchable: bool = False,
+    require_task_class_fit: bool = False,
+    operators_path: Optional[Path] = None,
+    required_execution_trust: str = "unspecified",
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Enumerate the complete catalog decision instead of dropping exclusions.
+
+    Static compatibility is a planning concern.  Live busy/lease state remains
+    a scheduler concern unless ``require_dispatchable`` is explicitly requested.
+    """
     registry = _load_json(operators_path or PHYSICAL_OPERATORS_PATH)
     operators = registry.get("operators", {}) or {}
     constraints = dict(operator_constraints or {})
@@ -814,60 +951,115 @@ def enumerate_physical_candidates(
     forbidden_ops = set(constraints.get("forbidden", []) or [])
     default_profile = str(constraints.get("default_operator_profile") or "")
     candidates: List[Dict[str, Any]] = []
+    excluded: List[Dict[str, Any]] = []
 
     for op_id, spec in operators.items():
+        reasons: List[str] = []
+        operator_trust = str(spec.get("execution_trust") or "unspecified")
+        if operator_trust not in PHYSICAL_EXECUTION_TRUST_CLASSES:
+            reasons.append("OPERATOR_EXECUTION_TRUST_INVALID")
+        if required_execution_trust not in PHYSICAL_EXECUTION_TRUST_CLASSES:
+            reasons.append("CAPSULE_EXECUTION_TRUST_INVALID")
+        elif (
+            required_execution_trust != "unspecified"
+            and operator_trust != required_execution_trust
+        ):
+            reasons.append("EXECUTION_TRUST_UNSATISFIED")
         if prefer_operator and op_id != prefer_operator:
-            continue
+            reasons.append("PREFERRED_OPERATOR_FILTER")
         if op_id in forbidden_ops:
-            continue
-        if not is_operator_statically_selectable(spec):
-            continue
+            reasons.append("CAPSULE_FORBIDDEN")
+        reasons.extend(
+            f"STATIC_{reason.upper().replace('=', '_').replace('-', '_')}"
+            for reason in static_operator_rejection_reasons(spec)
+        )
         if require_dispatchable and not _is_dispatchable_runtime(op_id):
-            continue
+            reasons.append("RUNTIME_NOT_IDLE")
         roles = [str(r).lower() for r in spec.get("roles", [spec.get("role", "")])]
         explicitly_preferred = op_id in preferred_ops
         # A capsule's explicit physical binding is stronger than its generic
         # host role. AutoSci stages run on the builder plane but intentionally
         # bind to scientific-* command workers with narrower operator roles.
         if role and role.lower() not in roles and not explicitly_preferred:
+            reasons.append("ROLE_MISMATCH")
+        task_classes = [
+            str(value).strip().lower().replace("_", "-")
+            for value in spec.get("task_classes", [])
+            if str(value).strip()
+        ]
+        normalized_task_type = str(task_type or "").strip().lower().replace("_", "-")
+        if require_task_class_fit and normalized_task_type and not explicitly_preferred:
+            if not task_classes:
+                reasons.append("TASK_CLASS_UNDECLARED")
+            elif not any(
+                normalized_task_type == declared
+                or normalized_task_type in declared
+                or declared in normalized_task_type
+                for declared in task_classes
+            ):
+                reasons.append("TASK_CLASS_MISMATCH")
+        if reasons:
+            excluded.append(
+                {
+                    "operator_id": str(op_id),
+                    "reasons": sorted(set(reasons)),
+                    "observed": {
+                        "roles": roles,
+                        "enabled": spec.get("enabled"),
+                        "available": spec.get("available", True),
+                        "deprecated": spec.get("deprecated", False),
+                        "health_status": spec.get("health_status"),
+                    },
+                }
+            )
             continue
 
         priority = 0
+        score: Dict[str, int] = {}
         kind = str(spec.get("launch_cmd_kind", "") or spec.get("backend", ""))
         if "print_once" in kind or "print" in kind:
-            priority += 10
+            score["backend_fit"] = 10
         elif "command" in kind:
-            priority += 5
+            score["backend_fit"] = 5
         else:
-            priority += 1
+            score["backend_fit"] = 1
 
-        task_classes = [str(t).lower() for t in spec.get("task_classes", [])]
         if task_type and any(task_type.lower() in tc for tc in task_classes):
-            priority += 3
+            score["task_class_fit"] = 3
         preferred_for = [str(item).lower() for item in spec.get("preferred_for", [])]
         if logical_operator and logical_operator.lower() in preferred_for:
-            priority += 2
+            score["logical_operator_fit"] = 2
         if role.lower() in preferred_for:
-            priority += 2
+            score["role_preference"] = 2
         if explicitly_preferred:
-            priority += 20
+            score["capsule_preference"] = 20
         if default_profile and (op_id == default_profile or str(spec.get("profile", "")) == default_profile):
-            priority += 8
+            score["default_profile_fit"] = 8
+        priority = sum(score.values())
         candidate = {
             "operator_id": op_id,
             "priority": priority,
+            "rank_score": priority,
+            "score_breakdown": score,
             "role": role,
             "task_type": task_type,
             "profile": spec.get("profile"),
             "model": spec.get("model"),
+            "provider": spec.get("provider") or spec.get("vendor"),
+            "cost_tier": spec.get("cost_tier"),
+            "latency_tier": spec.get("latency_tier"),
             "preferred_for": spec.get("preferred_for", []),
+            "admission_state": "READY",
         }
         if _product_mode_enabled():
             candidate["host_type"] = spec.get("host_type") or spec.get("backend") or "unknown"
         candidates.append(candidate)
 
     candidates.sort(key=lambda item: (-int(item["priority"]), str(item["operator_id"])))
-    return candidates
+    for index, candidate in enumerate(candidates, start=1):
+        candidate["rank"] = index
+    excluded.sort(key=lambda item: str(item["operator_id"]))
+    return {"candidates": candidates, "excluded": excluded}
 
 
 def build_physical_plan_for_capsule_node(
@@ -875,6 +1067,7 @@ def build_physical_plan_for_capsule_node(
     *,
     prefer_operator: str = "",
     require_dispatchable: bool = False,
+    require_task_class_fit: bool = False,
     operators_path: Optional[Path] = None,
 ) -> Dict[str, Any]:
     execute_stage = next((stage for stage in capsule_plan_node.get("stages", []) if stage.get("stage_kind") == "capability"), None)
@@ -889,34 +1082,44 @@ def build_physical_plan_for_capsule_node(
 
     selected_operator_id = ""
     execution_candidates: List[Dict[str, Any]] = []
+    execution_excluded: List[Dict[str, Any]] = []
     if execute_stage:
-        execution_candidates = enumerate_physical_candidates(
+        execution_decisions = enumerate_physical_candidate_decisions(
             role=str(execute_stage.get("role") or capsule_plan_node.get("role") or ""),
             task_type=str(execute_stage.get("task_type") or capsule_plan_node.get("dispatch_task_type") or ""),
             logical_operator=str(capsule_plan_node.get("logical_operator") or ""),
             operator_constraints=dict(execute_stage.get("operator_constraints") or {}),
             prefer_operator=prefer_operator,
             require_dispatchable=require_dispatchable,
+            require_task_class_fit=require_task_class_fit,
             operators_path=operators_path,
+            required_execution_trust=str(
+                execute_stage.get("required_execution_trust") or "unspecified"
+            ),
         )
+        execution_candidates = execution_decisions["candidates"]
+        execution_excluded = execution_decisions["excluded"]
         if execution_candidates:
             selected_operator_id = str(execution_candidates[0]["operator_id"])
 
     verifier_plans = []
     for stage in verifier_stages:
-        candidates = enumerate_physical_candidates(
+        verifier_decisions = enumerate_physical_candidate_decisions(
             role=str(stage.get("role") or "evaluator"),
             task_type=str(stage.get("task_type") or "verification"),
             logical_operator="Verifier",
             operator_constraints=dict(stage.get("operator_constraints") or {}),
             require_dispatchable=require_dispatchable,
+            require_task_class_fit=require_task_class_fit,
             operators_path=operators_path,
         )
+        candidates = verifier_decisions["candidates"]
         verifier_plans.append(
             {
                 "stage_id": stage.get("stage_id"),
                 "capability_capsule_id": stage.get("capability_capsule_id"),
                 "candidates": candidates,
+                "excluded": verifier_decisions["excluded"],
                 "selected_operator_id": str(candidates[0]["operator_id"]) if candidates else "",
             }
         )
@@ -932,8 +1135,114 @@ def build_physical_plan_for_capsule_node(
         "proof_obligations": list(capsule_plan_node.get("proof_obligations") or []),
         "selected_operator_id": selected_operator_id,
         "execution_candidates": execution_candidates,
+        "execution_excluded": execution_excluded,
         "attached_capsules": attached_stages,
         "verifier_plans": verifier_plans,
+    }
+
+
+def _canonical_sha256(payload: Dict[str, Any]) -> str:
+    encoded = (
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        + "\n"
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def build_physical_plan_ir(
+    capsule_plan_ir: Dict[str, Any],
+    *,
+    require_dispatchable: bool = False,
+    operators_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Compile one authoritative whole-request PhysicalPlan.
+
+    Candidate compatibility and order are frozen here.  The scheduler may
+    refresh transient availability later, but may not search outside these
+    approved candidate lists.
+    """
+    nodes: List[Dict[str, Any]] = []
+    unsatisfiable: List[Dict[str, Any]] = []
+    for capsule_node in capsule_plan_ir.get("nodes") or []:
+        if not isinstance(capsule_node, dict):
+            continue
+        if not bool(capsule_node.get("selected", True)):
+            unsatisfiable.append(
+                {
+                    "node_id": str(capsule_node.get("node_id") or ""),
+                    **dict(capsule_node.get("unsatisfiable") or {}),
+                }
+            )
+            continue
+        physical = build_physical_plan_for_capsule_node(
+            capsule_node,
+            require_dispatchable=require_dispatchable,
+            require_task_class_fit=True,
+            operators_path=operators_path,
+        )
+        candidates = list(physical.get("execution_candidates") or [])
+        if not candidates:
+            unsatisfiable.append(
+                {
+                    "node_id": str(capsule_node.get("node_id") or ""),
+                    "code": "UNSATISFIABLE_BINDING",
+                    "message": "No statically compatible physical operator is available.",
+                    "excluded": list(physical.get("execution_excluded") or []),
+                }
+            )
+        nodes.append(physical)
+    return {
+        "schema_version": "solar.physical_plan_ir.v2",
+        "sprint_id": capsule_plan_ir.get("sprint_id", "N/A"),
+        "capsule_plan_ref": {
+            "schema_version": capsule_plan_ir.get("schema_version"),
+            "sha256": _canonical_sha256(capsule_plan_ir),
+        },
+        "availability_boundary": {
+            "frozen": [
+                "static_catalog_eligibility",
+                "role_compatibility",
+                "capsule_preferences",
+                "candidate_order",
+                "execution_trust",
+            ],
+            "runtime_refresh": [
+                "busy",
+                "lease",
+                "quota_cooldown",
+                "process_health",
+            ],
+        },
+        "nodes": nodes,
+        "unsatisfiable_nodes": unsatisfiable,
+        "verdict": "fail" if unsatisfiable else "pass",
+    }
+
+
+def compile_whole_request_execution_plan(
+    task_graph: Dict[str, Any],
+    *,
+    request_type: str = "",
+    lane_hint: str = "",
+    registry_path: Optional[Path] = None,
+    operators_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Compile TaskGraph -> whole CapsulePlan -> whole PhysicalPlan once."""
+    capsule_plan = build_capsule_plan_ir(
+        task_graph,
+        request_type=request_type,
+        lane_hint=lane_hint,
+        registry_path=registry_path,
+    )
+    physical_plan = build_physical_plan_ir(
+        capsule_plan,
+        require_dispatchable=False,
+        operators_path=operators_path,
+    )
+    return {
+        "capsule_plan": capsule_plan,
+        "physical_plan": physical_plan,
+        "verdict": "pass" if physical_plan.get("verdict") == "pass" else "fail",
     }
 
 

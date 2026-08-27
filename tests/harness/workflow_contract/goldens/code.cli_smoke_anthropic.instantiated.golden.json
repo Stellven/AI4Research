@@ -192,6 +192,7 @@
       "evaluator_gate": {
         "kind": "llm_eval",
         "on_capacity_unavailable": "wait",
+        "on_fail": "fail",
         "on_human_review": "block_dependents",
         "role": "evaluator",
         "verdict_kinds": [
@@ -204,6 +205,7 @@
       "goal": "S3 \u00b7 Review",
       "id": "S3",
       "logical_operator": "Verifier",
+      "max_repair_attempts": 0,
       "node_kind": "verify",
       "on_human_review": "block_dependents",
       "outputs": [
@@ -258,7 +260,7 @@
   "sprint_id": "sprint-golden",
   "title": "Code smoke / CLI artifact (Anthropic)",
   "validator_command": "python3 -m pytest sprints/golden-sid/workdir/tests -q",
-  "workflow_contract_hash": "sha256:2f3ea9cbc2b2bb92f8ce334001d097144f26e66e0d61716b65bfca0287a6aafb",
+  "workflow_contract_hash": "sha256:d8d425a1b45806e8108b7cb3456f4141e12c03ca3969f9a1ba2822465cb85f41",
   "workflow_contract_id": "code.cli_smoke_anthropic",
   "workflow_contract_version": "1.0"
 }

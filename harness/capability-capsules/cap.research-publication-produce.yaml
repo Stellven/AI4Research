@@ -20,6 +20,8 @@ contract:
     required:
       - name: scientific_report
         schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      - name: artifact_review
+        schema_ref: schemas/evidence/artifact_review.v1.schema.json
     optional:
       - name: publication_target
         description: Paper, poster, rebuttal, slides, supplement, or mixed bundle.
@@ -42,15 +44,17 @@ composition:
   consumes:
     - schema_ref: schemas/evidence/scientific_report.v1.schema.json
       purpose: Source report or paper draft evidence.
+    - schema_ref: schemas/evidence/artifact_review.v1.schema.json
+      purpose: Independent review and blocking findings for the exact report.
   produces:
     - schema_ref: schemas/evidence/publication_bundle.v1.schema.json
       purpose: Publication bundle evidence.
   compatible_with:
-    - cap.research-report-draft
+    - cap.research-artifact-review
   incompatible_with:
     - cap.research-experiment-run
   requires_after:
-    - cap.research-report-draft
+    - cap.research-artifact-review
 effects:
   read:
     - report artifacts and source evidence
