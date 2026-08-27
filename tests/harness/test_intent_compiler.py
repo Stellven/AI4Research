@@ -1,5 +1,6 @@
 import copy
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -79,6 +80,33 @@ def test_codex_schema_projection_preserves_strict_source_schema() -> None:
     assert '"items": false' not in serialized
     assert "prefixItems" in json.dumps(source)
     assert "uniqueItems" in json.dumps(source)
+
+
+def test_codex_model_uses_absolute_managed_paths_with_relative_work_dir(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def fake_run(command, **kwargs):
+        schema_path = Path(command[command.index("--output-schema") + 1])
+        output_path = Path(command[command.index("--output-last-message") + 1])
+        assert schema_path.is_absolute()
+        assert output_path.is_absolute()
+        assert Path(kwargs["cwd"]).is_absolute()
+        output_path.write_text('{"ok": true}', encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(compiler.subprocess, "run", fake_run)
+    model = compiler.CodexJsonModel(model="test-model")
+
+    result = model.generate(
+        "Return JSON.",
+        compiler.SEMANTIC_SCHEMA,
+        Path("relative") / "model-call",
+    )
+
+    assert result == {"ok": True}
 
 
 def test_current_gateway_raw_intent_normalizes_without_losing_identity() -> None:

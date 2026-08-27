@@ -1053,6 +1053,29 @@ class TestBuildCommand:
             r"C:\run\operator-envelope.json",
         ]
 
+    def test_windows_autosci_bridge_worker_uses_native_python_adapter(self, monkeypatch):
+        monkeypatch.setattr(_od.os, "name", "nt")
+        config = {
+            "backend": "command",
+            "command": 'python3 "$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py" run --action discover_literature --envelope "$SOLAR_OPERATOR_ENVELOPE_JSON"',
+        }
+
+        cmd = _od._build_command(
+            config,
+            {"task_id": "scheduler-discovery", "command": config["command"]},
+            {"SOLAR_OPERATOR_ENVELOPE_JSON": r"C:\run\operator-envelope.json"},
+        )
+
+        assert cmd == [
+            sys.executable,
+            str(_od.HARNESS_DIR / "plugins" / "autosci" / "bin" / "autosci_bridge.py"),
+            "run",
+            "--action",
+            "discover_literature",
+            "--envelope",
+            r"C:\run\operator-envelope.json",
+        ]
+
     def test_codex_command_environment_is_platform_neutral(self):
         env = _od._command_operator_environment(
             {

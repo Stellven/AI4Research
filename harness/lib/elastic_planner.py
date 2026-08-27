@@ -1041,7 +1041,9 @@ is irrelevant.
                 "defects": defects or [],
             }
         )
-    return json.dumps(payload, ensure_ascii=False, indent=2)
+    # This prompt carries the full semantic capsule/check ABI. Compact JSON
+    # keeps registry growth from consuming the model context budget.
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
 def compile_exact_reuse_plan(
@@ -1585,6 +1587,12 @@ def _repair_preservation_errors(
         for row in repaired_plan.get("nodes") or []
         if isinstance(row, dict) and str(row.get("node_id") or "")
     }
+    repaired_requirement_owners: dict[str, set[str]] = {}
+    for repaired_node_id, repaired_node in repaired_nodes.items():
+        for requirement_id in repaired_node.get("requirement_ids") or []:
+            repaired_requirement_owners.setdefault(str(requirement_id), set()).add(
+                repaired_node_id
+            )
     errors: list[dict[str, Any]] = []
     for node_id in sorted(set(previous_nodes) & set(repaired_nodes)):
         before = previous_nodes[node_id]
@@ -1643,7 +1651,13 @@ def _repair_preservation_errors(
         after_requirements = {
             str(value) for value in after.get("requirement_ids") or []
         }
-        if after_requirements != before_requirements:
+        added_requirements = after_requirements - before_requirements
+        removed_requirements = before_requirements - after_requirements
+        safely_reassigned = all(
+            repaired_requirement_owners.get(requirement_id, set()) - {node_id}
+            for requirement_id in removed_requirements
+        )
+        if added_requirements or (removed_requirements and not safely_reassigned):
             errors.append(
                 _error(
                     "REPAIR_REQUIREMENT_OWNERSHIP_CHANGED",

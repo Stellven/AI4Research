@@ -385,6 +385,27 @@ def test_runtime_input_binding_is_hashed_routed_and_tamper_evident(tmp_path: Pat
     ]
 
 
+def test_request_envelope_controller_input_routes_to_operator_dispatch_envelope(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "scheduler_input.json"
+    value = _scheduler_input()
+    value["graph"]["nodes"][0]["artifact_contract"]["consumes"] = [
+        "schema:request-envelope.schema.json"
+    ]
+    _write(source, value)
+
+    graph_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime")
+    graph = graph_scheduler.load_graph(graph_path)
+    node = graph["nodes"][0]
+
+    assert node["artifact_routes"]["consumes"] == {
+        "schema:request-envelope.schema.json": "dispatch/envelope.json"
+    }
+    assert node["read_scope"] == ["dispatch/envelope.json"]
+    assert scheduler_input.verify_runtime_projection(graph)["ok"] is True
+
+
 def test_scheduler_projection_manifest_anchor_covers_runtime_inputs_and_outputs(tmp_path: Path) -> None:
     source = tmp_path / "scheduler_input.json"
     input_artifact = tmp_path / "inputs" / "request.json"

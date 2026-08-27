@@ -178,3 +178,51 @@ def test_semantic_scholar_attempt_records_key_mode_without_secret(
     archived = json.loads(request_path.read_text(encoding="utf-8"))
     assert archived["credential_mode"] == "api_key"
     assert "test-secret-never-archive" not in request_path.read_text(encoding="utf-8")
+
+
+def test_service_searches_base_topic_but_gates_on_full_authoritative_scope(tmp_path: Path) -> None:
+    full_query = """Discover sources supporting a comparison of lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage. Evidence coverage must support evaluation across energy density, lifetime, safety, material availability, cost, and commercial readiness.
+
+Authoritative discovery scope:
+- [R2] Compare the four specified battery chemistries for grid storage. Required coverage: Compare lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage.
+- [R3] Evaluate the six specified criteria. Required coverage: Evaluate energy density, lifetime, safety, material availability, cost, and commercial readiness.
+"""
+    seen_queries: list[str] = []
+    relevant = [
+        _candidate(1, "Sodium-ion batteries for stationary grid storage", "Battery chemistry and lifetime."),
+        _candidate(2, "Solid-state batteries for grid applications", "Storage safety and commercial readiness."),
+        _candidate(3, "Lithium-sulfur grid battery systems", "Energy storage cost and cycle life."),
+    ]
+
+    def backend(**kwargs):
+        seen_queries.append(str(kwargs["query"]))
+        return {
+            "status": "completed",
+            "candidates": [
+                {
+                    "candidate_id": item["source_id"],
+                    "paperId": item["source_id"],
+                    "title": item["title"],
+                    "source_ref": item["url"],
+                    "abstract": item["content_summary"],
+                    "source_channels": ["search_s2"],
+                }
+                for item in relevant
+            ],
+            "limitations": [],
+        }
+
+    service = LiteratureDiscoveryService(tmp_path, backend=backend, limit=3, max_attempts_per_provider=1)
+    result = service(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": full_query}]},
+        payload={"task_contract": {"user_intent": full_query}},
+    )
+
+    assert seen_queries
+    assert "Authoritative discovery scope" not in seen_queries[0]
+    assert seen_queries[0] == (
+        "lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage"
+    )
+    assert result["status"] == "completed"
+    assert result["provider_query"] == seen_queries[0]
+    assert len(result["relevance_gate"]["coverage_anchor_groups"]) == 2

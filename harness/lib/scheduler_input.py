@@ -40,6 +40,15 @@ MUTABLE_NODE_FIELDS = {
     "updated_at",
 }
 
+# Controller-owned request data is delivered inside the immutable physical
+# operator envelope.  It is an artifact-type identity in PlanIR/SchedulerInput,
+# not a staging-workspace filename.  Project it to the exact runtime authority
+# understood by graph_node_dispatcher instead of treating the schema URI as a
+# relative path below the node work directory.
+CONTROLLER_DISPATCH_ROUTES = {
+    "schema:request-envelope.schema.json": "dispatch/envelope.json",
+}
+
 
 class SchedulerInputError(ValueError):
     """A frozen scheduler input is malformed or cannot be trusted."""
@@ -201,6 +210,10 @@ def _runtime_node(node: dict[str, Any], artifact_paths: dict[str, str] | None = 
     artifact_paths = artifact_paths or {}
     consumes = list(node["artifact_contract"]["consumes"])
     produces = list(node["artifact_contract"]["produces"])
+    consume_paths = {
+        item: artifact_paths.get(item) or CONTROLLER_DISPATCH_ROUTES.get(item) or item
+        for item in consumes
+    }
     return {
         "id": node["id"],
         "goal": node["goal"],
@@ -215,7 +228,7 @@ def _runtime_node(node: dict[str, Any], artifact_paths: dict[str, str] | None = 
         "physical_candidates": candidates,
         "artifact_contract": deepcopy(node["artifact_contract"]),
         "artifact_routes": {
-            "consumes": {item: artifact_paths.get(item) for item in consumes},
+            "consumes": consume_paths,
             "produces": {item: artifact_paths.get(item) for item in produces},
         },
         "evaluation_binding": binding,
@@ -231,7 +244,7 @@ def _runtime_node(node: dict[str, Any], artifact_paths: dict[str, str] | None = 
         "failure_policy": failure,
         "max_repair_attempts": max(0, int(failure["max_attempts"]) - 1),
         "on_failure_exhausted": failure["on_exhausted"],
-        "read_scope": [artifact_paths.get(item) or item for item in consumes],
+        "read_scope": [consume_paths[item] for item in consumes],
         "write_scope": [artifact_paths.get(item) or item for item in produces],
         "acceptance": [
             *[f"deterministic gate: {item}" for item in deterministic_gates],

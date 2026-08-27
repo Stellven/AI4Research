@@ -748,6 +748,25 @@ def test_plan_repair_may_fold_requirement_free_support_node_into_composition() -
     assert errors == []
 
 
+def test_plan_repair_may_remove_duplicate_requirement_ownership() -> None:
+    previous = {
+        "nodes": [
+            {"node_id": "discovery", "requirement_ids": ["R2", "R3"]},
+            {"node_id": "report", "requirement_ids": ["R1", "R2", "R3"]},
+        ]
+    }
+    repaired = {
+        "nodes": [
+            {"node_id": "discovery", "requirement_ids": ["R2", "R3"]},
+            {"node_id": "report", "requirement_ids": ["R1"]},
+        ]
+    }
+
+    errors = planner._repair_preservation_errors(previous, repaired)
+
+    assert errors == []
+
+
 def test_plan_repair_cannot_fold_dependency_that_owns_a_requirement() -> None:
     previous, repaired, composition_catalog = _folded_report_plan_repair()
     previous["nodes"][1]["requirement_ids"] = ["REQ-PLAN"]

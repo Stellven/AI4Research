@@ -118,6 +118,10 @@ class CodexJsonModel:
     provider: str = "codex"
 
     def generate(self, prompt: str, schema_path: Path, work_dir: Path) -> dict[str, Any]:
+        # Codex resolves --output-schema and --output-last-message relative to
+        # its subprocess cwd.  Normalize the managed directory first so a
+        # caller may safely provide a relative output root.
+        work_dir = work_dir.resolve()
         work_dir.mkdir(parents=True, exist_ok=True)
         output_path = work_dir / "model_output.json"
         provider_schema_path = work_dir / "model_output.schema.json"

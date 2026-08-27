@@ -623,6 +623,28 @@ def _build_command(
     if (
         os.name == "nt"
         and backend == "command"
+        and "plugins/autosci/bin/autosci_bridge.py" in effective_command.replace("\\", "/")
+    ):
+        envelope_path = str((exec_env or {}).get("SOLAR_OPERATOR_ENVELOPE_JSON") or "").strip()
+        action_match = re.search(r"--action\s+[\"']?([A-Za-z0-9_-]+)", effective_command)
+        if not envelope_path or action_match is None:
+            return [
+                sys.executable,
+                "-c",
+                "import sys; print('AutoSci bridge action or envelope is unavailable', file=sys.stderr); raise SystemExit(127)",
+            ]
+        return [
+            str(os.environ.get("SOLAR_AUTOSCI_PYTHON") or sys.executable),
+            str(HARNESS_DIR / "plugins" / "autosci" / "bin" / "autosci_bridge.py"),
+            "run",
+            "--action",
+            action_match.group(1),
+            "--envelope",
+            envelope_path,
+        ]
+    if (
+        os.name == "nt"
+        and backend == "command"
         and "plugins/autosci/bin/fixed_research_node_adapter.py" in effective_command.replace("\\", "/")
     ):
         envelope_path = str((exec_env or {}).get("SOLAR_OPERATOR_ENVELOPE_JSON") or "").strip()

@@ -122,6 +122,14 @@ def test_registry_resolves_every_declared_deterministic_callable() -> None:
     assert any(row["check_id"] == "check.scientific.experiment_approval.v1" for row in deterministic)
 
 
+def test_registry_contains_requirement_compiler_checks() -> None:
+    registry = evaluation_plan.load_evaluation_check_registry()
+    check_ids = {row["check_id"] for row in registry["checks"]}
+
+    assert "check.information_outcome_completeness.v1" in check_ids
+    assert "check.intent_constraint_coverage.v1" in check_ids
+
+
 def test_checkable_semantic_requirement_routes_to_independent_review() -> None:
     compiled, validation = _compile()
 

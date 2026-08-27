@@ -3964,3 +3964,37 @@ Date: 2026-08-27
   native, and relevance suites `39 passed`; API-key/runtime/backoff checks
   `11 passed`; direct credential-loader checks `2 passed`. The repository's
   unrelated local schema deletions and runtime artifacts remain unstaged.
+
+## Live planner-to-AutoSci compatibility completion
+
+Date: 2026-08-27
+
+- Corrected the intent compiler's model work directory to an absolute path so
+  the subprocess can resolve its output schema after changing directories.
+- Registered the requirement compiler's two semantic checks in the planning
+  evaluation registry. Planner prompts remain below the bounded model-input
+  limit, and bounded repair may remove duplicate requirement ownership only
+  when another repaired node still owns every removed requirement.
+- Added native-Windows launch translation for all AutoSci bridge operators.
+  The dispatcher now invokes the Python bridge directly instead of attempting
+  the POSIX Bash command stored in the cross-platform registry.
+- Corrected the frozen SchedulerInput projection for the controller-owned
+  `schema:request-envelope.schema.json` identity. It now resolves to the exact
+  immutable `dispatch/envelope.json` authority rather than a nonexistent
+  staging-workspace path, allowing the scheduler's evaluator snapshot to pass
+  integrity validation.
+- Public discovery now sends the first exact planner `Required coverage:`
+  clause to bibliographic providers while retaining the complete planner scope
+  for deterministic relevance evaluation. The prior full workflow sentence
+  caused unrelated ranking results. An authenticated short-query Semantic
+  Scholar probe returned HTTP 200; no key value was printed or archived.
+- Live run `e2e-battery-live-v8-20260827` selected the planned
+  `autosci-literature-discover-worker`, completed with 10 real candidates from
+  arXiv and Europe PMC, and emitted a provider-backed final shortlist with
+  `final_shortlist_ready=true`. Runtime evidence is under `C:/sr/v10/`; this
+  local evidence is intentionally not a commit candidate.
+- Focused verification passed `132 passed`; one additional test was blocked by
+  the pre-existing local deletion of its schema fixture and is queued for a
+  clean-clone rerun. Discovery/relevance service verification passed
+  `32 passed`, and SchedulerInput runtime verification passed `23 passed`.
+  No schema deletion or runtime-generated file is included in this repair.

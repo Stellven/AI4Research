@@ -489,16 +489,27 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # topic seed re-supplies the full instruction and the search is buried again.
     from_page_title = bool(titles[:1]) and not inline[:1]
     query = " ".join(inline[:1] or titles[:1] or [intent]).strip()
-    if False:
-        # No page title or inline seed, so the query is the raw user request.
-        # The phrase patterns below only catch "survey/review on X" shapes;
-        # "Research and compare CRISPR ... Produce a source-linked report with
-        # evidence IDs, ..." matches none of them and went to the providers
-        # whole, which buried the topic and returned "Applied bibliometrics".
-        # Distil with the same topic definition the relevance gate uses so the
-        # search and the gate cannot disagree about what was asked.
-        pass
-    if has_topic_seed or not titles:
+    # A planner-owned Required coverage clause is the cleanest retrieval query:
+    # it retains the named subject without the surrounding workflow request.
+    # The full intent remains authoritative for the later relevance gate.  In
+    # particular, do not send providers prose such as "Discover a ranked,
+    # reviewable ... source set"; public bibliographic search ranks those
+    # instruction words and can return unrelated papers even when the scope is
+    # otherwise exact.
+    authoritative_coverage = re.search(
+        r"Required coverage\s*:\s*([^\r\n]+)",
+        intent,
+        flags=re.IGNORECASE,
+    )
+    if authoritative_coverage and not from_page_title:
+        query = str(authoritative_coverage.group(1) or "").strip().rstrip(".;")
+        query = re.sub(
+            r"^(?:compare|evaluate|assess|analy[sz]e|investigate|review)\s+",
+            "",
+            query,
+            flags=re.IGNORECASE,
+        ).strip()
+    if not authoritative_coverage and (has_topic_seed or not titles):
         match = re.search(
             r"\b(?:survey|review|report|analysis|brief)\s+(?:on|about|for)\s+(.+)",
             query,
@@ -512,9 +523,18 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
             maxsplit=1,
             flags=re.IGNORECASE,
         )[0].strip()
-    else:
+    elif not authoritative_coverage:
         query = re.sub(r"^(?:survey|review|research|analy[sz]e|synthesize)\s+", "", query, flags=re.IGNORECASE)
         query = re.split(r"[,;]", query, maxsplit=1)[0].strip()
+    # Planner-appended coverage clauses are evaluation authority, not search
+    # keywords. Keep them available to the relevance gate through user_intent,
+    # but do not send the whole contract to public search providers.
+    query = re.split(
+        r"\s*Authoritative discovery scope\s*:\s*",
+        query,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0]
     query = re.sub(r"\s+", " ", query).strip()
     # The phrase patterns above only catch "survey/review on X" shapes. A request
     # like "Research and compare CRISPR ... Produce a source-linked report with
@@ -523,7 +543,7 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # profiling, bibliometrics) instead of 939 CRISPR papers. Token-distil only
     # when the instruction survived, so inputs the patterns already handle keep
     # their cleaner phrasing, and never touch a fetched page title.
-    if not from_page_title and _DELIVERABLE_MARKER_RE.search(query):
+    if not authoritative_coverage and not from_page_title and _DELIVERABLE_MARKER_RE.search(query):
         distilled = distill_search_query(query)
         if distilled:
             query = distilled
@@ -587,24 +607,23 @@ def _candidate_relevance_text(candidate: dict[str, Any]) -> str:
 def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
     """Extract planner-preserved `Required coverage:` clauses as anchor groups.
 
-    Terms already present in the node's base objective are broad topic terms,
-    not discriminating coverage anchors. Removing them is what keeps generic
-    `battery energy storage` papers from satisfying a chemistry list merely by
-    repeating `battery` and `storage`.
+    Each clause remains authoritative even when the planner repeats its exact
+    terms in the base objective. Generic research/deliverable words are already
+    removed by `_relevance_terms`; subtracting the base terms would erase every
+    chemistry and criterion from a correctly scoped planner objective.
     """
 
     text = str(query or "")
     marker = re.search(r"Authoritative discovery scope\s*:", text, re.IGNORECASE)
     if not marker:
         return []
-    base_terms = _relevance_terms(text[: marker.start()], remove_generic=True)
     groups: list[dict[str, Any]] = []
     for match in re.finditer(r"Required coverage\s*:\s*([^\r\n]+)", text[marker.end() :], re.IGNORECASE):
         clause = str(match.group(1) or "").strip().rstrip(".;")
-        terms = _relevance_terms(clause, remove_generic=True) - base_terms
+        terms = _relevance_terms(clause, remove_generic=True)
         # These are grammatical glue inside chemistry names, not useful
         # discriminators by themselves. `solid` and `sulfur` remain anchors.
-        terms -= {"ion", "state"}
+        terms -= {"ion", "state", "battery", "storage", "energy"}
         if terms:
             groups.append(
                 {
@@ -1289,14 +1308,22 @@ class LiteratureDiscoveryService:
     def __call__(self, *, seed_snapshot: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
         self._attempts.clear()
         self._attempt_paths.clear()
+        task_contract = payload.get("task_contract") if isinstance(payload.get("task_contract"), dict) else {}
+        full_query = str(task_contract.get("user_intent") or payload.get("topic") or "").strip()
         query = _topic_from_snapshot(seed_snapshot, payload)
         if not query:
             raise ResearchOperatorError("Source discovery requires a non-empty query", error_type="invalid_input")
+        relevance_query = (
+            full_query
+            if re.search(r"Authoritative discovery scope\s*:", full_query, re.IGNORECASE)
+            else query
+        )
         request_hash = stable_json_sha256(
             {
                 "service_id": self.service_id,
                 "service_version": self.service_version,
                 "query": query,
+                "relevance_query": relevance_query,
                 "limit": self.limit,
                 "seed_snapshot_sha256": stable_json_sha256(seed_snapshot),
             }
@@ -1305,7 +1332,6 @@ class LiteratureDiscoveryService:
         candidates: list[dict[str, Any]] = []
         limitations: list[str] = []
         traces: list[dict[str, Any]] = []
-        task_contract = payload.get("task_contract") if isinstance(payload.get("task_contract"), dict) else {}
         try:
             min_provider_families = max(1, int(task_contract.get("min_provider_families") or 1))
         except (TypeError, ValueError):
@@ -1410,7 +1436,7 @@ class LiteratureDiscoveryService:
         except (TypeError, ValueError):
             minimum_relevant = None
         deduped, relevance_audit = apply_discovery_relevance_gate(
-            query,
+            relevance_query,
             selected,
             minimum_relevant_candidates=minimum_relevant,
         )
@@ -1427,7 +1453,7 @@ class LiteratureDiscoveryService:
         relevance_audit["audit_sha256"] = relevance_audit_sha
         for candidate in deduped:
             candidate["candidate_sha256"] = stable_json_sha256(candidate)
-            candidate["query"] = query
+            candidate["query"] = relevance_query
         if relevance_audit["status"] != "passed":
             limitations.append(
                 "Deterministic relevance gate left the discovery shortlist incomplete: "
@@ -1439,7 +1465,8 @@ class LiteratureDiscoveryService:
             "service_id": self.service_id,
             "service_version": self.service_version,
             "request_sha256": request_hash,
-            "query": query,
+            "query": relevance_query,
+            "provider_query": query,
             "provider_traces": traces,
             "provider_attempts": list(self._attempts),
             "candidate_count": len(deduped),
@@ -1469,7 +1496,8 @@ class LiteratureDiscoveryService:
             "request_sha256": request_hash,
             "response_sha256": response_hash,
             "trace": "production:" + "+".join(providers),
-            "query": query,
+            "query": relevance_query,
+            "provider_query": query,
             "status": "completed" if relevance_audit["status"] == "passed" else "inconclusive",
             "candidates": deduped,
             "relevance_gate": relevance_audit,

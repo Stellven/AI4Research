@@ -4,6 +4,22 @@
   "registry_id": "solar-evaluation-checks-v1",
   "checks": [
     {
+      "check_id": "check.information_outcome_completeness.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Check required outcome fields.",
+      "deterministic": null,
+      "semantic": {"rubric": ["Required fields are present, relevant, and supported or qualified."]}
+    },
+    {
+      "check_id": "check.intent_constraint_coverage.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Check required constraint coverage.",
+      "deterministic": null,
+      "semantic": {"rubric": ["All required values are explicitly covered; omissions fail."]}
+    },
+    {
       "check_id": "not_machine_checkable",
       "mode": "semantic",
       "applies_to": {"kind": "bound_output"},
