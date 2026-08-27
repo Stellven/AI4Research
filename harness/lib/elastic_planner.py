@@ -972,8 +972,14 @@ compiled requirements. Use schema:request-envelope.schema.json when the selected
 controller's normalized request envelope. Every value in consumes is an artifact_type identifier, never
 a materialization file path and never `node_id:path`.
 materialization.path is only the relative file/directory location inside the producer node workspace.
-Effects must be explicit. Keep independent work parallel by declaring only real dependencies. Do not
-add work that no requirement needs. Set operator_requirements.execution_trust to measured_execution
+Effects must be explicit. `operator_requirements.effects` is the permission envelope for the capsule
+composition that will implement the node, not merely a description of the user's requested outcome.
+For every viable capsule chain, include every `active_effects` value used by that chain. In particular,
+include `execute` whenever a required capsule ABI lists `execute`, even for information-retrieval or
+reporting nodes; include `network` in both `effects` and the network policy when network is required.
+Omitting an active effect makes that capsule composition invalid rather than making the effect disappear.
+Keep independent work parallel by declaring only real dependencies. Do not add work that no requirement
+needs. Set operator_requirements.execution_trust to measured_execution
 when the node must produce scientific results from a real dataset/code execution. Fixture, adapter,
 lineage, schema, or exit-code-only evidence never satisfies measured_execution. Use evidence_transform
 only when the catalog explicitly offers that trust class; otherwise use any when execution authenticity
@@ -1036,7 +1042,13 @@ is irrelevant.
     if generation:
         payload.update(
             {
-                "repair_instruction": "Correct only listed defects. Preserve unaffected node meaning and identifiers where possible.",
+                "repair_instruction": (
+                    "Correct only listed defects. Preserve unaffected node meaning and identifiers where possible. "
+                    "Treat capsule exclusion reason codes literally: UNREQUESTED_<EFFECT>_EFFECT means the "
+                    "node must declare <effect> in operator_requirements.effects when that capsule or chain is "
+                    "needed for its exact artifact contract. Do not remove the required output or replace the "
+                    "logical operation merely to avoid declaring the implementation's real effect."
+                ),
                 "previous": previous,
                 "defects": defects or [],
             }

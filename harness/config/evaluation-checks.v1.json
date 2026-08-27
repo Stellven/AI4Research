@@ -4,6 +4,22 @@
   "registry_id": "solar-evaluation-checks-v1",
   "checks": [
     {
+      "check_id": "check.action_outcome_completeness.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Check that the requested action has a complete and attributable execution outcome.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The output records execution, results, failure conditions, and what was or was not tested for the bound action."]}
+    },
+    {
+      "check_id": "check.artifact_outcome_completeness.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Check that the requested artifact is complete and supported by attributable evidence.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The output contains the requested deliverable, states its completeness, links supporting evidence, and identifies what was or was not tested."]}
+    },
+    {
       "check_id": "check.information_outcome_completeness.v1",
       "mode": "semantic",
       "applies_to": {"kind": "bound_output"},
@@ -18,6 +34,30 @@
       "decision": "Check required constraint coverage.",
       "deterministic": null,
       "semantic": {"rubric": ["All required values are explicitly covered; omissions fail."]}
+    },
+    {
+      "check_id": "check.unknown_resolution_trace.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Check that every unresolved question is resolved or explicitly retained as unresolved with traceable evidence.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The output records a finding, supporting evidence, and unresolved status for every bound unknown without inventing a resolution."]}
+    },
+    {
+      "check_id": "check.ambiguity_disclosure.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Check that every material ambiguity and its chosen resolution are disclosed.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The output states the assumption used for every bound ambiguity, its impact, and whether it was tested or remains untested."]}
+    },
+    {
+      "check_id": "check.goal_satisfaction.v1",
+      "mode": "semantic",
+      "applies_to": {"kind": "bound_output"},
+      "decision": "Check that an otherwise unbound user goal is satisfied explicitly.",
+      "deterministic": null,
+      "semantic": {"rubric": ["The output states how the bound goal was satisfied, identifies supporting evidence, and discloses limitations."]}
     },
     {
       "check_id": "not_machine_checkable",

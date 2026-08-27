@@ -37,6 +37,7 @@ TEMPLATE_PATH = (
     / "requirement_ir.json"
 )
 COMPILER_SCRIPT = REPO / "harness" / "lib" / "requirement_compiler" / "compiler.py"
+EVALUATION_CHECK_REGISTRY = REPO / "harness" / "config" / "evaluation-checks.v1.json"
 
 
 def _load(path: Path):
@@ -79,6 +80,30 @@ def test_all_25_intent_ir_fixtures_compile_to_template_shape() -> None:
         assert all(check["status"] == "pass" for check in evaluation["checks"])
         assert "compiler_next" not in first
         assert "planner_hints" not in first
+
+
+def test_every_requirement_compiler_check_is_registered_for_evaluation() -> None:
+    catalog = _load(FIXTURE_ROOT / "fixture_catalog.json")
+    registered = {
+        row["check_id"] for row in _load(EVALUATION_CHECK_REGISTRY)["checks"]
+    }
+    emitted: set[str] = set()
+
+    for case in catalog["cases"]:
+        intent_path = FIXTURE_ROOT / case["bundle_path"] / "intent_ir.json"
+        requirement_ir = compile_requirement_ir(
+            _load(intent_path),
+            intent_ir_sha256=hashlib.sha256(intent_path.read_bytes()).hexdigest(),
+        )
+        emitted.update(
+            requirement["check"] for requirement in requirement_ir["requirements"]
+        )
+
+    assert {
+        "check.unknown_resolution_trace.v1",
+        "check.ambiguity_disclosure.v1",
+    } <= emitted
+    assert emitted <= registered, f"unregistered checks: {sorted(emitted - registered)}"
 
 
 def test_format_evaluator_rejects_legacy_requirement_shape() -> None:

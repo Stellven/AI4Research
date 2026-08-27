@@ -935,6 +935,10 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
     assert "type `collection`" in payload["instruction"]
     assert "source- or literature-discovery node must own" in payload["instruction"]
     assert "full research query, not a generic topic summary" in payload["instruction"]
+    assert "permission envelope for the capsule" in payload["instruction"]
+    assert "include `execute` whenever a required capsule ABI lists `execute`" in payload[
+        "instruction"
+    ]
     experiment_check = next(
         row
         for row in payload["evaluation_check_abis"]
@@ -956,6 +960,37 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
         }
     assert "operator_compatibility" not in prompt
     assert len(prompt.encode("utf-8")) < 60000
+
+
+def test_plan_repair_prompt_explains_unrequested_capsule_effect() -> None:
+    requirement_ir = _requirement_ir()
+    prompt = planner._plan_prompt(
+        requirement_ir,
+        _decision(requirement_ir),
+        _catalog(),
+        {"requirement_ir": requirement_ir},
+        planner.evaluation_planning.load_evaluation_check_registry(),
+        generation=1,
+        previous=_plan_body(),
+        defects=[
+            {
+                "code": "NO_FEASIBLE_CAPSULE_COMPOSITION",
+                "closest_exclusions": [
+                    {
+                        "capsule_id": "cap.research-literature-discover",
+                        "reason_codes": ["UNREQUESTED_EXECUTE_EFFECT"],
+                    }
+                ],
+            }
+        ],
+    )
+    payload = json.loads(prompt)
+
+    assert "UNREQUESTED_<EFFECT>_EFFECT" in payload["repair_instruction"]
+    assert "operator_requirements.effects" in payload["repair_instruction"]
+    assert payload["defects"][0]["closest_exclusions"][0]["reason_codes"] == [
+        "UNREQUESTED_EXECUTE_EFFECT"
+    ]
 
 
 def test_discovery_plan_preserves_scope_requirements_in_runtime_goal(tmp_path: Path) -> None:

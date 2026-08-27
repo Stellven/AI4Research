@@ -124,10 +124,43 @@ def test_registry_resolves_every_declared_deterministic_callable() -> None:
 
 def test_registry_contains_requirement_compiler_checks() -> None:
     registry = evaluation_plan.load_evaluation_check_registry()
-    check_ids = {row["check_id"] for row in registry["checks"]}
+    checks = {row["check_id"]: row for row in registry["checks"]}
 
-    assert "check.information_outcome_completeness.v1" in check_ids
-    assert "check.intent_constraint_coverage.v1" in check_ids
+    expected = {
+        "check.action_outcome_completeness.v1",
+        "check.artifact_outcome_completeness.v1",
+        "check.information_outcome_completeness.v1",
+        "check.intent_constraint_coverage.v1",
+        "check.unknown_resolution_trace.v1",
+        "check.ambiguity_disclosure.v1",
+        "check.goal_satisfaction.v1",
+    }
+    assert expected <= checks.keys()
+    for check_id in expected:
+        assert checks[check_id]["mode"] == "semantic"
+        assert checks[check_id]["applies_to"] == {"kind": "bound_output"}
+
+
+@pytest.mark.parametrize(
+    "check_id",
+    [
+        "check.unknown_resolution_trace.v1",
+        "check.ambiguity_disclosure.v1",
+    ],
+)
+def test_requirement_compiler_trace_checks_compile_without_unregistered_error(
+    check_id: str,
+) -> None:
+    requirement_ir = _requirement_ir(check_id=check_id)
+    plan_ir = _plan_ir(verifier_id=check_id)
+
+    compiled, validation = _compile(requirement_ir=requirement_ir, plan_ir=plan_ir)
+
+    assert compiled["verdict"] == "pass"
+    assert validation["status"] == "pass"
+    assert compiled["unresolved"] == []
+    assert compiled["nodes"][0]["checks"][0]["check_id"] == check_id
+    assert compiled["nodes"][0]["checks"][0]["mode"] == "semantic"
 
 
 def test_checkable_semantic_requirement_routes_to_independent_review() -> None:
