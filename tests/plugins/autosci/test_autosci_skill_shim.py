@@ -1053,7 +1053,7 @@ def test_autosci_skill_shim_research_lifecycle_completes_from_verified_stage_evi
     )
     novelty = tmp_path / "novelty.json"
     novelty.write_text(
-        json.dumps({"schema": "external_novelty.v1", "status": "completed", "outputs": {"sources": [{"id": "web:1"}]}}),
+        json.dumps({"schema": "external_novelty.v1", "status": "completed", "outputs": {"sources": [{"id": "web:1"}, {"id": "web:2"}]}}),
         encoding="utf-8",
     )
     review = tmp_path / "review-llm.json"
@@ -1071,6 +1071,7 @@ def test_autosci_skill_shim_research_lifecycle_completes_from_verified_stage_evi
                         "evidence_ids": ["review-llm:research"],
                         "review_llm": {"status": "completed"},
                     },
+                    "final_acceptance_boundary": {"final_acceptance_ready": True},
                     "findings": [],
                 },
             }
@@ -5103,7 +5104,7 @@ def test_autosci_skill_shim_rebuttal_maps_review_llm_findings(tmp_path: Path) ->
     proof_entry = proof["proofs"][0]
     assert proof_entry["native_skill"] == "rebuttal"
     assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
-    assert str(Path(action["evidence_path"]).relative_to(tmp_path)) in proof_entry["evidence_refs"]
+    assert Path(action["evidence_path"]).relative_to(tmp_path).as_posix() in proof_entry["evidence_refs"]
 
 
 def test_autosci_skill_shim_rebuttal_ingests_reviewer_thread_and_submission_audit(tmp_path: Path) -> None:
@@ -6249,11 +6250,16 @@ def test_autosci_skill_shim_init_uses_verified_runtime_source_manifest(tmp_path:
                 "status": "completed",
                 "exit_code": 0,
                 "candidates": [
-                    {
-                        "title": "SkillGen Source Candidate",
+                        {
+                            "title": "SkillGen Source Candidate",
                         "url": "https://arxiv.org/abs/2601.00003",
-                        "abstract": "Runtime-discovered source candidate.",
-                    }
+                            "abstract": "Runtime-discovered source candidate.",
+                        },
+                        {
+                            "title": "SkillGen Source Candidate Two",
+                            "url": "https://arxiv.org/abs/2601.00005",
+                            "abstract": "Second runtime-discovered source candidate.",
+                        },
                 ],
                 "evidence_ids": ["runtime:init-skillgen"],
             }
@@ -6342,12 +6348,18 @@ def test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki(tmp_path: 
                 "status": "completed",
                 "exit_code": 0,
                 "candidates": [
-                    {
-                        "candidate_id": "skillgen-source",
+                        {
+                            "candidate_id": "skillgen-source",
                         "title": "SkillGen Source Candidate",
                         "url": "https://arxiv.org/abs/2601.00003",
-                        "abstract": "Runtime-discovered source candidate.",
-                    }
+                            "abstract": "Runtime-discovered source candidate.",
+                        },
+                        {
+                            "candidate_id": "skillgen-source-two",
+                            "title": "SkillGen Source Candidate Two",
+                            "url": "https://arxiv.org/abs/2601.00005",
+                            "abstract": "Second runtime-discovered source candidate.",
+                        },
                 ],
                 "evidence_ids": ["runtime:init-skillgen"],
             }
@@ -6383,7 +6395,7 @@ def test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki(tmp_path: 
     fan_in = evidence["outputs"]["source_fan_in"]
     assert fan_in["status"] == "completed"
     assert fan_in["applied"] is True
-    assert fan_in["written_count"] == 1
+    assert fan_in["written_count"] == 2
     fan_in_artifact = next(artifact for artifact in evidence["artifacts"] if artifact["type"] == "source_fan_in_writeback_json")
     fan_in_evidence = json.loads((tmp_path / fan_in_artifact["path"]).read_text(encoding="utf-8"))
     assert fan_in_evidence["status"] == "completed"
@@ -6404,7 +6416,7 @@ def test_autosci_skill_shim_init_write_fans_runtime_sources_into_wiki(tmp_path: 
     assert boundary["final_fan_in_ready"] is True
     assert boundary["fan_in_completed"] is True
     assert boundary["graph_log_rebuild_ready"] is True
-    assert boundary["written_count"] == 1
+    assert boundary["written_count"] == 2
     assert any(
         artifact["type"] == "provider_source_runtime_proof_manifest_json"
         for artifact in evidence["artifacts"]
@@ -6431,12 +6443,18 @@ def test_autosci_skill_shim_init_parity_demo_auto_fans_runtime_sources_into_wiki
                 "status": "completed",
                 "exit_code": 0,
                 "candidates": [
-                    {
-                        "candidate_id": "skillgen-parity-source",
+                        {
+                            "candidate_id": "skillgen-parity-source",
                         "title": "SkillGen Parity Source Candidate",
                         "url": "https://arxiv.org/abs/2601.00004",
-                        "abstract": "Runtime-discovered source candidate for parity fan-in.",
-                    }
+                            "abstract": "Runtime-discovered source candidate for parity fan-in.",
+                        },
+                        {
+                            "candidate_id": "skillgen-parity-source-two",
+                            "title": "SkillGen Parity Source Candidate Two",
+                            "url": "https://arxiv.org/abs/2601.00005",
+                            "abstract": "Second runtime-discovered source candidate for parity fan-in.",
+                        },
                 ],
                 "evidence_ids": ["runtime:init-parity-skillgen"],
             }
@@ -6470,7 +6488,7 @@ def test_autosci_skill_shim_init_parity_demo_auto_fans_runtime_sources_into_wiki
     assert fan_in["applied"] is True
     assert fan_in["policy_auto_fan_in"] is True
     assert fan_in["source_runtime_verified_for_policy"] is True
-    assert fan_in["written_count"] == 1
+    assert fan_in["written_count"] == 2
     boundary = evidence["outputs"]["final_fan_in_boundary"]
     assert boundary["status"] == "init_sources_final_fan_in_ready"
     assert boundary["final_fan_in_ready"] is True
@@ -6527,11 +6545,16 @@ def test_autosci_skill_shim_daily_arxiv_uses_verified_runtime_digest(tmp_path: P
                 "status": "completed",
                 "exit_code": 0,
                 "candidates": [
-                    {
-                        "title": "Daily SkillGen Paper",
+                        {
+                            "title": "Daily SkillGen Paper",
                         "url": "https://arxiv.org/abs/2601.00004",
-                        "abstract": "Daily arXiv source candidate.",
-                    }
+                            "abstract": "Daily arXiv source candidate.",
+                        },
+                        {
+                            "title": "Daily SkillGen Paper Two",
+                            "url": "https://arxiv.org/abs/2601.00005",
+                            "abstract": "Second daily arXiv source candidate.",
+                        },
                 ],
                 "evidence_ids": ["runtime:daily-skillgen"],
             }
@@ -6740,12 +6763,18 @@ def test_autosci_skill_shim_daily_arxiv_write_creates_ingest_handoff(tmp_path: P
                 "status": "completed",
                 "exit_code": 0,
                 "candidates": [
-                    {
-                        "candidate_id": "daily-skillgen",
+                        {
+                            "candidate_id": "daily-skillgen",
                         "title": "Daily SkillGen Paper",
                         "url": "https://arxiv.org/abs/2601.00004",
-                        "abstract": "Daily arXiv source candidate.",
-                    }
+                            "abstract": "Daily arXiv source candidate.",
+                        },
+                        {
+                            "candidate_id": "daily-skillgen-two",
+                            "title": "Daily SkillGen Paper Two",
+                            "url": "https://arxiv.org/abs/2601.00005",
+                            "abstract": "Second daily arXiv source candidate.",
+                        },
                 ],
                 "evidence_ids": ["runtime:daily-skillgen"],
             }
@@ -7071,7 +7100,7 @@ def test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources(tmp_pa
                 "    'outputs': {",
                 "        'answer': 'SkillGen is supported by verifier-gated generated skills in the retrieved wiki evidence.',",
                 "        'confidence': 0.82,",
-                "        'evidence_ids': ['model:skillgen-support'],",
+                "        'evidence_ids': ['artifacts/autosci/workspace/wiki/papers/skillgen.md'],",
                 "        'model': 'test-model',",
                 "        'provider': 'command',",
                 "    },",
@@ -7105,7 +7134,7 @@ def test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources(tmp_pa
     evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
     assert evidence["status"] == "completed"
     change = evidence["outputs"]["changes"][0]
-    assert "model:skillgen-support" in change["evidence_ids"]
+    assert "artifacts/autosci/workspace/wiki/papers/skillgen.md" in change["evidence_ids"]
     assert change["confidence"] == 0.82
     assert "explicit model evidence" in change["summary"]
 
@@ -7128,7 +7157,7 @@ def test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources(tmp_pa
     retrieval_artifact = next(item for item in evidence["artifacts"] if item["type"] == "ask_retrieval_json")
     retrieval = json.loads((tmp_path / retrieval_artifact["path"]).read_text(encoding="utf-8"))
     assert retrieval["model_output"]["status"] == "completed"
-    assert retrieval["model_output"]["evidence_ids"] == ["model:skillgen-support"]
+    assert retrieval["model_output"]["evidence_ids"] == ["artifacts/autosci/workspace/wiki/papers/skillgen.md"]
     assert re.fullmatch(r"[a-f0-9]{64}", retrieval["model_output"]["request_sha256"])
     assert re.fullmatch(r"[a-f0-9]{64}", retrieval["model_output"]["response_sha256"])
     boundary = retrieval["final_answer_boundary"]
@@ -7136,7 +7165,8 @@ def test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources(tmp_pa
     assert boundary["status"] == "final_answer_ready"
     assert boundary["retrieval_source_count"] == 1
     assert boundary["model_status"] == "completed"
-    assert boundary["model_evidence_ids"] == ["model:skillgen-support"]
+    assert boundary["model_evidence_ids"] == ["artifacts/autosci/workspace/wiki/papers/skillgen.md"]
+    assert boundary["cited_retrieval_source_ids"] == ["artifacts/autosci/workspace/wiki/papers/skillgen.md"]
     assert re.fullmatch(r"[a-f0-9]{64}", boundary["request_sha256"])
     assert re.fullmatch(r"[a-f0-9]{64}", boundary["response_sha256"])
     proof_artifact = next(item for item in evidence["artifacts"] if item["type"] == "model_runtime_proof_manifest_json")
@@ -7146,7 +7176,7 @@ def test_autosci_skill_shim_ask_uses_model_command_with_retrieved_sources(tmp_pa
     assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
     assert proof_entry["collection_mode"] == "manual_review"
     assert proof_entry["production_ready"] is True
-    assert str(Path(action["evidence_path"]).relative_to(tmp_path)) in proof_entry["evidence_refs"]
+    assert Path(action["evidence_path"]).relative_to(tmp_path).as_posix() in proof_entry["evidence_refs"]
     source_proof_artifact = next(
         item for item in evidence["artifacts"] if item["type"] == "provider_source_runtime_proof_manifest_json"
     )
@@ -7598,7 +7628,7 @@ def test_autosci_skill_shim_check_uses_model_command_for_quality_review(tmp_path
     assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
     assert proof_entry["collection_mode"] == "manual_review"
     assert proof_entry["production_ready"] is True
-    assert str(Path(action["evidence_path"]).relative_to(tmp_path)) in proof_entry["evidence_refs"]
+    assert Path(action["evidence_path"]).relative_to(tmp_path).as_posix() in proof_entry["evidence_refs"]
     markdown = (tmp_path / evolution["recommended_changes_path"]).read_text(encoding="utf-8")
     assert "## Model Evidence" in markdown
     assert "Native lint errors: `0`" in markdown
@@ -10900,7 +10930,13 @@ def test_autosci_skill_shim_ideate_promotes_with_model_novelty_and_review_eviden
                             "provider": "web",
                             "title": "Agent Skill Learning Prior Work",
                             "summary": "External novelty source for agent skill learning.",
-                        }
+                        },
+                        {
+                            "id": "web:ideate-002",
+                            "provider": "web",
+                            "title": "Independent Agent Skill Evaluation",
+                            "summary": "Second external prior-work source for agent skill evaluation.",
+                        },
                     ]
                 },
                 "provenance": {
@@ -10934,6 +10970,7 @@ def test_autosci_skill_shim_ideate_promotes_with_model_novelty_and_review_eviden
                         "recommendation": "pass_with_review_required",
                         "evidence_ids": ["review-llm:ideate"],
                     },
+                    "final_acceptance_boundary": {"final_acceptance_ready": True},
                     "findings": [],
                     "artifact": {"artifact_id": "artifact:ideate"},
                 },
@@ -11979,13 +12016,20 @@ def test_autosci_skill_shim_novelty_write_skips_without_review_llm_evidence(tmp_
                 "inputs": {"query": "skillgen-writeback"},
                 "outputs": {
                     "sources": [
-                        {
-                            "id": "s2-writeback-001",
+                            {
+                                "id": "s2-writeback-001",
                             "provider": "semantic_scholar",
                             "paperId": "s2-writeback-001",
                             "title": "SkillGen Writeback and Generated Skills for Inference-Time Agents",
-                            "summary": "External prior work evidence for generated skills.",
-                        }
+                                "summary": "External prior work evidence for generated skills.",
+                            },
+                            {
+                                "id": "s2-writeback-002",
+                                "provider": "semantic_scholar",
+                                "paperId": "s2-writeback-002",
+                                "title": "Independent Evaluation of Generated Agent Skills",
+                                "summary": "Second external prior-work source for generated skills.",
+                            },
                     ]
                 },
                 "provenance": {
@@ -12058,7 +12102,14 @@ def test_autosci_skill_shim_novelty_write_updates_with_external_and_review_llm_e
                             "paperId": "s2-writeback-001",
                             "title": "SkillGen Writeback and Generated Skills for Inference-Time Agents",
                             "summary": "External prior work evidence for generated skills.",
-                        }
+                        },
+                        {
+                            "id": "s2-writeback-002",
+                            "provider": "semantic_scholar",
+                            "paperId": "s2-writeback-002",
+                            "title": "Independent Evaluation of Generated Agent Skills",
+                            "summary": "Second external prior-work source for generated skills.",
+                        },
                     ]
                 },
                 "provenance": {
@@ -12226,7 +12277,14 @@ def test_autosci_skill_shim_novelty_write_uses_review_llm_command_bridge(tmp_pat
                             "paperId": "s2-writeback-001",
                             "title": "SkillGen Writeback and Generated Skills for Inference-Time Agents",
                             "summary": "External prior work evidence for generated skills.",
-                        }
+                        },
+                        {
+                            "id": "s2-writeback-002",
+                            "provider": "semantic_scholar",
+                            "paperId": "s2-writeback-002",
+                            "title": "Independent Evaluation of Generated Agent Skills",
+                            "summary": "Second external prior-work source for generated skills.",
+                        },
                     ]
                 },
                 "provenance": {
@@ -12566,12 +12624,12 @@ def test_autosci_skill_shim_review_uses_supplied_review_llm_evidence(tmp_path: P
         "--run-id",
         "shim-review-llm-evidence",
     )
-    assert proc.returncode == 0, proc.stderr
+    assert proc.returncode == 2, proc.stderr
     summary = json.loads(proc.stdout)
     payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
     action = payload["outputs"]["skill_run"]["actions"][0]
     assert action["schema"] == "artifact_review.v1"
-    assert action["gate_status"] == "passed"
+    assert action["gate_status"] == "failed"
 
     review_evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
     review = review_evidence["outputs"]["review"]
@@ -12580,21 +12638,15 @@ def test_autosci_skill_shim_review_uses_supplied_review_llm_evidence(tmp_path: P
     assert review["review_llm"]["status"] == "completed"
     assert review["review_llm"]["source_path"] == str(llm_evidence)
     boundary = review_evidence["outputs"]["final_acceptance_boundary"]
-    assert boundary["final_acceptance_ready"] is True
-    assert boundary["status"] == "final_acceptance_ready"
+    assert boundary["final_acceptance_ready"] is False
+    assert boundary["status"] == "review_llm_incomplete"
+    assert boundary["proof_verdict"] == "not_supported"
+    assert boundary["reviewer_independence_status"] == "same_provider_limitation"
     assert "review-llm:001" in boundary["evidence_ids"]
-    proof_artifact = next(
-        artifact
+    assert not any(
+        artifact["type"] == "review_model_runtime_proof_manifest_json"
         for artifact in review_evidence["artifacts"]
-        if artifact["type"] == "review_model_runtime_proof_manifest_json"
     )
-    proof = json.loads((tmp_path / proof_artifact["path"]).read_text(encoding="utf-8"))
-    proof_entry = proof["proofs"][0]
-    assert proof_entry["native_skill"] == "review"
-    assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
-    assert proof_entry["collection_mode"] == "manual_review"
-    assert proof_entry["production_ready"] is True
-    assert "artifacts/autosci/runs/shim-review-llm-evidence/artifact_review.json" in proof_entry["evidence_refs"]
     source_proof_artifact = next(
         artifact
         for artifact in review_evidence["artifacts"]
@@ -12670,7 +12722,7 @@ print(json.dumps({
         "--run-id",
         "shim-review-llm-command",
     )
-    assert proc.returncode == 0, proc.stderr
+    assert proc.returncode == 2, proc.stderr
     summary = json.loads(proc.stdout)
     payload = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))
     action = payload["outputs"]["skill_run"]["actions"][0]
@@ -12682,19 +12734,14 @@ print(json.dumps({
     assert review["review_llm"]["invocation_mode"] == "command"
     assert "review-llm:command" in review["evidence_ids"]
     boundary = review_evidence["outputs"]["final_acceptance_boundary"]
-    assert boundary["final_acceptance_ready"] is True
+    assert boundary["final_acceptance_ready"] is False
     assert boundary["invocation_mode"] == "command"
     assert "review-llm:command" in boundary["evidence_ids"]
-    proof_artifact = next(
-        artifact
+    assert boundary["reviewer_independence_status"] == "same_provider_limitation"
+    assert not any(
+        artifact["type"] == "review_model_runtime_proof_manifest_json"
         for artifact in review_evidence["artifacts"]
-        if artifact["type"] == "review_model_runtime_proof_manifest_json"
     )
-    proof = json.loads((tmp_path / proof_artifact["path"]).read_text(encoding="utf-8"))
-    proof_entry = proof["proofs"][0]
-    assert proof_entry["categories"] == ["review_llm_or_model_evidence", "external_runtime_evidence"]
-    assert proof_entry["collection_mode"] == "manual_review"
-    assert proof_entry["production_ready"] is True
 
 
 def test_autosci_skill_shim_review_invokes_openai_compatible_provider(tmp_path: Path) -> None:
@@ -12952,7 +12999,7 @@ def test_autosci_skill_shim_review_normalizes_flat_openai_payload_without_status
         server.server_close()
         thread.join(timeout=5)
 
-    assert proc.returncode == 0, proc.stderr
+    assert proc.returncode == 2, proc.stderr
     assert captured["authorization"] == "Bearer test-provider-key"
     request_payload = captured["payload"]
     assert isinstance(request_payload, dict)
@@ -12979,8 +13026,9 @@ def test_autosci_skill_shim_review_normalizes_flat_openai_payload_without_status
         "Review LLM response omitted top-level status; inferred completed from a valid review envelope."
     ]
     boundary = review_evidence["outputs"]["final_acceptance_boundary"]
-    assert boundary["final_acceptance_ready"] is True
-    assert boundary["status"] == "final_acceptance_ready"
+    assert boundary["final_acceptance_ready"] is False
+    assert boundary["status"] == "review_llm_incomplete"
+    assert boundary["proof_verdict"] == "not_supported"
 
 
 def test_autosci_skill_shim_keeps_setup_gated(tmp_path: Path) -> None:
