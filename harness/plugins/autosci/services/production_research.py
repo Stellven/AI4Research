@@ -496,20 +496,16 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # reviewable ... source set"; public bibliographic search ranks those
     # instruction words and can return unrelated papers even when the scope is
     # otherwise exact.
-    authoritative_coverage = re.search(
-        r"Required coverage\s*:\s*([^\r\n]+)",
-        intent,
-        flags=re.IGNORECASE,
-    )
-    if authoritative_coverage and not from_page_title:
-        query = str(authoritative_coverage.group(1) or "").strip().rstrip(".;")
+    authoritative_clauses = _authoritative_scope_clauses(intent)
+    if authoritative_clauses and not from_page_title:
+        query = authoritative_clauses[0]
         query = re.sub(
             r"^(?:compare|evaluate|assess|analy[sz]e|investigate|review)\s+",
             "",
             query,
             flags=re.IGNORECASE,
         ).strip()
-    if not authoritative_coverage and (has_topic_seed or not titles):
+    if not authoritative_clauses and (has_topic_seed or not titles):
         match = re.search(
             r"\b(?:survey|review|report|analysis|brief)\s+(?:on|about|for)\s+(.+)",
             query,
@@ -523,7 +519,7 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
             maxsplit=1,
             flags=re.IGNORECASE,
         )[0].strip()
-    elif not authoritative_coverage:
+    elif not authoritative_clauses:
         query = re.sub(r"^(?:survey|review|research|analy[sz]e|synthesize)\s+", "", query, flags=re.IGNORECASE)
         query = re.split(r"[,;]", query, maxsplit=1)[0].strip()
     # Planner-appended coverage clauses are evaluation authority, not search
@@ -543,7 +539,7 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # profiling, bibliometrics) instead of 939 CRISPR papers. Token-distil only
     # when the instruction survived, so inputs the patterns already handle keep
     # their cleaner phrasing, and never touch a fetched page title.
-    if not authoritative_coverage and not from_page_title and _DELIVERABLE_MARKER_RE.search(query):
+    if not authoritative_clauses and not from_page_title and _DELIVERABLE_MARKER_RE.search(query):
         distilled = distill_search_query(query)
         if distilled:
             query = distilled
@@ -613,13 +609,8 @@ def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
     chemistry and criterion from a correctly scoped planner objective.
     """
 
-    text = str(query or "")
-    marker = re.search(r"Authoritative discovery scope\s*:", text, re.IGNORECASE)
-    if not marker:
-        return []
     groups: list[dict[str, Any]] = []
-    for match in re.finditer(r"Required coverage\s*:\s*([^\r\n]+)", text[marker.end() :], re.IGNORECASE):
-        clause = str(match.group(1) or "").strip().rstrip(".;")
+    for clause in _authoritative_scope_clauses(query):
         terms = _relevance_terms(clause, remove_generic=True)
         # These are grammatical glue inside chemistry names, not useful
         # discriminators by themselves. `solid` and `sulfur` remain anchors.
@@ -633,6 +624,40 @@ def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
                 }
             )
     return groups
+
+
+def _authoritative_scope_clauses(query: str) -> list[str]:
+    """Return human topic clauses from the planner's discovery scope.
+
+    Older planner output placed human prose after ``Required coverage:``.
+    Current output puts deterministic verifier labels there and keeps the
+    human-readable requirement before the marker.  Treating labels such as
+    ``constraint_satisfied`` as search terms produced convincing but entirely
+    off-topic provider results, so support both shapes explicitly.
+    """
+
+    text = str(query or "")
+    marker = re.search(r"Authoritative discovery scope\s*:", text, re.IGNORECASE)
+    if not marker:
+        return []
+    clauses: list[str] = []
+    for raw_line in text[marker.end() :].splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        line = re.sub(r"^-\s*\[[^\]]+\]\s*", "", line)
+        parts = re.split(r"\s+Required coverage\s*:\s*", line, maxsplit=1, flags=re.IGNORECASE)
+        description = parts[0].strip().rstrip(".;")
+        required = parts[1].strip().rstrip(".;") if len(parts) == 2 else ""
+        required_items = [item.strip() for item in re.split(r"[;,]", required) if item.strip()]
+        verifier_labels = bool(required_items) and all(
+            re.fullmatch(r"[a-z][a-z0-9_]*", item, re.IGNORECASE) and "_" in item
+            for item in required_items
+        )
+        clause = description if verifier_labels or not required else required
+        if clause:
+            clauses.append(clause)
+    return clauses
 
 
 def apply_discovery_relevance_gate(

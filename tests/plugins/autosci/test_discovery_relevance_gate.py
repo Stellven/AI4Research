@@ -226,3 +226,56 @@ Authoritative discovery scope:
     assert result["status"] == "completed"
     assert result["provider_query"] == seen_queries[0]
     assert len(result["relevance_gate"]["coverage_anchor_groups"]) == 2
+
+
+def test_service_uses_human_scope_when_required_coverage_contains_verifier_labels(tmp_path: Path) -> None:
+    full_query = """Retrieve evidence for a battery comparison.
+
+Authoritative discovery scope:
+- [R2] Compare lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage. Required coverage: constraint_satisfied; supporting_evidence
+- [R3] Evaluate energy density, lifetime, safety, material availability, cost, and commercial readiness. Required coverage: constraint_satisfied; supporting_evidence
+"""
+    seen_queries: list[str] = []
+    relevant = [
+        _candidate(1, "Sodium-ion batteries for stationary grid storage", "Battery chemistry and lifetime."),
+        _candidate(2, "Solid-state batteries for grid applications", "Storage safety and commercial readiness."),
+        _candidate(3, "Lithium-sulfur grid battery systems", "Energy storage cost and cycle life."),
+    ]
+
+    def backend(**kwargs):
+        seen_queries.append(str(kwargs["query"]))
+        return {
+            "status": "completed",
+            "candidates": [
+                {
+                    "candidate_id": item["source_id"],
+                    "paperId": item["source_id"],
+                    "title": item["title"],
+                    "source_ref": item["url"],
+                    "abstract": item["content_summary"],
+                    "source_channels": ["search_s2"],
+                }
+                for item in relevant
+            ],
+            "limitations": [],
+        }
+
+    result = LiteratureDiscoveryService(
+        tmp_path,
+        backend=backend,
+        limit=3,
+        max_attempts_per_provider=1,
+    )(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": full_query}]},
+        payload={"task_contract": {"user_intent": full_query}},
+    )
+
+    assert seen_queries == [
+        "lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage"
+    ]
+    assert result["status"] == "completed"
+    clauses = result["relevance_gate"]["coverage_anchor_groups"]
+    assert [item["clause"] for item in clauses] == [
+        "Compare lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage",
+        "Evaluate energy density, lifetime, safety, material availability, cost, and commercial readiness",
+    ]

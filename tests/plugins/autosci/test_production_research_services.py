@@ -692,6 +692,23 @@ def test_topic_discovery_query_distills_research_subject_from_instruction() -> N
     assert "Cover evaluation dimensions" not in query
 
 
+def test_topic_discovery_query_uses_description_when_required_coverage_is_verifier_labels() -> None:
+    full_query = """Retrieve and rank evidence for a battery comparison.
+
+Authoritative discovery scope:
+- [R2] Compare lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage. Required coverage: constraint_satisfied; supporting_evidence
+- [R3] Evaluate energy density, lifetime, safety, material availability, cost, and commercial readiness. Required coverage: constraint_satisfied; supporting_evidence
+"""
+
+    query = _topic_from_snapshot(
+        {"seeds": [{"seed_kind": "topic", "content": full_query}]},
+        {"task_contract": {"user_intent": full_query}},
+    )
+
+    assert query == "lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage"
+    assert "constraint_satisfied" not in query
+
+
 def test_research_model_retries_429_retry_after_on_same_route(tmp_path: Path) -> None:
     calls = []
 
