@@ -892,6 +892,141 @@ def test_autosci_skill_shim_discover_wiki_runtime_proof_is_not_live_provider(tmp
     assert "workspace/wiki/papers/paper-runtime-wiki-source.md" in proof_entry["evidence_refs"]
 
 
+def test_autosci_skill_shim_discover_declared_scope_fails_without_covered_ranked_evidence(tmp_path: Path) -> None:
+    external_dir = tmp_path / "external-discover-declared-scope"
+    external_dir.mkdir()
+    allowlist = external_dir / "allowlist.json"
+    before = external_dir / "before.json"
+    after = external_dir / "after.json"
+    runtime = external_dir / "source-runtime.json"
+    allowlist.write_text('{"allowed": ["semantic_scholar"]}\n', encoding="utf-8")
+    before.write_text('{"state": "before-source-fetch"}\n', encoding="utf-8")
+    after.write_text('{"state": "after-source-fetch"}\n', encoding="utf-8")
+    runtime.write_text(
+        json.dumps(
+            {
+                "schema": "autosci_runtime_evidence.v1",
+                "task_id": "task-source-runtime-weak-discovery",
+                "status": "completed",
+                "outputs": {
+                    "runtime": {
+                        "action": "discover_literature",
+                        "status": "completed",
+                        "exit_code": 0,
+                        "command_run": "approved-semantic-scholar-fetch",
+                        "candidates": [
+                            {
+                                "candidate_id": "weak-source-001",
+                                "title": "High Temperature Superconductivity In Layered Materials",
+                                "url": "https://example.test/superconductivity",
+                                "source_channels": ["search_s2"],
+                                "ranking_score": 1.0,
+                            },
+                            {
+                                "candidate_id": "weak-source-002",
+                                "title": "Selenium Battery Electrolyte Interfaces",
+                                "url": "https://example.test/selenium",
+                                "source_channels": ["search_s2"],
+                                "ranking_score": 1.0,
+                            },
+                        ],
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_shim(
+        tmp_path,
+        "$discover",
+        "--topic",
+        (
+            "Battery electrolyte discovery\n"
+            "Required criteria: grid storage; lifetime; material availability; commercial readiness\n"
+            "Framing questions: grid storage lifetime; material availability; commercial readiness"
+        ),
+        "--approval-ref",
+        "approval-source-runtime-weak-discovery",
+        "--allowlist-evidence",
+        str(allowlist),
+        "--runtime-evidence",
+        str(runtime),
+        "--before-artifact",
+        str(before),
+        "--after-artifact",
+        str(after),
+        "--run-id",
+        "shim-discover-declared-scope-fails",
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    action = json.loads(Path(summary["evidence_path"]).read_text(encoding="utf-8"))["outputs"]["skill_run"]["actions"][0]
+    discovery = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
+    assert discovery["status"] == "inconclusive"
+    boundary = discovery["outputs"]["source_provider_boundary"]["final_shortlist_boundary"]
+    assert boundary["final_shortlist_ready"] is False
+    assert "declared-scope discovery requires non-default ranking scores and rationales" in boundary["blocking_reasons"]
+    assert "declared discovery criteria or framing questions are not covered by candidate evidence" in boundary["blocking_reasons"]
+    assert boundary["ranking_audit"]["all_scores_default_one"] is True
+    coverage = boundary["requested_coverage_audit"]
+    assert coverage["declared_scope"] is True
+    assert "grid storage" in coverage["missing_criteria"]
+    assert "commercial readiness" in coverage["unresolved_framing_questions"]
+
+
+def test_autosci_bridge_write_result_handles_long_windows_style_artifact_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sys.path.insert(0, str(SHIM.parent))
+    bridge = __import__("autosci_bridge")
+    monkeypatch.setattr(bridge, "HARNESS_DIR", tmp_path)
+    long_dir = tmp_path / ("battery-grid-storage-electrolyte-material-availability-" * 2)[:96]
+    long_dir = long_dir / ("commercial-readiness-lifetime-cycle-stability-" * 2)[:88]
+    long_dir = long_dir / ("declared-framing-questions-and-provider-evidence-" * 2)[:92]
+    evidence_path = long_dir / "discover_literature.evidence.json"
+    result_path = long_dir / "result.json"
+    ledger_path = long_dir / "evidence.jsonl"
+    handoff_path = long_dir / "handoff.md"
+    assert len(str(evidence_path)) > 260
+
+    result = bridge._write_result(
+        "discover_literature",
+        {
+            "outputs": {
+                "evidence_payload_path": str(evidence_path),
+                "result_path": str(result_path),
+                "evidence_jsonl": str(ledger_path),
+                "handoff_path": str(handoff_path),
+            }
+        },
+        {
+            "schema": "literature_discovery.v1",
+            "status": "inconclusive",
+            "inputs": {},
+            "outputs": {"query": "grid storage battery electrolytes", "candidates": []},
+            "artifacts": [],
+            "limitations": ["shortlist incomplete"],
+        },
+    )
+
+    assert result["status"] == "inconclusive"
+    actual_evidence_path = bridge._resolve_harness_path(result["evidence_path"])
+    assert os.path.isfile(bridge._windows_long_path(actual_evidence_path))
+    assert os.path.isfile(bridge._windows_long_path(result_path))
+    assert os.path.isfile(bridge._windows_long_path(ledger_path))
+    assert os.path.isfile(bridge._windows_long_path(handoff_path))
+    with open(bridge._windows_long_path(actual_evidence_path), encoding="utf-8") as fh:
+        assert json.load(fh)["schema"] == "literature_discovery.v1"
+    with open(bridge._windows_long_path(result_path), encoding="utf-8") as fh:
+        saved_result = json.load(fh)
+        assert saved_result["evidence_path"] == result["evidence_path"]
+        assert "artifacts/autosci/short-paths/" in saved_result["evidence_path"].replace("\\", "/")
+    with open(bridge._windows_long_path(ledger_path), encoding="utf-8") as fh:
+        assert fh.read().strip()
+
+
 def test_autosci_skill_shim_runs_research_pipeline(tmp_path: Path) -> None:
     proc = run_shim(
         tmp_path,

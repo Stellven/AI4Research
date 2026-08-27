@@ -1345,6 +1345,9 @@ def _candidate_from_runtime(raw: dict[str, Any], index: int) -> dict[str, Any] |
         candidate["source_ref"] = source_ref
     if raw.get("abstract"):
         candidate["abstract"] = str(raw["abstract"])
+    for key in ("relevance_gate", "relevance_evidence"):
+        if isinstance(raw.get(key), dict):
+            candidate[key] = dict(raw[key])
     return candidate
 
 
@@ -1409,7 +1412,7 @@ def _run_root_tool_json(
     timeout_env: str,
     timeout_default: int = 60,
 ) -> dict[str, Any]:
-    output_dir.mkdir(parents=True, exist_ok=True)
+    _mkdir_path_long_path(output_dir)
     command = [sys.executable, str(REPO_HARNESS_DIR.parent / "tools" / tool_name), *args]
     timeout = int(os.environ.get(timeout_env, str(timeout_default)))
     env = dict(os.environ)
@@ -1510,19 +1513,213 @@ def _source_provider_boundary(
     }
 
 
+def _discover_requirement_values(raw: Any) -> list[str]:
+    values: list[str] = []
+    if isinstance(raw, str):
+        text = raw.strip()
+        if not text:
+            return []
+        parts = re.split(r"[;\n]|,\s+(?=[A-Za-z0-9])", text)
+        return _unique_strings([
+            re.sub(r"^(?:and|or)\s+", "", part.strip(" -:\t"), flags=re.IGNORECASE)
+            for part in parts
+            if part.strip(" -:\t")
+        ])
+    if isinstance(raw, dict):
+        for key in ("text", "question", "criterion", "name", "label", "requirement", "topic"):
+            if str(raw.get(key) or "").strip():
+                values.extend(_discover_requirement_values(str(raw[key])))
+        return _unique_strings(values)
+    if isinstance(raw, list):
+        for item in raw:
+            values.extend(_discover_requirement_values(item))
+    return _unique_strings(values)
+
+
+def _discover_declared_scope(envelope: dict[str, Any], raw: dict[str, Any]) -> dict[str, Any]:
+    inputs = envelope.get("inputs") if isinstance(envelope.get("inputs"), dict) else {}
+    query = str(raw.get("query") or inputs.get("query") or inputs.get("topic") or "")
+    criteria: list[str] = []
+    questions: list[str] = []
+    scope_topics: list[str] = []
+    for key in (
+        "required_criteria",
+        "criteria",
+        "must_cover",
+        "required_coverage",
+        "coverage_requirements",
+        "evaluation_criteria",
+    ):
+        criteria.extend(_discover_requirement_values(inputs.get(key) or raw.get(key)))
+    for key in ("framing_questions", "questions", "open_questions", "unresolved_framing_questions"):
+        questions.extend(_discover_requirement_values(inputs.get(key) or raw.get(key)))
+    for line in query.splitlines():
+        lowered = line.lower()
+        if any(marker in lowered for marker in ("required criteria:", "must cover:", "coverage requirements:")):
+            criteria.extend(_discover_requirement_values(line.split(":", 1)[1] if ":" in line else line))
+        if any(marker in lowered for marker in ("framing questions:", "open questions:", "unresolved questions:")):
+            questions.extend(_discover_requirement_values(line.split(":", 1)[1] if ":" in line else line))
+        criteria_match = re.search(
+            r"(?:preserve\s+the\s+exact\s+comparison\s+criteria|comparison\s+criteria(?:\s+are)?)\s+(.+?)(?:,\s+and\s+capture\b|[.;]|$)",
+            line,
+            flags=re.IGNORECASE,
+        )
+        if criteria_match:
+            criteria.extend(_discover_requirement_values(criteria_match.group(1)))
+        questions_match = re.search(
+            r"(?:capture\s+the\s+)?(?:unresolved\s+)?framing\s+questions\s+about\s+(.+?)(?:[.;]|$)",
+            line,
+            flags=re.IGNORECASE,
+        )
+        if questions_match:
+            questions.extend(_discover_requirement_values(questions_match.group(1)))
+        scope_line = re.sub(r"^-\s*\[[^\]]+\]\s*", "", line).split("Required coverage:", 1)[0].strip(" .")
+        topic_match = re.search(
+            r"(?:is\s+limited\s+to(?:\s+the)?(?:\s+named)?(?:\s+chemistr(?:y|ies))?|compare)\s+(.+?)(?:\s+battery\s+technologies|\s+batteries)\s+for\s+grid\s+storage",
+            scope_line,
+            flags=re.IGNORECASE,
+        )
+        if topic_match:
+            scope_topics.extend(_discover_requirement_values(topic_match.group(1)))
+        criterion_scope_match = re.search(
+            r"(?:must\s+)?evaluate\s+(.+?)(?:[.;]|$)",
+            scope_line,
+            flags=re.IGNORECASE,
+        )
+        if criterion_scope_match:
+            criteria.extend(_discover_requirement_values(criterion_scope_match.group(1)))
+    return {
+        "criteria": _unique_strings(criteria),
+        "framing_questions": _unique_strings(questions),
+        "scope_topics": _unique_strings(scope_topics),
+        "declared": bool(criteria or questions or scope_topics),
+    }
+
+
+def _discover_candidate_text(candidate: dict[str, Any]) -> str:
+    pieces: list[str] = []
+    # Coverage must be proved by source metadata/content, not by a rationale
+    # that was itself derived from the query.
+    for key in ("title", "abstract", "summary", "content_summary"):
+        value = candidate.get(key)
+        if value not in (None, "", []):
+            pieces.append(str(value))
+    return " ".join(pieces).lower()
+
+
+def _discover_term_matches(term: str, candidates: list[dict[str, Any]]) -> list[str]:
+    tokens = [token for token in re.findall(r"[a-z0-9]+", term.lower()) if len(token) > 2]
+    if not tokens:
+        return []
+    matches: list[str] = []
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        text = _discover_candidate_text(candidate)
+        if all(token in text for token in tokens):
+            matches.append(str(candidate.get("candidate_id") or candidate.get("title") or "candidate"))
+    return _unique_strings(matches)
+
+
+def _discover_ranking_audit(candidates: list[dict[str, Any]]) -> dict[str, Any]:
+    scores: list[float] = []
+    missing: list[str] = []
+    default_like: list[str] = []
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        candidate_id = str(candidate.get("candidate_id") or candidate.get("title") or "candidate")
+        try:
+            score = float(candidate.get("ranking_score"))
+            scores.append(score)
+        except (TypeError, ValueError):
+            missing.append(candidate_id)
+            continue
+        rationale = str(candidate.get("ranking_rationale") or "").strip().lower()
+        if not rationale:
+            missing.append(candidate_id)
+        relevance_evidence = candidate.get("relevance_evidence") if isinstance(candidate.get("relevance_evidence"), dict) else {}
+        matched_terms = relevance_evidence.get("matched_query_terms") if isinstance(relevance_evidence.get("matched_query_terms"), list) else []
+        evidence_grounded = bool(matched_terms) or rationale.startswith("lexical relevance:")
+        if not evidence_grounded or rationale.startswith((
+            "approved runtime evidence supplied",
+            "production public-provider fallback supplied",
+            "native discover.py selected",
+        )):
+            default_like.append(candidate_id)
+    all_default_one = bool(candidates) and len(scores) == len(candidates) and all(score == 1.0 for score in scores)
+    ready = bool(candidates) and not missing and not all_default_one and not default_like
+    return {
+        "ranking_ready": ready,
+        "score_count": len(scores),
+        "distinct_scores": sorted({score for score in scores}, reverse=True),
+        "missing_ranking_evidence": _unique_strings(missing),
+        "default_like_ranking_candidates": _unique_strings(default_like),
+        "all_scores_default_one": all_default_one,
+    }
+
+
+def _discover_requested_coverage_audit(
+    envelope: dict[str, Any],
+    raw: dict[str, Any],
+    candidates: list[dict[str, Any]],
+) -> dict[str, Any]:
+    scope = _discover_declared_scope(envelope, raw)
+    topic_entries = []
+    missing_topics: list[str] = []
+    for topic in scope["scope_topics"]:
+        matches = _discover_term_matches(topic, candidates)
+        topic_entries.append({"topic": topic, "status": "covered" if matches else "missing", "candidate_ids": matches})
+        if not matches:
+            missing_topics.append(topic)
+    criteria_entries = []
+    missing_criteria: list[str] = []
+    for criterion in scope["criteria"]:
+        matches = _discover_term_matches(criterion, candidates)
+        criteria_entries.append({"criterion": criterion, "status": "covered" if matches else "missing", "candidate_ids": matches})
+        if not matches:
+            missing_criteria.append(criterion)
+    framing_entries = []
+    unresolved: list[str] = []
+    for question in scope["framing_questions"]:
+        matches = _discover_term_matches(question, candidates)
+        framing_entries.append({"question": question, "status": "resolved" if matches else "unresolved", "candidate_ids": matches})
+        if not matches:
+            unresolved.append(question)
+    return {
+        "schema": "autosci_discover_requested_coverage_audit.v1",
+        "declared_scope": scope["declared"],
+        "scope_topics": topic_entries,
+        "criteria": criteria_entries,
+        "framing_questions": framing_entries,
+        "missing_scope_topics": missing_topics,
+        "missing_criteria": missing_criteria,
+        "unresolved_framing_questions": unresolved,
+        "coverage_ready": not scope["declared"] or (not missing_topics and not missing_criteria),
+    }
+
+
 def _discover_final_shortlist_boundary(
     source_boundary: dict[str, Any],
     candidates: list[dict[str, Any]],
     *,
+    envelope: dict[str, Any],
+    raw: dict[str, Any],
     mode: str,
 ) -> dict[str, Any]:
     provider_channels = list(source_boundary.get("provider_channels") or []) if isinstance(source_boundary, dict) else []
     invalid_reasons = list(source_boundary.get("invalid_reasons") or []) if isinstance(source_boundary, dict) else []
+    ranking_audit = _discover_ranking_audit(candidates)
+    coverage_audit = _discover_requested_coverage_audit(envelope, raw, candidates)
     blocking_reasons: list[str] = []
     if not candidates:
         blocking_reasons.append("discovery shortlist is empty")
     if not provider_channels:
         blocking_reasons.append("provider-backed source channel is missing")
+    if coverage_audit["declared_scope"] and not ranking_audit["ranking_ready"]:
+        blocking_reasons.append("declared-scope discovery requires non-default ranking scores and rationales")
+    if coverage_audit["declared_scope"] and not coverage_audit["coverage_ready"]:
+        blocking_reasons.append("declared discovery criteria or framing questions are not covered by candidate evidence")
     if invalid_reasons:
         blocking_reasons.extend(str(item) for item in invalid_reasons)
     final_shortlist_ready = not blocking_reasons
@@ -1532,6 +1729,8 @@ def _discover_final_shortlist_boundary(
         "final_shortlist_ready": final_shortlist_ready,
         "mode": mode,
         "candidate_count": len(candidates),
+        "ranking_audit": ranking_audit,
+        "requested_coverage_audit": coverage_audit,
         "candidate_ids": _unique_strings([
             str(candidate.get("candidate_id") or candidate.get("paperId") or candidate.get("title") or "")
             for candidate in candidates
@@ -1541,7 +1740,7 @@ def _discover_final_shortlist_boundary(
         "source_provider_boundary_status": str(source_boundary.get("status") or "missing") if isinstance(source_boundary, dict) else "missing",
         "blocking_reasons": _unique_strings(blocking_reasons),
         "limitations": [] if final_shortlist_ready else [
-            "Final discovery shortlist requires non-empty candidates backed by non-fixture provider source channels."
+            "Final discovery shortlist requires non-empty candidates backed by non-fixture provider source channels, plus declared criteria/framing coverage when the request states them."
         ],
     }
 
@@ -1554,7 +1753,7 @@ def _attach_discover_final_shortlist_boundary(
 ) -> dict[str, Any]:
     candidates = raw.get("candidates") if isinstance(raw.get("candidates"), list) else []
     source_boundary = raw.get("source_provider_boundary") if isinstance(raw.get("source_provider_boundary"), dict) else {}
-    final_boundary = _discover_final_shortlist_boundary(source_boundary, candidates, mode=mode)
+    final_boundary = _discover_final_shortlist_boundary(source_boundary, candidates, envelope=envelope, raw=raw, mode=mode)
     source_boundary = dict(source_boundary)
     source_boundary["final_shortlist_boundary"] = final_boundary
     raw["source_provider_boundary"] = source_boundary
@@ -1564,6 +1763,7 @@ def _attach_discover_final_shortlist_boundary(
     artifacts.append({"type": "discover_final_shortlist_boundary_json", "path": boundary_artifact})
     raw["artifacts"] = artifacts
     if not final_boundary.get("final_shortlist_ready"):
+        raw["status"] = "inconclusive" if str(raw.get("status") or "") == "completed" else str(raw.get("status") or "inconclusive")
         raw["limitations"] = [
             *list(raw.get("limitations") or []),
             *list(final_boundary.get("limitations") or []),
@@ -1861,13 +2061,12 @@ def _approval_semantic_runtime(contract: dict[str, Any], action: str, *, limit: 
 
 
 def _write_evidence_payload(path: Path, evidence: dict[str, Any]) -> str:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path = _shortened_artifact_path(path)
     artifact_path = _rel(path)
     artifacts = evidence.setdefault("artifacts", [])
     if not any(isinstance(item, dict) and item.get("path") == artifact_path for item in artifacts):
         artifacts.append({"type": "solar_evidence_json", "path": artifact_path})
-    path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return artifact_path
+    return _write_json_sidecar(path, evidence)
 
 
 def _configured_handoff_path(envelope: dict[str, Any]) -> Path | None:
@@ -1967,9 +2166,7 @@ def _handoff_lines(action: str, evidence: dict[str, Any], result: dict[str, Any]
 
 
 def _write_handoff(path: Path, action: str, evidence: dict[str, Any], result: dict[str, Any]) -> str:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(_handoff_lines(action, evidence, result)).rstrip() + "\n", encoding="utf-8")
-    return _rel(path)
+    return _write_text_sidecar(path, "\n".join(_handoff_lines(action, evidence, result)).rstrip() + "\n")
 
 
 def _write_result(
@@ -1980,7 +2177,7 @@ def _write_result(
     extra_result_fields: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     output_dir = _output_dir(envelope, action)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    os.makedirs(_windows_long_path(output_dir), exist_ok=True)
     evidence_path = _configured_output_path(
         envelope,
         "evidence_payload_path",
@@ -2003,8 +2200,8 @@ def _write_result(
         if not any(isinstance(item, dict) and item.get("path") == handoff_artifact_path for item in artifacts):
             artifacts.append({"type": "handoff_markdown", "path": handoff_artifact_path})
     evidence_artifact_path = _write_evidence_payload(evidence_path, evidence)
-    ledger_path.parent.mkdir(parents=True, exist_ok=True)
-    with ledger_path.open("a", encoding="utf-8") as f:
+    _mkdir_parent_long_path(ledger_path)
+    with open(_windows_long_path(ledger_path), "a", encoding="utf-8") as f:
         f.write(json.dumps(evidence, sort_keys=True) + "\n")
     result = {
         "ok": True,
@@ -2020,8 +2217,7 @@ def _write_result(
         result.update(extra_result_fields)
     if handoff_path:
         result["handoff_path"] = _write_handoff(handoff_path, action, evidence, result)
-    result_path.parent.mkdir(parents=True, exist_ok=True)
-    result_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_sidecar(result_path, result)
     return result
 
 
@@ -2305,8 +2501,7 @@ def _prefill_fetch_wikipedia_sources(envelope: dict[str, Any], seeds: list[dict[
             _write_json_sidecar(sidecar, payload)
             attempts.append({"title": title, "status": "fetch_failed", "path": _rel(sidecar), "error": str(exc)})
             continue
-        sidecar.parent.mkdir(parents=True, exist_ok=True)
-        sidecar.write_text(proc.stdout or "{}", encoding="utf-8")
+        _write_text_sidecar(sidecar, proc.stdout or "{}")
         try:
             payload = json.loads(proc.stdout or "{}")
         except json.JSONDecodeError:
@@ -6883,13 +7078,41 @@ def _production_discovery_candidates(result: dict[str, Any], *, limit: int) -> l
             continue
         metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
         provider = str(item.get("provider") or "").strip().lower()
+        relevance = item.get("relevance_gate") if isinstance(item.get("relevance_gate"), dict) else {}
+        matched_terms = _unique_strings([str(value) for value in relevance.get("matched_query_terms") or []])
+        matched_anchors = _unique_strings([
+            str(anchor.get("label") or "")
+            for group in relevance.get("coverage_group_matches") or []
+            if isinstance(group, dict)
+            for anchor in group.get("matched_anchor_items") or []
+            if isinstance(anchor, dict) and str(anchor.get("label") or "").strip()
+        ])
+        if matched_terms:
+            relevance_score = min(0.999, 0.50 + (0.04 * min(len(matched_terms), 8)) + (0.03 * min(len(matched_anchors), 6)))
+            relevance_score = round(max(0.0, relevance_score - ((index - 1) * 0.0001)), 4)
+            rationale = (
+                f"Lexical relevance: matched query terms [{', '.join(matched_terms)}]; "
+                f"covered anchors [{', '.join(matched_anchors) or 'none'}]; "
+                f"provider {provider or 'unknown'}, provider order {index}."
+            )
+        else:
+            relevance_score = item.get("ranking_score") or item.get("score") or max(0.0, 1.0 - ((index - 1) * 0.01))
+            rationale = f"Production public-provider fallback supplied this candidate via {provider or 'unknown provider'}."
         raw = {
             "candidate_id": item.get("source_id") or item.get("canonical_id") or f"provider-candidate-{index:03d}",
             "title": item.get("title"),
             "source_ref": item.get("url") or item.get("canonical_id"),
             "source_channels": [provider] if provider else [],
-            "ranking_score": 1.0,
-            "ranking_rationale": f"Production public-provider fallback supplied this candidate via {provider or 'unknown provider'}.",
+            "ranking_score": relevance_score,
+            "ranking_rationale": rationale,
+            "relevance_gate": relevance,
+            "relevance_evidence": {
+                "matched_query_terms": matched_terms,
+                "matched_coverage_anchors": matched_anchors,
+                "provider": provider or "unknown",
+                "provider_order": index,
+                "scoring_method": "deterministic_lexical_relevance_v1",
+            },
             "dedup_status": "new",
             "fetch_status": "fetched",
             "year": metadata.get("year"),
@@ -6949,6 +7172,7 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
     if not anchors and isinstance(seed.get("positive_ids"), list):
         anchors = seed.get("positive_ids")
     limitations = [str(item) for item in payload.get("limitations") or []]
+    provider_relevance_gate: dict[str, Any] = {}
     if int(run.get("returncode") or 0) != 0:
         limitations.append(f"Native discover.py failed: {str(run.get('stderr') or '').strip() or 'no stderr'}")
         status = "failed"
@@ -7006,6 +7230,11 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
                 provider_result,
                 limit=int(inputs.get("limit") or payload.get("shortlist_count") or 10),
             )
+            provider_relevance_gate = (
+                dict(provider_result.get("relevance_gate"))
+                if isinstance(provider_result.get("relevance_gate"), dict)
+                else {}
+            )
             artifacts.extend(_production_discovery_artifacts(provider_result, service_workspace))
             limitations.extend(str(item) for item in provider_result.get("limitations") or [] if str(item).strip())
             if provider_candidates:
@@ -7033,6 +7262,7 @@ def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path
         "artifacts": artifacts,
         "limitations": limitations,
         "native_payload": payload,
+        "relevance_gate": provider_relevance_gate,
     }
 
 
@@ -13017,15 +13247,33 @@ def _windows_long_path(path: Path) -> str:
     return "\\\\?\\" + resolved
 
 
+def _mkdir_parent_long_path(path: Path) -> None:
+    os.makedirs(_windows_long_path(path.parent), exist_ok=True)
+
+
+def _mkdir_path_long_path(path: Path) -> None:
+    os.makedirs(_windows_long_path(path), exist_ok=True)
+
+
+def _shortened_artifact_path(path: Path) -> Path:
+    resolved = str(path.resolve())
+    if os.name != "nt" or len(resolved) < 240:
+        return path
+    rel = _rel(path)
+    digest = hashlib.sha256(rel.encode("utf-8")).hexdigest()[:16]
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "-", path.stem).strip("-")[:48] or "artifact"
+    return HARNESS_DIR / "artifacts" / "autosci" / "short-paths" / f"{stem}-{digest}{path.suffix or '.json'}"
+
+
 def _write_text_sidecar(path: Path, body: str) -> str:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    _mkdir_parent_long_path(path)
     with open(_windows_long_path(path), "w", encoding="utf-8") as fh:
         fh.write(body)
     return _rel(path)
 
 
 def _write_json_sidecar(path: Path, payload: dict[str, Any]) -> str:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    _mkdir_parent_long_path(path)
     with open(_windows_long_path(path), "w", encoding="utf-8") as fh:
         fh.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     return _rel(path)

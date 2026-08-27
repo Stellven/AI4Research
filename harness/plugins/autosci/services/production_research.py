@@ -600,6 +600,53 @@ def _candidate_relevance_text(candidate: dict[str, Any]) -> str:
     )
 
 
+def _coverage_anchor_items(clause: str) -> list[dict[str, Any]]:
+    """Human required-coverage items, preserved as phrase-level anchors."""
+
+    text = re.sub(r"\s+", " ", str(clause or "").replace("-", " ")).strip(" .;")
+    text = re.sub(r"^the\s+comparison\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"^(?:is\s+)?limited\s+to(?:\s+the)?(?:\s+named)?(?:\s+chemistr(?:y|ies))?\s+",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"^(?:must|should|shall)\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"^(?:compare|evaluate|assess|analy[sz]e|investigate|review)\s+",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    parts = [item.strip(" .;") for item in re.split(r"\s*,\s*|\s+\band\b\s+", text) if item.strip()]
+    items: list[dict[str, Any]] = []
+    seen: set[tuple[str, ...]] = set()
+    for raw in parts:
+        label = re.sub(r"^(?:and|or)\s+", "", raw, flags=re.IGNORECASE)
+        # Scope nouns after chemistry names ("batteries for grid storage") are
+        # not part of the chemistry anchor and let unrelated grid papers match.
+        if re.search(r"\b(?:lithium|sodium|solid|sulfur)\b", label, re.IGNORECASE):
+            label = re.split(r"\b(?:battery|batteries)\b", label, maxsplit=1, flags=re.IGNORECASE)[0]
+        terms = tuple(sorted(_relevance_terms(label, remove_generic=True) - {"battery", "batteries", "storage", "grid", "energy"}))
+        if not terms or terms in seen:
+            continue
+        seen.add(terms)
+        items.append({"label": label.strip(), "terms": list(terms)})
+    if items:
+        return items
+    terms = sorted(_relevance_terms(clause, remove_generic=True))
+    return [{"label": clause.strip(), "terms": terms}] if terms else []
+
+
+def _matched_anchor_items(group: dict[str, Any], candidate_terms: set[str]) -> list[dict[str, Any]]:
+    matched: list[dict[str, Any]] = []
+    for item in group.get("anchor_items") or []:
+        terms = {str(term) for term in item.get("terms") or []}
+        if terms and terms <= candidate_terms:
+            matched.append({"label": str(item.get("label") or ""), "terms": sorted(terms)})
+    return matched
+
+
 def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
     """Extract planner-preserved `Required coverage:` clauses as anchor groups.
 
@@ -611,7 +658,8 @@ def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
 
     groups: list[dict[str, Any]] = []
     for clause in _authoritative_scope_clauses(query):
-        terms = _relevance_terms(clause, remove_generic=True)
+        anchor_items = _coverage_anchor_items(clause)
+        terms = {term for item in anchor_items for term in item.get("terms", [])}
         # These are grammatical glue inside chemistry names, not useful
         # discriminators by themselves. `solid` and `sulfur` remain anchors.
         terms -= {"ion", "state", "battery", "storage", "energy"}
@@ -621,6 +669,7 @@ def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
                     "group_id": f"coverage-{len(groups) + 1}",
                     "clause": clause,
                     "anchor_terms": sorted(terms),
+                    "anchor_items": anchor_items,
                 }
             )
     return groups
@@ -679,6 +728,7 @@ def apply_discovery_relevance_gate(
 
     query_terms = _relevance_terms(query, remove_generic=True)
     coverage_groups = _coverage_anchor_groups(query)
+    requires_battery_domain = bool(coverage_groups) and "battery" in query_terms
     required_overlap = 2 if len(query_terms) >= 4 else 1
     raw_count = len(candidates)
     if minimum_relevant_candidates is None:
@@ -690,22 +740,33 @@ def apply_discovery_relevance_gate(
     accepted: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
     for candidate in candidates:
-        candidate_terms = _relevance_terms(_candidate_relevance_text(candidate), remove_generic=False)
+        candidate_text = _candidate_relevance_text(candidate)
+        candidate_terms = _relevance_terms(candidate_text, remove_generic=False)
         matched = sorted(query_terms & candidate_terms)
-        coverage_matches = [
-            {
-                "group_id": str(group["group_id"]),
-                "matched_anchor_terms": sorted(set(group["anchor_terms"]) & candidate_terms),
-            }
-            for group in coverage_groups
-        ]
+        coverage_matches = []
+        for group in coverage_groups:
+            matched_items = _matched_anchor_items(group, candidate_terms)
+            coverage_matches.append(
+                {
+                    "group_id": str(group["group_id"]),
+                    "matched_anchor_terms": sorted(set(group["anchor_terms"]) & candidate_terms),
+                    "matched_anchor_items": matched_items,
+                }
+            )
         unmatched_coverage_groups = [
             str(item["group_id"])
             for item in coverage_matches
-            if not item["matched_anchor_terms"]
+            if not item["matched_anchor_items"]
         ]
         topic_threshold_met = bool(query_terms) and len(matched) >= required_overlap
-        is_relevant = topic_threshold_met and not unmatched_coverage_groups
+        battery_domain_met = (
+            not requires_battery_domain
+            or (
+                "battery" in candidate_terms
+                and not re.search(r"\b(?:not|non)\s+batter(?:y|ies)\b", candidate_text, re.IGNORECASE)
+            )
+        )
+        is_relevant = topic_threshold_met and not unmatched_coverage_groups and battery_domain_met
         decision = {
             "candidate_id": str(candidate.get("source_id") or candidate.get("canonical_id") or ""),
             "canonical_id": str(candidate.get("canonical_id") or candidate.get("url") or ""),
@@ -724,6 +785,8 @@ def apply_discovery_relevance_gate(
                 if is_relevant
                 else "required_coverage_anchor_missing"
                 if topic_threshold_met and unmatched_coverage_groups
+                else "required_battery_domain_missing"
+                if topic_threshold_met and not battery_domain_met
                 else "query_has_no_specific_topic_terms"
                 if not query_terms
                 else "insufficient_topic_term_overlap"
@@ -740,7 +803,27 @@ def apply_discovery_relevance_gate(
             }
             accepted.append(item)
 
-    gate_passed = bool(query_terms) and len(accepted) >= minimum_relevant_candidates
+    aggregate_missing: list[dict[str, Any]] = []
+    if coverage_groups:
+        accepted_terms = _relevance_terms(
+            " ".join(_candidate_relevance_text(item) for item in accepted),
+            remove_generic=False,
+        )
+        for group in coverage_groups:
+            missing_items = [
+                {"label": str(item.get("label") or ""), "terms": list(item.get("terms") or [])}
+                for item in group.get("anchor_items") or []
+                if not ({str(term) for term in item.get("terms") or []} <= accepted_terms)
+            ]
+            if missing_items:
+                aggregate_missing.append(
+                    {
+                        "group_id": str(group["group_id"]),
+                        "clause": str(group["clause"]),
+                        "missing_anchor_items": missing_items,
+                    }
+                )
+    gate_passed = bool(query_terms) and len(accepted) >= minimum_relevant_candidates and not aggregate_missing
     audit = {
         "schema": "autosci_discovery_relevance_audit.v1",
         "status": "passed" if gate_passed else "incomplete",
@@ -754,12 +837,15 @@ def apply_discovery_relevance_gate(
         "input_candidate_count": raw_count,
         "accepted_candidate_count": len(accepted),
         "rejected_candidate_count": raw_count - len(accepted),
+        "aggregate_coverage_missing": aggregate_missing,
         "decisions": decisions,
         "blocking_reasons": (
             []
             if gate_passed
             else ["query_has_no_specific_topic_terms"]
             if not query_terms
+            else ["authoritative_coverage_incomplete"]
+            if aggregate_missing
             else [
                 f"only {len(accepted)} candidate(s) met the deterministic relevance threshold; "
                 f"{minimum_relevant_candidates} required"

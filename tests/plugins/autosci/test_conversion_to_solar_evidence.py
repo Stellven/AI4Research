@@ -141,6 +141,23 @@ def test_literature_converter_does_not_synthesize_fixture_candidates_by_default(
     assert literature["outputs"]["candidates"] == []
 
 
+def test_literature_converter_preserves_discovery_relevance_audit() -> None:
+    envelope = {"task_id": "t", "sprint_id": "s", "node_id": "n", "inputs": {}}
+    audit = {
+        "schema": "autosci_discovery_relevance_audit.v1",
+        "status": "passed",
+        "accepted_candidate_count": 4,
+        "aggregate_coverage_missing": [],
+    }
+
+    literature = convert_literature(
+        {"query": "grid storage battery comparison", "relevance_gate": audit},
+        envelope,
+    )
+
+    assert literature["outputs"]["relevance_gate"] == audit
+
+
 def test_phase16_converter_emits_workflow_evolution_schema() -> None:
     envelope = {"task_id": "t", "sprint_id": "s", "node_id": "n", "inputs": {}}
     payload = convert_workflow({

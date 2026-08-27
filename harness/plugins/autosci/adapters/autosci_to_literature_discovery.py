@@ -29,7 +29,15 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
         "mode": str(raw.get("mode") or "unknown"),
         "limit": int(raw.get("limit") or len(candidates) or 10),
     }
-    for key in ("anchors", "negative_ids", "venue", "year", "source_fan_in", "source_provider_boundary"):
+    for key in (
+        "anchors",
+        "negative_ids",
+        "venue",
+        "year",
+        "source_fan_in",
+        "source_provider_boundary",
+        "relevance_gate",
+    ):
         if raw.get(key) not in (None, "", []):
             outputs[key] = raw[key]
     return evidence_base(
