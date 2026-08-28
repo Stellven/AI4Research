@@ -25,7 +25,13 @@ from typing import Any
 HARNESS_DIR = Path(os.environ.get("SOLAR_HARNESS_DIR", Path(__file__).resolve().parents[1]))
 SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR", Path.home() / ".solar" / "harness" / "sprints"))
 INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR", Path.home() / ".solar" / "harness" / "intents"))
-_DEFAULT_LLM_INTENT_CHANNELS = {"dashboard", "gui", "webapp", "web"}
+_DEFAULT_LLM_INTENT_CHANNELS = {
+    "dashboard",
+    "gui",
+    "webapp",
+    "web",
+    "codex_pm_router",
+}
 
 
 def _llm_intent_compiler_required(source_channel: str) -> bool:
@@ -941,6 +947,7 @@ def compile_and_evaluate_requirement_bundle(
 
 def capture(args: argparse.Namespace) -> dict[str, Any]:
     raw_text = read_text_arg(args)
+    formal_intent_required = _llm_intent_compiler_required(args.source_channel)
     created = now_iso()
     digest = hashlib.sha1(f"{created}\n{raw_text}".encode("utf-8")).hexdigest()[:10]
     intent_id = args.intent_id or f"intent-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%d-%H%M%S')}-{digest}"
@@ -973,7 +980,10 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         },
         "routing_hints": {
             "urgency": args.urgency,
-            "mode": args.mode or infer_mode(raw_text),
+            # A production IntentIR is semantic authority.  Keep an explicit
+            # caller override, and retain the heuristic only for the named
+            # offline/CLI compatibility path.
+            "mode": args.mode or ("" if formal_intent_required else infer_mode(raw_text)),
             "allow_autodispatch": not args.no_autodispatch,
             "requires_human_confirm": args.requires_human_confirm,
             "require_research_artifact": bool(args.require_research_artifact or research),
@@ -990,7 +1000,7 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         raw_intent["research"] = research
     base = INTENTS_DIR / intent_id
     artifact_compiler_provider = os.environ.get("SOLAR_INTENT_COMPILER_PROVIDER", "").strip()
-    if not artifact_compiler_provider and _llm_intent_compiler_required(args.source_channel):
+    if not artifact_compiler_provider and formal_intent_required:
         # The formal compiler currently supports Codex and model_from_environment
         # already defaults both compiler and independent reviewer to that
         # provider.  Setting the sentinel here makes the production contract
@@ -1144,12 +1154,13 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
             if goals and isinstance(goals[0], dict)
             else None
         )
-        lane = deterministic_rewrite(raw_text)["suggested_lane"]
         return {
             "ok": True,
             "intent_id": intent_id,
             "title": title,
-            "lane": lane,
+            # Intent compilation must not choose a workflow lane.  The typed
+            # Elastic Planner owns direct_response/exact_reuse/generate.
+            "lane": None,
             "ready": True,
             "readiness_status": acceptance["decision"],
             "clarification_questions": acceptance["clarification_questions"],

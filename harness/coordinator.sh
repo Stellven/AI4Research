@@ -3520,12 +3520,117 @@ ensure_direct_answer_runtime() {
     "{\"pid\":${pid},\"runtime_handoff_allowed\":false}"
 }
 
+typed_planner_required() {
+  local sid="$1" requirement="$SPRINTS_DIR/${sid}.requirement_ir.json"
+  [[ -s "$requirement" ]] || return 1
+  python3 - "$requirement" <<'PY' >/dev/null 2>&1
+import json, sys
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+raise SystemExit(0 if payload.get("schema_version") == "solar.requirement_ir.v2" else 1)
+PY
+}
+
+typed_planner_result_path() {
+  printf '%s\n' "$SPRINTS_DIR/$1/planning/adapter_result.json"
+}
+
+reconcile_typed_planner_result() {
+  local sid="$1" sf="$2" result status extra
+  result="$(typed_planner_result_path "$sid")"
+  if [[ ! -s "$result" ]]; then
+    log "${Y}Typed Elastic Planner is still running or held for ${sid}; legacy Planner/Graph Compiler remain disabled${N}"
+    return 0
+  fi
+  status=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("status") or "failed")' "$result" 2>/dev/null || echo failed)
+  case "$status" in
+    accepted)
+      extra=$(python3 - "$result" <<'PY'
+import json, sys
+d=json.load(open(sys.argv[1], encoding="utf-8"))
+fields={
+  "phase":"planning_complete",
+  "handoff_to":"scheduler",
+  "target_role":"scheduler",
+  "planning_authority":"elastic_planner",
+  "runtime_handoff_allowed":bool(d.get("runtime_handoff_allowed")),
+  "plan_compile_required":False,
+  "scheduler_input_path":d.get("scheduler_input"),
+  "run_contract_path":d.get("run_contract"),
+  "scheduler_runtime_dir":d.get("scheduler_runtime_dir"),
+  "runtime_projection_path":d.get("runtime_projection"),
+}
+print(json.dumps({"status_fields":fields,"note":"Elastic Planner bundle and frozen SchedulerInput verified; legacy task_graph authority is disabled."}))
+PY
+)
+      runtime_status_transition "$sid" "active" "elastic_planner_accepted" "coordinator" "$extra" || true
+      ;;
+    direct_response)
+      extra=$(python3 - "$result" <<'PY'
+import json, sys
+d=json.load(open(sys.argv[1], encoding="utf-8"))
+print(json.dumps({"status_fields":{"phase":"direct_response_complete","handoff_to":"","target_role":"","runtime_handoff_allowed":False,"plan_compile_required":False,"result_path":d.get("direct_response")},"note":"Typed Planner selected direct_response; no scheduler or Builder DAG was created."}))
+PY
+)
+      runtime_status_transition "$sid" "passed" "elastic_planner_direct_response" "coordinator" "$extra" || true
+      ;;
+    *)
+      extra=$(python3 - "$result" <<'PY'
+import json, sys
+d=json.load(open(sys.argv[1], encoding="utf-8"))
+print(json.dumps({"status_fields":{"phase":"planning_failed","handoff_to":"","target_role":"","runtime_handoff_allowed":False,"plan_compile_required":True,"planning_errors":d.get("verification_errors") or []},"note":"Typed Elastic Planner failed closed; no runtime projection was authorized."}))
+PY
+)
+      runtime_status_transition "$sid" "failed" "elastic_planner_failed" "coordinator" "$extra" || true
+      ;;
+  esac
+}
+
+dispatch_typed_scheduler_once() {
+  local sid="$1" result scheduler_input run_contract runtime_dir out rc
+  local -a _typed_paths
+  result="$(typed_planner_result_path "$sid")"
+  [[ -s "$result" ]] || return 1
+  readarray -t _typed_paths < <(python3 - "$result" <<'PY'
+import json, sys
+d=json.load(open(sys.argv[1], encoding="utf-8"))
+for key in ("scheduler_input", "run_contract", "scheduler_runtime_dir"):
+    print(d.get(key) or "")
+PY
+)
+  scheduler_input="${_typed_paths[0]:-}"
+  run_contract="${_typed_paths[1]:-}"
+  runtime_dir="${_typed_paths[2]:-}"
+  [[ -s "$scheduler_input" && -s "$run_contract" && -d "$runtime_dir" ]] || return 1
+  set +e
+  out=$(HARNESS_DIR="$HARNESS_DIR" SOLAR_HARNESS_DIR="$HARNESS_DIR" \
+    SOLAR_HARNESS_SPRINTS_DIR="$runtime_dir" \
+    python3 "$HARNESS_DIR/lib/multi_task_runner.py" start \
+      --scheduler-input "$scheduler_input" \
+      --run-contract "$run_contract" \
+      --scheduler-runtime-dir "$runtime_dir" \
+      --once --no-clear 2>&1)
+  rc=$?
+  set -e
+  if (( rc == 0 )); then
+    emit_event "$sid" "typed_scheduler_tick" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"output":sys.argv[1][-2000:]}))' "$out" 2>/dev/null || echo '{}')"
+    return 0
+  fi
+  log "${R}Typed scheduler refused ${sid} rc=${rc}: ${out}${N}"
+  emit_event "$sid" "typed_scheduler_refused" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc":int(sys.argv[1]),"output":sys.argv[2][-2000:]}))' "$rc" "$out" 2>/dev/null || echo '{}')"
+  return "$rc"
+}
+
 handle_drafting() {
   local sid="$1" sf="$2"
   local prd="$SPRINTS_DIR/${sid}.prd.md"
   local plan="$SPRINTS_DIR/${sid}.plan.md"
   local req_file=""
   local direct_answer_required=0
+
+  if typed_planner_required "$sid"; then
+    reconcile_typed_planner_result "$sid" "$sf"
+    return 0
+  fi
 
   if direct_answer_runtime_required "$sid"; then
     direct_answer_required=1
@@ -4074,6 +4179,20 @@ handle_active() {
     fi
     ensure_direct_answer_runtime "$sid" "$sf"
     log "${Y}Sprint ${sid} downstream direct answer is in progress; no DAG is required${N}"
+    return 0
+  fi
+
+  if typed_planner_required "$sid"; then
+    local typed_phase
+    typed_phase=$(get_field "$sf" "phase")
+    if [[ "$typed_phase" != "planning_complete" && "$typed_phase" != "graph_dispatch_active" ]]; then
+      reconcile_typed_planner_result "$sid" "$sf"
+      return 0
+    fi
+    if dispatch_typed_scheduler_once "$sid"; then
+      runtime_status_transition "$sid" "active" "typed_scheduler_dispatched" "coordinator" \
+        '{"status_fields":{"phase":"graph_dispatch_active","handoff_to":"scheduler","target_role":"scheduler","runtime_handoff_allowed":true},"note":"Scheduler tick consumed the verified frozen SchedulerInput; legacy task_graph dispatch was not used."}' || true
+    fi
     return 0
   fi
 

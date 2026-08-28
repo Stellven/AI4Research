@@ -4697,7 +4697,31 @@ def _merge_execution_plans_into_graph(
         "sha256": sha256_payload(physical_plan),
     }
     merged["planning_authority"] = "frozen_execution_plan_v1"
+    _normalize_task_graph_schema_fields(merged)
     return merged
+
+
+def _normalize_task_graph_schema_fields(graph: dict[str, Any]) -> None:
+    """Materialize the TaskGraph fields required at the dispatch boundary."""
+    for index, node in enumerate(graph.get("nodes") or [], start=1):
+        if not isinstance(node, dict):
+            continue
+        acceptance = node.get("acceptance")
+        if not isinstance(acceptance, list) or not acceptance:
+            derived = [
+                str(row.get("requirement") or "").strip()
+                for row in node.get("proof_obligations") or []
+                if isinstance(row, dict) and str(row.get("requirement") or "").strip()
+            ]
+            node["acceptance"] = list(dict.fromkeys(derived)) or [
+                f"Complete {node.get('id') or 'node'} and produce its declared outputs."
+            ]
+        priority = node.get("priority")
+        if isinstance(priority, bool) or not isinstance(priority, (int, float)):
+            node["priority"] = index
+        node.setdefault("required_phase", None)
+        node.setdefault("required_node_id", None)
+        node.setdefault("required_node_status", None)
 
 
 def validate_capsule_bindings(capsule_plan: dict[str, Any]) -> dict[str, Any]:

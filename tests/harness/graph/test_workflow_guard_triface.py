@@ -90,8 +90,8 @@ def test_route_done_via_closure(tmp_path):
     assert result["stage"] == "done"
 
 
-def test_route_fallback_to_legacy_when_no_spec(tmp_path):
-    """workflow_guard falls back to legacy task_graph.json when spec missing."""
+def test_route_rejects_uncertified_legacy_graph_when_no_spec(tmp_path):
+    """An old untyped task_graph cannot regain Builder authority by fallback."""
     sid = "wg-test-sprint"
     _write_prd(tmp_path, sid)
     _write_design(tmp_path, sid)
@@ -100,7 +100,7 @@ def test_route_fallback_to_legacy_when_no_spec(tmp_path):
     _write_legacy_graph(tmp_path, sid)  # no spec file
 
     result = wg.route(sid)
-    assert result["route_role"] == "builder_main"
+    assert result["route_role"] == "planner"
 
 
 def test_triface_graph_valid_spec_ok(tmp_path):

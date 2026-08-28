@@ -2060,11 +2060,11 @@ print(next((m.group(1) for p in patterns for m in [re.search(p,text)] if m), "")
     if [[ "$autopilot_rc" != "0" ]]; then
       rc="$autopilot_rc"
     fi
-  elif [[ "$dispatch" == "1" && "$planner_handoff_mode" == "direct_answer" ]]; then
-    # The consumer already started Elastic Planner. Running the legacy global
-    # autopilot scan here is both slow and unsafe: it can dispatch a generic
-    # Planner against the proposal-only compatibility graph.
-    autopilot_out="direct_answer_runtime_submitted"
+  elif [[ "$dispatch" == "1" && "$planner_handoff_mode" =~ ^(direct_answer|elastic_planner)$ ]]; then
+    # The consumer already started a typed downstream path. Running the legacy
+    # global autopilot here could dispatch an uncertified task_graph before the
+    # frozen SchedulerInput exists.
+    autopilot_out="typed_planner_runtime_submitted"
     autopilot_rc=0
   elif [[ "$dispatch" == "1" && -f "$HARNESS_DIR/tools/solar-autopilot-monitor.py" ]]; then
     set +e
@@ -2100,8 +2100,8 @@ PY
       if [[ "$autopilot_rc" == "0" ]]; then
         if [[ "$fixed_route" == "1" ]]; then
           ok "Fixed research A1 dispatch triggered"
-        elif [[ "$planner_handoff_mode" == "direct_answer" ]]; then
-          ok "Direct answer Planner started; legacy autopilot skipped"
+        elif [[ "$planner_handoff_mode" =~ ^(direct_answer|elastic_planner)$ ]]; then
+          ok "Typed Planner path started; legacy autopilot skipped"
         else
           ok "Autopilot scan/dispatch triggered"
         fi

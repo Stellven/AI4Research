@@ -22,6 +22,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from jsonschema import Draft202012Validator
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import workflow_contract as wc  # noqa: E402
@@ -47,6 +49,7 @@ FALLBACK_ARTIFACT_ROOTS: Dict[str, Any] = {
 }
 
 ERRORS_ARTIFACT_SUFFIX = ".plan-compile-errors.json"
+TASK_GRAPH_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "task-graph.schema.json"
 
 # --- P5 G1: planner-graph policy (P5-RUNBOOK owner defaults) ----------------
 
@@ -206,6 +209,8 @@ ERROR_PLAN_CERTIFICATE_NOT_PASS = "PLAN_CERTIFICATE_NOT_PASS"
 ERROR_PLAN_CERTIFICATE_HASH_MISMATCH = "PLAN_CERTIFICATE_HASH_MISMATCH"
 ERROR_PLAN_GENERIC_CONTRACT_MISSING = "PLAN_GENERIC_CONTRACT_MISSING"
 ERROR_PLAN_GRAPH_MISSING = "PLAN_GRAPH_MISSING"
+ERROR_PLAN_SCHEMA_INVALID = "PLAN_SCHEMA_INVALID"
+ERROR_PLAN_TYPED_AUTHORITY_REQUIRED = "PLAN_TYPED_AUTHORITY_REQUIRED"
 
 PLAN_CERTIFICATE_SCHEMA = "solar.plan_certificate.v1"
 REQUEST_GOVERNANCE_FIELDS = (
@@ -255,6 +260,43 @@ def _scope_entries(raw: Any) -> List[str]:
     return []
 
 
+def validate_task_graph_schema(task_graph: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Validate the declared TaskGraph shape before semantic certification."""
+    try:
+        schema = json.loads(TASK_GRAPH_SCHEMA_PATH.read_text(encoding="utf-8"))
+        validation_errors = sorted(
+            Draft202012Validator(schema).iter_errors(task_graph),
+            key=lambda item: list(item.absolute_path),
+        )
+    except Exception as exc:
+        return [
+            wc.compile_error(
+                ERROR_PLAN_SCHEMA_INVALID,
+                "?",
+                f"TaskGraph schema could not be checked: {type(exc).__name__}: {exc}",
+            )
+        ]
+    errors: List[Dict[str, Any]] = []
+    for error in validation_errors:
+        path = ".".join(str(item) for item in error.absolute_path) or "$"
+        node_id = "?"
+        if len(error.absolute_path) >= 2 and list(error.absolute_path)[0] == "nodes":
+            try:
+                node = task_graph.get("nodes", [])[int(list(error.absolute_path)[1])]
+                node_id = str(node.get("id") or "?") if isinstance(node, dict) else "?"
+            except (IndexError, TypeError, ValueError):
+                pass
+        errors.append(
+            wc.compile_error(
+                ERROR_PLAN_SCHEMA_INVALID,
+                node_id,
+                f"TaskGraph schema violation at {path}: {error.message}",
+                declared=error.instance,
+            )
+        )
+    return errors
+
+
 def validate_plan(
     task_graph: Dict[str, Any],
     capsule_registry: Optional[Dict[str, Dict[str, Any]]],
@@ -279,7 +321,7 @@ def validate_plan(
     if policy is None:
         policy = (contract or {}).get("provider_policy")
 
-    errors: List[Dict[str, Any]] = []
+    errors: List[Dict[str, Any]] = validate_task_graph_schema(task_graph)
     if expected_sprint_id is not None and sprint_id != str(expected_sprint_id).strip():
         errors.append(wc.compile_error(
             ERROR_PLAN_SPRINT_ID_MISMATCH,
@@ -1391,6 +1433,14 @@ def check_planner_graph_dispatchable(
     effective_graph = _with_status_plan_provenance(
         task_graph or {}, sprints_dir=sprints_dir, sid=sid
     )
+    if not _is_epic_graph(effective_graph):
+        schema_errors = validate_task_graph_schema(effective_graph)
+        if schema_errors:
+            return {
+                "ok": False,
+                "reason": "plan_validator_dispatch_refused",
+                "errors": schema_errors,
+            }
     graph_kind = _generic_graph_kind(effective_graph)
     if graph_kind == "unregistered_planner_contract":
         contract_id = str(effective_graph.get("workflow_contract_id") or "")
@@ -1402,6 +1452,18 @@ def check_planner_graph_dispatchable(
                     ERROR_PLAN_GENERIC_CONTRACT_MISSING,
                     "?",
                     f"{contract_id} workflow contract is missing or not planner-generated",
+                )
+            ],
+        }
+    if graph_kind == "legacy_uncontracted":
+        return {
+            "ok": False,
+            "reason": "plan_validator_dispatch_refused",
+            "errors": [
+                _error(
+                    ERROR_PLAN_TYPED_AUTHORITY_REQUIRED,
+                    "?",
+                    "Uncontracted task_graph.json is a compatibility artifact, not runtime authority; dispatch requires a verified frozen SchedulerInput.",
                 )
             ],
         }

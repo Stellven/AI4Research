@@ -72,6 +72,19 @@ def _graph_valid(path: Path) -> tuple[bool, str]:
         graph = json.loads(path.read_text())
     except Exception as exc:
         return False, f"parse_error:{exc}"
+    try:
+        import plan_validator
+
+        schema_errors = plan_validator.validate_task_graph_schema(graph)
+    except Exception as exc:
+        return False, f"schema_uncheckable:{type(exc).__name__}"
+    if schema_errors:
+        codes = ",".join(
+            str(item.get("code") or "PLAN_SCHEMA_INVALID")
+            for item in schema_errors[:8]
+            if isinstance(item, dict)
+        )
+        return False, f"schema_invalid:{codes or 'PLAN_SCHEMA_INVALID'}"
     nodes = graph.get("nodes")
     if not isinstance(nodes, list) or not nodes:
         return False, "nodes_missing"
