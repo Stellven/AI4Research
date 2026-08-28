@@ -109,6 +109,8 @@ def test_intent_consumer_objective_includes_policy_only_when_env_on(tmp_path, mo
 
     off = ic.planner_objective_for_compiled_sprint("sprint-g2-ic")
     assert "capability_capsule_id" not in off
+    assert "preferred_outcome=direct_answer" in off
+    assert "不得生成 PlanIR/TaskGraph 或派发 Builder" in off
 
     monkeypatch.setenv("SOLAR_PLAN_VALIDATOR", "1")
     on = ic.planner_objective_for_compiled_sprint("sprint-g2-ic")

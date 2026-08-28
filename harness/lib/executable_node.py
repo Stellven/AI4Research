@@ -62,6 +62,7 @@ _GOVERNED_SOURCE_FIELDS = frozenset({
     "required_capabilities",
     "proof_obligations",
     "evaluator_gate",
+    "evaluation_policy",
     "gate",
     "max_repair_attempts",
     "on_human_review",
@@ -237,6 +238,11 @@ def canonical_executable_node(node: Mapping[str, Any]) -> dict[str, Any]:
         "required_capabilities": _as_string_list(node.get("required_capabilities")),
         "proof_obligations": deepcopy(list(node.get("proof_obligations") or [])),
         "evaluator_gate": deepcopy(dict(gate)),
+        "evaluation_policy": deepcopy(
+            node.get("evaluation_policy")
+            if isinstance(node.get("evaluation_policy"), Mapping)
+            else {}
+        ),
         "gate": str(node.get("gate") or ""),
         "max_repair_attempts": repair_budget,
         "on_human_review": node.get("on_human_review"),

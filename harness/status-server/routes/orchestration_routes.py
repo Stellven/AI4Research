@@ -1925,6 +1925,70 @@ def _event_token(event: dict, payload: dict) -> str:
     return str(event.get("type") or event.get("event") or "event")
 
 
+_NARRATIVE_WAIT_REASONS = frozenset({
+    "builder_operator_result_pending",
+    "deterministic_gate_waiting_for_builder",
+    "evaluator_temporarily_busy",
+})
+
+
+def _embedded_json_object(value: object) -> dict:
+    """Decode structured dispatcher output embedded in an event payload.
+
+    Coordinator events often put the real dispatcher response in ``output``
+    or ``eval_output`` as a JSON string.  If we ignore it, unrelated failures
+    all collapse into the same unhelpful "Dispatch blocked" label.
+    """
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return {}
+    candidates = [value.strip(), *reversed(value.splitlines())]
+    for candidate in candidates:
+        candidate = candidate.strip()
+        if not candidate.startswith("{"):
+            continue
+        try:
+            decoded = json.loads(candidate)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if isinstance(decoded, dict):
+            return decoded
+    return {}
+
+
+def _dispatch_diagnostic(payload: dict, event: dict) -> dict:
+    """Return the concrete dispatch reason/node without hiding unknown bugs."""
+    reason = str(payload.get("reason") or payload.get("blocked_reason") or event.get("reason") or "")
+    node = str(payload.get("node_id") or payload.get("node") or event.get("node_id") or "")
+    details: list[dict] = []
+    for field in ("output", "eval_output", "ready_output"):
+        decoded = _embedded_json_object(payload.get(field))
+        if decoded:
+            details.append(decoded)
+    for decoded in details:
+        if not reason:
+            reason = str(decoded.get("reason") or decoded.get("blocked_reason") or "")
+        rows: list[dict] = []
+        for field in ("waiting", "skipped", "worker_blocked", "blocked_prerequisites"):
+            value = decoded.get(field)
+            if isinstance(value, list):
+                rows.extend(item for item in value if isinstance(item, dict))
+        for row in rows:
+            row_reason = str(row.get("reason") or row.get("blocked_reason") or "")
+            if row_reason:
+                reason = reason or row_reason
+                node = node or str(row.get("node_id") or row.get("node") or "")
+                break
+        if reason:
+            break
+    return {
+        "reason": reason,
+        "node": node,
+        "waiting": reason in _NARRATIVE_WAIT_REASONS,
+    }
+
+
 def _narrative_role(payload: dict, event: dict) -> str:
     raw = str(
         payload.get("role")
@@ -1958,7 +2022,8 @@ def _clean_to_state(to_status: str) -> str:
     return " / ".join(parts[:2]) if parts else to_status
 
 
-def _narrative_title(token: str, role: str, node: str, phase: str, decision: str, to_status: str) -> str:
+def _narrative_title(token: str, role: str, node: str, phase: str, decision: str, to_status: str,
+                     reason: str = "") -> str:
     """Map an internal coordinator token to a plain human title."""
     t = token.lower()
     n = f" {node}" if node else ""
@@ -1973,8 +2038,14 @@ def _narrative_title(token: str, role: str, node: str, phase: str, decision: str
         return "Sent back for fixes"
     if "handoff" in t:
         return f"{who or 'Builder'} handed off{n}".strip()
-    if "no_matching" in decision or ("dispatch" in t and "fail" in t):
+    if reason in {"builder_operator_result_pending", "deterministic_gate_waiting_for_builder"}:
+        return f"Evaluation waiting for Builder{n}"
+    if reason == "evaluator_temporarily_busy":
+        return f"Evaluation queued — Evaluator busy{n}"
+    if "no_matching" in f"{decision} {reason}":
         return f"Dispatch blocked{n}"
+    if "dispatch" in t and "fail" in t:
+        return f"Evaluation dispatch failed{n}" if "eval" in t else f"Dispatch failed{n}"
     if t in {"dispatched", "round_dispatched", "slice_dispatched", "mixture_dispatched", "graph_nodes_dispatched", "dispatch_queued"}:
         return f"Routed{n}{f' to {who}' if who else ''}"
     if "planner_notified" in t:
@@ -1995,8 +2066,10 @@ def _narrative_title(token: str, role: str, node: str, phase: str, decision: str
     return token.replace("_", " ").strip().capitalize() or "Event"
 
 
-def _narrative_tone(token: str, decision: str, to_status: str) -> str:
-    blob = f"{token} {decision} {to_status}".lower()
+def _narrative_tone(token: str, decision: str, to_status: str, reason: str = "") -> str:
+    if reason in _NARRATIVE_WAIT_REASONS:
+        return "working"
+    blob = f"{token} {decision} {to_status} {reason}".lower()
     if "fail" in blob or "blocked" in blob or "no_matching" in blob or "error" in blob:
         return "blocked"
     if any(word in blob for word in ("passed", "completed", "accepted", "ended", "integrated", "done", "ready")):
@@ -2018,14 +2091,27 @@ def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
         actor_raw = str(event.get("actor") or payload.get("actor") or "").lower()
         if tl.startswith(_NARRATIVE_DROP) or actor_raw == "solar-autopilot":
             continue
-        node = str(payload.get("node_id") or payload.get("node") or event.get("node_id") or "")
+        diagnostic = _dispatch_diagnostic(payload, event) if "dispatch" in token.lower() else {}
+        node = str(
+            diagnostic.get("node")
+            or payload.get("node_id")
+            or payload.get("node")
+            or event.get("node_id")
+            or ""
+        )
         role = _narrative_role(payload, event)
         phase = str(payload.get("phase") or event.get("phase") or "")
         decision = str(payload.get("decision") or event.get("decision") or "")
         to_status = _clean_to_state(str(payload.get("to") or payload.get("status") or ""))
         round_num = str(payload.get("round") or "")
         ts = str(event.get("ts") or event.get("timestamp") or event.get("time") or "")
-        reason = str(payload.get("reason") or payload.get("blocked_reason") or event.get("reason") or "")
+        reason = str(
+            diagnostic.get("reason")
+            or payload.get("reason")
+            or payload.get("blocked_reason")
+            or event.get("reason")
+            or ""
+        )
         message = str(
             payload.get("message") or payload.get("summary") or payload.get("text")
             or event.get("message") or payload.get("thought") or ""
@@ -2036,12 +2122,18 @@ def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
         if token in {"log_message", "event"} and not message:
             continue
         # Collapse the dual-write: the same token+node+role+round is one human step.
-        key = (token, node, role, round_num or ts[:19])
+        # A prerequisite wait can be observed on every coordinator poll.  It
+        # is one continuing state, not dozens of distinct failures.
+        key = (
+            ("dispatch_wait", node, reason)
+            if diagnostic.get("waiting")
+            else (token, node, role, round_num or ts[:19])
+        )
         if key in seen:
             continue
         seen.add(key)
-        title = _narrative_title(token, role, node, phase, decision, to_status)
-        summary = reason or decision.replace("_", " ")
+        title = _narrative_title(token, role, node, phase, decision, to_status, reason)
+        summary = (reason or decision).replace("_", " ")
         if token in {"log_message", "event"} and message:
             title = message[:100]
         elif message and not summary:
@@ -2054,7 +2146,7 @@ def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
             "node_id": node,
             "title": title,
             "summary": summary[:240],
-            "tone": _narrative_tone(token, decision, to_status),
+            "tone": _narrative_tone(token, decision, to_status, reason),
             "token": token,
             "phase": phase,
         })

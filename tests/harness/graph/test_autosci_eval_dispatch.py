@@ -459,6 +459,7 @@ def test_autosci_eval_waits_for_durable_builder_result_before_snapshot(
     result = gnd.dispatch_node_evals(str(graph_path), ttl=30)
     saved = gnd.load_graph(graph_path)
 
+    assert result["ok"] is True
     assert result["dispatched"] == []
     assert result["skipped"] == [
         {
@@ -470,6 +471,8 @@ def test_autosci_eval_waits_for_durable_builder_result_before_snapshot(
             "result_json": None,
         }
     ]
+    assert result["waiting"] == result["skipped"]
+    assert result["blocking_skips"] == []
     assert saved["nodes"][0]["status"] == "dispatched"
     assert saved["node_results"]["paper_ingest"]["status"] == "dispatched"
     assert not (sprints / f"{sid}.paper_ingest-eval-snapshot.json").exists()

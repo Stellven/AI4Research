@@ -388,6 +388,36 @@ def test_planning_decision_is_hash_bound_and_covers_exact_requirement_set() -> N
     assert "REQUIREMENT_SET_MISMATCH" in codes
 
 
+def test_direct_answer_hint_cannot_be_promoted_to_generated_runtime_graph() -> None:
+    requirement_ir = _requirement_ir()
+    requirement_ir["planner_hints"] = {
+        "preferred_outcome": "direct_answer",
+        "runtime_handoff_allowed": False,
+    }
+
+    generated = _decision(requirement_ir, "generate")
+    codes = {
+        row["code"]
+        for row in planner.validate_planning_decision(
+            requirement_ir,
+            generated,
+            _catalog(),
+        )
+    }
+    assert "DIRECT_RESPONSE_ROUTE_VIOLATED" in codes
+
+    direct = _decision(requirement_ir, "direct_response")
+    direct_codes = {
+        row["code"]
+        for row in planner.validate_planning_decision(
+            requirement_ir,
+            direct,
+            _catalog(),
+        )
+    }
+    assert "DIRECT_RESPONSE_ROUTE_VIOLATED" not in direct_codes
+
+
 def test_exact_reuse_requires_registered_id_and_version() -> None:
     requirement_ir = _requirement_ir()
     decision = _decision(requirement_ir, "exact_reuse")
@@ -2677,7 +2707,12 @@ def test_generated_multicapsule_node_expands_and_freezes_static_graph(
     assert len(graph["nodes"]) == 3
     assert graph["nodes"][-1]["id"] == "design_reproducibility_experiment"
     assert graph["nodes"][-1]["requirement_ids"] == ["REQ-001", "REQ-002"]
-    assert all(node["max_repair_attempts"] == 0 for node in graph["nodes"])
+    semantic_ids = set(graph["evaluation_policy"]["semantic_evaluation_node_ids"])
+    assert 1 <= len(semantic_ids) <= graph["evaluation_policy"]["semantic_evaluation_budget"]
+    assert all(
+        node["max_repair_attempts"] == (1 if node["id"] in semantic_ids else 0)
+        for node in graph["nodes"]
+    )
     assert all(node["approved_physical_operator_ids"] for node in graph["nodes"])
     assert all(
         all(stage["stage_kind"] != "adapter" for stage in node["stages"])

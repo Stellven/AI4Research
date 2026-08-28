@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import datetime
+import json
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 
 ROOT = (Path(__file__).resolve().parents[3] / 'harness')
 sys.path.insert(0, str(ROOT / "lib"))
@@ -80,6 +82,215 @@ def test_operator_pool_submit_is_disabled_when_env_unset(monkeypatch, tmp_path: 
     )
 
     assert result == {"ok": False, "reason": "operator_pool_disabled"}
+
+
+def test_permanent_capsule_admission_failure_enters_durable_human_review(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    sid = "sprint-capsule-admission"
+    node_id = "N2"
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph_path = sprints / f"{sid}.task_graph.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "nodes": [
+                    {
+                        "id": node_id,
+                        "status": "assigned",
+                        "depends_on": [],
+                        "assigned_to": "operator-pool:builder.0",
+                        "dispatch_id": "dispatch-capsule",
+                        "capability_capsule_id": "capsule.missing.v1",
+                    }
+                ],
+                "node_results": {},
+                "gate_results": {},
+                "required_gates": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(gnd, "_builder_operator_pool_enabled", lambda: True)
+    monkeypatch.setattr(gnd, "_builder_operator_pool_allowed_for_pane", lambda _pane: True)
+    monkeypatch.setattr(gnd, "build_dispatch_text", lambda *_args, **_kwargs: "# dispatch\n")
+    monkeypatch.setattr(gnd, "_inject_dispatch_context", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(gnd, "_broker_env", lambda _sid: {})
+    monkeypatch.setattr(
+        gnd.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=2,
+            stdout="",
+            stderr=(
+                "pm_dispatch refused request: admission_failed: capsule "
+                "capsule.missing.v1 not found\n"
+            ),
+        ),
+    )
+    ledger: list[tuple] = []
+    events: list[dict] = []
+    monkeypatch.setattr(gnd, "_append_dispatch_ledger", lambda *args, **_kwargs: ledger.append(args))
+    monkeypatch.setattr(gnd, "_append_event", lambda _sid, event: events.append(event))
+    monkeypatch.setattr(gnd, "_record_node_runstate", lambda *_args, **_kwargs: None)
+
+    result = gnd._submit_builder_to_operator_pool(
+        item={"payload": {}},
+        payload={},
+        sid=sid,
+        node={
+            "id": node_id,
+            "required_capabilities": [],
+            "capability_capsule_id": "capsule.missing.v1",
+        },
+        node_id=node_id,
+        graph_path=str(graph_path),
+        pane="operator-pool:builder.0",
+        dispatch_id="dispatch-capsule",
+        dry_run=False,
+    )
+
+    assert result["ok"] is False
+    assert result["reason"] == "operator_pool_capsule_admission_failed"
+    assert result["permanent"] is True
+    assert result["suppress_fallback"] is True
+    assert result["graph_updated"] is True
+    assert "capsule.missing.v1 not found" in result["blocking_reason"]
+    persisted = gnd.load_graph(graph_path)
+    node = persisted["nodes"][0]
+    assert node["status"] == "needs_human_review"
+    assert node["blocking_reason"] == result["blocking_reason"]
+    assert node["next_action"] == result["next_action"]
+    assert node["operator_submit_reason"] == "operator_admission_failed"
+    assert "assigned_to" not in node
+    assert "dispatch_id" not in node
+    assert persisted["node_results"][node_id]["blocking_reason"] == result["blocking_reason"]
+    assert ledger and ledger[-1][0] == "operator_pool_capsule_admission_blocked"
+    assert events and events[-1]["event"] == "graph_operator_pool_capsule_admission_blocked"
+
+
+def test_transient_operator_pool_submit_failure_remains_retryable(monkeypatch, tmp_path: Path) -> None:
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    graph_path = sprints / "sprint-transient.task_graph.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": "sprint-transient",
+                "nodes": [{"id": "N2", "status": "assigned", "depends_on": []}],
+                "node_results": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gnd, "HARNESS_DIR", tmp_path)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(gnd, "_builder_operator_pool_enabled", lambda: True)
+    monkeypatch.setattr(gnd, "_builder_operator_pool_allowed_for_pane", lambda _pane: True)
+    monkeypatch.setattr(gnd, "build_dispatch_text", lambda *_args, **_kwargs: "# dispatch\n")
+    monkeypatch.setattr(gnd, "_inject_dispatch_context", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(gnd, "_broker_env", lambda _sid: {})
+    monkeypatch.setattr(
+        gnd.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=1,
+            stdout="",
+            stderr="operator busy: lease already held",
+        ),
+    )
+
+    result = gnd._submit_builder_to_operator_pool(
+        item={"payload": {}},
+        payload={},
+        sid="sprint-transient",
+        node={"id": "N2", "required_capabilities": []},
+        node_id="N2",
+        graph_path=str(graph_path),
+        pane="operator-pool:builder.0",
+        dispatch_id="dispatch-transient",
+        dry_run=False,
+    )
+
+    assert result["reason"] == "operator_pool_submit_failed"
+    assert not result.get("permanent")
+    assert not result.get("suppress_fallback")
+    persisted = gnd.load_graph(graph_path)
+    assert persisted["nodes"][0]["status"] == "assigned"
+
+
+def test_dispatch_queue_does_not_requeue_permanent_capsule_admission_failure(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    graph_path = tmp_path / "sprint-capsule-queue.task_graph.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "sprint_id": "sprint-capsule-queue",
+                "nodes": [
+                    {
+                        "id": "N2",
+                        "status": "assigned",
+                        "depends_on": [],
+                        "assigned_to": "operator-pool:builder.0",
+                        "dispatch_id": "dispatch-capsule",
+                    }
+                ],
+                "node_results": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    permanent_failure = {
+        "ok": False,
+        "reason": "operator_pool_capsule_admission_failed",
+        "permanent": True,
+        "suppress_fallback": True,
+        "blocking_reason": (
+            "permanent_capsule_admission_failure:admission_failed: "
+            "capsule capsule.missing.v1 not found"
+        ),
+        "next_action": "repair capsule and explicitly resume",
+        "graph_updated": True,
+    }
+    fallback_calls: list[str] = []
+    monkeypatch.setattr(gnd, "_plan_validator_enabled", lambda: False)
+    monkeypatch.setattr(gnd, "_prepare_human_search_handoff", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(gnd, "_submit_builder_to_operator_pool", lambda **_kwargs: permanent_failure)
+    monkeypatch.setattr(
+        gnd,
+        "enqueue",
+        lambda *_args, **_kwargs: fallback_calls.append("requeued") or {"ok": True},
+    )
+    monkeypatch.setattr(
+        gnd,
+        "_send_to_pane",
+        lambda *_args, **_kwargs: fallback_calls.append("pane_fallback") or True,
+    )
+
+    result = gnd.dispatch_queue_item(
+        {
+            "intent": "graph_node|node_id=N2",
+            "priority": 80,
+            "payload": {
+                "sprint_id": "sprint-capsule-queue",
+                "node": {"id": "N2", "status": "assigned"},
+                "assignment": {"pane": "operator-pool:builder.0"},
+                "dispatch_id": "dispatch-capsule",
+                "graph": str(graph_path),
+            },
+        },
+        dry_run=False,
+    )
+
+    assert result == permanent_failure
+    assert fallback_calls == []
 
 
 def test_expired_lease_does_not_make_pane_busy(monkeypatch) -> None:

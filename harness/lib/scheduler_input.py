@@ -305,9 +305,11 @@ def _runtime_node(node: dict[str, Any], artifact_paths: dict[str, str] | None = 
             "produces": {item: artifact_paths.get(item) for item in produces},
         },
         "evaluation_binding": binding,
+        "evaluator_gate": deepcopy(node.get("evaluator_gate") or {}),
+        "evaluation_policy": deepcopy(node.get("evaluation_policy") or {}),
         "evaluation_plan": {
             "review_mode": "single",
-            "required_evaluators": 1,
+            "required_evaluators": 1 if semantic_evaluators else 0,
             "evaluator_classes": semantic_evaluators or deterministic_gates,
             "evidence_requirements": ["handoff_md", "session_log", "artifact_contract"],
         },

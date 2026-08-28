@@ -48,6 +48,7 @@ except Exception:  # pragma: no cover
 SHORT_IMPL = "short_impl"
 FULL_SPEC = "full_spec"
 RESEARCH = "research"
+DIRECT_ANSWER = "direct_answer"
 MAX_REQUEST_CHARS = 12_000
 # A RawIntent consumer envelope carries the same bounded request in up to
 # three semantic sections (objective, problem, and raw user intent), plus
@@ -59,6 +60,7 @@ CLASS_TO_CANONICAL = {
     SHORT_IMPL: "implementation",
     FULL_SPEC: "full_prd",
     RESEARCH: "research",
+    DIRECT_ANSWER: "direct_answer",
 }
 CODE_UNDERSTANDING_TOKENS = (
     "knowledge graph",
@@ -365,6 +367,8 @@ def _derive_confidence(request_type: str, text: str, papers: list[str]) -> float
     normalized = _normalized_text(text)
     if request_type == SHORT_IMPL:
         return 0.86 if len(normalized) < 200 else 0.79
+    if request_type == DIRECT_ANSWER:
+        return 0.9
     if request_type == RESEARCH:
         return 0.9 if papers else 0.72
     if re.search(r"(metric|指标|success|acceptance|scope|non-goal)", normalized, re.I):
@@ -373,10 +377,11 @@ def _derive_confidence(request_type: str, text: str, papers: list[str]) -> float
 
 
 def _derive_assumptions(request_type: str, lane_hint: str) -> list[str]:
-    assumptions = [
-        "PM 产物需要兼容 solar-harness 现有 PM -> Planner -> Builder 主链。",
-        "Markdown PRD / contract 是编译视图，不是唯一事实源。",
-    ]
+    assumptions = ["Markdown PRD / contract 是编译视图，不是唯一事实源。"]
+    if request_type != DIRECT_ANSWER:
+        assumptions.insert(0, "PM 产物需要兼容 solar-harness 现有 PM -> Planner -> Builder 主链。")
+    else:
+        assumptions.append("有界的直接回答在独立复核通过后停止，不进入 Builder 或 TaskGraph 运行时。")
     if request_type == SHORT_IMPL:
         assumptions.append("短实现类请求默认优先最小改动和 verifier gate。")
     if request_type == FULL_SPEC:
@@ -402,6 +407,21 @@ def _derive_open_questions(request_type: str, text: str, papers: list[str]) -> l
 
 
 def _derive_risk_register(request_type: str) -> list[dict[str, str]]:
+    if request_type == DIRECT_ANSWER:
+        return [
+            {
+                "id": "R1",
+                "level": "low",
+                "title": "直接回答被错误升级为执行工作流",
+                "mitigation": "编译为 direct_answer 并禁止 runtime handoff。",
+            },
+            {
+                "id": "R2",
+                "level": "low",
+                "title": "回答声称了未执行的检索或外部操作",
+                "mitigation": "独立检查 factual restraint 与 effect claims。",
+            },
+        ]
     risks = [
         {
             "id": "R1",
@@ -438,6 +458,12 @@ def _derive_risk_register(request_type: str) -> list[dict[str, str]]:
 
 
 def _default_acceptance(request_type: str) -> list[str]:
+    if request_type == DIRECT_ANSWER:
+        return [
+            "回答直接覆盖用户问题和指定受众。",
+            "回答不声称未发生的检索、执行或文件修改。",
+            "独立 direct-response review 通过。",
+        ]
     if request_type == SHORT_IMPL:
         return [
             "目标变更在声明范围内完成。",
@@ -458,6 +484,11 @@ def _default_acceptance(request_type: str) -> list[str]:
 
 
 def _default_non_goals(request_type: str) -> list[str]:
+    if request_type == DIRECT_ANSWER:
+        return [
+            "不创建或调度运行时 DAG。",
+            "不执行网络检索、代码或文件修改。",
+        ]
     if request_type == SHORT_IMPL:
         return [
             "不做无关架构重写。",
@@ -475,6 +506,11 @@ def _default_non_goals(request_type: str) -> list[str]:
 
 
 def _default_stop_rules(request_type: str) -> list[str]:
+    if request_type == DIRECT_ANSWER:
+        return [
+            "direct-response review 失败时不得标记完成。",
+            "direct response 被接受后禁止 runtime handoff。",
+        ]
     rules = [
         "缺少可验证 acceptance 不得标记为完成。",
         "缺少 verifier 决策不得进入 DONE。",
@@ -519,9 +555,9 @@ def _adapt_graph_for_code_understanding(graph: dict[str, Any], request_type: str
         if "R2" in by_id:
             by_id["R2"]["goal"] = "Extract architecture map, module boundaries, key entrypoints, and technical levers from the codebase."
             by_id["R2"]["acceptance"] = ["Architecture map and module-level findings are produced."]
-        if "R4" in by_id:
-            by_id["R4"]["goal"] = "Synthesize codebase understanding into onboarding guidance and actionable architecture insights."
-            by_id["R4"]["acceptance"] = ["Onboarding and architecture synthesis is drafted."]
+        if "R5" in by_id:
+            by_id["R5"]["goal"] = "Synthesize codebase understanding into onboarding guidance and actionable architecture insights."
+            by_id["R5"]["acceptance"] = ["Onboarding and architecture synthesis is drafted."]
         if "R6" in by_id:
             by_id["R6"]["goal"] = "Translate codebase understanding into implementation, PRD, and task-graph implications."
     else:
@@ -561,9 +597,9 @@ def _node_enrichment(request_type: str, lane_hint: str, node: dict[str, Any]) ->
         "R1": "source_manifest.json",
         "R2": "claims.jsonl",
         "R3": "contradictions.jsonl",
-        "R4": "synthesis.md",
-        "R5": "critique.md",
-        "R6": "final_prd_implications.md",
+        "R4": "synthesis_plan.json",
+        "R5": "final.md",
+        "R6": "delivery.md",
     }.get(node["id"], "artifact.md")
     enriched = dict(node)
     enriched.setdefault("type", node_type_map.get(node["logical_operator"], "spec"))
@@ -621,13 +657,19 @@ def _build_requirement_items(
     normalized_goal: str,
     acceptance: list[str],
     priority: str,
+    request_type: str = "",
 ) -> list[dict[str, Any]]:
+    verification_method = (
+        "direct_response_review"
+        if request_type == DIRECT_ANSWER
+        else "task_graph_closeout"
+    )
     items = [
         {
             "id": "REQ-000",
             "source_text": normalized_goal,
             "success_criteria": [normalized_goal],
-            "verification_method": "task_graph_closeout",
+            "verification_method": verification_method,
             "priority": priority,
         }
     ]
@@ -637,7 +679,7 @@ def _build_requirement_items(
                 "id": f"REQ-{index:03d}",
                 "source_text": item,
                 "success_criteria": [item],
-                "verification_method": "acceptance_evidence",
+                "verification_method": verification_method,
                 "priority": priority,
             }
         )
@@ -697,6 +739,22 @@ def _make_prd_view(
         if source_inputs["repo_context"] or source_inputs["logs"]
         else "基于当前请求直接定位到交付范围。"
     )
+    if request_type == "direct_answer":
+        return {
+            "variant": "direct_answer",
+            "sections": [
+                {"title": "User Question", "body": normalized_goal},
+                {"title": "Answer Contract", "body": acceptance_body},
+                {"title": "Non-Goals", "body": non_goals_body},
+                {
+                    "title": "Planner Handoff",
+                    "body": (
+                        "Select direct_response, run independent direct-response review, "
+                        "and stop without creating or dispatching a TaskGraph."
+                    ),
+                },
+            ],
+        }
     if request_type == "implementation":
         sections = [
             {"title": "背景 / Context", "body": source_context},
@@ -774,17 +832,30 @@ def _build_contracts(
         "acceptance": acceptance,
         "stop_rules": stop_rules,
     }
+    direct_answer = classification == DIRECT_ANSWER
     interface = {
         "enabled": True,
         "name": "RequirementCompilerAdapters",
         "version": "1.0",
         "inputs": ["RequirementIR"],
-        "outputs": ["ProductBrief", "ContractsBundle", "TaskDAG", "HandoffPackage"],
-        "invariants": [
-            "Requirement IR is the only source of truth.",
-            "DAG nodes[*].id must be unique.",
-            "Every acceptance criterion maps to at least one validation step.",
-        ],
+        "outputs": (
+            ["ProductBrief", "ContractsBundle", "DirectResponse", "DirectResponseReview"]
+            if direct_answer
+            else ["ProductBrief", "ContractsBundle", "TaskDAG", "HandoffPackage"]
+        ),
+        "invariants": (
+            [
+                "Requirement IR is the only source of truth.",
+                "An accepted direct response forbids runtime handoff.",
+                "Every acceptance criterion is checked by direct-response review.",
+            ]
+            if direct_answer
+            else [
+                "Requirement IR is the only source of truth.",
+                "DAG nodes[*].id must be unique.",
+                "Every acceptance criterion maps to at least one validation step.",
+            ]
+        ),
         "errors": [
             {"code": "CYCLE_DETECTED", "action": "split dependencies or ask for clarification"},
             {"code": "ACCEPTANCE_COVERAGE_MISSING", "action": "add validation before dispatch"},
@@ -796,15 +867,19 @@ def _build_contracts(
         "harness/**",
     ]
     agent_execution = {
-        "enabled": True,
+        "enabled": not direct_answer,
         "task_scope": CLASS_TO_CANONICAL[classification],
         "project_dir": declared_execution["project_dir"],
-        "allowed_paths": allowed_paths,
+        "allowed_paths": [] if direct_answer else allowed_paths,
         "forbidden_paths": ["infra/prod/**", ".env*", "secrets/**"],
-        "commands": {
-            "test": declared_execution["test_commands"] or ["pnpm test", "pnpm lint"],
-            "inspect": ["rg", "python3", "pytest"],
-        },
+        "commands": (
+            {"test": [], "inspect": []}
+            if direct_answer
+            else {
+                "test": declared_execution["test_commands"] or ["pnpm test", "pnpm lint"],
+                "inspect": ["rg", "python3", "pytest"],
+            }
+        ),
         "declared_constraints": declared_execution["constraints"],
         "declared_scope": declared_execution["scope"],
         "approval_required_when": [
@@ -1148,8 +1223,11 @@ def classify_request_type(text: str, papers: list[str] | None = None) -> str:
     # research and silently become a short implementation task downstream.
     # Engineering requests containing the product name "Deep Research" remain
     # strategy/delivery because infer_mode resolves those before research.
-    if infer_intent_mode(normalized) == "research":
+    intent_mode = infer_intent_mode(normalized)
+    if intent_mode == "research":
         return RESEARCH
+    if intent_mode == "direct_answer":
+        return DIRECT_ANSWER
 
     full_spec_markers = [
         "architecture", "runtime", "system", "platform", "compatibility",
@@ -1188,6 +1266,8 @@ def choose_lane_hint(request_type: str, text: str) -> str:
     lowered = text.lower()
     if request_type == RESEARCH:
         return "strategy"
+    if request_type == DIRECT_ANSWER:
+        return "direct_answer"
     if request_type == FULL_SPEC and re.search(r"(architecture|refactor|runtime|system|platform|schema|dag)", lowered):
         return "strategy"
     return "delivery"
@@ -1199,12 +1279,16 @@ def choose_priority(text: str, request_type: str) -> str:
         return "P0"
     if request_type == RESEARCH:
         return "P1"
+    if request_type == DIRECT_ANSWER:
+        return "P2"
     if request_type == SHORT_IMPL:
         return "P1" if re.search(r"(bug|fix|repair|修|排查|debug)", lowered) else "P2"
     return "P1"
 
 
 def choose_output_mode(request_type: str) -> dict[str, str]:
+    if request_type == DIRECT_ANSWER:
+        return {"prd": "direct_answer", "contract": "direct_answer", "dag": "direct_answer_candidate"}
     if request_type == SHORT_IMPL:
         return {"prd": "short", "contract": "short", "dag": "short"}
     if request_type == RESEARCH:
@@ -1213,6 +1297,8 @@ def choose_output_mode(request_type: str) -> dict[str, str]:
 
 
 def choose_acceptance_profile(request_type: str) -> str:
+    if request_type == DIRECT_ANSWER:
+        return "direct_response_review"
     if request_type == SHORT_IMPL:
         return "execution_evidence"
     if request_type == RESEARCH:
@@ -1250,6 +1336,32 @@ def _short_task_graph() -> dict[str, Any]:
                 "acceptance": ["Independent verifier decision recorded."],
                 "estimated_cost": 1,
             },
+        ],
+    }
+
+
+def _direct_answer_candidate_graph() -> dict[str, Any]:
+    """Compiler proposal used only until the Planner accepts direct_response.
+
+    The node keeps legacy package validation structurally compatible.  It is
+    explicitly non-dispatchable and must never become a runtime TaskGraph.
+    """
+    return {
+        "dag_variant": "direct_answer_candidate",
+        "proposal_only": True,
+        "runtime_handoff_allowed": False,
+        "required_gates": ["G_REVIEW"],
+        "nodes": [
+            {
+                "id": "A1",
+                "goal": "Produce and independently review a bounded direct response without external effects.",
+                "logical_operator": "ArtifactCurator",
+                "depends_on": [],
+                "acceptance": ["An independently accepted direct response is available."],
+                "verifier_required": True,
+                "estimated_cost": 1,
+                "gate": "G_REVIEW",
+            }
         ],
     }
 
@@ -1467,15 +1579,25 @@ def _research_task_graph() -> dict[str, Any]:
             },
             {
                 "id": "R4",
-                "goal": "Synthesize only verified evidence into claims, a structured report AST, and a cited final report.",
+                "goal": "Compile a synthesis plan from the verified evidence audit without drafting the final report yet.",
                 "logical_operator": "ResearchSynthesizer",
                 "depends_on": ["R1", "R2", "R3"],
+                "outputs": [
+                    "workspace/research/report/synthesis_plan.json",
+                    "workspace/research/report/evidence_gaps.json",
+                ],
+                "acceptance": ["The synthesis plan maps verified evidence, contradictions, and known gaps to report sections."],
+                "estimated_cost": 1,
+            },
+            {
+                "id": "R5",
+                "goal": "Synthesize only verified evidence into claims, a structured report AST, and a cited final report.",
+                "logical_operator": "ResearchSynthesizer",
+                "depends_on": ["R4"],
                 "outputs": [
                     "workspace/research/report/sources.jsonl",
                     "workspace/research/report/evidence.jsonl",
                     "workspace/research/report/extracts",
-                    "workspace/research/report/synthesis_plan.json",
-                    "workspace/research/report/evidence_gaps.json",
                     "workspace/research/report/claims.jsonl",
                     "workspace/research/report/claim_evidence.jsonl",
                     "workspace/research/report/sections.jsonl",
@@ -1489,21 +1611,15 @@ def _research_task_graph() -> dict[str, Any]:
                 "estimated_cost": 3,
             },
             {
-                "id": "R5",
-                "goal": "Independently verify claim support, citation resolution, source quality, and report completeness.",
-                "logical_operator": "Verifier",
-                "depends_on": ["R4"],
-                "outputs": ["workspace/research/report/critique.md"],
-                "acceptance": ["Critique and deterministic final-report closeout decision are recorded."],
-                "estimated_cost": 2,
-            },
-            {
                 "id": "R6",
-                "goal": "Curate the verified report, limitations, and user-facing delivery summary without changing supported claims.",
-                "logical_operator": "ArtifactCurator",
+                "goal": "Run deterministic final-report closeout and record the delivery decision without recursively evaluating the verifier.",
+                "logical_operator": "Verifier",
                 "depends_on": ["R5"],
-                "outputs": ["workspace/research/report/delivery.md"],
-                "acceptance": ["The final deliverable links the verified report and states material evidence limitations."],
+                "outputs": [
+                    "workspace/research/report/critique.md",
+                    "workspace/research/report/delivery.md",
+                ],
+                "acceptance": ["Deterministic closeout records citation integrity, limitations, and the delivery decision."],
                 "estimated_cost": 1,
             },
         ],
@@ -1553,7 +1669,7 @@ def _apply_default_gate_assignments(graph: dict[str, Any]) -> dict[str, Any]:
             "R2": "G_EVIDENCE",
             "R3": "G_EVIDENCE",
             "R4": "G_SYNTHESIS",
-            "R5": "G_REVIEW",
+            "R5": "G_SYNTHESIS",
             "R6": "G_REVIEW",
         }
 
@@ -1583,7 +1699,9 @@ def _apply_default_gate_assignments(graph: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_task_graph_skeleton(request_type: str, lane_hint: str, request_text: str = "") -> dict[str, Any]:
-    if request_type == SHORT_IMPL:
+    if request_type == DIRECT_ANSWER:
+        graph = _direct_answer_candidate_graph()
+    elif request_type == SHORT_IMPL:
         graph = _apply_default_gate_assignments(_short_task_graph())
     elif request_type == RESEARCH:
         graph = _apply_default_gate_assignments(_research_task_graph())
@@ -1670,7 +1788,12 @@ def build_pm_intake(
     stop_rules = _default_stop_rules(request_type)
     open_questions = _derive_open_questions(request_type, compile_text, papers)
     risk_register = _derive_risk_register(request_type)
-    requirements = _build_requirement_items(normalized_goal, acceptance, priority)
+    requirements = _build_requirement_items(
+        normalized_goal,
+        acceptance,
+        priority,
+        request_type=request_type,
+    )
     source_inputs = {
         "raw_request": raw_user_text or text,
         "raw_request_original": text,
@@ -1736,6 +1859,13 @@ def build_pm_intake(
         },
         "evidence_policy": task_graph.get("evidence_policy", {}),
     }
+    requirement_ir["planner_hints"] = {
+        "selection_authority": "planner",
+        "allowed_outcomes": ["direct_answer", "memoized_task_graph", "new_task_graph"],
+        "runtime_handoff_allowed": request_type != DIRECT_ANSWER,
+    }
+    if request_type == DIRECT_ANSWER:
+        requirement_ir["planner_hints"]["preferred_outcome"] = "direct_answer"
     if autosci_contract:
         requirement_ir["workflow_contract"] = AUTOSCI_WORKFLOW_CONTRACT_ID
         requirement_ir["autosci_contract_bound"] = True
@@ -1752,7 +1882,7 @@ def build_pm_intake(
         "acceptance": acceptance,
         "non_goals": non_goals,
         "stop_rules": stop_rules,
-        "handoff_to": "planner",
+        "handoff_to": "elastic_planner" if request_type == DIRECT_ANSWER else "planner",
         "request_type": request_type,
         "template_variant": output_mode["prd"],
         "pm_intake": {
@@ -1768,7 +1898,11 @@ def build_pm_intake(
         "requirement_ir_ref": (
             f"{sprint_id}.requirement_ir.json" if sprint_id and sprint_id != "N/A" else ".pm/requirement_ir.json"
         ),
-        "notes": "Requirement Compiler produced canonical IR, compiled contracts, and a task DAG proposal.",
+        "notes": (
+            "Requirement Compiler selected the direct-response route; the candidate graph is compatibility-only and non-dispatchable."
+            if request_type == DIRECT_ANSWER
+            else "Requirement Compiler produced canonical IR, compiled contracts, and a task DAG proposal."
+        ),
     }
     if autosci_contract:
         product_brief.update(
@@ -1787,38 +1921,63 @@ def build_pm_intake(
         normalized_problem or normalized_goal,
         _sprint_handoff_artifacts(sprint_id or "", "codex"),
         acceptance,
-        [
-            "Treat requirement_ir.json and contracts/*.yaml as canonical sources.",
-            "Use requirement_trace/coverage_report as completion evidence, not intuition.",
-            "Do not bypass planner before builder dispatch.",
-        ],
+        (
+            [
+                "Treat requirement_ir.json and contracts/*.yaml as canonical sources.",
+                "Select direct_response and stop after independent direct-response review.",
+                "Do not create a PlanIR, TaskGraph, or Builder dispatch.",
+            ]
+            if request_type == DIRECT_ANSWER
+            else [
+                "Treat requirement_ir.json and contracts/*.yaml as canonical sources.",
+                "Use requirement_trace/coverage_report as completion evidence, not intuition.",
+                "Do not bypass planner before builder dispatch.",
+            ]
+        ),
     )
     solar_handoff_md = _render_handoff_markdown(
         title,
         "solar-harness",
         (
-            "Route the AutoSci graph proposal to a distinct Planner; Builder dispatch is forbidden until plan certification succeeds."
+            "Produce and independently review the direct response, then stop without runtime handoff."
+            if request_type == DIRECT_ANSWER
+            else "Route the AutoSci graph proposal to a distinct Planner; Builder dispatch is forbidden until plan certification succeeds."
             if autosci_contract
             else "Read compiled PRD / contract / task graph proposal, then produce planner artifacts without skipping governance."
         ),
         _sprint_handoff_artifacts(sprint_id or "", "solar_harness"),
-        [
-            (
-                "Planner reviews the Scientific* proposal and produces design.md, plan.md, and a valid plan certificate."
-                if autosci_contract
-                else "Planner produces design.md and plan.md."
-            ),
-            (
-                "Do not dispatch any Scientific* Builder node before the Planner certificate is valid."
-                if autosci_contract
-                else "Planner may refine task_graph.json but must preserve compiled governance constraints and explicit requirement_ids mapping."
-            ),
-            "No direct builder dispatch from raw request.",
-        ],
-        [
-            "IR is source of truth.",
-            "Markdown PRD / contract are compiled views.",
-        ],
+        (
+            [
+                "The direct answer satisfies every requirement identifier.",
+                "Independent direct-response review passes.",
+                "Runtime handoff remains disabled.",
+            ]
+            if request_type == DIRECT_ANSWER
+            else [
+                (
+                    "Planner reviews the Scientific* proposal and produces design.md, plan.md, and a valid plan certificate."
+                    if autosci_contract
+                    else "Planner produces design.md and plan.md."
+                ),
+                (
+                    "Do not dispatch any Scientific* Builder node before the Planner certificate is valid."
+                    if autosci_contract
+                    else "Planner may refine task_graph.json but must preserve compiled governance constraints and explicit requirement_ids mapping."
+                ),
+                "No direct builder dispatch from raw request.",
+            ]
+        ),
+        (
+            [
+                "IR is source of truth.",
+                "The compatibility candidate graph is not dispatchable.",
+            ]
+            if request_type == DIRECT_ANSWER
+            else [
+                "IR is source of truth.",
+                "Markdown PRD / contract are compiled views.",
+            ]
+        ),
     )
     product_brief_markdown = _render_product_brief_markdown(product_brief)
     # These are Planner-owned artifacts for every governed path, including

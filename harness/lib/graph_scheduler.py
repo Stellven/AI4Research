@@ -84,6 +84,7 @@ SCHEDULER_RUNTIME_STATIC_NODE_FIELDS = {
     "depends_on", "requirement_ids", "capsule_binding", "capability_capsule_id",
     "required_capabilities", "physical_candidates", "artifact_contract",
     "artifact_routes", "evaluation_binding", "evaluation_plan",
+    "evaluator_gate", "evaluation_policy",
     "resource_requirements", "effects", "priority", "failure_policy",
     "max_repair_attempts", "on_failure_exhausted", "read_scope", "write_scope",
     "acceptance",

@@ -82,7 +82,11 @@ import {
 import type { AuthLoginStatus, AuthStatus } from "./api";
 import type { AgentRole } from "./format";
 import { activeNodeActor, nodeActor } from "./nodeActor";
-import { pipelineStages, type TerminalRunOutcome } from "./runPipeline";
+import {
+  pipelineStages,
+  resultAvailabilityCopy,
+  type TerminalRunOutcome,
+} from "./runPipeline";
 import { perRunUsageLabel } from "./runUsage";
 import {
   ROLE_META,
@@ -1384,6 +1388,9 @@ function RunOverview({
     deliverables.find((item) => item.result) ||
     deliverables.find((item) => item.primary);
   const terminalOutcome = terminalRunOutcome(status, phase);
+  const resultCopy = result
+    ? resultAvailabilityCopy(terminalOutcome, deliverableLabel(result))
+    : undefined;
   const failedNode = graphNodes.find(
     (node) => asString(node.status).trim().toLowerCase() === "failed",
   );
@@ -1469,7 +1476,7 @@ function RunOverview({
             onClick={() => onOpenResult(result.rel_path)}
           >
             <FileCheck2 size={16} aria-hidden="true" />
-            <span className="run-result-label">Open result</span>
+            <span className="run-result-label">{resultCopy?.ctaLabel}</span>
             <span className="run-result-name">{deliverableLabel(result)}</span>
           </button>
         )}
@@ -3331,18 +3338,25 @@ function buildProcessSteps(
       (item) => item.kind === "html" || item.name.endsWith(".html"),
     );
   if (resultDeliverable && !stall?.is_stalled) {
+    const status = asString(
+      projection?.data?.status || projection?.data?.sprint?.status,
+    );
+    const resultCopy = resultAvailabilityCopy(
+      terminalRunOutcome(status, phase),
+      deliverableLabel(resultDeliverable),
+    );
     steps.push({
       id: `deliverable-${resultDeliverable.rel_path}`,
       actor: "Harness",
-      title: "Result is ready",
-      summary: `${deliverableLabel(resultDeliverable)} is ready to open.`,
+      title: resultCopy.title,
+      summary: resultCopy.summary,
       detail:
         "The output is separated from the process stream so review can happen without digging through agent telemetry.",
       timestamp: resultDeliverable.mtime
         ? new Date(resultDeliverable.mtime * 1000).toISOString()
         : projection?.generated_at || "",
-      state: "completed",
-      tone: "complete",
+      state: resultCopy.accepted ? "completed" : "active",
+      tone: resultCopy.accepted ? "complete" : "working",
       defaultExpanded: false,
       facts: [
         { label: "kind", value: resultDeliverable.kind.toUpperCase() },

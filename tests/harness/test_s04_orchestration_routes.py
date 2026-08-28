@@ -754,6 +754,85 @@ def test_projection_narrative_dedups_and_humanizes(tmp_path: Path) -> None:
     assert fast.get("narrative"), "narrative must ship in fast mode too"
 
 
+def test_projection_narrative_preserves_dispatch_reason_and_collapses_prerequisite_waits() -> None:
+    mod = _load_routes()
+    pending = json.dumps(
+        {
+            "ok": True,
+            "dispatched": [],
+            "waiting": [
+                {
+                    "node": "S1",
+                    "reason": "builder_operator_result_pending",
+                }
+            ],
+            "blocking_skips": [],
+        }
+    )
+    events = [
+        {
+            "ts": f"2026-06-26T10:00:{second:02d}Z",
+            "type": "activity_failed" if second < 31 else "log_message",
+            "actor": "coordinator",
+            "payload": {
+                "legacy_event": (
+                    "graph_eval_dispatch_failed" if second < 31 else "graph_nodes_dispatched"
+                ),
+                (
+                    "output" if second < 31 else "eval_output"
+                ): (
+                    json.dumps(
+                        {
+                            "ok": False,
+                            "dispatched": [],
+                            "skipped": [
+                                {
+                                    "node": "S1",
+                                    "reason": "builder_operator_result_pending",
+                                }
+                            ],
+                        }
+                    )
+                    if second < 31
+                    else pending
+                ),
+            },
+        }
+        for second in (1, 16, 31)
+    ]
+
+    narrative = mod._narrative_from_events(events)
+
+    waits = [row for row in narrative if row["title"].startswith("Evaluation waiting")]
+    assert len(waits) == 1
+    assert waits[0]["tone"] == "working"
+    assert waits[0]["summary"] == "builder operator result pending"
+
+    real_failure = mod._narrative_from_events(
+        [
+            {
+                "ts": "2026-06-26T10:01:00Z",
+                "type": "activity_failed",
+                "actor": "coordinator",
+                "payload": {
+                    "legacy_event": "graph_eval_dispatch_failed",
+                    "output": json.dumps(
+                        {
+                            "ok": False,
+                            "skipped": [
+                                {"node": "S1", "reason": "no_available_evaluator"}
+                            ],
+                        }
+                    ),
+                },
+            }
+        ]
+    )
+    assert real_failure[0]["title"] == "Evaluation dispatch failed S1"
+    assert real_failure[0]["summary"] == "no available evaluator"
+    assert real_failure[0]["tone"] == "blocked"
+
+
 def test_failed_planner_dispatch_is_projected_as_a_stall(tmp_path: Path) -> None:
     mod = _load_routes()
 

@@ -30,6 +30,7 @@ _HARNESS = (Path(__file__).resolve().parents[3] / 'harness')
 sys.path.insert(0, str(_HARNESS / "lib"))
 
 import plan_validator as pv  # noqa: E402
+import evaluation_budget  # noqa: E402
 import workflow_contract as wc  # noqa: E402
 
 WORKFLOWS_DIR = _HARNESS / "config" / "workflows"
@@ -86,6 +87,18 @@ class TestGateLegality:
     def test_none_gate_is_not_plannable(self):
         node = _node(evaluator_gate={"kind": "none", "on_fail": "fail"})
         assert "PLAN_GATE_KIND_ILLEGAL" in _errors(_graph(node))
+
+    def test_compiler_applied_budget_may_waive_redundant_node_evaluation(self):
+        graph = evaluation_budget.apply_evaluation_budget(
+            _graph(
+                _node("N1"),
+                _node("N2", depends_on=["N1"], logical_operator="Verifier"),
+            ),
+            {"request_type": "short_implementation"},
+        )
+        assert _errors(graph) == []
+        verifier = next(node for node in graph["nodes"] if node["id"] == "N2")
+        assert verifier["evaluator_gate"]["kind"] == "none"
 
     def test_unknown_gate_kind_rejects(self):
         node = _node(evaluator_gate={"kind": "vibes", "on_fail": "fail"})

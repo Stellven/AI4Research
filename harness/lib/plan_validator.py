@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import workflow_contract as wc  # noqa: E402
+import evaluation_budget  # noqa: E402
 from executable_node import (  # noqa: E402
     canonical_executable_node,
     logical_operator as executable_logical_operator,
@@ -451,7 +452,8 @@ def validate_plan(
         # launch allowlist only, everything else is llm_eval.
         gate = node.get("evaluator_gate") if isinstance(node.get("evaluator_gate"), dict) else {}
         gate_kind = str(gate.get("kind") or "llm_eval").strip()
-        if gate_kind not in PLANNABLE_GATE_KINDS:
+        policy_waiver = gate_kind == "none" and evaluation_budget.policy_allows_none(task_graph, node)
+        if gate_kind not in PLANNABLE_GATE_KINDS and not policy_waiver:
             errors.append(wc.compile_error(
                 ERROR_PLAN_GATE_KIND_ILLEGAL, node_id,
                 f"node {node_id}: evaluator_gate.kind {gate_kind!r} is not plannable "

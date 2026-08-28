@@ -22,6 +22,7 @@ from intent_compiler import JsonModel, sha256_payload, write_json
 import workflow_contract as workflow_contract
 import apo_plan_compiler
 import capsule_composition
+import evaluation_budget
 import evaluation_plan as evaluation_planning
 import plan_validator
 from capability_capsules import (
@@ -545,6 +546,9 @@ Use direct_response only when no retrieval, external effect, execution, multi-ar
 long-running work, or workflow is required. Use exact_reuse only when one registered workflow covers
 every requirement without topology changes. Otherwise use generate. Parameterize, extend, and compose
 are not supported. List every RequirementIR identifier exactly once in requirement_ids.
+When planner_hints.preferred_outcome is direct_answer and runtime_handoff_allowed is false, choose
+direct_response unless the admitted requirements contradict those hints. Do not upgrade a bounded
+answer into generate merely to obtain Builder execution or a TaskGraph.
 Treat identifiers, hashes, filenames, paths, and fixture labels as opaque references. Never infer user
 meaning, audience, domain, or scope from them; derive meaning only from admitted semantic content.
 For exact_reuse, workflow_bindings must contain one record per requirement identifier with one or more
@@ -660,6 +664,23 @@ def validate_planning_decision(
     strategy = str(decision.get("decision") or "")
     if strategy not in MVP_DECISIONS:
         errors.append(_error("STRATEGY_UNSUPPORTED", "decision", f"Unsupported MVP strategy: {strategy!r}."))
+    planner_hints = (
+        requirement_ir.get("planner_hints")
+        if isinstance(requirement_ir.get("planner_hints"), dict)
+        else {}
+    )
+    if (
+        planner_hints.get("preferred_outcome") == "direct_answer"
+        and planner_hints.get("runtime_handoff_allowed") is False
+        and strategy != "direct_response"
+    ):
+        errors.append(
+            _error(
+                "DIRECT_RESPONSE_ROUTE_VIOLATED",
+                "decision",
+                "RequirementIR requires a direct response and forbids runtime handoff.",
+            )
+        )
     workflow_ref = decision.get("workflow_ref")
     workflows = {
         (row["workflow_id"], row["version"])
@@ -4760,13 +4781,22 @@ def compile_scheduler_input(
         deterministic_gate_ids = [
             str(row.get("check_id") or "")
             for row in checks
-            if row.get("mode") == "deterministic" and str(row.get("check_id") or "")
+            if row.get("mode") in {"deterministic", "deterministic_plus_semantic"}
+            and str(row.get("check_id") or "")
         ]
+        semantic_review_required = bool(
+            (evaluation_node.get("semantic_review") or {}).get("required")
+        )
         semantic_evaluator_ids = [
             str(row.get("check_id") or "")
             for row in checks
-            if row.get("mode") == "semantic" and str(row.get("check_id") or "")
+            if semantic_review_required
+            and row.get("mode") in {"semantic", "deterministic_plus_semantic"}
+            and str(row.get("check_id") or "")
         ]
+        node_policy = node.get("evaluation_policy") if isinstance(node.get("evaluation_policy"), dict) else {}
+        if node_policy.get("semantic_review_required") is False and not deterministic_gate_ids:
+            deterministic_gate_ids = [evaluation_budget.PROOF_GATE_ID]
         candidates = [
             {
                 "operator_id": str(row.get("operator_id") or ""),
@@ -4820,6 +4850,8 @@ def compile_scheduler_input(
                     "deterministic_gate_ids": deterministic_gate_ids,
                     "semantic_evaluator_ids": semantic_evaluator_ids,
                 },
+                "evaluator_gate": copy.deepcopy(node.get("evaluator_gate") or {}),
+                "evaluation_policy": copy.deepcopy(node_policy),
                 "resource_requirements": {
                     "cpu_cores_min": float(requirements.get("cpu_cores_min") or 0),
                     "memory_mb_min": int(requirements.get("memory_mb_min") or 0),
@@ -4987,6 +5019,7 @@ def compile_and_freeze_execution_bundle(
                 semantic_result.get("planning_catalog_snapshot") or {},
                 sprint_id=sprint_id,
             )
+        graph = evaluation_budget.apply_evaluation_budget(graph, requirement_ir)
     execution = apo_plan_compiler.compile_whole_request_execution_plan(
         graph,
         request_type=str(requirement_ir.get("request_type") or ""),

@@ -11,6 +11,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+import evaluation_budget
 from intent_compiler import sha256_payload
 
 
@@ -227,6 +228,7 @@ def compile_evaluation_plan(
     }
     unresolved: list[dict[str, str]] = []
     compiled_nodes: list[dict[str, Any]] = []
+    deferred_semantic_criteria: list[str] = []
     for graph_node in task_graph.get("nodes") or []:
         if not isinstance(graph_node, dict):
             continue
@@ -337,7 +339,15 @@ def compile_evaluation_plan(
                 f"{graph_node.get('goal') or semantic_node.get('objective') or node_id}"
             )
         semantic_required = bool(semantic_criteria)
-        if semantic_required and gate_policy["kind"] != "llm_eval":
+        policy_waived = evaluation_budget.policy_allows_none(task_graph, graph_node)
+        if semantic_required and gate_policy["kind"] != "llm_eval" and policy_waived:
+            deferred_semantic_criteria.extend(
+                f"Upstream node {node_id}: {criterion}"
+                for criterion in semantic_criteria
+            )
+            semantic_required = False
+            semantic_criteria = []
+        elif semantic_required and gate_policy["kind"] != "llm_eval":
             unresolved.append(
                 {
                     "code": "SEMANTIC_REVIEW_GATE_MISSING",
@@ -360,6 +370,26 @@ def compile_evaluation_plan(
                     "criteria": semantic_criteria,
                 },
             }
+        )
+
+    policy = task_graph.get("evaluation_policy") if isinstance(task_graph.get("evaluation_policy"), dict) else {}
+    semantic_targets = [
+        str(value) for value in policy.get("semantic_evaluation_node_ids") or []
+    ]
+    target_id = next(
+        (
+            node_id
+            for node_id in reversed(semantic_targets)
+            if any(row.get("node_id") == node_id for row in compiled_nodes)
+        ),
+        "",
+    )
+    if deferred_semantic_criteria and target_id:
+        target = next(row for row in compiled_nodes if row.get("node_id") == target_id)
+        review = target["semantic_review"]
+        review["required"] = True
+        review["criteria"] = list(
+            dict.fromkeys([*(review.get("criteria") or []), *deferred_semantic_criteria])
         )
 
     artifact = {

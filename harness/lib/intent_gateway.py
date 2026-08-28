@@ -418,6 +418,50 @@ def _looks_like_engineering_strategy_request(value: str) -> bool:
     )
 
 
+def _looks_like_direct_answer_request(value: str) -> bool:
+    """Recognize bounded conversational answers that need no runtime DAG.
+
+    This intentionally excludes requests whose answer depends on fresh data,
+    supplied artifacts, retrieval, or an external effect.  Those requests must
+    continue through research or delivery planning even when they are phrased
+    as a question.
+    """
+    if not value.strip():
+        return False
+    if re.search(r"https?://|www\.", value, flags=re.IGNORECASE):
+        return False
+    if any(
+        _contains_marker(value, marker)
+        for marker in (
+            "current",
+            "latest",
+            "today",
+            "right now",
+            "source",
+            "sources",
+            "citation",
+            "citations",
+            "attached",
+            "attachment",
+            "uploaded",
+            "file",
+            "repository",
+            "repo",
+            "codebase",
+        )
+    ):
+        return False
+    return bool(
+        re.match(
+            r"\s*(?:what|why|how|who|when|where|explain|describe|define|"
+            r"tell\s+me|translate|rewrite|summarize)\b",
+            value,
+            flags=re.IGNORECASE,
+        )
+        or value.rstrip().endswith("?")
+    )
+
+
 def infer_mode(text: str) -> str:
     value = text.lower()
     # Failure/debug intent is more specific than the subsystem being repaired:
@@ -439,6 +483,8 @@ def infer_mode(text: str) -> str:
         return "strategy"
     if any(_contains_marker(value, token) for token in _ENGINEERING_MARKERS):
         return "strategy"
+    if _looks_like_direct_answer_request(value):
+        return "direct_answer"
     return "delivery"
 
 
@@ -450,9 +496,19 @@ def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
     objective = re.sub(r"\s+", " ", raw_text).strip() or title
     mode = infer_mode(raw_text)
     constraints: list[str] = [
-        "All execution must enter Solar-Harness through RawIntent and requirement compilation.",
-        "Do not bypass task_graph, operator runtime, quota-aware fallback, or evidence logging.",
+        "All work must enter Solar-Harness through RawIntent and requirement compilation.",
     ]
+    if mode == "direct_answer":
+        constraints.extend(
+            [
+                "Do not claim retrieval, execution, file mutation, or other external effects.",
+                "An independently accepted direct response must stop before task-graph runtime.",
+            ]
+        )
+    else:
+        constraints.append(
+            "Do not bypass task_graph, operator runtime, quota-aware fallback, or evidence logging."
+        )
     if mode == "debug":
         constraints.append("Capture failure evidence before changing implementation.")
     if mode == "research":
@@ -462,12 +518,24 @@ def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
         "Compiled work is routable through PM/Planner/task_graph and multi-task operator runtime.",
         "Completion requires evidence artifacts and verifier-visible status.",
     ]
+    if mode == "direct_answer":
+        acceptance = [
+            "RawIntent, rewritten_intent, requirement_ir, and requirement_trace artifacts are persisted.",
+            "The response directly answers the accepted request in the requested audience and format.",
+            "Independent direct-response review passes before terminal closeout.",
+        ]
     logical_operators = [
         "RequirementCompiler",
         "Planner",
         "ImplementationWorker",
         "Verifier",
     ]
+    if mode == "direct_answer":
+        logical_operators = [
+            "RequirementCompiler",
+            "Planner",
+            "Verifier",
+        ]
     if mode == "research":
         logical_operators = [
             "RequirementCompiler",
@@ -482,9 +550,17 @@ def deterministic_rewrite(raw_text: str) -> dict[str, Any]:
         "title": title,
         "problem": raw_text.strip(),
         "objective": objective,
-        "outcome": "A compiled, dispatchable Solar-Harness work item with acceptance evidence.",
+        "outcome": (
+            "A reviewed direct answer with no task-graph runtime."
+            if mode == "direct_answer"
+            else "A compiled, dispatchable Solar-Harness work item with acceptance evidence."
+        ),
         "constraints": constraints,
-        "non_goals": ["Do not dispatch raw natural language directly to builder panes."],
+        "non_goals": (
+            ["Do not create or dispatch a runtime DAG for a bounded direct answer."]
+            if mode == "direct_answer"
+            else ["Do not dispatch raw natural language directly to builder panes."]
+        ),
         "acceptance": acceptance,
         "suggested_lane": mode,
         "suggested_logical_operators": logical_operators,
@@ -778,6 +854,14 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
         str(raw_block.get("text") or ""),
         lane,
     )
+    planner_hints: dict[str, Any] = {
+        "workflow_candidates": workflow_candidates,
+        "selection_authority": "planner",
+        "allowed_outcomes": ["direct_answer", "memoized_task_graph", "new_task_graph"],
+    }
+    if lane == "direct_answer":
+        planner_hints["preferred_outcome"] = "direct_answer"
+        planner_hints["runtime_handoff_allowed"] = False
     return {
         "schema_version": "solar.requirement_ir.v1",
         "intent_id": intent_id,
@@ -792,14 +876,14 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
         "acceptance": rewritten.get("acceptance", []),
         "lane": lane,
         "logical_operators": rewritten.get("suggested_logical_operators", []),
-        "planner_hints": {
-            "workflow_candidates": workflow_candidates,
-            "selection_authority": "planner",
-            "allowed_outcomes": ["direct_answer", "memoized_task_graph", "new_task_graph"],
-        },
+        "planner_hints": planner_hints,
         "readiness": readiness,
         "compiler_next": (
-            "pm_planner_task_graph" if readiness["ready"] else "clarification_required"
+            "pm_elastic_planner"
+            if readiness["ready"] and lane == "direct_answer"
+            else "pm_planner_task_graph"
+            if readiness["ready"]
+            else "clarification_required"
         ),
     }
 

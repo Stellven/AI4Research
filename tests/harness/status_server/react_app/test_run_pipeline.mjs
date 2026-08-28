@@ -36,7 +36,20 @@ const formatModuleUrl = `data:text/javascript;base64,${Buffer.from(formatCompile
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(
   compiled.replace('from "./format"', `from "${formatModuleUrl}"`),
 ).toString("base64")}`;
-const { pipelineStages } = await import(moduleUrl);
+const { pipelineStages, resultAvailabilityCopy } = await import(moduleUrl);
+
+assert.deepEqual(resultAvailabilityCopy("", "report.md"), {
+  title: "Deliverable available",
+  summary: "report.md is available; verification is still in progress.",
+  ctaLabel: "Open deliverable",
+  accepted: false,
+});
+assert.deepEqual(resultAvailabilityCopy("success", "report.md"), {
+  title: "Result is ready",
+  summary: "report.md is ready to open.",
+  ctaLabel: "Open result",
+  accepted: true,
+});
 
 const stages = pipelineStages(
   "planning_complete",

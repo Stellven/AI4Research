@@ -87,6 +87,38 @@ def test_consumer_compiles_rawintent_to_sprint_package(tmp_path):
     assert len(trace["items"]) == len(ir["requirements"])
 
 
+def test_consumer_preserves_direct_answer_route_without_dispatchable_dag(tmp_path):
+    env = _env(tmp_path)
+    intent_id = _capture(
+        env,
+        text="explain photosynthesis to a 5 year old",
+        channel="test",
+    )
+
+    proc = subprocess.run(
+        [sys.executable, str(CONSUMER), "consume", "--intent-id", intent_id, "--json"],
+        text=True,
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    result = json.loads(proc.stdout)["results"][0]
+    sprint_id = result["sprint_id"]
+    requirement_ir = json.loads(
+        (tmp_path / "sprints" / f"{sprint_id}.requirement_ir.json").read_text(encoding="utf-8")
+    )
+    graph = json.loads(
+        (tmp_path / "sprints" / f"{sprint_id}.task_graph.json").read_text(encoding="utf-8")
+    )
+
+    assert requirement_ir["request_type"] == "direct_answer"
+    assert requirement_ir["planner_hints"]["preferred_outcome"] == "direct_answer"
+    assert requirement_ir["planner_hints"]["runtime_handoff_allowed"] is False
+    assert graph["proposal_only"] is True
+    assert graph["runtime_handoff_allowed"] is False
+    assert result["planner_handoff"]["requested"] is False
+
+
 def test_consumer_accepts_native_intent_ir_bundle_without_rewritten_artifact(tmp_path):
     env = _env(tmp_path)
     intent_id = "intent-native-bundle"

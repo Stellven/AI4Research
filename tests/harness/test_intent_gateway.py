@@ -255,6 +255,49 @@ def test_general_user_research_requests_get_research_lane_and_roles(prompt):
     ]
 
 
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "explain photosynthesis to a 5 year old",
+        "What is 2 + 2?",
+        "Why is the sky blue?",
+    ],
+)
+def test_bounded_questions_use_direct_answer_without_runtime_dag(prompt):
+    gateway = _load_gateway(f"intent_gateway_direct_{abs(hash(prompt))}")
+
+    rewritten = gateway.deterministic_rewrite(prompt)
+    raw_intent = {
+        "raw": {"text": prompt},
+        "source": {},
+        "context": {},
+        "routing_hints": {},
+    }
+    requirement_ir = gateway.build_requirement_ir("intent-direct", raw_intent, rewritten)
+
+    assert rewritten["suggested_lane"] == "direct_answer"
+    assert "ImplementationWorker" not in rewritten["suggested_logical_operators"]
+    assert requirement_ir["compiler_next"] == "pm_elastic_planner"
+    assert requirement_ir["planner_hints"]["preferred_outcome"] == "direct_answer"
+    assert requirement_ir["planner_hints"]["runtime_handoff_allowed"] is False
+    assert any("no task-graph runtime" in item for item in [rewritten["outcome"]])
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Build a Python CLI that explains photosynthesis.",
+        "Explain the Solar runtime architecture.",
+        "Summarize the attached report.",
+        "What is the latest evidence about battery safety? Cite sources.",
+    ],
+)
+def test_effectful_or_evidence_dependent_questions_do_not_use_direct_answer(prompt):
+    gateway = _load_gateway(f"intent_gateway_not_direct_{abs(hash(prompt))}")
+
+    assert gateway.infer_mode(prompt) != "direct_answer"
+
+
 def test_research_requirement_ir_exposes_template_without_selecting_it():
     gateway = _load_gateway("intent_gateway_planner_template_candidate")
     prompt = "Research current agent runtime architectures and cite public sources."

@@ -234,6 +234,14 @@
             }
           ]
         },
+        "evaluator_gate": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "evaluation_policy": {
+          "type": "object",
+          "additionalProperties": true
+        },
         "resource_requirements": {
           "type": "object",
           "additionalProperties": false,

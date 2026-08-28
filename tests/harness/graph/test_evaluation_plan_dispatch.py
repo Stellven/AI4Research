@@ -29,6 +29,47 @@ def test_plan_node_evaluation_derives_staged_mode_for_code_impl() -> None:
     assert "test_report" in plan["evidence_requirements"]
 
 
+def test_budget_waived_runtime_node_uses_policy_gate_without_evaluator(monkeypatch, tmp_path) -> None:
+    node = {
+        "id": "V1",
+        "logical_operator": "Verifier",
+        "status": "reviewing",
+        "evaluator_gate": {"kind": "none", "on_fail": "fail"},
+        "evaluation_policy": {
+            "policy_id": "risk_bounded_semantic_evaluation_v1",
+            "risk_tier": "low",
+            "semantic_review_required": False,
+            "decision_reason": "no_recursive_evaluator",
+        },
+    }
+    graph = {
+        "schema_version": "solar.scheduler_runtime_projection.v1",
+        "sprint_id": "sid-budget-waiver",
+        "nodes": [node],
+    }
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path)
+    monkeypatch.setattr(gnd, "node_status", lambda graph, node_id: "reviewing")
+    monkeypatch.setattr(
+        gnd,
+        "_capture_eval_artifact_snapshot",
+        lambda *args, **kwargs: {
+            "ok": True,
+            "schema": "solar.eval_artifact_snapshot.v1",
+            "path": str(tmp_path / "snapshot.json"),
+            "snapshot_digest": "a" * 64,
+        },
+    )
+    monkeypatch.setattr(gnd, "_ledger_record", lambda *args, **kwargs: None)
+
+    result = gnd._maybe_execute_contract_gate(graph, "sid-budget-waiver", node)
+
+    assert result is not None
+    assert result["dispatch_mode"] == "deterministic_gate"
+    assert result["gate_kind"] == "none"
+    assert result["verdict"] == "PASS"
+    assert (tmp_path / "sid-budget-waiver.V1-eval.json").is_file()
+
+
 def test_dispatch_node_evals_falls_back_dual_plan_to_staged_with_single_evaluator(monkeypatch) -> None:
     graph = {
         "sprint_id": "sid-eval-plan",
@@ -179,6 +220,9 @@ def test_busy_evaluator_dispatch_is_backpressure_not_a_failed_dispatch(monkeypat
     assert emitted == [("sid-eval-busy", "N5")]
     assert result["dispatched"] == []
     assert result["skipped"][0]["reason"] == "evaluator_temporarily_busy"
+    assert result["ok"] is True
+    assert result["waiting"] == result["skipped"]
+    assert result["blocking_skips"] == []
     assert result["terminalized"] == []
     assert "eval_dispatch_failures" not in graph["nodes"][0]
     assert graph["nodes"][0]["status"] == "reviewing"

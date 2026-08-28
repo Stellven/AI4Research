@@ -3,6 +3,39 @@ import { ROLE_ORDER, type AgentRole } from "./format";
 export type TerminalRunOutcome = "success" | "failure" | "";
 export type StageState = "done" | "active" | "blocked" | "pending";
 
+export function resultAvailabilityCopy(
+  terminalOutcome: TerminalRunOutcome,
+  label: string,
+): {
+  title: string;
+  summary: string;
+  ctaLabel: string;
+  accepted: boolean;
+} {
+  if (terminalOutcome === "success") {
+    return {
+      title: "Result is ready",
+      summary: `${label} is ready to open.`,
+      ctaLabel: "Open result",
+      accepted: true,
+    };
+  }
+  if (terminalOutcome === "failure") {
+    return {
+      title: "Deliverable available",
+      summary: `${label} was produced before the run failed; review it with the failure evidence.`,
+      ctaLabel: "Open deliverable",
+      accepted: false,
+    };
+  }
+  return {
+    title: "Deliverable available",
+    summary: `${label} is available; verification is still in progress.`,
+    ctaLabel: "Open deliverable",
+    accepted: false,
+  };
+}
+
 const RUN_PIPELINE: Array<{ role: AgentRole; match: RegExp }> = [
   { role: "pm", match: /intake|spec|prd|scope/ },
   { role: "planner", match: /plan|design|dag|rout/ },

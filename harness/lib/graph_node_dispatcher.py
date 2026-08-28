@@ -42,6 +42,7 @@ def _harness_dir() -> Path:
 HARNESS_DIR = _harness_dir()
 if str(HARNESS_DIR / "lib") not in sys.path:
     sys.path.insert(0, str(HARNESS_DIR / "lib"))
+import evaluation_budget  # noqa: E402
 try:
     from developer_observability import (  # noqa: E402
         enabled as _observability_enabled,
@@ -1682,6 +1683,14 @@ _EVAL_STUCK_REASONS = frozenset({
     "multi_evaluator_quorum_not_implemented",
     "operator_pool_eval_submit_exception",
     "operator_pool_eval_submit_failed",
+})
+# Eval-dispatch outcomes that are expected prerequisite waits, not dispatch
+# failures.  Keep this deliberately narrow: unknown reasons and real capacity,
+# capability, transport, or validator failures must remain visible failures.
+_EVAL_WAIT_REASONS = frozenset({
+    "builder_operator_result_pending",
+    "deterministic_gate_waiting_for_builder",
+    "evaluator_temporarily_busy",
 })
 _EVAL_INTEGRITY_BLOCK_REASONS = frozenset({
     "eval_artifact_snapshot_invalid",
@@ -10480,6 +10489,121 @@ def _parse_pm_submit_output(stdout: str) -> dict[str, str]:
     return parsed
 
 
+def _permanent_capsule_admission_detail(*chunks: str) -> str:
+    """Extract a deterministic capsule-admission refusal from PM output.
+
+    Operator busy, lease, quota, and transport failures intentionally do not
+    match this classifier and remain eligible for the existing retry path.
+    Capsule admission runs before operator execution, so retrying the same
+    unchanged graph cannot repair an ``admission_failed`` contract.
+    """
+    combined = "\n".join(str(chunk or "") for chunk in chunks)
+    match = re.search(r"\badmission_failed:\s*[^\r\n]+", combined, re.IGNORECASE)
+    if not match:
+        return ""
+    return re.sub(r"\s+", " ", match.group(0)).strip()
+
+
+def _persist_operator_pool_admission_block(
+    *,
+    graph_path: str,
+    sid: str,
+    node_id: str,
+    dispatch_id: str,
+    admission_detail: str,
+) -> dict[str, Any]:
+    """Persist a GUI-visible terminal block for a deterministic admission error."""
+    blocking_reason = f"permanent_capsule_admission_failure:{admission_detail}"
+    next_action = (
+        "repair the node capability_capsule_id or register the required capsule, "
+        "then explicitly resume this node"
+    )
+    graph_updated = False
+    graph_error = ""
+    human_review: dict[str, Any] = {}
+    try:
+        graph = load_graph(graph_path)
+        graph_node = _node_by_id(graph, node_id)
+        if graph_node is None:
+            raise ValueError(f"graph node not found: {node_id}")
+        human_review = enter_node_human_review(
+            graph,
+            node_id,
+            reason=blocking_reason,
+            next_action=next_action,
+            writer="_submit_builder_to_operator_pool",
+        )
+        graph_node["blocking_reason"] = blocking_reason
+        graph_node["dispatch_blocked_reason"] = blocking_reason
+        graph_node["operator_submit_reason"] = "operator_admission_failed"
+        graph_node["operator_submit_error"] = admission_detail
+        # Submit was refused before any operator accepted ownership.
+        graph_node.pop("assigned_to", None)
+        graph_node.pop("dispatch_id", None)
+        node_result = graph.setdefault("node_results", {}).setdefault(node_id, {})
+        node_result.update(
+            {
+                "blocking_reason": blocking_reason,
+                "next_action": next_action,
+                "operator_submit_reason": "operator_admission_failed",
+                "operator_submit_error": admission_detail,
+            }
+        )
+        save_graph(graph_path, graph)
+        graph_updated = True
+    except Exception as exc:
+        graph_error = f"{type(exc).__name__}: {exc}"
+
+    _append_dispatch_ledger(
+        "operator_pool_capsule_admission_blocked",
+        sid,
+        "operator-pool:builder",
+        dispatch_id,
+        {
+            "node": node_id,
+            "graph": graph_path,
+            "blocking_reason": blocking_reason,
+            "next_action": next_action,
+            "graph_updated": graph_updated,
+            "graph_error": graph_error,
+        },
+    )
+    _append_event(
+        sid,
+        {
+            "event": "graph_operator_pool_capsule_admission_blocked",
+            "by": "graph-dispatch",
+            "severity": "error",
+            "data": {
+                "node": node_id,
+                "dispatch_id": dispatch_id,
+                "blocking_reason": blocking_reason,
+                "next_action": next_action,
+                "human_review_generation": human_review.get("generation"),
+                "graph_updated": graph_updated,
+                "graph_error": graph_error,
+            },
+        },
+    )
+    _record_node_runstate(
+        sid,
+        node_id,
+        {
+            "last_dispatch_failure_reason": "operator_admission_failed",
+            "blocking_reason": blocking_reason,
+            "next_action": next_action,
+            "status": "needs_human_review",
+        },
+    )
+    return {
+        "blocking_reason": blocking_reason,
+        "next_action": next_action,
+        "graph_updated": graph_updated,
+        "graph_error": graph_error,
+        "human_review": human_review,
+    }
+
+
 def _actorhost_bridge(
     *,
     actor_id: str = "",
@@ -10656,12 +10780,49 @@ def _submit_builder_to_operator_pool(
             "instruction_file": str(instruction_file),
         }
     if completed.returncode != 0:
+        stdout = completed.stdout[-1200:]
+        stderr = completed.stderr[-1200:]
+        admission_detail = _permanent_capsule_admission_detail(stdout, stderr)
+        if admission_detail:
+            blocked = (
+                _persist_operator_pool_admission_block(
+                    graph_path=graph_path,
+                    sid=sid,
+                    node_id=node_id,
+                    dispatch_id=dispatch_id,
+                    admission_detail=admission_detail,
+                )
+                if not dry_run
+                else {
+                    "blocking_reason": f"permanent_capsule_admission_failure:{admission_detail}",
+                    "next_action": (
+                        "repair the node capability_capsule_id or register the required capsule, "
+                        "then explicitly resume this node"
+                    ),
+                    "graph_updated": False,
+                    "graph_error": "",
+                    "human_review": {},
+                }
+            )
+            return {
+                "ok": False,
+                "reason": "operator_pool_capsule_admission_failed",
+                "operator_submit_reason": "operator_admission_failed",
+                "operator_submit_error": admission_detail,
+                "permanent": True,
+                "suppress_fallback": True,
+                "returncode": completed.returncode,
+                "stdout": stdout,
+                "stderr": stderr,
+                "instruction_file": str(instruction_file),
+                **blocked,
+            }
         return {
             "ok": False,
             "reason": "operator_pool_submit_failed",
             "returncode": completed.returncode,
-            "stdout": completed.stdout[-1200:],
-            "stderr": completed.stderr[-1200:],
+            "stdout": stdout,
+            "stderr": stderr,
             "instruction_file": str(instruction_file),
         }
 
@@ -13868,7 +14029,9 @@ def _maybe_execute_contract_gate(graph: dict[str, Any], sid: str, node: dict[str
     executed non-llm gate kinds; contracted non-llm stages wedged in
     reviewing). Contracted-path only — uncontracted graphs and llm_eval
     stages keep legacy behavior byte-identically."""
-    if not (_ledger_enabled() and _gate_ledger is not None and _gate_ledger.contracted(graph)):
+    contracted = _ledger_enabled() and _gate_ledger is not None and _gate_ledger.contracted(graph)
+    policy_gate = evaluation_budget.policy_allows_none(graph, node)
+    if not (contracted or policy_gate):
         return None
     gate = node.get("evaluator_gate") if isinstance(node.get("evaluator_gate"), dict) else {}
     kind = str((gate or {}).get("kind") or "none")
@@ -14210,11 +14373,7 @@ def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: i
             break
         if not dry_run:
             _emit_node_proof_sidecars(sid, node, graph)
-        gate_result = (
-            None
-            if uses_autosci_double_gate
-            else _maybe_execute_contract_gate(graph, sid, node, dry_run=dry_run)
-        )
+        gate_result = _maybe_execute_contract_gate(graph, sid, node, dry_run=dry_run)
         if gate_result is not None:
             if gate_result.get("skip_reason"):
                 skipped.append({
@@ -14525,13 +14684,24 @@ def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: i
             dispatched.append(item)
 
     terminalized = _account_eval_dispatch_failures(graph, sid, skipped, dry_run)
+    waiting = [
+        item for item in skipped
+        if str(item.get("reason") or "") in _EVAL_WAIT_REASONS
+    ]
+    blocking_skips = [item for item in skipped if item not in waiting]
     if not dry_run:
         save_graph(graph_path, graph)
     return {
-        "ok": not skipped,
+        # A still-running Builder is normal prerequisite backpressure.  The
+        # evaluator has not failed to dispatch yet; it is simply not eligible
+        # to dispatch.  Preserve ``skipped`` for compatibility, but expose the
+        # truthful classification and keep the CLI exit code successful.
+        "ok": not blocking_skips,
         "sprint_id": sid,
         "dispatched": dispatched,
         "skipped": skipped,
+        "waiting": waiting,
+        "blocking_skips": blocking_skips,
         "terminalized": terminalized,
     }
 

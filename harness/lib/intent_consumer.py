@@ -341,7 +341,8 @@ def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
 
         Planner 步骤输出到 {planning_dir}：
         - planning_decision.json
-        - plan_ir.json（必须符合 solar.plan_ir.v2）
+        - plan_ir.json（仅 generate/exact_reuse；必须符合 solar.plan_ir.v2）
+        - direct_response.json（仅 direct_response）
 
         Planner 的独立 evaluator 输出到同一目录：
         - plan_validation.json
@@ -352,9 +353,10 @@ def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
         1. PlanIR 只定义语义节点、依赖、typed artifact ports、effects、execution trust 和 requirement ownership。
         2. 不要读取、细化或输出旧 task_graph.json；不要在 PlanIR 中选择 physical operator、lease、attempt 或运行状态。
         3. plan_validation、plan_fidelity 和 binding_trace 是 evaluator artifacts，不得由 Planner 自评代写。
-        4. 只有三个 evaluator verdict 均通过后，协调器才可调用 static_execution_compiler.py，把 bundle 编译到 {compiled_dir}。
-        5. scheduler 只接收 {compiled_dir}\\scheduler_input.json；它不得直接接收 RequirementIR 或 PlanIR。
-        6. 如果 RequirementIR 缺失关键字段或存在 requirements_gap，生成明确的 planning decision 并停止 runtime handoff。
+        4. planner_hints.preferred_outcome=direct_answer 且 runtime_handoff_allowed=false 时，必须选择 direct_response；独立 direct-response review 通过后立即终止，不得生成 PlanIR/TaskGraph 或派发 Builder。
+        5. 只有非 direct_response 路径的三个 evaluator verdict 均通过后，协调器才可调用 static_execution_compiler.py，把 bundle 编译到 {compiled_dir}。
+        6. scheduler 只接收 {compiled_dir}\\scheduler_input.json；它不得直接接收 RequirementIR 或 PlanIR。
+        7. 如果 RequirementIR 缺失关键字段或存在 requirements_gap，生成明确的 planning decision 并停止 runtime handoff。
         """
     ).strip()
     # P5 G2: teach the planner the compile rules it will be checked against
