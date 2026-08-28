@@ -32,9 +32,11 @@
       "required": ["method", "provider", "model"],
       "additionalProperties": false,
       "properties": {
-        "method": {"const": "model"},
+        "method": {"enum": ["model", "policy"]},
         "provider": {"type": "string", "minLength": 1},
-        "model": {"type": "string", "minLength": 1}
+        "model": {"type": "string", "minLength": 1},
+        "role": {"const": "planner"},
+        "component": {"const": "elastic_planner"}
       }
     },
     "decision": {"enum": ["direct_response", "exact_reuse", "generate"]},

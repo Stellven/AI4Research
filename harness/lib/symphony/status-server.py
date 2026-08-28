@@ -2426,6 +2426,48 @@ def _output_role(path: Path, workdir: Path, contracts: list[tuple[Path, str]]) -
     return producer_task_type, supporting
 
 
+def _artifact_producer_metadata(path: Path) -> dict[str, str]:
+    """Expose explicit Planner/Evaluator authorship from governed JSON artifacts.
+
+    Compilers may propose a direct-response route, but the answer itself is a
+    Planner artifact. Keep this parsing bounded and schema-specific so an
+    arbitrary process JSON file cannot impersonate a pipeline role in the UI.
+    """
+    if path.suffix.lower() != ".json":
+        return {}
+    try:
+        if path.stat().st_size > 2 * 1024 * 1024:
+            return {}
+        payload = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    schema_version = str(payload.get("schema_version") or "")
+    owner_key = {
+        "solar.planning_decision.v1": "producer",
+        "solar.direct_response.v1": "producer",
+        "solar.direct_response_review.v1": "reviewer",
+    }.get(schema_version)
+    if not owner_key:
+        return {}
+    owner = payload.get(owner_key)
+    if not isinstance(owner, dict):
+        return {}
+    role = str(owner.get("role") or "").strip().lower()
+    component = str(owner.get("component") or "").strip()
+    allowed = {
+        ("planner", "elastic_planner"),
+        ("evaluator", "direct_response_reviewer"),
+    }
+    if (role, component) not in allowed:
+        return {}
+    return {
+        "producer_role": role,
+        "producer_component": component,
+    }
+
+
 def _select_result_index(rows: list[dict]) -> int:
     """Pick the single canonical result among discovered rows. Preference: the
     evaluator-accepted artifact, then workdir output, then process reports.  Within
@@ -2538,7 +2580,7 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                 continue
             seen.add(key)
             stat = resolved.stat()
-            rows.append({
+            row = {
                 "name": resolved.name,
                 "rel_path": key,
                 "kind": resolved.suffix.lower().lstrip(".") or "file",
@@ -2548,7 +2590,9 @@ def _discover_sprint_deliverables(sid: str) -> list[dict]:
                 "primary": False,
                 "stage": _deliverable_stage(resolved.name, key, "process"),
                 "view_url": f"/sprints/{urllib.parse.quote(sid)}/deliverables?path={urllib.parse.quote(key)}",
-            })
+            }
+            row.update(_artifact_producer_metadata(resolved))
+            rows.append(row)
         except OSError:
             continue
 

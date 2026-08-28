@@ -25,6 +25,7 @@ HARNESS_DIR = Path(os.environ.get("SOLAR_HARNESS_DIR", Path(__file__).resolve().
 SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR", Path.home() / ".solar" / "harness" / "sprints"))
 INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR", Path.home() / ".solar" / "harness" / "intents"))
 DEFAULT_TRUSTED_AUTODISPATCH_CHANNELS = (
+    "dashboard",
     "pm_dispatch",
     "pm_compile_request",
     "codex_bridge",
@@ -45,6 +46,20 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def is_direct_answer_requirement(requirement_ir: dict[str, Any]) -> bool:
+    """Keep intake routing dependency-free; the heavy Planner loads in its worker."""
+    hints = (
+        requirement_ir.get("planner_hints")
+        if isinstance(requirement_ir.get("planner_hints"), dict)
+        else {}
+    )
+    return (
+        requirement_ir.get("request_type") == "direct_answer"
+        and hints.get("preferred_outcome") == "direct_answer"
+        and hints.get("runtime_handoff_allowed") is False
+    )
 
 
 def safe_slug(value: str, limit: int = 48) -> str:
@@ -353,7 +368,7 @@ def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
         1. PlanIR 只定义语义节点、依赖、typed artifact ports、effects、execution trust 和 requirement ownership。
         2. 不要读取、细化或输出旧 task_graph.json；不要在 PlanIR 中选择 physical operator、lease、attempt 或运行状态。
         3. plan_validation、plan_fidelity 和 binding_trace 是 evaluator artifacts，不得由 Planner 自评代写。
-        4. planner_hints.preferred_outcome=direct_answer 且 runtime_handoff_allowed=false 时，必须选择 direct_response；独立 direct-response review 通过后立即终止，不得生成 PlanIR/TaskGraph 或派发 Builder。
+        4. planner_hints.preferred_outcome=direct_answer 且 runtime_handoff_allowed=false 时，Planner 必须亲自生成 direct_response；Intent Compiler 和 Requirement Compiler 只能提出路由建议，不得代写答案。独立 direct-response review 通过后立即终止，不得生成 PlanIR/TaskGraph 或派发 Builder。
         5. 只有非 direct_response 路径的三个 evaluator verdict 均通过后，协调器才可调用 static_execution_compiler.py，把 bundle 编译到 {compiled_dir}。
         6. scheduler 只接收 {compiled_dir}\\scheduler_input.json；它不得直接接收 RequirementIR 或 PlanIR。
         7. 如果 RequirementIR 缺失关键字段或存在 requirements_gap，生成明确的 planning decision 并停止 runtime handoff。
@@ -404,6 +419,102 @@ def submit_planner_handoff(sprint_id: str, requirement_ir_path: Path, *, dry_run
         "cmd": cmd,
         "stdout_tail": (proc.stdout or "")[-4000:],
         "stderr_tail": (proc.stderr or "")[-4000:],
+    }
+
+
+def submit_direct_answer_runtime(sprint_id: str, requirement_ir_path: Path) -> dict[str, Any]:
+    """Start the Planner-owned no-DAG path without blocking the intake request."""
+    from activity_runtime import ActivityRuntime
+    from runtime_status import transition_status
+
+    status_path = SPRINTS_DIR / f"{sprint_id}.status.json"
+    log_dir = HARNESS_DIR / "logs" / "direct-answer"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / f"{sprint_id}.log"
+    configured_python = os.environ.get("SOLAR_DIRECT_ANSWER_PYTHON", "").strip()
+    runtime_python = HARNESS_DIR / ".venv-runtime" / "bin" / "python"
+    python_executable = (
+        configured_python
+        or (str(runtime_python) if runtime_python.is_file() else "")
+        or sys.executable
+    )
+    command = [
+        python_executable,
+        str(HARNESS_DIR / "tools" / "direct_answer_runtime.py"),
+        "--sprint-id",
+        sprint_id,
+    ]
+    environment = dict(os.environ)
+    environment["HARNESS_DIR"] = str(HARNESS_DIR)
+    environment["SOLAR_HARNESS_DIR"] = str(HARNESS_DIR)
+    environment["SOLAR_HARNESS_SPRINTS_DIR"] = str(SPRINTS_DIR)
+    transition_status(
+        status_path,
+        "active",
+        "direct_answer_queued",
+        "intent_consumer",
+        extra={
+            "status_fields": {
+                "phase": "direct_answer",
+                "stage": "direct_answer_queued",
+                "handoff_to": "planner",
+                "target_role": "planner",
+                "runtime_handoff_allowed": False,
+                "direct_answer_status": "queued",
+                "plan_compile_required": False,
+                "planner_dispatch_claim": None,
+            },
+            "note": "Queued the Planner-owned direct-answer path; no TaskGraph dispatch is allowed.",
+        },
+    )
+    runtime = ActivityRuntime(sprint_id, harness_dir=str(HARNESS_DIR))
+    runtime.command_issued(
+        "direct-answer",
+        actor="intent_consumer",
+        target="planner",
+        payload={"stage": "direct_answer", "runtime_handoff_allowed": False},
+    )
+    try:
+        with log_path.open("ab") as output:
+            process = subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=output,
+                stderr=subprocess.STDOUT,
+                env=environment,
+                cwd=str(HARNESS_DIR),
+                start_new_session=(os.name != "nt"),
+            )
+        (SPRINTS_DIR / f"{sprint_id}.direct-answer.pid").write_text(
+            f"{process.pid}\n", encoding="utf-8"
+        )
+    except Exception as exc:
+        transition_status(
+            status_path,
+            "failed",
+            "direct_answer_launch_failed",
+            "intent_consumer",
+            extra={
+                "status_fields": {
+                    "stage": "direct_answer_failed",
+                    "direct_answer_status": "failed",
+                    "direct_answer_error": str(exc),
+                },
+                "note": str(exc),
+            },
+        )
+        return {
+            "status": "failed",
+            "mode": "direct_answer",
+            "error": str(exc),
+            "cmd": command,
+        }
+    return {
+        "status": "submitted",
+        "mode": "direct_answer",
+        "pid": process.pid,
+        "cmd": command,
+        "log": str(log_path),
     }
 
 
@@ -504,8 +615,16 @@ def consume_one(
     if research:
         annotate_compiled_package_with_research_artifact(sid, research)
 
-    if handoff.get("requested"):
-        handoff = {**handoff, **submit_planner_handoff(sid, SPRINTS_DIR / f"{sid}.requirement_ir.json")}
+    requirement_ir_path = SPRINTS_DIR / f"{sid}.requirement_ir.json"
+    compiled_requirement_ir = read_json(requirement_ir_path)
+    if handoff.get("requested") and is_direct_answer_requirement(compiled_requirement_ir):
+        handoff = {
+            **handoff,
+            "reason": "direct_answer_elastic_planner",
+            **submit_direct_answer_runtime(sid, requirement_ir_path),
+        }
+    elif handoff.get("requested"):
+        handoff = {**handoff, **submit_planner_handoff(sid, requirement_ir_path)}
     else:
         handoff = {**handoff, "status": "skipped"}
 

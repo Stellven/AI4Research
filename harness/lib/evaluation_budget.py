@@ -15,8 +15,11 @@ POLICY_ID = "risk_bounded_semantic_evaluation_v1"
 POLICY_SCHEMA = "solar.evaluation_budget.v1"
 PROOF_GATE_ID = "policy.proof_obligations.v1"
 
-_RISK_BUDGETS = {"low": 1, "medium": 2, "high": 3, "critical": 3}
-_EVALUATOR_OPERATOR_MARKERS = ("verifier", "evaluator")
+# One independent LLM evaluator is the global ceiling.  Deterministic schema,
+# hash, proof-obligation, and coverage aggregation may still run on every node;
+# risk changes what the final evaluator must inspect, not how many models vote.
+_RISK_BUDGETS = {"low": 1, "medium": 1, "high": 1, "critical": 1}
+_EVALUATOR_OPERATOR_MARKERS = ("critic", "verifier", "evaluator")
 _HIGH_RISK_REQUESTS = {
     "research",
     "security_sensitive",
@@ -116,8 +119,20 @@ def _node_score(node: dict[str, Any], descendants: dict[str, int], index: int) -
 
 
 def _research_targets(nodes: list[dict[str, Any]], eligible: list[dict[str, Any]]) -> list[str]:
-    """Prefer the evidence audit and final report, not retrieval or closeout."""
+    """Prefer the final report, then an evidence audit if policy ever expands."""
     targets: list[str] = []
+    for node in reversed(eligible):
+        combined = " ".join(
+            [
+                _text(node.get("goal")),
+                " ".join(_text(value) for value in node.get("outputs") or []),
+            ]
+        )
+        if "final.md" in combined or "final report" in combined or "cited report" in combined:
+            node_id = str(node.get("id"))
+            if node_id not in targets:
+                targets.append(node_id)
+            break
     for node in eligible:
         combined = " ".join(
             [
@@ -127,16 +142,6 @@ def _research_targets(nodes: list[dict[str, Any]], eligible: list[dict[str, Any]
             ]
         )
         if any(token in combined for token in ("evidence audit", "contradiction", "unsupported assumption", "gaps.md")):
-            targets.append(str(node.get("id")))
-            break
-    for node in reversed(eligible):
-        combined = " ".join(
-            [
-                _text(node.get("goal")),
-                " ".join(_text(value) for value in node.get("outputs") or []),
-            ]
-        )
-        if "final.md" in combined or "final report" in combined or "cited report" in combined:
             node_id = str(node.get("id"))
             if node_id not in targets:
                 targets.append(node_id)

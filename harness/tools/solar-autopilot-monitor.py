@@ -34,6 +34,13 @@ NO_DISPATCH_FLAG = HARNESS / "run" / "no-dispatch.flag"
 PANE_ASSIGNMENTS = HARNESS / ".pane-assignments"
 PANE_LEASE_DIR = HARNESS / "run" / "pane-leases"
 QUEUE_TTL_SEC = 3600
+try:
+    GRAPH_LEASE_TTL_SEC = max(
+        30,
+        int(os.environ.get("SOLAR_GRAPH_LEASE_TTL_SECONDS", "180") or "180"),
+    )
+except (TypeError, ValueError):
+    GRAPH_LEASE_TTL_SEC = 180
 KB_PROBE_SCRIPT = HARNESS / "tests" / "test-knowledge-probe-coverage.sh"
 KB_PROBE_HEALTH = HARNESS / "state" / "knowledge-probe-health.json"
 KB_PROBE_INTERVAL_SEC = int(os.environ.get("SOLAR_KB_PROBE_INTERVAL_SEC", "1800"))
@@ -2605,7 +2612,7 @@ def reroute_survey_blocked_evaluator(finding: dict, dispatch: bool) -> dict:
     node.pop("eval_dispatch_id", None)
     node.pop("eval_assignments", None)
     save_graph(graph_path, graph)
-    dispatch_result = graph_dispatch_node_evals(str(graph_path), dry_run=not dispatch, ttl=900, force=True, max_items=1) if graph_dispatch_node_evals is not None else {"ok": False, "reason": "graph_dispatcher_unavailable"}
+    dispatch_result = graph_dispatch_node_evals(str(graph_path), dry_run=not dispatch, ttl=GRAPH_LEASE_TTL_SEC, force=True, max_items=1) if graph_dispatch_node_evals is not None else {"ok": False, "reason": "graph_dispatcher_unavailable"}
     return {
         "ok": bool(dispatch_result.get("ok")),
         "sid": sid,
@@ -2693,8 +2700,8 @@ def dispatch_ready_graph_nodes(sid: str, lease: bool = True) -> dict:
             eval_max_items = max(1, int(os.environ.get("SOLAR_AUTOPILOT_EVAL_MAX_ITEMS", "1") or "1"))
         except Exception:
             eval_max_items = 1
-        evals = graph_dispatch_node_evals(str(path), dry_run=not lease, ttl=900, max_items=eval_max_items)
-        ready = graph_dispatch_ready(str(path), dry_run=not lease, ttl=900)
+        evals = graph_dispatch_node_evals(str(path), dry_run=not lease, ttl=GRAPH_LEASE_TTL_SEC, max_items=eval_max_items)
+        ready = graph_dispatch_ready(str(path), dry_run=not lease, ttl=GRAPH_LEASE_TTL_SEC)
         # Evaluator availability is more volatile than builder readiness: pane
         # cleanup/reconciliation performed while dispatching ready builder work
         # can free lab panes in the same scan. Do not leave handoff-backed
@@ -2712,7 +2719,7 @@ def dispatch_ready_graph_nodes(sid: str, lease: bool = True) -> dict:
             eval_retry = graph_dispatch_node_evals(
                 str(path),
                 dry_run=not lease,
-                ttl=900,
+                ttl=GRAPH_LEASE_TTL_SEC,
                 max_items=eval_max_items,
             )
             if (eval_retry.get("dispatched") or []) and not (eval_retry.get("skipped") or []):
@@ -2734,7 +2741,14 @@ def dispatch_ready_graph_nodes(sid: str, lease: bool = True) -> dict:
         max_parallel = int(concurrency_policy.effective_max_parallel(8, scope="graph"))
     except Exception:
         max_parallel = 8
-    result = enqueue_ready(graph, str(path), graph_workers(), max_parallel=max_parallel, lease=lease, ttl=900)
+    result = enqueue_ready(
+        graph,
+        str(path),
+        graph_workers(),
+        max_parallel=max_parallel,
+        lease=lease,
+        ttl=GRAPH_LEASE_TTL_SEC,
+    )
     from graph_scheduler import save_graph  # imported late so older installs can still inspect
     save_graph(path, graph)
     return {"ok": result.get("ok"), "ready": result}
@@ -2802,6 +2816,11 @@ def workflow_guard_route(sid: str) -> dict:
 
 
 def normalize_status_to_workflow_route(sid: str, status: dict, route: dict) -> bool:
+    if (
+        status.get("runtime_handoff_allowed") is False
+        and str(status.get("phase") or "") == "direct_answer"
+    ):
+        return False
     role = str(route.get("route_role") or "")
     stage = str(route.get("stage") or "")
     if role == "none" and stage == "done":
@@ -2929,6 +2948,18 @@ def inspect_sprints(epic_filter: str = "") -> list[dict]:
                     "message": "Epic child sprint dependency is not satisfied; keep queued and do not dispatch.",
                 }
             )
+            continue
+
+        if (
+            status.get("runtime_handoff_allowed") is False
+            and (
+                str(status.get("phase") or "") == "direct_answer"
+                or str(status.get("direct_answer_status") or "")
+                in {"queued", "running", "accepted"}
+            )
+        ):
+            # Direct answers are owned by Elastic Planner and deliberately do
+            # not enter the legacy PM/Planner/Builder workflow guard.
             continue
 
         route = workflow_guard_route(str(sid))

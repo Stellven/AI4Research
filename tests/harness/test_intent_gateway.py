@@ -22,6 +22,25 @@ def _load_gateway(name: str):
     return module
 
 
+def test_gui_and_web_channels_require_formal_llm_intent_compilation(monkeypatch):
+    gateway = _load_gateway("intent_gateway_required_llm_channels")
+    monkeypatch.delenv("SOLAR_INTENT_COMPILER_REQUIRED_CHANNELS", raising=False)
+
+    assert gateway._llm_intent_compiler_required("dashboard") is True
+    assert gateway._llm_intent_compiler_required("gui") is True
+    assert gateway._llm_intent_compiler_required("webapp") is True
+    assert gateway._llm_intent_compiler_required("cli") is False
+
+
+def test_required_llm_intent_channels_can_be_renamed(monkeypatch):
+    gateway = _load_gateway("intent_gateway_configured_llm_channels")
+    monkeypatch.setenv("SOLAR_INTENT_COMPILER_REQUIRED_CHANNELS", "portal, desktop")
+
+    assert gateway._llm_intent_compiler_required("portal") is True
+    assert gateway._llm_intent_compiler_required("desktop") is True
+    assert gateway._llm_intent_compiler_required("dashboard") is False
+
+
 def test_capture_writes_raw_rewritten_ir_and_trace(tmp_path):
     env = dict(os.environ)
     env["SOLAR_INTENT_GATEWAY_DIR"] = str(tmp_path / "intents")
@@ -278,6 +297,7 @@ def test_bounded_questions_use_direct_answer_without_runtime_dag(prompt):
     assert rewritten["suggested_lane"] == "direct_answer"
     assert "ImplementationWorker" not in rewritten["suggested_logical_operators"]
     assert requirement_ir["compiler_next"] == "pm_elastic_planner"
+    assert requirement_ir["planner_hints"]["response_authority"] == "planner"
     assert requirement_ir["planner_hints"]["preferred_outcome"] == "direct_answer"
     assert requirement_ir["planner_hints"]["runtime_handoff_allowed"] is False
     assert any("no task-graph runtime" in item for item in [rewritten["outcome"]])

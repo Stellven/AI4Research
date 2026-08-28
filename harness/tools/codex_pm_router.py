@@ -1861,6 +1861,7 @@ def build_pm_intake(
     }
     requirement_ir["planner_hints"] = {
         "selection_authority": "planner",
+        "response_authority": "planner",
         "allowed_outcomes": ["direct_answer", "memoized_task_graph", "new_task_graph"],
         "runtime_handoff_allowed": request_type != DIRECT_ANSWER,
     }
@@ -1899,7 +1900,7 @@ def build_pm_intake(
             f"{sprint_id}.requirement_ir.json" if sprint_id and sprint_id != "N/A" else ".pm/requirement_ir.json"
         ),
         "notes": (
-            "Requirement Compiler selected the direct-response route; the candidate graph is compatibility-only and non-dispatchable."
+            "Requirement Compiler proposed the direct-response route; only the Elastic Planner may author the answer, and the candidate graph is compatibility-only and non-dispatchable."
             if request_type == DIRECT_ANSWER
             else "Requirement Compiler produced canonical IR, compiled contracts, and a task DAG proposal."
         ),

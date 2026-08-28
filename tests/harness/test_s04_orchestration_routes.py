@@ -113,6 +113,25 @@ def test_missing_plan_certificate_remains_blocked_without_certification() -> Non
     assert narrative[0]["tone"] == "blocked"
 
 
+def test_context_injected_is_a_completed_preparation_step() -> None:
+    mod = _load_routes()
+    events = [{
+        "ts": "2026-08-28T13:42:18Z",
+        "type": "context_injected",
+        "actor": "planner",
+        "payload": {"node": "A1"},
+    }]
+
+    timeline = mod._timeline_from_events(events, {}, "2026-08-28T13:42:18Z")
+    narrative = mod._narrative_from_events(events)
+
+    assert timeline[0]["title"] == "Context prepared"
+    assert timeline[0]["tone"] == "complete"
+    assert narrative[0]["title"] == "Context prepared"
+    assert narrative[0]["tone"] == "complete"
+    assert "model work" in narrative[0]["summary"]
+
+
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -514,6 +533,35 @@ def test_projection_payload_surfaces_ui_action_contract(tmp_path: Path) -> None:
     assert payload["timeline"]
 
 
+def test_projection_exposes_full_original_prompt_without_json_navigation(
+    tmp_path: Path,
+) -> None:
+    mod = _load_routes()
+    prompt = (
+        "Analyze the attached article and preserve every comparison dimension.\n\n"
+        "Requirements:\n- cite the source\n- explain uncertainty\n- keep the final table"
+    )
+    payload, degraded = _scenario_projection(
+        mod,
+        tmp_path,
+        "full-original-prompt",
+        status={"status": "active", "phase": "planning"},
+        graph={"nodes": []},
+        artifacts={
+            "raw_intent.json": json.dumps(
+                {"raw": {"text": prompt}},
+                ensure_ascii=False,
+            ),
+        },
+    )
+
+    assert degraded == []
+    assert payload["original_prompt"] == prompt
+    assert payload["sprint"]["original_prompt"] == prompt
+    assert "\n\nRequirements:\n" in payload["original_prompt"]
+    assert payload["title"].endswith("…")
+
+
 def _install_fake_solar(bin_dir: Path) -> list[str]:
     script = bin_dir / "fake_solar.py"
     _write_text(
@@ -903,7 +951,7 @@ def test_projection_narrative_preserves_dispatch_reason_and_collapses_prerequisi
     real_failure = mod._narrative_from_events(
         [
             {
-                "ts": "2026-06-26T10:01:00Z",
+                "ts": f"2026-06-26T10:01:{second:02d}Z",
                 "type": "activity_failed",
                 "actor": "coordinator",
                 "payload": {
@@ -918,8 +966,10 @@ def test_projection_narrative_preserves_dispatch_reason_and_collapses_prerequisi
                     ),
                 },
             }
+            for second in (0, 15)
         ]
     )
+    assert len(real_failure) == 1
     assert real_failure[0]["title"] == "Evaluation blocked S1"
     assert real_failure[0]["summary"] == "no available evaluator"
     assert real_failure[0]["tone"] == "blocked"

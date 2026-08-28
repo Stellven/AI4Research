@@ -318,3 +318,36 @@ def test_skill_execution_bridge_is_registered_for_runtime_admission():
         registry_path=registry_path,
     )
     assert resolved["capability_capsule_id"] == "cap.skill-execution-bridge"
+
+
+def test_artifact_type_bridge_resolves_through_runtime_admission():
+    """The dedicated adapter registry is an admission source of truth too."""
+    registry_path = ROOT / "config" / "capability-capsules.registry.yaml"
+    resolved = caps.resolve_capability_capsule_for_task(
+        {
+            "task_type": "implementation",
+            "objective": "Bridge the upstream artifact into the downstream shape.",
+            "capability_capsule_id": "adapter.artifact-type-bridge",
+            "upstream_artifact": {"kind": "artifact.request_context"},
+        },
+        operator_id="mini-claude-sonnet-builder-2",
+        registry_path=registry_path,
+    )
+    assert resolved["capability_capsule_id"] == "adapter.artifact-type-bridge"
+    assert resolved["status"] == "stable"
+
+
+def test_artifact_type_bridge_falls_back_to_dedicated_registry(monkeypatch):
+    """Older deployments without duplicated main-registry entries still admit adapters."""
+    monkeypatch.setattr(caps, "iter_registry_entries", lambda **kwargs: [])
+    resolved = caps.resolve_capability_capsule_for_task(
+        {
+            "task_type": "implementation",
+            "objective": "Bridge the upstream artifact into the downstream shape.",
+            "capability_capsule_id": "adapter.artifact-type-bridge",
+            "upstream_artifact": {"kind": "artifact.request_context"},
+        },
+        operator_id="mini-claude-sonnet-builder-2",
+        registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
+    )
+    assert resolved["capability_capsule_id"] == "adapter.artifact-type-bridge"

@@ -97,15 +97,8 @@ def _read_json(path: Path) -> tuple[Any, bool]:
         return None, False
 
 
-def _clean_sprint_title(sid: str, fallback: str) -> str:
-    """Human-friendly session title.
-
-    The stored title comes from the PRD's first heading, which is the user's intent
-    truncated mid-word at 80 chars (and is occasionally a non-English planner heading).
-    Prefer the user's full original intent from raw_intent.json, then truncate at a
-    word boundary. Falls back to the stored title when no raw intent is recorded.
-    """
-    fallback = re.sub(r"\s+", " ", str(fallback or "")).strip()
+def _sprint_original_prompt(sid: str) -> str:
+    """Return the exact user prompt stored by the governed RawIntent gateway."""
     full = ""
     data, ok = _read_json(SPRINTS_DIR / f"{sid}.raw_intent.json")
     if ok and isinstance(data, dict):
@@ -131,6 +124,19 @@ def _clean_sprint_title(sid: str, fallback: str) -> str:
                     full = str(parsed.get("text") or parsed.get("prompt") or "")
             else:
                 full = s
+    return full.strip()
+
+
+def _clean_sprint_title(sid: str, fallback: str) -> str:
+    """Human-friendly session title.
+
+    The stored title comes from the PRD's first heading, which is the user's intent
+    truncated mid-word at 80 chars (and is occasionally a non-English planner heading).
+    Prefer the user's full original intent from raw_intent.json, then truncate at a
+    word boundary. Falls back to the stored title when no raw intent is recorded.
+    """
+    fallback = re.sub(r"\s+", " ", str(fallback or "")).strip()
+    full = _sprint_original_prompt(sid)
     title = re.sub(r"\s+", " ", full).strip() or fallback
     if not title:
         return sid
@@ -1905,6 +1911,8 @@ def _timeline_title(event_type: str, actor: str, payload: dict) -> str:
         return f"Waiting for Builder result{f' for {waiting_node}' if waiting_node else ''}"
     if "intake" in event_type:
         return "Task intake recorded"
+    if event_type == "context_injected":
+        return "Context prepared"
     if "plan_verdict" in event_type:
         return "Plan verdict recorded"
     if "eval_pass" in event_type or "eval_failed" in event_type:
@@ -2089,6 +2097,8 @@ def _narrative_title(token: str, role: str, node: str, phase: str, decision: str
     t = token.lower()
     n = f" {node}" if node else ""
     who = role if role and role != "Coordinator" else ""
+    if t == "context_injected":
+        return "Context prepared"
     if "intake" in t:
         return "Task scoped"
     if "plan_verdict" in t:
@@ -2136,6 +2146,8 @@ def _narrative_title(token: str, role: str, node: str, phase: str, decision: str
 
 
 def _narrative_tone(token: str, decision: str, to_status: str, reason: str = "") -> str:
+    if token.lower() == "context_injected":
+        return "complete"
     if reason in _NARRATIVE_WAIT_REASONS:
         return "working"
     blob = f"{token} {decision} {to_status} {reason}".lower()
@@ -2219,9 +2231,12 @@ def _narrative_from_events(
         # A prerequisite wait can be observed on every coordinator poll.  It
         # is one continuing state, not dozens of distinct failures.
         is_waiting = bool(waiting) or bool(diagnostic.get("waiting"))
+        is_recurring_dispatch_state = "dispatch" in tl and (
+            is_waiting or "fail" in tl or bool(reason)
+        )
         key = (
-            ("dispatch_wait", node, reason)
-            if is_waiting
+            ("dispatch_state", token, node, reason)
+            if is_recurring_dispatch_state
             else (token, node, role, round_num or ts[:19])
         )
         if key in seen:
@@ -2233,6 +2248,8 @@ def _narrative_from_events(
             if is_waiting
             else "Dispatch resumed after the plan certificate was recorded."
             if certification_wait
+            else "Context preparation completed; any following delay is model work."
+            if token == "context_injected"
             else (reason or decision).replace("_", " ")
         )
         if token in {"log_message", "event"} and message:
@@ -2294,11 +2311,13 @@ def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -
     human_gates = _projection_human_gates(status, dashboard, artifacts, events)
     operators = _operator_readiness_projection(dashboard)
     evaluation = _projection_evaluation(status, artifacts)
+    original_prompt = _sprint_original_prompt(sid) if sid else ""
     return {
         "projection_schema": "solar.dashboard_projection.v1",
         "projection_mode": projection_mode,
         "sprint_id": sid,
         "title": _clean_sprint_title(sid, dashboard.get("title") or status.get("title") or ""),
+        "original_prompt": original_prompt,
         "status": status.get("status") or dashboard.get("sprint_status") or "",
         "phase": status.get("phase") or dashboard.get("phase") or "",
         "lazy_slices": _projection_lazy_slices(sid),
@@ -2306,6 +2325,7 @@ def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -
             "sprint_id": sid,
             "epic_id": dashboard.get("epic_id") or status.get("epic_id") or "",
             "title": _clean_sprint_title(sid, dashboard.get("title") or status.get("title") or ""),
+            "original_prompt": original_prompt,
             "status": status.get("status") or dashboard.get("sprint_status") or "",
             "phase": status.get("phase") or dashboard.get("phase") or "",
             "raw_status": status,

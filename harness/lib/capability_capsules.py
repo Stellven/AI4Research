@@ -449,6 +449,41 @@ def get_registry_entry(
     for entry in entries:
         if entry.capability_capsule_id == capability_capsule_id:
             return entry
+    # Artifact adapters have a dedicated registry because they are selected by
+    # the planner's artifact-rewrite pass.  They still use capability capsule
+    # manifests and must pass the same runtime admission checks.  Resolve an
+    # adapter explicitly when a deployment has not duplicated it into the
+    # general registry (older installations and generated fixtures do this).
+    adapter_registry_path = Path(path or CAPSULE_REGISTRY_PATH).parent / "artifact-adapter-capsules.registry.yaml"
+    if adapter_registry_path.exists():
+        try:
+            adapter_registry = _read_yaml_or_json(adapter_registry_path)
+            for item in adapter_registry.get("adapters", []) or []:
+                if str(item.get("adapter_capsule_id") or "") != str(capability_capsule_id):
+                    continue
+                status = str(item.get("status") or "draft").strip().lower()
+                if status != "stable" and not include_nonstable:
+                    return None
+                manifest_ref = str(item.get("manifest_path") or "").strip()
+                if not manifest_ref:
+                    raise CapsuleRegistryError(
+                        f"artifact adapter {capability_capsule_id} has no manifest_path"
+                    )
+                manifest_path = Path(manifest_ref)
+                if not manifest_path.is_absolute():
+                    manifest_path = (adapter_registry_path.parent / manifest_path).resolve()
+                return RegistryEntry(
+                    capability_capsule_id=str(capability_capsule_id),
+                    version=str(item.get("version") or "0.1.0"),
+                    capsule_kind="capability",
+                    status=status,
+                    schema_ref="schemas/draft/capability-capsule.v1.draft.json",
+                    manifest_path=str(manifest_path),
+                    tags=["adapter"],
+                    owner="opensolar",
+                )
+        except (AttributeError, KeyError, TypeError) as exc:
+            raise CapsuleRegistryError(f"invalid artifact adapter registry: {adapter_registry_path}: {exc}") from exc
     return None
 
 

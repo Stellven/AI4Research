@@ -594,18 +594,63 @@ def compile_planning_decision(
     previous: dict[str, Any] | None = None,
     defects: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    body = model.generate(
-        _decision_prompt(
-            requirement_ir,
-            catalog,
-            planning_inputs,
-            generation=generation,
-            previous=previous,
-            defects=defects,
-        ),
-        DECISION_BODY_SCHEMA,
-        work_dir / "decision_call",
+    planner_hints = (
+        requirement_ir.get("planner_hints")
+        if isinstance(requirement_ir.get("planner_hints"), dict)
+        else {}
     )
+    direct_answer_required = (
+        requirement_ir.get("request_type") == "direct_answer"
+        and planner_hints.get("preferred_outcome") == "direct_answer"
+        and planner_hints.get("runtime_handoff_allowed") is False
+    )
+    if direct_answer_required:
+        # This is a Planner-owned policy decision, not an answer produced by
+        # either compiler.  The Planner model still authors direct_response
+        # below; avoiding a separate model call here removes latency without
+        # transferring response authority upstream.
+        body = {
+            "decision": "direct_response",
+            "rationale": [
+                "The accepted RequirementIR requires a direct answer and explicitly forbids runtime handoff."
+            ],
+            "requirement_ids": [
+                _requirement_id(row)
+                for row in requirements(requirement_ir)
+                if _requirement_id(row)
+            ],
+            "workflow_ref": None,
+            "workflow_inputs": [],
+            "workflow_bindings": [],
+            "requirements_gap": None,
+        }
+        producer = {
+            "method": "policy",
+            "provider": "solar",
+            "model": "planner-direct-route-v1",
+            "role": "planner",
+            "component": "elastic_planner",
+        }
+    else:
+        body = model.generate(
+            _decision_prompt(
+                requirement_ir,
+                catalog,
+                planning_inputs,
+                generation=generation,
+                previous=previous,
+                defects=defects,
+            ),
+            DECISION_BODY_SCHEMA,
+            work_dir / "decision_call",
+        )
+        producer = {
+            "method": "model",
+            "provider": model.provider,
+            "model": model.model or "configured_default",
+            "role": "planner",
+            "component": "elastic_planner",
+        }
     rid = requirement_ir_id(requirement_ir)
     artifact = {
         "schema_version": "solar.planning_decision.v1",
@@ -620,11 +665,7 @@ def compile_planning_decision(
             "planning_context_id": planning_context.get("planning_context_id"),
             "sha256": sha256_payload(planning_context),
         },
-        "producer": {
-            "method": "model",
-            "provider": model.provider,
-            "model": model.model or "configured_default",
-        },
+        "producer": producer,
         **body,
     }
     _assert_schema(artifact, DECISION_SCHEMA, "planning_decision")
@@ -902,6 +943,8 @@ def compile_direct_response(
             "method": "model",
             "provider": model.provider,
             "model": model.model or "configured_default",
+            "role": "planner",
+            "component": "elastic_planner",
         },
         **body,
     }
@@ -963,6 +1006,8 @@ def review_direct_response(
         "reviewer": {
             "provider": reviewer.provider,
             "model": reviewer.model or "configured_default",
+            "role": "evaluator",
+            "component": "direct_response_reviewer",
         },
         "status": "fail" if errors else ("pass_with_warnings" if warnings else "pass"),
         "checks": body.get("checks") or [],
@@ -1037,6 +1082,10 @@ when the node must produce scientific results from a real dataset/code execution
 lineage, schema, or exit-code-only evidence never satisfies measured_execution. Use evidence_transform
 only when the catalog explicitly offers that trust class; otherwise use any when execution authenticity
 is irrelevant.
+Use at most one logical Critic, Verifier, or Evaluator node in the entire PlanIR, including high-risk
+plans. It must be the final independent semantic review. Do not create separate Critic and Verifier
+nodes or model-review quorums. Schema validation, hash binding, RequirementIR coverage aggregation,
+and proof-obligation checks are deterministic controller gates and do not need additional LLM nodes.
 """.strip()
     payload: dict[str, Any] = {
         "instruction": instruction,
@@ -1941,6 +1990,27 @@ def validate_plan_ir(
     if len(node_ids) != len(set(node_ids)):
         checks["node_identity"].append(_error("DUPLICATE_NODE_ID", "nodes", "PlanIR node identifiers must be unique."))
     nodes = {str(row.get("node_id") or ""): row for row in node_rows}
+    if decision.get("decision") == "generate":
+        evaluator_nodes = [
+            str(row.get("node_id") or "")
+            for row in node_rows
+            if any(
+                marker in str(row.get("logical_operator") or "").strip().lower()
+                for marker in ("critic", "verifier", "evaluator")
+            )
+        ]
+        if len(evaluator_nodes) > 1:
+            checks["dependency_graph"].append(
+                _error(
+                    "MULTIPLE_LLM_EVALUATOR_NODES",
+                    "nodes",
+                    (
+                        "PlanIR may contain at most one Critic/Verifier/Evaluator "
+                        f"node; found {evaluator_nodes}. Combine semantic review "
+                        "and use deterministic acceptance aggregation."
+                    ),
+                )
+            )
     known_ops = _known_logical_operators(catalog)
     requirement_rows = requirements(requirement_ir)
     known_requirements = {_requirement_id(row) for row in requirement_rows}

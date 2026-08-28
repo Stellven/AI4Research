@@ -392,6 +392,59 @@ def test_sync_status_cache_projects_human_review_as_terminal_blocker(tmp_path, m
     assert closure["human_review_nodes"] == ["N1"]
 
 
+def test_sync_status_cache_projects_human_review_through_pending_descendants(tmp_path, monkeypatch):
+    import graph_scheduler as gs
+
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
+
+    sid = "sprint-test-parent-transitive-human-review"
+    graph_path = sprints / f"{sid}.task_graph.json"
+    graph = {
+        "sprint_id": sid,
+        "title": "Human review blocks the remaining chain",
+        "nodes": [
+            {"id": "N1", "status": "needs_human_review", "depends_on": []},
+            {"id": "N2", "status": "pending", "depends_on": ["N1"]},
+            {"id": "N3", "status": "pending", "depends_on": ["N2"]},
+        ],
+        "gate_results": {},
+    }
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+
+    result = gs.sync_status_cache_from_graph(
+        graph, graph_path, actor="test", event="transitive_human_blocker"
+    )
+
+    assert result["ok"] is True
+    assert result["reason"] == "parent_needs_human_review"
+    assert result["parent"]["terminal_status"] == "needs_human_review"
+    assert result["parent"]["open_nodes"] == ["N1", "N2", "N3"]
+    status = json.loads((sprints / f"{sid}.status.json").read_text(encoding="utf-8"))
+    assert status["status"] == "needs_human_review"
+    assert status["active_node"] is None
+
+
+def test_parent_human_review_does_not_pause_independent_runnable_branch():
+    import graph_scheduler as gs
+
+    graph = {
+        "sprint_id": "sprint-test-independent-branch",
+        "nodes": [
+            {"id": "N1", "status": "needs_human_review", "depends_on": []},
+            {"id": "N2", "status": "pending", "depends_on": ["N1"]},
+            {"id": "N3", "status": "pending", "depends_on": []},
+        ],
+        "gate_results": {},
+    }
+
+    parent = gs.parent_ready_check(graph)
+
+    assert parent["terminal_status"] is None
+    assert parent["human_review_nodes"] == ["N1"]
+
+
 def test_sync_status_cache_fails_mixed_failed_and_human_terminal_graph(tmp_path, monkeypatch):
     import graph_scheduler as gs
 

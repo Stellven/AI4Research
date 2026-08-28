@@ -180,6 +180,7 @@ def test_simple_explanation_preserves_direct_answer_through_pm_compilation():
     assert payload["classification"] == router.DIRECT_ANSWER
     assert payload["canonical_request_type"] == "direct_answer"
     assert requirement_ir["request_type"] == "direct_answer"
+    assert requirement_ir["planner_hints"]["response_authority"] == "planner"
     assert requirement_ir["planner_hints"]["preferred_outcome"] == "direct_answer"
     assert requirement_ir["planner_hints"]["runtime_handoff_allowed"] is False
     assert proposal["dag_variant"] == "direct_answer_candidate"

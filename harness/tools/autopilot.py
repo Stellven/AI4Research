@@ -60,6 +60,13 @@ BACKLOG_THRESHOLD = int(os.environ.get("AUTOPILOT_BACKLOG_THRESHOLD", "3"))
 QUARANTINE_DIR = HARNESS_DIR / "run" / "quarantine"
 EVENTS_JSONL = HARNESS_DIR / "run" / "dispatch-ledger.jsonl"
 RUNTIME_REPAIR_PRIORITY = int(os.environ.get("AUTOPILOT_RUNTIME_REPAIR_PRIORITY", "92"))
+try:
+    GRAPH_LEASE_TTL_SEC = max(
+        30,
+        int(os.environ.get("SOLAR_GRAPH_LEASE_TTL_SECONDS", "180") or "180"),
+    )
+except (TypeError, ValueError):
+    GRAPH_LEASE_TTL_SEC = 180
 
 
 def _now() -> str:
@@ -421,7 +428,11 @@ def drain_queue(sprint_id: str) -> dict:
         if item is None:
             break
         if "graph_node|" in item.get("intent", "") or (item.get("payload") or {}).get("node"):
-            result = dispatch_queue_item(item, dry_run=bool(os.environ.get("SOLAR_COORD_DRY_RUN")), ttl=900)
+            result = dispatch_queue_item(
+                item,
+                dry_run=bool(os.environ.get("SOLAR_COORD_DRY_RUN")),
+                ttl=GRAPH_LEASE_TTL_SEC,
+            )
             conn = open_state_db()
             init_db(conn)
             db_emit_event(conn, sprint_id, "graph_queue_drain_dispatch", payload=result)

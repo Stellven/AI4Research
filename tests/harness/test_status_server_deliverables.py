@@ -146,6 +146,56 @@ def test_nonempty_planner_transcript_is_process_evidence_not_user_result(tmp_pat
     assert not any(item["result"] for item in items)
 
 
+def test_direct_response_artifacts_expose_planner_and_evaluator_ownership(
+    tmp_path: Path,
+) -> None:
+    module, _harness, sprints = _load_status_server(tmp_path)
+    sid = "sprint-direct-response-ownership"
+    planning = sprints / sid / "planning"
+    _write(
+        planning / "direct_response.json",
+        json.dumps(
+            {
+                "schema_version": "solar.direct_response.v1",
+                "producer": {
+                    "method": "model",
+                    "provider": "codex",
+                    "model": "configured_default",
+                    "role": "planner",
+                    "component": "elastic_planner",
+                },
+                "answer": "Plants use light to make food.",
+            }
+        ),
+    )
+    _write(
+        planning / "direct_response_review.json",
+        json.dumps(
+            {
+                "schema_version": "solar.direct_response_review.v1",
+                "reviewer": {
+                    "provider": "codex",
+                    "model": "configured_default",
+                    "role": "evaluator",
+                    "component": "direct_response_reviewer",
+                },
+                "status": "pass",
+            }
+        ),
+    )
+
+    items = module._discover_sprint_deliverables(sid)
+    response = next(item for item in items if item["name"] == "direct_response.json")
+    review = next(
+        item for item in items if item["name"] == "direct_response_review.json"
+    )
+
+    assert response["producer_role"] == "planner"
+    assert response["producer_component"] == "elastic_planner"
+    assert review["producer_role"] == "evaluator"
+    assert review["producer_component"] == "direct_response_reviewer"
+
+
 def test_user_deliverable_outranks_larger_supporting_evidence(tmp_path: Path) -> None:
     """A verification artifact must not replace the requested user output.
 

@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "lib"))
 import graph_node_dispatcher as gnd  # noqa: E402
 
 
-def test_plan_node_evaluation_derives_staged_mode_for_code_impl() -> None:
+def test_plan_node_evaluation_derives_single_mode_for_code_impl() -> None:
     node = {
         "id": "N1",
         "task_type": "CODE_IMPL",
@@ -22,7 +22,7 @@ def test_plan_node_evaluation_derives_staged_mode_for_code_impl() -> None:
     plan = gnd._plan_node_evaluation({}, node)
 
     assert plan["planning_source"] == "derived"
-    assert plan["review_mode"] == "staged"
+    assert plan["review_mode"] == "single"
     assert plan["required_evaluators"] == 1
     assert "Verifier" in plan["evaluator_classes"]
     assert "patch_diff" in plan["evidence_requirements"]
@@ -70,7 +70,7 @@ def test_budget_waived_runtime_node_uses_policy_gate_without_evaluator(monkeypat
     assert (tmp_path / "sid-budget-waiver.V1-eval.json").is_file()
 
 
-def test_dispatch_node_evals_falls_back_dual_plan_to_staged_with_single_evaluator(monkeypatch) -> None:
+def test_dispatch_node_evals_normalizes_dual_request_to_single_evaluator(monkeypatch) -> None:
     graph = {
         "sprint_id": "sid-eval-plan",
         "nodes": [
@@ -115,17 +115,19 @@ def test_dispatch_node_evals_falls_back_dual_plan_to_staged_with_single_evaluato
     assert result["dispatched"][0]["node"] == "N2"
     plan = graph["nodes"][0]["evaluation_plan"]
     requested = graph["nodes"][0]["evaluation_plan_requested"]
-    assert requested["review_mode"] == "dual"
-    assert requested["required_evaluators"] == 2
-    assert plan["review_mode"] == "staged"
+    assert requested["review_mode"] == "single"
+    assert requested["required_evaluators"] == 1
+    assert requested["requested_review_mode"] == "dual"
+    assert requested["requested_required_evaluators"] == 2
+    assert plan["review_mode"] == "single"
     assert plan["required_evaluators"] == 1
-    assert plan["fallback_applied"] is True
     assert plan["requested_review_mode"] == "dual"
+    assert plan["policy_normalized"] is True
     assert plan["capacity"]["available_evaluators"] == 1
     assert plan["capacity"]["dispatchable_now"] is True
 
 
-def test_dispatch_node_evals_keeps_dual_plan_when_quorum_capacity_exists(monkeypatch) -> None:
+def test_dispatch_node_evals_uses_one_evaluator_even_when_quorum_capacity_exists(monkeypatch) -> None:
     graph = {
         "sprint_id": "sid-eval-plan-quorum",
         "nodes": [
@@ -167,17 +169,17 @@ def test_dispatch_node_evals_keeps_dual_plan_when_quorum_capacity_exists(monkeyp
     result = gnd.dispatch_node_evals("/tmp/sid-eval-plan-quorum.task_graph.json", dry_run=False)
 
     assert result["skipped"] == []
-    assert len(result["dispatched"]) == 2
-    assert {item["pane"] for item in result["dispatched"]} == {"solar-harness:0.3", "solar-harness-lab:0.3"}
+    assert len(result["dispatched"]) == 1
+    assert {item["pane"] for item in result["dispatched"]} == {"solar-harness:0.3"}
     plan = graph["nodes"][0]["evaluation_plan"]
     requested = graph["nodes"][0]["evaluation_plan_requested"]
-    assert requested["review_mode"] == "dual"
+    assert requested["review_mode"] == "single"
+    assert requested["requested_review_mode"] == "dual"
     assert requested["capacity"]["quorum_dispatch_supported"] is True
-    assert plan["review_mode"] == "dual"
-    assert plan["required_evaluators"] == 2
+    assert plan["review_mode"] == "single"
+    assert plan["required_evaluators"] == 1
     assert plan["capacity"]["dispatchable_now"] is True
     assert graph["nodes"][0]["eval_assignments"][0]["role"] == "primary"
-    assert graph["nodes"][0]["eval_assignments"][1]["role"] == "secondary"
 
 
 def test_busy_evaluator_dispatch_is_backpressure_not_a_failed_dispatch(monkeypatch, tmp_path) -> None:
@@ -255,6 +257,58 @@ def test_missing_evaluator_capacity_still_escalates_at_the_configured_bound(monk
         }
     ]
     assert graph["nodes"][0]["status"] == "needs_human_review"
+
+
+def test_eval_escalation_projects_parent_status_in_the_same_dispatch_tick(
+    monkeypatch, tmp_path
+) -> None:
+    graph = {
+        "sprint_id": "sid-eval-parent-projection",
+        "nodes": [
+            {"id": "N1", "status": "reviewing", "depends_on": []},
+            {"id": "N2", "status": "pending", "depends_on": ["N1"]},
+        ],
+        "node_results": {
+            "N1": {"status": "reviewing"},
+            "N2": {"status": "pending"},
+        },
+    }
+    projected: list[str] = []
+
+    monkeypatch.setattr(gnd, "GRAPH_NODE_EVAL_MAX_DISPATCH_FAILURES", 1)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path / "sprints")
+    gnd.SPRINTS_DIR.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(gnd, "load_graph", lambda path: graph)
+    monkeypatch.setattr(gnd, "save_graph", lambda path, data: None)
+    monkeypatch.setattr(gnd, "_node_eval_needed", lambda *args, **kwargs: True)
+    monkeypatch.setattr(gnd, "_emit_node_proof_sidecars", lambda *args, **kwargs: {})
+    monkeypatch.setattr(gnd, "_discover_evaluators", lambda dry_run=False: [])
+    monkeypatch.setattr(gnd, "_append_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(gnd, "_record_node_runstate", lambda *args, **kwargs: None)
+
+    def project_parent(current_graph, graph_path, **kwargs):
+        projected.append(gnd.node_status(current_graph, "N1"))
+        return {"ok": True, "updated": True, "reason": "parent_needs_human_review"}
+
+    monkeypatch.setattr(gnd, "sync_status_cache_from_graph", project_parent)
+
+    result = gnd.dispatch_node_evals(
+        str(tmp_path / "sid-eval-parent-projection.task_graph.json"), dry_run=False
+    )
+
+    assert result["terminalized"] == [
+        {
+            "node": "N1",
+            "status": "needs_human_review",
+            "reason": "eval_dispatch_unavailable:no_available_evaluator:1_consecutive_failures",
+        }
+    ]
+    assert projected == ["needs_human_review"]
+    assert result["status_sync"] == {
+        "ok": True,
+        "updated": True,
+        "reason": "parent_needs_human_review",
+    }
 
 
 def test_build_eval_dispatch_text_includes_evaluation_plan(monkeypatch, tmp_path) -> None:

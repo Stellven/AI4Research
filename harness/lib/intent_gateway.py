@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Unified RawIntent gateway for Solar-Harness entrypoints.
 
-Every user-facing entrypoint should write the same RawIntent packet before it
-creates PRD/contract/task_graph work.  Model rewriting is pluggable through
-SOLAR_INTENT_REWRITE_CMD; deterministic rewriting is the fail-open fallback.
+Every user-facing entrypoint writes the same RawIntent packet before it creates
+PRD/contract/task_graph work.  Interactive production channels require the
+formal LLM IntentIR compiler; deterministic rewriting remains an offline/CLI
+compatibility path and must never silently classify GUI requests.
 """
 
 from __future__ import annotations
@@ -24,6 +25,30 @@ from typing import Any
 HARNESS_DIR = Path(os.environ.get("SOLAR_HARNESS_DIR", Path(__file__).resolve().parents[1]))
 SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR", Path.home() / ".solar" / "harness" / "sprints"))
 INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR", Path.home() / ".solar" / "harness" / "intents"))
+_DEFAULT_LLM_INTENT_CHANNELS = {"dashboard", "gui", "webapp", "web"}
+
+
+def _llm_intent_compiler_required(source_channel: str) -> bool:
+    """Return whether this ingress must produce model-authored IntentIR.
+
+    The channel list is configurable for deployments with renamed frontends,
+    but the shipped GUI/web channels are fail-closed by default.  CLI capture
+    stays deterministic-capable so local schema tests and offline maintenance
+    do not unexpectedly invoke a live model.
+    """
+    configured = str(
+        os.environ.get("SOLAR_INTENT_COMPILER_REQUIRED_CHANNELS") or ""
+    ).strip()
+    channels = (
+        {
+            value.strip().lower()
+            for value in configured.split(",")
+            if value.strip()
+        }
+        if configured
+        else _DEFAULT_LLM_INTENT_CHANNELS
+    )
+    return str(source_channel or "").strip().lower() in channels
 
 
 def now_iso() -> str:
@@ -857,6 +882,7 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
     planner_hints: dict[str, Any] = {
         "workflow_candidates": workflow_candidates,
         "selection_authority": "planner",
+        "response_authority": "planner",
         "allowed_outcomes": ["direct_answer", "memoized_task_graph", "new_task_graph"],
     }
     if lane == "direct_answer":
@@ -964,6 +990,12 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         raw_intent["research"] = research
     base = INTENTS_DIR / intent_id
     artifact_compiler_provider = os.environ.get("SOLAR_INTENT_COMPILER_PROVIDER", "").strip()
+    if not artifact_compiler_provider and _llm_intent_compiler_required(args.source_channel):
+        # The formal compiler currently supports Codex and model_from_environment
+        # already defaults both compiler and independent reviewer to that
+        # provider.  Setting the sentinel here makes the production contract
+        # explicit and prevents the legacy deterministic implementation label.
+        artifact_compiler_provider = "codex"
     if artifact_compiler_provider:
         from intent_compiler import (
             model_from_environment,

@@ -619,8 +619,10 @@ def test_final_verifier_refuses_published_and_staging_read_scope_drift(
         and item.get("declared") == "workspace/jsonl_stats.py"
         for item in snapshot["violations"]
     )
-    published_rows = [row for row in snapshot["rows"] if row.get("authority") == "published"]
-    assert published_rows[0]["path"] == str(product_file.resolve())
+    published_rows = [row for row in snapshot["rows"] if row.get("authority") == "published_frozen"]
+    assert published_rows[0]["published_path"] == str(product_file.resolve())
+    assert Path(published_rows[0]["path"]).is_relative_to(sprints)
+    assert Path(published_rows[0]["path"]).read_bytes() == _published_bytes()
     assert published_rows[0]["sha256"] == PUBLISHED_SHA256
 
 
@@ -774,11 +776,111 @@ def test_downstream_review_accepts_exact_published_directory_tree(
     published_rows = [
         row
         for row in snapshot["rows"]
-        if row.get("authority") == "published"
+        if row.get("authority") == "published_frozen"
     ]
     assert len(published_rows) == 1
     assert published_rows[0]["kind"] == "directory"
     assert published_rows[0]["sha256"] == manifest["rows"][0]["sha256"]
+
+
+
+def test_downstream_review_accepts_published_file_inside_manifest_directory(
+    sandbox: tuple[Path, Path],
+) -> None:
+    harness, sprints = sandbox
+    sid = "sprint-rc10-published-directory-child"
+    product = harness.parent / "product"
+    product.mkdir()
+    workspace_binding.bind_active_workspace(harness, product)
+    (sprints / f"{sid}.raw_intent.json").write_text(
+        json.dumps({"context": {"repo": str(product)}}),
+        encoding="utf-8",
+    )
+    workdir = sprints / sid / "workdir"
+    staging_dir = workdir / "workspace" / "pkg"
+    staging_file = staging_dir / "nested" / "b.txt"
+    staging_file.parent.mkdir(parents=True)
+    staging_file.write_text("beta\n", encoding="utf-8")
+    builder = {
+        "id": "S1",
+        "status": "passed",
+        "depends_on": [],
+        "read_scope": [],
+        "write_scope": ["workspace/pkg/"],
+    }
+    manifest = am.write_manifest(
+        sprints,
+        sid,
+        builder,
+        generation=0,
+        base_dir=workdir,
+        roots={"canonical": "workspace/"},
+    )
+    assert manifest is not None
+    assert manifest["rows"][0]["kind"] == "directory"
+    child = next(
+        entry
+        for entry in manifest["rows"][0]["entries"]
+        if entry.get("rel_path") == "nested/b.txt"
+    )
+    product_file = product / "pkg" / "nested" / "b.txt"
+    product_file.parent.mkdir(parents=True)
+    product_file.write_bytes(staging_file.read_bytes())
+    published = [
+        {
+            "from": str(staging_file),
+            "to": str(product_file),
+            "sha256": child["sha256"],
+        }
+    ]
+    publish_sidecar = {
+        "schema": "solar.workspace_publish.v1",
+        "sid": sid,
+        "node_id": "S1",
+        "required": True,
+        "ok": True,
+        "workspace_root": str(product),
+        "published": published,
+        "manifest_digest": manifest["content_digest"],
+        "published_digest": am.published_content_digest(published),
+    }
+    (sprints / f"{sid}.S1-publish.json").write_text(
+        json.dumps(publish_sidecar),
+        encoding="utf-8",
+    )
+    builder["closeout_receipt"] = {
+        "schema": "solar.node_closeout.v1",
+        "sid": sid,
+        "node_id": "S1",
+        "verdict": "passed",
+        "manifest": {"content_digest": manifest["content_digest"]},
+        "publication": {
+            "required": True,
+            "ok": True,
+            "published_count": 1,
+            "manifest_digest": manifest["content_digest"],
+            "published_digest": publish_sidecar["published_digest"],
+        },
+    }
+    verifier = {
+        "id": "S2",
+        "status": "reviewing",
+        "depends_on": ["S1"],
+        "read_scope": ["workspace/pkg/nested/b.txt"],
+        "write_scope": [],
+        "proof_obligations": [],
+    }
+    graph = _contracted_graph(sid, [builder, verifier])
+
+    snapshot = gnd._capture_eval_artifact_snapshot(sid, verifier, graph)
+
+    assert snapshot["ok"] is True, snapshot
+    published_rows = [
+        row for row in snapshot["rows"] if row.get("authority") == "published_frozen"
+    ]
+    assert len(published_rows) == 1
+    assert published_rows[0]["kind"] == "file"
+    assert published_rows[0]["sha256"] == child["sha256"]
 
 
 def test_contracted_pass_receipt_requires_snapshot_and_publication_digests() -> None:

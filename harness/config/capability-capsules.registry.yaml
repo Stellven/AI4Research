@@ -2,6 +2,32 @@
 version: 1
 capsules:
   capability:
+  # Artifact adapters are capability capsules too. Keep them in this runtime
+  # admission inventory as well as the artifact-conversion registry.
+  - capability_capsule_id: adapter.requirement-ir-to-design-brief
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/adapter.requirement-ir-to-design-brief.yaml
+    tags: [adapter, artifact]
+    owner: opensolar
+  - capability_capsule_id: adapter.patch-diff-to-verification-pack
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/adapter.patch-diff-to-verification-pack.yaml
+    tags: [adapter, artifact]
+    owner: opensolar
+  - capability_capsule_id: adapter.artifact-type-bridge
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: capability-capsules/adapter.artifact-type-bridge.yaml
+    tags: [adapter, artifact]
+    owner: opensolar
   - capability_capsule_id: cap.flashmlx-performance-debugger
     version: 0.1.0
     capsule_kind: capability

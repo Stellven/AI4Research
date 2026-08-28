@@ -90,6 +90,35 @@ def test_ready_nodes_does_not_raise_parallelism_quality_during_inflight():
     assert graph_scheduler.ready_nodes(graph) == []
 
 
+def test_active_execution_attempt_is_not_dispatched_twice():
+    graph = {
+        "sprint_id": "runtime-active-attempt",
+        "nodes": [
+            {
+                "id": "R1",
+                "status": "pending",
+                "depends_on": [],
+                "write_scope": ["workspace/R1"],
+                "acceptance": ["R1 done"],
+                "required_capabilities": ["implementation"],
+                "execution_attempt": {
+                    "schema_version": "solar.node_attempt.v1",
+                    "phase": "execution",
+                    "task_id": "pm-runtime-active-attempt-R1",
+                    "dispatch_id": "graph-runtime-active-attempt-R1",
+                    "operator_id": "builder-1",
+                    "source": "pm_dispatch",
+                    "status": "submitted",
+                    "requires_operator_result": True,
+                },
+            }
+        ],
+    }
+
+    assert graph_scheduler.node_status(graph, "R1") == "dispatched"
+    assert graph_scheduler.ready_nodes(graph) == []
+
+
 def test_ready_nodes_still_raises_structural_validation_errors():
     graph = {
         "sprint_id": "runtime-structural-error",

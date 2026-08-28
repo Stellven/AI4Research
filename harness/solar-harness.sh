@@ -1878,7 +1878,7 @@ intake_request() {
     printf '%s\n' "$wf_out"
     return 0
   fi
-  local out rc raw_file autopilot_out autopilot_rc intent_out intent_rc intent_id intent_lane intent_readiness_status sid_from_out consumer_out consumer_rc consumer_status planner_handoff_status fixed_route planner_selected_workflow
+  local out rc raw_file autopilot_out autopilot_rc intent_out intent_rc intent_id intent_lane intent_readiness_status sid_from_out consumer_out consumer_rc consumer_status planner_handoff_status planner_handoff_mode fixed_route planner_selected_workflow
   intent_out=""
   intent_rc=0
   intent_id=""
@@ -1890,6 +1890,7 @@ intake_request() {
   consumer_rc=0
   consumer_status=""
   planner_handoff_status=""
+  planner_handoff_mode=""
   if [[ -f "$HARNESS_DIR/lib/intent_gateway.py" ]]; then
     set +e
     intent_out=$(SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" python3 "$HARNESS_DIR/lib/intent_gateway.py" capture \
@@ -2009,6 +2010,7 @@ intake_request() {
         sid_from_out=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; print((results[0] or {}).get("sprint_id") or "")' <<<"$consumer_out" 2>/dev/null || true)
         consumer_status=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; print((results[0] or {}).get("status") or "")' <<<"$consumer_out" 2>/dev/null || true)
         planner_handoff_status=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; handoff=((results[0] or {}).get("planner_handoff") or {}); print(handoff.get("status") or handoff.get("reason") or "")' <<<"$consumer_out" 2>/dev/null || true)
+        planner_handoff_mode=$(python3 -c 'import json,sys; payload=json.loads(sys.stdin.read()); results=payload.get("results") or [{}]; handoff=((results[0] or {}).get("planner_handoff") or {}); print(handoff.get("mode") or "")' <<<"$consumer_out" 2>/dev/null || true)
         out=$(python3 - "$sid_from_out" "$intent_id" "$consumer_status" "$planner_handoff_status" <<'PY'
 import sys
 sid, intent_id, consumer_status, planner = sys.argv[1:5]
@@ -2058,6 +2060,12 @@ print(next((m.group(1) for p in patterns for m in [re.search(p,text)] if m), "")
     if [[ "$autopilot_rc" != "0" ]]; then
       rc="$autopilot_rc"
     fi
+  elif [[ "$dispatch" == "1" && "$planner_handoff_mode" == "direct_answer" ]]; then
+    # The consumer already started Elastic Planner. Running the legacy global
+    # autopilot scan here is both slow and unsafe: it can dispatch a generic
+    # Planner against the proposal-only compatibility graph.
+    autopilot_out="direct_answer_runtime_submitted"
+    autopilot_rc=0
   elif [[ "$dispatch" == "1" && -f "$HARNESS_DIR/tools/solar-autopilot-monitor.py" ]]; then
     set +e
     autopilot_out=$(python3 "$HARNESS_DIR/tools/solar-autopilot-monitor.py" --apply --dispatch --max-iterations 1 --json 2>&1)
@@ -2092,6 +2100,8 @@ PY
       if [[ "$autopilot_rc" == "0" ]]; then
         if [[ "$fixed_route" == "1" ]]; then
           ok "Fixed research A1 dispatch triggered"
+        elif [[ "$planner_handoff_mode" == "direct_answer" ]]; then
+          ok "Direct answer Planner started; legacy autopilot skipped"
         else
           ok "Autopilot scan/dispatch triggered"
         fi

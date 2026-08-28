@@ -188,6 +188,25 @@ class TestOnHumanReviewPolicy:
         ready = gs.ready_nodes(graph)
         assert [n["id"] for n in ready] == ["S2"]
 
+    def test_eval_integrity_review_always_blocks_dependents(self):
+        graph = _review_graph("warn_and_continue")
+        graph["nodes"][0]["human_review"] = {
+            "schema_version": "solar.human_review.v1",
+            "generation": 1,
+            "state": "blocked",
+            "reason": "eval_integrity_block:eval_artifact_snapshot_invalid",
+        }
+        graph["node_results"]["S1"] = {
+            "status": "needs_human_review",
+            "note": "eval_integrity_block:eval_artifact_snapshot_invalid",
+            "human_review": graph["nodes"][0]["human_review"],
+        }
+
+        assert gs.ready_nodes(graph) == []
+        changed = gs.terminalize_dependency_blocked_nodes(graph)
+        assert changed == []
+        assert gs.node_status(graph, "S2") == "pending"
+
     def test_absent_policy_keeps_legacy_block(self):
         graph = _review_graph(None)
         changed = gs.terminalize_dependency_blocked_nodes(graph)

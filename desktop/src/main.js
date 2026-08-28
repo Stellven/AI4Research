@@ -18,6 +18,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const http = require("http");
+const { guardOutputStream, isClosedOutputError } = require("./safe-output");
 
 // Chromium's setuid sandbox commonly can't init on Linux/WSL/headless; disabling it there keeps
 // the renderer from crashing. On Windows/macOS the sandbox works, so KEEP it (don't weaken the
@@ -94,13 +95,33 @@ function appendDesktopLog(line) {
     fs.appendFileSync(path.join(LOG_DIR, "desktop.log"), line + "\n");
   } catch {}
 }
+const stdoutState = guardOutputStream(process.stdout, (error) => {
+  appendDesktopLog(
+    `${new Date().toISOString()} [solar-desktop] stdout unavailable: ${String(
+      (error && (error.code || error.message)) || error,
+    )}`,
+  );
+});
+guardOutputStream(process.stderr, (error) => {
+  appendDesktopLog(
+    `${new Date().toISOString()} [solar-desktop] stderr unavailable: ${String(
+      (error && (error.code || error.message)) || error,
+    )}`,
+  );
+});
 function log(...a) {
   const line = "[solar-desktop] " + a.map((x) => String(x)).join(" ");
   const stamped = new Date().toISOString() + " " + line;
   LOG_RING.push(stamped);
   if (LOG_RING.length > LOG_RING_MAX) LOG_RING.shift();
-  console.log(line);
   appendDesktopLog(stamped);
+  if (stdoutState.writable) {
+    try {
+      console.log(line);
+    } catch (error) {
+      if (isClosedOutputError(error)) stdoutState.writable = false;
+    }
+  }
 }
 
 function finishSelftest(ok, details = {}) {

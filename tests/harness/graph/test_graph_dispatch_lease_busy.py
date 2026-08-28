@@ -12,6 +12,7 @@ ROOT = (Path(__file__).resolve().parents[3] / 'harness')
 sys.path.insert(0, str(ROOT / "lib"))
 
 import graph_node_dispatcher as gnd  # noqa: E402
+import graph_scheduler as gs  # noqa: E402
 import pytest  # noqa: E402
 
 
@@ -34,6 +35,30 @@ def test_operator_pool_defaults_disabled_when_env_unset(monkeypatch) -> None:
 def test_operator_pool_can_be_enabled_explicitly(monkeypatch) -> None:
     monkeypatch.setenv("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", "1")
     assert gnd._builder_operator_pool_enabled() is True
+
+
+def test_graph_dispatch_lease_defaults_to_three_minutes() -> None:
+    assert gnd.DEFAULT_GRAPH_LEASE_TTL_SECONDS == 180
+    assert gs.DEFAULT_GRAPH_LEASE_TTL_SECONDS == 180
+
+
+def test_builder_pool_probe_allows_health_checks_to_finish(monkeypatch) -> None:
+    monkeypatch.setenv("SOLAR_GRAPH_BUILDER_OPERATOR_POOL", "1")
+    observed: dict[str, object] = {}
+
+    def fake_run(*args, **kwargs):
+        observed["args"] = args
+        observed["timeout"] = kwargs.get("timeout")
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps({"total_policy_available": 2}),
+            stderr="",
+        )
+
+    monkeypatch.setattr(gnd.subprocess, "run", fake_run)
+
+    assert gnd._builder_operator_pool_available_count() == 2
+    assert observed["timeout"] == 30
 
 
 def test_planner_operator_alternatives_are_forwarded_in_declared_order() -> None:
@@ -946,6 +971,7 @@ def test_reconcile_recoverable_pane_blocker_requeues_pending(monkeypatch, tmp_pa
 def test_assigned_recoverable_pane_unavailable_does_not_cooldown(monkeypatch) -> None:
     marked: list[tuple[str, str, str, bool]] = []
     retryable: list[tuple[str, str]] = []
+    released: list[tuple[str, str, str]] = []
 
     item = {
         "sprint_id": "sprint-test",
@@ -963,6 +989,11 @@ def test_assigned_recoverable_pane_unavailable_does_not_cooldown(monkeypatch) ->
     monkeypatch.setattr(gnd, "_graph_node_runtime_state", lambda graph_path, node_id: {"status": "pending"})
     monkeypatch.setattr(gnd, "_pane_exists", lambda pane: True)
     monkeypatch.setattr(gnd, "_assigned_pane_unavailable_reason", lambda pane: "queued_prompt_residue")
+    monkeypatch.setattr(
+        gnd,
+        "release_lease",
+        lambda pane, dispatch_id, reason: released.append((pane, dispatch_id, reason)),
+    )
     monkeypatch.setattr(gnd, "_mark_pane_recover_cooldown", lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not cooldown")))
     monkeypatch.setattr(gnd, "_mark_pane_recover_retryable", lambda pane, reason, **kw: retryable.append((pane, reason)))
     monkeypatch.setattr(
@@ -985,6 +1016,11 @@ def test_assigned_recoverable_pane_unavailable_does_not_cooldown(monkeypatch) ->
     assert result["unavailable_reason"] == "queued_prompt_residue"
     assert marked == [("/tmp/sprint-test.task_graph.json", "N1", "pending", True)]
     assert retryable == [("solar-harness-lab:0.3", "assigned_pane_unavailable:queued_prompt_residue")]
+    assert released == [(
+        "solar-harness-lab:0.3",
+        "dispatch-N1",
+        "graph_dispatch_assigned_pane_unavailable:queued_prompt_residue",
+    )]
 
 
 def test_dispatch_queue_item_dry_run_does_not_reset_busy_active_node(monkeypatch, tmp_path) -> None:
@@ -1200,6 +1236,7 @@ def test_worker_discovery_marks_multi_task_shell_unavailable(monkeypatch) -> Non
     monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "zsh")
     monkeypatch.setattr(gnd, "_pane_tail", lambda pane, lines=80: "zsh% ")
     monkeypatch.setattr(gnd, "_pane_health", lambda pane: {})
+    monkeypatch.setattr(gnd, "_pane_hygiene_unavailable_reason", lambda pane: "")
     monkeypatch.setattr(gnd, "_pane_unavailable_reason", lambda pane: "")
     monkeypatch.setattr(gnd, "_pane_runtime_unavailable_reason", lambda pane, title="": "")
     monkeypatch.setattr(gnd, "_pane_tui_busy", lambda pane: False)
@@ -1211,8 +1248,56 @@ def test_worker_discovery_marks_multi_task_shell_unavailable(monkeypatch) -> Non
     assert workers[0]["unavailable_reason"] == "multi_task_shell_not_direct_worker"
 
 
+def test_worker_discovery_routes_around_needs_respawn_to_operator_pool(monkeypatch) -> None:
+    cockpit = "solar-harness:0.2"
+    pool = "operator-pool:builder.0"
+    monkeypatch.setattr(
+        gnd.subprocess,
+        "check_output",
+        lambda *a, **kw: b"solar-harness:0.2\tBuilder | model:gpt-5.5\n",
+    )
+    monkeypatch.setattr(gnd, "_recover_hung_pane", lambda *a, **kw: False)
+    monkeypatch.setattr(gnd, "_pane_current_command", lambda pane: "codex")
+    monkeypatch.setattr(gnd, "_pane_tail", lambda pane, lines=80: "Ask Codex to do anything")
+    monkeypatch.setattr(gnd, "_pane_health", lambda pane: {})
+    monkeypatch.setattr(gnd, "_pane_hygiene_unavailable_reason", lambda pane: "pane_hygiene_needs_respawn")
+    monkeypatch.setattr(gnd, "_pane_cooldown_reason", lambda pane: "")
+    monkeypatch.setattr(gnd, "_pane_runtime_unavailable_reason", lambda pane, title="": "")
+    monkeypatch.setattr(gnd, "_pane_unavailable_reason", lambda pane: "")
+    monkeypatch.setattr(gnd, "_pane_has_active_lease", lambda pane: False)
+    monkeypatch.setattr(gnd, "_pane_tui_busy", lambda pane: False)
+    monkeypatch.setattr(
+        gnd,
+        "_builder_operator_pool_workers",
+        lambda skills, capabilities: [{
+            "pane": pool,
+            "models": ["gpt-5.5"],
+            "skills": skills,
+            "capabilities": capabilities,
+            "role": "builder",
+            "dispatch_role": "builder",
+            "host_role": "operator_pool",
+            "busy": False,
+            "unavailable_reason": "",
+            "load": 0,
+        }],
+    )
+
+    workers = gnd._discover_workers(dry_run=False)
+    by_pane = {worker["pane"]: worker for worker in workers}
+    assignment = gs.assign_workers(
+        [{"id": "R1", "dispatch_role": "builder", "required_skills": [], "required_capabilities": []}],
+        workers,
+    )
+
+    assert by_pane[cockpit]["unavailable_reason"] == "pane_hygiene_needs_respawn"
+    assert by_pane[cockpit]["busy"] is True
+    assert assignment["assigned"][0]["pane"] == pool
+
+
 def test_dispatch_queue_item_retries_when_assigned_pane_later_hits_quota(monkeypatch) -> None:
     marked: list[tuple[str, str, str, bool]] = []
+    released: list[tuple[str, str, str]] = []
 
     item = {
         "sprint_id": "sprint-test",
@@ -1232,6 +1317,11 @@ def test_dispatch_queue_item_retries_when_assigned_pane_later_hits_quota(monkeyp
     monkeypatch.setattr(gnd, "_assigned_pane_unavailable_reason", lambda pane: "rate_limit_or_api_error")
     monkeypatch.setattr(
         gnd,
+        "release_lease",
+        lambda pane, dispatch_id, reason: released.append((pane, dispatch_id, reason)),
+    )
+    monkeypatch.setattr(
+        gnd,
         "_mark_graph_node",
         lambda graph_path, node_id, status, clear_assignment=False: marked.append(
             (graph_path, node_id, status, clear_assignment)
@@ -1249,6 +1339,11 @@ def test_dispatch_queue_item_retries_when_assigned_pane_later_hits_quota(monkeyp
     assert result["reason"] == "assigned_pane_unavailable_retry_later"
     assert result["unavailable_reason"] == "rate_limit_or_api_error"
     assert marked == [("/tmp/sprint-test.task_graph.json", "N1", "pending", True)]
+    assert released == [(
+        "solar-harness-lab:0.3",
+        "dispatch-N1",
+        "graph_dispatch_assigned_pane_unavailable:rate_limit_or_api_error",
+    )]
 
 
 def test_evaluator_discovery_ignores_expired_lease(monkeypatch) -> None:

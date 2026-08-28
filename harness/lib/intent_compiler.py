@@ -159,8 +159,12 @@ class CodexJsonModel:
                 f"{self.provider} model call timed out after {self.timeout_seconds}s"
             ) from exc
         if process.returncode != 0:
+            detail = " ".join(
+                str(process.stderr or process.stdout or "").strip().split()
+            )[-2000:]
             raise IntentCompilerError(
                 f"{self.provider} model call failed with exit {process.returncode}"
+                + (f": {detail}" if detail else "")
             )
         if not output_path.exists():
             raise IntentCompilerError(f"{self.provider} model call produced no structured output")

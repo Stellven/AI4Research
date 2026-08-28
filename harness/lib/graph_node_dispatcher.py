@@ -61,6 +61,34 @@ except Exception:  # Observability must never become a graph dependency.
 # HARNESS_SPRINTS_DIR override matches graph_scheduler:49 (round-4 G7).
 SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR") or (HARNESS_DIR / "sprints"))
 
+
+def _default_graph_lease_ttl_seconds() -> int:
+    """Keep a failed DAG assignment from reserving capacity for too long."""
+    try:
+        return max(
+            30,
+            int(os.environ.get("SOLAR_GRAPH_LEASE_TTL_SECONDS", "180") or "180"),
+        )
+    except (TypeError, ValueError):
+        return 180
+
+
+DEFAULT_GRAPH_LEASE_TTL_SECONDS = _default_graph_lease_ttl_seconds()
+
+
+def _builder_pool_status_timeout_seconds() -> int:
+    """Allow the policy-aware pool probe to finish its health checks."""
+    try:
+        return max(
+            5,
+            int(os.environ.get("SOLAR_BUILDER_POOL_STATUS_TIMEOUT_SECONDS", "30") or "30"),
+        )
+    except (TypeError, ValueError):
+        return 30
+
+
+BUILDER_POOL_STATUS_TIMEOUT_SECONDS = _builder_pool_status_timeout_seconds()
+
 try:  # Lane 3 gate ledger (R4/R5); optional so a partial install never breaks dispatch
     import gate_ledger as _gate_ledger
 except Exception:  # pragma: no cover
@@ -583,11 +611,14 @@ def _snapshot_row_material(row: dict[str, Any]) -> dict[str, Any]:
         for key in (
             "scope",
             "authority",
+            "source_authority",
             "declared",
             "path",
+            "published_path",
             "owner_node_id",
             "publish_sidecar",
             "expected_publish_sha256",
+            "frozen_from_sha256",
             "exists",
             "kind",
             "size",
@@ -760,13 +791,58 @@ def _published_read_snapshot(
     if relative is None:
         return None, []
     destination = (workspace / relative).resolve(strict=False)
+    all_manifest_rows = [
+        item for item in (manifest.get("rows") or []) if isinstance(item, dict)
+    ]
     manifest_rows = [
         item
-        for item in (manifest.get("rows") or [])
-        if isinstance(item, dict)
-        and _workspace_relative_scope(sid, str(item.get("declared") or "")) == relative
+        for item in all_manifest_rows
+        if _workspace_relative_scope(sid, str(item.get("declared") or "")) == relative
     ]
-    if len(manifest_rows) != 1:
+    manifest_row: dict[str, Any] | None = None
+    manifest_entry: dict[str, Any] | None = None
+    if len(manifest_rows) == 1:
+        manifest_row = manifest_rows[0]
+    elif not manifest_rows:
+        # A producer commonly owns and publishes a directory while a
+        # downstream node declares one file inside it.  The directory
+        # manifest is still the byte authority for that file; requiring an
+        # additional exact file row rejects valid published outputs (R3 -> R4
+        # report compilation).  Resolve the most-specific enclosing directory
+        # and bind the read to its exact, hashed child entry.
+        enclosing: list[tuple[int, dict[str, Any], dict[str, Any]]] = []
+        for candidate in all_manifest_rows:
+            if str(candidate.get("kind") or "") != "directory":
+                continue
+            candidate_relative = _workspace_relative_scope(
+                sid, str(candidate.get("declared") or "")
+            )
+            if candidate_relative is None:
+                continue
+            try:
+                child_relative = relative.relative_to(candidate_relative)
+            except ValueError:
+                continue
+            if not child_relative.parts:
+                continue
+            child_entries = [
+                entry
+                for entry in (candidate.get("entries") or [])
+                if isinstance(entry, dict)
+                and entry.get("kind") == "file"
+                and Path(str(entry.get("rel_path") or "")) == child_relative
+            ]
+            if len(child_entries) == 1:
+                enclosing.append(
+                    (len(candidate_relative.parts), candidate, child_entries[0])
+                )
+        if enclosing:
+            enclosing.sort(key=lambda item: item[0], reverse=True)
+            most_specific = enclosing[0][0]
+            best = [item for item in enclosing if item[0] == most_specific]
+            if len(best) == 1:
+                _, manifest_row, manifest_entry = best[0]
+    if manifest_row is None:
         return None, [
             {
                 "code": "PUBLISHED_READ_AUTHORITY_MISSING",
@@ -775,9 +851,8 @@ def _published_read_snapshot(
                 "publish_sidecar": str(sidecar),
             }
         ]
-    manifest_row = manifest_rows[0]
-    expected_kind = str(manifest_row.get("kind") or "")
-    expected_sha = str(manifest_row.get("sha256") or "")
+    expected_kind = str((manifest_entry or manifest_row).get("kind") or "")
+    expected_sha = str((manifest_entry or manifest_row).get("sha256") or "")
     if not re.fullmatch(r"[0-9a-f]{64}", expected_sha):
         return None, [
             {
@@ -866,6 +941,109 @@ def _published_read_snapshot(
             }
         )
     return row, violations
+
+
+def _freeze_published_eval_row(
+    sid: str,
+    node_id: str,
+    generation: int,
+    row: dict[str, Any],
+    *,
+    persist: bool,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Copy trusted published bytes into evaluator-readable immutable storage.
+
+    Published workspaces may live outside the evaluator sandbox (notably a
+    WSL process reading a Windows-mounted research workspace).  The scheduler
+    has already verified the publication receipt and hashes, so it freezes
+    those exact bytes beside the sprint control artifacts before dispatch.
+    Evaluators read this copy instead of crossing the producer sandbox.
+    """
+    source = Path(str(row.get("path") or "")).expanduser()
+    expected_sha = str(row.get("expected_publish_sha256") or row.get("sha256") or "")
+    expected_kind = str(row.get("kind") or "")
+    # Keep the frozen path deliberately short.  Windows still enforces the
+    # legacy MAX_PATH boundary in some Python/filesystem combinations, and a
+    # full sprint/node/hash hierarchy can exceed it inside pytest or a deeply
+    # nested checkout.  The content-addressed token retains collision safety.
+    token_material = json.dumps(
+        {
+            "sid": sid,
+            "node_id": node_id,
+            "generation": generation,
+            "declared": str(row.get("declared") or ""),
+            "sha256": expected_sha,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    token = hashlib.sha256(token_material).hexdigest()[:24]
+    bucket = SPRINTS_DIR / ".e"
+    suffix = source.suffix if expected_kind == "file" else ""
+    target = bucket / f"{token}{suffix}"
+    violations: list[dict[str, Any]] = []
+    if persist and not target.exists():
+        try:
+            bucket.mkdir(parents=True, exist_ok=True)
+            if expected_kind == "file":
+                fd, temporary_name = tempfile.mkstemp(prefix=".eval-copy-", dir=bucket)
+                os.close(fd)
+                temporary = Path(temporary_name)
+                try:
+                    shutil.copy2(source, temporary)
+                    os.replace(temporary, target)
+                finally:
+                    temporary.unlink(missing_ok=True)
+            elif expected_kind == "directory":
+                temporary_root = Path(tempfile.mkdtemp(prefix=".eval-copy-", dir=bucket))
+                temporary = temporary_root / "artifact"
+                try:
+                    shutil.copytree(source, temporary)
+                    temporary.replace(target)
+                finally:
+                    shutil.rmtree(temporary_root, ignore_errors=True)
+            else:
+                raise ValueError(f"unsupported published artifact kind: {expected_kind!r}")
+        except Exception as exc:
+            violations.append(
+                {
+                    "code": "EVAL_SNAPSHOT_FREEZE_FAILED",
+                    "declared": str(row.get("declared") or ""),
+                    "published_path": str(source),
+                    "frozen_path": str(target),
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            )
+
+    frozen = {
+        **row,
+        "authority": "published_frozen",
+        "source_authority": "published",
+        "published_path": str(source),
+        "path": str(target),
+        "resolved_root": "eval_snapshot_bytes",
+        "frozen_from_sha256": expected_sha,
+        **_artifact_manifest.snapshot_path(target, root=SPRINTS_DIR),
+    }
+    if (
+        frozen.get("unsafe")
+        or not frozen.get("exists")
+        or str(frozen.get("kind") or "") != expected_kind
+        or str(frozen.get("sha256") or "") != expected_sha
+    ):
+        violations.append(
+            {
+                "code": "EVAL_SNAPSHOT_FROZEN_CONTENT_MISMATCH",
+                "declared": str(row.get("declared") or ""),
+                "published_path": str(source),
+                "frozen_path": str(target),
+                "expected_kind": expected_kind,
+                "actual_kind": str(frozen.get("kind") or ""),
+                "expected_sha256": expected_sha,
+                "actual_sha256": str(frozen.get("sha256") or ""),
+            }
+        )
+    return frozen, violations
 
 
 def _capture_eval_artifact_snapshot(
@@ -1086,6 +1264,14 @@ def _capture_eval_artifact_snapshot(
             violations.extend(published_violations)
             if published_row is None:
                 continue
+            published_row, freeze_violations = _freeze_published_eval_row(
+                sid,
+                node_id,
+                _node_repair_attempts(node),
+                published_row,
+                persist=persist,
+            )
+            violations.extend(freeze_violations)
             rows.append(published_row)
             if (
                 staging_row.get("exists")
@@ -2284,24 +2470,12 @@ def _risk_tier_for_node(node: dict[str, Any]) -> str:
 
 
 def _evaluation_mode_required_evaluators(mode: str) -> int:
-    return {
-        "single": 1,
-        "staged": 1,
-        "dual": 2,
-        "committee": 3,
-    }.get(mode, 1)
+    # Solar uses deterministic acceptance aggregation around one independent
+    # model review.  A planner cannot buy quorum by changing review_mode.
+    return 1
 
 
 def _default_evaluation_mode(node: dict[str, Any]) -> str:
-    task_type = _node_task_type(node)
-    risk_tier = _risk_tier_for_node(node)
-    verifier_required = bool(node.get("verifier_required")) or bool(_evaluation_selector(node).get("verifier_required"))
-    if task_type == "SECURITY_SENSITIVE" or risk_tier == "critical":
-        return "committee"
-    if task_type in {"ARCH_DESIGN", "ACADEMIC_CRITIQUE"}:
-        return "dual"
-    if verifier_required or task_type in {"CODE_IMPL", "MULTI_FILE_REFACTOR", "TEST_GEN", "TEST_RUN", "DOC_REPORT", "ROOT_CAUSE_DEBUG", "SOFT_HW_OPT"}:
-        return "staged"
     return "single"
 
 
@@ -2325,12 +2499,14 @@ def _evaluation_evidence_requirements(node: dict[str, Any], mode: str) -> list[s
 
 def _normalized_evaluation_plan(plan: dict[str, Any], node: dict[str, Any], source: str) -> dict[str, Any]:
     raw_mode = str(plan.get("review_mode") or "").strip().lower()
-    mode = raw_mode if raw_mode in EVALUATION_REVIEW_MODES else _default_evaluation_mode(node)
+    requested_mode = raw_mode if raw_mode in EVALUATION_REVIEW_MODES else _default_evaluation_mode(node)
     raw_required = plan.get("required_evaluators")
     try:
-        required_evaluators = max(1, int(raw_required)) if raw_required is not None else _evaluation_mode_required_evaluators(mode)
+        requested_required = max(1, int(raw_required)) if raw_required is not None else _evaluation_mode_required_evaluators(requested_mode)
     except Exception:
-        required_evaluators = _evaluation_mode_required_evaluators(mode)
+        requested_required = _evaluation_mode_required_evaluators(requested_mode)
+    mode = "single"
+    required_evaluators = 1
     evaluator_classes = plan.get("evaluator_classes")
     if isinstance(evaluator_classes, str):
         evaluator_classes_list = [evaluator_classes] if evaluator_classes else []
@@ -2340,6 +2516,8 @@ def _normalized_evaluation_plan(plan: dict[str, Any], node: dict[str, Any], sour
         evaluator_classes_list = []
     if not evaluator_classes_list:
         evaluator_classes_list = ["Verifier"]
+    else:
+        evaluator_classes_list = evaluator_classes_list[:1]
     independence_policy = plan.get("independence_policy")
     if not isinstance(independence_policy, dict):
         independence_policy = {}
@@ -2347,7 +2525,7 @@ def _normalized_evaluation_plan(plan: dict[str, Any], node: dict[str, Any], sour
         "writer_same_operator": str(independence_policy.get("writer_same_operator") or "denied"),
         "writer_same_provider": str(
             independence_policy.get("writer_same_provider")
-            or ("avoid" if mode in {"dual", "committee"} else "allowed")
+            or "allowed"
         ),
     }
     evidence_requirements = plan.get("evidence_requirements")
@@ -2368,21 +2546,29 @@ def _normalized_evaluation_plan(plan: dict[str, Any], node: dict[str, Any], sour
         escalation = []
     if not escalation:
         escalation = ["HumanReview"] if mode == "committee" else ["Verifier"]
-    parallelizable = bool(plan.get("parallelizable", mode in {"dual", "committee"}))
-    cross_provider_required = bool(plan.get("cross_provider_required", mode in {"dual", "committee"}))
-    return {
+    normalized = {
         "planning_source": source,
         "task_type": _node_task_type(node) or "N/A",
         "risk_tier": _risk_tier_for_node(node),
         "review_mode": mode,
         "required_evaluators": required_evaluators,
         "evaluator_classes": evaluator_classes_list,
-        "parallelizable": parallelizable,
-        "cross_provider_required": cross_provider_required,
+        "parallelizable": False,
+        "cross_provider_required": False,
         "independence_policy": independence_policy,
         "evidence_requirements": evidence_requirements_list,
         "escalation_on_fail": escalation,
     }
+    if requested_mode != "single" or requested_required != 1:
+        normalized.update(
+            {
+                "requested_review_mode": requested_mode,
+                "requested_required_evaluators": requested_required,
+                "policy_normalized": True,
+                "policy_normalization_reason": "single_final_llm_evaluator_ceiling",
+            }
+        )
+    return normalized
 
 
 def _plan_node_evaluation(graph: dict[str, Any], node: dict[str, Any]) -> dict[str, Any]:
@@ -10022,7 +10208,7 @@ def _builder_operator_pool_available_count() -> int:
             ],
             capture_output=True,
             text=True,
-            timeout=8,
+            timeout=BUILDER_POOL_STATUS_TIMEOUT_SECONDS,
             env=_broker_env(),
         )
     except Exception:
@@ -12561,7 +12747,11 @@ def _submit_fixed_research_node_to_operator(
     }, actorhost)
 
 
-def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 900) -> dict[str, Any]:
+def dispatch_queue_item(
+    item: dict[str, Any],
+    dry_run: bool = False,
+    ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS,
+) -> dict[str, Any]:
     payload = item.get("payload") or {}
     sid = payload.get("sprint_id") or item.get("sprint_id") or item.get("sid") or ""
     node = payload.get("node") or {}
@@ -12848,6 +13038,7 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
         )
 
     if not dry_run and not _pane_exists(pane):
+        release_lease(pane, dispatch_id, "graph_dispatch_pane_missing")
         enqueue(sid, item.get("intent", f"graph_node|node_id={node_id}"), item.get("priority", 80), payload)
         _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
         return {"ok": False, "reason": "pane_missing", "node": node_id, "pane": pane, "requeued": True}
@@ -12855,6 +13046,15 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
     if not dry_run:
         unavailable_reason = _assigned_pane_unavailable_reason(pane)
         if unavailable_reason:
+            # enqueue_ready acquires the assignment lease before the queue item
+            # is drained. If the pane becomes unavailable at this boundary,
+            # release it immediately so the next deterministic tick can choose
+            # a healthy operator-pool worker instead of waiting for the TTL.
+            release_lease(
+                pane,
+                dispatch_id,
+                f"graph_dispatch_assigned_pane_unavailable:{unavailable_reason}",
+            )
             marker = _mark_pane_recover_retryable if _recoverable_pane_blocker(unavailable_reason) else _mark_pane_recover_cooldown
             marker(pane, f"assigned_pane_unavailable:{unavailable_reason}", sid=sid, dispatch_id=dispatch_id)
             _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
@@ -12999,7 +13199,12 @@ STALE_GRAPH_QUEUE_REASONS = {
 }
 
 
-def drain_queue(sprint_id: str, dry_run: bool = False, max_items: int = 0, ttl: int = 900) -> dict[str, Any]:
+def drain_queue(
+    sprint_id: str,
+    dry_run: bool = False,
+    max_items: int = 0,
+    ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS,
+) -> dict[str, Any]:
     results: list[dict[str, Any]] = []
     processed = 0
     dispatch_attempts = 0
@@ -13184,7 +13389,8 @@ def _discover_workers(dry_run: bool = False) -> list[dict[str, Any]]:
         current_command = _pane_current_command(pane)
         runtime_unavailable_reason = "" if cooldown_reason else _pane_runtime_unavailable_reason(pane, title)
         unavailable_reason = (
-            cooldown_reason
+            _pane_hygiene_unavailable_reason(pane)
+            or cooldown_reason
             or
             _multi_task_direct_dispatch_unavailable_reason(pane, current_command=current_command)
             or runtime_unavailable_reason
@@ -14117,7 +14323,7 @@ def _maybe_execute_contract_gate(graph: dict[str, Any], sid: str, node: dict[str
     }
 
 
-def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: int = 900,
+def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS,
                                   force: bool = False, max_items: int = 0) -> dict[str, Any]:
     graph = load_graph(graph_path)
     sid = str(graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", ""))
@@ -14689,8 +14895,22 @@ def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: i
         if str(item.get("reason") or "") in _EVAL_WAIT_REASONS
     ]
     blocking_skips = [item for item in skipped if item not in waiting]
+    status_sync: dict[str, Any] = {}
     if not dry_run:
         save_graph(graph_path, graph)
+        # Eval dispatch can itself move a node into needs_human_review (for
+        # example when the immutable artifact snapshot is invalid).  Project
+        # that transition immediately; waiting for the separate ready-node
+        # tick leaves the GUI parent status stale at active/planning_complete.
+        try:
+            status_sync = sync_status_cache_from_graph(
+                graph,
+                graph_path,
+                actor="graph_node_dispatcher",
+                event="eval_dispatch_projection",
+            )
+        except Exception as exc:
+            status_sync = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
     return {
         # A still-running Builder is normal prerequisite backpressure.  The
         # evaluator has not failed to dispatch yet; it is simply not eligible
@@ -14703,10 +14923,15 @@ def _dispatch_node_evals_unlocked(graph_path: str, dry_run: bool = False, ttl: i
         "waiting": waiting,
         "blocking_skips": blocking_skips,
         "terminalized": terminalized,
+        "status_sync": {
+            key: status_sync.get(key)
+            for key in ("ok", "updated", "reason", "error")
+            if key in status_sync
+        },
     }
 
 
-def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = 900,
+def dispatch_node_evals(graph_path: str, dry_run: bool = False, ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS,
                         force: bool = False, max_items: int = 0) -> dict[str, Any]:
     """Claim and submit evaluator work as one collision-free graph transaction.
 
@@ -14873,12 +15098,21 @@ def _enrich_dispatch_graph_if_mutable(
         return graph
 
 
-def _dispatch_ready_unlocked(graph_path: str, dry_run: bool = False, ttl: int = 900,
+def _dispatch_ready_unlocked(graph_path: str, dry_run: bool = False, ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS,
                              max_parallel: int | None = None) -> dict[str, Any]:
     if _no_dispatch_enabled() and not dry_run:
         return {"ok": False, "reason": "no_dispatch_flag", "graph": graph_path, "enqueue": {}, "drain": {}}
     graph = load_graph(graph_path)
     sid = graph.get("sprint_id") or Path(graph_path).stem.replace(".task_graph", "")
+    if graph.get("proposal_only") is True or graph.get("runtime_handoff_allowed") is False:
+        return {
+            "ok": True,
+            "status": "dispatch_forbidden",
+            "reason": "runtime_handoff_forbidden",
+            "graph": graph_path,
+            "enqueue": {"ok": True, "enqueued": []},
+            "drain": {"ok": True, "processed": 0, "results": []},
+        }
     fixed_guard = _fixed_research_specialization_guard(graph)
     if fixed_guard is not None:
         return {**fixed_guard, "graph": graph_path, "enqueue": {}, "drain": {}}
@@ -15062,7 +15296,7 @@ def _release_scheduler_tick_lock(handle: Any) -> None:
         handle.close()
 
 
-def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = 900,
+def dispatch_ready(graph_path: str, dry_run: bool = False, ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS,
                    max_parallel: int | None = None) -> dict[str, Any]:
     """Run one collision-free scheduler tick for a graph.
 
@@ -15575,7 +15809,7 @@ def _finalize_node_pass(
 
 
 def _node_verdict_unlocked(graph_path: str, node_id: str, verdict: str, reason: str = "",
-                           eval_json: str = "", dry_run: bool = False, ttl: int = 900,
+                           eval_json: str = "", dry_run: bool = False, ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS,
                            dispatch_downstream: bool = True,
                            verdict_kind: str = "") -> dict[str, Any]:
     graph = load_graph(graph_path)
@@ -15952,7 +16186,7 @@ def _node_verdict_unlocked(graph_path: str, node_id: str, verdict: str, reason: 
 
 
 def node_verdict(graph_path: str, node_id: str, verdict: str, reason: str = "",
-                 eval_json: str = "", dry_run: bool = False, ttl: int = 900,
+                 eval_json: str = "", dry_run: bool = False, ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS,
                  dispatch_downstream: bool = True, verdict_kind: str = "") -> dict[str, Any]:
     """Persist an evaluator verdict without racing a scheduler graph refresh.
 
@@ -16014,18 +16248,18 @@ def main() -> int:
     p.add_argument("--sprint", required=True)
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--max-items", type=int, default=0)
-    p.add_argument("--ttl", type=int, default=900)
+    p.add_argument("--ttl", type=int, default=DEFAULT_GRAPH_LEASE_TTL_SECONDS)
 
     p = sub.add_parser("dispatch-ready")
     p.add_argument("--graph", required=True)
     p.add_argument("--dry-run", action="store_true")
-    p.add_argument("--ttl", type=int, default=900)
+    p.add_argument("--ttl", type=int, default=DEFAULT_GRAPH_LEASE_TTL_SECONDS)
     p.add_argument("--max-parallel", type=int, default=None)
 
     p = sub.add_parser("dispatch-evals")
     p.add_argument("--graph", required=True)
     p.add_argument("--dry-run", action="store_true")
-    p.add_argument("--ttl", type=int, default=900)
+    p.add_argument("--ttl", type=int, default=DEFAULT_GRAPH_LEASE_TTL_SECONDS)
     p.add_argument("--force", action="store_true")
     p.add_argument("--max-items", type=int, default=0)
 
@@ -16036,7 +16270,7 @@ def main() -> int:
     p.add_argument("--reason", default="")
     p.add_argument("--eval-json", default="")
     p.add_argument("--dry-run", action="store_true")
-    p.add_argument("--ttl", type=int, default=900)
+    p.add_argument("--ttl", type=int, default=DEFAULT_GRAPH_LEASE_TTL_SECONDS)
     p.add_argument("--no-dispatch-downstream", action="store_true")
 
     p = sub.add_parser("resume-human-review")

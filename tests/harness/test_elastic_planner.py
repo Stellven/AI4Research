@@ -969,6 +969,9 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
     assert "include `execute` whenever a required capsule ABI lists `execute`" in payload[
         "instruction"
     ]
+    assert "at most one logical Critic, Verifier, or Evaluator node" in payload[
+        "instruction"
+    ]
     experiment_check = next(
         row
         for row in payload["evaluation_check_abis"]
@@ -1519,11 +1522,82 @@ def test_direct_response_stops_without_plan_or_runtime_handoff(tmp_path: Path) -
 
     assert result["plan_ir"] is None
     assert result["direct_response"]["answer"]
+    assert result["planning_decision"]["producer"]["role"] == "planner"
+    assert result["planning_decision"]["producer"]["component"] == "elastic_planner"
+    assert result["direct_response"]["producer"]["role"] == "planner"
+    assert result["direct_response"]["producer"]["component"] == "elastic_planner"
     assert result["direct_response_review"]["status"] == "pass"
+    assert result["direct_response_review"]["reviewer"]["role"] == "evaluator"
+    assert (
+        result["direct_response_review"]["reviewer"]["component"]
+        == "direct_response_reviewer"
+    )
     assert result["plan_acceptance"]["decision"] == "direct_response"
     assert result["plan_acceptance"]["runtime_handoff_allowed"] is False
     assert planner.PLAN_BODY_SCHEMA.name not in planner_model.calls
     assert planner.verify_semantic_planning_chain(tmp_path) == []
+
+
+def test_authoritative_direct_answer_route_is_planner_policy_not_compiler_answer(
+    tmp_path: Path,
+) -> None:
+    requirement_ir = _requirement_ir()
+    requirement_ir.update(
+        {
+            "request_type": "direct_answer",
+            "planner_hints": {
+                "preferred_outcome": "direct_answer",
+                "runtime_handoff_allowed": False,
+                "response_authority": "planner",
+            },
+        }
+    )
+    planner_model = ScriptedModel()
+
+    result = planner.run_semantic_planning_pipeline(
+        requirement_ir,
+        tmp_path,
+        planner_model,
+        ScriptedModel(),
+        catalog=_catalog(),
+    )
+
+    assert result["planning_decision"]["decision"] == "direct_response"
+    assert result["planning_decision"]["producer"] == {
+        "method": "policy",
+        "provider": "solar",
+        "model": "planner-direct-route-v1",
+        "role": "planner",
+        "component": "elastic_planner",
+    }
+    assert planner.DECISION_BODY_SCHEMA.name not in planner_model.calls
+    assert planner_model.calls.count(planner.DIRECT_RESPONSE_BODY_SCHEMA.name) == 1
+    assert result["plan_acceptance"]["runtime_handoff_allowed"] is False
+
+
+def test_generated_plan_rejects_multiple_llm_evaluator_nodes() -> None:
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir)
+    body = _plan_body()
+    first = body["nodes"][0]
+    first["logical_operator"] = "Critic"
+    second = copy.deepcopy(first)
+    second["node_id"] = "final_verifier"
+    second["logical_operator"] = "Verifier"
+    second["depends_on"] = [first["node_id"]]
+    body["nodes"].append(second)
+    plan_ir = _wrapped_plan(requirement_ir, decision, body)
+
+    validation = planner.validate_plan_ir(
+        requirement_ir,
+        decision,
+        plan_ir,
+        _catalog(),
+    )
+
+    assert "MULTIPLE_LLM_EVALUATOR_NODES" in {
+        row["code"] for row in validation["errors"]
+    }
 
 
 def test_direct_response_has_one_bounded_repair(tmp_path: Path) -> None:

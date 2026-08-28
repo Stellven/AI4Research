@@ -27,6 +27,8 @@ from typing import Any
 
 from executable_node import dispatch_role as executable_dispatch_role
 from prerequisite_resolver import evaluate_prerequisite, iter_blocked
+from task_lifecycle import ACTIVE_TASK_STATUSES as ACTIVE_EXECUTION_ATTEMPT_STATUSES
+from task_lifecycle import current_execution_attempt
 
 try:  # Lane 3 gate ledger (R4); optional so a partial install never breaks scheduling
     import gate_ledger as _gate_ledger
@@ -51,6 +53,13 @@ HUMAN_REVIEW_STATUS = "needs_human_review"
 HUMAN_REVIEW_SCHEMA_VERSION = "solar.human_review.v1"
 HUMAN_REVIEW_HISTORY_LIMIT = 20
 SPRINTS_DIR = Path(os.environ.get("HARNESS_SPRINTS_DIR", HARNESS_DIR / "sprints"))
+try:
+    DEFAULT_GRAPH_LEASE_TTL_SECONDS = max(
+        30,
+        int(os.environ.get("SOLAR_GRAPH_LEASE_TTL_SECONDS", "180") or "180"),
+    )
+except (TypeError, ValueError):
+    DEFAULT_GRAPH_LEASE_TTL_SECONDS = 180
 RUNTIME_NODE_SPEC_FIELDS = {
     "assigned_to",
     "blocking_reason",
@@ -767,6 +776,16 @@ def sync_status_cache_from_graph(
     status UI, exports, and old monitors. Keeping this projection in the same
     write path as graph closeout prevents a passed DAG from looking active.
     """
+    if graph.get("proposal_only") is True or graph.get("runtime_handoff_allowed") is False:
+        return {
+            "ok": True,
+            "updated": False,
+            "created": False,
+            "sprint_id": _sprint_id_for_graph(graph, graph_path),
+            "status_path": str(_status_path_for_graph(graph, graph_path)),
+            "reason": "runtime_handoff_forbidden",
+            "parent": {"ready": False, "open_nodes": [], "failed_nodes": []},
+        }
     # Once the split runtime plane exists, it is authoritative for node/gate
     # status.  Some callers retain a specification-only graph object across a
     # save, so calculating parent readiness from that stale object falsely
@@ -1774,6 +1793,19 @@ def node_recorded_status(graph: dict[str, Any], node_id: str) -> str:
         status = "passed"
     else:
         status = str(node.get("status", "pending") or "pending").lower()
+    # PM/operator submission authority lives in execution_attempt.  A process
+    # timeout or a concurrent legacy projection can leave the inline status at
+    # pending after the physical operator has already accepted the task.  Do
+    # not advertise that node as ready again and dispatch duplicate work.
+    if status in READY_STATUSES:
+        attempt = current_execution_attempt(node)
+        attempt_status = str((attempt or {}).get("status") or "").strip().lower()
+        if attempt_status in ACTIVE_EXECUTION_ATTEMPT_STATUSES:
+            status = (
+                "running"
+                if attempt_status in {"in_progress", "leased", "processing", "running", "started"}
+                else "dispatched"
+            )
     return status
 
 
@@ -2046,6 +2078,7 @@ def node_admission_status(graph: dict[str, Any], node_id: str) -> dict[str, Any]
         if (
             dep in ids
             and node_status(graph, dep) == HUMAN_REVIEW_STATUS
+            and not _human_review_is_integrity_block(graph, ids.get(dep))
             and not _human_review_blocks_dependents(graph, ids.get(dep))
         ):
             nonblocking_human_review.append(dep)
@@ -2101,6 +2134,7 @@ def ready_nodes(graph: dict[str, Any]) -> list[dict[str, Any]]:
                 # silent pending wedge (an R7 violation).
                 dep in ids
                 and node_status(graph, dep) == "needs_human_review"
+                and not _human_review_is_integrity_block(graph, ids.get(dep))
                 and not _human_review_blocks_dependents(graph, ids.get(dep))
             )
             for dep in deps
@@ -3275,6 +3309,24 @@ def commit_human_review_resume(
     }
 
 
+def _human_review_is_integrity_block(graph: dict[str, Any], dep_node: dict[str, Any]) -> bool:
+    """Whether a human-review dependency contains unverified artifact bytes."""
+    dep_id = str((dep_node or {}).get("id") or "")
+    result = _node_results(graph).get(dep_id)
+    review = _human_review_record(
+        dep_node or {},
+        result if isinstance(result, dict) else None,
+    )
+    integrity_reasons = {
+        str((dep_node or {}).get("eval_blocked_reason") or ""),
+        str(review.get("reason") or ""),
+        str((result or {}).get("note") or "") if isinstance(result, dict) else "",
+    }
+    return isinstance((dep_node or {}).get("eval_integrity_block"), dict) or any(
+        reason.startswith("eval_integrity_block:") for reason in integrity_reasons
+    )
+
+
 def _human_review_blocks_dependents(graph: dict[str, Any], dep_node: dict[str, Any]) -> bool:
     """Per-node on_human_review policy consult (design §2 change 2 / review 7.2).
 
@@ -3284,6 +3336,7 @@ def _human_review_blocks_dependents(graph: dict[str, Any], dep_node: dict[str, A
     policy) keeps the legacy behavior. Off the contracted path, needs_human_review
     always blocks — the global DEPENDENCY_BLOCK_STATUSES set is untouched.
     """
+
     if _gate_ledger is None:
         return True
     try:
@@ -3300,8 +3353,14 @@ def _dependency_blocks(graph: dict[str, Any], ids: dict[str, Any], dep_id: str) 
     dep_status = node_status(graph, dep_id)
     if dep_status not in DEPENDENCY_BLOCK_STATUSES:
         return False
-    if dep_status == "needs_human_review" and not _human_review_blocks_dependents(graph, ids.get(dep_id)):
-        return False
+    if dep_status == "needs_human_review":
+        # Integrity review is recoverable after the authoritative bytes are
+        # restored. Keep dependents pending rather than terminalizing them;
+        # dispatch readiness below still fails closed until explicit resume.
+        if _human_review_is_integrity_block(graph, ids.get(dep_id)):
+            return False
+        if not _human_review_blocks_dependents(graph, ids.get(dep_id)):
+            return False
     return True
 
 
@@ -3758,7 +3817,7 @@ def _enforce_contract_capsule_authority(graph: dict[str, Any], node: dict[str, A
 
 def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str, Any]],
                   max_parallel: int | None = None, lease: bool = False,
-                  ttl: int = 600, dry_run: bool = False) -> dict[str, Any]:
+                  ttl: int = DEFAULT_GRAPH_LEASE_TTL_SECONDS, dry_run: bool = False) -> dict[str, Any]:
     """Assign ready graph nodes and enqueue them as old-control-plane payloads.
 
     This is the compatibility bridge: graph scheduler decides what is safe to
@@ -4078,6 +4137,21 @@ def parent_ready_check(graph: dict[str, Any]) -> dict[str, Any]:
         if node_status(graph, node_id) == HUMAN_REVIEW_STATUS
     ]
     terminal_blocker_nodes = set(failed_nodes) | set(human_review_nodes)
+    # A pending descendant of a terminal blocker is not runnable work.  Treat
+    # it as transitively blocked when deciding the parent projection, while
+    # leaving the node itself pending so an explicit human resume can continue
+    # the existing DAG.  Without this closure, a graph such as
+    # R4=needs_human_review -> R5=pending leaves the parent falsely "active".
+    changed = True
+    while changed:
+        changed = False
+        for node_id in open_nodes:
+            if node_id in terminal_blocker_nodes:
+                continue
+            dependencies = [str(dep) for dep in (ids[node_id].get("depends_on") or [])]
+            if dependencies and any(dep in terminal_blocker_nodes for dep in dependencies):
+                terminal_blocker_nodes.add(node_id)
+                changed = True
     terminal_status = ""
     if open_nodes and all(node_id in terminal_blocker_nodes for node_id in open_nodes):
         terminal_status = "failed" if failed_nodes else HUMAN_REVIEW_STATUS
@@ -4621,7 +4695,7 @@ def main() -> int:
     p.add_argument("--workers", required=True)
     p.add_argument("--max-parallel", type=int)
     p.add_argument("--lease", action="store_true")
-    p.add_argument("--ttl", type=int, default=600)
+    p.add_argument("--ttl", type=int, default=DEFAULT_GRAPH_LEASE_TTL_SECONDS)
     p.add_argument("--in-place", action="store_true")
 
     p = sub.add_parser("enrich-backlog")

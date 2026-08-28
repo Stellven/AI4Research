@@ -14,6 +14,7 @@ import {
   Circle,
   Clock3,
   Code2,
+  Copy,
   Download,
   Eye,
   EyeOff,
@@ -1543,6 +1544,9 @@ function SessionView({
     projectionData?.phase || currentSprint.phase || currentSprint.status,
   );
   const status = asString(projectionData?.status || currentSprint.status);
+  const originalPrompt = asString(
+    projectionData?.original_prompt || currentSprint.original_prompt,
+  );
   const gateOpen = Boolean(GATE_KINDS[humanActionType]);
   const terminal = isTerminalRun(status, phase);
   const isBlocked = !terminal && isSystemBlocked(stall, humanActionType);
@@ -1601,6 +1605,7 @@ function SessionView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
+            <OriginalPrompt prompt={originalPrompt} />
             <RunOverview
               projection={projection}
               isBlocked={isBlocked}
@@ -1646,6 +1651,77 @@ function SessionView({
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function OriginalPrompt({ prompt }: { prompt: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const isLong = prompt.length > 420 || prompt.split(/\r?\n/).length > 7;
+
+  if (!prompt) return null;
+
+  const copyPrompt = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(prompt);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = prompt;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <section className="original-prompt" data-testid="original-prompt">
+      <div className="original-prompt-head">
+        <div>
+          <span className="original-prompt-label">Original prompt</span>
+          <span className="original-prompt-count">
+            {prompt.length.toLocaleString()} characters
+          </span>
+        </div>
+        <button
+          type="button"
+          className="original-prompt-copy"
+          onClick={() => void copyPrompt()}
+          aria-label="Copy full original prompt"
+        >
+          {copied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <div
+        className={`original-prompt-body ${isLong && !expanded ? "is-collapsed" : ""}`}
+      >
+        {prompt}
+      </div>
+      {isLong && (
+        <button
+          type="button"
+          className="original-prompt-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <ChevronDown
+            size={15}
+            className={expanded ? "is-expanded" : ""}
+            aria-hidden="true"
+          />
+          {expanded ? "Collapse prompt" : "Show full prompt"}
+        </button>
+      )}
+    </section>
   );
 }
 
@@ -2922,7 +2998,9 @@ function RailList({
         {deliverableLabel(item)}
       </span>
       <span className="artifact-meta">
-        {stageLabel(item.stage) || item.kind.toUpperCase()}
+        {item.producer_role
+          ? `${producerRoleLabel(item.producer_role)} · ${item.kind.toUpperCase()}`
+          : stageLabel(item.stage) || item.kind.toUpperCase()}
       </span>
       <ChevronRight size={14} className="artifact-chevron" />
     </button>
@@ -2997,6 +3075,11 @@ const STAGE_LABELS: Record<string, string> = {
 
 function stageLabel(stage?: string): string {
   return stage ? STAGE_LABELS[stage] || "" : "";
+}
+
+function producerRoleLabel(role?: string): string {
+  const normalized = normalizeRole(role);
+  return normalized ? ROLE_META[normalized].title.split(" ")[0] : "Agent";
 }
 
 function formatDeliverableTime(mtime?: number): string {
@@ -3309,10 +3392,11 @@ function buildProcessSteps(
   if (narrative.length > 0) {
     // Authoritative server narrative: already de-noised + de-duplicated. Render it
     // directly instead of reverse-engineering the raw event wall on the client.
-    narrative.forEach((entry, index) => {
+    const compactNarrative = compactNarrativeSteps(narrative);
+    compactNarrative.forEach((entry, index) => {
       const step = processStepFromNarrative(
         entry,
-        index === narrative.length - 1,
+        index === compactNarrative.length - 1,
         runActive,
       );
       if (step) steps.push(step);
@@ -3436,6 +3520,30 @@ function buildProcessSteps(
 
 const PROCESS_EVENT_LIMIT = 28;
 
+function compactNarrativeSteps(entries: NarrativeStep[]): NarrativeStep[] {
+  const seenDispatchStates = new Set<string>();
+  return entries.filter((entry) => {
+    const title = asString(entry.title).toLowerCase();
+    const token = asString(entry.token).toLowerCase();
+    const recurring =
+      token.includes("dispatch") &&
+      (token.includes("fail") ||
+        title.includes("dispatch blocked") ||
+        title.includes("dispatch failed") ||
+        title.includes("dispatch decision"));
+    if (!recurring) return true;
+    const key = [
+      token,
+      asString(entry.node_id),
+      asString(entry.summary),
+      asString(entry.tone),
+    ].join("\u0000");
+    if (seenDispatchStates.has(key)) return false;
+    seenDispatchStates.add(key);
+    return true;
+  });
+}
+
 function isSignificantProcessEvent(event: EventRecord): boolean {
   const u = unwrapEvent(event);
   const type = eventType(u).toLowerCase();
@@ -3475,9 +3583,13 @@ function processStepFromNarrative(
   latest: boolean,
   runActive: boolean,
 ): ProcessStep | null {
-  const title = asString(entry.title);
+  let title = asString(entry.title);
   if (!title) return null;
   const tone = asString(entry.tone, "working");
+  const token = asString(entry.token).toLowerCase();
+  if (title.toLowerCase().includes("dispatch decision") && token.includes("fail")) {
+    title = token.includes("eval") ? "Evaluation dispatch failed" : "Dispatch failed";
+  }
   const node = asString(entry.node_id);
   const actor = asString(entry.role || entry.actor, "Harness");
   const blocked = tone === "blocked";
@@ -3632,6 +3744,10 @@ function processTitle(
     return `${actor} moved the sprint to ${values.phase.replace(/_/g, " ") || "the next phase"}`;
   if (eventType.includes("dispatch") && values.decision.includes("dispatched"))
     return `${actor} routed ${values.node || "work"}${values.target ? ` to ${values.target}` : ""}`;
+  if (eventType.includes("dispatch") && eventType.includes("fail"))
+    return `${eventType.includes("eval") ? "Evaluation dispatch" : "Dispatch"} failed${values.node ? ` for ${values.node}` : ""}`;
+  if (eventType.includes("dispatch") && values.decision.includes("no_matching"))
+    return `Dispatch blocked${values.node ? ` for ${values.node}` : ""}`;
   if (eventType.includes("dispatch"))
     return `${actor} made a dispatch decision`;
   if (eventType.includes("model_session_started"))

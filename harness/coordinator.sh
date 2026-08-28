@@ -69,6 +69,29 @@ SOLAR_COORD_LOCALE="${SOLAR_COORD_LOCALE:-$(solar_choose_utf8_locale)}"
 export LANG="$SOLAR_COORD_LOCALE"
 export LC_ALL="$SOLAR_COORD_LOCALE"
 
+# A standalone coordinator must consume the same persisted runtime policy as
+# solar-harness.sh. The unified desktop backend starts this script directly;
+# without this bridge a saved runtime=codex silently disabled the healthy
+# operatord Builder/Evaluator pools and left only cockpit panes dispatchable.
+if [[ -f "$HARNESS_DIR/lib/harness-config.sh" ]]; then
+  # shellcheck source=/dev/null
+  . "$HARNESS_DIR/lib/harness-config.sh"
+fi
+if [[ -z "${SOLAR_PANE_RUNTIME:-}" ]] && declare -F solar_config_json_get >/dev/null 2>&1; then
+  SOLAR_PANE_RUNTIME="$(solar_config_json_get "runtime" "claude" 2>/dev/null || echo claude)"
+fi
+SOLAR_PANE_RUNTIME="${SOLAR_PANE_RUNTIME:-claude}"
+case "$SOLAR_PANE_RUNTIME" in
+  codex)
+    export SOLAR_PM_DEFAULT_PROVIDERS="${SOLAR_PM_DEFAULT_PROVIDERS:-openai}"
+    export SOLAR_MULTI_TASK_DEFAULT_PROVIDERS="${SOLAR_MULTI_TASK_DEFAULT_PROVIDERS:-openai}"
+    export SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH="${SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH:-1}"
+    export SOLAR_GRAPH_BUILDER_OPERATOR_POOL="${SOLAR_GRAPH_BUILDER_OPERATOR_POOL:-1}"
+    export SOLAR_GRAPH_EVAL_OPERATOR_POOL="${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-1}"
+    ;;
+esac
+export SOLAR_PANE_RUNTIME
+
 # Product mode deliberately leaves the four cockpit panes as passive viewers;
 # its local operatord pool is therefore the only executable builder path.  Keep
 # legacy cockpit mode's pool default OFF, and preserve an explicit 0 as the
@@ -2900,6 +2923,11 @@ gate_check() {
   if [[ -f "$sprint_dir/${sid}.finalized" ]]; then
     return 0
   fi
+  if direct_answer_runtime_required "$sid"; then
+    # The accepted RequirementIR is the authority for this bounded lane.
+    # Legacy PRD/Planner/TaskGraph gates must not rewrite it into a DAG flow.
+    return 0
+  fi
   case "$st" in
     finalized|eval_passed)
       return 0
@@ -3387,11 +3415,73 @@ handle_queued() {
   rollback_state_cache "$sid"
 }
 
+direct_answer_runtime_required() {
+  local sid="$1"
+  local requirement_ir="$SPRINTS_DIR/${sid}.requirement_ir.json"
+  [[ -f "$requirement_ir" ]] || return 1
+  python3 - "$requirement_ir" <<'PY' 2>/dev/null
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+h = d.get("planner_hints") if isinstance(d.get("planner_hints"), dict) else {}
+raise SystemExit(0 if (
+    d.get("request_type") == "direct_answer"
+    and h.get("preferred_outcome") == "direct_answer"
+    and h.get("runtime_handoff_allowed") is False
+) else 1)
+PY
+}
+
+ensure_direct_answer_runtime() {
+  local sid="$1" sf="$2"
+  local direct_state pid_file pid log_file python_bin
+  direct_state="$(get_field "$sf" "direct_answer_status")"
+  case "$direct_state" in
+    accepted|failed) return 0 ;;
+    "") return 0 ;;
+  esac
+  pid_file="$SPRINTS_DIR/${sid}.direct-answer.pid"
+  if [[ -f "$pid_file" ]]; then
+    pid="$(head -1 "$pid_file" 2>/dev/null || true)"
+    if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  # The intake process writes queued before it writes the child pid. Give that
+  # short handoff window time to finish instead of launching a duplicate.
+  if [[ "$direct_state" == "queued" ]]; then
+    local queued_age
+    queued_age=$(( $(date +%s) - $(solar_file_mtime "$sf" 2>/dev/null || echo 0) ))
+    (( queued_age < 15 )) && return 0
+  fi
+  log_file="$HARNESS_DIR/logs/direct-answer/${sid}.log"
+  mkdir -p "$(dirname "$log_file")"
+  python_bin="${SOLAR_DIRECT_ANSWER_PYTHON:-}"
+  if [[ -z "$python_bin" && -x "$HARNESS_DIR/.venv-runtime/bin/python" ]]; then
+    python_bin="$HARNESS_DIR/.venv-runtime/bin/python"
+  fi
+  python_bin="${python_bin:-python3}"
+  HARNESS_DIR="$HARNESS_DIR" SOLAR_HARNESS_DIR="$HARNESS_DIR" \
+    nohup "$python_bin" "$HARNESS_DIR/tools/direct_answer_runtime.py" --sprint-id "$sid" \
+    >>"$log_file" 2>&1 </dev/null &
+  pid=$!
+  printf '%s\n' "$pid" > "$pid_file"
+  runtime_status_transition "$sid" "active" "direct_answer_recovered" "coordinator" \
+    '{"status_fields":{"phase":"direct_answer","stage":"direct_answer_queued","handoff_to":"planner","target_role":"planner","runtime_handoff_allowed":false,"direct_answer_status":"queued"},"note":"Recovered the Planner-owned direct-answer runtime without dispatching a TaskGraph."}' || true
+  emit_event "$sid" "direct_answer_runtime_started" "coordinator" \
+    "{\"pid\":${pid},\"runtime_handoff_allowed\":false}"
+}
+
 handle_drafting() {
   local sid="$1" sf="$2"
   local prd="$SPRINTS_DIR/${sid}.prd.md"
   local plan="$SPRINTS_DIR/${sid}.plan.md"
   local req_file=""
+
+  if direct_answer_runtime_required "$sid"; then
+    ensure_direct_answer_runtime "$sid" "$sf"
+    log "${Y}Sprint ${sid} is on the Planner-owned direct-answer path; TaskGraph dispatch is forbidden${N}"
+    return 0
+  fi
 
   if python3 - "$sf" <<'PY' 2>/dev/null
 import json, sys
@@ -3836,6 +3926,12 @@ handle_active() {
   title=$(get_field "$sf" "title")
   round=$(get_field "$sf" "round")
 
+  if direct_answer_runtime_required "$sid"; then
+    ensure_direct_answer_runtime "$sid" "$sf"
+    log "${Y}Sprint ${sid} direct answer is in progress; skip Planner/Builder DAG dispatch${N}"
+    return 0
+  fi
+
   # sprint-20260503-090450 D1: research 拓扑 — 跳过 builder, 直接派 architect
   # sprint-20260503-182225 D1: select_topology 自动推断 + rs_set_topology
   local topology
@@ -4035,7 +4131,11 @@ EOF
         return 0
       fi
       local graph_rc=0 graph_out="" graph_eval_out="" graph_eval_rc=0
-      local graph_dispatch_timeout="${SOLAR_GRAPH_DISPATCH_TIMEOUT_SEC:-35}"
+      # A policy-aware pool probe may spend up to 30s refreshing operator
+      # health, followed by a PM submission that may spend up to 45s.  The
+      # outer guard must cover both or it can kill a successful dispatch
+      # before its graph assignment is durably recorded.
+      local graph_dispatch_timeout="${SOLAR_GRAPH_DISPATCH_TIMEOUT_SEC:-90}"
       # Self-advance cockpit/multi-task sprints: cockpit evaluator panes are usually idle, so eval needs the
       # operatord evaluator pool to find an evaluator (otherwise dispatch-evals returns no_available_evaluator
       # and the DAG never leaves `reviewing`). Honors an explicit SOLAR_GRAPH_EVAL_OPERATOR_POOL; otherwise
@@ -4069,6 +4169,11 @@ EOF
       fi
       log "${G}[graph-dispatch] node evals: ${graph_eval_out}${N}"
       log "${G}[graph-dispatch] ready nodes dispatched: ${graph_out}${N}"
+      local graph_dispatch_activity=0
+      if printf '%s' "$graph_eval_out" | python3 "$HARNESS_DIR/lib/graph_dispatch_outcome.py" dispatch-activity >/dev/null 2>&1 \
+        || printf '%s' "$graph_out" | python3 "$HARNESS_DIR/lib/graph_dispatch_outcome.py" dispatch-activity >/dev/null 2>&1; then
+        graph_dispatch_activity=1
+      fi
       # Research rule injection: scan dispatched nodes and inject hard rules for R-prefixed nodes
       local _research_inject_hook="$HOME/.solar/hooks/research_dispatch_inject.sh"
       if [[ -x "$_research_inject_hook" && -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
@@ -4077,8 +4182,10 @@ EOF
           "$_research_inject_hook" "$SPRINTS_DIR/${sid}.${_node_id}-dispatch.md" "$_node_id" 2>/dev/null || true
         done
       fi
-      emit_event "$sid" "graph_nodes_dispatched" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"eval_output": sys.argv[1][-2000:], "ready_output": sys.argv[2][-2000:]}))' "$graph_eval_out" "$graph_out" 2>/dev/null || echo '{}')"
-      mark_builder_flow "$sid" "graph_node_dispatch"
+      if (( graph_dispatch_activity == 1 )); then
+        emit_event "$sid" "graph_nodes_dispatched" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"eval_output": sys.argv[1][-2000:], "ready_output": sys.argv[2][-2000:]}))' "$graph_eval_out" "$graph_out" 2>/dev/null || echo '{}')"
+        mark_builder_flow "$sid" "graph_node_dispatch"
+      fi
       return 0
     fi
     log "${R}[graph-dispatch] ${sid} phase=${phase} but task_graph missing; refuse parent builder dispatch${N}"

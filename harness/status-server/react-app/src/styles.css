@@ -1711,6 +1711,98 @@ summary:focus-visible,
   background: var(--solar-surface);
 }
 
+.original-prompt {
+  max-width: 1120px;
+  padding: var(--solar-space-4) var(--solar-space-5);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-modal);
+  background: var(--solar-surface);
+}
+
+.original-prompt-head,
+.original-prompt-head > div,
+.original-prompt-copy,
+.original-prompt-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.original-prompt-head {
+  justify-content: space-between;
+  gap: var(--solar-space-4);
+}
+
+.original-prompt-head > div {
+  flex-wrap: wrap;
+  gap: var(--solar-space-2);
+}
+
+.original-prompt-label {
+  color: var(--solar-ink);
+  font-size: var(--solar-type-sm);
+  font-weight: 700;
+}
+
+.original-prompt-count {
+  color: var(--solar-subtle);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-micro);
+}
+
+.original-prompt-copy,
+.original-prompt-toggle {
+  gap: var(--solar-space-2);
+  color: var(--solar-muted);
+  background: transparent;
+  font-size: var(--solar-type-xs);
+  font-weight: 640;
+  cursor: pointer;
+}
+
+.original-prompt-copy {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 var(--solar-space-3);
+  border: 1px solid var(--solar-line);
+  border-radius: var(--solar-radius-control);
+}
+
+.original-prompt-copy:hover,
+.original-prompt-toggle:hover {
+  color: var(--solar-ink);
+}
+
+.original-prompt-body {
+  position: relative;
+  margin-top: var(--solar-space-3);
+  color: var(--solar-ink);
+  font-family: var(--solar-font-mono);
+  font-size: var(--solar-type-xs);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.original-prompt-body.is-collapsed {
+  max-height: 9.9em;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+}
+
+.original-prompt-toggle {
+  width: fit-content;
+  margin-top: var(--solar-space-3);
+  color: var(--solar-accent-ink);
+}
+
+.original-prompt-toggle svg {
+  transition: transform var(--solar-duration-fast) var(--solar-ease);
+}
+
+.original-prompt-toggle svg.is-expanded {
+  transform: rotate(180deg);
+}
+
 .intake-attachments {
   display: flex;
   align-items: center;

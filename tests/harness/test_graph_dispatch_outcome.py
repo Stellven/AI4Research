@@ -51,3 +51,15 @@ def test_real_dispatch_errors_are_not_reclassified() -> None:
 def test_invalid_output_is_not_reclassified() -> None:
     mod = _load()
     assert mod.classify_evaluator_dispatch_output("not json") is None
+
+
+def test_dispatch_activity_requires_routed_work() -> None:
+    mod = _load()
+    assert mod.has_dispatch_activity(json.dumps({"dispatched": [{"node": "S1"}]}))
+    assert mod.has_dispatch_activity(json.dumps({"enqueue": {"enqueued": [{"node": "S1"}]}}))
+    assert not mod.has_dispatch_activity(json.dumps({
+        "ok": True,
+        "dispatched": [],
+        "enqueue": {"ok": True, "enqueued": []},
+        "drain": {"ok": True, "processed": 0, "results": []},
+    }))

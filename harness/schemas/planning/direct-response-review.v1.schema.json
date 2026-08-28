@@ -10,7 +10,17 @@
     "review_id": {"type": "string", "minLength": 1},
     "response_ref": {"type": "object"},
     "review_method": {"const": "independent_model_call"},
-    "reviewer": {"type": "object"},
+    "reviewer": {
+      "type": "object",
+      "required": ["provider", "model"],
+      "additionalProperties": true,
+      "properties": {
+        "provider": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1},
+        "role": {"const": "evaluator"},
+        "component": {"const": "direct_response_reviewer"}
+      }
+    },
     "status": {"enum": ["pass", "pass_with_warnings", "fail"]},
     "checks": {"type": "array", "minItems": 3, "maxItems": 3},
     "errors": {"type": "array"},

@@ -22,6 +22,7 @@ export type SprintStatus = {
   phase?: string;
   epic_id?: string;
   updated_at?: string;
+  original_prompt?: string;
   [key: string]: unknown;
 };
 
@@ -121,6 +122,7 @@ export type ProjectionData = {
   };
   sprint_id?: string;
   title?: string;
+  original_prompt?: string;
   status?: string;
   phase?: string;
   sprint?: SprintStatus;
@@ -399,6 +401,10 @@ export type Deliverable = {
   result?: boolean;
   // Producing pipeline stage: report | prd | design | plan | task_graph | handoff | eval | source | other.
   stage?: string;
+  // Explicit governed-artifact authorship. Direct answers are Planner-owned;
+  // compiler artifacts must never be presented as their author.
+  producer_role?: string;
+  producer_component?: string;
 };
 
 export type IntakeResponse = {

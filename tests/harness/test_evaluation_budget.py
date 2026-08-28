@@ -44,7 +44,7 @@ def test_low_risk_dag_gets_one_final_semantic_review_and_never_reviews_verifier(
     assert verifier["evaluation_policy"]["decision_reason"] == "no_recursive_evaluator"
 
 
-def test_research_dag_reviews_evidence_audit_and_final_report_only() -> None:
+def test_research_dag_reviews_only_the_final_report() -> None:
     graph = {
         "schema_version": "solar.task_graph.v1",
         "research_mode": True,
@@ -67,10 +67,11 @@ def test_research_dag_reviews_evidence_audit_and_final_report_only() -> None:
 
     policy = bounded["evaluation_policy"]
     assert policy["risk_tier"] == "high"
-    assert policy["semantic_evaluation_budget"] == 3
-    assert policy["semantic_evaluation_node_ids"] == ["R3", "R5"]
+    assert policy["semantic_evaluation_budget"] == 1
+    assert policy["semantic_evaluation_node_ids"] == ["R5"]
     by_id = {node["id"]: node for node in bounded["nodes"]}
-    assert {node_id for node_id, node in by_id.items() if node["evaluator_gate"]["kind"] == "llm_eval"} == {"R3", "R5"}
+    assert {node_id for node_id, node in by_id.items() if node["evaluator_gate"]["kind"] == "llm_eval"} == {"R5"}
+    assert by_id["R3"]["evaluation_policy"]["decision_reason"] == "no_recursive_evaluator"
     assert by_id["R6"]["evaluator_gate"]["kind"] == "none"
     assert evaluation_budget.policy_allows_none(bounded, by_id["R6"]) is True
 

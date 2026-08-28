@@ -48,8 +48,34 @@ def classify_evaluator_dispatch_output(raw: str) -> dict[str, Any] | None:
     }
 
 
+def has_dispatch_activity(raw: str) -> bool:
+    """True only when a dispatcher result actually routed work.
+
+    A successful scheduler poll with no ready nodes is a no-op.  Treating it as
+    ``graph_nodes_dispatched`` manufactures one user-visible timeline event on
+    every coordinator tick.
+    """
+    try:
+        payload = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    dispatched = payload.get("dispatched")
+    if isinstance(dispatched, list) and bool(dispatched):
+        return True
+    enqueue = payload.get("enqueue")
+    if isinstance(enqueue, dict):
+        enqueued = enqueue.get("enqueued")
+        if isinstance(enqueued, list) and bool(enqueued):
+            return True
+    return False
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    if args == ["dispatch-activity"]:
+        return 0 if has_dispatch_activity(sys.stdin.read()) else 1
     if args != ["evaluator-wait"]:
         return 2
     result = classify_evaluator_dispatch_output(sys.stdin.read())
