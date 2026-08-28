@@ -2760,7 +2760,7 @@
       "auth_mode": "subscription_or_api_key",
       "key_ref": "codex_auth",
       "quota_cycle": "api_balance",
-      "quota_refresh_at": "unknown",
+      "quota_refresh_at": null,
       "quota_guard_state": "ok",
       "enabled": true,
       "enabled_at": "2026-06-01T20:45:00Z",
@@ -2831,7 +2831,25 @@
           }
         }
       },
-      "deprecated": false
+      "deprecated": false,
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null,
+        "last_error": null,
+        "last_error_at": "2026-08-27T06:37:55Z",
+        "last_pruned_at": "2026-08-27T12:49:46Z"
+      },
+      "flow_control": {
+        "last_block_state": "cooldown",
+        "last_block_reason": "rate_limit",
+        "last_block_source": "failure_flow_control",
+        "last_block_detected_at": "2026-08-27T06:37:55Z",
+        "last_block_expires_at": "2026-08-27T07:37:55Z",
+        "last_block_excerpt": "## Required Skills - N/A ## Required Capabilities - cap.research-literature-discover ## Acceptance - semantic evaluator: Start from the approved research scope and collect source-backed literature evidence only. - semantic evaluator: verifier-discover-1 ## Rules - 只执行本节点，不抢其他 DAG node。 - 只修改 Write Scope；需要扩大范围时在 handoff 里写 Scope Change Request。 - 不要把 parent sprint 标成 passed。 - 交付必须写 handoff。没有 handoff，后台 runner 会把本节点判为失败。 ## Required Closeout 1. 写入 handoff： ```bash cat > \"C:\\Users\\j50058254\\Desktop\\Github repo\\OpenSolar-Canonical\\outputs\\e2e-battery-grid-storage-20260827\\runtime\\e2e-battery-grid-storage-20260827.node-discover-handoff.md\" <<'EOF' # Handoff — e2e-battery-grid-storage-20260827 / node-discover ## 已完成 ## 已验证 ## 未验证 ## 风险 ## 后续待办 EOF ``` 2. 将节点标记为 reviewing： ```bash \"C:\\Users\\j5",
+        "last_pruned_at": "2026-08-27T12:49:46Z",
+        "last_prune_reason": "expired_operator_block"
+      }
     },
     "mini-codex-gpt53-spark-builder-2": {
       "display_name": "Mac mini Codex GPT 5.3 Spark builder pool slot 2",
@@ -4181,7 +4199,7 @@
       "auth_mode": "subscription_or_api_key",
       "key_ref": "codex_auth",
       "quota_cycle": "api_balance",
-      "quota_refresh_at": "unknown",
+      "quota_refresh_at": null,
       "quota_guard_state": "ok",
       "enabled": true,
       "enabled_at": "2026-06-29T00:00:00Z",
@@ -4247,7 +4265,25 @@
           }
         }
       },
-      "deprecated": false
+      "deprecated": false,
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null,
+        "last_error": null,
+        "last_error_at": "2026-08-27T13:17:37Z",
+        "last_pruned_at": "2026-08-27T14:02:51Z"
+      },
+      "flow_control": {
+        "last_block_state": "cooldown",
+        "last_block_reason": "contract_closeout_failed",
+        "last_block_source": "graph_node_dispatcher",
+        "last_block_detected_at": "2026-08-27T13:17:37Z",
+        "last_block_expires_at": "2026-08-27T13:32:37Z",
+        "last_block_excerpt": "{\"pane\": \"operator:mini-codex-gpt55-medium-evaluator-1\", \"dispatch_id\": \"graph-eval-e2e-battery-grid-storage-20260827-node-discover-20260827T131708Z-q1\", \"pm_task_id\": \"pm-e2e-battery-grid-storage-20260827-node-discover-a39c1332\", \"reason\": \"eval_failed_contract_closeout\", \"operator_status\": \"failed\", \"result_json\": \"/mnt/c/Users/j50058254/Desktop/Github repo/OpenSolar-Canonical/harness/run/operator-results/mini-codex-gpt55-medium-evaluator-1/pm-e2e-battery-grid-storage-20260827-node-discover-a39c1332/result.json\"}",
+        "last_pruned_at": "2026-08-27T14:02:51Z",
+        "last_prune_reason": "expired_operator_block"
+      }
     },
     "mini-claude-sonnet-evaluator-print": {
       "display_name": "Claude Sonnet evaluator (print)",
@@ -5006,7 +5042,7 @@
       "auth_mode": "subscription_or_api_key",
       "key_ref": "codex_auth",
       "quota_cycle": "api_balance",
-      "quota_refresh_at": "unknown",
+      "quota_refresh_at": null,
       "quota_guard_state": "ok",
       "enabled": true,
       "enabled_at": "2026-06-29T00:00:00Z",
@@ -5072,7 +5108,25 @@
           }
         }
       },
-      "deprecated": false
+      "deprecated": false,
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null,
+        "last_error": null,
+        "last_error_at": "2026-08-27T13:18:43Z",
+        "last_pruned_at": "2026-08-27T13:19:47Z"
+      },
+      "flow_control": {
+        "last_block_state": "cooldown",
+        "last_block_reason": "contract_closeout_failed",
+        "last_block_source": "graph_node_dispatcher",
+        "last_block_detected_at": "2026-08-27T13:18:43Z",
+        "last_block_expires_at": "2026-08-27T13:33:43Z",
+        "last_block_excerpt": "{\"pane\": \"operator:mini-codex-gpt55-medium-evaluator-2\", \"dispatch_id\": \"graph-eval-e2e-battery-grid-storage-20260827-node-discover-20260827T131813Z-q1\", \"pm_task_id\": \"pm-e2e-battery-grid-storage-20260827-node-discover-9c51605a\", \"reason\": \"eval_failed_contract_closeout\", \"operator_status\": \"failed\", \"result_json\": \"/mnt/c/Users/j50058254/Desktop/Github repo/OpenSolar-Canonical/harness/run/operator-results/mini-codex-gpt55-medium-evaluator-2/pm-e2e-battery-grid-storage-20260827-node-discover-9c51605a/result.json\"}",
+        "last_pruned_at": "2026-08-27T13:19:47Z",
+        "last_prune_reason": "api_key_auth_recovered"
+      }
     },
     "autosci-exec-idea-evaluation-worker": {
       "display_name": "Part B idea evaluation via the AutoSci $ideate skill",
