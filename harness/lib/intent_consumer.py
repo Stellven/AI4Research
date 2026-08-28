@@ -345,6 +345,31 @@ def planner_handoff_policy(
 
 def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
     base = str(SPRINTS_DIR / sprint_id)
+    return textwrap.dedent(
+        f"""\
+        请接手 {sprint_id}：RawIntent 已通过 Intent Compiler 和 Requirement Compiler。
+        Planner 只负责需求整理与向下游交接。
+
+        权威输入：
+        - {base}.requirement_ir.json
+        - {base}.contract.md
+        - {base}.prd.md
+
+        只允许输出：
+        - {base}.planner-requirements.md
+        - {base}.planner-handoff.md
+
+        规则：
+        1. 整理目标、约束、验收标准、风险、输入和建议的下游执行模式。
+        2. 不得创建或修改 design.md、plan.md、task_graph.json、PlanIR 或 DAG。
+        3. 不得研究、调用浏览器、生成 HTML/最终答案/报告、执行任务或评估。
+        4. 不得派发其他角色，也不得修改 status.json；Solar 根据 handoff 决定下一角色。
+        5. 简单问题可在 handoff 中建议 direct_response，但答案必须由下游 direct-response worker 生成。
+        """
+    ).strip()
+
+    # Retained below temporarily for byte-level compatibility history; the
+    # strict role-boundary return above is authoritative.
     planning_dir = str(SPRINTS_DIR / sprint_id / "planning")
     compiled_dir = str(SPRINTS_DIR / sprint_id / "compiled")
     objective = textwrap.dedent(
@@ -398,7 +423,7 @@ def submit_planner_handoff(sprint_id: str, requirement_ir_path: Path, *, dry_run
         "--objective", planner_objective_for_compiled_sprint(sprint_id),
         "--sprint", sprint_id,
         "--node", "N0",
-        "--task-type", "planning",
+        "--task-type", "requirements_handoff",
         "--context", f"compiled_requirement_ir={requirement_ir_path}",
     ]
     if dry_run:
@@ -423,7 +448,11 @@ def submit_planner_handoff(sprint_id: str, requirement_ir_path: Path, *, dry_run
 
 
 def submit_direct_answer_runtime(sprint_id: str, requirement_ir_path: Path) -> dict[str, Any]:
-    """Start the Planner-owned no-DAG path without blocking the intake request."""
+    """Compatibility launcher for the downstream no-DAG response worker.
+
+    New intake never calls this directly: Planner handoff must complete first,
+    and the coordinator then launches the worker.
+    """
     from activity_runtime import ActivityRuntime
     from runtime_status import transition_status
 
@@ -457,21 +486,21 @@ def submit_direct_answer_runtime(sprint_id: str, requirement_ir_path: Path) -> d
             "status_fields": {
                 "phase": "direct_answer",
                 "stage": "direct_answer_queued",
-                "handoff_to": "planner",
-                "target_role": "planner",
+                "handoff_to": "direct_response_worker",
+                "target_role": "direct_response_worker",
                 "runtime_handoff_allowed": False,
                 "direct_answer_status": "queued",
                 "plan_compile_required": False,
                 "planner_dispatch_claim": None,
             },
-            "note": "Queued the Planner-owned direct-answer path; no TaskGraph dispatch is allowed.",
+            "note": "Queued the downstream direct-response worker; no TaskGraph dispatch is allowed.",
         },
     )
     runtime = ActivityRuntime(sprint_id, harness_dir=str(HARNESS_DIR))
     runtime.command_issued(
         "direct-answer",
         actor="intent_consumer",
-        target="planner",
+        target="direct_response_worker",
         payload={"stage": "direct_answer", "runtime_handoff_allowed": False},
     )
     try:
@@ -616,14 +645,7 @@ def consume_one(
         annotate_compiled_package_with_research_artifact(sid, research)
 
     requirement_ir_path = SPRINTS_DIR / f"{sid}.requirement_ir.json"
-    compiled_requirement_ir = read_json(requirement_ir_path)
-    if handoff.get("requested") and is_direct_answer_requirement(compiled_requirement_ir):
-        handoff = {
-            **handoff,
-            "reason": "direct_answer_elastic_planner",
-            **submit_direct_answer_runtime(sid, requirement_ir_path),
-        }
-    elif handoff.get("requested"):
+    if handoff.get("requested"):
         handoff = {**handoff, **submit_planner_handoff(sid, requirement_ir_path)}
     else:
         handoff = {**handoff, "status": "skipped"}

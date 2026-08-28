@@ -1,4 +1,4 @@
-"""Planner-owned, no-DAG runtime for accepted direct-answer requests."""
+"""Downstream no-DAG worker for accepted direct-answer requests."""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def _run_direct_answer_locked(
     planner_model: Any | None = None,
     reviewer_model: Any | None = None,
 ) -> dict[str, Any]:
-    """Generate one Planner answer, independently review it, and terminate."""
+    """Generate one downstream answer, independently review it, and terminate."""
     harness_dir = harness_dir.resolve()
     sprints_dir = harness_dir / "sprints"
     status_path = sprints_dir / f"{sprint_id}.status.json"
@@ -84,7 +84,7 @@ def _run_direct_answer_locked(
     workdir_answer_path = (
         sprints_dir / sprint_id / "workdir" / "workspace" / "direct_response" / "answer.md"
     )
-    output_root = sprints_dir / sprint_id / "workdir" / "planner"
+    output_root = sprints_dir / sprint_id / "workdir" / "direct-response-worker"
     activity_id = "direct-answer"
     runtime = ActivityRuntime(sprint_id, harness_dir=str(harness_dir))
 
@@ -95,38 +95,51 @@ def _run_direct_answer_locked(
         status = load_object(status_path)
         if str(status.get("status") or "") in {"completed", "passed"}:
             return {"status": "already_completed", "answer_path": str(answer_path)}
+    status = load_object(status_path)
+    try:
+        strict_boundary = int(status.get("planner_role_boundary_version") or 0) >= 2
+    except (TypeError, ValueError):
+        strict_boundary = False
+    planner_outputs = [
+        sprints_dir / f"{sprint_id}.{suffix}"
+        for suffix in ("planner-requirements.md", "planner-handoff.md")
+    ]
+    if strict_boundary and not all(
+        path.is_file() and path.stat().st_size > 0 for path in planner_outputs
+    ):
+        raise RuntimeError("Planner requirements handoff must complete before direct response")
 
     runtime.activity_started(
         activity_id,
-        actor="planner",
-        payload={"stage": "direct_answer", "message": "Planner is writing the direct answer."},
+        actor="direct_response_worker",
+        payload={"stage": "direct_answer", "message": "The downstream response worker is writing the answer."},
     )
     transition_status(
         status_path,
         "active",
         "direct_answer_started",
-        "elastic_planner",
+        "direct_response_worker",
         extra={
             "allow_reopen": True,
             "status_fields": {
                 "phase": "direct_answer",
                 "stage": "direct_answer_in_progress",
-                "handoff_to": "planner",
-                "target_role": "planner",
+                "handoff_to": "direct_response_worker",
+                "target_role": "direct_response_worker",
                 "runtime_handoff_allowed": False,
                 "direct_answer_status": "running",
                 "plan_compile_required": False,
                 "planner_dispatch_claim": None,
                 "direct_answer_error": None,
             },
-            "note": "Elastic Planner is generating the answer; no TaskGraph is running.",
+            "note": "The downstream direct-response worker is generating the answer; no TaskGraph is running.",
         },
     )
     try:
         result = run_elastic_planning_request(
             requirement_ir,
             output_root,
-            planner_model or _model("planner"),
+            planner_model or _model("response"),
             reviewer_model or _model("reviewer"),
             sprint_id=sprint_id,
             workspace_root="workspace",
@@ -158,7 +171,7 @@ def _run_direct_answer_locked(
 
         runtime.activity_succeeded(
             activity_id,
-            actor="planner",
+            actor="direct_response_worker",
             payload={
                 "stage": "direct_answer",
                 "result": "accepted",
@@ -170,7 +183,7 @@ def _run_direct_answer_locked(
             status_path,
             "completed",
             "direct_answer_completed",
-            "elastic_planner",
+            "direct_response_worker",
             extra={
                 "status_fields": {
                     "phase": "finalized",
@@ -186,7 +199,7 @@ def _run_direct_answer_locked(
                     "plan_compile_required": False,
                     "planner_dispatch_claim": None,
                 },
-                "note": "Planner direct answer passed one independent review; no TaskGraph was dispatched.",
+                "note": "The downstream direct answer passed one independent review; no TaskGraph was dispatched.",
             },
         )
         return {
@@ -198,7 +211,7 @@ def _run_direct_answer_locked(
         message = f"{type(exc).__name__}: {exc}"
         runtime.activity_failed(
             activity_id,
-            actor="planner",
+            actor="direct_response_worker",
             error=message,
             payload={"stage": "direct_answer", "reason": "direct_answer_runtime_failed"},
         )
@@ -206,7 +219,7 @@ def _run_direct_answer_locked(
             status_path,
             "failed",
             "direct_answer_failed",
-            "elastic_planner",
+            "direct_response_worker",
             extra={
                 "status_fields": {
                     "stage": "direct_answer_failed",

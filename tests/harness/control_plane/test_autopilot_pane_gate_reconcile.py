@@ -67,6 +67,50 @@ def test_pane_gate_clears_stale_live_lease_without_graph_node(tmp_path, monkeypa
     assert lease_path.exists() is False
 
 
+def test_pane_gate_keeps_live_pm_ack_without_graph_node(tmp_path, monkeypatch) -> None:
+    sid = "sprint-live-pm"
+    dispatch_id = "d-live-pm"
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    (sprints / f"{sid}.status.json").write_text(json.dumps({
+        "sprint_id": sid,
+        "status": "drafting",
+        "phase": "spec",
+        "handoff_to": "pm",
+    }) + "\n")
+    (sprints / f"{sid}.current-dispatch-id").write_text(dispatch_id + "\n")
+    (sprints / f"{sid}.ack-{dispatch_id}.json").write_text(json.dumps({
+        "dispatch_id": dispatch_id,
+        "sid": sid,
+        "role": "pm",
+        "status": "in_progress",
+    }) + "\n")
+    lease_dir = tmp_path / "pane-leases"
+    lease_dir.mkdir()
+    lease_path = lease_dir / f"{mod.pane_safe('solar-harness:0.0')}.json"
+    lease_path.write_text(json.dumps({
+        "pane": "solar-harness:0.0",
+        "sid": sid,
+        "dispatch_id": dispatch_id,
+        "expires_at": _utc_after(180),
+        "ttl_sec": 180,
+    }) + "\n")
+    monkeypatch.setattr(mod, "SPRINTS", sprints)
+    monkeypatch.setattr(mod, "PANE_ASSIGNMENTS", tmp_path / ".pane-assignments")
+    monkeypatch.setattr(mod, "PANE_LEASE_DIR", lease_dir)
+    monkeypatch.setattr(mod, "append_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod, "assigned_graph_node_for_pane", lambda target: {})
+    monkeypatch.setattr(mod, "pane_is_busy", lambda target: False)
+
+    allowed, reason, detail = mod.pane_gate("solar-harness:0.0", "fresh-sprint")
+
+    assert allowed is False
+    assert reason == "pane_leased"
+    assert detail["role_dispatch_live"] is True
+    assert detail["lease"]["dispatch_id"] == dispatch_id
+    assert lease_path.exists() is True
+
+
 def test_pane_gate_keeps_active_graph_claims_even_when_pane_is_idle(tmp_path, monkeypatch) -> None:
     assignments = tmp_path / ".pane-assignments"
     assignments.write_text("solar-harness-lab:0.3=active-sprint:1779000000\n")

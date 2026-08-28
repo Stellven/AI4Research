@@ -186,4 +186,4 @@ def test_direct_answer_cli_imports_library_when_pythonpath_already_contains_lib(
     )
 
     assert proc.returncode == 0, proc.stderr
-    assert "Planner-owned direct-answer path" in proc.stdout
+    assert "downstream no-DAG direct-answer path" in proc.stdout

@@ -2405,7 +2405,7 @@ else:
         python3 "$HARNESS_DIR/lib/runtime_status.py" "$sf" "drafting" "wake_workflow_guard_to_pm" "wake" '{"status_fields":{"phase":"spec","handoff_to":"pm","target_role":"pm","auto_held":false},"note":"Workflow guard: PM PRD is required before planner or builder dispatch."}' >/dev/null 2>&1 || true
         st="drafting"
         target_pane="$LIVE_PM"
-        target_task="Sprint ${sid} 恢复：Workflow Guard 判定必须先走 PM。请研究用户要求，产出正式 PRD 到 ~/.solar/harness/sprints/${sid}.prd.md；完成后只交给 Planner，不要直接给 Builder。原因: ${workflow_reason}; violations=${workflow_violations}"
+        target_task="Sprint ${sid} 恢复：Workflow Guard 判定必须先走 PM。请研究用户要求，产出正式 PRD 到 ${SPRINTS_DIR}/${sid}.prd.md；完成后只交给 Planner，不要直接给 Builder。原因: ${workflow_reason}; violations=${workflow_violations}"
         ;;
       planner)
         python3 "$HARNESS_DIR/lib/runtime_status.py" "$sf" "drafting" "wake_workflow_guard_to_planner" "wake" '{"status_fields":{"phase":"prd_ready","handoff_to":"planner","target_role":"planner","auto_held":false},"note":"Workflow guard: planner must produce design.md, plan.md, and task_graph.json before builder dispatch."}' >/dev/null 2>&1 || true
@@ -2427,7 +2427,7 @@ else:
         target_pane="$LIVE_EVALUATOR"
         dispatch_role="evaluator"
         dispatch_task_type="review"
-        target_task="Sprint ${sid} 恢复：Workflow Guard 判定已有 handoff，需要 Evaluator 评审。cat ~/.solar/harness/sprints/${sid}.handoff.md"
+        target_task="Sprint ${sid} 恢复：Workflow Guard 判定已有 handoff，需要 Evaluator 评审。读取 ${SPRINTS_DIR}/${sid}.handoff.md"
         ;;
       *)
         target_pane="$LIVE_PM"
@@ -2461,7 +2461,7 @@ else:
       target_pane="$LIVE_EVALUATOR"
       dispatch_role="evaluator"
       dispatch_task_type="review"
-      target_task="Sprint ${sid} 恢复：建设者已提交计划，请审批。cat ~/.solar/harness/sprints/${sid}.plan.md"
+      target_task="Sprint ${sid} 恢复：建设者已提交计划，请审批。读取 ${SPRINTS_DIR}/${sid}.plan.md"
       ;;
     approved)
       if [[ "$workflow_role" != "builder" && "$workflow_role" != "builder_main" ]]; then
@@ -2470,20 +2470,20 @@ else:
         target_pane="$LIVE_BUILDER"
         dispatch_role="builder"
         dispatch_task_type="implementation"
-        target_task="Sprint ${sid} 恢复：计划已批准，请继续实现。cat ~/.solar/harness/sprints/${sid}.plan.md"
+        target_task="Sprint ${sid} 恢复：计划已批准，请继续实现。读取 ${SPRINTS_DIR}/${sid}.plan.md"
       fi
       ;;
     reviewing|ready_for_review)
       target_pane="$LIVE_EVALUATOR"
       dispatch_role="evaluator"
       dispatch_task_type="review"
-      target_task="Sprint ${sid} 恢复：建设者已提交，请评审。cat ~/.solar/harness/sprints/${sid}.handoff.md"
+      target_task="Sprint ${sid} 恢复：建设者已提交，请评审。读取 ${SPRINTS_DIR}/${sid}.handoff.md"
       ;;
     failed_review)
       target_pane="$LIVE_BUILDER"
       dispatch_role="builder"
       dispatch_task_type="implementation"
-      target_task="Sprint ${sid} 恢复：评审未通过，请修复。cat ~/.solar/harness/sprints/${sid}.eval.md"
+      target_task="Sprint ${sid} 恢复：评审未通过，请修复。读取 ${SPRINTS_DIR}/${sid}.eval.md"
       ;;
     interrupted)
       # 被 kill_harness 打断，改回 reviewing 让 coordinator 重新派发
@@ -2491,7 +2491,7 @@ else:
       target_pane="$LIVE_EVALUATOR"
       dispatch_role="evaluator"
       dispatch_task_type="review"
-      target_task="Sprint ${sid} 恢复 (从 interrupted)：请评审。cat ~/.solar/harness/sprints/${sid}.handoff.md"
+      target_task="Sprint ${sid} 恢复 (从 interrupted)：请评审。读取 ${SPRINTS_DIR}/${sid}.handoff.md"
       ;;
     *)
       warn "未知状态: ${st}，派发给 PM 做状态诊断，不直接给建设者执行"
@@ -2499,6 +2499,22 @@ else:
       target_task="Sprint ${sid} 恢复：当前状态 ${st} 未被 wake 状态机识别。请先诊断 status/phase/handoff_to，修正状态后再派发，不要直接实现。"
       ;;
   esac
+
+  # The pre-write hook contract refers to one stable state file. Older installs
+  # could dispatch that requirement without provisioning the file, which made
+  # every role stop before its first write. Create a minimal, non-secret
+  # locator once; per-sprint status/events remain the runtime source of truth.
+  local state_file="${SOLAR_STATE_FILE:-$HOME/.solar/STATE.md}"
+  if [[ ! -f "$state_file" ]]; then
+    mkdir -p "$(dirname "$state_file")" || return 78
+    {
+      printf '# Solar Runtime State\n\n'
+      printf -- '- Canonical harness root: `%s`\n' "$HARNESS_DIR"
+      printf -- '- Canonical sprint directory: `%s`\n' "$SPRINTS_DIR"
+      printf -- '- Runtime truth: read the active sprint status/events files; do not infer completion from this locator.\n'
+    } > "$state_file" || return 78
+    chmod 600 "$state_file" 2>/dev/null || true
+  fi
 
   # Step 4: 重新生成 dispatch.md 并派发
   cat > "$SPRINTS_DIR/${sid}.dispatch.md" << DISPATCH_EOF
@@ -2509,7 +2525,7 @@ else:
 
 在任何 Write/Edit/handoff/eval/status 更新之前，必须先用 Claude/Codex 的 **Read 工具**读取：
 
-\`~/.solar/STATE.md\`
+\`${state_file}\`
 
 不要用 \`cat\` 替代这一步；本地 \`state-read-enforcer.sh\` hook 只认 Read 工具标记。
 

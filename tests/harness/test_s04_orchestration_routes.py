@@ -55,6 +55,27 @@ def test_builder_result_pending_is_presented_as_waiting_not_blocked() -> None:
     assert "durable result" in narrative[0]["summary"]
 
 
+def test_spec_phase_does_not_report_missing_task_graph_as_a_stall() -> None:
+    mod = _load_routes()
+    stall = mod._build_stall_summary(
+        {
+            "status": "drafting",
+            "phase": "spec",
+            "handoff_to": "pm",
+            "target_role": "pm",
+        },
+        [],
+        [],
+        False,
+        [],
+    )
+
+    assert stall["is_stalled"] is False
+    assert stall["state"] == "awaiting_pm"
+    assert stall["title"] == "Waiting for PM"
+    assert "not expected yet" in stall["detail"]
+
+
 def test_real_evaluator_dispatch_failure_remains_blocked() -> None:
     mod = _load_routes()
     events = [{

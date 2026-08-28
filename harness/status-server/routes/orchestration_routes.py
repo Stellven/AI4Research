@@ -899,6 +899,24 @@ def _build_stall_summary(
     active = [card for card in node_cards if str(card.get("status") or "").lower() in {"active", "running", "dispatched", "in_progress"}]
     reasons = sorted({str(card.get("blocked_reason") or card.get("decision") or "").strip() for card in blocked if str(card.get("blocked_reason") or card.get("decision") or "").strip()})
 
+    if not tg_ok and (
+        phase in {"spec", "prd_ready", "requirements", "requirements_ready"}
+        or (sprint_status == "drafting" and phase not in {"planning_complete", "graph_dispatch_active"})
+    ):
+        target_role = str(status.get("target_role") or status.get("handoff_to") or "planner").strip().lower()
+        role_label = "PM" if target_role in {"pm", "product_manager"} else "Planner"
+        return {
+            "is_stalled": False,
+            "state": f"awaiting_{target_role or 'planner'}",
+            "severity": "info",
+            "title": f"Waiting for {role_label}",
+            "detail": (
+                "The task graph is not expected yet. PM must finish the specification first."
+                if role_label == "PM"
+                else "The task graph is not expected until Planner finishes planning."
+            ),
+            "reasons": [],
+        }
     if not tg_ok:
         return {
             "is_stalled": True,

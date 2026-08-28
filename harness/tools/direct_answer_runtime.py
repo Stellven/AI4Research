@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Solar's Planner-owned direct-answer path for one compiled sprint."""
+"""Run Solar's downstream no-DAG direct-answer path for one compiled sprint."""
 
 from __future__ import annotations
 

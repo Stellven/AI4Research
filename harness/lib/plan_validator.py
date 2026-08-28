@@ -33,7 +33,7 @@ from executable_node import (  # noqa: E402
     physical_role_is_compatible,
 )
 from physical_operator_catalog import is_operator_statically_selectable  # noqa: E402
-from planner_operator_gate import planner_operator_state  # noqa: E402
+from planner_operator_gate import operator_task_state  # noqa: E402
 
 GENERIC_CONTRACT_ID = "pm.generic.v1"
 AUTOSCI_CONTRACT_ID = "research.autosci.v1"
@@ -631,7 +631,7 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
         "workflow_contract_version": str(task_graph.get("workflow_contract_version") or ""),
         "plan_compile_required": task_graph.get("plan_compile_required") is True,
         "planner_stage": copy.deepcopy(task_graph.get("planner_stage") or {}),
-        "planner_artifacts": copy.deepcopy(task_graph.get("planner_artifacts") or {}),
+        "graph_compiler_artifacts": copy.deepcopy(task_graph.get("graph_compiler_artifacts") or {}),
         "dag_variant": str(task_graph.get("dag_variant") or ""),
         "artifact_roots": copy.deepcopy(task_graph.get("artifact_roots") or {}),
         "required_gates": [str(item) for item in (task_graph.get("required_gates") or [])],
@@ -725,18 +725,18 @@ def check_plan_certificate(task_graph: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
-def _planner_artifact_errors(
+def _graph_compiler_artifact_errors(
     task_graph: Dict[str, Any],
     *,
     sprints_dir: os.PathLike,
     sid: str,
 ) -> List[Dict[str, Any]]:
-    """Verify the Planner evidence files bound into an AutoSci certificate."""
+    """Verify Graph Compiler evidence files bound into an AutoSci certificate."""
     import hashlib
 
-    declared = task_graph.get("planner_artifacts")
+    declared = task_graph.get("graph_compiler_artifacts")
     if not isinstance(declared, dict):
-        return [_error("AUTOSCI_PLANNER_ARTIFACTS_MISSING", "N0", "planner_artifacts hash manifest is missing")]
+        return [_error("AUTOSCI_GRAPH_COMPILER_ARTIFACTS_MISSING", "GC0", "graph_compiler_artifacts hash manifest is missing")]
     errors: List[Dict[str, Any]] = []
     for suffix in ("design.md", "plan.md"):
         path = Path(sprints_dir) / f"{sid}.{suffix}"
@@ -749,9 +749,9 @@ def _planner_artifact_errors(
         if not payload or actual != expected:
             errors.append(
                 _error(
-                    "AUTOSCI_PLANNER_ARTIFACT_HASH_MISMATCH",
-                    "N0",
-                    f"Planner artifact {path.name} is missing, empty, or differs from its certificate manifest",
+                    "AUTOSCI_GRAPH_COMPILER_ARTIFACT_HASH_MISMATCH",
+                    "GC0",
+                    f"Graph Compiler artifact {path.name} is missing, empty, or differs from its certificate manifest",
                     declared=expected,
                     admitted=actual,
                 )
@@ -1184,17 +1184,23 @@ def compile_planner_graph(
         return verdict
 
     # Certification is a Solar lifecycle decision, not an action the bounded
-    # Planner model may take while it is still writing artifacts.  An
-    # operator-pool task therefore has to publish a durable successful result
-    # before any candidate graph can be stamped.  Legacy pane planning has no
+    # Graph Compiler may take while it is still writing artifacts. Its
+    # operator-pool task must publish a durable successful result before any
+    # candidate graph can be stamped. Legacy pane compilation has no matching
     # PM task record and remains supported as ``unmanaged``.
-    operator_gate = planner_operator_state(sprints.parent, sid)
+    operator_gate = operator_task_state(
+        sprints.parent,
+        sid,
+        "GC0",
+        role="builder",
+        closeout_kind="task_graph_compiler",
+    )
     if not operator_gate["ready_for_compile"]:
         return {
             **verdict,
             "ok": False,
             "deferred": True,
-            "skipped_reason": "planner_operator_not_complete",
+            "skipped_reason": "graph_compiler_operator_not_complete",
             "operator_gate": operator_gate,
         }
 
@@ -1260,7 +1266,7 @@ def compile_planner_graph(
         from autosci_intake_contract import validate_autosci_planner_graph  # noqa: WPS433
 
         errors: List[Dict[str, Any]] = []
-        planner_artifacts: Dict[str, Any] = {}
+        graph_compiler_artifacts: Dict[str, Any] = {}
         for suffix in ("design.md", "plan.md"):
             artifact_path = sprints / f"{sid}.{suffix}"
             try:
@@ -1270,20 +1276,26 @@ def compile_planner_graph(
             if not artifact_bytes.strip():
                 errors.append(
                     _error(
-                        "AUTOSCI_PLANNER_ARTIFACT_MISSING",
-                        "N0",
-                        f"Planner artifact is missing or empty: {artifact_path}",
+                        "AUTOSCI_GRAPH_COMPILER_ARTIFACT_MISSING",
+                        "GC0",
+                        f"Graph Compiler artifact is missing or empty: {artifact_path}",
                     )
                 )
             else:
-                planner_artifacts[suffix] = {
+                graph_compiler_artifacts[suffix] = {
                     "path": artifact_path.name,
                     "sha256": hashlib.sha256(artifact_bytes).hexdigest(),
                 }
         planner_stage = dict(candidate.get("planner_stage") or {})
-        planner_stage.update({"status": "reviewed", "completed_by": "compiled_sprint_planner"})
+        planner_stage.update({"status": "requirements_handoff_complete", "completed_by": "planner_operator"})
         candidate["planner_stage"] = planner_stage
-        candidate["planner_artifacts"] = planner_artifacts
+        candidate["graph_compiler_stage"] = {
+            "role": "graph_compiler",
+            "node_id": "GC0",
+            "status": "compiled",
+            "completed_by": "task_graph_compiler",
+        }
+        candidate["graph_compiler_artifacts"] = graph_compiler_artifacts
         requirement_ir_path = sprints / f"{sid}.requirement_ir.json"
         expected_request_text = ""
         try:
@@ -1436,7 +1448,7 @@ def check_planner_graph_dispatchable(
                 )
             ]
         else:
-            errors = _planner_artifact_errors(
+            errors = _graph_compiler_artifact_errors(
                 effective_graph,
                 sprints_dir=sprints_dir,
                 sid=str(sid or effective_graph.get("sprint_id") or ""),
@@ -1491,11 +1503,11 @@ def planner_compile_policy_block(
                     f"## Plan compile policy ({AUTOSCI_CONTRACT_ID})",
                     "",
                     "This is an AutoSci graph PROPOSAL, not a Builder-ready graph.",
-                    "You are the distinct Planner stage (N0). Do not execute any Scientific* Builder node.",
-                    "Review the PRD, contract, requirement IR, and proposed task graph; preserve the locked",
+                    "You are the distinct Graph Compiler stage (GC0), downstream of Planner. Do not execute any Scientific* Builder node.",
+                    "Read the Planner requirements/handoff plus PRD, contract, requirement IR, and proposed task graph; preserve the locked",
                     "Scientific* node set, dependencies, logical operators, capability capsules, scopes, and gates.",
-                    "Produce design.md and plan.md, finish every artifact write, then return from this bounded",
-                    "Planner invocation. Do not invoke the plan compiler and do not edit lifecycle status.",
+                    "Produce design.md, plan.md, and a valid task_graph.json, finish every artifact write, then return from this bounded",
+                    "Graph Compiler invocation. Do not execute graph nodes and do not edit lifecycle status.",
                     "After your durable operator result succeeds, Solar alone runs plan_validator, stamps any",
                     "PASS certificate, and transitions the sprint to planning_complete. Never self-declare it.",
                 ]
