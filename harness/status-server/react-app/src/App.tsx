@@ -2015,12 +2015,46 @@ function operatorReadiness(
 ): "ready" | "busy" | "blocked" | "unknown" {
   const r = asString(row.readiness).toLowerCase();
   if (r === "ready" || r === "busy" || r === "blocked") return r;
-  if (row.available === false) return "blocked";
-  const state = asString(row.runtime_state || row.state).toLowerCase();
-  if (/auth|quota|blocked|error|permission/.test(state)) return "blocked";
+  if (r.endsWith("_blocked") || r === "disabled") return "blocked";
+  if (row.enabled === false || row.available === false) return "blocked";
+  const state = asString(
+    row.operator_runtime_state || row.runtime_state || row.state,
+  ).toLowerCase();
+  const quota = asString(row.quota_state || row.quota_guard_state).toLowerCase();
+  const auth = asString(row.auth_state).toLowerCase();
+  if (/auth|quota|cooldown|blocked|disabled|error|permission/.test(`${state} ${quota} ${auth}`)) {
+    return "blocked";
+  }
   if (/run|busy|active|dispatch|progress/.test(state)) return "busy";
   if (/idle|ready|wait/.test(state) || row.available === true) return "ready";
   return "unknown";
+}
+
+function operatorHasRole(row: Record<string, unknown>, role: string): boolean {
+  const roles = Array.isArray(row.roles)
+    ? row.roles.map((item) => asString(item).toLowerCase())
+    : [];
+  const primary = asString(row.role).toLowerCase();
+  return roles.includes(role) || primary === role;
+}
+
+function roleWorkerStats(
+  projection: ProjectionData | undefined,
+  role: string,
+): ReturnType<typeof workerStats> {
+  const rows = collectOperatorRows(projection).filter((row) =>
+    operatorHasRole(row, role),
+  );
+  let ready = 0;
+  let busy = 0;
+  let blocked = 0;
+  for (const row of rows) {
+    const state = operatorReadiness(row);
+    if (state === "ready") ready += 1;
+    else if (state === "busy") busy += 1;
+    else if (state === "blocked") blocked += 1;
+  }
+  return { total: rows.length, ready, busy, blocked };
 }
 
 function workerStats(projection?: ProjectionData): {
@@ -2064,6 +2098,9 @@ function RunHealth({
   const data = projection?.data;
   if (!data) return null;
   const stats = workerStats(data);
+  const stall = projectionStall(projection);
+  const focusRole = stall?.state === "planner_dispatch_failed" ? "planner" : "";
+  const focused = focusRole ? roleWorkerStats(data, focusRole) : null;
   const mismatch = data.capability_mismatch;
   const status = asString(data.status || data.sprint?.status);
   const phase = asString(data.phase || data.sprint?.phase);
@@ -2081,9 +2118,12 @@ function RunHealth({
         <span className="run-health-label">Workers</span>
         {stats.total > 0 ? (
           <span className="run-health-value">
-            {stats.ready} ready
+            {stats.total} configured · {stats.ready} ready
             {stats.busy ? ` · ${stats.busy} busy` : ""}
-            {stats.blocked ? ` · ${stats.blocked} blocked` : ""} / {stats.total}
+            {stats.blocked ? ` · ${stats.blocked} blocked` : ""}
+            {focused
+              ? ` · ${focused.ready + focused.busy}/${focused.total} ${focusRole} eligible now`
+              : ""}
           </span>
         ) : (
           <span className="run-health-value run-health-warn">
@@ -2440,6 +2480,9 @@ function SystemStall({
   data?: ProjectionData;
 }) {
   const missing = asString(mismatch?.missing_capability);
+  const stall = data?.dispatch?.stall;
+  const stallTitle = asString(stall?.title, "System paused");
+  const stallDetail = asString(stall?.detail || stall?.explanation);
   const blockedNodes = Array.isArray(mismatch?.blocked_nodes)
     ? (mismatch!.blocked_nodes as Array<Record<string, unknown>>)
     : [];
@@ -2454,21 +2497,23 @@ function SystemStall({
   )
     .map((node) => asString(node))
     .filter(Boolean);
-  const diagnostics = (
+  const diagnostics = [
+    ...(Array.isArray(stall?.reasons) ? stall.reasons : []),
+    ...(
     Array.isArray(
       (data?.dispatch as { blocker_diagnostics?: unknown })
         ?.blocker_diagnostics,
     )
       ? ((data!.dispatch as { blocker_diagnostics?: unknown[] })
           .blocker_diagnostics as unknown[])
-      : []
-  )
+      : []),
+  ]
     .map((entry) =>
       typeof entry === "string"
         ? entry
         : asString((entry as { reason?: unknown })?.reason),
     )
-    .filter(Boolean)
+    .filter((reason, index, all) => Boolean(reason) && all.indexOf(reason) === index)
     .slice(0, 3);
   const unsafe = actions.filter(
     (action) =>
@@ -2483,17 +2528,18 @@ function SystemStall({
     >
       <h2 className="stall-title">
         <PauseCircle size={16} aria-hidden="true" />
-        System paused
+        {stallTitle}
       </h2>
       <p className="stall-resolve">
-        {blockedNode ? (
+        {mismatch?.present ? (
           <>
-            Node <code>{blockedNode}</code> can’t run:{" "}
+            {blockedNode ? <>Node <code>{blockedNode}</code> can’t run: </> : null}
+            no connected worker currently provides{" "}
+            {missing ? <code>{missing}</code> : "the required capability"}.
           </>
-        ) : null}
-        Connect a worker that provides{" "}
-        {missing ? <code>{missing}</code> : "the missing capability"} and the
-        run continues.
+        ) : (
+          stallDetail || "Solar cannot advance this run yet."
+        )}
       </p>
       {waiting.length > 0 && (
         <p className="stall-waiting">
@@ -3469,17 +3515,19 @@ function processStepFromEvent(
 ): ProcessStep {
   event = unwrapEvent(event);
   const body = payload(event);
-  const type = eventType(event);
+  let type = eventType(event);
   // Narrative: attribute the step to the AGENT the coordinator dispatched to (PM/Builder/
   // Evaluator/Planner) when the payload names a role, so the stream reads "PM did X, Builder did
   // Y" instead of everything being "coordinator".
   const stepRole = normalizeRole(body.role || body.target_role || event.role);
   const actor = stepRole ? ROLE_META[stepRole].title : eventActor(event);
-  const node = asString(body.node_id || body.node || event.node_id);
+  const waiting = evaluatorWaitDetails(body);
+  if (waiting) type = "graph_eval_dispatch_waiting";
+  const node = asString(waiting?.node || body.node_id || body.node || event.node_id);
   const phase = asString(body.phase || event.phase);
   const decision = asString(body.decision || event.decision);
   const target = asString(body.target_pane || body.pane || event.target_pane);
-  const reason = asString(body.reason || body.blocked_reason || event.reason);
+  const reason = asString(waiting?.reason || body.reason || body.blocked_reason || event.reason);
   const model = asString(body.model || event.model);
   const thought = asString(
     body.thought || body.summary || body.message || event.message,
@@ -3577,6 +3625,8 @@ function processTitle(
   values: { node: string; phase: string; decision: string; target: string },
 ): string {
   const eventType = asString(type);
+  if (eventType === "graph_eval_dispatch_waiting")
+    return `Waiting for Builder result${values.node ? ` for ${values.node}` : ""}`;
   if (eventType.includes("intake")) return `${actor} scoped the request`;
   if (eventType.includes("phase"))
     return `${actor} moved the sprint to ${values.phase.replace(/_/g, " ") || "the next phase"}`;
@@ -3607,6 +3657,8 @@ function processSummary(
   },
 ): string {
   const eventType = asString(type);
+  if (eventType === "graph_eval_dispatch_waiting")
+    return "Evaluation starts after the Builder publishes its durable result.";
   if (values.reason) return shortText(values.reason, 120);
   if (values.thought) return shortText(values.thought, 120);
   if (eventType.includes("phase"))
@@ -3624,6 +3676,45 @@ function processSummary(
       ? `The agent is working on ${values.node}.`
       : "An agent model session started.";
   return "";
+}
+
+function evaluatorWaitDetails(
+  body: Record<string, unknown>,
+): { node: string; reason: string } | null {
+  if (asString(body.reason) === "builder_operator_result_pending") {
+    return {
+      node: asString(body.node),
+      reason: "builder_operator_result_pending",
+    };
+  }
+  const raw = body.output;
+  if (typeof raw !== "string" || !raw.trim().startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (Array.isArray(parsed.dispatched) && parsed.dispatched.length > 0)
+      return null;
+    const skipped = parsed.skipped;
+    if (!Array.isArray(skipped) || skipped.length === 0) return null;
+    const rows = skipped.filter(
+      (entry): entry is Record<string, unknown> =>
+        Boolean(entry) && typeof entry === "object" && !Array.isArray(entry),
+    );
+    if (
+      rows.length !== skipped.length ||
+      rows.some(
+        (entry) =>
+          asString(entry.reason) !== "builder_operator_result_pending" ||
+          entry.complete === true,
+      )
+    )
+      return null;
+    return {
+      node: rows.length === 1 ? asString(rows[0].node) : "",
+      reason: "builder_operator_result_pending",
+    };
+  } catch {
+    return null;
+  }
 }
 
 function humanizeToken(value: string): string {

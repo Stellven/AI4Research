@@ -21,6 +21,98 @@ def _load_routes():
     return mod
 
 
+def test_builder_result_pending_is_presented_as_waiting_not_blocked() -> None:
+    mod = _load_routes()
+    output = json.dumps({
+        "ok": False,
+        "dispatched": [],
+        "skipped": [{
+            "node": "S1",
+            "reason": "builder_operator_result_pending",
+            "complete": False,
+        }],
+        "terminalized": [],
+    })
+    events = [{
+        "ts": "2026-08-27T21:39:05Z",
+        "type": "activity_failed",
+        "actor": "coordinator",
+        "payload": {
+            "legacy_event": "graph_eval_dispatch_failed",
+            "rc": 2,
+            "output": output,
+            "error": "graph_eval_dispatch_failed",
+        },
+    }]
+
+    timeline = mod._timeline_from_events(events, {}, "2026-08-27T21:39:05Z")
+    narrative = mod._narrative_from_events(events)
+
+    assert timeline[0]["title"] == "Waiting for Builder result for S1"
+    assert timeline[0]["tone"] == "working"
+    assert narrative[0]["title"] == "Waiting for Builder result S1"
+    assert narrative[0]["tone"] == "working"
+    assert "durable result" in narrative[0]["summary"]
+
+
+def test_real_evaluator_dispatch_failure_remains_blocked() -> None:
+    mod = _load_routes()
+    events = [{
+        "ts": "2026-08-27T21:39:05Z",
+        "type": "activity_failed",
+        "actor": "coordinator",
+        "payload": {
+            "legacy_event": "graph_eval_dispatch_failed",
+            "reason": "no_available_evaluator",
+        },
+    }]
+
+    narrative = mod._narrative_from_events(events)
+
+    assert narrative[0]["title"] == "Evaluation blocked"
+    assert narrative[0]["tone"] == "blocked"
+
+
+def test_transient_missing_plan_certificate_is_working_after_certification() -> None:
+    mod = _load_routes()
+    events = [{
+        "ts": "2026-08-27T21:39:05Z",
+        "type": "log_message",
+        "actor": "graph-dispatch",
+        "payload": {
+            "legacy_event": "plan_validator_dispatch_refused",
+            "errors": [{
+                "code": "PLAN_CERTIFICATE_MISSING",
+                "message": "planner graph carries no plan_certificate",
+            }],
+        },
+    }]
+
+    narrative = mod._narrative_from_events(events, plan_certified=True)
+
+    assert narrative[0]["title"] == "Plan awaiting certification"
+    assert narrative[0]["tone"] == "working"
+    assert narrative[0]["summary"] == "Dispatch resumed after the plan certificate was recorded."
+
+
+def test_missing_plan_certificate_remains_blocked_without_certification() -> None:
+    mod = _load_routes()
+    events = [{
+        "ts": "2026-08-27T21:39:05Z",
+        "type": "log_message",
+        "actor": "graph-dispatch",
+        "payload": {
+            "legacy_event": "plan_validator_dispatch_refused",
+            "errors": [{"code": "PLAN_CERTIFICATE_MISSING"}],
+        },
+    }]
+
+    narrative = mod._narrative_from_events(events, plan_certified=False)
+
+    assert narrative[0]["title"] == "Plan certification required"
+    assert narrative[0]["tone"] == "blocked"
+
+
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -803,10 +895,10 @@ def test_projection_narrative_preserves_dispatch_reason_and_collapses_prerequisi
 
     narrative = mod._narrative_from_events(events)
 
-    waits = [row for row in narrative if row["title"].startswith("Evaluation waiting")]
+    waits = [row for row in narrative if row["title"].startswith("Waiting for Builder result")]
     assert len(waits) == 1
     assert waits[0]["tone"] == "working"
-    assert waits[0]["summary"] == "builder operator result pending"
+    assert waits[0]["summary"] == "Evaluation starts after the Builder publishes its durable result."
 
     real_failure = mod._narrative_from_events(
         [
@@ -828,7 +920,7 @@ def test_projection_narrative_preserves_dispatch_reason_and_collapses_prerequisi
             }
         ]
     )
-    assert real_failure[0]["title"] == "Evaluation dispatch failed S1"
+    assert real_failure[0]["title"] == "Evaluation blocked S1"
     assert real_failure[0]["summary"] == "no available evaluator"
     assert real_failure[0]["tone"] == "blocked"
 
@@ -857,6 +949,31 @@ def test_failed_planner_dispatch_is_projected_as_a_stall(tmp_path: Path) -> None
 
     assert stall["is_stalled"] is True
     assert stall["state"] == "planner_dispatch_failed"
-    assert stall["title"] == "Planner could not start"
+    assert stall["title"] == "Planner temporarily unavailable"
     assert stall["reasons"] == ["no_dispatchable_operator_for_role: planner"]
-    assert "No dispatchable Planner operator" in stall["detail"]
+    assert "No eligible Planner worker" in stall["detail"]
+
+
+def test_completed_planning_supersedes_an_old_failed_planner_claim(tmp_path: Path) -> None:
+    mod = _load_routes()
+
+    projection, _ = _scenario_projection(
+        mod,
+        tmp_path,
+        "planner-dispatch-recovered",
+        status={
+            "status": "active",
+            "phase": "planning_complete",
+            "handoff_to": "builder_main",
+            "planner_dispatch_claim": {
+                "owner": "operator_pool",
+                "state": "failed",
+                "failure_reason": "no_dispatchable_operator_for_role: planner",
+            },
+        },
+        graph={"nodes": [{"id": "N1", "goal": "build", "status": "pending"}]},
+    )
+
+    stall = projection["dispatch"]["stall"]
+    assert stall.get("state") != "planner_dispatch_failed"
+    assert stall.get("title") != "Planner temporarily unavailable"

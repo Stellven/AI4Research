@@ -21,6 +21,8 @@ grep -Fq '"$ORIGINAL_WORK_DIR" "$WORK_DIR"' "$LAUNCHER"
 grep -Fq 'export CODEX_HOME="$sandbox_codex_home"' "$LAUNCHER"
 grep -Fq '"$source_codex_home/auth.json"' "$LAUNCHER"
 grep -Fq '"$codex_arg0_dir"' "$LAUNCHER"
+grep -Fq 'codex_package_root' "$LAUNCHER"
+grep -Fq 'node_real' "$LAUNCHER"
 grep -Fq '/etc/resolv.conf /etc/hosts /etc/nsswitch.conf /etc/gai.conf' "$LAUNCHER"
 
 mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied" "$TMP_ROOT/home/.codex" "$TMP_ROOT/stale-codex-home"

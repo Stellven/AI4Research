@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -720,7 +721,7 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert command[0] == sys.executable
     assert command[1].endswith("landlock_exec.py")
     assert command[-4] == "--"
-    assert Path(command[-3]).name == "codex"
+    assert Path(command[-3]).name in {"codex", "codex.js"}
     assert command[-2:] == ["exec", "-"]
     assert proof["mode"] == "landlock"
     assert proof["strict"] is True
@@ -733,6 +734,11 @@ def test_codex_operator_wraps_strict_run_in_landlock(tmp_path, monkeypatch):
     assert str(relative_read.resolve()) in proof["read_only"]
     assert str(tmp_path.resolve()) not in proof["read_write"]
     assert str(Path("/etc/resolv.conf").resolve()) in proof["read_only"]
+    resolved_codex = Path(command[-3]).resolve()
+    assert str(resolved_codex.parent.parent) in proof["read_only"]
+    node_binary = shutil.which("node", path=env.get("PATH"))
+    assert node_binary
+    assert str(Path(node_binary).resolve()) in proof["read_only"]
     sandbox_codex_home = Path(env["CODEX_HOME"])
     assert Path(env["HOME"]) == sandbox_codex_home.parent
     assert sandbox_codex_home == Path(env["CODEX_SQLITE_HOME"]) / "home"

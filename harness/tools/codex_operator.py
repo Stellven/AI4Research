@@ -697,6 +697,11 @@ def _filesystem_isolated_command(
         if path.exists()
     ]
     declared_read_scope = _declared_read_scope_paths(env, cwd)
+    node_runtime_paths: list[Path] = []
+    node_binary = shutil.which("node", path=env.get("PATH"))
+    if node_binary:
+        resolved_node = Path(node_binary).expanduser().resolve(strict=False)
+        node_runtime_paths.extend([resolved_node, resolved_node.parent])
     read_only = _existing_paths(
         [
             Path("/usr"),
@@ -706,7 +711,9 @@ def _filesystem_isolated_command(
             Path("/lib64"),
             Path("/etc"),
             codex_binary,
+            resolved_binary.parent.parent,
             resolved_binary.parent,
+            *node_runtime_paths,
             *resolved_system_network_files,
             harness_dir,
             harness_dir.parent / "AGENTS.md",

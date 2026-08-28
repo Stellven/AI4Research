@@ -302,6 +302,120 @@ def test_terminal_pm_record_and_result_do_not_reclaim_planner_ownership(tmp_path
     assert submitted.stdout.strip() == "active"
 
 
+def test_newest_successful_planner_result_compiles_despite_older_pending_retry(
+    tmp_path: Path,
+) -> None:
+    """An abandoned older submission must not veto a newer successful plan.
+
+    The live dashboard hit this after a no-capacity retry remained in pm-inbox:
+    planner_operator_gate correctly selected the newer durable success, but the
+    drafting flow separately treated the older pending record as ownership and
+    skipped certification.  The coordinator then fell back to Planner again.
+    """
+    harness = _minimal_harness(tmp_path)
+    (harness / "lib").mkdir(exist_ok=True)
+    shutil.copy2(_HARNESS / "lib" / "planner_operator_gate.py", harness / "lib")
+    sid = "sprint-newer-planner-success"
+    old_task = f"pm-{sid}-N0-00000001"
+    new_task = f"pm-{sid}-N0-00000002"
+    sprints = harness / "sprints"
+    status_path = sprints / f"{sid}.status.json"
+    prd_path = sprints / f"{sid}.prd.md"
+    compile_marker = tmp_path / "compiled"
+    dispatch_marker = tmp_path / "legacy-dispatch"
+
+    status_path.write_text(
+        json.dumps(
+            {
+                "id": sid,
+                "status": "drafting",
+                "phase": "prd_ready",
+                "handoff_to": "planner",
+                "planner_dispatch_claim": {
+                    "owner": "operator_pool",
+                    "state": "failed",
+                    "expires_at": _iso_after(-1),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    prd_path.write_text("# PRD\n\nValid fixture.\n", encoding="utf-8")
+    for suffix, content in (
+        ("design.md", "# Design\n"),
+        ("plan.md", "# Plan\n"),
+        ("task_graph.json", json.dumps({"nodes": [{"id": "N1"}]})),
+    ):
+        (sprints / f"{sid}.{suffix}").write_text(content, encoding="utf-8")
+
+    old_record = harness / "run" / "pm-inbox" / f"{old_task}.json"
+    old_record.write_text(
+        json.dumps(
+            {
+                "task_id": old_task,
+                "sprint_id": sid,
+                "requested_role": "planner",
+                "status": "submitted",
+            }
+        ),
+        encoding="utf-8",
+    )
+    old_time = dt.datetime.now().timestamp() - 10
+    os.utime(old_record, (old_time, old_time))
+
+    (harness / "run" / "pm-inbox" / f"{new_task}.json").write_text(
+        json.dumps(
+            {
+                "task_id": new_task,
+                "sprint_id": sid,
+                "requested_role": "planner",
+                "status": "completed",
+            }
+        ),
+        encoding="utf-8",
+    )
+    result_dir = harness / "run" / "operator-results" / "op" / new_task
+    result_dir.mkdir(parents=True)
+    (result_dir / "result.json").write_text(
+        json.dumps({"task_id": new_task, "status": "completed", "exit_code": 0}),
+        encoding="utf-8",
+    )
+
+    script = r'''
+pm_requirements_file() { printf '%s\n' "$REQ_FILE"; }
+workflow_guard_route_role() { [[ -e "$COMPILE_MARKER" ]] && printf '%s\n' builder || printf '%s\n' planner; }
+annotate_requirement_matrix_for_planning() { return 0; }
+compile_generic_plan_graph() { : > "$COMPILE_MARKER"; return 0; }
+runtime_status_transition() { return 0; }
+validate_doc() { return 0; }
+drafting_flow_marked() { return 1; }
+drafting_retry_blocked() { return 1; }
+generate_dispatch() { :; }
+append_dispatch() { :; }
+dispatch_to_planner() { : > "$DISPATCH_MARKER"; return 0; }
+mark_drafting_flow() { :; }
+emit_event() { :; }
+rollback_state_cache() { :; }
+handle_drafting "$SID" "$STATUS_FILE"
+[[ -e "$COMPILE_MARKER" && ! -e "$DISPATCH_MARKER" ]]
+'''
+    result = _source_coordinator(
+        harness,
+        script,
+        env={
+            "SID": sid,
+            "STATUS_FILE": str(status_path),
+            "REQ_FILE": str(prd_path),
+            "COMPILE_MARKER": str(compile_marker),
+            "DISPATCH_MARKER": str(dispatch_marker),
+        },
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert compile_marker.exists()
+    assert not dispatch_marker.exists()
+
+
 def test_registered_live_planner_process_is_strong_ownership_evidence(
     tmp_path: Path,
 ) -> None:
@@ -436,6 +550,14 @@ def test_coordinator_retries_failed_drafting_without_fingerprint_change() -> Non
     assert "startup recovery: replaying failed Planner dispatch" in source
     assert "retrying without a status-fingerprint change" in source
     assert 'drafting_retry_blocked "$sid" "planner_operator_retry"' in source
+
+
+def test_coordinator_certifies_completed_drafting_without_fingerprint_change() -> None:
+    source = _COORDINATOR.read_text(encoding="utf-8")
+
+    assert '[[ "$drafting_planner_state" == "completed" ]]' in source
+    assert 'planner_artifacts_present "$sid"' in source
+    assert "certifying without a status-fingerprint change" in source
 
 
 def test_active_gate_waits_for_planner_result_without_certifying_or_rolling_back(

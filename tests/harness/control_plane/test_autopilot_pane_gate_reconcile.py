@@ -334,6 +334,61 @@ def test_ready_for_planner_queue_bypasses_fixed_pane_busy(tmp_path, monkeypatch)
     assert mod.load_queue() == []
 
 
+def test_ready_for_planner_queue_drops_when_planner_outputs_already_exist(tmp_path, monkeypatch) -> None:
+    sid = "sprint-planner-complete"
+    monkeypatch.setattr(mod, "QUEUE", tmp_path / "autopilot-queue.jsonl")
+    monkeypatch.setattr(mod, "SPRINTS", tmp_path / "sprints")
+    events: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        mod,
+        "append_event",
+        lambda event_sid, event, *_args, **_kwargs: events.append((event_sid, event)),
+    )
+    monkeypatch.setattr(
+        mod,
+        "dispatch_role_handoff",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("stale planner handoff must not dispatch")),
+    )
+    mod.SPRINTS.mkdir(parents=True)
+    (mod.SPRINTS / f"{sid}.status.json").write_text(
+        json.dumps({
+            "sprint_id": sid,
+            "status": "active",
+            "phase": "planning_complete",
+            "handoff_to": "builder_main",
+        }) + "\n",
+        encoding="utf-8",
+    )
+    (mod.SPRINTS / f"{sid}.design.md").write_text("# Design\n", encoding="utf-8")
+    (mod.SPRINTS / f"{sid}.plan.md").write_text("# Plan\n", encoding="utf-8")
+    (mod.SPRINTS / f"{sid}.task_graph.json").write_text(
+        json.dumps({"sprint_id": sid, "nodes": []}) + "\n",
+        encoding="utf-8",
+    )
+    mod.QUEUE.write_text(
+        json.dumps({
+            "sid": sid,
+            "type": "ready_for_planner",
+            "target": "solar-harness:0.1",
+            "created_at_epoch": time.time(),
+        }) + "\n",
+        encoding="utf-8",
+    )
+
+    actions = mod.retry_queue({"actions": {}, "target_actions": {}}, dispatch=True, cooldown=0)
+
+    assert actions == [{
+        "sid": sid,
+        "action": "ready_for_planner",
+        "dropped": "stale_planner_handoff",
+        "target": "solar-harness:0.1",
+        "status": "active",
+        "phase": "planning_complete",
+    }]
+    assert events == [(sid, "autopilot_queue_drop_stale_planner_handoff")]
+    assert mod.load_queue() == []
+
+
 def test_ready_for_planner_finding_bypasses_fixed_pane_busy(monkeypatch) -> None:
     sid = "sprint-planner-demo"
     finding = {

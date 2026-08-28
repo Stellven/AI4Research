@@ -50,6 +50,25 @@ def request_json(base_url: str, path: str, payload: dict | None = None) -> tuple
         return exc.code, json.loads(raw or "{}")
 
 
+def request_text(base_url: str, path: str) -> tuple[int, str, str, str]:
+    request = urllib.request.Request(base_url + path, headers={"Accept": "text/html"})
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return (
+                response.status,
+                response.headers.get("Content-Type", ""),
+                response.read().decode("utf-8"),
+                response.geturl(),
+            )
+    except urllib.error.HTTPError as exc:
+        return (
+            exc.code,
+            exc.headers.get("Content-Type", ""),
+            exc.read().decode("utf-8", errors="replace"),
+            exc.geturl(),
+        )
+
+
 def main() -> None:
     mod = load_module()
     with tempfile.TemporaryDirectory(prefix="solar-p0-status-") as td:
@@ -265,6 +284,12 @@ fi
             assert status_code == 200, api_projection
             assert api_projection["ok"] is True
             assert api_projection["data"]["sprint_id"] == sid
+
+            status_code, content_type, session_html, final_url = request_text(base_url, f"/sessions/{sid}")
+            assert status_code == 200, session_html
+            assert content_type.startswith("text/html")
+            assert "AI4Research" in session_html
+            assert final_url.endswith(f"/#/sessions/{sid}")
 
             write(
                 sprints / f"{sid}.status.json",

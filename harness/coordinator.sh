@@ -3510,7 +3510,8 @@ PY
   # re-reads workflow_guard before deciding whether Builder may run.
   if [[ "$guard_role" != "builder_main" && "$guard_role" != "builder" ]] \
     && planner_artifacts_present "$sid" \
-    && ! pm_operator_role_pool_task_seen "$sid" "planner"; then
+    && { [[ "$planner_operator_state" == "completed" ]] \
+      || ! pm_operator_role_pool_task_seen "$sid" "planner"; }; then
     if ! annotate_requirement_matrix_for_planning "$sid"; then
       log "${R}Planner 产物存在但 Requirement Trace Matrix 注入失败，阻止 Solar 签证${N}"
       emit_event "$sid" "gate_blocked" "coordinator" '{"stage":"planning","reason":"requirement_trace_annotation_failed"}'
@@ -3656,7 +3657,7 @@ PY
   fi
 
   log "${G}Drafting sprint 已有 PRD + design + plan + task_graph → 自动推进 active/planning_complete${N}"
-  runtime_status_transition "$sid" "active" "planner_graph_completed" "coordinator" '{"status_fields":{"phase":"planning_complete","handoff_to":"builder_main","target_role":"builder_main"},"note":"Auto-promoted drafting sprint because planner artifacts and task_graph are complete."}' || true
+  runtime_status_transition "$sid" "active" "planner_graph_completed" "coordinator" '{"status_fields":{"phase":"planning_complete","handoff_to":"builder_main","target_role":"builder_main","planner_dispatch_claim":null,"plan_compile_required":false},"note":"Auto-promoted drafting sprint because planner artifacts and task_graph are complete."}' || true
 }
 
 auto_drive_drafting_sprints() {
@@ -4048,6 +4049,13 @@ EOF
         graph_out="$(run_with_timeout "$graph_dispatch_timeout" python3 "$graph_dispatcher" dispatch-ready --graph "$SPRINTS_DIR/${sid}.task_graph.json" 2>&1)" || graph_rc=$?
       fi
       if (( graph_eval_rc != 0 )); then
+        local graph_eval_wait_payload=""
+        if graph_eval_wait_payload="$(printf '%s' "$graph_eval_out" | python3 "$HARNESS_DIR/lib/graph_dispatch_outcome.py" evaluator-wait 2>/dev/null)"; then
+          log "${Y}[graph-dispatch] evaluator waiting for Builder result: ${graph_eval_wait_payload}${N}"
+          rollback_state_cache "$sid"
+          emit_event "$sid" "graph_eval_dispatch_waiting" "coordinator" "$graph_eval_wait_payload"
+          return 0
+        fi
         log "${Y}[graph-dispatch] dispatch-evals failed rc=${graph_eval_rc}: ${graph_eval_out}${N}"
         rollback_state_cache "$sid"
         emit_event "$sid" "graph_eval_dispatch_failed" "coordinator" "$(python3 -c 'import json,sys; print(json.dumps({"rc": int(sys.argv[1]), "output": sys.argv[2][-1000:]}))' "$graph_eval_rc" "$graph_eval_out" 2>/dev/null || echo '{}')"
@@ -5853,6 +5861,9 @@ with open('$patches_file','w') as f:
                 log "${Y}[state-recovery] ${sid} Planner dispatch is ${drafting_planner_state}; retrying without a status-fingerprint change${N}"
                 handle_drafting "$sid" "$sf"
               fi
+            elif [[ "$drafting_planner_state" == "completed" ]] && planner_artifacts_present "$sid"; then
+              log "${Y}[state-recovery] ${sid} has a successful durable Planner result and candidate artifacts; certifying without a status-fingerprint change${N}"
+              handle_drafting "$sid" "$sf"
             fi
           fi
         fi

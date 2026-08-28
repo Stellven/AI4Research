@@ -24,6 +24,34 @@ def _load_pm_dispatch():
     return module
 
 
+def test_reconcile_keeps_live_task_active_when_partial_result_exists(tmp_path, monkeypatch, capsys):
+    pm_dispatch = _load_pm_dispatch()
+    inbox = tmp_path / "pm-inbox"
+    inbox.mkdir()
+    result_path = tmp_path / "partial-result.md"
+    result_path.write_text("worker is still writing\n", encoding="utf-8")
+    task_id = "pm-sprint-live-N1-deadbeef"
+    record_path = inbox / f"{task_id}.json"
+    record_path.write_text(json.dumps({
+        "task_id": task_id,
+        "status": "submitted",
+        "submitted_at": "2026-08-27T21:00:00Z",
+        "result_path": str(result_path),
+        "expected_artifacts": [str(tmp_path / "not-published-yet.md")],
+    }), encoding="utf-8")
+    monkeypatch.setattr(pm_dispatch, "PM_INBOX_DIR", inbox)
+    monkeypatch.setattr(pm_dispatch, "_active_pm_task_ids", lambda: {task_id})
+
+    rc = pm_dispatch.cmd_reconcile(argparse.Namespace(max_age_minutes=30, apply=True, json=True))
+
+    assert rc == 0
+    persisted = json.loads(record_path.read_text(encoding="utf-8"))
+    assert persisted["status"] == "submitted"
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["summary"] == {"keep_active": 1}
+    assert payload["actions"][0]["action"] == "keep_active"
+
+
 def test_select_operator_by_role_prefers_capsule_operator_constraints(monkeypatch):
     pm_dispatch = _load_pm_dispatch()
     monkeypatch.setattr(

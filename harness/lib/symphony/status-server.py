@@ -14409,6 +14409,14 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_redirect(self, location: str) -> None:
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def _send_file(self, path: Path, content_type: str):
         try:
             body = path.read_bytes()
@@ -15022,6 +15030,13 @@ class StatusHandler(BaseHTTPRequestHandler):
                     self._send_json({"status": "no_runs", "benchmark": "terminal-bench@2.0"})
             else:
                 self._send_json({"status": "no_runs", "benchmark": "terminal-bench@2.0"})
+
+        elif re.fullmatch(r"/sessions/[^/]+", path):
+            sid = urllib.parse.unquote(path.split("/sessions/", 1)[1])
+            if not _valid_sprint_id(sid):
+                self._send_json({"ok": False, "error": "invalid_sprint_id"}, status=400)
+                return
+            self._send_redirect(f"/#/sessions/{urllib.parse.quote(sid, safe='')}")
 
         elif path == "/":
             self._send_text(_p0_dashboard_html(), content_type="text/html; charset=utf-8")

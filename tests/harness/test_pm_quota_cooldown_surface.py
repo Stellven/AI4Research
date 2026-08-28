@@ -80,6 +80,20 @@ class TestQuotaTextClassification:
     def test_normal_output_not_classified(self, ofc):
         assert ofc.classify_failure_state("Task completed successfully") == ""
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "/usr/bin/env: ‘node’: Permission denied",
+            "landlock_exec: failed to execute /opt/node/bin/node: Permission denied",
+        ],
+    )
+    def test_local_execution_permission_denial_is_not_auth_expired(self, ofc, text):
+        assert ofc.classify_failure_state(text) == ""
+
+    def test_auth_context_permission_denial_is_auth_expired(self, ofc):
+        text = "PERMISSION_DENIED: request had invalid authentication credentials"
+        assert ofc.classify_failure_state(text) == "auth_expired"
+
 
 # ---------------------------------------------------------------------------
 # 2. quotaProject= must NOT trigger quota classification

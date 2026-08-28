@@ -1266,6 +1266,32 @@ def retry_queue(state: dict, dispatch: bool, cooldown: int, epic_filter: str = "
                     }
                 )
                 continue
+            if item.get("type") == "ready_for_planner":
+                files = sprint_files(sid)
+                if not planner_outputs_missing(files):
+                    append_event(
+                        sid,
+                        "autopilot_queue_drop_stale_planner_handoff",
+                        "info",
+                        {
+                            "target": target,
+                            "type": item.get("type"),
+                            "status": status.get("status"),
+                            "phase": status.get("phase"),
+                            "reason": "planner_outputs_already_exist",
+                        },
+                    )
+                    actions.append(
+                        {
+                            "sid": sid,
+                            "action": item.get("type"),
+                            "dropped": "stale_planner_handoff",
+                            "target": target,
+                            "status": status.get("status"),
+                            "phase": status.get("phase"),
+                        }
+                    )
+                    continue
             if item.get("type") == "graph_node_idle_assigned":
                 graph_node = item.get("graph_node") or {}
                 node_id = str(graph_node.get("node_id") or item.get("node_id") or "")

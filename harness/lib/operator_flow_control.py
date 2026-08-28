@@ -30,8 +30,13 @@ RATE_LIMIT_RE = re.compile(
 # NOTE: \bquota\b requires a word boundary after "quota", so "quotaProject=" is
 # NOT matched — the word continues with "P" which is a word character.
 AUTH_RE = re.compile(
-    r"not logged in|you are not logged|auth(?:entication)? failed|oauth token|permission denied|"
+    r"not logged in|you are not logged|auth(?:entication)? failed|oauth token|"
     r"sign in|login wall|login required|logged out|auth expired",
+    re.I,
+)
+AUTH_PERMISSION_RE = re.compile(
+    r"(?:auth(?:entication)?|credential|oauth|token|login|account)[^\n]{0,100}permission[_ ]denied|"
+    r"permission[_ ]denied[^\n]{0,100}(?:auth(?:entication)?|credential|oauth|token|login|account)",
     re.I,
 )
 AUTH_SUCCESS_RE = re.compile(
@@ -176,9 +181,8 @@ def _excerpt(text: str, limit: int = 800) -> str:
 
 def auth_failure_is_current(text: str) -> bool:
     raw = text or ""
-    last_auth = None
-    for match in AUTH_RE.finditer(raw):
-        last_auth = match
+    auth_matches = [*AUTH_RE.finditer(raw), *AUTH_PERMISSION_RE.finditer(raw)]
+    last_auth = max(auth_matches, key=lambda match: match.start(), default=None)
     if last_auth is None:
         return False
     for success in AUTH_SUCCESS_RE.finditer(raw):

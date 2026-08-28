@@ -3927,6 +3927,11 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         if _pm_status_is_terminal(status):
             continue
 
+        age = _record_age_minutes(record, path)
+        if task_id in active_task_ids:
+            actions.append({"task_id": task_id, "action": "keep_active", "age_min": round(age, 1)})
+            continue
+
         result_path = Path(str(record.get("result_path") or ""))
         result_exists = bool(str(result_path) and result_path.exists())
         if result_exists:
@@ -3961,10 +3966,6 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
                 write_pm_task_record(task_id, record)
             continue
 
-        age = _record_age_minutes(record, path)
-        if task_id in active_task_ids:
-            actions.append({"task_id": task_id, "action": "keep_active", "age_min": round(age, 1)})
-            continue
         if age >= max_age_minutes:
             actions.append(
                 {

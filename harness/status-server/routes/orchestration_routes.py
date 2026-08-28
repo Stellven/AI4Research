@@ -912,16 +912,26 @@ def _build_stall_summary(
             "reasons": reasons,
         }
     planner_claim = status.get("planner_dispatch_claim")
-    if isinstance(planner_claim, dict) and str(planner_claim.get("state") or "").lower() == "failed":
+    planner_claim_is_current = phase not in {
+        "planning_complete",
+        "graph_dispatch_active",
+        "handoff_ready",
+        "eval_completed",
+    }
+    if (
+        planner_claim_is_current
+        and isinstance(planner_claim, dict)
+        and str(planner_claim.get("state") or "").lower() == "failed"
+    ):
         failure_reason = str(planner_claim.get("failure_reason") or "planner_dispatch_failed").strip()
         no_operator = "no_dispatchable_operator_for_role" in failure_reason
         return {
             "is_stalled": True,
             "state": "planner_dispatch_failed",
             "severity": "warn",
-            "title": "Planner could not start",
+            "title": "Planner temporarily unavailable",
             "detail": (
-                "No dispatchable Planner operator is available. Solar can retry after operator health recovers."
+                "No eligible Planner worker is available right now. Solar can retry when a compatible worker becomes ready."
                 if no_operator
                 else "Solar could not hand the task to the Planner. Solar can retry after the dispatch failure clears."
             ),
@@ -1849,9 +1859,50 @@ def _projection_events(sid: str, limit: int = 80) -> list[dict]:
     return []
 
 
+def _evaluator_waiting_details(payload: dict) -> dict:
+    """Recognize the historical event shape emitted while Builder was still running."""
+    candidate = payload
+    legacy = payload.get("legacy_event")
+    if isinstance(legacy, dict):
+        nested = legacy.get("payload")
+        candidate = nested if isinstance(nested, dict) else legacy
+    if str(candidate.get("reason") or "") == "builder_operator_result_pending":
+        node = str(candidate.get("node") or "")
+        return {"node": node, "reason": "builder_operator_result_pending"}
+    raw = candidate.get("output")
+    if not isinstance(raw, str) or not raw.strip().startswith("{"):
+        return {}
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(result, dict) or result.get("dispatched") not in (None, []):
+        return {}
+    skipped = result.get("skipped")
+    if not isinstance(skipped, list) or not skipped:
+        return {}
+    if not all(
+        isinstance(item, dict)
+        and str(item.get("reason") or "") == "builder_operator_result_pending"
+        and item.get("complete") is not True
+        for item in skipped
+    ):
+        return {}
+    nodes = [str(item.get("node") or "") for item in skipped if str(item.get("node") or "")]
+    return {
+        "node": nodes[0] if len(nodes) == 1 else "",
+        "nodes": nodes,
+        "reason": "builder_operator_result_pending",
+    }
+
+
 def _timeline_title(event_type: str, actor: str, payload: dict) -> str:
     decision = str(payload.get("decision") or "")
     node = str(payload.get("node_id") or payload.get("node") or "")
+    waiting = _evaluator_waiting_details(payload)
+    if waiting:
+        waiting_node = str(waiting.get("node") or node)
+        return f"Waiting for Builder result{f' for {waiting_node}' if waiting_node else ''}"
     if "intake" in event_type:
         return "Task intake recorded"
     if "plan_verdict" in event_type:
@@ -1879,7 +1930,10 @@ def _timeline_from_events(events: list[dict], dashboard: dict, generated_at: str
         actor = str(event.get("actor") or event.get("role") or payload.get("actor") or "Harness")
         decision = str(payload.get("decision") or event.get("decision") or "")
         reason = str(payload.get("reason") or payload.get("blocked_reason") or event.get("reason") or "")
-        tone = "blocked" if "blocked" in event_type or "no_matching" in f"{decision} {reason}" else "complete"
+        waiting = _evaluator_waiting_details(payload)
+        if waiting:
+            reason = "Evaluation starts after the Builder publishes its durable result."
+        tone = "working" if waiting else "blocked" if "blocked" in event_type or "no_matching" in f"{decision} {reason}" else "complete"
         rows.append({
             "id": f"event-{index}",
             "source": "event",
@@ -1929,6 +1983,13 @@ _NARRATIVE_WAIT_REASONS = frozenset({
     "builder_operator_result_pending",
     "deterministic_gate_waiting_for_builder",
     "evaluator_temporarily_busy",
+})
+
+_NARRATIVE_EVALUATOR_BLOCK_REASONS = frozenset({
+    "no_available_evaluator",
+    "insufficient_evaluator_capacity",
+    "insufficient_selected_evaluators",
+    "multi_evaluator_quorum_not_implemented",
 })
 
 
@@ -2038,10 +2099,18 @@ def _narrative_title(token: str, role: str, node: str, phase: str, decision: str
         return "Sent back for fixes"
     if "handoff" in t:
         return f"{who or 'Builder'} handed off{n}".strip()
+    if t == "graph_eval_dispatch_waiting":
+        return f"Waiting for Builder result{n}"
+    if t == "plan_validator_awaiting_certificate":
+        return "Plan awaiting certification"
+    if t == "plan_validator_dispatch_refused":
+        return "Plan certification required"
     if reason in {"builder_operator_result_pending", "deterministic_gate_waiting_for_builder"}:
         return f"Evaluation waiting for Builder{n}"
     if reason == "evaluator_temporarily_busy":
         return f"Evaluation queued — Evaluator busy{n}"
+    if reason in _NARRATIVE_EVALUATOR_BLOCK_REASONS:
+        return f"Evaluation blocked{n}"
     if "no_matching" in f"{decision} {reason}":
         return f"Dispatch blocked{n}"
     if "dispatch" in t and "fail" in t:
@@ -2070,6 +2139,8 @@ def _narrative_tone(token: str, decision: str, to_status: str, reason: str = "")
     if reason in _NARRATIVE_WAIT_REASONS:
         return "working"
     blob = f"{token} {decision} {to_status} {reason}".lower()
+    if token.lower() == "plan_validator_dispatch_refused":
+        return "blocked"
     if "fail" in blob or "blocked" in blob or "no_matching" in blob or "error" in blob:
         return "blocked"
     if any(word in blob for word in ("passed", "completed", "accepted", "ended", "integrated", "done", "ready")):
@@ -2077,7 +2148,12 @@ def _narrative_tone(token: str, decision: str, to_status: str, reason: str = "")
     return "working"
 
 
-def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
+def _narrative_from_events(
+    events: list[dict],
+    limit: int = 60,
+    *,
+    plan_certified: bool = False,
+) -> list[dict]:
     """A de-noised, de-duplicated human narrative from the raw coordinator event stream.
     Each real action is double-written (a log_message plus a command/activity event, both
     carrying payload.legacy_event); we collapse those to one step, map the internal token to
@@ -2087,13 +2163,30 @@ def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
     for event in events:
         payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
         token = _event_token(event, payload)
+        waiting = _evaluator_waiting_details(payload)
+        if waiting:
+            token = "graph_eval_dispatch_waiting"
+        certification_wait = False
+        if token == "plan_validator_dispatch_refused" and plan_certified:
+            legacy = payload.get("legacy_event")
+            candidate = legacy if isinstance(legacy, dict) else payload
+            data = candidate.get("data") if isinstance(candidate.get("data"), dict) else candidate
+            errors = data.get("errors") if isinstance(data, dict) else []
+            certification_wait = bool(errors) and all(
+                isinstance(error, dict)
+                and str(error.get("code") or "") == "PLAN_CERTIFICATE_MISSING"
+                for error in errors
+            )
+            if certification_wait:
+                token = "plan_validator_awaiting_certificate"
         tl = token.lower()
         actor_raw = str(event.get("actor") or payload.get("actor") or "").lower()
         if tl.startswith(_NARRATIVE_DROP) or actor_raw == "solar-autopilot":
             continue
         diagnostic = _dispatch_diagnostic(payload, event) if "dispatch" in token.lower() else {}
         node = str(
-            diagnostic.get("node")
+            waiting.get("node")
+            or diagnostic.get("node")
             or payload.get("node_id")
             or payload.get("node")
             or event.get("node_id")
@@ -2106,7 +2199,8 @@ def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
         round_num = str(payload.get("round") or "")
         ts = str(event.get("ts") or event.get("timestamp") or event.get("time") or "")
         reason = str(
-            diagnostic.get("reason")
+            waiting.get("reason")
+            or diagnostic.get("reason")
             or payload.get("reason")
             or payload.get("blocked_reason")
             or event.get("reason")
@@ -2124,16 +2218,23 @@ def _narrative_from_events(events: list[dict], limit: int = 60) -> list[dict]:
         # Collapse the dual-write: the same token+node+role+round is one human step.
         # A prerequisite wait can be observed on every coordinator poll.  It
         # is one continuing state, not dozens of distinct failures.
+        is_waiting = bool(waiting) or bool(diagnostic.get("waiting"))
         key = (
             ("dispatch_wait", node, reason)
-            if diagnostic.get("waiting")
+            if is_waiting
             else (token, node, role, round_num or ts[:19])
         )
         if key in seen:
             continue
         seen.add(key)
         title = _narrative_title(token, role, node, phase, decision, to_status, reason)
-        summary = (reason or decision).replace("_", " ")
+        summary = (
+            "Evaluation starts after the Builder publishes its durable result."
+            if is_waiting
+            else "Dispatch resumed after the plan certificate was recorded."
+            if certification_wait
+            else (reason or decision).replace("_", " ")
+        )
         if token in {"log_message", "event"} and message:
             title = message[:100]
         elif message and not summary:
@@ -2178,7 +2279,15 @@ def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -
     # The de-noised narrative is compact, so it ships in BOTH modes (the client renders it
     # instead of reverse-engineering the raw /events wall). Read independently of `events`,
     # which stays empty in fast mode.
-    narrative = _narrative_from_events(_projection_events(sid, limit=160)) if sid else []
+    plan_governance = dashboard.get("plan_governance") or {}
+    narrative = (
+        _narrative_from_events(
+            _projection_events(sid, limit=160),
+            plan_certified=bool(plan_governance.get("certified")),
+        )
+        if sid
+        else []
+    )
     requirements = _projection_requirements(sid, artifacts)
     plan = _projection_plan(dashboard, artifacts)
     task_graph = _projection_task_graph(dashboard)
@@ -2201,7 +2310,7 @@ def build_projection_payload(sprint_id: str | None = None, mode: str = "full") -
             "phase": status.get("phase") or dashboard.get("phase") or "",
             "raw_status": status,
         },
-        "plan_governance": dashboard.get("plan_governance") or {},
+        "plan_governance": plan_governance,
         "requirements": requirements,
         "plan": plan,
         "task_graph": task_graph,
