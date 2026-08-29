@@ -2987,6 +2987,12 @@ gate_check() {
     # Legacy PRD/Planner/TaskGraph gates must not rewrite it into a DAG flow.
     return 0
   fi
+  if typed_planner_required "$sid"; then
+    # Formal RequirementIR v2 is the authority for the typed planning lane.
+    # Its accepted bundle is reconciled and dispatched by handle_active(); the
+    # legacy PRD/plan gate must not demote planning_complete back to PM.
+    return 0
+  fi
   case "$st" in
     finalized|eval_passed)
       return 0
