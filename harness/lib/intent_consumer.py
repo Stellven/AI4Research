@@ -21,9 +21,13 @@ import textwrap
 from pathlib import Path
 from typing import Any
 
-HARNESS_DIR = Path(os.environ.get("SOLAR_HARNESS_DIR", Path(__file__).resolve().parents[1]))
-SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR", Path.home() / ".solar" / "harness" / "sprints"))
-INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR", Path.home() / ".solar" / "harness" / "intents"))
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or Path(__file__).resolve().parents[1]
+)
+SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR") or (HARNESS_DIR / "sprints"))
+INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR") or (HARNESS_DIR / "intents"))
 DEFAULT_TRUSTED_AUTODISPATCH_CHANNELS = (
     "dashboard",
     "pm_dispatch",

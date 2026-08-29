@@ -10,6 +10,25 @@ CONSUMER = ROOT / "lib" / "intent_consumer.py"
 REPO = ROOT.parent
 
 
+def test_default_artifact_dirs_follow_runtime_harness(monkeypatch, tmp_path):
+    runtime = tmp_path / "runtime-harness"
+    monkeypatch.setenv("HARNESS_DIR", str(runtime))
+    monkeypatch.setenv("SOLAR_HARNESS_DIR", str(tmp_path / "stale-harness"))
+    monkeypatch.delenv("SOLAR_INTENT_GATEWAY_DIR", raising=False)
+    monkeypatch.delenv("SOLAR_HARNESS_SPRINTS_DIR", raising=False)
+
+    spec = __import__("importlib.util").util.spec_from_file_location(
+        "intent_consumer_runtime_defaults", CONSUMER
+    )
+    assert spec and spec.loader
+    consumer = __import__("importlib.util").util.module_from_spec(spec)
+    spec.loader.exec_module(consumer)
+
+    assert consumer.HARNESS_DIR == runtime
+    assert consumer.INTENTS_DIR == runtime / "intents"
+    assert consumer.SPRINTS_DIR == runtime / "sprints"
+
+
 def _env(tmp_path):
     env = dict(os.environ)
     env["SOLAR_HARNESS_DIR"] = str(ROOT)
