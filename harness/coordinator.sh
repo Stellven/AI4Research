@@ -3552,6 +3552,7 @@ fields={
   "handoff_to":"scheduler",
   "target_role":"scheduler",
   "planning_authority":"elastic_planner",
+  "test_policy":d.get("test_policy") or {},
   "runtime_handoff_allowed":bool(d.get("runtime_handoff_allowed")),
   "plan_compile_required":False,
   "scheduler_input_path":d.get("scheduler_input"),

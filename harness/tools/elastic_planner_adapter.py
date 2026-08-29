@@ -27,6 +27,19 @@ from intent_compiler import CodexJsonModel  # noqa: E402
 from scheduler_input import prepare_runtime_graph, verify_runtime_projection  # noqa: E402
 
 
+def _trusted_test_policy() -> dict[str, Any]:
+    mode = os.environ.get("SOLAR_TEST_MODE", "").strip().lower()
+    if not mode:
+        return {}
+    if mode != "rapid_smoke":
+        raise ValueError(f"unsupported SOLAR_TEST_MODE: {mode!r}")
+    return {
+        "mode": "rapid_smoke",
+        "semantic_evaluation_budget": 0,
+        "deterministic_gates_required": True,
+    }
+
+
 def _read_object(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -65,6 +78,7 @@ def run_adapter(
     requirement_ir = _read_object(requirement_ir_path)
     if requirement_ir.get("schema_version") != "solar.requirement_ir.v2":
         raise ValueError("typed Planner adapter requires solar.requirement_ir.v2")
+    test_policy = _trusted_test_policy()
 
     result = run_elastic_planning_request(
         requirement_ir,
@@ -73,6 +87,7 @@ def run_adapter(
         reviewer_model or _model("reviewer"),
         sprint_id=sprint_id,
         workspace_root=workspace_root,
+        test_policy=test_policy,
     )
     status = str(result.get("status") or "failed")
     verification_errors = list(result.get("verification_errors") or [])
@@ -83,6 +98,7 @@ def run_adapter(
         "verification_errors": verification_errors,
         "output_root": str(output_root),
         "runtime_handoff_allowed": False,
+        "test_policy": test_policy,
     }
 
     if status == "accepted" and not verification_errors:

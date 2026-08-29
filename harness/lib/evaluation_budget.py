@@ -14,6 +14,7 @@ from typing import Any
 POLICY_ID = "risk_bounded_semantic_evaluation_v1"
 POLICY_SCHEMA = "solar.evaluation_budget.v1"
 PROOF_GATE_ID = "policy.proof_obligations.v1"
+RAPID_SMOKE_MODE = "rapid_smoke"
 
 # One independent LLM evaluator is the global ceiling.  Deterministic schema,
 # hash, proof-obligation, and coverage aggregation may still run on every node;
@@ -172,14 +173,31 @@ def select_semantic_targets(
 
 
 def apply_evaluation_budget(
-    graph: dict[str, Any], requirement_ir: dict[str, Any]
+    graph: dict[str, Any],
+    requirement_ir: dict[str, Any],
+    *,
+    test_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a copy with a certified semantic-review budget applied."""
     bounded = copy.deepcopy(graph)
     nodes = [node for node in bounded.get("nodes") or [] if isinstance(node, dict)]
     tier = risk_tier(requirement_ir, bounded)
-    budget = _RISK_BUDGETS[tier]
-    semantic_node_ids = select_semantic_targets(requirement_ir, bounded, tier=tier)
+    policy = copy.deepcopy(test_policy) if isinstance(test_policy, dict) else {}
+    rapid_smoke = _text(policy.get("mode")) == RAPID_SMOKE_MODE
+    if rapid_smoke:
+        policy = {
+            "mode": RAPID_SMOKE_MODE,
+            "semantic_evaluation_budget": 0,
+            "deterministic_gates_required": True,
+        }
+    else:
+        policy = {}
+    budget = 0 if rapid_smoke else _RISK_BUDGETS[tier]
+    semantic_node_ids = (
+        []
+        if rapid_smoke
+        else select_semantic_targets(requirement_ir, bounded, tier=tier)
+    )
     semantic_set = set(semantic_node_ids)
     recursive_ids: list[str] = []
     deterministic_ids: list[str] = []
@@ -189,7 +207,17 @@ def apply_evaluation_budget(
         semantic = node_id in semantic_set and not recursive
         if recursive:
             recursive_ids.append(node_id)
-        if semantic:
+        existing_gate = (
+            node.get("evaluator_gate")
+            if isinstance(node.get("evaluator_gate"), dict)
+            else {}
+        )
+        existing_kind = _text(existing_gate.get("kind"))
+        if rapid_smoke and existing_kind == "deterministic_command":
+            node["max_repair_attempts"] = 0
+            deterministic_ids.append(node_id)
+            reason = "rapid_smoke_deterministic_gate_retained"
+        elif semantic:
             node["evaluator_gate"] = {
                 "kind": "llm_eval",
                 "on_fail": "repair_once_then_fail",
@@ -198,14 +226,21 @@ def apply_evaluation_budget(
             reason = "targeted_semantic_review"
         else:
             node["evaluator_gate"] = {"kind": "none", "on_fail": "fail"}
+            if rapid_smoke:
+                node["evaluator_gate"]["test_policy_mode"] = RAPID_SMOKE_MODE
             node["max_repair_attempts"] = 0
             deterministic_ids.append(node_id)
-            reason = "no_recursive_evaluator" if recursive else "covered_by_bounded_final_review"
+            reason = (
+                "rapid_smoke_bypass"
+                if rapid_smoke
+                else ("no_recursive_evaluator" if recursive else "covered_by_bounded_final_review")
+            )
         node["evaluation_policy"] = {
             "policy_id": POLICY_ID,
             "risk_tier": tier,
             "semantic_review_required": semantic,
             "decision_reason": reason,
+            "test_policy_mode": policy.get("mode", ""),
         }
     bounded["evaluation_policy"] = {
         "schema_version": POLICY_SCHEMA,
@@ -215,7 +250,9 @@ def apply_evaluation_budget(
         "semantic_evaluation_node_ids": semantic_node_ids,
         "deterministic_only_node_ids": deterministic_ids,
         "recursive_evaluator_node_ids": recursive_ids,
+        "test_policy": policy,
     }
+    bounded["test_policy"] = policy
     return bounded
 
 

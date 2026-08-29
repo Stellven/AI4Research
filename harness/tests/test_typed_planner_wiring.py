@@ -220,3 +220,69 @@ def test_legacy_task_graph_schema_violation_is_fail_closed():
     assert errors
     assert {error["code"] for error in errors} == {"PLAN_SCHEMA_INVALID"}
     assert plan_validator.check_planner_graph_dispatchable(graph)["ok"] is False
+
+
+def test_rapid_smoke_budget_blocks_semantic_evaluators_but_keeps_hard_gates():
+    import evaluation_budget
+
+    graph = {
+        "nodes": [
+            {"id": "build", "logical_operator": "ImplementationWorker", "depends_on": [], "evaluator_gate": {"kind": "llm_eval"}},
+            {"id": "verify", "logical_operator": "Verifier", "depends_on": ["build"], "evaluator_gate": {"kind": "llm_eval"}},
+            {"id": "hard-check", "logical_operator": "TestRunner", "depends_on": ["build"], "evaluator_gate": {"kind": "deterministic_command", "command": "python -m pytest -q"}},
+        ]
+    }
+    policy = {"mode": "rapid_smoke", "semantic_evaluation_budget": 0, "deterministic_gates_required": True}
+
+    bounded = evaluation_budget.apply_evaluation_budget(graph, {}, test_policy=policy)
+
+    by_id = {node["id"]: node for node in bounded["nodes"]}
+    assert bounded["evaluation_policy"]["semantic_evaluation_budget"] == 0
+    assert bounded["test_policy"] == policy
+    assert by_id["build"]["evaluator_gate"] == {"kind": "none", "on_fail": "fail", "test_policy_mode": "rapid_smoke"}
+    assert by_id["verify"]["evaluator_gate"]["kind"] == "none"
+    assert by_id["hard-check"]["evaluator_gate"]["kind"] == "deterministic_command"
+
+
+def test_adapter_injects_rapid_smoke_only_from_trusted_environment(tmp_path, monkeypatch):
+    adapter = _load("rapid_adapter_test", TOOLS / "elastic_planner_adapter.py")
+    requirement = tmp_path / "requirement_ir.json"
+    requirement.write_text(json.dumps({"schema_version": "solar.requirement_ir.v2"}), encoding="utf-8")
+    captured = {}
+
+    def planning_stub(*_args, **kwargs):
+        captured.update(kwargs)
+        return {"status": "direct_response", "verification_errors": []}
+
+    monkeypatch.setenv("SOLAR_TEST_MODE", "rapid_smoke")
+    monkeypatch.setattr(adapter, "run_elastic_planning_request", planning_stub)
+
+    result = adapter.run_adapter(
+        requirement_ir_path=requirement,
+        output_root=tmp_path / "planning",
+        sprint_id="sprint-rapid",
+        workspace_root="workspace",
+        planner_model=object(),
+        reviewer_model=object(),
+    )
+
+    assert captured["test_policy"] == result["test_policy"]
+    assert result["test_policy"]["mode"] == "rapid_smoke"
+    assert result["test_policy"]["semantic_evaluation_budget"] == 0
+
+
+def test_rapid_smoke_none_gate_records_explicit_bypass_provenance(tmp_path):
+    import contract_gate_executor
+
+    result = contract_gate_executor.execute_gate(
+        tmp_path,
+        "sprint-rapid",
+        {"id": "build", "repair_attempts": 0},
+        {"kind": "none", "test_policy_mode": "rapid_smoke"},
+        harness_dir=ROOT,
+    )
+    payload = json.loads(Path(result["eval_json"]).read_text(encoding="utf-8"))
+
+    assert result["ok"] is True
+    assert payload["generation_mode"] == "rapid_smoke_bypass"
+    assert payload["duration_seconds"] == 0.0

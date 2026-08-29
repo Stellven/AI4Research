@@ -34,6 +34,15 @@
     "planning_authority": {
       "const": "frozen_execution_plan_v1"
     },
+    "test_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {"const": "rapid_smoke"},
+        "semantic_evaluation_budget": {"const": 0},
+        "deterministic_gates_required": {"const": true}
+      }
+    },
     "graph": {
       "type": "object",
       "additionalProperties": false,

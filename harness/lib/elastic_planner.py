@@ -4971,6 +4971,7 @@ def compile_scheduler_input(
         "scheduler_input_id": f"scheduler-input-{sprint_id}",
         "sprint_id": sprint_id,
         "planning_authority": "frozen_execution_plan_v1",
+        "test_policy": copy.deepcopy(task_graph.get("test_policy") or {}),
         "graph": {
             "graph_id": str(
                 task_graph.get("workflow_contract_id")
@@ -4993,6 +4994,7 @@ def compile_and_freeze_execution_bundle(
     workspace_root: str = "workspace",
     planner_model: JsonModel | None = None,
     reviewer_model: JsonModel | None = None,
+    test_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Turn admitted semantic planning into a physically feasible frozen graph."""
     semantic_acceptance = semantic_result.get("plan_acceptance") or {}
@@ -5011,6 +5013,12 @@ def compile_and_freeze_execution_bundle(
             sprint_id=sprint_id,
             workspace_root=workspace_root,
         )
+        if str((test_policy or {}).get("mode") or "") == evaluation_budget.RAPID_SMOKE_MODE:
+            graph = evaluation_budget.apply_evaluation_budget(
+                graph,
+                requirement_ir,
+                test_policy=test_policy,
+            )
     else:
         if planner_model is None or reviewer_model is None:
             raise ElasticPlannerError(
@@ -5113,7 +5121,11 @@ def compile_and_freeze_execution_bundle(
                 semantic_result.get("planning_catalog_snapshot") or {},
                 sprint_id=sprint_id,
             )
-        graph = evaluation_budget.apply_evaluation_budget(graph, requirement_ir)
+        graph = evaluation_budget.apply_evaluation_budget(
+            graph,
+            requirement_ir,
+            test_policy=test_policy,
+        )
     execution = apo_plan_compiler.compile_whole_request_execution_plan(
         graph,
         request_type=str(requirement_ir.get("request_type") or ""),
@@ -5304,6 +5316,7 @@ def compile_and_freeze_execution_bundle(
         "artifact_role": "runtime_artifact",
         "sprint_id": sprint_id,
         "planning_authority": "frozen_execution_plan_v1",
+        "test_policy": copy.deepcopy(merged.get("test_policy") or {}),
         "requirement_ir_ref": {
             "requirement_ir_id": requirement_ir_id(requirement_ir),
             "sha256": sha256_payload(requirement_ir),
@@ -5616,6 +5629,7 @@ def run_elastic_planning_request(
     workspace_root: str = "workspace",
     catalog: dict[str, Any] | None = None,
     upstream_artifacts: dict[str, dict[str, Any]] | None = None,
+    test_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run the complete static planning boundary for one accepted RequirementIR."""
     semantic_dir = output_root / "semantic"
@@ -5651,6 +5665,7 @@ def run_elastic_planning_request(
         workspace_root=workspace_root,
         planner_model=planner_model,
         reviewer_model=reviewer_model,
+        test_policy=test_policy,
     )
     verification_errors = verify_frozen_execution_chain(semantic_dir, execution_dir)
     accepted = (

@@ -70,6 +70,7 @@ RUNTIME_PROJECTION_ROOT_FIELDS = {
     "sprint_id",
     "graph_id",
     "planning_authority",
+    "test_policy",
     "scheduler_input_ref",
     "run_contract_ref",
     "runtime_input_bindings",
@@ -482,6 +483,7 @@ def prepare_runtime_graph(
         "sprint_id": sprint_id,
         "graph_id": value["graph"]["graph_id"],
         "planning_authority": value["planning_authority"],
+        "test_policy": deepcopy(value.get("test_policy") or {}),
         "scheduler_input_ref": source_ref,
         "run_contract_ref": run_contract_ref,
         "runtime_input_bindings": input_bindings,
@@ -561,6 +563,7 @@ def verify_runtime_projection(
         graph.get("sprint_id") != value["sprint_id"]
         or graph.get("graph_id") != value["graph"]["graph_id"]
         or graph.get("planning_authority") != value["planning_authority"]
+        or graph.get("test_policy") != (value.get("test_policy") or {})
         or graph.get("runtime_state_filename")
         != f"{value['sprint_id']}.task_graph_state.json"
     ):
