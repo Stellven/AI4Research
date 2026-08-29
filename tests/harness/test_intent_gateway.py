@@ -22,6 +22,20 @@ def _load_gateway(name: str):
     return module
 
 
+def test_default_artifact_dirs_follow_runtime_harness(monkeypatch, tmp_path):
+    runtime = tmp_path / "runtime-harness"
+    monkeypatch.setenv("HARNESS_DIR", str(runtime))
+    monkeypatch.setenv("SOLAR_HARNESS_DIR", str(tmp_path / "stale-harness"))
+    monkeypatch.delenv("SOLAR_INTENT_GATEWAY_DIR", raising=False)
+    monkeypatch.delenv("SOLAR_HARNESS_SPRINTS_DIR", raising=False)
+
+    gateway = _load_gateway("intent_gateway_runtime_defaults")
+
+    assert gateway.HARNESS_DIR == runtime
+    assert gateway.INTENTS_DIR == runtime / "intents"
+    assert gateway.SPRINTS_DIR == runtime / "sprints"
+
+
 def test_intent_compiler_validates_without_optional_referencing(tmp_path):
     sys.path.insert(0, str(ROOT / "lib"))
     try:
