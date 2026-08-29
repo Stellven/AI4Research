@@ -1063,6 +1063,11 @@ final-answer, publication, or delivery requirement. Preserve the exact named sub
 dimensions, constraints, and required coverage values from those requirements in the discovery node's
 objective so the physical operator receives the full research query, not a generic topic summary. Assign
 a requirement only to a node whose produced artifact can actually be judged by that requirement's check.
+Requirements whose acceptance contract calls for a finding, supporting evidence, and unresolved status
+are resolution requirements, not discovery-scope requirements. A discovery node may retain those study
+protocol questions as constraints in its objective, but it must not own them when its output ABI promises
+only a source shortlist. Assign their ownership to a downstream synthesis or report node whose artifact
+can explicitly resolve the question or preserve it as unresolved with evidence.
 Keep implementation-only support steps out of PlanIR. A single logical node may be implemented by a
 multi-capsule chain, so declare that node's external input/output boundary and let capsule composition
 insert internal artifacts such as a report plan. Add a separate logical node only when it represents a
@@ -2423,6 +2428,10 @@ For source or literature discovery, fail a genericized objective that drops name
 dimensions, constraints, or required coverage values from the RequirementIR. The discovery node must
 retain the applicable scope/evidence-coverage requirement IDs and checks, but must not claim ownership
 of a final-answer, publication, or delivery requirement merely because it supplies upstream evidence.
+Also fail a discovery node that owns a resolution requirement requiring a finding, supporting evidence,
+and unresolved status when its declared output is only a source shortlist. The protocol question may
+remain in the discovery objective as a constraint, but ownership must be assigned to a downstream
+synthesis or report artifact that can truthfully emit the required resolution trace.
 Judge unrequested effects by the semantic action added to the plan, such as a domain experiment,
 deployment, external mutation, or publication. The generic `execute` effect means registered operator
 code must run; it does not itself mean scientific experiment execution and is not an unrequested effect.

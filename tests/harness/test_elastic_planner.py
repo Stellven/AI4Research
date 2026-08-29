@@ -1157,6 +1157,30 @@ def test_discovery_scope_does_not_duplicate_report_owned_requirement() -> None:
     assert preserved["nodes"][1]["requirement_ids"] == ["R5"]
 
 
+def test_planner_and_fidelity_prompts_keep_protocol_resolution_downstream() -> None:
+    plan_payload = json.loads(
+        planner._plan_prompt(
+            {"requirements": []},
+            {"decision": "generate"},
+            {"logical_operators": [], "capsules": []},
+            {},
+            {"checks": []},
+            generation=0,
+        )
+    )
+    fidelity_payload = json.loads(
+        planner._fidelity_prompt(
+            {"requirements": []},
+            {"decision": "generate"},
+            {"nodes": []},
+            {},
+        )
+    )
+
+    assert "resolution requirements, not discovery-scope requirements" in plan_payload["instruction"]
+    assert "output is only a source shortlist" in fidelity_payload["instruction"]
+
+
 def test_fidelity_prompt_does_not_confuse_runtime_execute_with_experiment() -> None:
     requirement_ir = _requirement_ir()
     prompt = planner._fidelity_prompt(
