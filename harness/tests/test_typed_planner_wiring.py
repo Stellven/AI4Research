@@ -43,6 +43,24 @@ def test_elastic_planner_validates_without_optional_referencing(tmp_path):
     assert planner._schema_errors({"value": 7}, schema)
 
 
+def test_plan_repair_may_add_fidelity_required_requirement_ownership():
+    planner = _load("typed_elastic_planner_repair_ownership", LIB / "elastic_planner.py")
+    previous = {
+        "nodes": [
+            {"node_id": "discover_literature", "requirement_ids": ["R5"]},
+            {"node_id": "synthesize_report", "requirement_ids": ["R1", "R4"]},
+        ]
+    }
+    repaired = {
+        "nodes": [
+            {"node_id": "discover_literature", "requirement_ids": ["R4", "R5"]},
+            {"node_id": "synthesize_report", "requirement_ids": ["R1", "R4"]},
+        ]
+    }
+
+    assert planner._repair_preservation_errors(previous, repaired) == []
+
+
 def _capture_args() -> argparse.Namespace:
     return argparse.Namespace(
         text="Research current battery technology and produce a report.",

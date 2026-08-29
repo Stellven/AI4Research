@@ -1938,19 +1938,23 @@ def _repair_preservation_errors(
         after_requirements = {
             str(value) for value in after.get("requirement_ids") or []
         }
-        added_requirements = after_requirements - before_requirements
         removed_requirements = before_requirements - after_requirements
         safely_reassigned = all(
             repaired_requirement_owners.get(requirement_id, set()) - {node_id}
             for requirement_id in removed_requirements
         )
-        if added_requirements or (removed_requirements and not safely_reassigned):
+        # A bounded repair may add requirement ownership when validation or the
+        # independent fidelity reviewer identifies missing scope. Additions are
+        # still governed by requirement-ownership, operator/capsule, artifact,
+        # and fidelity checks. This preservation seam only blocks semantic loss.
+        if removed_requirements and not safely_reassigned:
             errors.append(
                 _error(
                     "REPAIR_REQUIREMENT_OWNERSHIP_CHANGED",
                     f"nodes.{node_id}.requirement_ids",
                     (
-                        f"Repair changed requirement ownership for node {node_id!r}: "
+                        f"Repair removed requirement ownership from node {node_id!r} "
+                        "without a safe reassignment: "
                         f"{sorted(before_requirements)} -> {sorted(after_requirements)}."
                     ),
                     repairable=False,
