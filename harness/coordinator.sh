@@ -52,6 +52,7 @@ LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"
 HARNESS_MANAGE_LAB="${SOLAR_HARNESS_MANAGE_LAB:-${SOLAR_WATCHDOG_MANAGE_LAB:-0}}"
 COORD_STATE="$HARNESS_DIR/.coordinator-state"
 SESSION_SH="$HARNESS_DIR/session.sh"
+COORDINATOR_ADMISSION_EPOCH="${SOLAR_COORDINATOR_ADMISSION_EPOCH:-$(date +%s)}"
 
 solar_choose_utf8_locale() {
   local locs
@@ -128,6 +129,50 @@ export SOLAR_GRAPH_BUILDER_OPERATOR_POOL
 set +e
 set +u
 set +o pipefail 2>/dev/null || true
+
+# A Coordinator launch is not permission to resume historical work.  By
+# default, only sprints created during this process lifetime are admitted.
+# Operators may explicitly opt into recovery with SOLAR_COORDINATOR_RESUME_EXISTING=1
+# or admit named sprint IDs via SOLAR_COORDINATOR_ADMITTED_SPRINTS.
+coordinator_sprint_admitted() {
+  local status_file="$1" sid admitted_list
+  [[ -f "$status_file" ]] || return 1
+  case "${SOLAR_COORDINATOR_RESUME_EXISTING:-0}" in
+    1|true|TRUE|yes|YES|on|ON) return 0 ;;
+  esac
+  sid="$(basename "$status_file" .status.json)"
+  admitted_list=",${SOLAR_COORDINATOR_ADMITTED_SPRINTS:-},"
+  [[ "$admitted_list" == *",${sid},"* ]] && return 0
+  python3 - "$status_file" "$COORDINATOR_ADMISSION_EPOCH" "$HARNESS_DIR" <<'PY' >/dev/null 2>&1
+import datetime as dt
+import json
+from pathlib import Path
+import sys
+
+path, cutoff_raw, harness_raw = sys.argv[1:4]
+payload = json.load(open(path, encoding="utf-8"))
+sid = str(payload.get("sprint_id") or payload.get("id") or Path(path).name.removesuffix(".status.json"))
+now = dt.datetime.now(dt.timezone.utc)
+for lease_path in (Path(harness_raw) / "run" / "pane-leases").glob("*.json"):
+    try:
+        lease = json.loads(lease_path.read_text(encoding="utf-8"))
+        lease_sid = str(lease.get("sprint_id") or lease.get("sid") or "")
+        expires = dt.datetime.fromisoformat(str(lease.get("expires_at") or "").replace("Z", "+00:00"))
+    except Exception:
+        continue
+    if lease_sid == sid and expires > now:
+        raise SystemExit(0)
+value = payload.get("created_ts") or payload.get("created_at")
+if isinstance(value, (int, float)):
+    created = float(value)
+elif isinstance(value, str) and value.strip():
+    text = value.strip().replace("Z", "+00:00")
+    created = dt.datetime.fromisoformat(text).timestamp()
+else:
+    raise SystemExit(1)
+raise SystemExit(0 if created >= float(cutoff_raw) else 1)
+PY
+}
 
 # Pane targets are session-qualified. Product Delivery and Builder Lab are
 # separate tmux sessions, so bare pane indexes are no longer safe identifiers.
@@ -868,6 +913,7 @@ get_latest_sprint_file() {
 
   for f in "$SPRINTS_DIR"/sprint-*.status.json; do
     [[ -f "$f" ]] || continue
+    coordinator_sprint_admitted "$f" || continue
 
     # JSON 可读但缺 id/sprint_id 时按文件名自愈；真正不可读才降频告警。
     local fid
@@ -2425,6 +2471,7 @@ detect_stuck_state() {
 
   for sf in "$SPRINTS_DIR"/sprint-*.status.json; do
     [[ -f "$sf" ]] || continue
+    coordinator_sprint_admitted "$sf" || continue
     local sid st
     sid=$(get_field "$sf" "id")
     st=$(get_field "$sf" "status")
@@ -3999,6 +4046,7 @@ auto_drive_drafting_sprints() {
   local sf sid st
   for sf in "$SPRINTS_DIR"/sprint-*.status.json; do
     [[ -f "$sf" ]] || continue
+    coordinator_sprint_admitted "$sf" || continue
     sid=$(get_field "$sf" "id")
     st=$(get_field "$sf" "status")
     [[ -n "$sid" && "$st" == "drafting" ]] || continue
@@ -5997,6 +6045,7 @@ with open('$patches_file','w') as f:
   local recovery_count=0
   for rsf in "$SPRINTS_DIR"/sprint-*.status.json; do
     [[ -f "$rsf" ]] || continue
+    coordinator_sprint_admitted "$rsf" || continue
     local rsid rst
     rsid=$(get_field "$rsf" "id")
     rst=$(get_field "$rsf" "status")
@@ -6019,6 +6068,7 @@ with open('$patches_file','w') as f:
   local planning_recovery_count=0
   for rsf in "$SPRINTS_DIR"/sprint-*.status.json; do
     [[ -f "$rsf" ]] || continue
+    coordinator_sprint_admitted "$rsf" || continue
     local rsid rst rphase
     rsid=$(get_field "$rsf" "id")
     rst=$(get_field "$rsf" "status")
@@ -6082,6 +6132,9 @@ with open('$patches_file','w') as f:
     local max_file_mtime=0
     for f in "$SPRINTS_DIR"/sprint-*.status.json "$SPRINTS_DIR"/sprint-*.task_dag.state.json; do
       [[ -f "$f" ]] || continue
+      local admission_status_file="$f"
+      [[ "$f" == *.task_dag.state.json ]] && admission_status_file="${f%.task_dag.state.json}.status.json"
+      coordinator_sprint_admitted "$admission_status_file" || continue
       local fmtime
       fmtime=$(solar_file_mtime "$f" 2>/dev/null || echo 0)
       (( fmtime > max_file_mtime )) && max_file_mtime=$fmtime
@@ -6112,6 +6165,7 @@ with open('$patches_file','w') as f:
       local sf
       for sf in "$SPRINTS_DIR"/sprint-*.status.json; do
         [[ -f "$sf" ]] || continue
+        coordinator_sprint_admitted "$sf" || continue
 
         local sid st
         sid=$(get_field "$sf" "id")
@@ -6308,6 +6362,7 @@ PY
       # 扫所有 status=passed 但无 .finalized 的 sprint → 补跑 handle_passed
       for rsf in "$SPRINTS_DIR"/sprint-*.status.json; do
         [[ -f "$rsf" ]] || continue
+        coordinator_sprint_admitted "$rsf" || continue
         local rsid rst
         rsid=$(get_field "$rsf" "id")
         rst=$(get_field "$rsf" "status")

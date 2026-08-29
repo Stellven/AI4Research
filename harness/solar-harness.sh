@@ -1858,7 +1858,7 @@ intake_request() {
   # contract compiler — fail-closed, never a silent fall-through to the generic
   # planner path (smoke 20260707T180639Z ran a 5-node planner DAG because this
   # seam did not exist and code.cli_smoke's trigger is explicit-workflow_id-only).
-  if [[ -n "${SOLAR_INTAKE_WORKFLOW_ID:-}" && "${SOLAR_INTAKE_WORKFLOW_ID}" != "research.evidence_to_poc.v1" ]]; then
+  if [[ "${SOLAR_INTAKE_COMPAT_MODE:-}" == "legacy" && -n "${SOLAR_INTAKE_WORKFLOW_ID:-}" && "${SOLAR_INTAKE_WORKFLOW_ID}" != "research.evidence_to_poc.v1" ]]; then
     if [[ "${SOLAR_WORKFLOW_ROUTER:-0}" != "1" || ! -f "$HARNESS_DIR/lib/workflow_intake.py" ]]; then
       err "SOLAR_INTAKE_WORKFLOW_ID is set but the workflow router is unavailable (need SOLAR_WORKFLOW_ROUTER=1 and lib/workflow_intake.py) — refusing generic fallback"
       return 1
@@ -1923,7 +1923,7 @@ intake_request() {
   # Requirement compilation may expose this registered workflow as a memoized
   # TaskGraph candidate, but only the elastic planner may select it. A research
   # lane by itself must continue into the normal Planner handoff.
-  if [[ "$intent_rc" == "0" && -n "$intent_id" && "$intent_lane" == "research" && "$planner_selected_workflow" == "research.evidence_to_poc.v1" ]]; then
+  if [[ "${SOLAR_INTAKE_COMPAT_MODE:-}" == "legacy" && "$intent_rc" == "0" && -n "$intent_id" && "$intent_lane" == "research" && "$planner_selected_workflow" == "research.evidence_to_poc.v1" ]]; then
     local fixed_args fixed_out fixed_rc fixed_sid fixed_execution_profile fixed_acquisition_mode
     fixed_execution_profile="${SOLAR_RESEARCH_EXECUTION_PROFILE:-part_a_only}"
     fixed_acquisition_mode="${SOLAR_RESEARCH_ACQUISITION_MODE:-source_pack}"
@@ -1997,7 +1997,7 @@ intake_request() {
     fixed_route=1
   fi
   if [[ "$fixed_route" != "1" ]]; then
-    if [[ "$intent_rc" == "0" && -n "$intent_id" && -f "$HARNESS_DIR/lib/intent_consumer.py" ]] && ! should_epic_decompose_request "$req"; then
+    if [[ "$intent_rc" == "0" && -n "$intent_id" && -f "$HARNESS_DIR/lib/intent_consumer.py" ]] && { [[ "${SOLAR_INTAKE_COMPAT_MODE:-}" != "legacy" ]] || ! should_epic_decompose_request "$req"; }; then
       set +e
       consumer_out=$(SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
         SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT="$intake_workspace_root" \
@@ -2025,7 +2025,7 @@ PY
         out="$consumer_out"
         rc="$consumer_rc"
       fi
-    else
+    elif [[ "${SOLAR_INTAKE_COMPAT_MODE:-}" == "legacy" ]]; then
       set +e
       out=$(new_sprint "$req" 2>&1)
       rc=$?
@@ -2035,6 +2035,18 @@ patterns=(r"Sprint created:\s*(\S+)", r"Epic:\s*(\S+)", r"\"epic_id\":\s*\"([^\"
 print(next((m.group(1) for p in patterns for m in [re.search(p,text)] if m), ""))' <<<"$out" 2>/dev/null || true)
       if [[ "$rc" == "0" && -n "$intent_id" && -n "$sid_from_out" && -f "$HARNESS_DIR/lib/intent_gateway.py" ]]; then
         SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" python3 "$HARNESS_DIR/lib/intent_gateway.py" bind --intent-id "$intent_id" --sprint-id "$sid_from_out" --json >/dev/null 2>&1 || true
+      fi
+    else
+      rc="$intent_rc"
+      [[ "$rc" != "0" ]] || rc=2
+      if [[ ! -f "$HARNESS_DIR/lib/intent_gateway.py" ]]; then
+        out="production intake refused: LLM Intent Compiler is unavailable"
+      elif [[ -z "$intent_id" ]]; then
+        out="production intake refused: LLM Intent Compiler did not produce an accepted IntentIR"
+        [[ -n "$intent_out" ]] && out="$out
+$intent_out"
+      else
+        out="production intake refused: Requirement Compiler / Intent Consumer is unavailable"
       fi
     fi
   fi

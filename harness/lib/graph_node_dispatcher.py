@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Iterable
@@ -5615,12 +5616,10 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                             }
                         )
                         continue
-                    # Some deployments intentionally disable runtime leases.
-                    # A matching submit ack is the durable proof that the pane
-                    # received the node, so do not reset/re-enqueue it merely
-                    # because no live lease exists.
-                    set_node_status(graph, node_id, "dispatched", pane=pane, dispatch_id=dispatch_id)
-                    continue
+                    # A submit ack proves only that the prompt crossed the tmux
+                    # transport boundary.  It is not worker acceptance.  With
+                    # no matching live lease, fall through to the stale-dispatch
+                    # recovery below so the node can be scheduled again.
                 if lease_live and not unavailable_reason and not _pane_tui_busy(pane):
                     acquired_at = _parse_utc(str((lease or {}).get("acquired_at") or ""))
                     now = datetime.datetime.now(datetime.timezone.utc)
@@ -7367,7 +7366,7 @@ def _is_graph_queue_item(item: dict[str, Any]) -> bool:
 
 
 def _pop_graph_queue_item(sprint_id: str) -> dict[str, Any] | None:
-    """Pop only graph-node items so legacy PM/planner queue entries do not block DAG dispatch."""
+    """Claim one graph item without destroying it before dispatch completes."""
     qf = _queue_file(sprint_id)
     if not qf.exists():
         return None
@@ -7381,15 +7380,33 @@ def _pop_graph_queue_item(sprint_id: str) -> dict[str, Any] | None:
                     items.append(json.loads(line))
                 except Exception:
                     pass
+            now = _utc_now()
             pending = sorted(
-                [item for item in items if not item.get("consumed") and _is_graph_queue_item(item)],
+                [
+                    item
+                    for item in items
+                    if not item.get("consumed")
+                    and _is_graph_queue_item(item)
+                    and not (
+                        isinstance(item.get("claim"), dict)
+                        and str(item["claim"].get("expires_at") or "") > now
+                    )
+                ],
                 key=lambda x: (-x.get("priority", 0), x.get("enqueued_at", "")),
             )
             if not pending:
                 return None
             target = pending[0]
-            target["consumed"] = True
-            target["consumed_at"] = _utc_now()
+            claim_ttl = max(5, int(os.environ.get("SOLAR_GRAPH_QUEUE_CLAIM_TTL_SECONDS", "60") or "60"))
+            target["claim"] = {
+                "id": f"graph-queue-claim-{uuid.uuid4().hex}",
+                "claimed_at": now,
+                "expires_at": (
+                    datetime.datetime.now(datetime.timezone.utc)
+                    + datetime.timedelta(seconds=claim_ttl)
+                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "pid": os.getpid(),
+            }
             for idx, item in enumerate(items):
                 if item.get("id") == target.get("id"):
                     items[idx] = target
@@ -7409,6 +7426,56 @@ def _pop_graph_queue_item(sprint_id: str) -> dict[str, Any] | None:
             except FileNotFoundError:
                 pass
             except OSError:
+                pass
+
+
+def _complete_graph_queue_claim(
+    sprint_id: str,
+    claimed_item: dict[str, Any],
+    *,
+    consumed: bool,
+) -> bool:
+    """Commit or release the exact queue claim under the queue lock."""
+    claim = claimed_item.get("claim") if isinstance(claimed_item.get("claim"), dict) else {}
+    claim_id = str(claim.get("id") or "")
+    if not claim_id:
+        return False
+    qf = _queue_file(sprint_id)
+    if not qf.exists():
+        return False
+    lock_path = str(qf) + ".lock"
+    with open(lock_path, "a") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        try:
+            items: list[dict[str, Any]] = []
+            for line in qf.read_text().splitlines():
+                try:
+                    items.append(json.loads(line))
+                except Exception:
+                    pass
+            updated = False
+            for item in items:
+                current = item.get("claim") if isinstance(item.get("claim"), dict) else {}
+                if str(current.get("id") or "") != claim_id:
+                    continue
+                item.pop("claim", None)
+                if consumed:
+                    item["consumed"] = True
+                    item["consumed_at"] = _utc_now()
+                updated = True
+                break
+            if updated:
+                tmp = str(qf) + ".tmp"
+                with open(tmp, "w") as output:
+                    for item in items:
+                        output.write(json.dumps(item) + "\n")
+                os.replace(tmp, str(qf))
+            return updated
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
+            try:
+                os.unlink(lock_path)
+            except (FileNotFoundError, OSError):
                 pass
 
 
@@ -13215,7 +13282,12 @@ def drain_queue(
         item = _pop_graph_queue_item(sprint_id)
         if item is None:
             break
-        result = dispatch_queue_item(item, dry_run=dry_run, ttl=ttl)
+        try:
+            result = dispatch_queue_item(item, dry_run=dry_run, ttl=ttl)
+        except Exception:
+            _complete_graph_queue_claim(sprint_id, item, consumed=False)
+            raise
+        _complete_graph_queue_claim(sprint_id, item, consumed=True)
         results.append(result)
         processed += 1
         if str(result.get("reason") or "") in STALE_GRAPH_QUEUE_REASONS:
