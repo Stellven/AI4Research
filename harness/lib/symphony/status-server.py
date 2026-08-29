@@ -209,6 +209,10 @@ _RUNTIME_INTERFACES_TIMEOUT_SECONDS = 1.0
 _STATUS_PAYLOAD_CACHE = {}
 _STATUS_PAYLOAD_CACHE_TTL_SECONDS = 2.0
 _STATUS_WARMUP_ACTIVE = False
+_SPRINT_INDEX_CACHE = {}
+_SPRINT_INDEX_CACHE_TTL_SECONDS = 2.0
+_SPRINT_INDEX_CACHE_BUILDING = set()
+_SPRINT_INDEX_CACHE_CONDITION = threading.Condition()
 _EVENTS_CACHE = {}
 _EVENTS_CACHE_TTL_SECONDS = 3.0
 _ACTIVE_SPRINT_STATUSES = {
@@ -877,7 +881,7 @@ def _orchestration_verdict_payload(kind: str, sprint_id: str, data: dict) -> tup
     return payload, status_code
 
 
-def _sprint_index_payload(limit: int = 80) -> dict:
+def _build_sprint_index_payload(limit: int) -> dict:
     mod = _load_orchestration_routes_module()
     builder = getattr(mod, "build_sprint_index_payload", None)
     if not callable(builder):
@@ -898,6 +902,43 @@ def _sprint_index_payload(limit: int = 80) -> dict:
         "degraded_sources": degraded or [],
         "data": data,
     }
+
+
+def _sprint_index_payload(limit: int = 80) -> dict:
+    """Build the expensive sprint index once for concurrent dashboard polls."""
+    cache_key = max(1, int(limit))
+    with _SPRINT_INDEX_CACHE_CONDITION:
+        cached = _SPRINT_INDEX_CACHE.get(cache_key)
+        now = time.monotonic()
+        if cached and now - cached["ts"] <= _SPRINT_INDEX_CACHE_TTL_SECONDS:
+            return copy.deepcopy(cached["value"])
+        if cache_key in _SPRINT_INDEX_CACHE_BUILDING:
+            # A stale index is preferable to multiplying the same filesystem scan.
+            if cached:
+                return copy.deepcopy(cached["value"])
+            while cache_key in _SPRINT_INDEX_CACHE_BUILDING:
+                _SPRINT_INDEX_CACHE_CONDITION.wait()
+            cached = _SPRINT_INDEX_CACHE.get(cache_key)
+            if cached:
+                return copy.deepcopy(cached["value"])
+        _SPRINT_INDEX_CACHE_BUILDING.add(cache_key)
+
+    try:
+        payload = _build_sprint_index_payload(cache_key)
+    except BaseException:
+        with _SPRINT_INDEX_CACHE_CONDITION:
+            _SPRINT_INDEX_CACHE_BUILDING.discard(cache_key)
+            _SPRINT_INDEX_CACHE_CONDITION.notify_all()
+        raise
+
+    with _SPRINT_INDEX_CACHE_CONDITION:
+        _SPRINT_INDEX_CACHE[cache_key] = {
+            "ts": time.monotonic(),
+            "value": copy.deepcopy(payload),
+        }
+        _SPRINT_INDEX_CACHE_BUILDING.discard(cache_key)
+        _SPRINT_INDEX_CACHE_CONDITION.notify_all()
+    return payload
 
 
 def _extract_intake_id(text: str) -> str:
