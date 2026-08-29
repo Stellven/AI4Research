@@ -22,6 +22,30 @@ def _load_gateway(name: str):
     return module
 
 
+def test_intent_compiler_validates_without_optional_referencing(tmp_path):
+    sys.path.insert(0, str(ROOT / "lib"))
+    try:
+        import intent_compiler
+
+        schema = tmp_path / "minimal.schema.json"
+        schema.write_text(
+            json.dumps(
+                {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object",
+                    "properties": {"value": {"type": "string"}},
+                    "required": ["value"],
+                    "additionalProperties": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        assert intent_compiler._schema_errors({"value": "ok"}, schema) == []
+        assert intent_compiler._schema_errors({"value": 7}, schema)
+    finally:
+        sys.path.remove(str(ROOT / "lib"))
+
+
 def test_gui_and_web_channels_require_formal_llm_intent_compilation(monkeypatch):
     gateway = _load_gateway("intent_gateway_required_llm_channels")
     monkeypatch.delenv("SOLAR_INTENT_COMPILER_REQUIRED_CHANNELS", raising=False)

@@ -18,7 +18,12 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from jsonschema import Draft202012Validator
-from referencing import Registry, Resource
+
+try:
+    from referencing import Registry, Resource
+except ModuleNotFoundError:  # Ubuntu's jsonschema 4.10.x predates referencing.
+    Registry = None
+    Resource = None
 
 
 HARNESS_DIR = Path(__file__).resolve().parents[1]
@@ -239,13 +244,27 @@ def normalize_input(raw: dict[str, Any]) -> dict[str, Any]:
 
 def _schema_errors(payload: dict[str, Any], schema_path: Path) -> list[dict[str, Any]]:
     schema = _load_json(schema_path)
-    registry = Registry()
+    resources: dict[str, dict[str, Any]] = {}
     for candidate in SCHEMA_DIR.glob("*.schema.json"):
         content = _load_json(candidate)
         identifier = content.get("$id")
         if identifier:
-            registry = registry.with_resource(str(identifier), Resource.from_contents(content))
-    validator = Draft202012Validator(schema, registry=registry)
+            resources[str(identifier)] = content
+    if Registry is not None and Resource is not None:
+        registry = Registry()
+        for identifier, content in resources.items():
+            registry = registry.with_resource(identifier, Resource.from_contents(content))
+        validator = Draft202012Validator(schema, registry=registry)
+    else:
+        # jsonschema 4.10.x (the supported Ubuntu system package) resolves the
+        # same local schema store through RefResolver and has no referencing
+        # package. Keep both APIs valid so the runtime is deployment-portable.
+        from jsonschema import RefResolver
+
+        validator = Draft202012Validator(
+            schema,
+            resolver=RefResolver.from_schema(schema, store=resources),
+        )
     errors: list[dict[str, Any]] = []
     for error in sorted(validator.iter_errors(payload), key=lambda item: list(item.absolute_path)):
         path = ".".join(str(part) for part in error.absolute_path) or "$"

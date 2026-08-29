@@ -1403,7 +1403,15 @@ def _intake_payload(data: dict) -> dict:
         "ambiguous": bool(candidate.get("ambiguous")),
         "candidate_sprint_ids": candidate.get("candidates", []),
         "attachments": attachments,
-        "error": "ambiguous_sprint_attribution" if candidate.get("ambiguous") else ("" if sprint_id else "sprint_id_not_found"),
+        "error": (
+            "ambiguous_sprint_attribution"
+            if candidate.get("ambiguous")
+            else "intake_cli_failed"
+            if proc.returncode != 0 and not sprint_id
+            else ""
+            if sprint_id
+            else "sprint_id_not_found"
+        ),
         "returncode": proc.returncode,
         "command": " ".join(cmd[:3]),
         "stdout_tail": output[-4000:],
