@@ -1111,6 +1111,52 @@ def test_discovery_plan_preserves_scope_requirements_in_runtime_goal(tmp_path: P
     assert runtime_node["goal"] == node["objective"]
 
 
+def test_discovery_scope_does_not_duplicate_report_owned_requirement() -> None:
+    requirement_ir = {
+        "requirements": [
+            {
+                "requirement_id": "R2",
+                "statement": "Cover every requested method family.",
+                "acceptance": {"kind": "coverage", "required_values": ["all families"]},
+                "check": "check.intent_constraint_coverage.v1",
+            },
+            {
+                "requirement_id": "R5",
+                "statement": "The report must provide an auditable evidence chain.",
+                "acceptance": {"kind": "coverage", "required_values": ["auditable"]},
+                "check": "check.intent_constraint_coverage.v1",
+            },
+        ]
+    }
+    body = {
+        "nodes": [
+            {
+                "node_id": "discover",
+                "logical_operator": "ScientificLiteratureDiscoverer",
+                "objective": "Discover evidence.",
+                "requirement_ids": [],
+                "operator_requirements": {"capabilities": ["source_discovery"]},
+                "produces": [{"verifier_ids": []}],
+            },
+            {
+                "node_id": "report",
+                "logical_operator": "ScientificReportDrafter",
+                "objective": "Write the report.",
+                "requirement_ids": ["R5"],
+                "operator_requirements": {"capabilities": ["research_synthesis"]},
+                "produces": [{"verifier_ids": []}],
+            },
+        ]
+    }
+
+    preserved = planner._preserve_discovery_requirement_scope(requirement_ir, body)
+
+    discovery = preserved["nodes"][0]
+    assert discovery["requirement_ids"] == ["R2"]
+    assert "[R5]" in discovery["objective"]
+    assert preserved["nodes"][1]["requirement_ids"] == ["R5"]
+
+
 def test_fidelity_prompt_does_not_confuse_runtime_execute_with_experiment() -> None:
     requirement_ir = _requirement_ir()
     prompt = planner._fidelity_prompt(

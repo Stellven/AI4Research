@@ -1484,16 +1484,28 @@ def _preserve_discovery_requirement_scope(
     if not scope_requirements:
         return preserved
 
-    for node in preserved.get("nodes") or []:
+    nodes = [node for node in preserved.get("nodes") or [] if isinstance(node, dict)]
+    owned_requirement_ids = {
+        str(requirement_id)
+        for node in nodes
+        for requirement_id in node.get("requirement_ids") or []
+        if str(requirement_id)
+    }
+
+    for node in nodes:
         if not isinstance(node, dict) or not _is_discovery_node(node):
             continue
-        scope_ids = [_requirement_id(row) for row in scope_requirements]
+        current_ids = [str(value) for value in node.get("requirement_ids") or []]
+        scope_ids = [
+            _requirement_id(row)
+            for row in scope_requirements
+            if _requirement_id(row) in current_ids
+            or _requirement_id(row) not in owned_requirement_ids
+        ]
         node["requirement_ids"] = list(
-            dict.fromkeys(
-                [str(value) for value in node.get("requirement_ids") or []]
-                + scope_ids
-            )
+            dict.fromkeys(current_ids + scope_ids)
         )
+        owned_requirement_ids.update(scope_ids)
         scope_lines = [
             f"- [{_requirement_id(row)}] {_scope_requirement_text(row)}"
             for row in scope_requirements
