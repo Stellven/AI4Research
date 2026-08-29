@@ -4058,7 +4058,14 @@ def review_composition_fit(
                     "faithfully performs its logical PlanIR objective. Deterministic composition "
                     "already proves types, effects, and executable registration; you judge meaning. "
                     "Fail chains that are too narrow, add material unrequested work, omit an "
-                    "essential semantic operation, or use an inappropriate method. Do not rewrite."
+                    "essential semantic operation, or use an inappropriate method. When a requirement "
+                    "explicitly permits either resolving a question or reporting it as unresolved, a "
+                    "chain may satisfy that requirement by preserving the missing evidence, limitation, "
+                    "and unresolved status truthfully and traceably; do not require an unregistered "
+                    "resolution operation merely because resolution is one allowed alternative. Still "
+                    "fail a chain that claims resolution without the necessary operation, or when the "
+                    "requirement mandates resolution rather than allowing unresolved reporting. Do not "
+                    "rewrite."
                 ),
                 "requirement_ir": requirement_ir,
                 "upstream_artifacts": planning_inputs,

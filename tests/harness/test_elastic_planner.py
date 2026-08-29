@@ -2636,6 +2636,41 @@ def test_fit_review_failure_without_error_row_becomes_typed_bounded_failure(
     ]
 
 
+def test_composition_fit_prompt_allows_explicit_unresolved_reporting(
+    tmp_path: Path,
+) -> None:
+    requirement_ir = _requirement_ir()
+    requirement_ir["requirements"][0]["statement"] = (
+        "Resolve the implementation evidence question or explicitly report it unresolved."
+    )
+    plan_ir = {
+        "nodes": [
+            {
+                "node_id": "report",
+                "objective": "Report supported findings and preserve unsupported items as unresolved.",
+            }
+        ]
+    }
+    model = ScriptedModel()
+
+    result = planner.review_composition_fit(
+        requirement_ir,
+        {},
+        plan_ir,
+        {},
+        {"selection_id": "selection-report", "nodes": []},
+        {"capsules": []},
+        model,
+        tmp_path,
+    )
+
+    instruction = json.loads(model.prompts[-1])["instruction"]
+    assert result["status"] == "pass"
+    assert "reporting it as unresolved" in instruction
+    assert "do not require an unregistered" in instruction
+    assert "claims resolution without the necessary operation" in instruction
+
+
 def test_capsule_binding_validation_rejects_undeclared_generic_coercion() -> None:
     capsule_plan = {
         "sprint_id": "sprint-binding-gap",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -348,3 +349,12 @@ def test_rapid_smoke_none_gate_records_explicit_bypass_provenance(tmp_path):
     assert result["ok"] is True
     assert payload["generation_mode"] == "rapid_smoke_bypass"
     assert payload["duration_seconds"] == 0.0
+
+
+def test_composition_fit_preserves_explicit_unresolved_alternative():
+    planner = _load("typed_composition_fit_unresolved", LIB / "elastic_planner.py")
+    source = inspect.getsource(planner.review_composition_fit)
+
+    assert "reporting it as unresolved" in source
+    assert "do not require an unregistered" in source
+    assert "claims resolution without the necessary operation" in source
