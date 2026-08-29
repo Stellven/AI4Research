@@ -6136,10 +6136,15 @@ with open('$patches_file','w') as f:
     # dormant on node-level progress and never re-runs dispatch-evals/dispatch-ready
     # (back-half stall). Extra wakes are safe: downstream dispatch is lease-guarded/idempotent.
     local max_file_mtime=0
-    for f in "$SPRINTS_DIR"/sprint-*.status.json "$SPRINTS_DIR"/sprint-*.task_dag.state.json; do
+    for f in "$SPRINTS_DIR"/sprint-*.status.json "$SPRINTS_DIR"/sprint-*.task_dag.state.json "$SPRINTS_DIR"/sprint-*/planning/adapter_result.json; do
       [[ -f "$f" ]] || continue
       local admission_status_file="$f"
-      [[ "$f" == *.task_dag.state.json ]] && admission_status_file="${f%.task_dag.state.json}.status.json"
+      if [[ "$f" == *.task_dag.state.json ]]; then
+        admission_status_file="${f%.task_dag.state.json}.status.json"
+      elif [[ "$f" == */planning/adapter_result.json ]]; then
+        local adapter_sprint_dir="${f%/planning/adapter_result.json}"
+        admission_status_file="$SPRINTS_DIR/${adapter_sprint_dir##*/}.status.json"
+      fi
       coordinator_sprint_admitted "$admission_status_file" || continue
       local fmtime
       fmtime=$(solar_file_mtime "$f" 2>/dev/null || echo 0)
@@ -6297,16 +6302,21 @@ with open('$patches_file','w') as f:
             log "${Y}[state-recovery] ${sid} has task_graph or eval_passed; driving handle_active to ensure progress${N}"
             handle_active "$sid" "$sf"
           elif [[ "$st" == "drafting" ]]; then
-            local drafting_planner_state
-            drafting_planner_state="$(planner_operator_compile_state "$sid")"
-            if [[ "$drafting_planner_state" == "failed" || "$drafting_planner_state" == "abandoned" ]]; then
-              if ! drafting_retry_blocked "$sid" "planner_operator_retry"; then
-                log "${Y}[state-recovery] ${sid} Planner dispatch is ${drafting_planner_state}; retrying without a status-fingerprint change${N}"
+            if typed_planner_required "$sid" && [[ -s "$(typed_planner_result_path "$sid")" ]]; then
+              log "${Y}[state-recovery] ${sid} has a completed typed Planner result; reconciling without a status-fingerprint change${N}"
+              handle_drafting "$sid" "$sf"
+            else
+              local drafting_planner_state
+              drafting_planner_state="$(planner_operator_compile_state "$sid")"
+              if [[ "$drafting_planner_state" == "failed" || "$drafting_planner_state" == "abandoned" ]]; then
+                if ! drafting_retry_blocked "$sid" "planner_operator_retry"; then
+                  log "${Y}[state-recovery] ${sid} Planner dispatch is ${drafting_planner_state}; retrying without a status-fingerprint change${N}"
+                  handle_drafting "$sid" "$sf"
+                fi
+              elif [[ "$drafting_planner_state" == "completed" ]] && planner_artifacts_present "$sid"; then
+                log "${Y}[state-recovery] ${sid} has a successful durable Planner result and candidate artifacts; certifying without a status-fingerprint change${N}"
                 handle_drafting "$sid" "$sf"
               fi
-            elif [[ "$drafting_planner_state" == "completed" ]] && planner_artifacts_present "$sid"; then
-              log "${Y}[state-recovery] ${sid} has a successful durable Planner result and candidate artifacts; certifying without a status-fingerprint change${N}"
-              handle_drafting "$sid" "$sf"
             fi
           fi
         fi

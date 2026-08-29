@@ -200,6 +200,17 @@ def test_typed_planner_active_state_bypasses_legacy_prd_gate():
     assert gate_prefix.index(typed_bypass) < gate_prefix.index('case "$st" in')
 
 
+def test_completed_typed_planner_result_wakes_and_reconciles_coordinator():
+    coordinator = (ROOT / "coordinator.sh").read_text(encoding="utf-8")
+
+    assert '"$SPRINTS_DIR"/sprint-*/planning/adapter_result.json' in coordinator
+    assert (
+        'has a completed typed Planner result; reconciling without a '
+        'status-fingerprint change'
+    ) in coordinator
+    assert 'typed_planner_required "$sid" && [[ -s "$(typed_planner_result_path "$sid")" ]]' in coordinator
+
+
 def test_adapter_authorizes_only_verified_scheduler_projection(tmp_path, monkeypatch):
     adapter = _load("typed_adapter_test", TOOLS / "elastic_planner_adapter.py")
     requirement = tmp_path / "requirement_ir.json"
