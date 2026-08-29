@@ -16,7 +16,12 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from jsonschema import Draft202012Validator
-from referencing import Registry, Resource
+
+try:
+    from referencing import Registry, Resource
+except ModuleNotFoundError:  # Ubuntu's jsonschema 4.10.x predates referencing.
+    Registry = None
+    Resource = None
 
 from intent_compiler import JsonModel, sha256_payload, write_json
 import workflow_contract as workflow_contract
@@ -87,18 +92,33 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _schema_registry() -> Registry:
-    registry = Registry()
+def _schema_resources() -> dict[str, dict[str, Any]]:
+    resources: dict[str, dict[str, Any]] = {}
     for path in SCHEMA_DIR.glob("*.schema.json"):
         content = _load_json(path)
         identifier = content.get("$id")
         if identifier:
-            registry = registry.with_resource(str(identifier), Resource.from_contents(content))
-    return registry
+            resources[str(identifier)] = content
+    return resources
 
 
 def _schema_errors(payload: dict[str, Any], schema_path: Path) -> list[dict[str, Any]]:
-    validator = Draft202012Validator(_load_json(schema_path), registry=_schema_registry())
+    schema = _load_json(schema_path)
+    resources = _schema_resources()
+    if Registry is not None and Resource is not None:
+        registry = Registry()
+        for identifier, content in resources.items():
+            registry = registry.with_resource(identifier, Resource.from_contents(content))
+        validator = Draft202012Validator(schema, registry=registry)
+    else:
+        # Keep the Planner runnable on supported distro packages that predate
+        # the referencing API; this resolves the same local planning schemas.
+        from jsonschema import RefResolver
+
+        validator = Draft202012Validator(
+            schema,
+            resolver=RefResolver.from_schema(schema, store=resources),
+        )
     errors: list[dict[str, Any]] = []
     for error in sorted(validator.iter_errors(payload), key=lambda item: list(item.absolute_path)):
         errors.append(

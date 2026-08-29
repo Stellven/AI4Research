@@ -23,6 +23,26 @@ def _load(name: str, path: Path):
     return module
 
 
+def test_elastic_planner_validates_without_optional_referencing(tmp_path):
+    planner = _load("typed_elastic_planner_runtime_compat", LIB / "elastic_planner.py")
+    schema = tmp_path / "minimal.schema.json"
+    schema.write_text(
+        json.dumps(
+            {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+                "required": ["value"],
+                "additionalProperties": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert planner._schema_errors({"value": "ok"}, schema) == []
+    assert planner._schema_errors({"value": 7}, schema)
+
+
 def _capture_args() -> argparse.Namespace:
     return argparse.Namespace(
         text="Research current battery technology and produce a report.",
