@@ -1411,6 +1411,11 @@ def _resolve_root_tool(tool_name: str) -> tuple[Path | None, Path | None]:
     runtime_tool = (HARNESS_DIR / "tools" / tool_name).resolve()
     if runtime_tool.is_file():
         return runtime_tool, HARNESS_DIR
+    allow_parent_helpers = os.environ.get(
+        "SOLAR_ALLOW_PARENT_NATIVE_HELPERS", ""
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    if not allow_parent_helpers:
+        return None, None
     source_root = REPO_HARNESS_DIR.parent.resolve()
     source_tool = source_root / "tools" / tool_name
     if (source_root / ".git").is_dir() and source_tool.is_file():

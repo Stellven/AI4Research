@@ -38,6 +38,28 @@ def test_planner_scope_distills_provider_query_to_retrieval_subject() -> None:
     assert "auditable" not in query
 
 
+def test_separate_workflow_and_deliverable_requirements_are_not_discovery_topics() -> None:
+    current_scope = """Discover sources for a systematic study of KV cache efficiency.
+
+Authoritative discovery scope:
+- [R3] Treat the task as a research-type, end-to-end research workflow. Required coverage: research-type end-to-end research workflow
+- [R4] Do not treat the requested deliverable as a one-off answer. Required coverage: one-off answer
+- [R5] Cover the requested KV cache methods. Required coverage: KV cache compression; KV cache quantization; KV cache selection; KV cache eviction; KV cache sparsification
+- [R6] Focus the study on long-context LLM inference. Required coverage: long-context large language model inference
+- [R7] The report must be a comprehensive technical landscape report. Required coverage: comprehensive; technical; landscape
+- [R8] Include an evidence chain. Required coverage: explicit; auditable; extensible for future research
+"""
+
+    assert production_research._topical_scope_clauses(current_scope) == [
+        "KV cache compression; KV cache quantization; KV cache selection; KV cache eviction; KV cache sparsification",
+        "long-context large language model inference",
+    ]
+    assert production_research._topical_scope_query(current_scope) == (
+        "KV cache compression; KV cache quantization; KV cache selection; KV cache eviction; "
+        "KV cache sparsification long-context large language model inference"
+    )
+
+
 def test_relevance_gate_allows_specialists_and_enforces_collective_coverage() -> None:
     candidates = [
         {
@@ -122,6 +144,16 @@ def test_installed_bridge_does_not_adopt_an_unrelated_parent_tool(monkeypatch, t
     monkeypatch.setattr(bridge, "REPO_HARNESS_DIR", runtime)
 
     assert bridge._resolve_root_tool("discover.py") == (None, None)
+
+    runtime.parent.joinpath(".git").mkdir()
+    assert bridge._resolve_root_tool("discover.py") == (None, None)
+
+    monkeypatch.setenv("SOLAR_ALLOW_PARENT_NATIVE_HELPERS", "1")
+    assert bridge._resolve_root_tool("discover.py") == (
+        unrelated.joinpath("discover.py").resolve(),
+        runtime.parent.resolve(),
+    )
+    monkeypatch.delenv("SOLAR_ALLOW_PARENT_NATIVE_HELPERS")
 
     runtime_tool = runtime / "tools" / "discover.py"
     runtime_tool.parent.mkdir()
