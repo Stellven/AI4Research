@@ -134,6 +134,7 @@ set +o pipefail 2>/dev/null || true
 # default, only sprints created during this process lifetime are admitted.
 # Operators may explicitly opt into recovery with SOLAR_COORDINATOR_RESUME_EXISTING=1
 # or admit named sprint IDs via SOLAR_COORDINATOR_ADMITTED_SPRINTS.
+declare -A COORDINATOR_ADMITTED_IN_PROCESS=()
 coordinator_sprint_admitted() {
   local status_file="$1" sid admitted_list
   [[ -f "$status_file" ]] || return 1
@@ -141,9 +142,13 @@ coordinator_sprint_admitted() {
     1|true|TRUE|yes|YES|on|ON) return 0 ;;
   esac
   sid="$(basename "$status_file" .status.json)"
+  [[ -n "${COORDINATOR_ADMITTED_IN_PROCESS[$sid]:-}" ]] && return 0
   admitted_list=",${SOLAR_COORDINATOR_ADMITTED_SPRINTS:-},"
-  [[ "$admitted_list" == *",${sid},"* ]] && return 0
-  python3 - "$status_file" "$COORDINATOR_ADMISSION_EPOCH" "$HARNESS_DIR" <<'PY' >/dev/null 2>&1
+  if [[ "$admitted_list" == *",${sid},"* ]]; then
+    COORDINATOR_ADMITTED_IN_PROCESS["$sid"]=1
+    return 0
+  fi
+  if python3 - "$status_file" "$COORDINATOR_ADMISSION_EPOCH" "$HARNESS_DIR" <<'PY' >/dev/null 2>&1
 import datetime as dt
 import json
 from pathlib import Path
@@ -172,6 +177,14 @@ else:
     raise SystemExit(1)
 raise SystemExit(0 if created >= float(cutoff_raw) else 1)
 PY
+  then
+    # Admission is a lifecycle decision, not a property of a transient worker
+    # lease.  Once admitted, keep the sprint in scope for this Coordinator
+    # process even after the Planner/worker lease is released.
+    COORDINATOR_ADMITTED_IN_PROCESS["$sid"]=1
+    return 0
+  fi
+  return 1
 }
 
 # Pane targets are session-qualified. Product Delivery and Builder Lab are

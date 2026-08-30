@@ -61,6 +61,9 @@ Path(sys.argv[1]).write_text(
 PY
 coordinator_sprint_admitted "$TMP/sprints/sprint-old.status.json"
 rm -f "$TMP/run/pane-leases/live.json"
+# A transient live lease may admit a sprint, but releasing that lease must not
+# make the same Coordinator forget the already-authorized sprint.
+coordinator_sprint_admitted "$TMP/sprints/sprint-old.status.json"
 SOLAR_COORDINATOR_ADMITTED_SPRINTS=sprint-old \
   coordinator_sprint_admitted "$TMP/sprints/sprint-old.status.json"
 
