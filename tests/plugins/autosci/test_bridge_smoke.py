@@ -753,6 +753,98 @@ def test_phase14_write_report_outputs_report_and_publication_bundle(tmp_path: Pa
         assert (tmp_path / rel_path).exists()
 
 
+def test_phase14_report_actions_consume_scheduler_artifact_routes_without_fixture_fallback(tmp_path: Path) -> None:
+    upstream = tmp_path / "upstream"
+    method_route = upstream / "methods"
+    plan_route = upstream / "plan"
+    method_route.mkdir(parents=True)
+    plan_route.mkdir(parents=True)
+    verdict_route = upstream / "claim_verdict.v1.json"
+    verdict_route.write_text(
+        json.dumps({
+            "schema": "claim_verdict.v1",
+            "task_id": "verify-real-kv",
+            "outputs": {"verdicts": [{
+                "claim_id": "claim-real-kv",
+                "claim_text": "Selective retention can reduce KV-cache memory under the evaluated setup.",
+                "verdict": "insufficient",
+                "confidence": 0.4,
+                "basis": "The routed paper anchor does not establish every comparison condition.",
+                "evidence_ids": ["paper-real-kv#results"],
+            }]},
+            "limitations": ["Independent benchmark replication was not routed."],
+        }),
+        encoding="utf-8",
+    )
+    (method_route / "extract_methods.evidence.json").write_text(
+        json.dumps({
+            "schema": "research_method.v1",
+            "task_id": "methods-real-kv",
+            "outputs": {"methods": [{
+                "method_id": "method-real-quantization",
+                "name": "Routed KV quantization",
+                "procedure": ["Quantize cached keys and values, then measure accuracy and memory."],
+                "source_papers": ["paper-real-kv"],
+                "source_anchor": "paper-real-kv#method",
+                "evidence_ids": ["paper-real-kv", "paper-real-kv#method"],
+            }]},
+            "limitations": [],
+        }),
+        encoding="utf-8",
+    )
+    (plan_route / "plan_report.evidence.json").write_text(
+        json.dumps({
+            "schema": "scientific_report.v1",
+            "task_id": "plan-real-kv",
+            "outputs": {"report": {
+                "report_id": "plan-real-kv",
+                "title": "Routed plan",
+                "evidence_ids": ["method-real-quantization", "claim-real-kv"],
+                "sections": [],
+            }},
+            "limitations": [],
+        }),
+        encoding="utf-8",
+    )
+    routes = {
+        "schema:schemas/evidence/scientific_report_plan.v1.schema.json": str(plan_route),
+        "schema:schemas/evidence/claim_verdict.v1.schema.json": str(verdict_route),
+        "schema:schemas/evidence/research_method.v1.schema.json": str(method_route),
+    }
+    request = (
+        "Synthesize the routed evidence and produce the technical report named "
+        "\u201cKV Cache Routed Evidence Landscape\u201d with an auditable evidence chain."
+    )
+    for action in ("plan_report", "write_report"):
+        envelope = tmp_path / f"{action}.json"
+        envelope.write_text(
+            json.dumps({
+                "task_id": f"{action}-routed",
+                "sprint_id": "phase14-routed",
+                "node_id": f"node-{action}",
+                "mode": "solar_native",
+                "output_dir": f"artifacts/scientific/{action}",
+                "inputs": {"request": request, "artifact_routes": routes},
+                "outputs": {"evidence_payload_path": f"artifacts/scientific/{action}/{action}.evidence.json"},
+            }),
+            encoding="utf-8",
+        )
+        proc = run_bridge(["run", "--action", action, "--envelope", str(envelope)], tmp_path)
+        assert proc.returncode == 0, proc.stderr
+        result = json.loads(proc.stdout)
+        evidence = json.loads((tmp_path / result["evidence_path"]).read_text(encoding="utf-8"))
+        report = evidence["outputs"]["report"]
+        assert report["title"] == "KV Cache Routed Evidence Landscape"
+        assert "method-real-quantization" in report["evidence_ids"]
+        assert "claim-real-kv" in report["evidence_ids"]
+        assert "fixture" not in json.dumps(evidence).lower()
+
+    report_md = (tmp_path / "artifacts/scientific/write_report/report.md").read_text(encoding="utf-8")
+    assert "Routed KV quantization" in report_md
+    assert "Selective retention can reduce KV-cache memory" in report_md
+    assert "paper-real-kv#method" in report_md
+
+
 def test_phase16_evolve_workflow_outputs_reviewable_proposal(tmp_path: Path) -> None:
     proc = run_bridge(
         [

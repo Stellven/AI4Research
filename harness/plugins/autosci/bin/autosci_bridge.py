@@ -12540,6 +12540,33 @@ def _phase14_source_payloads(envelope: dict[str, Any]) -> list[dict[str, Any]]:
     payloads: list[dict[str, Any]] = []
     for key in PHASE14_SOURCE_INPUT_KEYS:
         payloads.extend(_load_optional_evidence_many(inputs.get(key)))
+    routes = inputs.get("artifact_routes") if isinstance(inputs.get("artifact_routes"), dict) else {}
+    seen_paths: set[str] = set()
+    for raw_route in routes.values():
+        route_values = raw_route if isinstance(raw_route, list) else [raw_route]
+        for value in route_values:
+            if not str(value or "").strip():
+                continue
+            route_path = _resolve_harness_path(str(value))
+            if route_path.is_dir():
+                candidates = sorted(route_path.glob("*.evidence.json"))
+                if not candidates:
+                    candidates = sorted(path for path in route_path.glob("*.json") if path.name != "result.json")
+            else:
+                candidates = [route_path]
+            for candidate in candidates:
+                key = str(candidate.resolve())
+                if key in seen_paths:
+                    continue
+                seen_paths.add(key)
+                try:
+                    payload = json.loads(candidate.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    continue
+                if isinstance(payload, dict) and isinstance(payload.get("evidence"), dict):
+                    payload = payload["evidence"]
+                if isinstance(payload, dict) and str(payload.get("schema") or "").endswith(".v1"):
+                    payloads.append(payload)
     return payloads
 
 
@@ -12572,6 +12599,11 @@ def _phase14_payload_evidence_ids(payload: dict[str, Any]) -> list[str]:
             if claim.get("claim_id"):
                 ids.append(str(claim["claim_id"]))
             ids.extend(str(item) for item in claim.get("evidence_ids") or [] if str(item).strip())
+    for method in outputs.get("methods") or []:
+        if isinstance(method, dict):
+            if method.get("method_id"):
+                ids.append(str(method["method_id"]))
+            ids.extend(str(item) for item in method.get("evidence_ids") or [] if str(item).strip())
     for mapping in outputs.get("mappings") or []:
         if isinstance(mapping, dict):
             if mapping.get("mapping_id"):
@@ -12603,6 +12635,173 @@ def _phase14_verdicts(payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if isinstance(verdict, dict):
                 verdicts.append(verdict)
     return verdicts
+
+
+def _phase14_methods(payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    methods: list[dict[str, Any]] = []
+    for payload in payloads:
+        outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+        methods.extend(item for item in outputs.get("methods") or [] if isinstance(item, dict))
+    return methods
+
+
+def _report_title_from_request(envelope: dict[str, Any], fallback: str) -> str:
+    inputs = dict(envelope.get("inputs") or {})
+    explicit = inputs.get("report_title") or inputs.get("title") or inputs.get("topic") or inputs.get("target")
+    if explicit:
+        return str(explicit)
+    request = str(inputs.get("request") or envelope.get("objective") or "").strip()
+    for pattern in (
+        r"(?:report\s+named|report\s+titled|project\s+name\s*:?)\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
+        r"(?:report\s+named|report\s+titled|project\s+name\s*:?)\s*([^.;\n]{4,160})",
+    ):
+        match = re.search(pattern, request, flags=re.IGNORECASE)
+        if match and match.group(1).strip():
+            return match.group(1).strip()
+    return fallback
+
+
+def _phase14_evidence_report_raw(
+    envelope: dict[str, Any],
+    payloads: list[dict[str, Any]],
+    *,
+    paths: dict[str, Path],
+    compile_handoff: dict[str, Any],
+    compile_artifacts: list[dict[str, Any]],
+    compile_limitations: list[str],
+) -> dict[str, Any]:
+    inputs = dict(envelope.get("inputs") or {})
+    title = _report_title_from_request(envelope, "Scientific Evidence Landscape Report")
+    report_id = str(inputs.get("report_id") or f"report-{_slug(title)}")
+    evidence_ids = _unique_strings([
+        *[str(item) for payload in payloads for item in _phase14_payload_evidence_ids(payload)],
+        *[str(item) for item in compile_handoff.get("evidence_ids", [])],
+    ])
+    verdicts = _phase14_verdicts(payloads)
+    methods = _phase14_methods(payloads)
+    supported = [item for item in verdicts if str(item.get("verdict") or "").lower() in {"supported", "pass", "verified"}]
+    unresolved = [item for item in verdicts if item not in supported]
+    method_lines = []
+    for method in methods[:24]:
+        method_id = str(method.get("method_id") or "method-unidentified")
+        name = str(method.get("name") or "Unnamed method")
+        procedure = [str(item) for item in method.get("procedure") or [] if str(item).strip()]
+        source_ids = _unique_strings([
+            *[str(item) for item in method.get("source_papers") or []],
+            *[str(item) for item in method.get("evidence_ids") or []],
+            str(method.get("source_anchor") or ""),
+        ])
+        summary = procedure[0] if procedure else "No explicit procedure summary was present."
+        method_lines.append(f"- **{method_id} — {name}:** {summary} Sources: {', '.join(source_ids) or 'unresolved'}.")
+    verdict_lines = []
+    for verdict in verdicts[:30]:
+        claim_id = str(verdict.get("claim_id") or "claim-unidentified")
+        claim_text = str(verdict.get("claim_text") or verdict.get("text") or "Claim text unavailable.")
+        label = str(verdict.get("verdict") or verdict.get("support_classification") or "inconclusive")
+        confidence = verdict.get("confidence")
+        basis = str(verdict.get("basis") or "No verifier basis was recorded.")
+        refs = _unique_strings([str(item) for item in verdict.get("evidence_ids") or []])
+        confidence_text = f", confidence {confidence}" if confidence is not None else ""
+        verdict_lines.append(
+            f"- **{claim_id} — {label}{confidence_text}:** {claim_text} Basis: {basis} Evidence: {', '.join(refs) or 'unresolved'}."
+        )
+    route_schemas = list((inputs.get("artifact_routes") or {}).keys()) if isinstance(inputs.get("artifact_routes"), dict) else []
+    payload_schemas = _unique_strings([str(payload.get("schema") or "") for payload in payloads])
+    request = str(inputs.get("request") or envelope.get("objective") or "").strip()
+    sections = [
+        {
+            "section_id": "executive-summary",
+            "title": "Executive Summary",
+            "evidence_ids": evidence_ids,
+            "body": (
+                f"This evidence-linked landscape addresses: {request or title}. "
+                f"The routed corpus yielded {len(methods)} method records and {len(verdicts)} explicit claim verdicts. "
+                f"{len(supported)} claims are supported by the supplied verifier record; {len(unresolved)} remain insufficient, inconclusive, or otherwise unresolved."
+            ),
+        },
+        {
+            "section_id": "scope-and-method",
+            "title": "Study Scope and Method",
+            "evidence_ids": evidence_ids,
+            "body": (
+                "The report synthesizes only the frozen Scheduler artifact routes. "
+                f"Consumed contracts: {', '.join(route_schemas) or 'none declared'}. "
+                f"Observed Evidence ABI payloads: {', '.join(payload_schemas) or 'none'}. "
+                "Search-period, inclusion-criteria, and comparison-framework details not present in those artifacts remain explicitly unresolved."
+            ),
+        },
+        {
+            "section_id": "technical-method-landscape",
+            "title": "Technical Method Landscape",
+            "evidence_ids": _unique_strings([str(item) for method in methods for item in [method.get("method_id"), *(method.get("evidence_ids") or [])]]),
+            "body": "\n".join(method_lines) if method_lines else "No valid routed method records were available.",
+            "figures": [{
+                "figure_id": "fig.optional-poster",
+                "title": "Optional poster artifact",
+                "artifact_path": _rel(paths["poster_html"]),
+                "evidence_ids": evidence_ids,
+            }],
+        },
+        {
+            "section_id": "claim-assessment",
+            "title": "Claim Assessment: Tested, Supported, and Unresolved",
+            "evidence_ids": _unique_strings([str(item) for verdict in verdicts for item in [verdict.get("claim_id"), *(verdict.get("evidence_ids") or [])]]),
+            "body": "\n".join(verdict_lines) if verdict_lines else "No valid routed claim-verdict records were available.",
+        },
+        {
+            "section_id": "auditable-evidence-chain",
+            "title": "Auditable Evidence Chain",
+            "evidence_ids": evidence_ids,
+            "body": (
+                "Every method and claim entry retains its upstream Evidence ABI identifier and source anchor. "
+                "The report evidence index and publication bundle preserve these identifiers for extension. "
+                "The chain is: frozen Scheduler route -> schema-validated evidence payload -> method/claim record -> report section evidence ids."
+            ),
+            "tables": [{
+                "table_id": "table.evidence-map",
+                "title": "Evidence ids",
+                "artifact_path": _rel(paths["evidence_index"]),
+                "evidence_ids": evidence_ids,
+            }],
+        },
+        {
+            "section_id": "limitations",
+            "title": "Limitations",
+            "evidence_ids": evidence_ids,
+            "body": (
+                "Rapid mode bypasses semantic evaluator calls but not schema, hash, artifact, or proof gates. "
+                "This run did not execute new benchmarks, so empirical comparisons absent from routed evidence are not claimed. "
+                "Any missing category mapping, quantitative normalization, or independent replication remains future work."
+            ),
+        },
+    ]
+    limitations = _unique_strings([
+        "The report is bounded to routed local evidence and does not substitute for external peer review.",
+        "No new benchmark was executed during report drafting.",
+        *[str(item) for payload in payloads for item in payload.get("limitations") or []],
+        *compile_limitations,
+    ])
+    return {
+        "report_id": report_id,
+        "title": title,
+        "sections": sections,
+        "evidence_ids": evidence_ids,
+        "unsupported_claims": _unique_strings([str(item.get("claim_id") or "") for item in unresolved]),
+        "figures": sections[2]["figures"],
+        "tables": sections[4]["tables"],
+        "publication_bundle_path": _rel(paths["publication_bundle"]),
+        "compile_handoff": compile_handoff,
+        "artifacts": [
+            _artifact("report_plan_json", paths["report_plan"]),
+            _artifact("markdown_report", paths["report_md"]),
+            _artifact("report_evidence_index_json", paths["evidence_index"]),
+            _artifact("optional_poster_html", paths["poster_html"]),
+            _artifact("optional_rebuttal_markdown", paths["rebuttal_md"]),
+            *compile_artifacts,
+        ],
+        "status": "completed" if evidence_ids else "inconclusive",
+        "limitations": limitations,
+    }
 
 
 def _compile_pdf_paths_from_contract(contract: dict[str, Any]) -> list[Path]:
@@ -13005,6 +13204,15 @@ def _phase14_report_raw(envelope: dict[str, Any]) -> dict[str, Any]:
     paths = _phase14_report_paths(envelope)
     payloads = _phase14_source_payloads(envelope)
     compile_handoff, compile_artifacts, compile_limitations = _phase14_compile_handoff(envelope)
+    if payloads:
+        return _phase14_evidence_report_raw(
+            envelope,
+            payloads,
+            paths=paths,
+            compile_handoff=compile_handoff,
+            compile_artifacts=compile_artifacts,
+            compile_limitations=compile_limitations,
+        )
     evidence_ids = _unique_strings([
         *[str(item) for payload in payloads for item in _phase14_payload_evidence_ids(payload)],
         *[str(item) for item in compile_handoff.get("evidence_ids", [])],
@@ -14660,14 +14868,7 @@ def _action_write_report(envelope: dict[str, Any]) -> dict[str, Any]:
 
 
 def _native_publication_title(envelope: dict[str, Any], fallback: str) -> str:
-    inputs = dict(envelope.get("inputs") or {})
-    return str(
-        inputs.get("report_title")
-        or inputs.get("title")
-        or inputs.get("topic")
-        or inputs.get("target")
-        or fallback
-    )
+    return _report_title_from_request(envelope, fallback)
 
 
 def _native_publication_target(envelope: dict[str, Any]) -> str:
