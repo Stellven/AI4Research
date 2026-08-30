@@ -23,7 +23,13 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
         "evidence_ids": list(raw.get("evidence_ids") or ["claim-001", "exp-001"]),
         "unsupported_claims": list(raw.get("unsupported_claims") or []),
     }
-    for optional_key in ("figures", "tables", "publication_bundle_path", "compile_handoff"):
+    for optional_key in (
+        "figures",
+        "tables",
+        "publication_bundle_path",
+        "compile_handoff",
+        "study_protocol",
+    ):
         if optional_key in raw:
             report[optional_key] = raw[optional_key]
     return evidence_base(

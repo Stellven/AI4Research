@@ -9,8 +9,21 @@ if str(HARNESS_ROOT) not in sys.path:
     sys.path.insert(0, str(HARNESS_ROOT))
 if str(HARNESS_ROOT / "lib") not in sys.path:
     sys.path.insert(0, str(HARNESS_ROOT / "lib"))
+if str(HARNESS_ROOT / "plugins" / "autosci" / "bin") not in sys.path:
+    sys.path.insert(0, str(HARNESS_ROOT / "plugins" / "autosci" / "bin"))
 
 from lib import elastic_planner
+from plugins.autosci.adapters.autosci_to_literature_discovery import (
+    convert as convert_literature_discovery,
+)
+from plugins.autosci.adapters.autosci_to_scientific_report import (
+    convert as convert_scientific_report,
+)
+from plugins.autosci.bin.autosci_bridge import (
+    _discovery_study_protocol,
+    _native_study_protocol_body,
+    _phase14_study_protocol,
+)
 from plugins.autosci.operators.scientific_lifecycle.action.delivery import (
     _render_study_protocol,
     _study_protocol_evidence,
@@ -135,3 +148,52 @@ def test_every_admitted_report_composition_routes_discovery_into_report_planning
         ]
         assert planning_steps
         assert all(LITERATURE_DISCOVERY in step["consumes"] for step in planning_steps)
+
+
+def test_bridge_evidence_adapters_preserve_protocol_across_plan_boundary() -> None:
+    raw = {
+        "query": "KV cache compression",
+        "mode": "topic_public_provider_fallback",
+        "year": 2025,
+        "candidates": [
+            {
+                "candidate_id": "paper-1",
+                "title": "KV Cache Compression",
+                "source_channels": ["arxiv"],
+                "ranking_score": 0.9,
+                "ranking_rationale": "Query match",
+                "dedup_status": "new",
+                "fetch_status": "fetched",
+            }
+        ],
+    }
+    raw["study_protocol"] = _discovery_study_protocol(
+        {"query": raw["query"], "year": 2025},
+        raw,
+        query=raw["query"],
+        candidates=raw["candidates"],
+    )
+    envelope = {"task_id": "task-1", "sprint_id": "sprint-1", "node_id": "discover"}
+
+    discovery = convert_literature_discovery(raw, envelope)
+    carried, evidence_ids, limitations = _phase14_study_protocol([discovery])
+    plan = convert_scientific_report(
+        {
+            "report_id": "plan-1",
+            "title": "Plan",
+            "sections": [],
+            "evidence_ids": evidence_ids,
+            "study_protocol": carried,
+        },
+        {**envelope, "node_id": "plan"},
+    )
+    drafted, drafted_evidence_ids, drafted_limitations = _phase14_study_protocol([plan])
+
+    assert discovery["outputs"]["study_protocol"] == raw["study_protocol"]
+    assert carried == raw["study_protocol"]
+    assert evidence_ids == ["task-1"]
+    assert limitations == []
+    assert drafted == carried
+    assert drafted_evidence_ids == ["task-1", "plan-1"]
+    assert drafted_limitations == []
+    assert "Time range: 2025 to 2025 (resolved)" in _native_study_protocol_body(drafted)
