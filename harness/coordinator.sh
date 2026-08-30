@@ -53,6 +53,8 @@ HARNESS_MANAGE_LAB="${SOLAR_HARNESS_MANAGE_LAB:-${SOLAR_WATCHDOG_MANAGE_LAB:-0}}
 COORD_STATE="$HARNESS_DIR/.coordinator-state"
 SESSION_SH="$HARNESS_DIR/session.sh"
 COORDINATOR_ADMISSION_EPOCH="${SOLAR_COORDINATOR_ADMISSION_EPOCH:-$(date +%s)}"
+COORDINATOR_ADMISSION_DIR="$HARNESS_DIR/run/coordinator-admissions"
+COORDINATOR_ADMISSION_TTL_SECS="${SOLAR_COORDINATOR_ADMISSION_TTL_SECS:-300}"
 
 solar_choose_utf8_locale() {
   local locs
@@ -135,6 +137,55 @@ set +o pipefail 2>/dev/null || true
 # Operators may explicitly opt into recovery with SOLAR_COORDINATOR_RESUME_EXISTING=1
 # or admit named sprint IDs via SOLAR_COORDINATOR_ADMITTED_SPRINTS.
 declare -A COORDINATOR_ADMITTED_IN_PROCESS=()
+coordinator_record_durable_admission() {
+  local status_file="$1"
+  python3 - "$status_file" "$COORDINATOR_ADMISSION_DIR" "$COORDINATOR_ADMISSION_TTL_SECS" <<'PY' >/dev/null 2>&1
+import datetime as dt
+import json
+import os
+from pathlib import Path
+import sys
+
+status_path = Path(sys.argv[1])
+admission_dir = Path(sys.argv[2])
+ttl = max(30, int(sys.argv[3]))
+payload = json.loads(status_path.read_text(encoding="utf-8"))
+sid = str(payload.get("sprint_id") or payload.get("id") or status_path.name.removesuffix(".status.json"))
+if not sid.startswith("sprint-"):
+    raise SystemExit(1)
+now = dt.datetime.now(dt.timezone.utc)
+admission_dir.mkdir(parents=True, exist_ok=True)
+target = admission_dir / f"{sid}.json"
+record = {
+    "schema_version": "solar.coordinator_admission.v1",
+    "sprint_id": sid,
+    "refreshed_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "expires_at": (now + dt.timedelta(seconds=ttl)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+}
+temporary = target.with_suffix(f".json.tmp.{os.getpid()}")
+temporary.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+os.replace(temporary, target)
+PY
+}
+
+coordinator_durable_admission_valid() {
+  local status_file="$1"
+  python3 - "$status_file" "$COORDINATOR_ADMISSION_DIR" <<'PY' >/dev/null 2>&1
+import datetime as dt
+import json
+from pathlib import Path
+import sys
+
+status_path = Path(sys.argv[1])
+admission_dir = Path(sys.argv[2])
+payload = json.loads(status_path.read_text(encoding="utf-8"))
+sid = str(payload.get("sprint_id") or payload.get("id") or status_path.name.removesuffix(".status.json"))
+record = json.loads((admission_dir / f"{sid}.json").read_text(encoding="utf-8"))
+expires = dt.datetime.fromisoformat(str(record.get("expires_at") or "").replace("Z", "+00:00"))
+raise SystemExit(0 if str(record.get("sprint_id") or "") == sid and expires > dt.datetime.now(dt.timezone.utc) else 1)
+PY
+}
+
 coordinator_sprint_admitted() {
   local status_file="$1" sid admitted_list
   [[ -f "$status_file" ]] || return 1
@@ -142,31 +193,29 @@ coordinator_sprint_admitted() {
     1|true|TRUE|yes|YES|on|ON) return 0 ;;
   esac
   sid="$(basename "$status_file" .status.json)"
-  [[ -n "${COORDINATOR_ADMITTED_IN_PROCESS[$sid]:-}" ]] && return 0
+  if [[ -n "${COORDINATOR_ADMITTED_IN_PROCESS[$sid]:-}" ]]; then
+    coordinator_record_durable_admission "$status_file" || true
+    return 0
+  fi
   admitted_list=",${SOLAR_COORDINATOR_ADMITTED_SPRINTS:-},"
   if [[ "$admitted_list" == *",${sid},"* ]]; then
     COORDINATOR_ADMITTED_IN_PROCESS["$sid"]=1
+    coordinator_record_durable_admission "$status_file" || true
     return 0
   fi
-  if python3 - "$status_file" "$COORDINATOR_ADMISSION_EPOCH" "$HARNESS_DIR" <<'PY' >/dev/null 2>&1
+  if coordinator_durable_admission_valid "$status_file"; then
+    COORDINATOR_ADMITTED_IN_PROCESS["$sid"]=1
+    coordinator_record_durable_admission "$status_file" || true
+    return 0
+  fi
+  if python3 - "$status_file" "$COORDINATOR_ADMISSION_EPOCH" <<'PY' >/dev/null 2>&1
 import datetime as dt
 import json
 from pathlib import Path
 import sys
 
-path, cutoff_raw, harness_raw = sys.argv[1:4]
+path, cutoff_raw = sys.argv[1:3]
 payload = json.load(open(path, encoding="utf-8"))
-sid = str(payload.get("sprint_id") or payload.get("id") or Path(path).name.removesuffix(".status.json"))
-now = dt.datetime.now(dt.timezone.utc)
-for lease_path in (Path(harness_raw) / "run" / "pane-leases").glob("*.json"):
-    try:
-        lease = json.loads(lease_path.read_text(encoding="utf-8"))
-        lease_sid = str(lease.get("sprint_id") or lease.get("sid") or "")
-        expires = dt.datetime.fromisoformat(str(lease.get("expires_at") or "").replace("Z", "+00:00"))
-    except Exception:
-        continue
-    if lease_sid == sid and expires > now:
-        raise SystemExit(0)
 value = payload.get("created_ts") or payload.get("created_at")
 if isinstance(value, (int, float)):
     created = float(value)
@@ -182,6 +231,7 @@ PY
     # lease.  Once admitted, keep the sprint in scope for this Coordinator
     # process even after the Planner/worker lease is released.
     COORDINATOR_ADMITTED_IN_PROCESS["$sid"]=1
+    coordinator_record_durable_admission "$status_file" || true
     return 0
   fi
   return 1

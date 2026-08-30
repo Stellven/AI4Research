@@ -11,6 +11,7 @@ root = Path(sys.argv[1])
 intake = (root / "solar-harness.sh").read_text(encoding="utf-8")
 gateway = (root / "lib" / "intent_gateway.py").read_text(encoding="utf-8")
 adapter = (root / "tools" / "elastic_planner_adapter.py").read_text(encoding="utf-8")
+watchdog = (root / "coordinator-watchdog.sh").read_text(encoding="utf-8")
 
 region = intake[intake.index("intake_request()") : intake.index("new_sprint()")]
 assert 'SOLAR_INTAKE_COMPAT_MODE:-}" == "legacy"' in region
@@ -20,6 +21,8 @@ assert '&& ! should_epic_decompose_request "$req"' not in region
 assert '"cli_intake"' in gateway
 assert "run_elastic_planning_request(" in adapter
 assert "prepare_runtime_graph(" in adapter
+assert 'bash "$HARNESS_DIR/solar-harness.sh" wake "$active_sid"' not in watchdog
+assert "latest_durable_admitted_sprint" in watchdog
 PY
 
 TMP="$(mktemp -d)"
@@ -31,7 +34,7 @@ from pathlib import Path
 import sys
 
 root = Path(sys.argv[1])
-for sid, created in (("sprint-old", 99), ("sprint-new", 100)):
+for sid, created in (("sprint-old", 99), ("sprint-new", 100), ("sprint-expired", 98)):
     (root / f"{sid}.status.json").write_text(
         json.dumps({"sprint_id": sid, "id": sid, "status": "drafting", "created_ts": created}) + "\n",
         encoding="utf-8",
@@ -59,11 +62,21 @@ Path(sys.argv[1]).write_text(
     encoding="utf-8",
 )
 PY
-coordinator_sprint_admitted "$TMP/sprints/sprint-old.status.json"
-rm -f "$TMP/run/pane-leases/live.json"
-# A transient live lease may admit a sprint, but releasing that lease must not
-# make the same Coordinator forget the already-authorized sprint.
-coordinator_sprint_admitted "$TMP/sprints/sprint-old.status.json"
+# Generic worker leases are execution state, not permission to revive history.
+if coordinator_sprint_admitted "$TMP/sprints/sprint-old.status.json"; then
+  echo "FAIL: generic pane lease revived a historical sprint" >&2
+  exit 1
+fi
+# A short-lived durable admission survives a Coordinator process restart.
+unset 'COORDINATOR_ADMITTED_IN_PROCESS[sprint-new]'
+COORDINATOR_ADMISSION_EPOCH=200 coordinator_sprint_admitted "$TMP/sprints/sprint-new.status.json"
+# An expired durable admission must not revive history.
+mkdir -p "$TMP/run/coordinator-admissions"
+printf '%s\n' '{"schema_version":"solar.coordinator_admission.v1","sprint_id":"sprint-expired","expires_at":"1970-01-01T00:00:00Z"}' > "$TMP/run/coordinator-admissions/sprint-expired.json"
+if COORDINATOR_ADMISSION_EPOCH=200 coordinator_sprint_admitted "$TMP/sprints/sprint-expired.status.json"; then
+  echo "FAIL: expired durable admission revived a historical sprint" >&2
+  exit 1
+fi
 SOLAR_COORDINATOR_ADMITTED_SPRINTS=sprint-old \
   coordinator_sprint_admitted "$TMP/sprints/sprint-old.status.json"
 
