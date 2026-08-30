@@ -414,6 +414,90 @@ def test_research_registry_adapter_admits_claim_verify_with_all_routed_documents
     assert payload == {"claims": [claims, paper]}
 
 
+def test_composition_support_step_preserves_parent_plan_objective():
+    planner = _load("typed_composition_parent_context", LIB / "elastic_planner.py")
+    parent_objective = (
+        "Discover evidence about a named technical subject.\n\n"
+        "Authoritative discovery scope:\n"
+        "- [R1] Cover named method families. Required coverage: method alpha; method beta"
+    )
+    graph = planner._generated_composition_task_graph_proposal(
+        {"requirement_ir_id": "requirement-context", "requirements": []},
+        {
+            "nodes": [
+                {
+                    "node_id": "research",
+                    "objective": parent_objective,
+                    "logical_operator": "ScientificLiteratureDiscoverer",
+                    "depends_on": [],
+                    "consumes": ["schema:request-envelope.schema.json"],
+                    "produces": [
+                        {
+                            "artifact_type": "schema:paper.v1",
+                            "materialization": {"kind": "file", "path": "paper.json"},
+                            "verifier_ids": [],
+                        }
+                    ],
+                    "requirement_ids": ["R1"],
+                    "operator_requirements": {},
+                }
+            ]
+        },
+        {
+            "nodes": [
+                {
+                    "node_id": "research",
+                    "search": {
+                        "candidates": [
+                            {
+                                "candidate_id": "composition-1",
+                                "steps": [
+                                    {
+                                        "capsule_id": "cap.discover",
+                                        "consumes": ["schema:request-envelope.schema.json"],
+                                        "produces": ["schema:shortlist.v1"],
+                                    },
+                                    {
+                                        "capsule_id": "cap.ingest",
+                                        "consumes": ["schema:shortlist.v1"],
+                                        "produces": ["schema:paper.v1"],
+                                    },
+                                ],
+                            }
+                        ]
+                    },
+                }
+            ]
+        },
+        {
+            "nodes": [
+                {
+                    "node_id": "research",
+                    "selected_candidate_id": "composition-1",
+                    "rationale": "typed chain",
+                    "step_bindings": [
+                        {"dispatch_task_type": "literature-discovery"},
+                        {"dispatch_task_type": "paper-ingest"},
+                    ],
+                }
+            ]
+        },
+        {
+            "capsules": [
+                {"capsule_id": "cap.discover", "description": "Discover a shortlist."},
+                {"capsule_id": "cap.ingest", "description": "Normalize papers."},
+            ]
+        },
+        sprint_id="sprint-context",
+    )
+
+    support, terminal = graph["nodes"]
+    assert support["goal"].startswith("Discover a shortlist.")
+    assert "Composition parent objective:" in support["goal"]
+    assert parent_objective in support["goal"]
+    assert terminal["goal"] == parent_objective
+
+
 def test_legacy_task_graph_schema_violation_is_fail_closed():
     import plan_validator
 

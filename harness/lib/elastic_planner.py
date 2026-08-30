@@ -4613,11 +4613,18 @@ def _generated_composition_task_graph_proposal(
             ]
             task_type = str(selected_step.get("dispatch_task_type") or "")
             capsule_description = str(capsule.get("description") or "").strip()
-            objective = (
-                str(plan_node.get("objective") or "")
-                if is_terminal
+            parent_objective = str(plan_node.get("objective") or "").strip()
+            support_objective = (
+                f"{capsule_description}\n\nComposition parent objective:\n{parent_objective}"
+                if capsule_description and parent_objective
                 else capsule_description
+                or parent_objective
                 or f"Run {capsule_id} as part of {parent_id}."
+            )
+            objective = (
+                parent_objective
+                if is_terminal
+                else support_objective
             )
             node = {
                 "id": step_id,
