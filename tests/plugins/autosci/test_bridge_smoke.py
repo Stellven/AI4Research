@@ -824,7 +824,11 @@ def test_phase14_report_actions_consume_scheduler_artifact_routes_without_fixtur
                 "node_id": f"node-{action}",
                 "mode": "solar_native",
                 "output_dir": f"artifacts/scientific/{action}",
-                "inputs": {"request": request, "artifact_routes": routes},
+                "inputs": {
+                    "request": request,
+                    "target": "for the project \u201cKV Cache Routed Evidence Landscape\u201d",
+                    "artifact_routes": routes,
+                },
                 "outputs": {"evidence_payload_path": f"artifacts/scientific/{action}/{action}.evidence.json"},
             }),
             encoding="utf-8",

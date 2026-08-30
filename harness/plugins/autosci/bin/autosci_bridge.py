@@ -12647,17 +12647,20 @@ def _phase14_methods(payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _report_title_from_request(envelope: dict[str, Any], fallback: str) -> str:
     inputs = dict(envelope.get("inputs") or {})
-    explicit = inputs.get("report_title") or inputs.get("title") or inputs.get("topic") or inputs.get("target")
+    explicit = inputs.get("report_title") or inputs.get("title")
     if explicit:
         return str(explicit)
     request = str(inputs.get("request") or envelope.get("objective") or "").strip()
     for pattern in (
-        r"(?:report\s+named|report\s+titled|project\s+name\s*:?)\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
+        r"(?:report\s+(?:named|titled)(?:\s+for\s+the\s+project)?|project\s+name\s*:?)\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
         r"(?:report\s+named|report\s+titled|project\s+name\s*:?)\s*([^.;\n]{4,160})",
     ):
         match = re.search(pattern, request, flags=re.IGNORECASE)
         if match and match.group(1).strip():
             return match.group(1).strip()
+    contextual = inputs.get("topic") or inputs.get("target")
+    if contextual:
+        return str(contextual).strip()
     return fallback
 
 
