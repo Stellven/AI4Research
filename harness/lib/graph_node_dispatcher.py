@@ -4781,6 +4781,13 @@ def _cooldown_operator_after_contract_closeout(operator_id: str, closeout: dict[
             sys.path.insert(0, str(HARNESS_DIR / "lib"))
         import operator_flow_control as ofc  # type: ignore
 
+        if ofc.contract_closeout_evidence_is_stale(closeout):
+            return {
+                "ok": False,
+                "reason": "stale_contract_closeout_cannot_cooldown_operator",
+                "operator_id": operator_id,
+            }
+
         expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
             seconds=OPERATOR_CONTRACT_CLOSEOUT_COOLDOWN_SEC
         )

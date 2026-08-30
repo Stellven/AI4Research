@@ -20,6 +20,9 @@ HARNESS_DIR = Path(os.environ.get("HARNESS_DIR", HOME / ".solar" / "harness"))
 PHYSICAL_OPERATORS_PATH = Path(os.environ.get("SOLAR_MULTI_TASK_OPERATORS", HARNESS_DIR / "config" / "physical-operators.json"))
 TASK_CONTROL_FILENAME = "operator-task-control.json"
 BLOCKING_STATES = {"cooldown", "quota_exhausted", "auth_expired"}
+STALE_CONTRACT_CLOSEOUT_MAX_AGE_SECONDS = int(
+    os.environ.get("SOLAR_STALE_CONTRACT_CLOSEOUT_MAX_AGE_SECONDS", "900")
+)
 ANTIGRAVITY_PROBE_PROMPT = "Reply with exactly: SOLAR_AGY_OK"
 RATE_LIMIT_RE = re.compile(
     r"RESOURCE_EXHAUSTED|\bquota(?:\s+exhausted)?\b|monthly usage limit|"
@@ -102,6 +105,45 @@ def _parse_time(value: Any) -> dt.datetime | None:
         return dt.datetime.fromisoformat(raw).astimezone(dt.timezone.utc)
     except Exception:
         return None
+
+
+def contract_closeout_evidence_is_stale(
+    evidence: dict[str, Any] | str,
+    *,
+    now: dt.datetime | None = None,
+    max_age_seconds: int | None = None,
+) -> bool:
+    """Return true only for a safely attributable historical closeout."""
+
+    if isinstance(evidence, str):
+        try:
+            payload = json.loads(evidence)
+        except Exception:
+            return False
+    else:
+        payload = evidence if isinstance(evidence, dict) else {}
+    result_raw = str(payload.get("result_json") or "").strip()
+    if not result_raw:
+        return False
+    result_path = Path(result_raw)
+    if not result_path.is_absolute():
+        result_path = HARNESS_DIR / result_path
+    try:
+        resolved = result_path.resolve()
+        resolved.relative_to((HARNESS_DIR / "run" / "operator-results").resolve())
+        result = json.loads(resolved.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    finished_at = _parse_time(result.get("finished_at"))
+    if finished_at is None:
+        return False
+    age_seconds = ((now or _now()) - finished_at).total_seconds()
+    limit = (
+        STALE_CONTRACT_CLOSEOUT_MAX_AGE_SECONDS
+        if max_age_seconds is None
+        else max(0, int(max_age_seconds))
+    )
+    return age_seconds > limit
 
 
 def _timezone_from_text(text: str) -> dt.tzinfo:
@@ -513,7 +555,14 @@ def prune_expired_operator_config_blocks() -> dict[str, Any]:
         flow = op.get("flow_control") if isinstance(op.get("flow_control"), dict) else {}
         reason = str(flow.get("last_block_reason") or state.get("last_error") or "").strip().lower()
         source = str(flow.get("last_block_source") or "").strip().lower()
-        excerpt = str(flow.get("last_block_excerpt") or "").lower()
+        excerpt_raw = str(flow.get("last_block_excerpt") or "")
+        excerpt = excerpt_raw.lower()
+        stale_contract_closeout = (
+            runtime_state == "cooldown"
+            and reason == "contract_closeout_failed"
+            and source == "graph_node_dispatcher"
+            and contract_closeout_evidence_is_stale(excerpt_raw, now=now)
+        )
         weak_pane_cooldown = (
             runtime_state == "cooldown"
             and reason in {"pane_tui_rate_limit_fallback_ttl", "pane_tui_rate_limit"}
@@ -533,7 +582,7 @@ def prune_expired_operator_config_blocks() -> dict[str, Any]:
             )
         )
         if expires is not None and expires > now:
-            if weak_pane_cooldown:
+            if weak_pane_cooldown or stale_contract_closeout:
                 pass
             else:
                 kept.append({"operator_id": str(operator_id), "runtime_state": runtime_state, "expires_at": expires_raw})
@@ -544,12 +593,26 @@ def prune_expired_operator_config_blocks() -> dict[str, Any]:
         _clear_registry_block(
             op,
             now=now,
-            reason="weak_pane_rate_limit_evidence" if weak_pane_cooldown else "expired_operator_block",
+            reason=(
+                "stale_contract_closeout_evidence"
+                if stale_contract_closeout
+                else "weak_pane_rate_limit_evidence"
+                if weak_pane_cooldown
+                else "expired_operator_block"
+            ),
         )
+        if stale_contract_closeout:
+            _operator_runtime_module().clear_operator_status(str(operator_id))
         pruned.append({
             "operator_id": str(operator_id),
             "runtime_state": runtime_state,
-            "expired_at": "weak_pane_rate_limit_evidence" if weak_pane_cooldown else (expires_raw or "N/A"),
+            "expired_at": (
+                "stale_contract_closeout_evidence"
+                if stale_contract_closeout
+                else "weak_pane_rate_limit_evidence"
+                if weak_pane_cooldown
+                else (expires_raw or "N/A")
+            ),
         })
     if pruned:
         _write_operator_registry(registry)
