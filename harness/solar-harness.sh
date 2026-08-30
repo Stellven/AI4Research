@@ -4091,7 +4091,7 @@ print(json.dumps({
             # harness's pid/port/token files. Bind ownership-critical paths in
             # the pane command itself; session-name scoping alone is not enough.
             tmux new-session -d -s "$_SS_TMUX_SESSION" \
-              "cd '$HARNESS_DIR' && exec env HOME='$HOME' USERPROFILE='${USERPROFILE:-$HOME}' SOLAR_HOME='${SOLAR_HOME:-$HOME/.solar}' HARNESS_DIR='$HARNESS_DIR' SOLAR_HARNESS_DIR='$HARNESS_DIR' SOLAR_BIND_HOST='${SOLAR_BIND_HOST:-127.0.0.1}' '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
+              "cd '$HARNESS_DIR' && exec env HOME='$HOME' USERPROFILE='${USERPROFILE:-$HOME}' SOLAR_HOME='${SOLAR_HOME:-$HOME/.solar}' HARNESS_DIR='$HARNESS_DIR' SOLAR_HARNESS_DIR='$HARNESS_DIR' SOLAR_BIND_HOST='${SOLAR_BIND_HOST:-127.0.0.1}' SOLAR_STATUS_PORT_START='$_SS_PORT_START' SOLAR_STATUS_PORT_END='$_SS_PORT_END' SOLAR_REQUIRE_TOKEN='${SOLAR_REQUIRE_TOKEN:-0}' SOLAR_TEST_MODE='${SOLAR_TEST_MODE:-}' '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
           else
             nohup "$_ss_py" "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
           fi

@@ -252,3 +252,17 @@ def test_status_start_ignores_argv_decoy_that_only_mentions_server_path(tmp_path
         if decoy.poll() is None:
             decoy.kill()
         decoy.wait(timeout=10)
+
+
+def test_status_start_propagates_locked_runtime_settings_into_tmux():
+    script = _SOLAR_HARNESS.read_text(encoding="utf-8")
+    start = script.index('tmux new-session -d -s "$_SS_TMUX_SESSION"')
+    end = script.index("\n          else", start)
+    launcher = script[start:end]
+
+    assert "SOLAR_STATUS_PORT_START='$_SS_PORT_START'" in launcher
+    assert "SOLAR_STATUS_PORT_END='$_SS_PORT_END'" in launcher
+    assert "SOLAR_REQUIRE_TOKEN='${SOLAR_REQUIRE_TOKEN:-0}'" in launcher
+    assert "SOLAR_TEST_MODE='${SOLAR_TEST_MODE:-}'" in launcher
+    assert "D:\\demo only version\\harness" not in launcher
+    assert "172.19.127.84" not in launcher
