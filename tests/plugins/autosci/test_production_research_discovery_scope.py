@@ -126,6 +126,29 @@ def test_coverage_recovery_query_targets_the_missing_method() -> None:
     assert all("workflow" not in query for query in queries)
 
 
+def test_coverage_recovery_alias_survives_a_prefixed_method_label() -> None:
+    queries = production_research._coverage_recovery_queries(
+        PLANNER_SCOPE,
+        {
+            "aggregate_coverage_missing": [
+                {
+                    "group_id": "coverage-methods",
+                    "missing_anchor_items": [
+                        {
+                            "label": "KV cache sparsification",
+                            "terms": ["cache", "kv", "sparsification"],
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    assert len(queries) == 1
+    assert "KV cache sparsification" in queries[0]
+    assert "sparse pruning" in queries[0]
+
+
 def test_installed_bridge_does_not_adopt_an_unrelated_parent_tool(monkeypatch, tmp_path: Path) -> None:
     bridge_path = PLUGIN / "bin" / "autosci_bridge.py"
     sys.path.insert(0, str(PLUGIN / "bin"))

@@ -785,7 +785,12 @@ def _coverage_recovery_queries(query: str, audit: dict[str, Any]) -> list[str]:
             label = str(item.get("label") or "").strip()
             if not label:
                 continue
-            aliases = _DISCOVERY_PROVIDER_ALIASES.get(label.lower(), "")
+            alias_phrases = [
+                _DISCOVERY_PROVIDER_ALIASES[term]
+                for term in sorted(_relevance_terms(label, remove_generic=True))
+                if term in _DISCOVERY_PROVIDER_ALIASES
+            ]
+            aliases = " ".join(dict.fromkeys(alias_phrases))
             candidate = re.sub(r"\s+", " ", f"{context} {label} {aliases}").strip()[:500]
             if candidate and candidate not in queries:
                 queries.append(candidate)
