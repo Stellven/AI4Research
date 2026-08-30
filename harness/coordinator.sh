@@ -3587,6 +3587,44 @@ typed_planner_result_path() {
   printf '%s\n' "$SPRINTS_DIR/$1/planning/adapter_result.json"
 }
 
+typed_scheduler_state_path() {
+  local sid="$1" result
+  result="$(typed_planner_result_path "$sid")"
+  [[ -s "$result" ]] || return 1
+  python3 - "$result" "$sid" <<'PY'
+import json, sys
+from pathlib import Path
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+sid = sys.argv[2]
+projection = str(payload.get("runtime_projection") or "").strip()
+if projection:
+    path = Path(projection)
+elif payload.get("scheduler_runtime_dir"):
+    path = Path(str(payload["scheduler_runtime_dir"])) / f"{sid}.task_graph.json"
+else:
+    raise SystemExit(1)
+suffix = ".task_graph.json"
+if not path.name.endswith(suffix):
+    raise SystemExit(1)
+print(path.with_name(path.name[:-len(suffix)] + ".task_graph_state.json"))
+PY
+}
+
+typed_scheduler_state_requires_tick() {
+  local sid="$1" state
+  state="$(typed_scheduler_state_path "$sid" 2>/dev/null || true)"
+  # An accepted typed plan with no state yet still needs its first Scheduler tick.
+  [[ -n "$state" && -s "$state" ]] || return 0
+  python3 - "$state" <<'PY' >/dev/null 2>&1
+import json, sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+terminal = {"passed", "completed", "failed", "cancelled", "needs_human_review"}
+raise SystemExit(1 if str(payload.get("run_status") or "").lower() in terminal else 0)
+PY
+}
+
 reconcile_typed_planner_result() {
   local sid="$1" sf="$2" result status extra
   result="$(typed_planner_result_path "$sid")"
@@ -6136,7 +6174,7 @@ with open('$patches_file','w') as f:
     # dormant on node-level progress and never re-runs dispatch-evals/dispatch-ready
     # (back-half stall). Extra wakes are safe: downstream dispatch is lease-guarded/idempotent.
     local max_file_mtime=0
-    for f in "$SPRINTS_DIR"/sprint-*.status.json "$SPRINTS_DIR"/sprint-*.task_dag.state.json "$SPRINTS_DIR"/sprint-*/planning/adapter_result.json; do
+    for f in "$SPRINTS_DIR"/sprint-*.status.json "$SPRINTS_DIR"/sprint-*.task_dag.state.json "$SPRINTS_DIR"/sprint-*/planning/adapter_result.json "$SPRINTS_DIR"/sprint-*/planning/runtime/sprint-*.task_graph_state.json; do
       [[ -f "$f" ]] || continue
       local admission_status_file="$f"
       if [[ "$f" == *.task_dag.state.json ]]; then
@@ -6144,6 +6182,11 @@ with open('$patches_file','w') as f:
       elif [[ "$f" == */planning/adapter_result.json ]]; then
         local adapter_sprint_dir="${f%/planning/adapter_result.json}"
         admission_status_file="$SPRINTS_DIR/${adapter_sprint_dir##*/}.status.json"
+      elif [[ "$f" == */planning/runtime/*.task_graph_state.json ]]; then
+        local runtime_state_sid
+        runtime_state_sid="$(get_field "$f" "sprint_id")"
+        [[ "$runtime_state_sid" == sprint-* ]] || continue
+        admission_status_file="$SPRINTS_DIR/${runtime_state_sid}.status.json"
       fi
       coordinator_sprint_admitted "$admission_status_file" || continue
       local fmtime
@@ -6298,6 +6341,9 @@ with open('$patches_file','w') as f:
           if [[ "$st" == "approved" && -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
             log "${Y}[state-recovery] ${sid} is approved with task_graph; driving handle_approved to ensure progress${N}"
             handle_approved "$sid" "$sf"
+          elif [[ "$st" == "active" ]] && typed_planner_required "$sid" && typed_scheduler_state_requires_tick "$sid"; then
+            log "${Y}[state-recovery] ${sid} has nonterminal typed Scheduler state; driving the next frozen SchedulerInput tick${N}"
+            handle_active "$sid" "$sf"
           elif [[ "$st" == "active" ]] && { eval_passed_needs_progress "$sf" || [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; }; then
             log "${Y}[state-recovery] ${sid} has task_graph or eval_passed; driving handle_active to ensure progress${N}"
             handle_active "$sid" "$sf"

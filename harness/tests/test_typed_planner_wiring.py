@@ -212,6 +212,32 @@ def test_completed_typed_planner_result_wakes_and_reconciles_coordinator():
     assert 'typed_planner_required "$sid" && [[ -s "$(typed_planner_result_path "$sid")" ]]' in coordinator
 
 
+def test_typed_scheduler_state_wakes_and_repeats_frozen_scheduler_ticks():
+    coordinator = (ROOT / "coordinator.sh").read_text(encoding="utf-8")
+
+    assert (
+        '"$SPRINTS_DIR"/sprint-*/planning/runtime/'
+        'sprint-*.task_graph_state.json'
+    ) in coordinator
+    assert 'runtime_state_sid="$(get_field "$f" "sprint_id")"' in coordinator
+    assert 'admission_status_file="$SPRINTS_DIR/${runtime_state_sid}.status.json"' in coordinator
+    assert 'typed_scheduler_state_requires_tick "$sid"' in coordinator
+    assert 'has nonterminal typed Scheduler state; driving the next frozen SchedulerInput tick' in coordinator
+
+
+def test_typed_scheduler_state_path_is_derived_from_adapter_result():
+    coordinator = (ROOT / "coordinator.sh").read_text(encoding="utf-8")
+    helper_start = coordinator.index("typed_scheduler_state_path() {")
+    helper_end = coordinator.index("\ntyped_scheduler_state_requires_tick() {", helper_start)
+    helper = coordinator[helper_start:helper_end]
+
+    assert 'payload.get("runtime_projection")' in helper
+    assert 'payload["scheduler_runtime_dir"]' in helper
+    assert "D:\\demo only version\\harness" not in helper
+    assert "172.19.127.84" not in helper
+    assert "8767" not in helper
+
+
 def test_adapter_authorizes_only_verified_scheduler_projection(tmp_path, monkeypatch):
     adapter = _load("typed_adapter_test", TOOLS / "elastic_planner_adapter.py")
     requirement = tmp_path / "requirement_ir.json"
