@@ -12820,13 +12820,25 @@ def _report_title_from_request(envelope: dict[str, Any], fallback: str) -> str:
         return str(explicit)
     request = str(inputs.get("request") or envelope.get("objective") or "").strip()
     for pattern in (
-        r"(?:report\s+(?:named|titled)(?:\s+for\s+the\s+project)?|project\s+name\s*:?)\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
+        r"(?:report\s+(?:named|titled)(?:\s+for\s+the\s+project)?(?:\s+or\s+(?:organized|presented)\s+as)?|project\s+name\s*:?)\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
         r"\breport\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
-        r"(?:report\s+named|report\s+titled|project\s+name\s*:?)\s*([^.;\n]{4,160})",
     ):
         match = re.search(pattern, request, flags=re.IGNORECASE)
         if match and match.group(1).strip():
-            return match.group(1).strip()
+            candidate = match.group(1).strip()
+            # In prose, American-style punctuation is commonly placed inside
+            # the closing quote even when it is not part of the supplied title.
+            return candidate[:-1].rstrip() if candidate.endswith(".") else candidate
+    for pattern in (
+        r"(?:report\s+named|report\s+titled|project\s+name\s*:?)\s*([^.;\n]{4,160})",
+    ):
+        match = re.search(pattern, request, flags=re.IGNORECASE)
+        if not match or not match.group(1).strip():
+            continue
+        candidate = match.group(1).strip()
+        if re.search(r"[\u201c\u201d\"]", candidate) or re.match(r"^(?:or|and)\b", candidate, flags=re.IGNORECASE):
+            continue
+        return candidate
     contextual = inputs.get("topic") or inputs.get("target")
     if contextual:
         return str(contextual).strip()

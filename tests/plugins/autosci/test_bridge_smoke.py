@@ -815,8 +815,8 @@ def test_phase14_report_actions_consume_scheduler_artifact_routes_without_fixtur
         "schema:schemas/evidence/research_method.v1.schema.json": str(method_route),
     }
     request = (
-        "Synthesize the routed evidence and produce the comprehensive technical report "
-        "\u201cKV Cache Routed Evidence Landscape\u201d with an auditable evidence chain."
+        "Produce a comprehensive technical landscape report titled or organized as "
+        "\u201cKV Cache Routed Evidence Landscape.\u201d Treat it as an auditable research workflow."
     )
     for action in ("plan_report", "write_report"):
         envelope = tmp_path / f"{action}.json"
