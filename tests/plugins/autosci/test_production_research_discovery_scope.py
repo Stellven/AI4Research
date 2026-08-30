@@ -147,6 +147,68 @@ def test_coverage_recovery_alias_survives_a_prefixed_method_label() -> None:
     assert len(queries) == 1
     assert "KV cache sparsification" in queries[0]
     assert "sparse pruning" in queries[0]
+    assert [row[0] for row in production_research._DISCOVERY_COVERAGE_RECOVERY_PROVIDERS] == [
+        "arxiv",
+        "openalex",
+    ]
+
+
+def test_coverage_recovery_uses_arxiv_before_broad_catalogue(monkeypatch, tmp_path: Path) -> None:
+    service = production_research.LiteratureDiscoveryService(tmp_path, limit=4)
+    calls: list[tuple[str, str]] = []
+
+    def row(source_id: str, title: str, summary: str, provider: str) -> dict:
+        return {
+            "source_id": source_id,
+            "canonical_id": f"https://example.test/{source_id}",
+            "title": title,
+            "provider": provider,
+            "content_summary": summary,
+        }
+
+    monkeypatch.setattr(
+        service,
+        "_semantic_scholar",
+        lambda _query: ([], {"provider": "semantic_scholar", "status": "empty"}, []),
+    )
+
+    def arxiv(query: str):
+        calls.append(("arxiv", query))
+        if "sparse pruning" in query:
+            return [
+                row(
+                    "sparse",
+                    "Scissorhands: Sparse KV Cache Pruning",
+                    "Sparsification for long-context large language model inference.",
+                    "arxiv",
+                )
+            ], {"provider": "arxiv"}
+        return [
+            row("kivi", "KIVI KV Cache Quantization", "Compression efficiency landscape for long-context LLM inference.", "arxiv"),
+            row("h2o", "H2O KV Cache Eviction", "Token selection for long-context LLM inference.", "arxiv"),
+            row("snapkv", "SnapKV Cache Selection", "KV cache compression for large language models.", "arxiv"),
+        ], {"provider": "arxiv"}
+
+    monkeypatch.setattr(service, "_arxiv", arxiv)
+    monkeypatch.setattr(service, "_europe_pmc", lambda _query: ([], {"provider": "europe_pmc"}))
+    monkeypatch.setattr(
+        service,
+        "_openalex",
+        lambda query: (
+            [row("survey", "KV Cache Management Survey", "Quantization and long-context inference.", "openalex")],
+            {"provider": "openalex", "query": query},
+        ),
+    )
+    monkeypatch.setattr(service, "_crossref", lambda _query: ([], {"provider": "crossref"}))
+
+    result = service(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": PLANNER_SCOPE}]},
+        payload={"task_contract": {"user_intent": PLANNER_SCOPE, "min_provider_families": 2}},
+    )
+
+    assert len(result["candidates"]) >= 4
+    assert any(provider == "arxiv" and "sparse pruning" in query for provider, query in calls)
+    assert result["relevance_gate"]["status"] == "passed"
 
 
 def test_installed_bridge_does_not_adopt_an_unrelated_parent_tool(monkeypatch, tmp_path: Path) -> None:

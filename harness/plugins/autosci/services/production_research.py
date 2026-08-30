@@ -78,6 +78,10 @@ _DISCOVERY_PROVIDER_ALIASES = {
     "selection": "token retention",
     "sparsification": "sparse pruning",
 }
+_DISCOVERY_COVERAGE_RECOVERY_PROVIDERS = (
+    ("arxiv", "_arxiv", "arXiv"),
+    ("openalex", "_openalex", "OpenAlex"),
+)
 _RELEVANCE_STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "between", "by", "can", "could", "do", "does",
     "for", "from", "how", "in", "into", "is", "it", "its", "of", "on", "or", "our", "that",
@@ -1650,25 +1654,27 @@ class LiteratureDiscoveryService:
             recovery_candidates: list[dict[str, Any]] = []
             recovery_queries = _coverage_recovery_queries(relevance_query, relevance_audit)
             for recovery_query in recovery_queries:
-                try:
-                    found, trace = self._openalex(recovery_query)
-                except ResearchOperatorError as exc:
-                    limitations.append(
-                        f"OpenAlex coverage recovery boundary: {exc.error_type}: {exc}"
-                    )
-                    traces.append({
-                        "provider": "openalex",
-                        "status": "failed",
-                        "error_type": exc.error_type,
-                        "recovery_query": recovery_query,
-                    })
-                    continue
-                trace["recovery_query"] = recovery_query
-                traces.append(trace)
-                recovery_candidates.extend(found)
-                if found:
-                    contributed.add("openalex")
-                    answered["openalex"] = "completed"
+                for provider, backend_name, boundary in _DISCOVERY_COVERAGE_RECOVERY_PROVIDERS:
+                    backend = getattr(self, backend_name)
+                    try:
+                        found, trace = backend(recovery_query)
+                    except ResearchOperatorError as exc:
+                        limitations.append(
+                            f"{boundary} coverage recovery boundary: {exc.error_type}: {exc}"
+                        )
+                        traces.append({
+                            "provider": provider,
+                            "status": "failed",
+                            "error_type": exc.error_type,
+                            "recovery_query": recovery_query,
+                        })
+                        continue
+                    trace["recovery_query"] = recovery_query
+                    traces.append(trace)
+                    recovery_candidates.extend(found)
+                    if found:
+                        contributed.add(provider)
+                        answered[provider] = "completed"
             if recovery_candidates:
                 selected = _select_candidates(
                     seeded,
