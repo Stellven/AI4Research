@@ -1403,6 +1403,21 @@ def _source_provider_runtime_description(native_skill: str, collection_mode: str
     return f"Completed provider-backed source evidence for AutoSci `{native_skill}` parity."
 
 
+def _resolve_root_tool(tool_name: str) -> tuple[Path | None, Path | None]:
+    """Resolve a helper without escaping an installed runtime."""
+
+    if Path(tool_name).name != tool_name:
+        return None, None
+    runtime_tool = (HARNESS_DIR / "tools" / tool_name).resolve()
+    if runtime_tool.is_file():
+        return runtime_tool, HARNESS_DIR
+    source_root = REPO_HARNESS_DIR.parent.resolve()
+    source_tool = source_root / "tools" / tool_name
+    if (source_root / ".git").is_dir() and source_tool.is_file():
+        return source_tool, source_root
+    return None, None
+
+
 def _run_root_tool_json(
     tool_name: str,
     args: list[str],
@@ -1413,31 +1428,40 @@ def _run_root_tool_json(
     timeout_default: int = 60,
 ) -> dict[str, Any]:
     _mkdir_path_long_path(output_dir)
-    command = [sys.executable, str(REPO_HARNESS_DIR.parent / "tools" / tool_name), *args]
+    tool_path, tool_cwd = _resolve_root_tool(tool_name)
+    command = [sys.executable, str(tool_path), *args] if tool_path is not None else []
     timeout = int(os.environ.get(timeout_env, str(timeout_default)))
     env = dict(os.environ)
     env["HARNESS_DIR"] = str(HARNESS_DIR)
     env["SOLAR_AUTOSCI_OUTPUT_HARNESS"] = str(HARNESS_DIR)
-    try:
-        proc = subprocess.run(
-            command,
-            cwd=REPO_HARNESS_DIR.parent,
-            env=env,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            timeout=timeout,
-        )
-        returncode = proc.returncode
-        stdout = proc.stdout
-        stderr = proc.stderr
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    if tool_path is None or tool_cwd is None:
         returncode = 1
         stdout = ""
-        stderr = str(exc)
+        stderr = (
+            f"Native helper {tool_name!r} is unavailable inside the selected runtime; "
+            "the provider-backed runtime path remains eligible."
+        )
+    else:
+        try:
+            proc = subprocess.run(
+                command,
+                cwd=tool_cwd,
+                env=env,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=timeout,
+            )
+            returncode = proc.returncode
+            stdout = proc.stdout
+            stderr = proc.stderr
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            returncode = 1
+            stdout = ""
+            stderr = str(exc)
     stdout_path = _write_text_sidecar(output_dir / f"{artifact_prefix}_stdout.json", stdout)
     stderr_path = _write_text_sidecar(output_dir / f"{artifact_prefix}_stderr.txt", stderr)
     payload: dict[str, Any] = {}

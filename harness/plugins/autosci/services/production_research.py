@@ -52,6 +52,31 @@ _RELEVANCE_GENERIC_TERMS = {
     "result", "results", "review", "source", "sources", "study", "studies", "synthesize", "systematic",
     "using", "work",
 }
+_DISCOVERY_NON_TOPIC_SCOPE_TERMS = {
+    "auditable", "chain", "comprehensive", "end", "explicit", "extensible",
+    "future", "provenance", "traceability", "workflow",
+}
+_DISCOVERY_TERM_CANONICAL = {
+    "compress": "compression",
+    "compressed": "compression",
+    "evict": "eviction",
+    "evicted": "eviction",
+    "prune": "sparsification",
+    "pruning": "sparsification",
+    "quantize": "quantization",
+    "quantized": "quantization",
+    "select": "selection",
+    "selected": "selection",
+    "sparse": "sparsification",
+    "sparsity": "sparsification",
+}
+_DISCOVERY_PROVIDER_ALIASES = {
+    "compression": "compressed",
+    "eviction": "evict heavy-hitter retention",
+    "quantization": "quantized low-bit",
+    "selection": "token retention",
+    "sparsification": "sparse pruning",
+}
 _RELEVANCE_STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "between", "by", "can", "could", "do", "does",
     "for", "from", "how", "in", "into", "is", "it", "its", "of", "on", "or", "our", "that",
@@ -497,8 +522,9 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # instruction words and can return unrelated papers even when the scope is
     # otherwise exact.
     authoritative_clauses = _authoritative_scope_clauses(intent)
-    if authoritative_clauses and not from_page_title:
-        query = authoritative_clauses[0]
+    topical_clauses = _topical_scope_clauses(intent)
+    if topical_clauses and not from_page_title:
+        query = " ".join(topical_clauses)
         query = re.sub(
             r"^(?:compare|evaluate|assess|analy[sz]e|investigate|review)\s+",
             "",
@@ -584,6 +610,9 @@ def _relevance_terms(value: Any, *, remove_generic: bool) -> set[str]:
         if remove_generic and term in _RELEVANCE_GENERIC_TERMS:
             continue
         terms.add(term)
+        canonical = _DISCOVERY_TERM_CANONICAL.get(raw) or _DISCOVERY_TERM_CANONICAL.get(term)
+        if canonical:
+            terms.add(canonical)
     return terms
 
 
@@ -618,7 +647,7 @@ def _coverage_anchor_items(clause: str) -> list[dict[str, Any]]:
         text,
         flags=re.IGNORECASE,
     )
-    parts = [item.strip(" .;") for item in re.split(r"\s*,\s*|\s+\band\b\s+", text) if item.strip()]
+    parts = [item.strip(" .;") for item in re.split(r"\s*[;,]\s*|\s+\band\b\s+", text) if item.strip()]
     items: list[dict[str, Any]] = []
     seen: set[tuple[str, ...]] = set()
     for raw in parts:
@@ -627,14 +656,18 @@ def _coverage_anchor_items(clause: str) -> list[dict[str, Any]]:
         # not part of the chemistry anchor and let unrelated grid papers match.
         if re.search(r"\b(?:lithium|sodium|solid|sulfur)\b", label, re.IGNORECASE):
             label = re.split(r"\b(?:battery|batteries)\b", label, maxsplit=1, flags=re.IGNORECASE)[0]
-        terms = tuple(sorted(_relevance_terms(label, remove_generic=True) - {"battery", "batteries", "storage", "grid", "energy"}))
+        terms = tuple(sorted(
+            _relevance_terms(label, remove_generic=True)
+            - _DISCOVERY_NON_TOPIC_SCOPE_TERMS
+            - {"battery", "batteries", "storage", "grid", "energy"}
+        ))
         if not terms or terms in seen:
             continue
         seen.add(terms)
         items.append({"label": label.strip(), "terms": list(terms)})
     if items:
         return items
-    terms = sorted(_relevance_terms(clause, remove_generic=True))
+    terms = sorted(_relevance_terms(clause, remove_generic=True) - _DISCOVERY_NON_TOPIC_SCOPE_TERMS)
     return [{"label": clause.strip(), "terms": terms}] if terms else []
 
 
@@ -657,7 +690,7 @@ def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
     """
 
     groups: list[dict[str, Any]] = []
-    for clause in _authoritative_scope_clauses(query):
+    for clause in _topical_scope_clauses(query):
         anchor_items = _coverage_anchor_items(clause)
         terms = {term for item in anchor_items for term in item.get("terms", [])}
         # These are grammatical glue inside chemistry names, not useful
@@ -709,6 +742,55 @@ def _authoritative_scope_clauses(query: str) -> list[str]:
     return clauses
 
 
+def _topical_scope_clauses(query: str) -> list[str]:
+    """Keep discovery subjects while excluding workflow/report obligations."""
+
+    topical: list[str] = []
+    for clause in _authoritative_scope_clauses(query):
+        terms = _relevance_terms(clause, remove_generic=True)
+        if terms - _DISCOVERY_NON_TOPIC_SCOPE_TERMS:
+            topical.append(clause)
+    return topical
+
+
+def _topical_scope_query(query: str) -> str:
+    clauses = _topical_scope_clauses(query)
+    if clauses:
+        return re.sub(r"\s+", " ", " ".join(clauses)).strip()
+    return re.split(
+        r"\s*Authoritative discovery scope\s*:\s*",
+        str(query or ""),
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0].strip()
+
+
+def _coverage_recovery_queries(query: str, audit: dict[str, Any]) -> list[str]:
+    """Build bounded provider queries for aggregate coverage gaps."""
+
+    context_parts = [
+        clause
+        for clause in _topical_scope_clauses(query)
+        if len(_coverage_anchor_items(clause)) == 1
+    ]
+    context = re.sub(r"\s+", " ", " ".join(context_parts)).strip()
+    queries: list[str] = []
+    for group in audit.get("aggregate_coverage_missing") or []:
+        if not isinstance(group, dict):
+            continue
+        for item in group.get("missing_anchor_items") or []:
+            if not isinstance(item, dict):
+                continue
+            label = str(item.get("label") or "").strip()
+            if not label:
+                continue
+            aliases = _DISCOVERY_PROVIDER_ALIASES.get(label.lower(), "")
+            candidate = re.sub(r"\s+", " ", f"{context} {label} {aliases}").strip()[:500]
+            if candidate and candidate not in queries:
+                queries.append(candidate)
+    return queries[:5]
+
+
 def apply_discovery_relevance_gate(
     query: str,
     candidates: list[dict[str, Any]],
@@ -726,7 +808,8 @@ def apply_discovery_relevance_gate(
     partial list as final.
     """
 
-    query_terms = _relevance_terms(query, remove_generic=True)
+    subject_query = _topical_scope_query(query) or str(query or "")
+    query_terms = _relevance_terms(subject_query, remove_generic=True)
     coverage_groups = _coverage_anchor_groups(query)
     requires_battery_domain = bool(coverage_groups) and "battery" in query_terms
     required_overlap = 2 if len(query_terms) >= 4 else 1
@@ -759,6 +842,9 @@ def apply_discovery_relevance_gate(
             if not item["matched_anchor_items"]
         ]
         topic_threshold_met = bool(query_terms) and len(matched) >= required_overlap
+        coverage_signal_met = not coverage_groups or any(
+            item["matched_anchor_items"] for item in coverage_matches
+        )
         battery_domain_met = (
             not requires_battery_domain
             or (
@@ -766,7 +852,10 @@ def apply_discovery_relevance_gate(
                 and not re.search(r"\b(?:not|non)\s+batter(?:y|ies)\b", candidate_text, re.IGNORECASE)
             )
         )
-        is_relevant = topic_threshold_met and not unmatched_coverage_groups and battery_domain_met
+        # The shortlist is collectively comprehensive. Specialist papers need
+        # not each cover every requested method family; aggregate coverage is
+        # enforced below after per-candidate topical admission.
+        is_relevant = topic_threshold_met and coverage_signal_met and battery_domain_met
         decision = {
             "candidate_id": str(candidate.get("source_id") or candidate.get("canonical_id") or ""),
             "canonical_id": str(candidate.get("canonical_id") or candidate.get("url") or ""),
@@ -779,12 +868,10 @@ def apply_discovery_relevance_gate(
             "coverage_group_matches": coverage_matches,
             "unmatched_coverage_groups": unmatched_coverage_groups,
             "reason": (
-                "topic_and_coverage_threshold_met"
-                if is_relevant and coverage_groups
-                else "topic_term_threshold_met"
+                "topic_term_threshold_met"
                 if is_relevant
                 else "required_coverage_anchor_missing"
-                if topic_threshold_met and unmatched_coverage_groups
+                if topic_threshold_met and not coverage_signal_met
                 else "required_battery_domain_missing"
                 if topic_threshold_met and not battery_domain_met
                 else "query_has_no_specific_topic_terms"
@@ -828,6 +915,7 @@ def apply_discovery_relevance_gate(
         "schema": "autosci_discovery_relevance_audit.v1",
         "status": "passed" if gate_passed else "incomplete",
         "query": str(query),
+        "subject_query": subject_query,
         "query_terms": sorted(query_terms),
         "gate_mode": "required_coverage" if coverage_groups else "topic_overlap",
         "authoritative_coverage_required": bool(coverage_groups),
@@ -1551,6 +1639,43 @@ class LiteratureDiscoveryService:
             selected,
             minimum_relevant_candidates=minimum_relevant,
         )
+        recovery_queries: list[str] = []
+        if relevance_audit["status"] != "passed" and relevance_audit.get("aggregate_coverage_missing"):
+            recovery_candidates: list[dict[str, Any]] = []
+            recovery_queries = _coverage_recovery_queries(relevance_query, relevance_audit)
+            for recovery_query in recovery_queries:
+                try:
+                    found, trace = self._openalex(recovery_query)
+                except ResearchOperatorError as exc:
+                    limitations.append(
+                        f"OpenAlex coverage recovery boundary: {exc.error_type}: {exc}"
+                    )
+                    traces.append({
+                        "provider": "openalex",
+                        "status": "failed",
+                        "error_type": exc.error_type,
+                        "recovery_query": recovery_query,
+                    })
+                    continue
+                trace["recovery_query"] = recovery_query
+                traces.append(trace)
+                recovery_candidates.extend(found)
+                if found:
+                    contributed.add("openalex")
+                    answered["openalex"] = "completed"
+            if recovery_candidates:
+                selected = _select_candidates(
+                    seeded,
+                    [*recovery_candidates, *candidates],
+                    limit=self.limit + 1,
+                )
+                deduped, relevance_audit = apply_discovery_relevance_gate(
+                    relevance_query,
+                    selected,
+                    minimum_relevant_candidates=minimum_relevant,
+                )
+        if recovery_queries:
+            relevance_audit["coverage_recovery_queries"] = recovery_queries
         relevance_audit_hash = stable_json_sha256(relevance_audit)
         relevance_audit_path = (
             self.workspace_root
