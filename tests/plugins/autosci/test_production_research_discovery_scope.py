@@ -46,7 +46,7 @@ Authoritative discovery scope:
 - [R4] Do not treat the requested deliverable as a one-off answer. Required coverage: one-off answer
 - [R5] Cover the requested KV cache methods. Required coverage: KV cache compression; KV cache quantization; KV cache selection; KV cache eviction; KV cache sparsification
 - [R6] Focus the study on long-context LLM inference. Required coverage: long-context large language model inference
-- [R7] The report must be a comprehensive technical landscape report. Required coverage: comprehensive; technical; landscape
+- [R7] The report must be comprehensive and include an explicit evidence chain. Required coverage: comprehensive; technical; landscape-oriented; supported by an explicit evidence chain; auditable; extensible for future research
 - [R8] Include an evidence chain. Required coverage: explicit; auditable; extensible for future research
 """
 

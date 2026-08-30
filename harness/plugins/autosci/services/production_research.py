@@ -54,8 +54,8 @@ _RELEVANCE_GENERIC_TERMS = {
 }
 _DISCOVERY_NON_TOPIC_SCOPE_TERMS = {
     "answer", "auditable", "chain", "comprehensive", "end", "explicit", "extensible",
-    "future", "landscape", "off", "one", "provenance", "technical", "traceability",
-    "type", "workflow",
+    "future", "landscape", "off", "one", "oriented", "provenance", "supported",
+    "technical", "traceability", "type", "workflow",
 }
 _DISCOVERY_TERM_CANONICAL = {
     "compress": "compression",
