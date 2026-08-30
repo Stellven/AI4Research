@@ -303,51 +303,96 @@ def _method_steps(text: str) -> list[str]:
     return sentences[:5]
 
 
-def _paper_methods_raw(envelope: dict[str, Any]) -> dict[str, Any]:
-    paper = _read_sample_paper(envelope)
-    sections = [section for section in list(paper.get("sections") or []) if isinstance(section, dict)]
-    method_sections = [
-        section
-        for section in sections
-        if any(
-            keyword in str(section.get("title") or section.get("section_id") or "").lower()
-            for keyword in ("method", "approach", "workflow", "procedure")
+def _routed_research_papers(envelope: dict[str, Any]) -> tuple[list[dict[str, Any]], bool]:
+    """Load upstream ResearchPaper artifacts supplied by the Scheduler route."""
+
+    inputs = dict(envelope.get("inputs") or {})
+    routes = inputs.get("artifact_routes") if isinstance(inputs.get("artifact_routes"), dict) else {}
+    raw_routes: list[str] = []
+    for schema_ref, route in routes.items():
+        if "research_paper.v1" not in str(schema_ref):
+            continue
+        if isinstance(route, list):
+            raw_routes.extend(str(item) for item in route if str(item).strip())
+        elif str(route or "").strip():
+            raw_routes.append(str(route))
+
+    papers: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw_route in raw_routes:
+        route_path = _resolve_harness_path(raw_route)
+        candidates = (
+            sorted(route_path.glob("research_paper*.json"))
+            if route_path.is_dir()
+            else [route_path]
         )
-    ]
-    if not method_sections and sections:
-        method_sections = [sections[0]]
-    paper_id = str(paper.get("paper_id") or "paper-autosci-fixture")
+        for candidate in candidates:
+            try:
+                payload = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if not isinstance(payload, dict) or payload.get("schema") != "research_paper.v1":
+                continue
+            outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+            paper = outputs.get("paper") if isinstance(outputs.get("paper"), dict) else None
+            if not paper:
+                continue
+            paper_id = str(paper.get("paper_id") or candidate.resolve())
+            if paper_id in seen:
+                continue
+            seen.add(paper_id)
+            papers.append(dict(paper))
+    return papers, bool(raw_routes)
+
+
+def _paper_methods_raw(envelope: dict[str, Any]) -> dict[str, Any]:
+    routed_papers, routed = _routed_research_papers(envelope)
+    papers = routed_papers if routed else [_read_sample_paper(envelope)]
     methods: list[dict[str, Any]] = []
-    for section in method_sections[:2]:
-        text = str(section.get("text") or "")
-        anchor = str(section.get("source_anchor") or paper.get("source_ref") or paper_id)
-        title = str(section.get("title") or "Method")
-        summary = (_sentences(text) or ["No explicit method summary was found in the input paper."])[0]
-        methods.append({
-            "method_id": f"method-{len(methods) + 1:03d}",
-            "name": f"{title} protocol",
-            "summary": summary,
-            "procedure": _method_steps(text),
-            "source_papers": [paper_id],
-            "evidence_ids": [paper_id, anchor],
-            "source_anchor": anchor,
-        })
-    if not methods:
-        anchor = str(paper.get("source_ref") or paper_id)
-        methods.append({
-            "method_id": "method-001",
-            "name": "No explicit method found",
-            "summary": "The input paper did not contain a method section.",
-            "procedure": ["Mark method extraction as incomplete for this paper."],
-            "source_papers": [paper_id],
-            "evidence_ids": [paper_id, anchor],
-            "source_anchor": anchor,
-        })
+    for paper in papers:
+        sections = [section for section in list(paper.get("sections") or []) if isinstance(section, dict)]
+        method_sections = [
+            section
+            for section in sections
+            if any(
+                keyword in str(section.get("title") or section.get("section_id") or "").lower()
+                for keyword in ("method", "approach", "workflow", "procedure", "algorithm", "architecture", "training")
+            )
+        ]
+        if not method_sections and sections:
+            method_sections = [sections[0]]
+        paper_id = str(paper.get("paper_id") or "paper-unknown")
+        for section in method_sections[:2]:
+            text = str(section.get("text") or "")
+            anchor = str(section.get("source_anchor") or paper.get("source_ref") or paper_id)
+            title = str(section.get("title") or "Method")
+            summary = (_sentences(text) or ["No explicit method summary was found in the input paper."])[0]
+            methods.append({
+                "method_id": f"method-{len(methods) + 1:03d}",
+                "name": f"{title} protocol",
+                "summary": summary,
+                "procedure": _method_steps(text),
+                "source_papers": [paper_id],
+                "evidence_ids": [paper_id, anchor],
+                "source_anchor": anchor,
+            })
+        if not method_sections:
+            anchor = str(paper.get("source_ref") or paper_id)
+            methods.append({
+                "method_id": f"method-{len(methods) + 1:03d}",
+                "name": "No explicit method found",
+                "summary": "The input paper did not contain a method section.",
+                "procedure": ["Mark method extraction as incomplete for this paper."],
+                "source_papers": [paper_id],
+                "evidence_ids": [paper_id, anchor],
+                "source_anchor": anchor,
+            })
+    limitations = ["Method extraction is deterministic and section-based; it does not infer hidden procedure steps."]
+    if routed and not routed_papers:
+        limitations.append("The declared ResearchPaper artifact route contained no valid research_paper.v1 payloads; fixture fallback was refused.")
     return {
         "methods": methods,
-        "limitations": [
-            "Method extraction is deterministic and section-based; it does not infer hidden procedure steps.",
-        ],
+        "limitations": limitations,
     }
 
 

@@ -425,6 +425,51 @@ def test_phase10_claims_and_methods_use_input_paper_anchors(tmp_path: Path) -> N
     assert methods["outputs"]["methods"][0]["source_anchor"] == "skillgen_sample_paper.md#method"
 
 
+def test_phase10_methods_consume_scheduler_routed_research_papers(tmp_path: Path) -> None:
+    route = tmp_path / "upstream-papers"
+    route.mkdir()
+    for index, paper_id in enumerate(("paper-kivi", "paper-h2o"), start=1):
+        (route / f"research_paper.{index:03d}.v1.json").write_text(
+            json.dumps({
+                "schema": "research_paper.v1",
+                "outputs": {"paper": {
+                    "paper_id": paper_id,
+                    "title": f"Real routed paper {index}",
+                    "source_ref": f"real-{index}.tex",
+                    "sections": [{
+                        "section_id": "method",
+                        "title": "Method",
+                        "text": f"The {paper_id} procedure quantizes cached keys and measures accuracy.",
+                        "source_anchor": f"real-{index}.tex#method",
+                    }],
+                }},
+            }),
+            encoding="utf-8",
+        )
+    envelope = tmp_path / "routed-methods.json"
+    envelope.write_text(
+        json.dumps({
+            "task_id": "routed-methods",
+            "sprint_id": "phase10-test",
+            "node_id": "node-extract-methods",
+            "mode": "solar_native",
+            "output_dir": "artifacts/scientific/routed",
+            "inputs": {"artifact_routes": {"schema:schemas/evidence/research_paper.v1.schema.json": str(route)}},
+            "outputs": {"evidence_payload_path": "artifacts/scientific/routed/research_method.json"},
+        }),
+        encoding="utf-8",
+    )
+
+    proc = run_bridge(["run", "--action", "extract_methods", "--envelope", str(envelope)], tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    payload = json.loads((tmp_path / out["evidence_path"]).read_text(encoding="utf-8"))
+    methods = payload["outputs"]["methods"]
+    assert {paper for method in methods for paper in method["source_papers"]} == {"paper-kivi", "paper-h2o"}
+    assert "paper-autosci-fixture" not in json.dumps(payload)
+    assert all(method["source_anchor"].startswith("real-") for method in methods)
+
+
 def test_phase10_code_mapping_marks_missing_repo_unknown(tmp_path: Path) -> None:
     envelope = tmp_path / "missing-repo-envelope.json"
     envelope.write_text(
