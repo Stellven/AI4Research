@@ -794,12 +794,15 @@ def test_phase14_report_actions_consume_scheduler_artifact_routes_without_fixtur
     )
     (plan_route / "plan_report.evidence.json").write_text(
         json.dumps({
-            "schema": "scientific_report.v1",
+            "schema": "scientific_report_plan.v1",
             "task_id": "plan-real-kv",
-            "outputs": {"report": {
+            "outputs": {"report_plan": {
                 "report_id": "plan-real-kv",
                 "title": "Routed plan",
+                "audience": "researcher",
                 "evidence_ids": ["method-real-quantization", "claim-real-kv"],
+                "supported_claim_ids": ["claim-real-kv"],
+                "excluded_claim_ids": [],
                 "sections": [],
             }},
             "limitations": [],
@@ -812,7 +815,7 @@ def test_phase14_report_actions_consume_scheduler_artifact_routes_without_fixtur
         "schema:schemas/evidence/research_method.v1.schema.json": str(method_route),
     }
     request = (
-        "Synthesize the routed evidence and produce the technical report named "
+        "Synthesize the routed evidence and produce the comprehensive technical report "
         "\u201cKV Cache Routed Evidence Landscape\u201d with an auditable evidence chain."
     )
     for action in ("plan_report", "write_report"):
@@ -837,7 +840,12 @@ def test_phase14_report_actions_consume_scheduler_artifact_routes_without_fixtur
         assert proc.returncode == 0, proc.stderr
         result = json.loads(proc.stdout)
         evidence = json.loads((tmp_path / result["evidence_path"]).read_text(encoding="utf-8"))
-        report = evidence["outputs"]["report"]
+        if action == "plan_report":
+            assert evidence["schema"] == "scientific_report_plan.v1"
+            report = evidence["outputs"]["report_plan"]
+        else:
+            assert evidence["schema"] == "scientific_report.v1"
+            report = evidence["outputs"]["report"]
         assert report["title"] == "KV Cache Routed Evidence Landscape"
         assert "method-real-quantization" in report["evidence_ids"]
         assert "claim-real-kv" in report["evidence_ids"]

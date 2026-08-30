@@ -68,6 +68,7 @@ from adapters.autosci_to_research_paper import convert as convert_research_paper
 from adapters.autosci_to_workflow_evolution import convert as convert_workflow_evolution
 from adapters.autosci_to_publication_bundle import convert as convert_publication_bundle
 from adapters.autosci_to_scientific_report import convert as convert_scientific_report
+from adapters.autosci_to_scientific_report_plan import convert as convert_scientific_report_plan
 from adapters.solar_envelope_to_autosci import load_envelope, normalize_envelope
 from runtime_env import load_local_provider_env
 from claim_scope import compare_claim_evidence_scope
@@ -12698,6 +12699,13 @@ def _phase14_payload_evidence_ids(payload: dict[str, Any]) -> list[str]:
         if report.get("report_id"):
             ids.append(str(report["report_id"]))
         ids.extend(str(item) for item in report.get("evidence_ids") or [] if str(item).strip())
+    report_plan = outputs.get("report_plan")
+    if isinstance(report_plan, dict):
+        if report_plan.get("report_id"):
+            ids.append(str(report_plan["report_id"]))
+        ids.extend(str(item) for item in report_plan.get("supported_claim_ids") or [] if str(item).strip())
+        ids.extend(str(item) for item in report_plan.get("excluded_claim_ids") or [] if str(item).strip())
+        ids.extend(str(item) for item in report_plan.get("evidence_ids") or [] if str(item).strip())
     for item in outputs.get("evaluations") or []:
         if isinstance(item, dict):
             if item.get("idea_id"):
@@ -12732,9 +12740,12 @@ def _phase14_study_protocol(
     for payload in payloads:
         outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
         report = outputs.get("report") if isinstance(outputs.get("report"), dict) else {}
+        report_plan = outputs.get("report_plan") if isinstance(outputs.get("report_plan"), dict) else {}
         protocol = outputs.get("study_protocol")
         if not isinstance(protocol, dict):
             protocol = report.get("study_protocol")
+        if not isinstance(protocol, dict):
+            protocol = report_plan.get("study_protocol")
         if not isinstance(protocol, dict):
             continue
         evidence_ids = _phase14_payload_evidence_ids(payload)
@@ -12810,6 +12821,7 @@ def _report_title_from_request(envelope: dict[str, Any], fallback: str) -> str:
     request = str(inputs.get("request") or envelope.get("objective") or "").strip()
     for pattern in (
         r"(?:report\s+(?:named|titled)(?:\s+for\s+the\s+project)?|project\s+name\s*:?)\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
+        r"\breport\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
         r"(?:report\s+named|report\s+titled|project\s+name\s*:?)\s*([^.;\n]{4,160})",
     ):
         match = re.search(pattern, request, flags=re.IGNORECASE)
@@ -15995,14 +16007,28 @@ def _action_plan_report(envelope: dict[str, Any]) -> dict[str, Any]:
         artifacts.append(review_runtime_proof_artifact)
     if source_runtime_proof_artifact is not None:
         artifacts.append(source_runtime_proof_artifact)
-    return convert_scientific_report({
+    verdicts = _phase14_verdicts(source_payloads)
+    reportable_claim_ids = _unique_strings([
+        str(item.get("claim_id") or "")
+        for item in verdicts
+        if str(item.get("claim_id") or "").strip()
+        and any(str(evidence_id).strip() for evidence_id in item.get("evidence_ids") or [])
+    ])
+    excluded_claim_ids = _unique_strings([
+        str(item.get("claim_id") or "")
+        for item in verdicts
+        if str(item.get("claim_id") or "").strip()
+        and str(item.get("claim_id")) not in reportable_claim_ids
+    ])
+    return convert_scientific_report_plan({
         "report_id": f"paper-plan-{_slug(title)}",
         "title": title,
+        "audience": str(inputs.get("audience") or "researcher"),
         "sections": sections,
+        "supported_claim_ids": reportable_claim_ids,
+        "excluded_claim_ids": excluded_claim_ids,
         "evidence_ids": evidence_ids,
         "study_protocol": study_protocol,
-        "unsupported_claims": [],
-        "compile_handoff": compile_handoff,
         "status": "completed" if final_acceptance_boundary.get("final_plan_accepted") else "inconclusive",
         "artifacts": artifacts,
         "limitations": limitations,
