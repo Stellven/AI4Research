@@ -388,6 +388,32 @@ def test_adapter_authorizes_only_verified_scheduler_projection(tmp_path, monkeyp
     assert result["runtime_projection"].endswith("sprint-typed.task_graph.json")
 
 
+def test_research_registry_adapter_admits_claim_verify_with_all_routed_documents():
+    adapter = _load(
+        "typed_research_registry_claim_verify",
+        TOOLS / "research_operator_registry_adapter.py",
+    )
+    runtime_binding = {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "claim_verify",
+        "implementation_operator_id": "autosci-claim-verification-physical",
+    }
+
+    expected = adapter._validated_binding(
+        {
+            "operator_id": "claim_verify_worker",
+            "runtime_binding": runtime_binding,
+        }
+    )
+    claims = {"schema": "research_claims.v1", "outputs": {"claims": []}}
+    paper = {"schema": "research_paper.v1", "outputs": {"paper": {}}}
+
+    payload = adapter._inline_operator_payload(expected, [claims, paper])
+
+    assert expected["node_id"] == "claim_verify"
+    assert payload == {"claims": [claims, paper]}
+
+
 def test_legacy_task_graph_schema_violation_is_fail_closed():
     import plan_validator
 

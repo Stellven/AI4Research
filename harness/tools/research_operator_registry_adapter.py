@@ -46,7 +46,9 @@ _PAYLOAD_KEYS = {
     "claim_extract": "paper_evidence",
     "idea_evaluate": "idea_candidate",
     "experiment_design": "idea_candidate",
+    "claim_verify": "claims",
 }
+_MULTI_DOCUMENT_PAYLOAD_NODES = {"claim_verify"}
 
 
 def _read_object(path: Path, *, label: str) -> dict[str, Any]:
@@ -207,6 +209,22 @@ def _validated_binding(envelope: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _inline_operator_payload(
+    expected: dict[str, str],
+    documents: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Preserve every routed document for operators with multi-schema inputs."""
+
+    if not documents:
+        raise RegistryAdapterError("no routed documents are available for registry dispatch")
+    value: dict[str, Any] | list[dict[str, Any]]
+    if expected["node_id"] in _MULTI_DOCUMENT_PAYLOAD_NODES:
+        value = documents
+    else:
+        value = documents[0]
+    return {expected["payload_key"]: value}
+
+
 def _matching_input_documents(
     graph: dict[str, Any],
     node: dict[str, Any],
@@ -300,7 +318,7 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
     if not documents:
         raise RegistryAdapterError("no artifact matching the frozen consume contract was found")
     payload = {
-        expected["payload_key"]: documents[0],
+        **_inline_operator_payload(expected, documents),
         "source_artifacts": [
             {"path": path, "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
             for path in source_paths
