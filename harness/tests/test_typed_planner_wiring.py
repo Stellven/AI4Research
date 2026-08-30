@@ -62,6 +62,92 @@ def test_plan_repair_may_add_fidelity_required_requirement_ownership():
     assert planner._repair_preservation_errors(previous, repaired) == []
 
 
+def test_fidelity_ignores_duplicate_discovery_ownership_for_downstream_requirements(tmp_path):
+    planner = _load("typed_elastic_planner_fidelity_ownership", LIB / "elastic_planner.py")
+
+    class Reviewer:
+        provider = "stub"
+        model = "stub"
+
+        def generate(self, _prompt, _schema, _work_dir):
+            return {
+                "checks": [
+                    {"kind": "requirement_preservation", "status": "fail", "reason": "Discovery omits downstream requirements."},
+                    {"kind": "smallest_sufficient_plan", "status": "pass", "reason": "Smallest plan."},
+                    {"kind": "dependency_soundness", "status": "pass", "reason": "Dependencies are sound."},
+                    {"kind": "no_unrequested_effects", "status": "pass", "reason": "No extra effects."},
+                ],
+                "errors": [
+                    {
+                        "code": "MISSING_DISCOVERY_REQUIREMENT_BINDINGS",
+                        "path": "plan_ir.nodes[0].requirement_ids",
+                        "message": "The discovery requirement bindings omit R2, R3, and R6.",
+                        "repairable": True,
+                        "requirement_ids": ["R2", "R3", "R6"],
+                    }
+                ],
+                "warnings": [],
+            }
+
+    plan_ir = {
+        "plan_ir_id": "plan-1",
+        "generation": 0,
+        "nodes": [
+            {
+                "node_id": "discover_literature",
+                "logical_operator": "ScientificLiteratureDiscoverer",
+                "requirement_ids": ["R4", "R5"],
+            },
+            {
+                "node_id": "synthesize_report",
+                "logical_operator": "ScientificReportDrafter",
+                "requirement_ids": ["R1", "R2", "R3", "R6"],
+            },
+        ],
+    }
+    fidelity = planner.review_plan_fidelity(
+        {"requirement_ir_id": "req-1", "requirements": []},
+        {"decision": "generate"},
+        plan_ir,
+        {},
+        Reviewer(),
+        tmp_path,
+    )
+
+    assert fidelity["status"] == "pass_with_warnings"
+    assert fidelity["errors"] == []
+    assert fidelity["warnings"][0]["code"] == "REDUNDANT_DISCOVERY_OWNERSHIP_REQUEST_IGNORED"
+
+
+def test_fidelity_keeps_missing_discovery_ownership_when_no_downstream_owner():
+    planner = _load("typed_elastic_planner_fidelity_missing_scope", LIB / "elastic_planner.py")
+    error = {
+        "code": "MISSING_DISCOVERY_REQUIREMENT_BINDING",
+        "message": "Discovery requirement binding omits R4.",
+        "requirement_ids": ["R4"],
+    }
+    kept, ignored = planner._filter_redundant_discovery_ownership_errors(
+        {
+            "nodes": [
+                {
+                    "node_id": "discover_literature",
+                    "logical_operator": "ScientificLiteratureDiscoverer",
+                    "requirement_ids": [],
+                },
+                {
+                    "node_id": "report",
+                    "logical_operator": "ScientificReportDrafter",
+                    "requirement_ids": ["R2"],
+                },
+            ]
+        },
+        [error],
+    )
+
+    assert kept == [error]
+    assert ignored == []
+
+
 def _capture_args() -> argparse.Namespace:
     return argparse.Namespace(
         text="Research current battery technology and produce a report.",

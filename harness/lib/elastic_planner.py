@@ -2432,6 +2432,9 @@ For source or literature discovery, fail a genericized objective that drops name
 dimensions, constraints, or required coverage values from the RequirementIR. The discovery node must
 retain the applicable scope/evidence-coverage requirement IDs and checks, but must not claim ownership
 of a final-answer, publication, or delivery requirement merely because it supplies upstream evidence.
+The `Authoritative discovery scope` text also preserves downstream-owned constraints for operator context;
+appearance in that text does not itself require duplicate ownership. If a requirement is already owned
+and verifiable on a downstream non-discovery artifact, do not fail discovery merely for omitting its ID.
 Also fail a discovery node that owns a resolution requirement requiring a finding, supporting evidence,
 and unresolved status when its declared output is only a source shortlist. The protocol question may
 remain in the discovery objective as a constraint, but ownership must be assigned to a downstream
@@ -2464,6 +2467,42 @@ do not demand a redundant raw-claims input when the report node consumes that ve
     )
 
 
+def _filter_redundant_discovery_ownership_errors(
+    plan_ir: dict[str, Any],
+    errors: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Reject reviewer requests for duplicate downstream-owned requirements."""
+
+    downstream_owned = {
+        str(requirement_id)
+        for node in plan_ir.get("nodes") or []
+        if isinstance(node, dict) and not _is_discovery_node(node)
+        for requirement_id in node.get("requirement_ids") or []
+        if str(requirement_id)
+    }
+    kept: list[dict[str, Any]] = []
+    ignored: list[dict[str, Any]] = []
+    for error in errors:
+        code_and_message = f"{error.get('code') or ''} {error.get('message') or ''}".lower()
+        requirement_ids = {
+            str(value) for value in error.get("requirement_ids") or [] if str(value)
+        }
+        requests_missing_discovery_ownership = (
+            "discover" in code_and_message
+            and "requirement" in code_and_message
+            and any(token in code_and_message for token in ("missing", "omit", "retain", "bind"))
+        )
+        if (
+            requests_missing_discovery_ownership
+            and requirement_ids
+            and requirement_ids <= downstream_owned
+        ):
+            ignored.append(error)
+            continue
+        kept.append(error)
+    return kept, ignored
+
+
 def review_plan_fidelity(
     requirement_ir: dict[str, Any],
     decision: dict[str, Any],
@@ -2486,10 +2525,33 @@ def review_plan_fidelity(
     actual = [str(row.get("kind") or "") for row in body.get("checks") or []]
     if len(actual) != len(required_kinds) or set(actual) != required_kinds:
         raise ElasticPlannerError("plan reviewer did not return every required check exactly once")
-    errors = list(body.get("errors") or [])
+    errors, ignored_ownership_errors = _filter_redundant_discovery_ownership_errors(
+        plan_ir,
+        list(body.get("errors") or []),
+    )
     warnings = list(body.get("warnings") or [])
+    checks = copy.deepcopy(body.get("checks") or [])
+    if ignored_ownership_errors:
+        warnings.append(
+            {
+                "code": "REDUNDANT_DISCOVERY_OWNERSHIP_REQUEST_IGNORED",
+                "path": "plan_ir.nodes[*].requirement_ids",
+                "message": (
+                    "The independent reviewer requested duplicate discovery ownership for "
+                    "requirements already owned by downstream non-discovery artifacts."
+                ),
+            }
+        )
+        if not errors:
+            for check in checks:
+                if check.get("kind") == "requirement_preservation" and check.get("status") == "fail":
+                    check["status"] = "warning"
+                    check["reason"] = (
+                        "Scope text is preserved, while requirement ownership remains on "
+                        "the downstream artifact that can verify it."
+                    )
     failed_checks = [
-        row for row in body.get("checks") or [] if row.get("status") == "fail"
+        row for row in checks if row.get("status") == "fail"
     ]
     if failed_checks and not errors:
         errors.extend(
@@ -2522,7 +2584,7 @@ def review_plan_fidelity(
             "provider": reviewer.provider,
             "model": reviewer.model or "configured_default",
         },
-        "checks": body.get("checks") or [],
+        "checks": checks,
         "errors": errors,
         "warnings": warnings,
     }
