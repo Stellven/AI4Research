@@ -1097,3 +1097,65 @@ class TestAutoAdvanceStatusSync:
             "actor": "multi_task_runner",
             "event": "multi_task_auto_advance_reconciled",
         }]
+
+
+class TestSchedulerCapabilityAndRuntimeIsolation:
+    def test_leased_command_profile_does_not_require_scheduler_local_codex(self, monkeypatch):
+        profile = {
+            "backend": "command",
+            "model": "gpt-5.5",
+            "command": "python3 worker.py",
+            "operator_id": "autosci-literature-discover-worker",
+        }
+        monkeypatch.setattr(mtr.shutil, "which", lambda _name: None)
+
+        capability = mtr.capability_for_profile(profile, include_probe=False)
+
+        assert capability["status"] == "ok"
+        assert capability["evidence"] == (
+            "operator=autosci-literature-discover-worker command=configured"
+        )
+
+    def test_local_openai_command_uses_shared_portable_codex_resolver(self, tmp_path, monkeypatch):
+        codex = tmp_path / "codex"
+        codex.write_text("#!/bin/sh\n", encoding="utf-8")
+        monkeypatch.setattr(
+            mtr,
+            "resolve_codex_cli",
+            lambda *_args, **_kwargs: (codex, "user_local_bin"),
+        )
+
+        capability = mtr.capability_for_profile(
+            {"backend": "command", "model": "gpt-5.5"},
+            include_probe=False,
+        )
+
+        assert capability["status"] == "ok"
+        assert f"cli={codex}" in capability["evidence"]
+        assert "resolution=user_local_bin" in capability["evidence"]
+
+    def test_terminal_attribution_uses_the_task_owned_runtime_root(self, tmp_path, monkeypatch):
+        current_runtime = tmp_path / "current"
+        task_runtime = tmp_path / "task-owned"
+        calls = []
+        fake_runstate = types.SimpleNamespace(
+            read_snapshot=lambda root, sid, node: calls.append(("read", Path(root), sid, node)) or {},
+            record=lambda root, sid, node, kind, payload: calls.append(
+                ("record", Path(root), sid, node, kind, payload)
+            ),
+        )
+        monkeypatch.setattr(mtr, "SPRINTS_DIR", current_runtime)
+        monkeypatch.setitem(sys.modules, "node_runstate", fake_runstate)
+
+        mtr._finalize_terminal_attribution({
+            "id": "dispatch-old",
+            "status": "completed",
+            "sprint_id": "sprint-old",
+            "node_id": "N1",
+            "node_runstate_root": str(task_runtime),
+            "exit_code": 0,
+        })
+
+        assert calls[0][1] == task_runtime
+        assert calls[1][1] == task_runtime
+        assert all(call[1] != current_runtime for call in calls)

@@ -21,6 +21,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from codex_cli_runtime import resolve_codex_cli
 from executable_node import (
     dispatch_role as executable_dispatch_role,
     logical_operator as executable_logical_operator,
@@ -503,11 +504,21 @@ def capability_for_profile(profile: dict[str, Any], include_probe: bool = True) 
             evidence = f"gemini doctor failed:{type(exc).__name__}"
     elif backend == "command":
         command = str(profile.get("command") or "").strip()
-        if provider == "openai":
-            codex = shutil.which("codex")
+        operator_id = str(profile.get("operator_id") or "").strip()
+        if command and operator_id and operator_id != "N/A":
+            # A leased physical operator owns its command environment.  Do not
+            # reject that remote/daemon-backed command because the Scheduler
+            # process itself cannot see an unrelated provider CLI on PATH.
+            evidence = f"operator={operator_id} command=configured"
+        elif provider == "openai":
+            codex, codex_resolution = resolve_codex_cli(
+                HARNESS_DIR,
+                env=os.environ,
+                configured_path=str(os.environ.get("SOLAR_CODEX_CLI") or ""),
+            )
             driver = HARNESS_DIR / "tools" / "codex_operator.py"
             if codex and driver.exists():
-                evidence = f"cli={codex} driver={driver}"
+                evidence = f"cli={codex} resolution={codex_resolution} driver={driver}"
             else:
                 status = "error"
                 missing = []
@@ -2649,7 +2660,8 @@ def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
             return
         import node_runstate
 
-        snap = node_runstate.read_snapshot(SPRINTS_DIR, sid, node_id)
+        runstate_root = Path(str(row.get("node_runstate_root") or SPRINTS_DIR))
+        snap = node_runstate.read_snapshot(runstate_root, sid, node_id)
         attr = snap.get("build_attribution") if isinstance(snap.get("build_attribution"), dict) else {}
         if not attr:
             attr = snap.get("attribution") if isinstance(snap.get("attribution"), dict) else {}
@@ -2664,7 +2676,7 @@ def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
             return
         if attr.get("phase") == "completed" and attr.get("status") == status and attr.get("exit_code") == row.get("exit_code"):
             return
-        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+        node_runstate.record(runstate_root, sid, node_id, "attribution", {
             "phase": "completed",
             "status": status,
             "exit_code": row.get("exit_code"),
