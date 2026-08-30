@@ -3625,6 +3625,83 @@ raise SystemExit(1 if str(payload.get("run_status") or "").lower() in terminal e
 PY
 }
 
+typed_scheduler_terminal_status() {
+  local sid="$1" state
+  state="$(typed_scheduler_state_path "$sid" 2>/dev/null || true)"
+  [[ -n "$state" && -s "$state" ]] || return 1
+  python3 - "$state" <<'PY'
+import json, sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+status = str(payload.get("run_status") or "").lower()
+terminal = {"passed", "completed", "failed", "cancelled", "needs_human_review"}
+if status not in terminal:
+    raise SystemExit(1)
+print(status)
+PY
+}
+
+reconcile_typed_scheduler_state() {
+  local sid="$1" state run_status top_status event phase extra
+  state="$(typed_scheduler_state_path "$sid" 2>/dev/null || true)"
+  [[ -n "$state" && -s "$state" ]] || return 1
+  run_status="$(typed_scheduler_terminal_status "$sid" 2>/dev/null || true)"
+  [[ -n "$run_status" ]] || return 1
+  case "$run_status" in
+    passed|completed)
+      top_status="passed"
+      event="typed_scheduler_completed"
+      phase="scheduler_complete"
+      ;;
+    failed)
+      top_status="failed"
+      event="typed_scheduler_failed"
+      phase="scheduler_failed"
+      ;;
+    cancelled)
+      top_status="cancelled"
+      event="typed_scheduler_cancelled"
+      phase="scheduler_cancelled"
+      ;;
+    needs_human_review)
+      top_status="needs_human_review"
+      event="typed_scheduler_needs_human_review"
+      phase="scheduler_needs_human_review"
+      ;;
+    *) return 1 ;;
+  esac
+  extra=$(python3 - "$state" "$run_status" "$phase" <<'PY'
+import json, sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+run_status, phase = sys.argv[2:4]
+nodes = payload.get("nodes") if isinstance(payload.get("nodes"), dict) else {}
+by_status = {}
+for node_id, node in nodes.items():
+    if not isinstance(node, dict):
+        continue
+    status = str(node.get("status") or "unknown").lower()
+    by_status.setdefault(status, []).append(str(node_id))
+fields = {
+    "phase": phase,
+    "handoff_to": "",
+    "target_role": "",
+    "runtime_handoff_allowed": False,
+    "scheduler_run_status": run_status,
+    "scheduler_state_revision": payload.get("revision"),
+    "passed_nodes": sorted(by_status.get("passed", [])),
+    "failed_nodes": sorted(by_status.get("failed", [])),
+    "cancelled_nodes": sorted(by_status.get("cancelled", [])),
+}
+print(json.dumps({
+    "status_fields": fields,
+    "note": "Reconciled the terminal typed Scheduler ledger into the top-level sprint status.",
+}))
+PY
+)
+  runtime_status_transition "$sid" "$top_status" "$event" "coordinator" "$extra"
+}
+
 reconcile_typed_planner_result() {
   local sid="$1" sf="$2" result status extra
   result="$(typed_planner_result_path "$sid")"
@@ -4282,9 +4359,14 @@ handle_active() {
       reconcile_typed_planner_result "$sid" "$sf"
       return 0
     fi
+    if reconcile_typed_scheduler_state "$sid"; then
+      return 0
+    fi
     if dispatch_typed_scheduler_once "$sid"; then
-      runtime_status_transition "$sid" "active" "typed_scheduler_dispatched" "coordinator" \
-        '{"status_fields":{"phase":"graph_dispatch_active","handoff_to":"scheduler","target_role":"scheduler","runtime_handoff_allowed":true},"note":"Scheduler tick consumed the verified frozen SchedulerInput; legacy task_graph dispatch was not used."}' || true
+      if ! reconcile_typed_scheduler_state "$sid"; then
+        runtime_status_transition "$sid" "active" "typed_scheduler_dispatched" "coordinator" \
+          '{"status_fields":{"phase":"graph_dispatch_active","handoff_to":"scheduler","target_role":"scheduler","runtime_handoff_allowed":true},"note":"Scheduler tick consumed the verified frozen SchedulerInput; legacy task_graph dispatch was not used."}' || true
+      fi
     fi
     return 0
   fi
@@ -6341,8 +6423,12 @@ with open('$patches_file','w') as f:
           if [[ "$st" == "approved" && -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; then
             log "${Y}[state-recovery] ${sid} is approved with task_graph; driving handle_approved to ensure progress${N}"
             handle_approved "$sid" "$sf"
-          elif [[ "$st" == "active" ]] && typed_planner_required "$sid" && typed_scheduler_state_requires_tick "$sid"; then
-            log "${Y}[state-recovery] ${sid} has nonterminal typed Scheduler state; driving the next frozen SchedulerInput tick${N}"
+          elif [[ "$st" == "active" ]] && typed_planner_required "$sid"; then
+            if typed_scheduler_state_requires_tick "$sid"; then
+              log "${Y}[state-recovery] ${sid} has nonterminal typed Scheduler state; driving the next frozen SchedulerInput tick${N}"
+            else
+              log "${Y}[state-recovery] ${sid} has terminal typed Scheduler state; reconciling the top-level sprint status${N}"
+            fi
             handle_active "$sid" "$sf"
           elif [[ "$st" == "active" ]] && { eval_passed_needs_progress "$sf" || [[ -f "$SPRINTS_DIR/${sid}.task_graph.json" ]]; }; then
             log "${Y}[state-recovery] ${sid} has task_graph or eval_passed; driving handle_active to ensure progress${N}"

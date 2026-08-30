@@ -223,6 +223,24 @@ def test_typed_scheduler_state_wakes_and_repeats_frozen_scheduler_ticks():
     assert 'admission_status_file="$SPRINTS_DIR/${runtime_state_sid}.status.json"' in coordinator
     assert 'typed_scheduler_state_requires_tick "$sid"' in coordinator
     assert 'has nonterminal typed Scheduler state; driving the next frozen SchedulerInput tick' in coordinator
+    assert 'has terminal typed Scheduler state; reconciling the top-level sprint status' in coordinator
+    assert 'reconcile_typed_scheduler_state "$sid"' in coordinator
+    assert 'if ! reconcile_typed_scheduler_state "$sid"; then' in coordinator
+
+
+def test_typed_scheduler_terminal_reconciliation_is_portable_and_authoritative():
+    coordinator = (ROOT / "coordinator.sh").read_text(encoding="utf-8")
+    helper_start = coordinator.index("reconcile_typed_scheduler_state() {")
+    helper_end = coordinator.index("\nreconcile_typed_planner_result() {", helper_start)
+    helper = coordinator[helper_start:helper_end]
+
+    assert '"typed_scheduler_completed"' in helper
+    assert '"typed_scheduler_failed"' in helper
+    assert '"scheduler_state_revision"' in helper
+    assert '"failed_nodes"' in helper
+    assert "D:\\demo only version\\harness" not in helper
+    assert "172.19.127.84" not in helper
+    assert "8767" not in helper
 
 
 def test_typed_scheduler_state_path_is_derived_from_adapter_result():

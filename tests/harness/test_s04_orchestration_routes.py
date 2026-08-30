@@ -500,6 +500,47 @@ def test_dashboard_payload_reports_degraded_missing_task_graph(tmp_path: Path) -
     assert payload["progress"]["total_nodes"] == 0
 
 
+def test_dashboard_loads_typed_scheduler_projection_and_runtime_state(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _fixture_tree(tmp_path)
+    _patch_dirs(mod, tree)
+    sid = "sprint-active"
+    (tree["sprints"] / f"{sid}.task_graph.json").unlink()
+    runtime = tree["sprints"] / sid / "planning" / "runtime"
+    _write_json(runtime / f"{sid}.task_graph.json", {
+        "schema_version": "solar.scheduler_runtime_projection.v1",
+        "sprint_id": sid,
+        "nodes": [{
+            "id": "typed-node",
+            "goal": "Run typed work",
+            "owner": "scheduler",
+            "depends_on": [],
+            "capability_capsule_id": "cap.typed-work",
+            "required_capabilities": ["cap.typed-work"],
+            "physical_candidates": [{
+                "operator_id": "typed-worker",
+                "admission_state": "ELIGIBLE",
+            }],
+            "write_scope": ["artifacts/typed-node"],
+        }],
+    })
+    _write_json(runtime / f"{sid}.task_graph_state.json", {
+        "schema_version": "solar.task_graph_state.v1",
+        "sprint_id": sid,
+        "run_status": "running",
+        "nodes": {"typed-node": {"status": "dispatched"}},
+    })
+
+    payload, degraded = mod.build_dashboard_payload(sid)
+
+    assert not any(item.startswith("task_graph:missing") for item in degraded)
+    assert payload["progress"]["total_nodes"] == 1
+    assert payload["dag"]["nodes"][0]["id"] == "typed-node"
+    assert payload["dag"]["nodes"][0]["workflow_status"] == "dispatched"
+    assert payload["dag"]["nodes"][0]["selected_operator_id"] == "typed-worker"
+    assert payload["dag"]["nodes"][0]["route_decision"] == "fixed_contract_binding"
+
+
 def test_projection_payload_surfaces_ui_action_contract(tmp_path: Path) -> None:
     mod = _load_routes()
     tree = _fixture_tree(tmp_path)
