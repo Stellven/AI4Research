@@ -2,7 +2,7 @@ capability_capsule_id: cap.research-literature-discover
 capsule_kind: capability
 metadata:
   name: Scientific Literature Discover
-  description: Produce a ranked and reviewable scientific paper shortlist without hidden ingestion or memory mutation.
+  description: Produce a ranked and reviewable scientific paper shortlist together with an explicit study protocol covering search strategy, source selection, time range, inclusion, exclusion, and unresolved fields.
 applicability:
   task_types:
     - scientific-research
@@ -26,6 +26,7 @@ contract:
     required:
       - name: literature_discovery
         schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+        description: Ranked candidates plus the explicit study_protocol used to discover and select them.
     optional:
       - name: degraded_sources
         description: Source channels that failed or returned incomplete data.
@@ -35,16 +36,19 @@ contract:
   postconditions:
     - check: shortlist_traceable
       description: Candidate ranking includes sources, rationale, and dedup status.
+    - check: study_protocol_traceable
+      description: Discovery records its search strategy, source-selection criteria, time range, inclusion criteria, exclusion criteria, and unresolved protocol fields.
   invariants:
     - Does not ingest selected papers directly.
     - Does not mutate durable research memory directly.
+    - Missing protocol parameters remain explicitly unresolved rather than being silently invented.
 composition:
   consumes:
     - schema_ref: request-envelope.schema.json
       purpose: Discovery request.
   produces:
     - schema_ref: schemas/evidence/literature_discovery.v1.schema.json
-      purpose: Ranked literature candidates.
+      purpose: Ranked literature candidates and the auditable study protocol used to select them.
   compatible_with:
     - cap.research-paper-ingest
     - cap.research-memory-update
@@ -79,10 +83,12 @@ verification:
   self_check:
     - Validate emitted evidence against literature_discovery.v1.schema.json.
     - Confirm candidates include source channels, ranking rationale, and dedup status.
+    - Confirm outputs.study_protocol records all systematic-review protocol fields and identifies unresolved values.
   external_verifier:
     required: false
   pass_conditions:
     - Fixture discovery emits at least one candidate or an explicit inconclusive status with limitations.
+    - The discovery artifact always carries a study_protocol, including when provider discovery is inconclusive.
     - No memory or ingestion artifact is created by this capsule alone.
 operator_compatibility:
   preferred:

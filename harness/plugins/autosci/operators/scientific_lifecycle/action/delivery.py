@@ -197,9 +197,62 @@ def _method_evidence(context: OperatorContext) -> tuple[list[dict[str, Any]], li
     return methods, limitations
 
 
+def _study_protocol_evidence(
+    context: OperatorContext,
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    documents = load_documents(
+        context,
+        schemas=("literature_discovery.v1",),
+        payload_keys=("literature_discovery", "discovery_evidence"),
+        required=False,
+    )
+    for document in documents:
+        values = _outputs(document)
+        protocol = values.get("study_protocol") if isinstance(values, dict) else None
+        if not isinstance(protocol, dict):
+            continue
+        candidate_ids = [
+            str(item.get("candidate_id"))
+            for item in values.get("candidates") or []
+            if isinstance(item, dict) and str(item.get("candidate_id") or "").strip()
+        ]
+        limitations = [
+            str(item)
+            for item in document.get("limitations") or []
+            if str(item).strip()
+        ]
+        return protocol, candidate_ids, limitations
+    unresolved = [
+        "search_strategy",
+        "source_selection_criteria",
+        "time_range",
+        "inclusion_criteria",
+        "exclusion_criteria",
+    ]
+    return (
+        {
+            "protocol_status": "unresolved",
+            "search_strategy": "No literature-discovery protocol artifact reached report planning.",
+            "source_selection_criteria": [],
+            "time_range": {
+                "status": "unresolved",
+                "start": None,
+                "end": None,
+                "rationale": "No publication-date boundary was available to report planning.",
+            },
+            "inclusion_criteria": [],
+            "exclusion_criteria": [],
+            "unresolved_fields": unresolved,
+        },
+        ["unresolved:study-protocol"],
+        ["The study protocol was not supplied by literature discovery."],
+    )
+
+
 def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     verdicts = _verdicts(context)
     methods, method_limitations = _method_evidence(context)
+    study_protocol, protocol_evidence_ids, protocol_limitations = _study_protocol_evidence(context)
     reportable = [
         item for item in verdicts
         if _grounded_evidence_ids(item) and str(item.get("claim_text") or "").strip()
@@ -218,10 +271,16 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
         for evidence_id in method.get("evidence_ids") or []
         if str(evidence_id).strip()
     }
-    evidence_ids = sorted(claim_evidence_ids | method_evidence_ids)
+    evidence_ids = sorted(claim_evidence_ids | method_evidence_ids | set(protocol_evidence_ids))
     sections = [
         {"section_id": "summary", "title": f"Summary: {topic}", "purpose": "Answer the requested topic.", "evidence_ids": evidence_ids},
         {"section_id": "findings", "title": "Source-grounded findings", "purpose": "Present claims with their unchanged verification classification.", "evidence_ids": evidence_ids},
+        {
+            "section_id": "study_protocol",
+            "title": "Study protocol and selection boundaries",
+            "purpose": "Report the discovery search strategy, source-selection criteria, time range, inclusion criteria, exclusion criteria, and every unresolved protocol field.",
+            "evidence_ids": sorted(protocol_evidence_ids),
+        },
     ]
     if methods or method_limitations:
         sections.append({
@@ -248,6 +307,7 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
         "supported_claim_ids": [str(item["claim_id"]) for item in reportable],
         "excluded_claim_ids": [str(item["claim_id"]) for item in verdicts if item not in reportable],
         "evidence_ids": evidence_ids,
+        "study_protocol": study_protocol,
     }
     return completed_result(
         context,
@@ -256,6 +316,7 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
         outputs={"report_plan": plan},
         filename="scientific_report_plan.v1.json",
         artifact_id="scientific_report_plan",
+        limitations=[*method_limitations, *protocol_limitations],
     )
 
 
@@ -332,8 +393,51 @@ def _render_method_section(
     return "\n".join(rows).strip(), sorted(evidence_ids)
 
 
+def _render_study_protocol(protocol: dict[str, Any]) -> str:
+    time_range = protocol.get("time_range") if isinstance(protocol.get("time_range"), dict) else {}
+    start = str(time_range.get("start") or "unresolved")
+    end = str(time_range.get("end") or "unresolved")
+    rows = [
+        f"- Protocol status: {str(protocol.get('protocol_status') or 'unresolved')}",
+        f"- Search strategy: {str(protocol.get('search_strategy') or 'unresolved')}",
+        f"- Time range: {start} to {end} ({str(time_range.get('status') or 'unresolved')})",
+        f"- Time-range rationale: {str(time_range.get('rationale') or 'not recorded')}",
+        "- Source-selection criteria:",
+        *[
+            f"  - {item}"
+            for item in protocol.get("source_selection_criteria") or ["unresolved"]
+        ],
+        "- Inclusion criteria:",
+        *[f"  - {item}" for item in protocol.get("inclusion_criteria") or ["unresolved"]],
+        "- Exclusion criteria:",
+        *[f"  - {item}" for item in protocol.get("exclusion_criteria") or ["unresolved"]],
+        "- Unresolved protocol fields: "
+        + ", ".join(str(item) for item in protocol.get("unresolved_fields") or [])
+        if protocol.get("unresolved_fields")
+        else "- Unresolved protocol fields: none",
+    ]
+    return "\n".join(rows).strip()
+
+
 def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     plan, verdicts, methods, method_limitations = _report_plan_and_verdicts(context)
+    study_protocol = (
+        plan.get("study_protocol")
+        if isinstance(plan.get("study_protocol"), dict)
+        else {
+            "protocol_status": "unresolved",
+            "search_strategy": "The report plan did not carry a study protocol.",
+            "source_selection_criteria": [],
+            "time_range": {"status": "unresolved", "start": None, "end": None, "rationale": "Missing from report plan."},
+            "inclusion_criteria": [],
+            "exclusion_criteria": [],
+            "unresolved_fields": ["search_strategy", "source_selection_criteria", "time_range", "inclusion_criteria", "exclusion_criteria"],
+        }
+    )
+    protocol_limitations = [
+        f"Study protocol field remains unresolved: {item}."
+        for item in study_protocol.get("unresolved_fields") or []
+    ]
     supported_ids = set(str(item) for item in plan.get("supported_claim_ids") or [])
     reportable = [item for item in verdicts if str(item.get("claim_id")) in supported_ids]
     if not reportable:
@@ -346,7 +450,9 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         section_id = require_text(section.get("section_id"), "section_id")
         section_title = require_text(section.get("title"), "section title")
         evidence_ids = [str(item) for item in section.get("evidence_ids") or [] if str(item).strip()]
-        if section_id == "methods":
+        if section_id == "study_protocol":
+            body = _render_study_protocol(study_protocol)
+        elif section_id == "methods":
             body, method_section_evidence_ids = _render_method_section(
                 methods, method_limitations
             )
@@ -407,6 +513,7 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         "unsupported_claims": unsupported,
         "methods": methods,
         "method_evidence_status": "available" if methods else "insufficient_evidence",
+        "study_protocol": study_protocol,
         "markdown": markdown,
     }
     extra_artifacts: list[dict[str, Any]] = []
@@ -428,7 +535,7 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         outputs={"report": report},
         filename="scientific_report.v1.json",
         artifact_id="scientific_report",
-        limitations=method_limitations,
+        limitations=[*method_limitations, *protocol_limitations],
         extra_artifacts=extra_artifacts,
         extra_hashes=extra_hashes,
     )

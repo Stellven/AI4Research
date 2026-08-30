@@ -2,7 +2,7 @@ capability_capsule_id: cap.research-method-aware-report-plan
 capsule_kind: capability
 metadata:
   name: Method-aware Scientific Report Plan
-  description: Plan a scientific report while preserving structured method evidence as a required report input.
+  description: Plan a scientific report while preserving structured method evidence and the literature-discovery study protocol as required report inputs.
 applicability:
   task_types:
     - scientific-research
@@ -21,6 +21,9 @@ contract:
         schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       - name: research_method
         schema_ref: schemas/evidence/research_method.v1.schema.json
+      - name: literature_discovery
+        schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+        description: Ranked sources and the study protocol that must remain auditable in the final report.
   outputs:
     required:
       - name: scientific_report_plan
@@ -31,15 +34,20 @@ contract:
   postconditions:
     - check: report_plan_evidenced
       description: The report plan assigns method evidence to a methods section.
+    - check: study_protocol_planned
+      description: The plan contains a study-protocol section and preserves every unresolved protocol field.
   invariants:
     - Does not discard supplied method evidence.
     - Does not draft unsupported claims as findings.
+    - Does not discard or silently resolve study-protocol limitations.
 composition:
   consumes:
     - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       purpose: Verdict-backed findings.
     - schema_ref: schemas/evidence/research_method.v1.schema.json
       purpose: Source-grounded methods that the report must compare or explain.
+    - schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+      purpose: Search strategy, source-selection criteria, time range, inclusion/exclusion criteria, and unresolved protocol fields.
   produces:
     - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
       purpose: Method-aware report plan.
@@ -76,10 +84,12 @@ verification:
   self_check:
     - Validate emitted evidence against scientific_report_plan.v1.schema.json.
     - Confirm method evidence IDs are assigned to the methods section.
+    - Confirm report_plan.study_protocol is copied from literature discovery and has a dedicated report section.
   external_verifier:
     required: false
   pass_conditions:
     - Structured method evidence remains connected to the report plan.
+    - Study-protocol values and unresolved fields remain visible in the report plan.
 operator_compatibility:
   preferred:
     - autosci-report-plan-worker

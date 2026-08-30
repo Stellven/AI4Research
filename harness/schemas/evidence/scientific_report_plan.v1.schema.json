@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/scientific_report_plan.v1.schema.json",
+  "title": "Solar Evidence ABI - Scientific Report Plan",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "scientific_report_plan.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "inputs": {"type": "object", "additionalProperties": true},
+    "outputs": {
+      "type": "object",
+      "required": ["report_plan"],
+      "additionalProperties": false,
+      "properties": {
+        "report_plan": {
+          "type": "object",
+          "required": ["report_id", "title", "audience", "sections", "supported_claim_ids", "excluded_claim_ids", "evidence_ids"],
+          "additionalProperties": false,
+          "properties": {
+            "report_id": {"type": "string", "minLength": 1},
+            "title": {"type": "string", "minLength": 1},
+            "audience": {"type": "string", "minLength": 1},
+            "sections": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["section_id", "title", "purpose", "evidence_ids"],
+                "additionalProperties": false,
+                "properties": {
+                  "section_id": {"type": "string", "minLength": 1},
+                  "title": {"type": "string", "minLength": 1},
+                  "purpose": {"type": "string", "minLength": 1},
+                  "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+                }
+              }
+            },
+            "supported_claim_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "excluded_claim_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "study_protocol": {
+              "type": "object",
+              "required": ["protocol_status", "search_strategy", "source_selection_criteria", "time_range", "inclusion_criteria", "exclusion_criteria", "unresolved_fields"],
+              "additionalProperties": false,
+              "properties": {
+                "protocol_status": {"type": "string", "enum": ["resolved", "partially_resolved", "unresolved"]},
+                "search_strategy": {"type": "string", "minLength": 1},
+                "source_selection_criteria": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                "time_range": {
+                  "type": "object",
+                  "required": ["status", "start", "end", "rationale"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {"type": "string", "enum": ["resolved", "unresolved"]},
+                    "start": {"type": ["string", "null"]},
+                    "end": {"type": ["string", "null"]},
+                    "rationale": {"type": "string", "minLength": 1}
+                  }
+                },
+                "inclusion_criteria": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                "exclusion_criteria": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                "unresolved_fields": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {"type": "string", "enum": ["search_strategy", "source_selection_criteria", "time_range", "inclusion_criteria", "exclusion_criteria"]}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "artifacts": {"type": "array"},
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "operator_version", "implementation_package", "timestamp", "input_sha256", "output_sha256"],
+      "additionalProperties": true
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  }
+}
