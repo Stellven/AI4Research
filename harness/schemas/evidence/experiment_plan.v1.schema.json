@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/experiment_plan.v1.schema.json",
+  "title": "Solar Evidence ABI - Experiment Plan",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "experiment_plan.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "status": {"$ref": "#/$defs/status"},
+    "inputs": {"type": "object", "additionalProperties": true},
+    "outputs": {
+      "type": "object",
+      "required": ["experiment_plan"],
+      "additionalProperties": true,
+      "properties": {
+        "experiment_plan": {"$ref": "#/$defs/experiment_plan"}
+      }
+    },
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "artifact": {
+      "type": "object",
+      "required": ["type", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "implementation_package", "timestamp"],
+      "additionalProperties": true,
+      "properties": {
+        "operator_id": {"type": "string", "minLength": 1},
+        "implementation_package": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"}
+      }
+    },
+    "experiment_plan": {
+      "type": "object",
+      "required": ["experiment_id", "objective", "hypothesis", "variables", "metrics", "procedure", "approval_required", "expected_artifacts"],
+      "additionalProperties": true,
+      "properties": {
+        "experiment_id": {"type": "string", "minLength": 1},
+        "objective": {"type": "string", "minLength": 1},
+        "hypothesis": {"type": "string", "minLength": 1},
+        "variables": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "metrics": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "procedure": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "approval_required": {"type": "boolean"},
+        "expected_artifacts": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

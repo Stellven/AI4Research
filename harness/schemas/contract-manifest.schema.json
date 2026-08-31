@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/contract-manifest.schema.json",
+  "title": "Solar Contract Manifest",
+  "type": "object",
+  "required": ["schema_version", "sprint_id", "requirement_ir_ref", "contracts"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "solar.contract_manifest.v1"
+    },
+    "sprint_id": { "type": "string", "minLength": 1 },
+    "requirement_ir_ref": { "type": "string", "minLength": 1 },
+    "contracts": {
+      "type": "object",
+      "required": ["product", "interface", "agent_execution", "research"],
+      "additionalProperties": false,
+      "properties": {
+        "product": { "$ref": "#/$defs/entry" },
+        "interface": { "$ref": "#/$defs/entry" },
+        "agent_execution": { "$ref": "#/$defs/entry" },
+        "research": { "$ref": "#/$defs/entry" }
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["path", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^sha256:" }
+      }
+    }
+  }
+}

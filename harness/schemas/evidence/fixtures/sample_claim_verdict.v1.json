@@ -1,0 +1,35 @@
+{
+  "schema": "claim_verdict.v1",
+  "task_id": "task.phase1.sample.claim_verdict",
+  "sprint_id": "sprint.scientific.phase1",
+  "node_id": "node.claim_verify",
+  "status": "completed",
+  "inputs": {
+    "claim_id": "claim.sample.001",
+    "experiment_result": "sample_experiment_result.v1.json"
+  },
+  "outputs": {
+    "verdicts": [
+      {
+        "claim_id": "claim.sample.001",
+        "verdict": "supported",
+        "confidence": 0.72,
+        "basis": "The fixture experiment result covers the sample claim with code evidence.",
+        "evidence_ids": ["claim.sample.001", "experiment.sample.001"],
+        "limitations": ["Fixture verdict is not external scientific validation."]
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "claim_verdict",
+      "path": "artifacts/scientific/fixtures/claim_verdict.json"
+    }
+  ],
+  "provenance": {
+    "operator_id": "ScientificClaimVerifier",
+    "implementation_package": "fixture.local",
+    "timestamp": "2026-06-16T20:30:00Z"
+  },
+  "limitations": ["Fixture confidence is illustrative."]
+}

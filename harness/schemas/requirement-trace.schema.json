@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/requirement-trace.schema.json",
+  "title": "Solar Requirement Trace",
+  "type": "object",
+  "required": ["schema_version", "requirement_ir_id", "sprint_id", "items"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "type": "string", "const": "solar.requirement_trace.v1" },
+    "requirement_ir_id": { "type": "string" },
+    "sprint_id": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["requirement_id", "source_text", "mapped_nodes", "final_status"],
+        "additionalProperties": true,
+        "properties": {
+          "requirement_id": { "type": "string" },
+          "source_text": { "type": "string" },
+          "success_criteria": { "type": "array", "items": { "type": "string" } },
+          "verification_method": { "type": "string" },
+          "mapped_nodes": { "type": "array", "items": { "type": "string" } },
+          "expected_artifacts": { "type": "array", "items": { "type": "string" } },
+          "final_status": { "type": "string", "enum": ["done", "partial", "missing", "rejected"] }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/research_workflow_skeleton.v1.schema.json",
+  "title": "Research Workflow Skeleton v1 Draft Schema",
+  "description": "Draft schema for research workflow skeleton artifacts used in planning and static validation only.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": [
+    "workflow_id",
+    "status",
+    "execution_mode",
+    "contract",
+    "nodes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "schema_version": {
+      "type": "string",
+      "enum": [
+        "v1.0.0-draft",
+        "v1"
+      ]
+    },
+    "workflow_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "non-executable"
+      ]
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "non-executable",
+        "draft"
+      ]
+    },
+    "contract": {
+      "$ref": "#/$defs/task_contract"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/workflow_node"
+      }
+    }
+  },
+  "$defs": {
+    "workflow_node": {
+      "type": "object",
+      "required": [
+        "node_id",
+        "purpose",
+        "logical_operator",
+        "required_capabilities",
+        "input_artifacts",
+        "output_artifacts",
+        "permission_profile",
+        "gate_contract",
+        "binding_status",
+        "retry_policy",
+        "depends_on"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "logical_operator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "input_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "output_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "permission_profile": {
+          "$ref": "#/$defs/permission_profile"
+        },
+        "gate_contract": {
+          "$ref": "#/$defs/gate_contract"
+        },
+        "binding_status": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "required"
+          ]
+        },
+        "retry_policy": {
+          "$ref": "#/$defs/retry_policy"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "default": []
+        }
+      }
+    },
+    "permission_profile": {
+      "type": "object",
+      "required": [
+        "network",
+        "provider_execution",
+        "read_scope",
+        "write_scope",
+        "approved_operators"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "network": {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "notes": {
+              "type": "string",
+              "default": ""
+            }
+          }
+        },
+        "provider_execution": {
+          "type": "boolean"
+        },
+        "read_scope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "write_scope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "approved_operators": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "gate_contract": {
+      "type": "object",
+      "required": [
+        "entry_condition",
+        "exit_condition",
+        "deliverable",
+        "success_criteria"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "entry_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exit_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deliverable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "success_criteria": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "retry_policy": {
+      "type": "object",
+      "required": [
+        "mode",
+        "max_attempts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "required",
+            "once"
+          ]
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "task_contract": {
+      "type": "object",
+      "required": [
+        "deliverables",
+        "success_criteria"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "deliverables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "success_criteria": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

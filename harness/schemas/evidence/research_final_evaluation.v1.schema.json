@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/research_final_evaluation.v1.schema.json",
+  "title": "Solar Evidence ABI - Final Research Evaluation",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "research_final_evaluation.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"const": "final_evaluation"},
+    "status": {"const": "completed"},
+    "inputs": {"type": "object", "additionalProperties": true},
+    "outputs": {
+      "type": "object",
+      "required": ["evaluation"],
+      "additionalProperties": true,
+      "properties": {
+        "evaluation": {
+          "type": "object",
+          "required": ["decision", "accepted", "blockers", "residual_risks", "follow_up", "checks", "criterion_results", "requirement_results", "method_evaluation", "review_assessment", "source_report_id", "publication_bundle_id", "evidence_ids", "run_provenance", "does_not_modify_graph_or_run_state"],
+          "additionalProperties": false,
+          "properties": {
+            "decision": {"enum": ["accepted", "accepted_with_limitations"]},
+            "accepted": {"const": true},
+            "blockers": {"type": "array", "maxItems": 0},
+            "residual_risks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "follow_up": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "checks": {
+              "type": "object",
+              "required": ["publication_bundle_present", "non_empty_report", "evidence_linked", "usable_file_manifest", "artifact_review_passed", "user_intent_relevance", "core_result_claims_present", "method_evidence_honestly_rendered"],
+              "additionalProperties": {"type": "boolean"}
+            },
+            "criterion_results": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"$ref": "#/$defs/criterion_result"}
+            },
+            "requirement_results": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/requirement_result"}
+            },
+            "method_evaluation": {
+              "enum": ["available_and_rendered", "insufficient_evidence_disclosed"]
+            },
+            "review_assessment": {
+              "type": "object",
+              "required": ["expected_mode", "actual_mode", "independent_peer_review_required", "independent_peer_review_performed", "task_contract_matches", "limitation_disclosed"],
+              "additionalProperties": false,
+              "properties": {
+                "expected_mode": {"type": "string", "minLength": 1},
+                "actual_mode": {"type": "string", "minLength": 1},
+                "independent_peer_review_required": {"type": "boolean"},
+                "independent_peer_review_performed": {"type": "boolean"},
+                "task_contract_matches": {"const": true},
+                "limitation_disclosed": {"const": true}
+              }
+            },
+            "source_report_id": {"type": "string", "minLength": 1},
+            "publication_bundle_id": {"type": "string", "minLength": 1},
+            "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "run_provenance": {"type": "object", "additionalProperties": true},
+            "does_not_modify_graph_or_run_state": {"const": true}
+          }
+        }
+      }
+    },
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "criterion_result": {
+      "type": "object",
+      "required": ["criterion", "status", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "criterion": {"type": "string", "minLength": 1},
+        "status": {"enum": ["passed", "failed", "not_applicable"]},
+        "evidence": {"type": "string", "minLength": 1}
+      }
+    },
+    "requirement_result": {
+      "type": "object",
+      "required": ["requirement_id", "status", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement_id": {"type": "string", "minLength": 1},
+        "status": {"enum": ["passed", "failed", "not_applicable"]},
+        "evidence": {"type": "string", "minLength": 1}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["type", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "implementation_package", "timestamp"],
+      "additionalProperties": true,
+      "properties": {
+        "operator_id": {"type": "string", "minLength": 1},
+        "implementation_package": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

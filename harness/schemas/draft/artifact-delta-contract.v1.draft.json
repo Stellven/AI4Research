@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/artifact-delta-contract.v1.draft.json",
+  "title": "Artifact Delta Contract v1",
+  "description": "Draft schema for delta-friendly artifact updates. Defines a structured set of changes (additions, modifications, deletions) applied to research artifacts.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": [
+    "delta_id",
+    "target_artifact_id",
+    "target_artifact_type",
+    "changes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "delta_id": {
+      "type": "string",
+      "description": "Unique identifier for this delta set."
+    },
+    "target_artifact_id": {
+      "type": "string",
+      "description": "Identifier of the artifact being patched."
+    },
+    "target_artifact_type": {
+      "type": "string",
+      "enum": [
+        "living_report",
+        "research_lab",
+        "research_memory",
+        "ai_infra_pack"
+      ],
+      "description": "The type of the target research artifact."
+    },
+    "base_version": {
+      "type": "string",
+      "description": "The version of the artifact before applying this delta."
+    },
+    "new_version": {
+      "type": "string",
+      "description": "The version of the artifact after applying this delta."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "author": {
+      "type": "string"
+    },
+    "changes": {
+      "type": "array",
+      "description": "The sequence of differential changes to apply.",
+      "items": {
+        "type": "object",
+        "required": [
+          "op",
+          "path"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "add",
+              "replace",
+              "remove",
+              "append"
+            ],
+            "description": "The mutation operation."
+          },
+          "path": {
+            "type": "string",
+            "description": "JSON pointer or path within the artifact schema."
+          },
+          "value": {
+            "description": "The value to add, replace, or append. Required for add, replace, and append."
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

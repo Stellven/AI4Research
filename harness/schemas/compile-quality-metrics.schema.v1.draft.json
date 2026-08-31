@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar-harness://schemas/compile-quality-metrics.schema.v1.draft.json",
+  "title": "Compile Quality Metrics v1 (Draft)",
+  "description": "Schema for a Requirement Compiler quality metrics report. Captures 10 metrics (4 hard gates + 6 soft thresholds), gate verdicts per mode, and the data-source references used to compute each metric. Produced by the quality gate runner and consumed by validate.sh (gate integration spec only — not implemented in this sprint).",
+  "type": "object",
+
+  "required": [
+    "schema_version",
+    "sprint_id",
+    "computed_at",
+    "mode",
+    "gate_verdict",
+    "metrics"
+  ],
+
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "compile-quality-metrics.v1",
+      "description": "Schema version identifier."
+    },
+    "sprint_id": {
+      "type": "string",
+      "pattern": "^sprint-\\d{8}-",
+      "description": "The sprint whose compiler output this report evaluates."
+    },
+    "computed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp when this metrics report was produced."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["default", "strict-quality"],
+      "description": "Gate enforcement mode. 'default': only 4 hard metrics block dispatch. 'strict-quality': all 10 metrics block dispatch (--strict-quality CLI flag)."
+    },
+    "gate_verdict": {
+      "type": "string",
+      "enum": ["pass", "fail", "warn"],
+      "description": "Overall gate verdict. 'pass': all hard gates (in current mode) met. 'fail': at least one hard gate not met. 'warn': all hard gates met but at least one soft threshold violated."
+    },
+    "gate_failures": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of metric names that caused gate_verdict=fail. Empty if gate_verdict=pass or warn."
+    },
+    "gate_warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of metric names whose soft threshold was not met. Non-blocking. Empty if all soft metrics pass."
+    },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "golden_set_pass_rate",
+        "field_coverage_rate",
+        "acceptance_coverage_rate",
+        "secret_leak_rate",
+        "planner_diff_rate",
+        "evaluator_reject_rate",
+        "replay_consistency_rate",
+        "misclassification_rate",
+        "miscompilation_rate",
+        "evidence_ledger_completeness"
+      ],
+      "additionalProperties": false,
+      "description": "All 10 quality metrics. 4 hard gates (acceptance_coverage_rate, secret_leak_rate, evidence_ledger_completeness, replay_consistency_rate) block dispatch when failed. 6 soft metrics produce warnings only in default mode.",
+      "properties": {
+
+        "golden_set_pass_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "Fraction of golden set cases that the compiler passes when replayed. Formula: passed_cases / total_cases. Data source: replay_result.json files from N2 replay suite run against golden-set-spec.md cases. Threshold: >= 0.95 (soft in default mode, hard in strict-quality mode)."
+        },
+
+        "field_coverage_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "Fraction of required IR fields that are non-empty in compiled output. Formula: count(non_null_non_empty_required_fields) / count(total_required_fields) across all cases in window. Data source: IR schema validator output (requirement-ir.schema.v1). Threshold: >= 0.98 (soft in default mode, hard in strict-quality mode)."
+        },
+
+        "acceptance_coverage_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "HARD GATE. Fraction of compiled acceptance[] items that have a non-empty mapped_to[] array. Formula: count(acceptance_items with mapped_to.length >= 1) / count(total_acceptance_items). Data source: grep on IR JSON files for mapped_to[] array contents. Threshold: = 1.00 (HARD in all modes — any unmapped acceptance item blocks dispatch)."
+        },
+
+        "secret_leak_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "HARD GATE. Fraction of compiled IRs that contain a secret-like string after compilation. Formula: count(IRs with secret_detected=true) / count(total_compiled_IRs). Data source: secret scanner run over IR JSON output; uses pattern set from feedback-event.schema.v1 $comment + N3 secret-safe scrub patterns. Threshold: = 0.0 (HARD in all modes — any secret leak immediately blocks dispatch and triggers incident)."
+        },
+
+        "planner_diff_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "Fraction of planner runs where the planner modified at least one IR-derived field in the compiled PRD. Formula: count(planner_runs with >= 1 planner_diff feedback-event) / count(total_planner_runs). Data source: planner_diff_log.jsonl (feedback-event.v1 with event_type=planner_diff). Threshold: <= 0.30 (soft in default mode, hard in strict-quality mode)."
+        },
+
+        "evaluator_reject_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "Fraction of evaluator runs that produced at least one error-severity rejection reason. Formula: count(evaluator_runs with >= 1 rejection_reason.severity=error) / count(total_evaluator_runs). Data source: evaluator_reject_log.jsonl (feedback-event.v1 with event_type=evaluator_reject, severity=error). Threshold: <= 0.20 (soft in default mode, hard in strict-quality mode)."
+        },
+
+        "replay_consistency_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "HARD GATE. Fraction of replay runs that produce byte-exact identical output when re-run on the same input. Formula: count(replays where output_hash_run1 == output_hash_run2) / count(total_replays). Data source: replay_result.json pairs (same case_id, two runs). Verifies deterministic compiler guarantee (C9). Threshold: >= 0.99 (HARD in all modes — non-deterministic compiler output is a critical correctness violation)."
+        },
+
+        "misclassification_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "Fraction of compiled cases where the source/type classification is incorrect per human label. Formula: count(cases with human_label.class=misclassification) / count(total_human_labeled_cases). Data source: failure-replay archive human_label fields (failure_replay_entry.v1 human_label.class). Threshold: <= 0.05 (soft in default mode, hard in strict-quality mode)."
+        },
+
+        "miscompilation_rate": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "Fraction of compiled cases where field extraction or template substitution produced incorrect output per human label. Formula: count(cases with human_label.class=miscompilation) / count(total_human_labeled_cases). Data source: failure-replay archive human_label fields. Threshold: <= 0.10 (soft in default mode, hard in strict-quality mode)."
+        },
+
+        "evidence_ledger_completeness": {
+          "$ref": "#/$defs/metric_entry",
+          "description": "HARD GATE. Fraction of research-type IRs that have a corresponding evidence ledger directory and at least one ledger entry. Formula: count(research-type IRs with evidence/ dir present AND ledger.jsonl non-empty) / count(total research-type IRs). Data source: filesystem check `test -d sprints/<sid>.evidence/ && wc -l sprints/<sid>.evidence/ledger.jsonl`. Threshold: = 1.00 (HARD in all modes — research IR without evidence ledger is a gate violation per C8)."
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "metric_entry": {
+      "type": "object",
+      "required": ["value", "threshold", "gate_kind", "passed", "data_source_refs"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": ["number", "null"],
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Computed metric value in [0.0, 1.0]. null if metric could not be computed (e.g., no data in window)."
+        },
+        "threshold": {
+          "type": "object",
+          "required": ["default", "strict_quality", "comparison"],
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "type": "number",
+              "description": "Threshold value in default mode."
+            },
+            "strict_quality": {
+              "type": "number",
+              "description": "Threshold value in --strict-quality mode. Must equal default for hard gates (same threshold regardless of mode)."
+            },
+            "comparison": {
+              "type": "string",
+              "enum": ["gte", "lte", "eq"],
+              "description": "Comparison operator: gte=>=, lte=<=, eq===. Applied as: value <comparison> threshold."
+            }
+          }
+        },
+        "gate_kind": {
+          "type": "string",
+          "enum": ["hard", "soft"],
+          "description": "hard: metric blocks dispatch in default mode AND strict-quality mode when threshold is not met. soft: metric only warns in default mode; blocks in strict-quality mode."
+        },
+        "passed": {
+          "type": ["boolean", "null"],
+          "description": "Whether the threshold was met under the current mode. null if value is null (metric uncomputed)."
+        },
+        "numerator": {
+          "type": ["number", "null"],
+          "description": "Raw numerator of the metric formula. Optional — for auditability."
+        },
+        "denominator": {
+          "type": ["number", "null"],
+          "description": "Raw denominator of the metric formula. null if metric could not be computed. Optional — for auditability."
+        },
+        "data_source_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "List of file paths or system references where the metric data was collected from. At least one required for auditability."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional human-readable note about this metric computation (e.g., 'computed over last 30 days', 'no research-type cases this sprint — trivially 1.00').",
+          "maxLength": 500
+        }
+      }
+    }
+  }
+}

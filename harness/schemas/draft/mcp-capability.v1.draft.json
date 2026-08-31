@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/mcp-capability.v1.draft.json",
+  "title": "Solar MCP Capability Registry Entry v1",
+  "description": "Draft v1 schema extending capability.schema.json (Draft-07) for MCP-specific fields. Adds endpoint_type, input_schema, output_schema, auth_requirements, rate_limits. All base fields from capability.schema.json are preserved.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "type": "object",
+  "required": ["capability", "provider", "level", "endpoint_type"],
+  "additionalProperties": true,
+  "properties": {
+    "capability": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]*$",
+      "description": "Capability token (e.g. wiki.read, pdf.extract). Must match capability.schema.json:8 pattern."
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Plugin or server ID that provides this capability."
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "description": "Integration level: 1=dead_end, 2=basic_usable, 3=default_usable, 4=closed_loop. Matches capability.schema.json levels."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "disabled", "degraded"],
+      "default": "active",
+      "description": "Runtime status. Matches capability.schema.json status enum."
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "ISO 8601 UTC timestamp of last status update."
+    },
+    "endpoint_type": {
+      "type": "string",
+      "enum": ["mcp_stdio", "mcp_sse", "mcp_http"],
+      "description": "MCP transport type. mcp_stdio=subprocess with JSON-RPC over stdin/stdout. mcp_sse=server-sent events. mcp_http=HTTP REST."
+    },
+    "endpoint_url": {
+      "type": ["string", "null"],
+      "description": "Endpoint URL for mcp_sse and mcp_http. Null for mcp_stdio (uses launch_cmd)."
+    },
+    "launch_cmd": {
+      "type": ["array", "null"],
+      "items": {"type": "string"},
+      "description": "Command array to launch MCP server subprocess (mcp_stdio only)."
+    },
+    "input_schema": {
+      "type": ["object", "null"],
+      "description": "JSON Schema for tool input parameters. APO uses this to validate arguments before dispatch.",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": ["object", "null"],
+      "description": "JSON Schema for tool output. APO uses this for verification_contract checks.",
+      "additionalProperties": true
+    },
+    "auth_requirements": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Auth token kind required (e.g. 'oauth2_bearer', 'api_key_header', 'none')."
+      },
+      "default": [],
+      "description": "List of auth mechanisms required. Empty = no auth required."
+    },
+    "rate_limits": {
+      "type": "object",
+      "properties": {
+        "requests_per_minute": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Max requests per minute. Null = unlimited."
+        },
+        "requests_per_hour": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Max requests per hour. Null = unlimited."
+        },
+        "concurrent_max": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Max concurrent requests. Null = unlimited."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Rate limit policy. APO checks before dispatching to prevent quota exhaustion."
+    },
+    "meta": {
+      "type": "object",
+      "description": "Provider-specific metadata. Passed through from capability.schema.json.",
+      "additionalProperties": true
+    }
+  }
+}

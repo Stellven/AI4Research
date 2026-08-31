@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/claim_verdict.v1.schema.json",
+  "title": "Solar Evidence ABI - Claim Verdict",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "claim_verdict.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "status": {"$ref": "#/$defs/status"},
+    "inputs": {"type": "object", "additionalProperties": true},
+    "outputs": {
+      "type": "object",
+      "required": ["verdicts"],
+      "additionalProperties": true,
+      "properties": {
+        "verdicts": {"type": "array", "items": {"$ref": "#/$defs/verdict"}}
+      }
+    },
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "artifact": {
+      "type": "object",
+      "required": ["type", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "implementation_package", "timestamp"],
+      "additionalProperties": true,
+      "properties": {
+        "operator_id": {"type": "string", "minLength": 1},
+        "implementation_package": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"}
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "required": ["claim_id", "verdict", "confidence", "basis", "evidence_ids"],
+      "additionalProperties": true,
+      "properties": {
+        "claim_id": {"type": "string", "minLength": 1},
+        "verdict": {"type": "string", "enum": ["supported", "partially_supported", "not_supported", "insufficient", "inconclusive"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "basis": {"type": "string", "minLength": 1},
+        "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "limitations": {"type": "array", "items": {"type": "string"}},
+        "scope_comparison": {
+          "type": "object",
+          "required": ["schema_version", "status", "dimensions", "mismatched_dimensions", "missing_evidence_dimensions", "lexical_guardrail", "risks"],
+          "additionalProperties": true,
+          "properties": {
+            "schema_version": {"const": "solar.claim_evidence_scope_comparison.v1"},
+            "status": {"type": "string", "enum": ["aligned", "mismatch", "insufficient", "unscoped"]},
+            "dimensions": {"type": "object"},
+            "mismatched_dimensions": {"type": "array", "items": {"type": "string"}},
+            "missing_evidence_dimensions": {"type": "array", "items": {"type": "string"}},
+            "lexical_guardrail": {"type": "object"},
+            "risks": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    }
+  }
+}

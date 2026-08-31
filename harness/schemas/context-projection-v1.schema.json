@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContextProjectionV1",
+  "description": "Schema for model-visible context projections over session events",
+  "type": "object",
+  "required": ["session_id", "policy_name", "built_at", "included_event_ids"],
+  "properties": {
+    "session_id": { "type": "string" },
+    "policy_name": { "type": "string", "default": "default" },
+    "built_at": { "type": "string", "format": "date-time" },
+    "token_estimate": { "type": "integer", "minimum": 0 },
+    "budget_tokens": { "type": ["integer", "null"] },
+    "included_event_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "summarized_ranges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "start_seq": { "type": "integer" },
+          "end_seq": { "type": "integer" },
+          "summary": { "type": "string" },
+          "event_count": { "type": "integer" }
+        }
+      }
+    },
+    "dropped_ranges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "start_seq": { "type": "integer" },
+          "end_seq": { "type": "integer" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "kb_hits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": { "type": "string" },
+          "title": { "type": "string" },
+          "relevance_score": { "type": "number" }
+        }
+      }
+    }
+  }
+}

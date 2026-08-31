@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/research_run_state.v1.schema.json",
+  "title": "Research Run State v1",
+  "description": "Solar-owned committed state for a generic research orchestration run.",
+  "type": "object",
+  "required": [
+    "schema",
+    "task_id",
+    "run_id",
+    "workflow_id",
+    "graph_identity",
+    "run_provenance",
+    "node_states",
+    "ready_nodes",
+    "current_blockers",
+    "resume_import_provenance",
+    "final_status",
+    "status_updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "research_run_state.v1"},
+    "task_id": {"$ref": "#/$defs/non_empty_string"},
+    "run_id": {"$ref": "#/$defs/non_empty_string"},
+    "workflow_id": {"$ref": "#/$defs/non_empty_string"},
+    "graph_identity": {"$ref": "#/$defs/graph_identity"},
+    "run_provenance": {"$ref": "#/$defs/run_provenance"},
+    "node_states": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/node_state"}
+    },
+    "ready_nodes": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/non_empty_string"}
+    },
+    "current_blockers": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/blocker"}
+    },
+    "resume_import_provenance": {"$ref": "#/$defs/resume_import_provenance"},
+    "final_status": {"$ref": "#/$defs/run_status"},
+    "status_updated_at": {"type": "string", "format": "date-time"},
+    "final_status_evidence_refs": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/non_empty_string"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"final_status": {"const": "completed"}},
+        "required": ["final_status"]
+      },
+      "then": {
+        "required": ["final_status_evidence_refs"],
+        "properties": {
+          "current_blockers": {"maxItems": 0},
+          "final_status_evidence_refs": {"minItems": 1},
+          "node_states": {
+            "additionalProperties": {
+              "required": ["status", "required_for_completion", "result_ref"],
+              "properties": {
+                "status": {"enum": ["completed", "cancelled"]}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {"required_for_completion": {"const": true}},
+                    "required": ["required_for_completion"]
+                  },
+                  "then": {
+                    "properties": {
+                      "status": {"const": "completed"},
+                      "result_ref": {"$ref": "#/$defs/non_empty_string"}
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "non_empty_string": {"type": "string", "minLength": 1},
+    "node_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "ready",
+        "running",
+        "awaiting_human",
+        "awaiting_external",
+        "completed",
+        "failed",
+        "blocked",
+        "cancelled"
+      ]
+    },
+    "run_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "running",
+        "awaiting_human",
+        "awaiting_external",
+        "completed",
+        "failed",
+        "blocked",
+        "cancelled"
+      ]
+    },
+    "run_mode": {
+      "type": "string",
+      "enum": ["execute", "resume", "import_evidence"]
+    },
+    "graph_identity": {
+      "type": "object",
+      "required": ["graph_id", "graph_version", "workflow_kind"],
+      "additionalProperties": false,
+      "properties": {
+        "graph_id": {"$ref": "#/$defs/non_empty_string"},
+        "graph_version": {"type": "integer", "minimum": 1},
+        "workflow_kind": {
+          "type": "string",
+          "enum": [
+            "research_synthesis",
+            "paper_ingestion",
+            "literature_synthesis",
+            "scientific_lifecycle",
+            "workflow_evolution"
+          ]
+        }
+      }
+    },
+    "run_provenance": {
+      "type": "object",
+      "required": ["repo_head", "worktree_status", "captured_at", "workflow_identity"],
+      "additionalProperties": false,
+      "properties": {
+        "repo_head": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[A-Fa-f0-9]{40,64}$"},
+            {"const": "unavailable"}
+          ]
+        },
+        "worktree_status": {"enum": ["clean", "dirty", "unavailable"]},
+        "captured_at": {"type": "string", "format": "date-time"},
+        "workflow_identity": {
+          "type": "object",
+          "required": ["workflow_id", "workflow_version", "workflow_kind"],
+          "additionalProperties": false,
+          "properties": {
+            "workflow_id": {"$ref": "#/$defs/non_empty_string"},
+            "workflow_version": {
+              "oneOf": [
+                {"type": "integer", "minimum": 1},
+                {"$ref": "#/$defs/non_empty_string"}
+              ]
+            },
+            "workflow_kind": {"$ref": "#/$defs/non_empty_string"}
+          }
+        }
+      }
+    },
+    "node_state": {
+      "type": "object",
+      "required": [
+        "node_id",
+        "required_for_completion",
+        "previous_status",
+        "status",
+        "depends_on",
+        "result_ref",
+        "updated_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {"$ref": "#/$defs/non_empty_string"},
+        "required_for_completion": {"type": "boolean"},
+        "previous_status": {
+          "anyOf": [
+            {"$ref": "#/$defs/node_status"},
+            {"type": "null"}
+          ]
+        },
+        "status": {"$ref": "#/$defs/node_status"},
+        "depends_on": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/non_empty_string"}
+        },
+        "result_ref": {
+          "anyOf": [
+            {"$ref": "#/$defs/non_empty_string"},
+            {"type": "null"}
+          ]
+        },
+        "updated_at": {"type": "string", "format": "date-time"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"previous_status": {"const": null}}},
+          "then": {
+            "properties": {
+              "status": {"enum": ["pending", "ready", "blocked", "cancelled"]}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "pending"}}},
+          "then": {
+            "properties": {
+              "status": {"enum": ["pending", "ready", "blocked", "cancelled"]}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "ready"}}},
+          "then": {
+            "properties": {
+              "status": {"enum": ["ready", "running", "blocked", "cancelled"]}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "running"}}},
+          "then": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "running",
+                  "awaiting_human",
+                  "awaiting_external",
+                  "completed",
+                  "failed",
+                  "blocked",
+                  "cancelled"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "awaiting_human"}}},
+          "then": {
+            "properties": {
+              "status": {"enum": ["awaiting_human", "ready", "running", "blocked", "cancelled"]}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "awaiting_external"}}},
+          "then": {
+            "properties": {
+              "status": {
+                "enum": ["awaiting_external", "ready", "running", "failed", "blocked", "cancelled"]
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "completed"}}},
+          "then": {"properties": {"status": {"const": "completed"}}}
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "failed"}}},
+          "then": {"properties": {"status": {"enum": ["failed", "ready", "cancelled"]}}}
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "blocked"}}},
+          "then": {
+            "properties": {"status": {"enum": ["blocked", "ready", "cancelled"]}}
+          }
+        },
+        {
+          "if": {"properties": {"previous_status": {"const": "cancelled"}}},
+          "then": {"properties": {"status": {"const": "cancelled"}}}
+        }
+      ]
+    },
+    "blocker": {
+      "type": "object",
+      "required": ["blocker_id", "node_id", "reason"],
+      "additionalProperties": true,
+      "properties": {
+        "blocker_id": {"$ref": "#/$defs/non_empty_string"},
+        "node_id": {"$ref": "#/$defs/non_empty_string"},
+        "reason": {"$ref": "#/$defs/non_empty_string"}
+      }
+    },
+    "resume_import_provenance": {
+      "type": "object",
+      "required": ["run_mode", "imported_evidence_refs", "source_run_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "run_mode": {"$ref": "#/$defs/run_mode"},
+        "imported_evidence_refs": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/non_empty_string"}
+        },
+        "source_run_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/non_empty_string"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"run_mode": {"const": "execute"}}},
+          "then": {
+            "properties": {
+              "imported_evidence_refs": {"maxItems": 0},
+              "source_run_ids": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"run_mode": {"enum": ["resume", "import_evidence"]}}},
+          "then": {
+            "properties": {
+              "imported_evidence_refs": {"minItems": 1}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

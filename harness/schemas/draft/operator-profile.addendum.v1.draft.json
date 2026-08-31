@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/operator-profile.addendum.v1.draft.json",
+  "title": "Solar Physical Operator Profile Addendum v1 (APO Extension)",
+  "description": "Draft v1 addendum schema extending physical-operators.schema.v2.draft.json operator entries with APO-specific fields: skill_affinity, mcp_capabilities, apo_score_weights. compat_mode: missing/unknown fields → warn (never reject). Matches the missing_field_policy='warn' established in physical-operators.schema.v2.draft.json:9.",
+  "schema_status": "draft",
+  "schema_version": "v1.0.0-draft",
+  "compat_mode": {
+    "missing_field_policy": "warn",
+    "unknown_field_policy": "warn",
+    "missing_field_policy_rationale": "Operator entries that predate this addendum have no APO fields. Loader must warn (emit log event) but continue. Never reject a valid physical-operators.json entry solely because addendum fields are absent.",
+    "legacy_field_preservation": [
+      "skill_affinity",
+      "mcp_capabilities",
+      "apo_score_weights"
+    ]
+  },
+  "type": "object",
+  "required": [],
+  "additionalProperties": true,
+  "description": "Addendum fields mixed into a physical operator entry. All fields are optional — missing fields produce warnings, not errors.",
+  "properties": {
+    "skill_affinity": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Skill name pattern (exact match or glob with '*'). e.g. 'architecture-writing', 'json-schema*'."
+      },
+      "default": [],
+      "description": "List of Skill name patterns this operator handles well. APO boosts this operator's heuristic score when matched skill is in the list."
+    },
+    "mcp_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]*$",
+        "description": "MCP capability token available to this operator."
+      },
+      "default": [],
+      "description": "MCP capability tokens available to this operator (pre-provisioned). APO uses this to filter operators that can satisfy a Skill's mcp_tools list without additional provisioning."
+    },
+    "apo_score_weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "latency_weight": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3,
+          "description": "Weight applied to latency score component. 0=ignore latency, 1=pure latency."
+        },
+        "error_rate_weight": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3,
+          "description": "Weight applied to historical error rate. Higher = penalize high-error operators more."
+        },
+        "quota_headroom_weight": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.2,
+          "description": "Weight for available quota headroom. Operators near quota exhaustion score lower."
+        },
+        "skill_affinity_weight": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.2,
+          "description": "Bonus weight when operator's skill_affinity matches the dispatched skill."
+        }
+      },
+      "description": "Per-dimension heuristic score weights for APO v1 config-driven scoring. Weights are per-operator overrides; APO uses global defaults when absent. Sum of weights need not equal 1.0 — APO normalizes internally."
+    },
+    "apo_excluded": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, APO never selects this operator. Used for maintenance or dedicated non-APO operators."
+    },
+    "apo_preferred_for": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": [],
+      "description": "Task type strings for which this operator is preferred (boosted rank regardless of heuristic score)."
+    },
+    "apo_avoid_for": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": [],
+      "description": "Task type strings for which this operator should be avoided (demoted rank)."
+    }
+  },
+  "$defs": {
+    "compat_warning_note": {
+      "description": "When a loader reads an operator entry and any addendum field is absent: emit a WARNING log event (do not raise an error, do not reject the entry). When an unknown addendum field is encountered: emit a WARNING and preserve the field via additionalProperties=true. This policy is inherited from physical-operators.schema.v2.draft.json compat_mode.missing_field_policy='warn'."
+    }
+  }
+}

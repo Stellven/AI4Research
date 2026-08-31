@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/draft/execution-capsule.v1.draft.json",
+  "title": "Solar Execution Capsule v1 (Deprecated Alias)",
+  "description": "Deprecated compatibility alias for Capability Capsule. Runtime loader accepts legacy execution_capsule_id payloads and normalizes them to capability_capsule_id for one migration cycle. New manifests and new runtime writes must use schemas/draft/capability-capsule.v1.draft.json and capability_capsule_id.",
+  "type": "object",
+  "required": ["execution_capsule_id"],
+  "additionalProperties": true,
+  "properties": {
+    "execution_capsule_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Legacy identifier accepted only for compatibility. Runtime normalization maps it to capability_capsule_id."
+    },
+    "skill_id": {
+      "type": "string"
+    },
+    "skill_version": {
+      "type": "string"
+    },
+    "mcp_bindings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "policy_guard": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "verification_rules": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

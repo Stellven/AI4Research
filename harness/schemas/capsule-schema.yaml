@@ -1,0 +1,45 @@
+# State Capsule Schema v1
+# RecursiveMAS 论文 latent-state transfer 工程化映射
+# plan / handoff / eval 共享同一结构 (字段语义不同)
+
+goal:
+  type: string
+  required: true
+  description: "当前 sprint 一句话目标"
+
+facts_established:
+  type: list[string]
+  required: true
+  description: "已确认的事实、假设、前提"
+
+changes_made:
+  type: list[string]
+  required: true
+  description: "已做出的变更 (handoff 时填, plan 时可为空)"
+
+risks:
+  type: list[string]
+  required: true
+  description: "已识别的风险、边界条件、不确定项"
+
+open_questions:
+  type: list[string]
+  required: true
+  description: "未解决问题、待确认项"
+
+required_next_action:
+  type: string
+  required: true
+  description: "下一步必须做什么 (具体到命令/文件/验证)"
+
+recursion_round:
+  type: int
+  required: true
+  min: 0
+  description: "当前递归轮次 (>= 0)"
+
+topology:
+  type: enum
+  required: true
+  values: [standard, deliberation, research, mixture]
+  description: "当前执行拓扑"

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/task-classification.v1.json",
+  "title": "APO Task Classification Artifact v1",
+  "description": "Stable schema for the task_classification section of an APO planning artifact. Emitted by compile_execution_plan_for_node() after the goal-driven classifier runs.",
+  "schema_status": "stable",
+  "schema_version": "v1.0.0",
+  "type": "object",
+  "required": ["selected_classes", "confidence", "signals_detected", "rejected_classes"],
+  "additionalProperties": false,
+  "properties": {
+    "selected_classes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "PERFORMANCE_REGRESSION",
+          "PERFORMANCE_KERNEL_DEBUG",
+          "SOFT_HW_OPT",
+          "CODE_IMPL_REQUIRED",
+          "FAST_PROTOTYPE"
+        ]
+      },
+      "description": "Ordered list of selected task classes (highest score first)."
+    },
+    "primary_class": {
+      "type": "string",
+      "enum": [
+        "PERFORMANCE_REGRESSION",
+        "PERFORMANCE_KERNEL_DEBUG",
+        "SOFT_HW_OPT",
+        "CODE_IMPL_REQUIRED",
+        "FAST_PROTOTYPE"
+      ],
+      "description": "The single highest-scoring task class. Used as the key for workflow template selection."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Confidence level based on total signal score vs. thresholds in task-taxonomy.json."
+    },
+    "signal_score": {
+      "type": "number",
+      "description": "Raw numeric signal score that determined the classification."
+    },
+    "signals_detected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["signal", "weight", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "signal": {
+            "type": "string",
+            "description": "The matched signal token (e.g. 'flashmlx', 'gather_qmm')."
+          },
+          "weight": {
+            "type": "integer",
+            "enum": [-3, 1, 2],
+            "description": "Signal weight: 2=primary, 1=secondary, -3=negative."
+          },
+          "source": {
+            "type": "string",
+            "enum": ["goal_text", "node_description", "context_hints"],
+            "description": "Where in the input the signal was found."
+          }
+        }
+      },
+      "description": "All signals that contributed to the classification score."
+    },
+    "rejected_classes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["class_id", "score", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "class_id": {
+            "type": "string",
+            "enum": [
+              "PERFORMANCE_REGRESSION",
+              "PERFORMANCE_KERNEL_DEBUG",
+              "SOFT_HW_OPT",
+              "CODE_IMPL_REQUIRED",
+              "FAST_PROTOTYPE"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "description": "Score this class received. Lower than selected_class score."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why this class was rejected (e.g. 'below_min_signal_score', 'negative_signal_override', 'outscored_by_primary')."
+          }
+        }
+      },
+      "description": "Classes that were considered but not selected. Required for explainability."
+    },
+    "classifier_version": {
+      "type": "string",
+      "description": "Version of the classifier that produced this output. Helps debugging regressions.",
+      "default": "v1"
+    }
+  }
+}
