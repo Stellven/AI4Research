@@ -2,9 +2,13 @@
 
 项目是本地优先的多智能体研究执行框架。默认链路是 GUI/CLI → LLM Intent Compiler → LLM Requirement Compiler → Elastic Planner → 冻结执行合同 → 确定性 Scheduler/Dispatcher → 研究算子 → 报告。不能退回按关键词分流或自由文本临时图。
 
-代码分支必须保持 codex/safety-before-intent-rollback-20260828。最后产品代码 commit 是 f463b861bf47bddff46cc2ce3de151dcd8d78992，迁移包的目标 HEAD 还包含之后的交接文档 commit，以随包 transfer-manifest.json 为准。GitHub 仓库为 https://github.com/Coconut-ch1ken/OpenSolar.git；2026-08-31 核对该分支远端只有 4ca349bcecf4517fa4c98fdf3bcb6f823fc6c553，不能假定 clone 后已经有最新修复。
+代码分支必须保持 codex/safety-before-intent-rollback-20260828。从 https://github.com/Coconut-ch1ken/OpenSolar.git 的这个分支获取完整代码，不能使用默认分支。最后产品代码 commit 是 f463b861bf47bddff46cc2ce3de151dcd8d78992；此前完整交接 commit 是 cae374a593e5fe59c381372e71cfd55b07113378。本次 GitHub 发布还包含更新后的迁移说明，确切发布 commit 以 migration-20260831 tag 和附件 transfer-manifest.json 的 target_commit 为准。
 
-如果提供了 OpenSolar-final-migration-20260831.bundle，它是增量包，不是可单独 clone 的完整仓库。先核验 manifest 的 SHA-256、基线和目标 commit。在用户确认的新空目录 clone 指定 GitHub 分支，确认基线对象存在，再运行 git bundle verify。报告导入方案并获得用户允许，才从 bundle 导入并将这个新 checkout 快进至 manifest 目标；不得覆盖/重置已有 checkout、改分支或强推。如果该分支后来已被授权推送，直接核对其目标 commit 和 ancestry。不要复制旧 venv、node_modules、个人配置或凭据。
+首选直接 clone：在用户确认的新空目录运行 git clone --branch codex/safety-before-intent-rollback-20260828 --single-branch https://github.com/Coconut-ch1ken/OpenSolar.git <新源码目录>。核对 git branch --show-current、git rev-parse HEAD，并确认包含上述产品与交接 commit。用 git ls-remote origin refs/tags/migration-20260831 对照发布 tag 与 manifest；HEAD 必须等于发布 commit 或是经审阅的后续提交，不能仅凭分支名字相同就认为版本正确。已有 checkout 则先报告差异并获得允许，不得 reset、覆盖或擅自切分支。
+
+GitHub 发布页：https://github.com/Coconut-ch1ken/OpenSolar/releases/tag/migration-20260831
+迁移 ZIP：https://github.com/Coconut-ch1ken/OpenSolar/releases/download/migration-20260831/OpenSolar-migration-20260831.zip
+ZIP 是可选备份交接包，不是运行时安装包。直接 clone 正确的已发布分支后，不需要再导入 bundle。ZIP 内的 OpenSolar-final-migration-20260831.bundle 仍是增量包，不能独立 clone；仅在获准离线导入时使用，先验证 SHA-256、git bundle verify 和基线 4ca349bcecf4517fa4c98fdf3bcb6f823fc6c553，再申请对既有 checkout 的更新授权。不要复制旧 venv、node_modules、个人配置或凭据。
 
 拿到完整目标代码后，按顺序阅读：
 1. AGENTS.md、README.md。

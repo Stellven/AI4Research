@@ -56,12 +56,14 @@ Intent 首轮通过。Requirement 使用共享合同 v2，首轮因过程要求�
 
 ## 5. GitHub 与传输
 
-2026-08-31 只读 ls-remote 核对：
+发布前的 2026-08-31 只读 ls-remote 检查（以下旧 tip 不代表发布后的当前状态）：
 
 - origin：https://github.com/Coconut-ch1ken/OpenSolar.git，迁移分支远端 tip 为 `4ca349bcecf4517fa4c98fdf3bcb6f823fc6c553`。
 - stellven：https://github.com/Stellven/AI4Research.git，未发现同名迁移分支。
-- 远端 tip 是当前 HEAD 的祖先；最后产品代码比该 tip 多 11 commits，另加本轮迁移文档 commit。当前 turn 没有 push、fetch、merge、reset 或切分支。
+- 远端 tip 是当前 HEAD 的祖先；最后产品代码比该 tip 多 11 commits，另加迁移文档。用户随后明确授权推送此迁移分支、上传 ZIP Release 附件并更新 prompt；不涉及 openJiuwen-Solar 或其他发布分支。
 
-因此直接 clone 远端旧 tip **不会得到最新修复**。准备的增量 Git bundle 只包含远端基线之后的提交；必须结合 GitHub 仓库使用，不能单独 clone 成完整仓库。transfer-manifest.json 记录该 bundle 的基线、目标 commit、SHA-256 和导入边界。先克隆上述迁移分支，核验基线，再取得用户允许才将新 checkout 快进到 bundle 的目标；现有 checkout 不得 reset/覆盖。若改用 GitHub 直接传输，先获得明确 push 授权并核验远端 tip，上传同一迁移分支；不得改推其他发布分支。
+GitHub 迁移入口为 https://github.com/Coconut-ch1ken/OpenSolar/releases/tag/migration-20260831 ，ZIP 附件为 https://github.com/Coconut-ch1ken/OpenSolar/releases/download/migration-20260831/OpenSolar-migration-20260831.zip 。发布标记为 prerelease 且不设为 Latest：这是开发状态快照，最后 E2E 仍为 FAIL，不能当作稳定产品版本。
+
+新机器首选直接 clone 指定迁移分支，核对发布 tag/manifest 的目标 commit 及已测产品 commit。发布后 clone 正确版本即可取得完整源码和最新 prompt，无需额外导入 bundle。ZIP 是可选备用交接包，包含本次目标 commit 的增量 bundle、manifest、prompt 和说明；它需要 GitHub 基线，不能独立 clone。新的 ZIP 不覆盖旧本地备份。传输成功与否以实际远端 ref、公开 Release 及下载哈希核验为准，而非文档中预先列出的 URL。
 
 本地源仓库有无关 untracked 文件和旧临时 Git objects，均保留未删除；它们不是迁移依赖。增量 bundle 不含这些文件、旧 venv、session、备份和凭据。源码代码与审计摘要可迁移，运行历史若需要应另行私下授权转移。
