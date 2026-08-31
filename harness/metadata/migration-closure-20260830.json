@@ -10,7 +10,7 @@
     },
     {
       "path": "schemas/planning/plan-ir.semantic.structured.v2.schema.json",
-      "sha256_lf": "8e85a9ec26804cf10f63b495722099dd1d758575f76e92178af555ed4f2f355f"
+      "sha256_lf": "48b6585a9c4f28648fef06f4ed77b902950d4d719582789320da82d004a3e27d"
     },
     {
       "path": "schemas/compiler/requirement-semantics.v1.schema.json",
@@ -586,7 +586,7 @@
     },
     {
       "path": "schemas/planning/planning-catalog-snapshot.v1.schema.json",
-      "sha256_lf": "0acb69a5f81fc365e14b1191df52add60a5a4ef782364bc0149aa7381eda2493"
+      "sha256_lf": "7c0ec4d0fd1635a499b4bc58af8df14220327f3d0be7ae43771463050ca961fb"
     },
     {
       "path": "schemas/planning/planning-context.v1.schema.json",
@@ -610,7 +610,7 @@
     },
     {
       "path": "schemas/planning/scheduler-input.v1.schema.json",
-      "sha256_lf": "1a0edcf76476e4fdf537ede0975363915941ac35f3947709b8372235058cda86"
+      "sha256_lf": "203678250f1e49c9917d79e688e08bdaa6ccf0fc33bd11619687bb54521a0e9d"
     },
     {
       "path": "schemas/plugin.schema.json",

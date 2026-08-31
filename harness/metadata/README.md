@@ -9,6 +9,38 @@ LLM Requirement compilation and review using a shared program-owned contract,
 Elastic Planner, frozen SchedulerInput, Scheduler and operators. Current repair
 and E2E limitations are recorded in pre-scheduler-stabilization-log-20260829.md.
 
+### Capability contract handoff — 2026-08-31
+
+`lib/capability_admission.py` defines static availability for Planner presentation,
+direct binding and composition/conversion filtering. Registered but unavailable
+entries remain visible with reasons; declarations are not evidence of successful
+execution. Full capability contracts and static physical-operator facts are
+read-only model inputs, not writable Planner output fields.
+
+Generated DAGs receive composition/semantic-fit feedback within the existing
+single DAG-repair budget. An accepted selection is reused and revalidated before
+freeze. Requirements and their ordering/permissions cannot be weakened to obtain
+a candidate. Scheduler and Dispatcher never redesign the DAG or call a model to
+choose a capability.
+
+The catalog schema `schemas/planning/planning-catalog-snapshot.v1.schema.json`
+now carries `execution_definitions`. Each new SchedulerInput node embeds its
+hash-bound `execution_authority` under
+`schemas/planning/scheduler-input.v1.schema.json`; `lib/execution_authority.py`
+checks projection, envelope, frozen definitions and live revocation/drift gates.
+Historical immutable inputs without this field remain readable; no old run is
+silently upgraded or resumed.
+
+Resource minima originate in
+`schemas/planning/plan-ir.semantic.structured.v2.schema.json`, propagate to
+SchedulerInput, and are checked by `lib/execution_resources.py` before selection
+and submit. Unknown hard capacity blocks; no model context sizes are invented.
+Local CPU/RAM/GPU checks are point-in-time preflight, not resource reservations;
+remote requirements need remote capacity declarations rather than local probes.
+Regression evidence: `tests/test_capability_contract_authority.py`; live E2E
+outcomes and limitations belong in the stabilization log, not this architecture
+description.
+
 The numbered artifacts below are design/reference examples, NOT proof that every
 described stage is emitted or enforced in the running product. In particular,
 RequirementIR v2 uses a template-based format evaluator; do not substitute the

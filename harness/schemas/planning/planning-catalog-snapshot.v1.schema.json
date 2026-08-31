@@ -24,6 +24,8 @@
           "consumes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
           "produces": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
           "contract": {"type": "object"},
+          "bindings": {"type": "object"},
+          "composition_constraints": {"type": "object"},
           "effects": {"type": "object"},
           "verification": {"type": "object"},
           "implementation": {
@@ -43,6 +45,7 @@
       }
     },
     "registries": {"type": "object"},
+    "execution_definitions": {"type": "object", "required": ["capsules", "operators"], "properties": {"capsules": {"type": "object"}, "operators": {"type": "object"}}, "additionalProperties": false},
     "enabled_physical_operator_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "catalog_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
   }

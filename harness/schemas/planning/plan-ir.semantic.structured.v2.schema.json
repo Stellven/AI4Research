@@ -81,8 +81,12 @@
         },
         "minimum_context_tokens": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Hard lower bound on the execution model context capacity, not a quality score or estimated token use. Use 0 when the task imposes no hard minimum. Unknown operator capacity cannot satisfy a positive minimum."
         },
+        "cpu_cores_min": {"type": "number", "minimum": 0},
+        "memory_mb_min": {"type": "integer", "minimum": 0},
+        "gpu_required": {"type": "boolean"},
         "effects": {
           "type": "array",
           "items": {

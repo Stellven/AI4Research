@@ -425,6 +425,17 @@
           "type": "object",
           "additionalProperties": true
         },
+        "execution_authority": {
+          "type": "object",
+          "required": ["schema_version", "capsules", "operators", "sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {"const": "solar.node_execution_authority.v1"},
+            "capsules": {"type": "object"},
+            "operators": {"type": "object"},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          }
+        },
         "resource_requirements": {
           "type": "object",
           "additionalProperties": false,
@@ -435,6 +446,7 @@
             "network"
           ],
           "properties": {
+            "minimum_context_tokens": {"type": "integer", "minimum": 0},
             "cpu_cores_min": {
               "type": "number",
               "minimum": 0
