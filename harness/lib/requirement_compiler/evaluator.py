@@ -74,7 +74,13 @@ def evaluate_requirement_ir_format(
     template_path: Path = DEFAULT_TEMPLATE_PATH,
 ) -> dict[str, Any]:
     template = json.loads(template_path.read_text(encoding="utf-8"))
-    defects = _shape_defects(template, requirement_ir)
+    # v2's additive semantic contract has its own strict versioned schema.
+    legacy_shape = {key: value for key, value in requirement_ir.items() if key != "semantic_contract"}
+    defects = _shape_defects(template, legacy_shape)
+    if "semantic_contract" in requirement_ir:
+        from .semantic import semantic_defects
+        defects.extend({"path": "$.semantic_contract", "code": "SEMANTIC_CONTRACT_INVALID", "detail": message}
+                       for message in semantic_defects(requirement_ir, intent_ir))
 
     schema_version = requirement_ir.get("schema_version")
     if not isinstance(schema_version, str) or not schema_version.strip():

@@ -291,6 +291,7 @@ def _runtime_node(node: dict[str, Any], artifact_paths: dict[str, str] | None = 
     return {
         "id": node["id"],
         "goal": node["goal"],
+        **({"retrieval_contract": deepcopy(node["retrieval_contract"])} if node.get("retrieval_contract") else {}),
         "logical_operator": node["logical_operator"],
         "dispatch_task_type": node["dispatch_task_type"],
         "task_type": node["dispatch_task_type"],

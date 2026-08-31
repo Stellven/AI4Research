@@ -1739,6 +1739,13 @@ def _discover_requested_coverage_audit(
     raw: dict[str, Any],
     candidates: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    retrieval = (envelope.get("inputs") or {}).get("retrieval_contract")
+    if retrieval:
+        # The structured producer audit owns selection and coverage. Objective
+        # prose is not a second source of search semantics.
+        audit = raw.get("relevance_gate") or {}
+        return {"declared_scope": False, "coverage_ready": audit.get("status") == "passed",
+                "retrieval_contract_id": retrieval["contract_id"], "structured_audit": audit}
     scope = _discover_declared_scope(envelope, raw)
     topic_entries = []
     missing_topics: list[str] = []
@@ -1787,6 +1794,10 @@ def _discover_final_shortlist_boundary(
     ranking_audit = _discover_ranking_audit(candidates)
     coverage_audit = _discover_requested_coverage_audit(envelope, raw, candidates)
     blocking_reasons: list[str] = []
+    if (envelope.get("inputs") or {}).get("retrieval_contract"):
+        audit = raw.get("relevance_gate") or {}
+        if audit.get("status") != "passed":
+            blocking_reasons.extend(audit.get("blocking_reasons") or ["structured retrieval audit missing"])
     if not candidates:
         blocking_reasons.append("discovery shortlist is empty")
     if not provider_channels:
@@ -1843,6 +1854,8 @@ def _attach_discover_final_shortlist_boundary(
             *list(raw.get("limitations") or []),
             *list(final_boundary.get("limitations") or []),
         ]
+        if (envelope.get("inputs") or {}).get("retrieval_contract"):
+            raise ValueError("DISCOVERY_HANDOFF_REJECTED: " + "; ".join(final_boundary["blocking_reasons"]))
     return raw
 
 
@@ -7221,6 +7234,19 @@ def _production_discovery_artifacts(result: dict[str, Any], workspace_root: Path
 def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path, allow_network_fetch: bool) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     output_dir = _output_dir(envelope, "discover_literature")
+    if inputs.get("retrieval_contract"):
+        if not allow_network_fetch:
+            raise ValueError("Structured source discovery requires authorized network access")
+        retrieval = inputs["retrieval_contract"]
+        service_workspace = output_dir / "structured-discovery"
+        service = production_services_from_environment(workspace_root=service_workspace)["discover_sources"]
+        result = service(seed_snapshot={"seeds": []}, payload={"task_contract": {"retrieval_contract": retrieval}})
+        # Never truncate a shortlist after its required coverage was checked.
+        candidates = _production_discovery_candidates(result, limit=max(len(result.get("candidates", [])), retrieval["minimum_candidates"]))
+        return {"status": result["status"], "mode": "structured_retrieval", "query": retrieval["subject"],
+                "limit": service.limit, "candidates": candidates, "relevance_gate": result["relevance_gate"],
+                "artifacts": _production_discovery_artifacts(result, service_workspace),
+                "limitations": result.get("limitations", [])}
     mode, args = _discover_native_command(inputs, wiki_root, allow_network_fetch)
     checkpoint_path = output_dir / "discover_native_checkpoint.json"
     args.extend(["--output-checkpoint", str(checkpoint_path)])
@@ -7536,6 +7562,20 @@ def _discovery_study_protocol(
     candidates: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Record the discovery policy actually used without inventing missing scope."""
+
+    retrieval = inputs.get("retrieval_contract")
+    if retrieval:
+        bounds = retrieval["time_range"]
+        resolved = bounds["start_year"] is not None and bounds["end_year"] is not None
+        return {"protocol_status": "resolved" if resolved else "partially_resolved",
+                "search_strategy": "Execute accepted queries: " + "; ".join(retrieval["search_queries"]),
+                "source_selection_criteria": [json.dumps(row, ensure_ascii=False) for row in retrieval["inclusion_criteria"]],
+                "inclusion_criteria": [json.dumps(row, ensure_ascii=False) for row in retrieval["inclusion_criteria"]],
+                "exclusion_criteria": [json.dumps(row, ensure_ascii=False) for row in retrieval["exclusion_criteria"]],
+                "time_range": {"status": "resolved" if resolved else "unresolved", "start": str(bounds["start_year"]) if bounds["start_year"] else None,
+                               "end": str(bounds["end_year"]) if bounds["end_year"] else None,
+                               "rationale": "Use only supplied bounds; unspecified dates remain unresolved."},
+                "unresolved_fields": [] if resolved else ["time_range"]}
 
     source_channels = sorted({
         str(channel).strip()

@@ -247,6 +247,180 @@
           "type": "object",
           "additionalProperties": true
         },
+        "retrieval_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "contract_id",
+            "subject",
+            "search_queries",
+            "source_refs",
+            "inclusion_criteria",
+            "exclusion_criteria",
+            "coverage",
+            "time_range",
+            "minimum_candidates"
+          ],
+          "properties": {
+            "contract_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1
+            },
+            "search_queries": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1,
+              "maxItems": 8
+            },
+            "source_refs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "inclusion_criteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "field",
+                  "any_of",
+                  "source_refs"
+                ],
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "title_abstract",
+                      "publication_type"
+                    ]
+                  },
+                  "any_of": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "source_refs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  }
+                }
+              }
+            },
+            "exclusion_criteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "field",
+                  "any_of",
+                  "source_refs"
+                ],
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "title_abstract",
+                      "publication_type"
+                    ]
+                  },
+                  "any_of": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "source_refs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  }
+                }
+              }
+            },
+            "coverage": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "label",
+                  "any_of",
+                  "required"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "any_of": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "required": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "time_range": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "start_year",
+                "end_year"
+              ],
+              "properties": {
+                "start_year": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1000,
+                  "maximum": 9999
+                },
+                "end_year": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1000,
+                  "maximum": 9999
+                }
+              }
+            },
+            "minimum_candidates": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
         "evaluation_policy": {
           "type": "object",
           "additionalProperties": true

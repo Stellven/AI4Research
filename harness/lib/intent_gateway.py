@@ -926,20 +926,20 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
 
 
 def compile_and_evaluate_requirement_bundle(
-    intent_ir: dict[str, Any], intent_acceptance: dict[str, Any]
+    intent_ir: dict[str, Any], intent_acceptance: dict[str, Any],
+    *, work_dir: Path, model: Any = None, reviewer: Any = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Compile an admitted IntentIR and run the independent deterministic gate."""
     from intent_compiler import requirement_handoff
-    from requirement_compiler import (
-        compile_requirement_ir,
-        evaluate_requirement_ir_format,
-    )
+    from requirement_compiler import evaluate_requirement_ir_format
+    from requirement_compiler.semantic import compile_semantic_requirement_ir
 
     handoff = requirement_handoff(intent_ir, intent_acceptance)
     intent_digest = handoff["intent_ir_sha256"]
-    requirement_ir = compile_requirement_ir(
+    requirement_ir = compile_semantic_requirement_ir(
         intent_ir,
         intent_ir_sha256=intent_digest,
+        work_dir=work_dir, model=model, reviewer=reviewer,
     )
     evaluation = evaluate_requirement_ir_format(
         requirement_ir,
@@ -1106,6 +1106,7 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         requirement_ir, requirement_evaluation = compile_and_evaluate_requirement_bundle(
             accepted_intent,
             acceptance,
+            work_dir=base / "requirement",
         )
         requirement_ir_path = base / "requirement_ir.json"
         requirement_evaluation_path = base / "requirement_format_evaluation.json"

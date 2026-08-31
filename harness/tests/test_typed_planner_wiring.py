@@ -44,6 +44,77 @@ def test_elastic_planner_validates_without_optional_referencing(tmp_path):
     assert planner._schema_errors({"value": 7}, schema)
 
 
+def test_discovery_scope_preservation_does_not_duplicate_report_owned_requirement():
+    planner = _load("typed_elastic_planner_scope_ownership", LIB / "elastic_planner.py")
+    requirement_ir = {
+        "requirements": [
+            {
+                "requirement_id": "R2",
+                "statement": "Cover every requested method family.",
+                "acceptance": {"kind": "coverage", "required_values": ["all families"]},
+                "check": "check.intent_constraint_coverage.v1",
+            },
+            {
+                "requirement_id": "R5",
+                "statement": "The report must provide an auditable evidence chain.",
+                "acceptance": {"kind": "coverage", "required_values": ["auditable"]},
+                "check": "check.intent_constraint_coverage.v1",
+            },
+        ]
+    }
+    body = {
+        "nodes": [
+            {
+                "node_id": "discover",
+                "logical_operator": "ScientificLiteratureDiscoverer",
+                "objective": "Discover evidence.",
+                "requirement_ids": [],
+                "operator_requirements": {"capabilities": ["source_discovery"]},
+                "produces": [{"verifier_ids": []}],
+            },
+            {
+                "node_id": "report",
+                "logical_operator": "ScientificReportDrafter",
+                "objective": "Write the report.",
+                "requirement_ids": ["R5"],
+                "operator_requirements": {"capabilities": ["research_synthesis"]},
+                "produces": [{"verifier_ids": []}],
+            },
+        ]
+    }
+
+    # Superseded behavior injected a report requirement into discovery prose.
+    # No semantic postprocessor may rewrite the model's objective/ownership.
+    assert not hasattr(planner, "_preserve_discovery_requirement_scope")
+    assert "_preserve_discovery_requirement_scope" not in inspect.getsource(planner.compile_plan_candidate)
+    assert body["nodes"][0]["objective"] == "Discover evidence."
+
+
+def test_planner_and_fidelity_prompts_keep_protocol_resolution_downstream():
+    planner = _load("typed_elastic_planner_protocol_ownership", LIB / "elastic_planner.py")
+    plan_payload = json.loads(
+        planner._plan_prompt(
+            {"requirements": []},
+            {"decision": "generate"},
+            {"logical_operators": [], "capsules": []},
+            {},
+            {"checks": []},
+            generation=0,
+        )
+    )
+    fidelity_payload = json.loads(
+        planner._fidelity_prompt(
+            {"requirements": []},
+            {"decision": "generate"},
+            {"nodes": []},
+            {},
+        )
+    )
+
+    assert "resolution requirements, not discovery-scope requirements" in plan_payload["instruction"]
+    assert "output is only a source shortlist" in fidelity_payload["instruction"]
+
+
 def test_plan_repair_may_add_fidelity_required_requirement_ownership():
     planner = _load("typed_elastic_planner_repair_ownership", LIB / "elastic_planner.py")
     previous = {
@@ -209,7 +280,7 @@ def test_formal_gateway_never_calls_deterministic_semantic_router(tmp_path, monk
     monkeypatch.setattr(
         gateway,
         "compile_and_evaluate_requirement_bundle",
-        lambda *_args: (
+        lambda *_args, **_kwargs: (
             {
                 "schema_version": "solar.requirement_ir.v2",
                 "requirement_ir_id": "requirement-ir-typed-test",

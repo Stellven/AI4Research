@@ -13,8 +13,9 @@ OpenSolar（界面名称 AI4Research）是本地优先的多智能体任务执�
 论断评估、报告规划与报告撰写，而不是只生成一次聊天回答。
 
 目标设计是：**LLM 解释语义，确定性代码校验结构、维护引用、冻结合同和调度。**
-目前还没有完全实现这个设计：Intent Compiler / Elastic Planner 是 LLM-based；
-当前 Requirement Compiler 仍是确定性模板编译器，且存在下文所列语义缺陷。
+Intent Compiler、默认 Requirement Compiler 和 Elastic Planner 均为 LLM-based。
+2026-08-30 的后续修复新增结构化检索合同，离线验证与在线验收状态以问题日志为准。
+Requirement 的旧确定性编译器仅供显式 legacy 调用，不是默认 intake 的回退路径。
 项目是受控试用系统，不是多租户云服务，也没有通过所有平台/工具的完整验收。
 
 旧机器的唯一 runtime 和 backend 在
@@ -35,7 +36,7 @@ OpenSolar（界面名称 AI4Research）是本地优先的多智能体任务执�
 | --- | --- | --- |
 | GUI / CLI intake | `harness/lib/symphony/status-server.py`；`harness/solar-harness.sh` | 用户请求、附件引用 → intent request；返回 session/intake 状态 |
 | Intent Compiler | `harness/lib/intent_gateway.py` → `intent_compiler.run_pipeline` | 标准化 input → IntentIR、validation、独立 fidelity、acceptance；失败/澄清时禁止继续 |
-| Requirement Compiler | `harness/lib/requirement_compiler/compiler.py`，`evaluator.py` | 已接受 IntentIR → RequirementIR v2 + format evaluation；当前为确定性编译 |
+| Requirement Compiler | `harness/lib/requirement_compiler/semantic.py`，`evaluator.py` | 已接受 IntentIR → LLM requirements/roles/retrieval + 独立语义审查 + 结构/来源验证；最多一次 bounded repair |
 | Planner 入口 | `harness/lib/intent_consumer.py` → `harness/tools/elastic_planner_adapter.py` | 已接受 RequirementIR → semantic/execution bundle；adapter 本身不写生命周期状态 |
 | Elastic Planner | `harness/lib/elastic_planner.py::run_elastic_planning_request` | LLM decision、PlanIR、fidelity 与绑定审查；确定性 validation/acceptance；最多限定次数修复 |
 | 执行合同编译 | `elastic_planner.compile_and_freeze_execution_bundle` | accepted semantic plan → capsule/physical/evaluation plans、SchedulerInput、frozen run contract |
@@ -63,7 +64,7 @@ Rapid smoke 通过可信环境 `SOLAR_TEST_MODE=rapid_smoke` 注入冻结 test_p
 [Intent](../schemas/compiler/)、
 [Planner/Scheduler](../schemas/planning/)、
 [Scientific Evidence ABI](../schemas/evidence/)。
-完整 165 文件哈希清单见
+完整 schema 文件哈希清单见
 [migration-closure-20260830.json](migration-closure-20260830.json)。
 
 **并非每一步都有独立 JSON Schema。** 下表明确区分 JSON Schema、模板和代码校验；
@@ -74,7 +75,8 @@ Rapid smoke 通过可信环境 `SOLAR_TEST_MODE=rapid_smoke` 注入冻结 test_p
 | 原始请求 / input.json | `harness/lib/intent_compiler.py::normalize_input`；`harness/metadata/1-input normalizer output/` | 代码规范化 + 设计示例；不是独立 JSON Schema |
 | intent_ir.json | `harness/schemas/compiler/intent-ir.v3.schema.json`；模型 body 为 `intent-ir.semantic.v1.schema.json` | JSON Schema + 来源/引用校验 |
 | Intent validation/fidelity/acceptance | 同目录 `intent-validation.v1.schema.json`、`intent-fidelity.review.v1.schema.json`、`intent-fidelity.v1.schema.json`、`intent-acceptance.v1.schema.json` | 独立结构、语义和准入合同 |
-| requirement_ir.json v2 | `harness/metadata/3-requirements compiler output/requirement_ir/requirement_ir.json`；`harness/lib/requirement_compiler/evaluator.py::evaluate_requirement_ir_format` | 当前是模板形状/引用校验，**未发现独立正式 v2 JSON Schema**；`harness/schemas/requirement-ir.schema.json` 是不同的旧合同 |
+| requirement_ir.json v2 | `harness/metadata/3-requirements compiler output/requirement_ir/requirement_ir.json`；`harness/schemas/compiler/requirement-semantics.v1.schema.json`；`evaluator.py` | 原 envelope 模板 + 新增 versioned semantic_contract；LLM body 由 JSON Schema 校验，原约束 AST 精确保留 |
+| 检索合同 / Requirement review | `harness/schemas/compiler/retrieval-contract.v1.schema.json`、`requirement-semantic-review.v1.schema.json` | Planner 用 retrieval_contract_ref 引用；Scheduler 冻结合同；Discovery 不从 objective 猜主题 |
 | requirement_format_evaluation.json | `harness/lib/requirement_compiler/evaluator.py` | 代码定义输出；metadata 的 requirement_validation/coverage 不能视为当前全部已执行 |
 | planning_context / catalog / decision | `harness/schemas/planning/planning-context.v1.schema.json`、`planning-catalog-snapshot.v1.schema.json`、`planning-decision.v1.schema.json` | 决策模型 body 用 `planning-decision.semantic.v1.schema.json` |
 | plan_ir / validation / fidelity / binding / acceptance | 同目录 `plan-ir.v2.schema.json`、`plan-validation.v2.schema.json`、`plan-fidelity.v1.schema.json`、`binding-trace.v2.schema.json`、`plan-acceptance.v1.schema.json` | 模型语义 body 与机械 envelope 分开；见同目录 semantic/review schemas |
@@ -100,12 +102,14 @@ dispatch acknowledgement、旧 session 复活、schema 导入兼容、artifact r
 study_protocol 传递、report-plan schema 身份以及报告标题解析。
 按记录中的 commit 与当次测试判断，不要把后来的已修复问题继续当成当前阻塞。
 
-**仍未解决的主要问题：**
+**最新语义修复（最终无干预 E2E 结果见问题日志）：**
 
-- Requirement Compiler 丢失 constraint 类别和否定语义；
-- Planner 后处理将流程约束追加成 Discovery 主题覆盖要求；
-- 有相关候选却被错误覆盖条件清空；rapid discovery 交接未阻止空结果；
-- ingestion 因 `Discovery evidence contains no candidates` 失败。
+- 默认 Requirement Compiler 已改为 LLM，原 constraint 类别/表达式单独保留并核对；
+- 删除 Planner 的语义后处理；语义合同路径不再按 reviewer 错误文本过滤缺陷；
+- Discovery 使用结构化查询/纳入/排除/时间与覆盖条件；流程和交付要求不参与关键词推断；
+- 结构化 Discovery 缺少必要候选或 audit 时在 producer 交接处失败，rapid 不豁免。
+
+设计与兼容边界：[semantic-retrieval-contract.md](semantic-retrieval-contract.md)。
 
 原始 Planner 的 R2/R3 归属不等于后处理修改后的 objective。不要归因成笼统的
 “LLM 智能不稳定”，也不要靠补 stopwords 来隐藏问题。

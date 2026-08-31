@@ -139,7 +139,11 @@ schema helper. They do not establish scientific quality, provider connectivity,
 scheduler completeness or final E2E acceptance. The old backend stayed stopped,
 so /api/sprints and new-host installation were not re-tested in this change.
 
-## Open defect: do not replace semantics with phrasing heuristics
+## Historical defect and follow-up: do not replace semantics with phrasing heuristics
+
+The diagnosis below describes the pre-repair run. The later user-authorized
+semantic-contract repair is documented in [semantic-retrieval-contract.md](semantic-retrieval-contract.md)
+and the stabilization log. Do not infer a new unattended E2E PASS from this historical section.
 
 Last unattended run:
 `sprint-20260830-194438-intent-conduct-a-systematic-study-o-e7736e72`.

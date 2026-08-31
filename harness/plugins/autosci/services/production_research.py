@@ -1518,8 +1518,12 @@ class LiteratureDiscoveryService:
         self._attempts.clear()
         self._attempt_paths.clear()
         task_contract = payload.get("task_contract") if isinstance(payload.get("task_contract"), dict) else {}
+        retrieval = task_contract.get("retrieval_contract")
+        if retrieval is not None:
+            from .retrieval_contract import validate_contract
+            validate_contract(retrieval)
         full_query = str(task_contract.get("user_intent") or payload.get("topic") or "").strip()
-        query = _topic_from_snapshot(seed_snapshot, payload)
+        query = retrieval["search_queries"][0] if retrieval else _topic_from_snapshot(seed_snapshot, payload)
         if not query:
             raise ResearchOperatorError("Source discovery requires a non-empty query", error_type="invalid_input")
         relevance_query = (
@@ -1527,12 +1531,15 @@ class LiteratureDiscoveryService:
             if re.search(r"Authoritative discovery scope\s*:", full_query, re.IGNORECASE)
             else query
         )
+        if retrieval:
+            relevance_query = retrieval["subject"]
         request_hash = stable_json_sha256(
             {
                 "service_id": self.service_id,
                 "service_version": self.service_version,
                 "query": query,
                 "relevance_query": relevance_query,
+                "retrieval_contract": retrieval,
                 "limit": self.limit,
                 "seed_snapshot_sha256": stable_json_sha256(seed_snapshot),
             }
@@ -1644,15 +1651,21 @@ class LiteratureDiscoveryService:
             minimum_relevant = int(minimum_relevant_raw) if minimum_relevant_raw is not None else None
         except (TypeError, ValueError):
             minimum_relevant = None
-        deduped, relevance_audit = apply_discovery_relevance_gate(
+        if retrieval:
+            from .retrieval_contract import filter_candidates
+
+        def apply_gate(query_text, rows, **kwargs):
+            return filter_candidates(retrieval, rows) if retrieval else apply_discovery_relevance_gate(query_text, rows, **kwargs)
+
+        deduped, relevance_audit = apply_gate(
             relevance_query,
             selected,
             minimum_relevant_candidates=minimum_relevant,
         )
         recovery_queries: list[str] = []
-        if relevance_audit["status"] != "passed" and relevance_audit.get("aggregate_coverage_missing"):
+        if retrieval or (relevance_audit["status"] != "passed" and relevance_audit.get("aggregate_coverage_missing")):
             recovery_candidates: list[dict[str, Any]] = []
-            recovery_queries = _coverage_recovery_queries(relevance_query, relevance_audit)
+            recovery_queries = retrieval["search_queries"][1:] if retrieval else _coverage_recovery_queries(relevance_query, relevance_audit)
             for recovery_query in recovery_queries:
                 for provider, backend_name, boundary in _DISCOVERY_COVERAGE_RECOVERY_PROVIDERS:
                     backend = getattr(self, backend_name)
@@ -1681,13 +1694,14 @@ class LiteratureDiscoveryService:
                     [*recovery_candidates, *candidates],
                     limit=self.limit + 1,
                 )
-                deduped, relevance_audit = apply_discovery_relevance_gate(
+                deduped, relevance_audit = apply_gate(
                     relevance_query,
                     selected,
                     minimum_relevant_candidates=minimum_relevant,
                 )
         if recovery_queries:
             relevance_audit["coverage_recovery_queries"] = recovery_queries
+        limitations.extend(relevance_audit.get("limitations", []))
         relevance_audit_hash = stable_json_sha256(relevance_audit)
         relevance_audit_path = (
             self.workspace_root

@@ -100,6 +100,15 @@ def normalize_envelope(
     if raw_inputs is not None and not isinstance(raw_inputs, dict):
         raise EnvelopeContractError("inputs must be an object")
     inputs = dict(raw_inputs or {})
+    retrieval = normalized.get("retrieval_contract")
+    if action == "discover_literature" and retrieval is not None:
+        if not isinstance(retrieval, dict):
+            raise EnvelopeContractError("retrieval_contract must be an object")
+        # Scheduler already verified the immutable projection before dispatch.
+        # Never let an action-specific prose field override its contract.
+        inputs["retrieval_contract"] = retrieval
+        inputs["topic"] = retrieval["subject"]
+        inputs["query"] = retrieval["search_queries"][0]
     objective = str(normalized.get("objective") or "").strip()
     if objective:
         inputs.setdefault("request", objective)

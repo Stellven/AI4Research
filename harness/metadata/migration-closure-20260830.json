@@ -2,8 +2,24 @@
   "schema": "solar.migration_contract_inventory.v1",
   "source_base": "27d724f3e46d3f14d5430c18a2354f40ff2345dd",
   "normalization": "UTF-8 text, CRLF converted to LF; no other normalization",
-  "scope": "All 165 schema-tree source/fixture/helper files in the audited runtime. 118 were absent from the canonical Git tree. Draft contracts are preserved, not activated. This inventory is not proof of live-provider or E2E success.",
+  "scope": "All 169 schema-tree source/fixture/helper files, including four semantic-retrieval contract schemas added after the 165-file migration closure. Draft contracts remain inactive. This inventory is not E2E evidence.",
   "files": [
+    {
+      "path": "schemas/planning/plan-ir.semantic.structured.v2.schema.json",
+      "sha256_lf": "8e85a9ec26804cf10f63b495722099dd1d758575f76e92178af555ed4f2f355f"
+    },
+    {
+      "path": "schemas/compiler/requirement-semantics.v1.schema.json",
+      "sha256_lf": "6e8513e18bab7a3b79b939438da6caba8b60fa7545f5f491f3c1aea1ce0fa7d7"
+    },
+    {
+      "path": "schemas/compiler/requirement-semantic-review.v1.schema.json",
+      "sha256_lf": "6f51b1314de2a69570de06d16ffa22e13b336ac0a10f4f263b9bc7a7af47f809"
+    },
+    {
+      "path": "schemas/compiler/retrieval-contract.v1.schema.json",
+      "sha256_lf": "1a7203950c168324c6b70d1f0de60e8977dbd6f30955fca1d8d55e92a021117d"
+    },
     {
       "path": "schemas/acceptance-verdict.schema.json",
       "sha256_lf": "c0edde1ddee6e4cf1e76e40e733e83ee5a95f119d1b874d7cd467315179a60e6"
@@ -554,7 +570,7 @@
     },
     {
       "path": "schemas/planning/plan-ir.semantic.v2.schema.json",
-      "sha256_lf": "655ce910909d5615872a0d1f008b65c841ff0c2540568ee48e772774e621c9dd"
+      "sha256_lf": "e9b6c96d38589ab8b5197d08dbfb8c0773c5d6f44caa0a0eb7d9ce115f7fdfab"
     },
     {
       "path": "schemas/planning/plan-ir.v2.schema.json",
@@ -590,7 +606,7 @@
     },
     {
       "path": "schemas/planning/scheduler-input.v1.schema.json",
-      "sha256_lf": "141dbc2b62650ef21a8f45e07faabdaff3dff1b5c3c6f101b25232b7e08a88ac"
+      "sha256_lf": "1a0edcf76476e4fdf537ede0975363915941ac35f3947709b8372235058cda86"
     },
     {
       "path": "schemas/plugin.schema.json",

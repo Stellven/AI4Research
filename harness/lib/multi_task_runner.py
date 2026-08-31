@@ -4356,6 +4356,7 @@ def _build_operator_envelope(
         "operator_id": str(profile.get("operator_id") or "").strip(),
         "task_type": str(node.get("dispatch_task_type") or profile.get("role") or "builder"),
         "objective": str(node.get("goal") or node.get("title") or node_id),
+        **({"retrieval_contract": deepcopy(node["retrieval_contract"])} if node.get("retrieval_contract") else {}),
         "command": profile.get("command"),
         "backend": profile.get("backend"),
         "model": profile.get("model"),

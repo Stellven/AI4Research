@@ -1061,11 +1061,15 @@ cannot be traced to an accepted requirement. A source- or literature-discovery n
 scope/evidence-coverage requirements that define what evidence it must retrieve; do not assign it a
 final-answer, publication, or delivery requirement. Preserve the exact named subjects, comparison
 dimensions, constraints, and required coverage values from those requirements in the discovery node's
-objective so the physical operator receives the full research query, not a generic topic summary. Assign
+objective for human understanding. When RequirementIR has semantic_contract, its requirement_roles
+are authoritative (not substrings in check names). Set retrieval_contract_ref to discovery.contract_id
+on a discovery node or a logical node requiring discovery in its implementation; otherwise use null.
+Do NOT restate process/delivery constraints as research subjects or source filters. The physical operator
+receives the exact structured retrieval contract, never a reinterpreted objective. Assign
 a requirement only to a node whose produced artifact can actually be judged by that requirement's check.
 Requirements whose acceptance contract calls for a finding, supporting evidence, and unresolved status
 are resolution requirements, not discovery-scope requirements. A discovery node may retain those study
-protocol questions as constraints in its objective, but it must not own them when its output ABI promises
+protocol questions as context only, not as search scope, and it must not own them when its output ABI promises
 only a source shortlist. Assign their ownership to a downstream synthesis or report node whose artifact
 can explicitly resolve the question or preserve it as unresolved with evidence.
 Keep implementation-only support steps out of PlanIR. A single logical node may be implemented by a
@@ -1414,10 +1418,9 @@ def compile_plan_candidate(
             previous=previous,
             defects=defects,
         ),
-        PLAN_BODY_SCHEMA,
+        (SCHEMA_DIR / "plan-ir.semantic.structured.v2.schema.json") if requirement_ir.get("semantic_contract") else PLAN_BODY_SCHEMA,
         work_dir / "plan_call",
     )
-    body = _preserve_discovery_requirement_scope(requirement_ir, body)
     return _wrap_plan_ir(
         requirement_ir,
         decision,
@@ -1471,75 +1474,6 @@ def _scope_requirement_text(requirement: dict[str, Any]) -> str:
     return statement
 
 
-def _preserve_discovery_requirement_scope(
-    requirement_ir: dict[str, Any],
-    body: dict[str, Any],
-) -> dict[str, Any]:
-    """Keep accepted research scope intact at the Planner-to-operator boundary.
-
-    Requirement ownership remains precise: discovery receives only requirements
-    whose acceptance contract defines scope/evidence coverage. Final-answer and
-    publication requirements stay on their downstream artifact owners.
-    """
-
-    preserved = copy.deepcopy(body)
-    scope_requirements = [
-        row for row in requirements(requirement_ir) if _is_scope_coverage_requirement(row)
-    ]
-    if not scope_requirements:
-        return preserved
-
-    nodes = [node for node in preserved.get("nodes") or [] if isinstance(node, dict)]
-    owned_requirement_ids = {
-        str(requirement_id)
-        for node in nodes
-        for requirement_id in node.get("requirement_ids") or []
-        if str(requirement_id)
-    }
-
-    for node in nodes:
-        if not isinstance(node, dict) or not _is_discovery_node(node):
-            continue
-        current_ids = [str(value) for value in node.get("requirement_ids") or []]
-        scope_ids = [
-            _requirement_id(row)
-            for row in scope_requirements
-            if _requirement_id(row) in current_ids
-            or _requirement_id(row) not in owned_requirement_ids
-        ]
-        node["requirement_ids"] = list(
-            dict.fromkeys(current_ids + scope_ids)
-        )
-        owned_requirement_ids.update(scope_ids)
-        scope_lines = [
-            f"- [{_requirement_id(row)}] {_scope_requirement_text(row)}"
-            for row in scope_requirements
-            if _scope_requirement_text(row)
-        ]
-        objective = str(node.get("objective") or "").strip()
-        if scope_lines and "Authoritative discovery scope:" not in objective:
-            node["objective"] = (
-                f"{objective}\n\nAuthoritative discovery scope:\n"
-                + "\n".join(scope_lines)
-            ).strip()
-
-        scope_verifiers = list(
-            dict.fromkeys(
-                _requirement_verifier(row)
-                for row in scope_requirements
-                if _requirement_verifier(row)
-            )
-        )
-        for output in node.get("produces") or []:
-            if not isinstance(output, dict):
-                continue
-            output["verifier_ids"] = list(
-                dict.fromkeys(
-                    [str(value) for value in output.get("verifier_ids") or []]
-                    + scope_verifiers
-                )
-            )
-    return preserved
 
 
 def _wrap_plan_ir(
@@ -2027,6 +1961,18 @@ def validate_plan_ir(
     if (plan_ir.get("planning_decision_ref") or {}).get("sha256") != sha256_payload(decision):
         checks["artifact_references"].append(_error("PLANNING_DECISION_REF_MISMATCH", "planning_decision_ref", "PlanIR does not reference exact planning decision."))
     node_rows = [dict(row) for row in plan_ir.get("nodes") or [] if isinstance(row, dict)]
+    semantic_contract = requirement_ir.get("semantic_contract") or {}
+    discovery = semantic_contract.get("discovery")
+    roles = semantic_contract.get("requirement_roles") or {}
+    for row in node_rows:
+        ref = row.get("retrieval_contract_ref")
+        if ref and (not discovery or ref != discovery.get("contract_id")):
+            checks["artifact_references"].append(_error("RETRIEVAL_CONTRACT_REF_MISMATCH", "nodes", "Use the exact accepted discovery contract_id."))
+        if semantic_contract and _is_discovery_node(row):
+            if not ref:
+                checks["artifact_references"].append(_error("RETRIEVAL_CONTRACT_REF_REQUIRED", "nodes", "Discovery must bind the accepted structured retrieval contract."))
+            if any(roles.get(rid) in {"process", "delivery", "outcome", "resolution"} for rid in row.get("requirement_ids", [])):
+                checks["requirement_ownership"].append(_error("DISCOVERY_NON_SCOPE_OWNERSHIP", "nodes", "Assign workflow/delivery/resolution requirements to their actual artifact owner, not the shortlist."))
     node_ids = [str(row.get("node_id") or "") for row in node_rows]
     if len(node_ids) != len(set(node_ids)):
         checks["node_identity"].append(_error("DUPLICATE_NODE_ID", "nodes", "PlanIR node identifiers must be unique."))
@@ -2428,12 +2374,15 @@ validation owns those. An efficient plan may use one node for several requiremen
 and verifier contract truthfully covers them. Fail execution-trust weakening: a request for experiments
 on real datasets, reproduced measurements, or scientific effect validation requires measured_execution;
 fixture, adapter, lineage-only, schema-only, and exit-code-only paths are not equivalent evidence.
-For source or literature discovery, fail a genericized objective that drops named subjects, comparison
+When semantic_contract exists, use its requirement_roles and discovery contract as the semantic
+authority. A node's retrieval_contract_ref binds that exact scope, search queries, inclusion/exclusion
+criteria and time range. Never require process/delivery wording in retrieval scope or duplicate it in
+the objective. Judge semantic coverage through the explicit contract reference, not objective wording.
+For historical plans without semantic_contract, fail a genericized objective that drops named subjects, comparison
 dimensions, constraints, or required coverage values from the RequirementIR. The discovery node must
 retain the applicable scope/evidence-coverage requirement IDs and checks, but must not claim ownership
 of a final-answer, publication, or delivery requirement merely because it supplies upstream evidence.
-The `Authoritative discovery scope` text also preserves downstream-owned constraints for operator context;
-appearance in that text does not itself require duplicate ownership. If a requirement is already owned
+If a requirement is already owned
 and verifiable on a downstream non-discovery artifact, do not fail discovery merely for omitting its ID.
 Also fail a discovery node that owns a resolution requirement requiring a finding, supporting evidence,
 and unresolved status when its declared output is only a source shortlist. The protocol question may
@@ -2525,10 +2474,12 @@ def review_plan_fidelity(
     actual = [str(row.get("kind") or "") for row in body.get("checks") or []]
     if len(actual) != len(required_kinds) or set(actual) != required_kinds:
         raise ElasticPlannerError("plan reviewer did not return every required check exactly once")
-    errors, ignored_ownership_errors = _filter_redundant_discovery_ownership_errors(
-        plan_ir,
-        list(body.get("errors") or []),
-    )
+    if requirement_ir.get("semantic_contract"):
+        errors, ignored_ownership_errors = list(body.get("errors") or []), []
+    else:
+        errors, ignored_ownership_errors = _filter_redundant_discovery_ownership_errors(
+            plan_ir, list(body.get("errors") or []),
+        )
     warnings = list(body.get("warnings") or [])
     checks = copy.deepcopy(body.get("checks") or [])
     if ignored_ownership_errors:
@@ -5066,6 +5017,7 @@ def compile_scheduler_input(
                     "semantic_evaluator_ids": semantic_evaluator_ids,
                 },
                 "evaluator_gate": copy.deepcopy(node.get("evaluator_gate") or {}),
+                **({"retrieval_contract": copy.deepcopy(node["retrieval_contract"])} if node.get("retrieval_contract") else {}),
                 "evaluation_policy": copy.deepcopy(node_policy),
                 "resource_requirements": {
                     "cpu_cores_min": float(requirements.get("cpu_cores_min") or 0),
@@ -5104,6 +5056,30 @@ def compile_scheduler_input(
     }
     _assert_schema(scheduler_input, SCHEDULER_INPUT_SCHEMA, "scheduler_input")
     return scheduler_input
+
+
+def _bind_retrieval_contracts(graph: dict[str, Any], requirement_ir: dict[str, Any],
+                             plan_ir: dict[str, Any]) -> None:
+    """Copy accepted semantics by explicit PlanIR reference; never infer a topic."""
+    semantic = requirement_ir.get("semantic_contract")
+    if not semantic:
+        return
+    contract = semantic.get("discovery")
+    parents = {row["node_id"]: row for row in plan_ir.get("nodes", [])}
+    for node in graph.get("nodes", []):
+        parent = parents.get(node.get("composition_parent_node_id") or node["id"], {})
+        if not parent:
+            parent = next((parents.get(trace.get("plan_ir_node_id"), {})
+                           for trace in graph.get("composition_expansion_trace", [])
+                           if node["id"] in trace.get("task_graph_node_ids", [])), {})
+        produces = (node.get("semantic_artifact_contract") or {}).get("produces", [])
+        is_discovery = any("literature_discovery" in str(row.get("artifact_type", "")) for row in produces)
+        is_discovery = is_discovery or _is_discovery_node(node)
+        if not is_discovery:
+            continue
+        if not contract or parent.get("retrieval_contract_ref") != contract["contract_id"]:
+            raise ElasticPlannerError("Discovery execution lacks an accepted PlanIR retrieval_contract_ref")
+        node["retrieval_contract"] = copy.deepcopy(contract)
 
 
 def compile_and_freeze_execution_bundle(
@@ -5294,6 +5270,7 @@ def compile_and_freeze_execution_bundle(
             "plan_acceptance": acceptance,
         }
     merged = _merge_execution_plans_into_graph(graph, capsule_plan, physical_plan)
+    _bind_retrieval_contracts(merged, requirement_ir, plan_ir)
     capsule_registry = workflow_contract.load_capsule_registry(CONFIG_DIR)
     operator_registry = workflow_contract.load_operator_registry(PHYSICAL_OPERATORS_PATH)
     contract_id = str(merged.get("workflow_contract_id") or "pm.generic.v1")
