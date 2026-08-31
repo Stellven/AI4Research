@@ -1,5 +1,9 @@
 # OpenSolar migration handoff — 2026-08-30
 
+Historical checkpoint only. The latest code, final unattended failure, dependency
+audit and remote/bundle state are in [migration-handoff-20260831.md](migration-handoff-20260831.md).
+Do not use the old process/session counts or defect status below as current state.
+
 ## Status and scope
 
 This change closes a source-distribution gap. It does **not** fix the open

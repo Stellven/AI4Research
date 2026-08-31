@@ -1,6 +1,8 @@
 # 新机器接手入口：OpenSolar / AI4Research
 
-核对日期：2026-08-30。核对基线：`b000106a78beed09e95c4ee3806ba7319ffa922f`。
+核对日期：2026-08-31。最后产品代码：`f463b861bf47bddff46cc2ce3de151dcd8d78992`。
+先读 [最后一次 E2E 与迁移状态](migration-handoff-20260831.md)。最后测试在 Planner
+模型输出 schema 准入失败，未到 Scheduler；用户要求停止修复并迁移，不能宣称全流程通过。
 本说明由当前生产源码与已记录运行证据整理，不将设计示例当作已实现功能。
 所有下文代码路径均相对**源码仓库根目录**；安装后 `harness/` 对应已批准的 runtime。
 
@@ -36,7 +38,7 @@ Requirement 的旧确定性编译器仅供显式 legacy 调用，不是默认 in
 | --- | --- | --- |
 | GUI / CLI intake | `harness/lib/symphony/status-server.py`；`harness/solar-harness.sh` | 用户请求、附件引用 → intent request；返回 session/intake 状态 |
 | Intent Compiler | `harness/lib/intent_gateway.py` → `intent_compiler.run_pipeline` | 标准化 input → IntentIR、validation、独立 fidelity、acceptance；失败/澄清时禁止继续 |
-| Requirement Compiler | `harness/lib/requirement_compiler/semantic.py`，`evaluator.py` | 已接受 IntentIR → LLM requirements/roles/retrieval + 独立语义审查 + 结构/来源验证；最多一次 bounded repair |
+| Requirement Compiler | `harness/lib/requirement_compiler/semantic.py`，`evaluator.py` | 已接受 IntentIR → 共享合同 v2 的 LLM values + 独立语义审查；结构与语义各一次修复，最多五次调用且总时限有界 |
 | Planner 入口 | `harness/lib/intent_consumer.py` → `harness/tools/elastic_planner_adapter.py` | 已接受 RequirementIR → semantic/execution bundle；adapter 本身不写生命周期状态 |
 | Elastic Planner | `harness/lib/elastic_planner.py::run_elastic_planning_request` | LLM decision、PlanIR、fidelity 与绑定审查；确定性 validation/acceptance；最多限定次数修复 |
 | 执行合同编译 | `elastic_planner.compile_and_freeze_execution_bundle` | accepted semantic plan → capsule/physical/evaluation plans、SchedulerInput、frozen run contract |
@@ -75,8 +77,9 @@ Rapid smoke 通过可信环境 `SOLAR_TEST_MODE=rapid_smoke` 注入冻结 test_p
 | 原始请求 / input.json | `harness/lib/intent_compiler.py::normalize_input`；`harness/metadata/1-input normalizer output/` | 代码规范化 + 设计示例；不是独立 JSON Schema |
 | intent_ir.json | `harness/schemas/compiler/intent-ir.v3.schema.json`；模型 body 为 `intent-ir.semantic.v1.schema.json` | JSON Schema + 来源/引用校验 |
 | Intent validation/fidelity/acceptance | 同目录 `intent-validation.v1.schema.json`、`intent-fidelity.review.v1.schema.json`、`intent-fidelity.v1.schema.json`、`intent-acceptance.v1.schema.json` | 独立结构、语义和准入合同 |
-| requirement_ir.json v2 | `harness/metadata/3-requirements compiler output/requirement_ir/requirement_ir.json`；`harness/schemas/compiler/requirement-semantics.v1.schema.json`；`evaluator.py` | 原 envelope 模板 + 新增 versioned semantic_contract；LLM body 由 JSON Schema 校验，原约束 AST 精确保留 |
-| 检索合同 / Requirement review | `harness/schemas/compiler/retrieval-contract.v1.schema.json`、`requirement-semantic-review.v1.schema.json` | Planner 用 retrieval_contract_ref 引用；Scheduler 冻结合同；Discovery 不从 objective 猜主题 |
+| requirement_ir.json v2 | `harness/metadata/3-requirements compiler output/requirement_ir/requirement_ir.json`；`harness/schemas/compiler/requirement-semantics.v2.schema.json`；`evaluator.py` | 原 envelope 模板 + semantic_contract；模型 values 新增 selection_authority；原约束 AST 精确保留 |
+| 共享模板 / Requirement review | `harness/schemas/compiler/requirement-semantic-contract.v2.json`、`harness/schemas/compiler/requirement-semantic-review.v2.schema.json` | registry/Intent ID 固化为实际调用 schema 枚举；结构化 rule/field/evidence/reason；只读 runtime policy 单独保留。v1 历史合同不覆盖 |
+| 检索合同 | `harness/schemas/compiler/retrieval-contract.v1.schema.json` | Planner 用 retrieval_contract_ref 引用；Scheduler 冻结合同；Discovery 不从 objective 猜主题 |
 | requirement_format_evaluation.json | `harness/lib/requirement_compiler/evaluator.py` | 代码定义输出；metadata 的 requirement_validation/coverage 不能视为当前全部已执行 |
 | planning_context / catalog / decision | `harness/schemas/planning/planning-context.v1.schema.json`、`planning-catalog-snapshot.v1.schema.json`、`planning-decision.v1.schema.json` | 决策模型 body 用 `planning-decision.semantic.v1.schema.json` |
 | plan_ir / validation / fidelity / binding / acceptance | 同目录 `plan-ir.v2.schema.json`、`plan-validation.v2.schema.json`、`plan-fidelity.v1.schema.json`、`binding-trace.v2.schema.json`、`plan-acceptance.v1.schema.json` | 模型语义 body 与机械 envelope 分开；见同目录 semantic/review schemas |
