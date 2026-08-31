@@ -1,0 +1,51 @@
+{
+  "contract_id": "solar.requirement_semantic_contract",
+  "version": 1,
+  "compiler_output_schema": "schemas/compiler/requirement-semantics.v1.schema.json",
+  "reviewer_output_schema": "schemas/compiler/requirement-semantic-review.v1.schema.json",
+  "ownership": {
+    "fixed": "The program owns contract_ref, read_only, schema definitions, descriptions, policies, registry and source constraints. Neither model may edit these.",
+    "editable": "The compiler returns ONLY the values object: requirements, assumptions and discovery, using the compiler output schema. It may add array rows using the item templates. Null placeholders must be filled where the output schema requires a value.",
+    "reviewer": "Review the program-merged filled template against the admitted IntentIR and this same contract. Return only the reviewer output schema. Do not modify values, invent policies or redesign the workflow."
+  },
+  "field_definitions": {
+    "/requirements": "Atomic, checkable requirements with complete Intent source coverage. Their number is model-authored, not preselected by a script.",
+    "/requirements/*/source_refs": "IDs of original goals, outcomes, constraints, unknowns, ambiguities or conflicts supporting this requirement. Do not invent IDs.",
+    "/requirements/*/priority": "Preserve the user's strength. A preference is not automatically a must. Runtime validity policies must not be rewritten as user-authored must requirements.",
+    "/requirements/*/semantic_role": "research_scope covers evidence subjects/selection; process covers how work proceeds; delivery covers requested output; outcome covers the requested result; resolution covers unknowns/conflicts; constraint covers other restrictions. Preserve original meaning, not merely the spelling of the source category.",
+    "/requirements/*/acceptance": "Checkable acceptance criteria, not automatically search keywords. scope_coverage is only for research_scope; process and delivery criteria must not become source-topic filters.",
+    "/requirements/*/check": "A registered check ID with compatible meaning and artifacts. The registry is provided to both models. A check name containing constraint_coverage does not override semantic_role. Do not demand an unregistered check.",
+    "/requirements/*/checkable": "Fixed true by the output schema. A model cannot change this constant.",
+    "/requirements/*/disposition": "Fixed null by the output schema.",
+    "/assumptions": "Explicit assumptions, not permission to invent user scope, mandatory deliverable content, source counts or scientific claims.",
+    "/discovery": "Structured source retrieval instructions when new source discovery is needed; otherwise null. This is not a DAG or operator selection.",
+    "/discovery/subject": "Research subject matter only. Workflow instructions, report titles/formats, evidence auditability and provenance are not source topics.",
+    "/discovery/search_queries": "Bounded complementary queries for the research subject, including useful alternatives. They are not final-report text.",
+    "/discovery/inclusion_criteria": "All criteria must match a candidate. any_of is a list of case-insensitive literal alternatives in the named field. Add a criterion only when an explicit source selection requirement supports it.",
+    "/discovery/exclusion_criteria": "Any matching criterion excludes a candidate. Preserve real user exclusions and polarity; never turn an exclusion into positive coverage. Source references must support the criterion.",
+    "/discovery/coverage": "Coverage is measured across the accepted corpus, not separately for every candidate. any_of contains literal synonyms. required=true only for explicit must-have shortlist coverage, not merely a desire for comprehensive final analysis. Best-effort gaps remain limitations.",
+    "/discovery/time_range": "User-specified publication date limits. Unknown bounds stay null; do not invent dates.",
+    "/discovery/minimum_candidates": "Effective minimum number of accepted candidates for successful discovery handoff. Apply the named runtime validity policy below. It is NOT the final report's target source count, and satisfying it does NOT establish completeness or scientific quality.",
+    "/read_only/source_constraints": "The exact copy of ALL original Intent constraints: polarity, category, expression AST and source spans. The name does not mean source-selection-only constraints. The program owns this copy; workflow/delivery constraints must remain here for provenance, but must not become discovery filters."
+  },
+  "policies": {
+    "discovery_nonempty_handoff": {
+      "policy_id": "solar.discovery.nonempty_handoff.v1",
+      "field": "/discovery/minimum_candidates",
+      "default": 1,
+      "origin": "runtime_validity_policy",
+      "meaning": "Zero usable candidates must not be passed to evidence-consuming downstream work as a successful discovery result. This is a runtime safety/validity floor, not an extra user requirement.",
+      "override": "Use a higher minimum only when an explicit Intent requirement supports that candidate/source lower bound at this retrieval stage. Its source must be accounted for by discovery.source_refs and the corresponding requirement. Never invent a higher number or silently weaken an explicit lower bound.",
+      "review": "With no user count, minimum_candidates=1 is required by this contract and is not an invented user count. Do not demand null, zero or removal. Reject attributing the default to the user or claiming that one source makes a comprehensive report sufficient."
+    }
+  },
+  "fidelity_rules": [
+    {"id": "F01", "description": "Account for every Intent goal, outcome, constraint, unknown, ambiguity and conflict through source_refs. Preserve project identity, requested deliverables and the timing of required resolutions."},
+    {"id": "F02", "description": "Preserve polarity, category meaning and strength. Do not turn preferences into musts, exclusions into positive coverage, or unspecified scope/date/count into user requirements. Apply explicitly declared runtime policies as runtime policies, not as user requests."},
+    {"id": "F03", "description": "Keep process, delivery and evidence topics separate. User workflow instructions remain requirements but are not source selection or lexical coverage criteria."},
+    {"id": "F04", "description": "Use faithful, executable retrieval predicates with source-supported inclusions/exclusions and useful synonyms. Respect corpus-level coverage semantics and retain missing best-effort coverage as limitations."},
+    {"id": "F05", "description": "Use compatible registered checks. Do not add mandatory deliverable content, extra research or policies absent from Intent and this contract. Do not design a DAG or choose operators."},
+    {"id": "F06", "description": "Review editable values, not the program-owned contract. A genuine fidelity defect must be reported and must not be waived to make a run pass. Accept only if no substantive defects remain; when rejecting, identify the violated rule/field and the supporting Intent evidence."
+    }
+  ]
+}

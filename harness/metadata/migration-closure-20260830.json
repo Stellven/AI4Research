@@ -2,8 +2,12 @@
   "schema": "solar.migration_contract_inventory.v1",
   "source_base": "27d724f3e46d3f14d5430c18a2354f40ff2345dd",
   "normalization": "UTF-8 text, CRLF converted to LF; no other normalization",
-  "scope": "All 169 schema-tree source/fixture/helper files, including four semantic-retrieval contract schemas added after the 165-file migration closure. Draft contracts remain inactive. This inventory is not E2E evidence.",
+  "scope": "All 170 schema-tree source/fixture/helper files, including the shared Requirement semantic contract and four semantic-retrieval schemas added after the 165-file migration closure. Draft contracts remain inactive. This inventory is not E2E evidence.",
   "files": [
+    {
+      "path": "schemas/compiler/requirement-semantic-contract.v1.json",
+      "sha256_lf": "04fec33f72a5fce9ccb54cf5eba45af9782cfe72f46bcff238a12f3f959b76a0"
+    },
     {
       "path": "schemas/planning/plan-ir.semantic.structured.v2.schema.json",
       "sha256_lf": "8e85a9ec26804cf10f63b495722099dd1d758575f76e92178af555ed4f2f355f"

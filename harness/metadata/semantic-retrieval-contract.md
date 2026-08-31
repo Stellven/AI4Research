@@ -6,8 +6,9 @@ LLM outputs or public-provider behavior are deterministic.
 ## Authoritative path
 
 1. Accepted IntentIR enters `lib/requirement_compiler/semantic.py`. A schema-bound
-   LLM emits requirements, source references, priorities, semantic roles, and an
-   optional discovery contract. An independent LLM checks fidelity. Schema/source
+   LLM fills only the editable values of a program-owned template: requirements,
+   source references, priorities, semantic roles, and an optional discovery contract.
+   An independent LLM checks fidelity against the same fixed definitions. Schema/source
    checks are mandatory, with one bounded repair and no deterministic fallback.
 2. RequirementIR v2 retains its existing envelope and adds `semantic_contract`
    (`solar.requirement_semantics.v1`). Source constraints are copied exactly,
@@ -28,6 +29,8 @@ LLM outputs or public-provider behavior are deterministic.
 
 ## Schemas (relative to harness)
 
+- `schemas/compiler/requirement-semantic-contract.v1.json`: the single versioned
+  semantic definition, ownership rules, field descriptions and runtime count policy.
 - `schemas/compiler/requirement-semantics.v1.schema.json`: LLM body.
 - `schemas/compiler/requirement-semantic-review.v1.schema.json`: fidelity verdict.
 - `schemas/compiler/retrieval-contract.v1.schema.json`: research subject, queries,
@@ -36,6 +39,32 @@ LLM outputs or public-provider behavior are deterministic.
   shape requiring a nullable contract reference. Historical PlanIR v2 remains readable.
 - `schemas/planning/scheduler-input.v1.schema.json`: optional immutable retrieval
   contract, embedded for offline validation; a regression checks exact schema equality.
+
+## Program-owned template and model permissions
+
+`lib/requirement_compiler/template_contract.py` loads the definition and referenced
+schemas once per compilation. It creates `template.json` with a hash-bound
+`contract_ref`, `read_only` definitions/registry/original constraints/item templates,
+and blank editable `values`. The Compiler sees that complete template but returns
+only the values object. Strict schema validation rejects unknown fields and changes
+to fixed constants; the program deep-copies valid values into the original template.
+Each generation retains `filled_template.json`; the Reviewer sees exactly the same
+read-only snapshot and the filled values. Validation records retain its contract ref.
+Neither model may rewrite definitions, descriptions, policies or original constraints.
+
+The shared count policy distinguishes a runtime handoff floor from a user-authored
+source-count requirement. With no explicit user count, `minimum_candidates=1` is
+required for nonempty discovery handoff, not an invented user requirement and not
+proof of report sufficiency. A higher value needs Intent support. Both models see
+this same rule; no reviewer error-string whitelist or automatic acceptance is used.
+The source_constraints copy contains ALL original constraints, while only actual
+source-selection constraints may become discovery predicates. Corpus coverage is
+aggregate coverage, not a per-paper requirement to discuss every technique.
+
+Existing RequirementIR/retrieval/SchedulerInput shapes and frozen historical
+artifacts are unchanged. The filled template is compilation audit evidence, not a
+new scheduler authority or extra agent stage. Do not edit a published contract's
+meaning in place: use a new version for a subsequent semantic-policy change.
 
 Selection predicates match case-insensitive literal alternatives in title/abstract
 or publication type. All inclusion predicates must match; any exclusion excludes.

@@ -5,8 +5,9 @@
 Start with [NEW-MACHINE-START-HERE.md](NEW-MACHINE-START-HERE.md) for the project
 purpose, current production pipeline, exact schema/validator paths, known issues
 and environment requirements. The formal intake now reaches Intent compilation,
-native deterministic Requirement compilation, Elastic Planner, frozen SchedulerInput,
-Scheduler and operators. Requirement/Discovery semantic defects remain open.
+LLM Requirement compilation and review using a shared program-owned contract,
+Elastic Planner, frozen SchedulerInput, Scheduler and operators. Current repair
+and E2E limitations are recorded in pre-scheduler-stabilization-log-20260829.md.
 
 The numbered artifacts below are design/reference examples, NOT proof that every
 described stage is emitted or enforced in the running product. In particular,
