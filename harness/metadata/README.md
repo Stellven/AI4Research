@@ -1,4 +1,20 @@
-# End-to-end artifact architecture incubator
+# End-to-end artifact architecture and current runtime index
+
+## Current runtime / new-machine entry — 2026-08-30
+
+Start with [NEW-MACHINE-START-HERE.md](NEW-MACHINE-START-HERE.md) for the project
+purpose, current production pipeline, exact schema/validator paths, known issues
+and environment requirements. The formal intake now reaches Intent compilation,
+native deterministic Requirement compilation, Elastic Planner, frozen SchedulerInput,
+Scheduler and operators. Requirement/Discovery semantic defects remain open.
+
+The numbered artifacts below are design/reference examples, NOT proof that every
+described stage is emitted or enforced in the running product. In particular,
+RequirementIR v2 uses a template-based format evaluator; do not substitute the
+different legacy requirement-ir.schema.json. The current entry document explicitly
+distinguishes JSON Schema, code validation and design-only examples.
+
+## Historical architecture-incubator notes
 
 This folder contains reviewed JSON examples for Solar's artifact-only control
 plane. The Intent Compiler increment is now connected inside the current
@@ -49,7 +65,7 @@ The corrected Requirement Compiler run is retained under Stage 3 in
 deterministic format evaluation. The earlier
 `current-v1-compiler-evaluation-20260825/` run is marked superseded.
 
-## Current integration boundary
+## Historical integration boundary (before the later typed runtime wiring)
 
 The current `intent_gateway.py` activates this compiler when
 `SOLAR_INTENT_COMPILER_PROVIDER=codex` is present. Compiler and reviewer calls
@@ -154,4 +170,7 @@ that the current product executed the proposed architecture.
 
 These remain reviewed examples rather than production runtime output. The
 Intent Compiler's enforceable schema mirrors live under
-`harness/schemas/compiler/`; later pipeline stages remain future increments.
+`harness/schemas/compiler/`. Planner/Scheduler schema mirrors now live under
+`harness/schemas/planning/`, and scientific operator contracts under
+`harness/schemas/evidence/`. See the current entry document for actual wiring;
+the historical examples do not define the present implementation boundary.

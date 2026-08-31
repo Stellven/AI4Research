@@ -1,5 +1,11 @@
 # AI4Research / Solar
 
+> **2026-08-30 新机器接手入口：** [当前实现、pipeline、每阶段 schema/validator、问题记录与环境要求](harness/metadata/NEW-MACHINE-START-HERE.md)。
+> 当前迁移修复线为 `codex/safety-before-intent-rollback-20260828`，不同于下文历史发布主线。
+> 默认 formal 路径是 **Intent Compiler → Requirement Compiler → Elastic Planner → frozen SchedulerInput → Scheduler → Operators/Gates**。
+> 下文 PRD/Contracts/task_graph 编译图描述的是历史兼容链，不能用来判断当前 typed 路径。
+> 当前 Requirement Compiler 仍为 deterministic；Discovery 语义缺陷尚未解决。详见接手入口，勿将架构目标误认为已验收行为。
+
 > 面向软件工程与科学研究的本地优先（local-first）多智能体执行框架：把自然语言目标编译为受治理的任务图，在可替换的 AI / CLI / tool operators 上执行，并以证据、评审和可回放状态闭环交付。
 
 AI4Research 是 Solar 体系在 `Stellven/AI4Research` 仓库中的产品化分支。项目的当前主线不是一个云端 SaaS，也不只是“在 tmux 中启动多个 Agent”；它是一套运行在开发者工作站上的 **AI-native execution fabric**，重点解决以下问题：
