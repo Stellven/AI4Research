@@ -10,7 +10,7 @@
     },
     {
       "path": "schemas/compiler/requirement-semantics.v1.schema.json",
-      "sha256_lf": "6e8513e18bab7a3b79b939438da6caba8b60fa7545f5f491f3c1aea1ce0fa7d7"
+      "sha256_lf": "60e878babb93f97aa2568ee1610289898bd5d8ca324d8956005b9d2fa041e0ce"
     },
     {
       "path": "schemas/compiler/requirement-semantic-review.v1.schema.json",

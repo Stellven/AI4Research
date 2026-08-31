@@ -71,6 +71,38 @@ def compiled(tmp_path):
                                   model=Model(body()), reviewer=Model({"accepted": True, "errors": []}))
 
 
+def test_requirement_provider_schema_preserves_typed_true_constraint(tmp_path, monkeypatch):
+    """Exercise the real schema projection/CLI boundary without a provider call."""
+    import subprocess
+    from jsonschema import Draft202012Validator
+    from intent_compiler import CodexJsonModel, write_json
+    from requirement_compiler.semantic import BODY_SCHEMA
+
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        schema_path = Path(command[command.index("--output-schema") + 1])
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        checkable = schema["properties"]["requirements"]["items"]["properties"]["checkable"]
+        assert checkable == {"type": "boolean", "const": True}
+        validator = Draft202012Validator(checkable)
+        assert validator.is_valid(True)
+        assert all(not validator.is_valid(value) for value in (False, 1, "true", None))
+        assert Path(kwargs["cwd"]) == schema_path.parent
+        output_path = Path(command[command.index("--output-last-message") + 1])
+        write_json(output_path, body())
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    result = CodexJsonModel(model="offline-fixture").generate(
+        "Compile source-linked requirements", BODY_SCHEMA, tmp_path / "compile"
+    )
+    assert len(calls) == 1
+    assert result == body()
+    assert (tmp_path / "compile/model_call_receipt.json").is_file()
+
+
 def test_llm_compilation_preserves_polarity_category_strength(tmp_path):
     ir = compiled(tmp_path)
     assert ir["semantic_contract"]["source_constraints"] == intent()["constraints"]

@@ -86,6 +86,7 @@
             "minLength": 1
           },
           "checkable": {
+            "type": "boolean",
             "const": true
           },
           "disposition": {
