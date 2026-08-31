@@ -9,7 +9,9 @@ LLM outputs or public-provider behavior are deterministic.
    LLM fills only the editable values of a program-owned template: requirements,
    source references, priorities, semantic roles, and an optional discovery contract.
    An independent LLM checks fidelity against the same fixed definitions. Schema/source
-   checks are mandatory, with one bounded repair and no deterministic fallback.
+   checks are mandatory. Contract v2 allows one structural and one semantic repair,
+   at most three compiler/two reviewer calls within the existing four per-call
+   timeout slots. There is no deterministic semantic fallback.
 2. RequirementIR v2 retains its existing envelope and adds `semantic_contract`
    (`solar.requirement_semantics.v1`). Source constraints are copied exactly,
    including category, expression operators, and source spans. Role classification
@@ -29,10 +31,12 @@ LLM outputs or public-provider behavior are deterministic.
 
 ## Schemas (relative to harness)
 
-- `schemas/compiler/requirement-semantic-contract.v1.json`: the single versioned
-  semantic definition, ownership rules, field descriptions and runtime count policy.
-- `schemas/compiler/requirement-semantics.v1.schema.json`: LLM body.
-- `schemas/compiler/requirement-semantic-review.v1.schema.json`: fidelity verdict.
+- `schemas/compiler/requirement-semantic-contract.v2.json`: current shared
+  semantic definition, ownership, field descriptions and count/evidence policies.
+- `schemas/compiler/requirement-semantics.v2.schema.json`: current LLM values body.
+- `schemas/compiler/requirement-semantic-review.v2.schema.json`: structured fidelity
+  verdict with rule ID, field pointer, Intent/policy evidence references and reason.
+  The v1 files remain unchanged for historical interpretation.
 - `schemas/compiler/retrieval-contract.v1.schema.json`: research subject, queries,
   source-linked inclusion/exclusion, coverage, time bounds and minimum candidates.
 - `schemas/planning/plan-ir.semantic.structured.v2.schema.json`: model generation
@@ -52,6 +56,19 @@ Each generation retains `filled_template.json`; the Reviewer sees exactly the sa
 read-only snapshot and the filled values. Validation records retain its contract ref.
 Neither model may rewrite definitions, descriptions, policies or original constraints.
 
+Contract v2 freezes registry check IDs and Intent source IDs as enums in the actual
+provider schema, not just the prompt. The same instantiated schema validates the
+response; its files are `compiler-output.schema.json` and `reviewer-output.schema.json`
+beside the template. `selection_authority` contains exact field pointers, Intent
+references and model-authored justification for hard retrieval restrictions. The
+program checks target/reference coverage; the reviewer decides whether the cited
+Intent really authorizes each restriction. Topic queries and best-effort corpus
+coverage need no such authority, and never remove mandatory report scope.
+
+Program-owned count/evidence policies are copied separately into
+`semantic_contract.runtime_policies`, not synthesized as user requirements.
+Missing evidence must remain visible; disclosure does not establish task success.
+
 The shared count policy distinguishes a runtime handoff floor from a user-authored
 source-count requirement. With no explicit user count, `minimum_candidates=1` is
 required for nonempty discovery handoff, not an invented user requirement and not
@@ -61,8 +78,10 @@ The source_constraints copy contains ALL original constraints, while only actual
 source-selection constraints may become discovery predicates. Corpus coverage is
 aggregate coverage, not a per-paper requirement to discuss every technique.
 
-Existing RequirementIR/retrieval/SchedulerInput shapes and frozen historical
-artifacts are unchanged. The filled template is compilation audit evidence, not a
+The RequirementIR v2 base envelope and retrieval/SchedulerInput shapes are unchanged.
+New semantic extensions retain selection_authority, runtime_policies and template_ref;
+historical semantic extensions without these fields remain readable. Frozen historical
+artifacts are not rewritten. The filled template is compilation audit evidence, not a
 new scheduler authority or extra agent stage. Do not edit a published contract's
 meaning in place: use a new version for a subsequent semantic-policy change.
 

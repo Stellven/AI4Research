@@ -51,7 +51,11 @@ def body():
                      "priority": priority, "source_refs": refs, "acceptance": {"kind": kind, "required_values": values},
                      "check": "check.artifact_outcome_completeness.v1" if index == 1 else "check.intent_constraint_coverage.v1",
                      "checkable": True, "disposition": None, "semantic_role": role})
-    return {"requirements": rows, "assumptions": [], "discovery": retrieval()}
+    authority = [{"field_path": path, "basis": "explicit_source_selection", "source_refs": [ref],
+                  "justification": "Fixture explicitly requests this source selection."} for path, ref in (
+        ("/discovery/inclusion_criteria/0", "C1"), ("/discovery/exclusion_criteria/0", "C3"),
+        ("/discovery/coverage/0/required", "C1"))]
+    return {"requirements": rows, "assumptions": [], "discovery": retrieval(), "selection_authority": authority}
 
 
 class Model:
@@ -118,7 +122,9 @@ def test_no_silent_deterministic_fallback():
 
 
 def test_semantic_reviewer_failure_is_bounded_and_fail_closed(tmp_path):
-    model, reviewer = Model(body()), Model({"accepted": False, "errors": ["POLARITY_WRONG"]})
+    model, reviewer = Model(body()), Model({"accepted": False, "errors": [{
+        "rule_id": "F02", "field_path": "/requirements/2/priority", "evidence_refs": ["C2"],
+        "reason": "POLARITY_WRONG"}]})
     with pytest.raises(RequirementCompilationError, match="POLARITY_WRONG"):
         compile_requirement_ir(intent(), intent_ir_sha256="a" * 64, work_dir=tmp_path, model=model, reviewer=reviewer)
     assert len(model.calls) == len(reviewer.calls) == 2

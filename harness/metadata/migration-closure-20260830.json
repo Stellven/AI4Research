@@ -2,8 +2,20 @@
   "schema": "solar.migration_contract_inventory.v1",
   "source_base": "27d724f3e46d3f14d5430c18a2354f40ff2345dd",
   "normalization": "UTF-8 text, CRLF converted to LF; no other normalization",
-  "scope": "All 170 schema-tree source/fixture/helper files, including the shared Requirement semantic contract and four semantic-retrieval schemas added after the 165-file migration closure. Draft contracts remain inactive. This inventory is not E2E evidence.",
+  "scope": "All 173 schema-tree source/fixture/helper files, including versioned Requirement contract v2, compiler values v2 and structured reviewer v2. Historical v1 contracts are preserved. Draft contracts remain inactive. This inventory is not E2E evidence.",
   "files": [
+    {
+      "path": "schemas/compiler/requirement-semantic-contract.v2.json",
+      "sha256_lf": "1e3062fa6fd89f7671eaaf3f599dea214d539c3b22fa9f8e78dcc1a444942ad9"
+    },
+    {
+      "path": "schemas/compiler/requirement-semantics.v2.schema.json",
+      "sha256_lf": "b9cbedc7dee58af6e9fc84a15733ef60c46759f532f2a2254463ef9a69472217"
+    },
+    {
+      "path": "schemas/compiler/requirement-semantic-review.v2.schema.json",
+      "sha256_lf": "b14c9b0bb9e14604e9cf8e56e93eddefb1a55e7bbcc00c06e52be57ab93f531d"
+    },
     {
       "path": "schemas/compiler/requirement-semantic-contract.v1.json",
       "sha256_lf": "04fec33f72a5fce9ccb54cf5eba45af9782cfe72f46bcff238a12f3f959b76a0"

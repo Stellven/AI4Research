@@ -33,7 +33,7 @@ def test_compiler_and_reviewer_receive_identical_program_owned_contract(tmp_path
     filled = payload(reviewer.calls[0])["filled_template"]
     assert blank["read_only"] == filled["read_only"]
     assert blank["contract_ref"] == filled["contract_ref"]
-    assert blank["values"] == {"requirements": [], "assumptions": [], "discovery": None}
+    assert blank["values"] == {"requirements": [], "assumptions": [], "discovery": None, "selection_authority": []}
     assert filled["values"] == body()
     fixed = filled["read_only"]
     assert fixed["source_constraints"] == intent()["constraints"]
@@ -105,6 +105,9 @@ def test_explicit_user_minimum_is_preserved_and_reaches_runtime_filter(tmp_path)
     candidate = body()
     candidate["discovery"]["minimum_candidates"] = 5
     candidate["discovery"]["source_refs"].append("C4")
+    candidate["selection_authority"].append({"field_path": "/discovery/minimum_candidates",
+        "basis": "explicit_source_selection", "source_refs": ["C4"],
+        "justification": "User explicitly requests at least five discovered papers."})
     row = copy.deepcopy(candidate["requirements"][1])
     row.update(requirement_id="R5", origin="user:C4", statement="Discover at least 5 papers",
                source_refs=["C4"], acceptance={"kind": "constraint", "required_values": ["at least 5 papers"]})
@@ -126,7 +129,9 @@ def test_default_floor_still_rejects_empty_handoff():
 
 
 def test_review_rejection_is_never_suppressed_by_matching_default_wording(tmp_path):
-    reviewer = Model({"accepted": False, "errors": ["minimum_candidates=1 is an invented user count"]})
+    reviewer = Model({"accepted": False, "errors": [{"rule_id": "F02",
+        "field_path": "/discovery/minimum_candidates", "evidence_refs": ["G1"],
+        "reason": "minimum_candidates=1 is an invented user count"}]})
     model = Model(body())
     with pytest.raises(RequirementCompilationError, match="invented user count"):
         compile_requirement_ir(intent(), intent_ir_sha256="a" * 64, work_dir=tmp_path,
