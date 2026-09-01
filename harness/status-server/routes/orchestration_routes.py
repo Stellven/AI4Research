@@ -12,6 +12,7 @@ All responses use envelope: {ok, schema_version, generated_at, degraded_sources,
 from __future__ import annotations
 
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -321,6 +322,7 @@ def _existing_task_graph_path(sid: str) -> Path:
 def _split_runtime_state(sid: str) -> dict:
     """Load the runtime node/gate plane stored beside a specification graph."""
     for name in (
+        f"{sid}.task_graph_state.json",
         f"{sid}.task_dag.state.json",
         f"{sid}.task_graph.state.json",
     ):
@@ -366,6 +368,7 @@ def _load_task_graph(sid: str) -> tuple[dict, bool]:
 def _load_task_runtime_state(sid: str) -> dict:
     """Load scheduler-owned node state independently of the stable graph spec."""
     candidates = [
+        SPRINTS_DIR / f"{sid}.task_graph_state.json",
         SPRINTS_DIR / f"{sid}.task_dag.state.json",
         SPRINTS_DIR / f"{sid}.task_graph.state.json",
         SPRINTS_DIR / sid / "task_dag.state.json",
@@ -399,13 +402,45 @@ def _is_within(path: Path, root: Path) -> bool:
         return False
 
 
+def _verified_terminal_direct_response(
+    sid: str,
+    status: dict[str, Any],
+) -> tuple[bool, str]:
+    """Verify the exact report that permits a direct response to omit a DAG."""
+    if (
+        str(status.get("execution_mode") or "") != "direct_response"
+        or str(status.get("status") or "").lower()
+        not in {"passed", "completed", "done"}
+    ):
+        return False, "not_terminal_direct_response"
+    reference = status.get("direct_response_ref")
+    if not isinstance(reference, dict):
+        return False, "reference_not_object"
+    raw_path = str(reference.get("path") or "").strip()
+    if not raw_path:
+        return False, "path_missing"
+    expected = (SPRINTS_DIR / f"{sid}.direct-response-report.md").resolve()
+    candidate = Path(raw_path).expanduser().resolve()
+    if not _is_within(expected, SPRINTS_DIR) or not _is_within(candidate, SPRINTS_DIR):
+        return False, "path_outside_sprints"
+    if candidate != expected:
+        return False, "path_not_canonical"
+    if not candidate.is_file():
+        return False, "report_missing"
+    expected_sha = str(reference.get("sha256") or "").lower()
+    actual_sha = hashlib.sha256(candidate.read_bytes()).hexdigest()
+    if expected_sha != actual_sha:
+        return False, "sha256_mismatch"
+    return True, "verified"
+
+
 def _normalize_status(status: str | None) -> str:
     value = (status or "").strip().lower()
     if value in {"passed", "completed"}:
         return "passed"
     if value in {"failed", "cancelled", "error"}:
         return "failed"
-    if value in {"blocked", "dependency_blocked", "quota_blocked", "auth_blocked"}:
+    if value in {"blocked", "worker_blocked", "dependency_blocked", "quota_blocked", "auth_blocked"}:
         return "blocked"
     if value in {"active", "dispatched", "reviewing", "ready_for_review", "in_progress"}:
         return "active"
@@ -628,6 +663,28 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
     for index, node in enumerate(nodes):
         nid = str(node.get("id") or f"N{index + 1}")
         decision = by_node.get(nid, {})
+        runtime_nodes = status_state.get("nodes") if isinstance(status_state.get("nodes"), dict) else {}
+        runtime_result = runtime_nodes.get(nid) if isinstance(runtime_nodes.get(nid), dict) else {}
+        raw_prework_refusal = (
+            runtime_result.get("pre_work_refusal")
+            if isinstance(runtime_result.get("pre_work_refusal"), dict)
+            else {}
+        )
+        refusal_error = (
+            raw_prework_refusal.get("error")
+            if isinstance(raw_prework_refusal.get("error"), dict)
+            else {}
+        )
+        prework_refusal_summary = (
+            {
+                "operator_id": str(raw_prework_refusal.get("operator_id") or ""),
+                "error_type": str(refusal_error.get("type") or ""),
+                "next_candidate_id": str(raw_prework_refusal.get("next_candidate_id") or ""),
+                "recorded_at": str(raw_prework_refusal.get("recorded_at") or ""),
+            }
+            if raw_prework_refusal
+            else {}
+        )
         executable_node = (
             node.get("executable_node")
             if isinstance(node.get("executable_node"), dict)
@@ -731,7 +788,14 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
             "host_type": actorhost.get("host_type", "unknown") if actorhost else "unknown",
             "lease_state": actorhost.get("lease_state", "unknown") if actorhost else "unknown",
             "route_decision": decision.get("decision") or ("fixed_contract_binding" if contract_bound_worker else "no_routing_record"),
-            "blocked_reason": decision.get("blocked_reason") or "",
+            "blocked_reason": runtime_result.get("blocking_reason") or decision.get("blocked_reason") or "",
+            "candidate_observations": runtime_result.get("candidate_observations") or [],
+            "retryable": runtime_result.get("retryable"),
+            "retry_after": runtime_result.get("retry_after") or "",
+            "next_action": runtime_result.get("next_action") or "",
+            "wait_classification": runtime_result.get("wait_classification") or "",
+            "candidate_wait_attempts": runtime_result.get("candidate_wait_attempts") or 0,
+            "pre_work_refusal": prework_refusal_summary,
             "decision": decision.get("decision") or ("fixed_contract_binding" if contract_bound_worker else "no_routing_record"),
             "write_scope": identity.get("write_scope") or [],
             "read_scope": identity.get("read_scope") or [],
@@ -893,6 +957,46 @@ def _build_stall_summary(
     active = [card for card in node_cards if str(card.get("status") or "").lower() in {"active", "running", "dispatched", "in_progress"}]
     reasons = sorted({str(card.get("blocked_reason") or card.get("decision") or "").strip() for card in blocked if str(card.get("blocked_reason") or card.get("decision") or "").strip()})
 
+    if sprint_status == "failed" and phase == "elastic_planner_failed":
+        failure = status.get("elastic_planner_failure") if isinstance(status.get("elastic_planner_failure"), dict) else {}
+        error = failure.get("error") if isinstance(failure.get("error"), dict) else {}
+        code = str(error.get("code") or failure.get("status") or "elastic_planner_failed").strip()
+        detail = str(error.get("detail") or "Elastic Planner stopped before it could publish an answer or execution plan.").strip()
+        stage = str(error.get("stage") or "").strip()
+        return {
+            "is_stalled": True,
+            "state": "elastic_planner_failed",
+            "severity": "error",
+            "title": "Planning failed",
+            "detail": detail[:500],
+            "reasons": [code],
+            "failure": {
+                "code": code,
+                "stage": stage or None,
+                "before_execution": bool(error.get("before_execution", True)),
+                "retry_safe": (
+                    error.get("retry_safe")
+                    if isinstance(error.get("retry_safe"), bool)
+                    else None
+                ),
+                "node_id": error.get("node_id") or None,
+                "receipt_ref": error.get("receipt_ref") or None,
+                "task_id": failure.get("task_id") or None,
+            },
+        }
+    if (
+        not tg_ok
+        and phase == "elastic_planning"
+        and sprint_status not in {"failed", "blocked", "cancelled", "completed", "done"}
+    ):
+        return {
+            "is_stalled": False,
+            "state": "elastic_planner_working",
+            "severity": "ok",
+            "title": "Planner is working",
+            "detail": "The Elastic Planner is compiling the request; a DAG is not expected until planning finishes.",
+            "reasons": [],
+        }
     if not tg_ok:
         return {
             "is_stalled": True,
@@ -938,6 +1042,60 @@ def _build_stall_summary(
             "reasons": [failure_reason],
         }
     governance_state = str((plan_governance or {}).get("state") or "").strip().lower()
+    frozen_unsat = [
+        card
+        for card in blocked
+        if str(card.get("blocked_reason") or "") == "frozen_physical_plan_unsatisfiable"
+    ]
+    if frozen_unsat:
+        return {
+            "is_stalled": True,
+            "state": "frozen_physical_plan_unsatisfiable",
+            "severity": "error",
+            "title": "No allowed worker can run this node",
+            "detail": (
+                "Every operator in the frozen plan is statically incompatible or unavailable. "
+                "Solar will not broaden the plan or retry until a new frozen plan is accepted."
+            ),
+            "reasons": reasons,
+        }
+    frozen_wait_exhausted = [
+        card
+        for card in blocked
+        if str(card.get("blocked_reason") or "") == "frozen_physical_candidate_wait_exhausted"
+    ]
+    if frozen_wait_exhausted:
+        return {
+            "is_stalled": True,
+            "state": "frozen_physical_candidate_wait_exhausted",
+            "severity": "warn",
+            "title": "Worker wait limit reached",
+            "detail": "Frozen candidates stayed busy or unavailable through the bounded wait window.",
+            "reasons": reasons,
+        }
+    frozen_waiting = [
+        card
+        for card in blocked
+        if str(card.get("blocked_reason") or "")
+        == "frozen_physical_candidates_temporarily_unavailable"
+    ]
+    if frozen_waiting:
+        retry_after = next(
+            (str(card.get("retry_after") or "") for card in frozen_waiting if card.get("retry_after")),
+            "",
+        )
+        return {
+            "is_stalled": True,
+            "state": "frozen_physical_candidates_waiting",
+            "severity": "warn",
+            "title": "Waiting for an allowed worker",
+            "detail": (
+                f"All frozen candidates are temporarily busy or cooling down. Next retry: {retry_after}."
+                if retry_after
+                else "All frozen candidates are temporarily busy or cooling down."
+            ),
+            "reasons": reasons,
+        }
     if (
         "planning_complete" in phase
         and not active
@@ -1052,6 +1210,7 @@ def _projection_artifacts(sid: str) -> list[dict]:
         f"{sid}.design.md",
         f"{sid}.plan.md",
         f"{sid}.task_graph.json",
+        f"{sid}.task_graph_state.json",
         f"{sid}.task_graph.state.json",
         f"{sid}.task_dag.json",
         f"{sid}.handoff.md",
@@ -2352,7 +2511,23 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
         degraded.append("sprint_status:missing")
 
     tg, tg_ok = _load_task_graph(sid) if sid else ({}, False)
-    if sid and not tg_ok:
+    direct_candidate = bool(
+        str(status.get("execution_mode") or "") == "direct_response"
+        and str(status.get("status") or "").lower() in {"passed", "completed", "done"}
+    )
+    direct_terminal, direct_reason = _verified_terminal_direct_response(sid, status)
+    if sid and direct_candidate and not direct_terminal:
+        degraded.append(f"direct_response:invalid:{sid}:{direct_reason}")
+    effective_tg_ok = tg_ok or direct_terminal
+    phase = str(status.get("phase") or "").strip().lower()
+    sprint_status = str(status.get("status") or "").strip().lower()
+    elastic_planner_working = bool(
+        sid
+        and not effective_tg_ok
+        and phase == "elastic_planning"
+        and sprint_status not in {"failed", "blocked", "cancelled", "completed", "done"}
+    )
+    if sid and not effective_tg_ok and not elastic_planner_working:
         degraded.append(f"task_graph:missing:{sid}")
     nodes = tg.get("nodes") or []
     if not isinstance(nodes, list):
@@ -2365,13 +2540,19 @@ def build_dashboard_payload(sprint_id: str | None = None) -> tuple[dict, list[st
     registry = _capability_registry()
     runtime_state = _load_task_runtime_state(sid) or tg.get("runtime_state") or {}
     node_cards = _build_node_cards(sid, nodes, runtime_state, routing)
-    diagnostics = _build_blocker_diagnostics(sid, status, nodes, node_cards, tg_ok)
+    diagnostics = _build_blocker_diagnostics(
+        sid,
+        status,
+        nodes,
+        node_cards,
+        effective_tg_ok or elastic_planner_working,
+    )
     plan_governance = _build_plan_governance(sid, status, tg)
     stall = _build_stall_summary(
         status,
         node_cards,
         diagnostics,
-        tg_ok,
+        effective_tg_ok,
         events=_recent_sprint_events(sid),
         plan_governance=plan_governance,
     )

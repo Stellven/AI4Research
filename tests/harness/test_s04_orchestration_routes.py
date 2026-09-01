@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -71,6 +72,152 @@ def test_real_evaluator_dispatch_failure_remains_blocked() -> None:
 
     assert narrative[0]["title"] == "Evaluation blocked"
     assert narrative[0]["tone"] == "blocked"
+
+
+def test_native_elastic_planner_terminal_failure_precedes_missing_graph() -> None:
+    mod = _load_routes()
+    status = {
+        "status": "failed",
+        "phase": "elastic_planner_failed",
+        "elastic_planner_failure": {
+            "task_id": "pm-elastic-failed",
+            "status": "failed_contract_closeout",
+            "error": {
+                "code": "failed_contract_closeout",
+                "detail": "Planner output did not satisfy its contract.",
+            },
+            "retryable": False,
+        },
+    }
+
+    stall = mod._build_stall_summary(status, [], [], False)
+
+    assert stall["state"] == "elastic_planner_failed"
+    assert stall["title"] == "Planning failed"
+    assert stall["detail"] == "Planner output did not satisfy its contract."
+    assert stall["reasons"] == ["failed_contract_closeout"]
+
+
+def test_active_elastic_planning_without_graph_is_working_not_paused() -> None:
+    mod = _load_routes()
+    status = {
+        "status": "active",
+        "phase": "elastic_planning",
+        "planner_dispatch_claim": {
+            "state": "submitted",
+            "planner_task_id": "pm-elastic-live",
+        },
+    }
+
+    stall = mod._build_stall_summary(status, [], [], False)
+
+    assert stall == {
+        "is_stalled": False,
+        "state": "elastic_planner_working",
+        "severity": "ok",
+        "title": "Planner is working",
+        "detail": "The Elastic Planner is compiling the request; a DAG is not expected until planning finishes.",
+        "reasons": [],
+    }
+
+
+def test_active_elastic_planning_full_projection_has_no_missing_graph_diagnostic(
+    tmp_path: Path,
+) -> None:
+    mod = _load_routes()
+    payload, degraded = _scenario_projection(
+        mod,
+        tmp_path,
+        "elastic-planner-working",
+        status={
+            "status": "active",
+            "phase": "elastic_planning",
+            "planner_dispatch_claim": {
+                "state": "submitted",
+                "planner_task_id": "pm-elastic-live",
+            },
+        },
+    )
+
+    assert degraded == []
+    assert payload["nodes"] == []
+    assert payload["dispatch"]["blocker_diagnostics"] == []
+    assert payload["dispatch"]["stall"]["state"] == "elastic_planner_working"
+    assert payload["dispatch"]["stall"]["is_stalled"] is False
+
+
+def test_terminal_elastic_planner_failure_full_projection_remains_failed(tmp_path: Path) -> None:
+    mod = _load_routes()
+    payload, degraded = _scenario_projection(
+        mod,
+        tmp_path,
+        "elastic-planner-failed",
+        status={
+            "status": "failed",
+            "phase": "elastic_planner_failed",
+            "elastic_planner_failure": {
+                "task_id": "pm-elastic-failed",
+                "status": "failed_contract_closeout",
+                "error": {
+                    "code": "failed_contract_closeout",
+                    "detail": "Planner output did not satisfy its contract.",
+                },
+                "retryable": False,
+            },
+        },
+    )
+
+    assert any(item.startswith("task_graph:missing") for item in degraded)
+    assert payload["nodes"] == []
+    assert payload["dispatch"]["stall"]["state"] == "elastic_planner_failed"
+    assert payload["dispatch"]["stall"]["is_stalled"] is True
+    assert payload["dispatch"]["stall"]["detail"] == "Planner output did not satisfy its contract."
+
+
+def test_dashboard_node_projects_safe_prework_refusal_summary(tmp_path: Path) -> None:
+    mod = _load_routes()
+    payload, degraded = _scenario_projection(
+        mod,
+        tmp_path,
+        "prework-refusal",
+        status={"status": "active", "phase": "graph_dispatch_active"},
+        graph={
+            "nodes": [{
+                "id": "S1",
+                "goal": "Run bounded work",
+                "status": "pending",
+                "depends_on": [],
+            }],
+        },
+        runtime_state={
+            "S1": {
+                "status": "queued",
+                "blocking_reason": "frozen_physical_candidates_temporarily_unavailable",
+                "retryable": True,
+                "next_action": "Wait for cooldown.",
+                "candidate_observations": [{"operator_id": "op.rank2", "state": "UNAVAILABLE"}],
+                "pre_work_refusal": {
+                    "operator_id": "op.rank1",
+                    "task_id": "private-task-id",
+                    "result_json": "/private/result.json",
+                    "error": {"type": "provider_quota", "detail": "private log text"},
+                    "next_candidate_id": "op.rank2",
+                    "recorded_at": "2026-08-28T12:00:00Z",
+                },
+            },
+        },
+    )
+
+    assert degraded == []
+    card = payload["nodes"][0]
+    assert card["pre_work_refusal"] == {
+        "operator_id": "op.rank1",
+        "error_type": "provider_quota",
+        "next_candidate_id": "op.rank2",
+        "recorded_at": "2026-08-28T12:00:00Z",
+    }
+    assert "private-task-id" not in json.dumps(card)
+    assert "/private/result.json" not in json.dumps(card)
 
 
 def test_transient_missing_plan_certificate_is_working_after_certification() -> None:
@@ -426,6 +573,237 @@ def test_projection_and_sprint_index_rehydrate_split_runtime_state(tmp_path: Pat
     index = mod._sprint_status_rows(limit=10)
     row = next(item for item in index if item["sprint_id"] == sid)
     assert row["node_status_counts"] == {"passed": 1}
+
+
+def test_dashboard_reads_scheduler_underscore_state_filename(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "underscore-runtime-state")
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {}
+    sid = "sprint-underscore-runtime-state"
+    _write_json(tree["sprints"] / f"{sid}.status.json", {
+        "sprint_id": sid,
+        "status": "active",
+        "phase": "planning_complete",
+    })
+    _write_json(tree["sprints"] / f"{sid}.task_graph.json", {
+        "sprint_id": sid,
+        "runtime_state_filename": f"{sid}.task_graph_state.json",
+        "nodes": [{"id": "S1", "goal": "Work", "depends_on": []}],
+    })
+    _write_json(tree["sprints"] / f"{sid}.task_graph_state.json", {
+        "schema_version": "solar.task_graph_state.v1",
+        "artifact_role": "mutable_execution_ledger",
+        "nodes": {"S1": {"status": "dispatched"}},
+        "node_results": {"S1": {"status": "dispatched"}},
+        "ready_nodes": [],
+        "revision": 1,
+        "events": [],
+    })
+
+    payload, degraded = mod.build_dashboard_payload(sid)
+
+    assert degraded == []
+    assert payload["dag"]["nodes"][0]["workflow_status"] == "dispatched"
+
+
+def test_dashboard_projects_static_frozen_candidate_unsat_from_split_state(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "frozen-unsat")
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {}
+    sid = "sprint-frozen-unsat"
+    _write_json(tree["sprints"] / f"{sid}.status.json", {
+        "sprint_id": sid,
+        "status": "active",
+        "phase": "planning_complete",
+    })
+    _write_json(tree["sprints"] / f"{sid}.task_graph.json", {
+        "sprint_id": sid,
+        "runtime_state_filename": f"{sid}.task_graph_state.json",
+        "nodes": [{"id": "S1", "goal": "Execute", "depends_on": []}],
+    })
+    observations = [{
+        "operator_id": "op.claude",
+        "rank": 1,
+        "state": "UNAVAILABLE",
+        "reason": "physical_operator_provider_incompatible:allowed=openai:actual=anthropic",
+    }]
+    _write_json(tree["sprints"] / f"{sid}.task_graph_state.json", {
+        "schema_version": "solar.task_graph_state.v1",
+        "nodes": {"S1": {"status": "worker_blocked"}},
+        "node_results": {
+            "S1": {
+                "status": "worker_blocked",
+                "blocking_reason": "frozen_physical_plan_unsatisfiable",
+                "retryable": False,
+                "wait_classification": "static_incompatible",
+                "candidate_observations": observations,
+                "next_action": "Update provider policy, then explicitly resume.",
+            }
+        },
+    })
+
+    payload, degraded = mod.build_dashboard_payload(sid)
+
+    assert degraded == []
+    card = payload["dag"]["nodes"][0]
+    assert card["status"] == "blocked"
+    assert card["workflow_status"] == "worker_blocked"
+    assert card["blocked_reason"] == "frozen_physical_plan_unsatisfiable"
+    assert card["candidate_observations"] == observations
+    assert card["retryable"] is False
+    assert card["next_action"] == "Update provider policy, then explicitly resume."
+    assert payload["stall"]["state"] == "frozen_physical_plan_unsatisfiable"
+    assert payload["stall"]["is_stalled"] is True
+
+
+def test_dashboard_projects_bounded_frozen_candidate_wait_from_split_state(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "frozen-wait")
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {}
+    sid = "sprint-frozen-wait"
+    retry_after = "2026-08-28T12:30:00Z"
+    _write_json(tree["sprints"] / f"{sid}.status.json", {
+        "sprint_id": sid,
+        "status": "active",
+        "phase": "planning_complete",
+    })
+    _write_json(tree["sprints"] / f"{sid}.task_graph.json", {
+        "sprint_id": sid,
+        "runtime_state_filename": f"{sid}.task_graph_state.json",
+        "nodes": [{"id": "S1", "goal": "Execute", "depends_on": []}],
+    })
+    _write_json(tree["sprints"] / f"{sid}.task_graph_state.json", {
+        "schema_version": "solar.task_graph_state.v1",
+        "node_results": {
+            "S1": {
+                "status": "queued",
+                "blocking_reason": "frozen_physical_candidates_temporarily_unavailable",
+                "retryable": True,
+                "retry_after": retry_after,
+                "wait_classification": "transient",
+                "candidate_wait_attempts": 2,
+                "candidate_observations": [{
+                    "operator_id": "op.primary",
+                    "rank": 1,
+                    "state": "UNAVAILABLE",
+                    "reason": "worker_capacity_exhausted",
+                }],
+                "next_action": "Wait for capacity to clear.",
+            }
+        },
+    })
+
+    payload, degraded = mod.build_dashboard_payload(sid)
+
+    assert degraded == []
+    card = payload["dag"]["nodes"][0]
+    assert card["status"] == "pending"
+    assert card["blocked_reason"] == "frozen_physical_candidates_temporarily_unavailable"
+    assert card["retryable"] is True
+    assert card["retry_after"] == retry_after
+    assert card["candidate_wait_attempts"] == 2
+    assert payload["stall"]["state"] == "frozen_physical_candidates_waiting"
+    assert retry_after in payload["stall"]["detail"]
+
+
+def test_terminal_direct_answer_does_not_report_missing_dag_stall(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "direct-terminal")
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {}
+    sid = "sprint-direct-terminal"
+    report = tree["sprints"] / f"{sid}.direct-response-report.md"
+    _write_text(report, "Photosynthesis converts light energy into stored chemical energy.\n")
+    _write_json(tree["sprints"] / f"{sid}.status.json", {
+        "sprint_id": sid,
+        "status": "passed",
+        "phase": "direct_response_complete",
+        "execution_mode": "direct_response",
+        "direct_response_ref": {
+            "path": str(report),
+            "sha256": hashlib.sha256(report.read_bytes()).hexdigest(),
+        },
+    })
+
+    payload, degraded = mod.build_dashboard_payload(sid)
+
+    assert degraded == []
+    assert payload["progress"]["total_nodes"] == 0
+    assert payload["stall"]["is_stalled"] is False
+
+
+def test_terminal_direct_answer_requires_existing_report(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "direct-terminal-missing")
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {}
+    sid = "sprint-direct-terminal-missing"
+    report = tree["sprints"] / f"{sid}.direct-response-report.md"
+    _write_json(tree["sprints"] / f"{sid}.status.json", {
+        "sprint_id": sid,
+        "status": "passed",
+        "phase": "direct_response_complete",
+        "execution_mode": "direct_response",
+        "direct_response_ref": {"path": str(report), "sha256": "a" * 64},
+    })
+
+    payload, degraded = mod.build_dashboard_payload(sid)
+
+    assert f"direct_response:invalid:{sid}:report_missing" in degraded
+    assert f"task_graph:missing:{sid}" in degraded
+    assert payload["stall"]["is_stalled"] is True
+
+
+def test_terminal_direct_answer_rejects_report_outside_sprints(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "direct-terminal-outside")
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {}
+    sid = "sprint-direct-terminal-outside"
+    report = tmp_path / "outside-report.md"
+    _write_text(report, "This file is outside the sprint authority.\n")
+    _write_json(tree["sprints"] / f"{sid}.status.json", {
+        "sprint_id": sid,
+        "status": "passed",
+        "phase": "direct_response_complete",
+        "execution_mode": "direct_response",
+        "direct_response_ref": {
+            "path": str(report),
+            "sha256": hashlib.sha256(report.read_bytes()).hexdigest(),
+        },
+    })
+
+    _payload, degraded = mod.build_dashboard_payload(sid)
+
+    assert f"direct_response:invalid:{sid}:path_outside_sprints" in degraded
+    assert f"task_graph:missing:{sid}" in degraded
+
+
+def test_terminal_direct_answer_rejects_tampered_report(tmp_path: Path) -> None:
+    mod = _load_routes()
+    tree = _scenario_tree(tmp_path, "direct-terminal-tampered")
+    _patch_dirs(mod, tree)
+    mod._capability_registry = lambda: {}
+    sid = "sprint-direct-terminal-tampered"
+    report = tree["sprints"] / f"{sid}.direct-response-report.md"
+    _write_text(report, "Original answer.\n")
+    recorded_sha = hashlib.sha256(report.read_bytes()).hexdigest()
+    _write_text(report, "Tampered answer.\n")
+    _write_json(tree["sprints"] / f"{sid}.status.json", {
+        "sprint_id": sid,
+        "status": "passed",
+        "phase": "direct_response_complete",
+        "execution_mode": "direct_response",
+        "direct_response_ref": {"path": str(report), "sha256": recorded_sha},
+    })
+
+    _payload, degraded = mod.build_dashboard_payload(sid)
+
+    assert f"direct_response:invalid:{sid}:sha256_mismatch" in degraded
+    assert f"task_graph:missing:{sid}" in degraded
 
 
 def test_dashboard_payload_preserves_compiler_owned_node_role_authority(tmp_path: Path) -> None:

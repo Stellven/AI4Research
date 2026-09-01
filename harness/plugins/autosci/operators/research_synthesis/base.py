@@ -54,6 +54,23 @@ class OperatorContext:
         return payload
 
     @property
+    def output_node_id(self) -> str:
+        """Return the scheduler-visible node identity for emitted evidence.
+
+        A physical registry entry can reuse a generic implementation name such
+        as ``report_draft`` while executing a semantically named TaskGraph node
+        such as ``technical_landscape_report``.  The implementation selector is
+        still ``node_id``; evidence and result ownership belong to the frozen
+        scheduler node when that exact identity is supplied by the adapter.
+        """
+
+        return str(
+            self.node_request.get("scheduled_node_id")
+            or self.node_request.get("node_id")
+            or ""
+        )
+
+    @property
     def read_scope(self) -> list[str]:
         return [str(item) for item in self.node_request.get("read_scope") or []]
 
@@ -180,6 +197,7 @@ def validate_scoped_path(
     *,
     workspace_root: Path | None = None,
     must_exist: bool = False,
+    allow_external_exact: bool = False,
 ) -> Path:
     """Resolve a path only if it is equal to, or below, one declared scope."""
 
@@ -191,12 +209,18 @@ def validate_scoped_path(
     scope_paths = [path for _raw, path in scope_entries]
     if not scope_paths:
         raise ResearchOperatorError("No scope was declared for path access", error_type="scope_violation")
-    if not _is_same_or_child(target, workspace):
+    target_in_workspace = _is_same_or_child(target, workspace)
+    if not target_in_workspace and not allow_external_exact:
         raise ResearchOperatorError(f"Path escapes workspace root: {path_text}", error_type="scope_violation")
     outside_scopes = [raw for raw, scope_path in scope_entries if not _is_same_or_child(scope_path, workspace)]
-    if outside_scopes:
+    if outside_scopes and not allow_external_exact:
         raise ResearchOperatorError(
             "Declared scope escapes workspace root: " + ", ".join(outside_scopes),
+            error_type="scope_violation",
+        )
+    if not target_in_workspace and not any(target == scope_path for _raw, scope_path in scope_entries):
+        raise ResearchOperatorError(
+            f"External path is not an exact declared scope: {path_text}",
             error_type="scope_violation",
         )
 
@@ -425,7 +449,7 @@ def build_node_result(
         "task_id": str(context.node_request.get("task_id") or ""),
         "run_id": str(context.node_request.get("run_id") or ""),
         "workflow_id": str(context.node_request.get("workflow_id") or ""),
-        "node_id": str(context.node_request.get("node_id") or ""),
+        "node_id": context.output_node_id,
         "status": status,
         "status_is_terminal": status in TERMINAL_STATUSES,
         "output_artifacts": list(output_artifacts or []),
@@ -452,7 +476,11 @@ def error_result(context: OperatorContext, exc: ResearchOperatorError) -> dict[s
 
 
 def require_node(context: OperatorContext, expected: str) -> None:
-    actual = str(context.node_request.get("node_id") or "")
+    actual = str(
+        context.node_request.get("implementation_node_id")
+        or context.node_request.get("node_id")
+        or ""
+    )
     if actual != expected:
         raise ResearchOperatorError(f"Operator expected node_id={expected}, got {actual}", error_type="wrong_node_identity")
 

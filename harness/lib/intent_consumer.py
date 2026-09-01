@@ -11,6 +11,7 @@ the Planner or scheduler—binds that PlanIR into frozen scheduler authority.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as dt
 import json
 import os
@@ -21,10 +22,13 @@ import textwrap
 from pathlib import Path
 from typing import Any
 
+import file_lock_compat as fcntl
+
 HARNESS_DIR = Path(os.environ.get("SOLAR_HARNESS_DIR", Path(__file__).resolve().parents[1]))
 SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR", Path.home() / ".solar" / "harness" / "sprints"))
 INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR", Path.home() / ".solar" / "harness" / "intents"))
 DEFAULT_TRUSTED_AUTODISPATCH_CHANNELS = (
+    "dashboard",
     "pm_dispatch",
     "pm_compile_request",
     "codex_bridge",
@@ -407,6 +411,420 @@ def submit_planner_handoff(sprint_id: str, requirement_ir_path: Path, *, dry_run
     }
 
 
+ELASTIC_PLANNER_DEDUPE_PM_STATUSES = {
+    "accepted",
+    "assigned",
+    "claimed",
+    "completed",
+    "dispatched",
+    "in_progress",
+    "queued",
+    "running",
+    "submitted",
+}
+
+
+def _elastic_planner_tasks(sprint_id: str) -> list[dict[str, Any]]:
+    inbox = HARNESS_DIR / "run" / "pm-inbox"
+    if not inbox.is_dir():
+        return []
+    matches: list[tuple[float, dict[str, Any]]] = []
+    for path in inbox.glob("pm-*.json"):
+        try:
+            value = read_json(path)
+            if (
+                value.get("sprint_id") == sprint_id
+                and value.get("closeout_kind") == "elastic_planner"
+                and value.get("node_id") == "elastic-planner"
+            ):
+                matches.append((path.stat().st_mtime, value))
+        except (OSError, json.JSONDecodeError):
+            continue
+    return [value for _, value in sorted(matches, key=lambda item: item[0])]
+
+
+def _preflight_elastic_planner_input(requirement_ir_path: Path) -> dict[str, Any]:
+    """Reject an incompatible Planner input before it can own a sprint."""
+    from elastic_planner import requirement_ir_id, requirements
+
+    try:
+        requirement_ir = read_json(requirement_ir_path)
+        stable_id = requirement_ir_id(requirement_ir)
+        rows = requirements(requirement_ir)
+    except (OSError, json.JSONDecodeError, ValueError, RuntimeError) as exc:
+        return {
+            "ok": False,
+            "error": {
+                "code": "ELASTIC_PLANNER_INPUT_INCOMPATIBLE",
+                "detail": f"{type(exc).__name__}:{exc}",
+            },
+        }
+    return {
+        "ok": True,
+        "requirement_ir_id": stable_id,
+        "requirement_count": len(rows),
+    }
+
+
+def _existing_elastic_planner_task(sprint_id: str) -> dict[str, Any] | None:
+    for value in reversed(_elastic_planner_tasks(sprint_id)):
+        if str(value.get("status") or "").strip().lower() in ELASTIC_PLANNER_DEDUPE_PM_STATUSES:
+            return value
+    return None
+
+
+def _record_elastic_submission_attempt(
+    owner: dict[str, Any],
+    *,
+    task_id: str,
+    status: str,
+    prior_failed_task_ids: list[str],
+) -> list[dict[str, Any]]:
+    attempts = [dict(item) for item in owner.get("planner_attempts") or [] if isinstance(item, dict)]
+    if task_id and any(str(item.get("task_id") or "") == task_id for item in attempts):
+        return attempts
+    attempts.append(
+        {
+            "attempt": len(attempts) + 1,
+            "task_id": task_id or None,
+            "status": status,
+            "prior_failed_task_ids": prior_failed_task_ids,
+            "recorded_at": now_iso(),
+        }
+    )
+    return attempts
+
+
+@contextlib.contextmanager
+def _elastic_submission_lock(sprint_id: str):
+    lock_path = SPRINTS_DIR / sprint_id / "elastic-planner" / "submission.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("w", encoding="utf-8") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def submit_elastic_planner(sprint_id: str, requirement_ir_path: Path, *, dry_run: bool = False) -> dict[str, Any]:
+    """Submit the dedicated Planner command once through the durable runtime."""
+    from elastic_planner_runtime import owner_path, update_owner
+
+    cmd = [
+        sys.executable,
+        str(HARNESS_DIR / "tools" / "pm_dispatch.py"),
+        "submit",
+        "--role", "elastic-planner",
+        "--objective", f"Produce the native Elastic Planner decision for accepted RequirementIR {requirement_ir_path}.",
+        "--sprint", sprint_id,
+        "--node", "elastic-planner",
+        "--task-type", "elastic_planning",
+        "--closeout-kind", "elastic_planner",
+        "--context", f"accepted_requirement_ir={requirement_ir_path}",
+    ]
+    if dry_run:
+        return {"status": "dry_run", "cmd": cmd}
+    with _elastic_submission_lock(sprint_id):
+        owner = read_json(owner_path(SPRINTS_DIR, sprint_id))
+        if owner.get("state") == "finalized":
+            return {"status": "finalized", "task_id": owner.get("planner_task_id") or ""}
+        typed_retry_safe = False
+        try:
+            from planner_failure import read_planner_failure
+
+            typed_failure = read_planner_failure(
+                SPRINTS_DIR / sprint_id / "elastic-planner"
+            )
+            typed_retry_safe = bool(
+                isinstance(typed_failure, dict)
+                and typed_failure.get("before_execution") is True
+                and typed_failure.get("retry_safe") is True
+            )
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            typed_retry_safe = False
+        if (
+            owner.get("state") == "failed"
+            and not bool((owner.get("failure") or {}).get("retryable"))
+            and not typed_retry_safe
+        ):
+            return {
+                "status": "terminal_failed",
+                "task_id": owner.get("planner_task_id") or "",
+                "failure": owner.get("failure") or {},
+            }
+        existing = _existing_elastic_planner_task(sprint_id)
+        if existing:
+            task_id = str(existing.get("task_id") or "")
+            attempts = _record_elastic_submission_attempt(
+                owner,
+                task_id=task_id,
+                status="already_submitted",
+                prior_failed_task_ids=[],
+            )
+            update_owner(
+                SPRINTS_DIR,
+                sprint_id,
+                state="submitted",
+                planner_task_id=task_id,
+                planner_attempts=attempts,
+            )
+            return {"status": "already_submitted", "task_id": task_id, "pm_status": existing.get("status")}
+        prior_failed_records = _elastic_planner_tasks(sprint_id)
+        prior_failed_task_ids = [
+            str(item.get("task_id") or "")
+            for item in prior_failed_records
+            if str(item.get("status") or "").strip().lower().startswith("failed")
+            and str(item.get("task_id") or "")
+        ]
+        env = dict(os.environ)
+        env.update(
+            {
+                "SOLAR_HARNESS_DIR": str(HARNESS_DIR),
+                "HARNESS_DIR": str(HARNESS_DIR),
+                "SOLAR_HARNESS_SPRINTS_DIR": str(SPRINTS_DIR),
+                "SOLAR_INTENT_GATEWAY_DIR": str(INTENTS_DIR),
+                "SOLAR_PM_DISPATCH_ALLOW_DIRECT": "1",
+            }
+        )
+        try:
+            proc = subprocess.run(cmd, text=True, capture_output=True, env=env, timeout=90)
+        except Exception as exc:
+            return {"status": "failed", "exit_code": -1, "error": str(exc), "cmd": cmd}
+        task_match = re.search(r"task_id\s*=\s*([^\s]+)", proc.stdout or "")
+        task_id = task_match.group(1) if task_match else ""
+        attempt_status = "submitted" if proc.returncode == 0 else "failed"
+        attempts = _record_elastic_submission_attempt(
+            owner,
+            task_id=task_id,
+            status=attempt_status,
+            prior_failed_task_ids=prior_failed_task_ids,
+        )
+        if proc.returncode == 0:
+            update_owner(
+                SPRINTS_DIR,
+                sprint_id,
+                state="submitted",
+                planner_task_id=task_id or None,
+                planner_attempts=attempts,
+                failure=None,
+                failure_ref=None,
+            )
+        else:
+            prior_ids = {
+                str(item.get("task_id") or "")
+                for item in prior_failed_records
+                if str(item.get("task_id") or "")
+            }
+            new_failed = [
+                item
+                for item in _elastic_planner_tasks(sprint_id)
+                if str(item.get("task_id") or "") not in prior_ids
+                and str(item.get("status") or "").strip().lower().startswith("failed")
+            ]
+            if new_failed:
+                from elastic_planner_runtime import project_planner_failure
+
+                failed_record = new_failed[-1]
+                failed_task_id = str(failed_record.get("task_id") or "")
+                attempts = _record_elastic_submission_attempt(
+                    owner,
+                    task_id=failed_task_id,
+                    status=str(failed_record.get("status") or "failed"),
+                    prior_failed_task_ids=prior_failed_task_ids,
+                )
+                update_owner(
+                    SPRINTS_DIR,
+                    sprint_id,
+                    state="submitted",
+                    planner_task_id=failed_task_id,
+                    planner_attempts=attempts,
+                )
+                inbox = HARNESS_DIR / "run" / "pm-inbox"
+                projection = project_planner_failure(
+                    SPRINTS_DIR,
+                    sprint_id,
+                    task_id=failed_task_id,
+                    failure_status=str(failed_record.get("status") or "failed"),
+                    failure_reason=str(
+                        failed_record.get("failure_reason")
+                        or failed_record.get("status")
+                        or "failed"
+                    ),
+                    record_path=inbox / f"{failed_task_id}.json",
+                    record_root=inbox,
+                )
+                owner = read_json(owner_path(SPRINTS_DIR, sprint_id))
+                return {
+                    "status": (
+                        "retryable_failure"
+                        if bool((projection.get("failure") or {}).get("retryable"))
+                        else "terminal_failed"
+                    ),
+                    "task_id": failed_task_id,
+                    "exit_code": proc.returncode,
+                    "cmd": cmd,
+                    "failure": owner.get("failure") or {},
+                }
+            update_owner(
+                SPRINTS_DIR,
+                sprint_id,
+                state="claimed",
+                planner_task_id=None,
+                planner_attempts=attempts,
+            )
+        return {
+            "status": "submitted" if proc.returncode == 0 else "failed",
+            "task_id": task_id,
+            "exit_code": proc.returncode,
+            "cmd": cmd,
+            "stdout_tail": (proc.stdout or "")[-4000:],
+            "stderr_tail": (proc.stderr or "")[-4000:],
+        }
+
+
+def _parse_utc(value: object) -> dt.datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(dt.timezone.utc)
+
+
+def reconcile_retryable_elastic_planners(
+    *,
+    sprint_id: str = "",
+    limit: int = 1,
+    base_delay_seconds: int = 5,
+    max_delay_seconds: int = 60,
+    now: dt.datetime | None = None,
+) -> dict[str, Any]:
+    """Resubmit durable Planner capacity failures after bounded backoff.
+
+    A dashboard request is already durably owned before PM dispatch.  If every
+    Planner operator is busy, the request must remain queued and be retried by
+    the control plane; a user refresh or second submission is not a scheduler.
+    Terminal Planner failures are deliberately excluded.
+    """
+    from elastic_planner_runtime import OWNER_SCHEMA, planner_failure_retryable
+    from planner_failure import read_planner_failure
+
+    now = (now or dt.datetime.now(dt.timezone.utc)).astimezone(dt.timezone.utc)
+    limit = max(1, int(limit))
+    base_delay_seconds = max(1, int(base_delay_seconds))
+    max_delay_seconds = max(base_delay_seconds, int(max_delay_seconds))
+    owner_files = (
+        [SPRINTS_DIR / sprint_id / "elastic-planner" / "owner.json"]
+        if sprint_id
+        else sorted(SPRINTS_DIR.glob("sprint-*/elastic-planner/owner.json"))
+    )
+    due: list[tuple[dt.datetime, Path, dict[str, Any], int]] = []
+    rows: list[dict[str, Any]] = []
+    for owner_file in owner_files:
+        if not owner_file.is_file():
+            continue
+        try:
+            owner = read_json(owner_file)
+        except (OSError, json.JSONDecodeError) as exc:
+            rows.append(
+                {
+                    "sprint_id": owner_file.parents[1].name,
+                    "status": "invalid_owner",
+                    "error": f"{type(exc).__name__}:{exc}",
+                }
+            )
+            continue
+        sid = str(owner.get("sprint_id") or "")
+        failure = owner.get("failure") if isinstance(owner.get("failure"), dict) else {}
+        failure_status = str(failure.get("status") or "").strip().lower()
+        typed_failure = read_planner_failure(owner_file.parent)
+        typed_retry_safe = bool(
+            isinstance(typed_failure, dict)
+            and typed_failure.get("before_execution") is True
+            and typed_failure.get("retry_safe") is True
+        )
+        if (
+            owner.get("schema_version") != OWNER_SCHEMA
+            or owner.get("state") not in {"retryable_failure", "failed"}
+            or not (failure.get("retryable") is True or typed_retry_safe)
+        ):
+            continue
+        failed_at = _parse_utc(failure.get("failed_at"))
+        if failed_at is None:
+            rows.append(
+                {
+                    "sprint_id": sid,
+                    "status": "invalid_retry_timestamp",
+                    "failure_status": failure_status,
+                }
+            )
+            continue
+        retryable_failures = sum(
+            1
+            for item in _elastic_planner_tasks(sid)
+            if planner_failure_retryable(str(item.get("status") or ""))
+        )
+        delay = min(
+            max_delay_seconds,
+            base_delay_seconds * (2 ** min(max(retryable_failures - 1, 0), 4)),
+        )
+        age = max(0.0, (now - failed_at).total_seconds())
+        if age < delay:
+            rows.append(
+                {
+                    "sprint_id": sid,
+                    "status": "backoff",
+                    "failure_status": failure_status,
+                    "retry_in_seconds": round(delay - age, 3),
+                }
+            )
+            continue
+        due.append((failed_at, owner_file, owner, delay))
+
+    attempted = 0
+    for _, owner_file, owner, delay in sorted(due, key=lambda item: item[0])[:limit]:
+        sid = str(owner.get("sprint_id") or "")
+        reference = owner.get("requirement_ir_ref") or {}
+        requirement_path = Path(str(reference.get("path") or "")).expanduser().resolve()
+        canonical = (SPRINTS_DIR / f"{sid}.requirement_ir.json").resolve()
+        if requirement_path != canonical or not requirement_path.is_file():
+            rows.append(
+                {
+                    "sprint_id": sid,
+                    "status": "invalid_requirement_reference",
+                    "path": str(requirement_path),
+                }
+            )
+            continue
+        result = submit_elastic_planner(sid, requirement_path)
+        attempted += 1
+        rows.append(
+            {
+                "sprint_id": sid,
+                "status": str(result.get("status") or "unknown"),
+                "task_id": str(result.get("task_id") or ""),
+                "previous_backoff_seconds": delay,
+            }
+        )
+    errors = [
+        row
+        for row in rows
+        if row.get("status")
+        in {"invalid_owner", "invalid_retry_timestamp", "invalid_requirement_reference", "failed"}
+    ]
+    return {
+        "ok": not errors,
+        "attempted": attempted,
+        "due": len(due),
+        "rows": rows,
+    }
+
+
 def consume_one(
     intent_id: str,
     *,
@@ -430,7 +848,11 @@ def consume_one(
         explicit_dispatch_planner=dispatch_planner,
         auto_dispatch_planner=auto_dispatch_planner,
     )
-    handoff = suppress_pm_operator_dispatch_for_codex(handoff)
+    native_elastic_planner = bool(
+        handoff.get("requested") and handoff.get("source_channel") == "dashboard"
+    )
+    if not native_elastic_planner:
+        handoff = suppress_pm_operator_dispatch_for_codex(handoff)
     if research_required and not research:
         payload = {
             "ok": False,
@@ -460,7 +882,118 @@ def consume_one(
     env["SOLAR_PM_DISPATCH_ALLOW_DIRECT"] = "1"
 
     if dry_run:
+        if native_elastic_planner:
+            native_cmd = [
+                sys.executable,
+                str(HARNESS_DIR / "tools" / "pm_dispatch.py"),
+                "submit", "--role", "elastic-planner",
+                "--sprint", sid, "--node", "elastic-planner", "--task-type", "elastic_planning",
+                "--closeout-kind", "elastic_planner",
+            ]
+            return {"ok": True, "intent_id": intent_id, "status": "dry_run", "sprint_id": sid, "cmd": native_cmd, "planner_handoff": {**handoff, "planner_kind": "native_elastic_planner"}}
         return {"ok": True, "intent_id": intent_id, "status": "dry_run", "sprint_id": sid, "cmd": cmd, "planner_handoff": handoff}
+
+    if native_elastic_planner:
+        bind_cmd = [
+            sys.executable,
+            str(HARNESS_DIR / "lib" / "intent_gateway.py"),
+            "bind", "--intent-id", intent_id, "--sprint-id", sid, "--json",
+        ]
+        bind = subprocess.run(bind_cmd, text=True, capture_output=True, env=env, timeout=30)
+        if bind.returncode != 0:
+            payload = {
+                "ok": False,
+                "status": "bind_failed",
+                "intent_id": intent_id,
+                "sprint_id": sid,
+                "updated_at": now_iso(),
+                "planner_handoff": handoff,
+                "bind_stderr_tail": (bind.stderr or bind.stdout or "")[-4000:],
+            }
+            write_json(base / "consumer.json", payload)
+            return payload
+        from elastic_planner_runtime import claim_owner, initialize_status
+
+        requirement_path = SPRINTS_DIR / f"{sid}.requirement_ir.json"
+        # Research source metadata is part of the authoritative RequirementIR.
+        # Apply it before any hash-bearing workspace/owner receipt is frozen.
+        if research:
+            annotate_compiled_package_with_research_artifact(sid, research)
+        preflight = _preflight_elastic_planner_input(requirement_path)
+        if not preflight.get("ok"):
+            payload = {
+                "ok": False,
+                "status": "planner_input_invalid",
+                "intent_id": intent_id,
+                "sprint_id": sid,
+                "updated_at": now_iso(),
+                "planner_handoff": {**handoff, "planner_kind": "native_elastic_planner"},
+                "planner_input_preflight": preflight,
+            }
+            write_json(base / "consumer.json", payload)
+            return payload
+        import workspace_binding
+
+        binding_harness_dir = Path(
+            os.environ.get("SOLAR_WORKSPACE_BINDING_HARNESS_DIR") or HARNESS_DIR
+        )
+        try:
+            workspace_authority_path = workspace_binding.freeze_sprint_workspace_authority(
+                SPRINTS_DIR,
+                sid,
+                harness_dir=binding_harness_dir,
+                captured_cwd=(raw.get("context") or {}).get("cwd")
+                if isinstance(raw.get("context"), dict)
+                else None,
+            )
+        except ValueError as exc:
+            payload = {
+                "ok": False,
+                "status": "workspace_authority_invalid",
+                "intent_id": intent_id,
+                "sprint_id": sid,
+                "updated_at": now_iso(),
+                "planner_handoff": {**handoff, "planner_kind": "native_elastic_planner"},
+                "workspace_authority_error": str(exc),
+            }
+            write_json(base / "consumer.json", payload)
+            return payload
+        claim_owner(
+            SPRINTS_DIR,
+            sid,
+            intent_id,
+            requirement_path,
+            workspace_authority_path=workspace_authority_path,
+            workspace_binding_harness_dir=binding_harness_dir,
+        )
+        initialize_status(
+            SPRINTS_DIR,
+            sid,
+            intent_id,
+            title=str(rewritten.get("title") or rewritten.get("objective") or "")[:120],
+        )
+        handoff = {**handoff, "planner_kind": "native_elastic_planner", **submit_elastic_planner(sid, requirement_path)}
+        payload = {
+            "ok": handoff.get("status") in {"submitted", "already_submitted", "finalized"},
+            "status": "consumed" if handoff.get("status") in {"submitted", "already_submitted", "finalized"} else "planner_submit_failed",
+            "intent_id": intent_id,
+            "sprint_id": sid,
+            "updated_at": now_iso(),
+            "consumer": "intent_consumer.py",
+            "direct_pane_dispatch": False,
+            "planner_runtime_submit": handoff.get("status") in {"submitted", "already_submitted"},
+            "planner_handoff": handoff,
+            "artifacts": {
+                "status": str(SPRINTS_DIR / f"{sid}.status.json"),
+                "owner": str(SPRINTS_DIR / sid / "elastic-planner" / "owner.json"),
+                "raw_intent": str(SPRINTS_DIR / f"{sid}.raw_intent.json"),
+                "intent_ir": str(SPRINTS_DIR / f"{sid}.intent_ir.json"),
+                "requirement_ir": str(requirement_path),
+                "workspace_authority": str(workspace_authority_path),
+            },
+        }
+        write_json(base / "consumer.json", payload)
+        return payload
 
     proc = subprocess.run(cmd, text=True, capture_output=True, env=env, timeout=120)
     if proc.returncode != 0:
@@ -591,9 +1124,23 @@ def main(argv: list[str] | None = None) -> int:
     st.add_argument("--newest-first", action="store_true")
     st.add_argument("--json", action="store_true")
 
+    retry = sub.add_parser("retry-planners")
+    retry.add_argument("--sprint-id", default="")
+    retry.add_argument("--limit", type=int, default=1)
+    retry.add_argument("--base-delay-seconds", type=int, default=5)
+    retry.add_argument("--max-delay-seconds", type=int, default=60)
+    retry.add_argument("--json", action="store_true")
+
     args = parser.parse_args(argv)
     if args.cmd == "consume":
         payload = consume(args)
+    elif args.cmd == "retry-planners":
+        payload = reconcile_retryable_elastic_planners(
+            sprint_id=args.sprint_id,
+            limit=args.limit,
+            base_delay_seconds=args.base_delay_seconds,
+            max_delay_seconds=args.max_delay_seconds,
+        )
     else:
         payload = status(args)
 
@@ -608,6 +1155,10 @@ def main(argv: list[str] | None = None) -> int:
             for item in payload["results"]:
                 handoff = item.get("planner_handoff") or {}
                 print(f"- {item.get('intent_id')} {item.get('status')} sprint={item.get('sprint_id', 'N/A')} planner={handoff.get('status', 'N/A')}")
+        elif args.cmd == "retry-planners":
+            print(f"planner_retries={payload['attempted']} due={payload['due']} ok={payload['ok']}")
+            for item in payload["rows"]:
+                print(f"- {item.get('sprint_id')} {item.get('status')} task={item.get('task_id', 'N/A')}")
         else:
             print(f"pending={payload['pending_count']} consumed={payload['consumed_count']} failed={payload['failed_count']}")
             for item in payload["pending"]:

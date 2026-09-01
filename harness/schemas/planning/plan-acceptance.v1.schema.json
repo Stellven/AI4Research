@@ -9,14 +9,14 @@
     "artifact_role": {"const": "runtime_artifact"},
     "acceptance_id": {"type": "string", "minLength": 1},
     "decision": {"enum": ["accepted", "failed", "requirements_gap", "direct_response"]},
-    "final_generation": {"anyOf": [{"type": "integer", "minimum": 0, "maximum": 1}, {"type": "null"}]},
+    "final_generation": {"anyOf": [{"type": "integer", "minimum": 0, "maximum": 4}, {"type": "null"}]},
     "repair": {
       "type": "object",
       "required": ["attempted", "maximum_attempts"],
       "additionalProperties": false,
       "properties": {
         "attempted": {"type": "boolean"},
-        "maximum_attempts": {"const": 1}
+        "maximum_attempts": {"type": "integer", "minimum": 0, "maximum": 4}
       }
     },
     "refs": {"type": "object"},

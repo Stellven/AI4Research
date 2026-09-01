@@ -223,6 +223,33 @@ def test_operatord_materializes_work_dir_for_codex(tmp_path, monkeypatch):
     }
 
 
+def test_operatord_native_registry_handoff_uses_verified_canonical_path(tmp_path, monkeypatch):
+    operatord = _load_module("operatord_contract_native_handoff", ROOT / "tools" / "operatord.py")
+    harness = tmp_path / "harness"
+    runtime_root = tmp_path / "runtime"
+    result_dir = harness / "run" / "operator-results" / "native" / "task"
+    result_dir.mkdir(parents=True)
+    monkeypatch.setattr(operatord, "HARNESS_DIR", harness)
+    monkeypatch.setattr(operatord, "SPRINTS_DIR", runtime_root)
+    handoff = runtime_root / "sprint-1.N1-handoff.md"
+
+    env = operatord._materialize_envelope_context(
+        result_dir,
+        {
+            "task_id": "pm-sprint-1-N1-native",
+            "sprint_id": "sprint-1",
+            "node_id": "N1",
+            "operator_backend": "research_operator_registry",
+            "handoff_path": str(handoff),
+            "work_dir": str(runtime_root / "sprint-1" / "workdir"),
+            "expected_artifacts": [str(handoff)],
+        },
+    )
+
+    assert "SOLAR_OPERATOR_OUTPUT_PUBLISH_MAP_JSON" not in env
+    assert json.loads(env["SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON"]) == [str(handoff)]
+
+
 def test_operatord_stages_and_atomically_publishes_replaceable_outputs(tmp_path, monkeypatch):
     operatord = _load_module("operatord_contract_output_publish", ROOT / "tools" / "operatord.py")
     harness = tmp_path / "harness"
@@ -917,7 +944,7 @@ def test_codex_operator_does_not_forward_unrecognized_extra_flags(tmp_path, monk
     cmd = codex_operator._codex_exec_command("gpt-5.5", "medium", str(tmp_path), tmp_path / "last.md")
 
     assert cmd[:2] == ["codex", "exec"]
-    assert "--json" not in cmd
+    assert "--json" in cmd
     assert "--add-dir" not in cmd
     assert "/tmp/not-authorized-by-the-operator-contract" not in cmd
 
@@ -930,6 +957,204 @@ def test_codex_operator_treats_malformed_extra_flags_as_search_disabled(tmp_path
 
     assert cmd[:2] == ["codex", "exec"]
     assert "--search" not in cmd
+
+
+def test_codex_operator_writes_typed_provider_admission_receipt(tmp_path, monkeypatch):
+    codex_operator = _load_module(
+        "codex_operator_provider_admission_receipt",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    monkeypatch.setenv("TASK_ID", "pm-task")
+    monkeypatch.setenv("DISPATCH_ID", "dispatch-pm-task")
+    monkeypatch.setenv("ATTEMPT_ID", "2")
+    monkeypatch.setenv("CORRELATION_ID", "sprint:N1")
+    monkeypatch.setenv("GRAPH_DISPATCH_ID", "graph-sprint-N1")
+    monkeypatch.setenv("SCHEDULER_INPUT_SHA256", "b" * 64)
+    monkeypatch.setenv("FROZEN_CANDIDATE_IDS_JSON", '["op.rank1", "op.rank2"]')
+    output_file = tmp_path / "last-message.md"
+
+    provider_jsonl = "\n".join([
+        json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+        json.dumps({"type": "item.completed", "item": {"type": "error", "message": "retry warning"}}),
+        json.dumps({"type": "turn.started"}),
+        json.dumps({"type": "error", "message": "You've hit your usage limit; resets later"}),
+        json.dumps({"type": "turn.failed", "error": {"message": "You've hit your usage limit; resets later"}}),
+    ])
+    receipt = codex_operator._write_provider_invocation_receipt(
+        tmp_path,
+        output_file,
+        provider_jsonl,
+        1,
+        invocation_id="inv-1",
+        status="failed",
+    )
+
+    persisted = json.loads(
+        (tmp_path / "provider-invocation-receipt.json").read_text(encoding="utf-8")
+    )
+    assert persisted == receipt
+    assert receipt["provider_admission_refusal"] is True
+    assert receipt["error"] == {
+        "type": "provider_quota",
+        "phase": "admission",
+        "retryable": True,
+        "retry_scope": "frozen_operator_alternative",
+    }
+    assert receipt["final_assistant_message"]["present"] is False
+    assert receipt["tool_evidence"]["observed"] is False
+    assert receipt["tool_evidence"]["complete"] is True
+    assert receipt["structured_stream"]["terminal_event_type"] == "turn.failed"
+    assert receipt["structured_stream"]["event_count"] == 5
+    assert receipt["identifiers"]["graph_dispatch_id"] == "graph-sprint-N1"
+    assert receipt["identifiers"]["frozen_candidate_ids"] == ["op.rank1", "op.rank2"]
+
+
+def test_codex_operator_does_not_call_completed_work_an_admission_refusal(tmp_path, monkeypatch):
+    codex_operator = _load_module(
+        "codex_operator_provider_admission_with_message",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    output_file = tmp_path / "last-message.md"
+    output_file.write_text("I changed the requested file.", encoding="utf-8")
+
+    provider_jsonl = "\n".join([
+        json.dumps({"type": "thread.started", "thread_id": "thread-2"}),
+        json.dumps({"type": "turn.started"}),
+        json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": "You've hit your usage limit after doing work"}}),
+        json.dumps({"type": "turn.failed", "error": {"message": "You've hit your usage limit after doing work"}}),
+    ])
+    receipt = codex_operator._write_provider_invocation_receipt(
+        tmp_path,
+        output_file,
+        provider_jsonl,
+        1,
+        invocation_id="inv-2",
+        status="failed",
+    )
+
+    assert receipt["provider_admission_refusal"] is False
+    assert "error" not in receipt
+    assert receipt["final_assistant_message"]["present"] is True
+    assert receipt["tool_evidence"]["complete"] is True
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [
+            {"type": "thread.started", "prompt": "You've hit your usage limit"},
+            {"type": "turn.started"},
+            {"type": "turn.completed", "usage": {"input_tokens": 1}},
+        ],
+        [
+            {"type": "thread.started"},
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {"type": "agent_message", "text": "usage limit"}},
+            {"type": "turn.failed", "error": {"message": "usage limit"}},
+        ],
+        [
+            {"type": "thread.started"},
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {"type": "command_execution", "aggregated_output": "usage limit"}},
+            {"type": "turn.failed", "error": {"message": "usage limit"}},
+        ],
+    ],
+)
+def test_codex_operator_does_not_authorize_fallback_from_adversarial_message_text(
+    tmp_path,
+    events,
+):
+    codex_operator = _load_module(
+        "codex_operator_structured_adversarial_stream",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    receipt = codex_operator._write_provider_invocation_receipt(
+        tmp_path,
+        tmp_path / "last-message.md",
+        "\n".join(json.dumps(event) for event in events),
+        1,
+        invocation_id="inv-adversarial",
+        status="failed",
+    )
+
+    assert receipt["provider_admission_refusal"] is False
+    assert "error" not in receipt
+
+
+def test_codex_operator_malformed_jsonl_fails_closed(tmp_path):
+    codex_operator = _load_module(
+        "codex_operator_structured_malformed_stream",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    stream = "\n".join([
+        json.dumps({"type": "turn.started"}),
+        "not-json",
+        json.dumps({"type": "turn.failed", "error": {"message": "usage limit"}}),
+    ])
+
+    receipt = codex_operator._write_provider_invocation_receipt(
+        tmp_path,
+        tmp_path / "last-message.md",
+        stream,
+        1,
+        invocation_id="inv-malformed",
+        status="failed",
+    )
+
+    assert receipt["provider_admission_refusal"] is False
+    assert receipt["structured_stream"]["malformed"] is True
+
+
+def test_codex_operator_unknown_json_event_fails_closed(tmp_path):
+    codex_operator = _load_module(
+        "codex_operator_structured_unknown_event",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    stream = "\n".join(json.dumps(event) for event in [
+        {"type": "turn.started"},
+        {"type": "provider.work.maybe_started", "detail": "unknown effect"},
+        {"type": "turn.failed", "error": {"message": "You've hit your usage limit"}},
+    ])
+
+    receipt = codex_operator._write_provider_invocation_receipt(
+        tmp_path,
+        tmp_path / "last-message.md",
+        stream,
+        1,
+        invocation_id="inv-unknown",
+        status="failed",
+    )
+
+    assert receipt["provider_admission_refusal"] is False
+    assert receipt["structured_stream"]["complete"] is False
+    assert receipt["structured_stream"]["unknown_event_types"] == ["provider.work.maybe_started"]
+
+
+def test_codex_operator_oversized_jsonl_is_bounded_and_fails_closed(tmp_path, monkeypatch):
+    codex_operator = _load_module(
+        "codex_operator_structured_bounded_stream",
+        ROOT / "tools" / "codex_operator.py",
+    )
+    monkeypatch.setenv("SOLAR_CODEX_PROVIDER_JSONL_MAX_BYTES", "65536")
+    noise = json.dumps({"type": "error", "message": "x" * 70000})
+    stream = "\n".join([
+        json.dumps({"type": "turn.started"}),
+        noise,
+        json.dumps({"type": "turn.failed", "error": {"message": "You've hit your usage limit"}}),
+    ])
+
+    receipt = codex_operator._write_provider_invocation_receipt(
+        tmp_path,
+        tmp_path / "last-message.md",
+        stream,
+        1,
+        invocation_id="inv-overflow",
+        status="failed",
+    )
+
+    assert receipt["provider_admission_refusal"] is False
+    assert receipt["structured_stream"]["complete"] is False
+    assert (tmp_path / "codex-cli-output.log").stat().st_size <= 65536
 
 
 def test_codex_operator_bounds_forwarded_provider_stream(tmp_path):

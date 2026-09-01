@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solar.local/schemas/evidence/research_source_assessment.v1.schema.json",
+  "title": "Solar Evidence ABI - Research Source Assessment",
+  "type": "object",
+  "required": ["schema", "task_id", "sprint_id", "node_id", "status", "inputs", "outputs", "artifacts", "provenance", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "research_source_assessment.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sprint_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "enum": ["completed", "failed", "inconclusive"]},
+    "inputs": {"type": "object", "additionalProperties": true},
+    "outputs": {
+      "type": "object",
+      "required": ["query", "assessments", "selected_source_ids", "excluded_source_ids", "unresolved_source_ids", "benchmark_candidates", "unresolved_questions"],
+      "additionalProperties": false,
+      "properties": {
+        "query": {"type": "string", "minLength": 1},
+        "assessments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/assessment"}},
+        "selected_source_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "excluded_source_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "unresolved_source_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "benchmark_candidates": {"type": "array", "items": {"$ref": "#/$defs/benchmark_candidate"}},
+        "unresolved_questions": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "assessment": {
+      "type": "object",
+      "required": ["source_id", "title", "source_ref", "source_channels", "relevance", "credibility", "ingestion", "decision", "evidence_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "source_ref": {"type": "string"},
+        "source_channels": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "relevance": {"$ref": "#/$defs/relevance"},
+        "credibility": {"$ref": "#/$defs/credibility"},
+        "ingestion": {"$ref": "#/$defs/ingestion"},
+        "decision": {"type": "string", "enum": ["selected", "excluded", "unresolved"]},
+        "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    },
+    "relevance": {
+      "type": "object",
+      "required": ["status", "score", "basis"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"type": "string", "enum": ["relevant", "not_relevant", "unresolved"]},
+        "score": {"type": ["number", "null"]},
+        "basis": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "credibility": {
+      "type": "object",
+      "required": ["status", "authority_class", "score", "basis"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"type": "string", "enum": ["credible", "traceable", "unresolved"]},
+        "authority_class": {"type": "string", "enum": ["authoritative", "bibliographic", "traceable", "unattributed"]},
+        "score": {"type": "number", "minimum": 0, "maximum": 1},
+        "basis": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "ingestion": {
+      "type": "object",
+      "required": ["status", "paper_id"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"type": "string", "enum": ["parsed", "partial", "failed", "not_available"]},
+        "paper_id": {"type": "string"}
+      }
+    },
+    "benchmark_candidate": {
+      "type": "object",
+      "required": ["source_id", "title", "identification_basis", "availability_status"],
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "identification_basis": {"type": "string", "minLength": 1},
+        "availability_status": {"type": "string", "enum": ["candidate_only", "public_reference_present", "unresolved"]}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["type", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["operator_id", "implementation_package", "timestamp"],
+      "additionalProperties": true,
+      "properties": {
+        "operator_id": {"type": "string", "minLength": 1},
+        "implementation_package": {"type": "string", "minLength": 1},
+        "timestamp": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

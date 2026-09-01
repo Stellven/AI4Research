@@ -1,0 +1,112 @@
+capability_capsule_id: cap.research-experiment-aware-report-plan
+capsule_kind: capability
+metadata:
+  name: Experiment-aware Scientific Report Plan
+  description: Plan one combined scientific report from accepted requirements, literature verdicts and methods, and a matched measured experiment plan/result pair.
+applicability:
+  task_types:
+    - scientific-research
+    - report-planning
+    - experiment-reporting
+  positive_signals:
+    - combined research and experiment report
+    - measured experiment results
+    - compare literature claims with measurements
+  negative_signals:
+    - research-only report
+    - design-only experiment
+contract:
+  inputs:
+    required:
+      - name: requirement_ir
+        type: controller_input
+        description: Accepted user requirements that the combined report must preserve.
+      - name: claim_verdict
+        schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      - name: research_method
+        schema_ref: schemas/evidence/research_method.v1.schema.json
+      - name: research_source_assessment
+        schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
+      - name: experiment_plan
+        schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+      - name: experiment_result
+        schema_ref: schemas/evidence/experiment_result.v1.schema.json
+  outputs:
+    required:
+      - name: scientific_report_plan
+        schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+  preconditions:
+    - check: matched_experiment_evidence_present
+      description: The measured result belongs to the supplied experiment plan and carries metrics and evidence IDs.
+  postconditions:
+    - check: experiment_sections_planned
+      description: The report plan contains separate experiment-design and measured-results sections.
+  invariants:
+    - Does not call a proposed experiment an executed experiment.
+    - Does not promote a recorded outcome beyond its measured evidence.
+    - Carries explicit selected, excluded, and unresolved source decisions into the report plan.
+composition:
+  consumes:
+    - type: requirement_ir.v1
+      purpose: Accepted research, experiment, metric, and final-delivery requirements.
+    - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      purpose: Literature and measured claim verdicts.
+    - schema_ref: schemas/evidence/research_method.v1.schema.json
+      purpose: Source-grounded research methods.
+    - schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
+      purpose: Explicit source relevance, credibility, benchmark-candidate, and unresolved-question evidence.
+    - schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+      purpose: Exact experiment design that produced the measured result.
+    - schema_ref: schemas/evidence/experiment_result.v1.schema.json
+      purpose: Measured metrics, outcome, and retained result evidence.
+  produces:
+    - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+      purpose: Combined literature-and-experiment report plan.
+  compatible_with:
+    - cap.scientific-experiment-aware-report-draft
+  incompatible_with: []
+  requires_after: []
+effects:
+  read:
+    - accepted RequirementIR
+    - typed literature and experiment evidence
+  write:
+    - artifacts/scientific/scientific_report_plan/
+  execute:
+    - plugins/autosci/operators/scientific_lifecycle/action/delivery.py
+  network:
+    - none
+  cost:
+    - bounded planning cost
+  risk:
+    - mismatched experiment evidence could produce a false scientific narrative
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.report_plan
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/scientific_report_plan.v1.schema.json
+    - schemas/evidence/experiment_plan.v1.schema.json
+    - schemas/evidence/experiment_result.v1.schema.json
+    - schemas/evidence/research_source_assessment.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against scientific_report_plan.v1.schema.json.
+    - Confirm experiment design and measured result sections retain result evidence IDs.
+    - Confirm source assessment decisions and unresolved questions have a dedicated report section.
+  external_verifier:
+    required: false
+  pass_conditions:
+    - The plan preserves accepted requirements and explicitly separates proposed design from measured results.
+    - The measured-results section is backed by a matched non-empty experiment result.
+operator_compatibility:
+  preferred:
+    - autosci-report-plan-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_experiment_report_handoff

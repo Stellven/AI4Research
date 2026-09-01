@@ -18,12 +18,17 @@ from harness.plugins.autosci.operators.scientific_lifecycle.action.registry impo
     registration_entries,
 )
 from harness.plugins.autosci.operators.scientific_lifecycle.action.common import stable_json_sha256  # noqa: E402
+from harness.plugins.autosci.operators.research_synthesis.base import (  # noqa: E402
+    ResearchOperatorError,
+    validate_scoped_path,
+)
 
 
 NODE_RESULT_SCHEMA = json.loads(
     (HARNESS / "schemas" / "evidence" / "research_node_result.v1.schema.json").read_text(encoding="utf-8")
 )
 EXPECTED_NODES = {
+    "dataset_prepare",
     "idea_generate",
     "idea_evaluate",
     "experiment_design",
@@ -38,6 +43,37 @@ EXPECTED_NODES = {
     "final_evaluation",
     "workflow_evolve",
 }
+
+
+def test_external_controller_input_requires_exact_declared_read_scope(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    controller_input = tmp_path / "requirement_ir.json"
+    controller_input.write_text("{}\n", encoding="utf-8")
+
+    assert validate_scoped_path(
+        controller_input,
+        [str(controller_input)],
+        workspace_root=workspace,
+        must_exist=True,
+        allow_external_exact=True,
+    ) == controller_input.resolve()
+
+    with pytest.raises(ResearchOperatorError, match="not an exact declared scope"):
+        validate_scoped_path(
+            controller_input,
+            [str(tmp_path)],
+            workspace_root=workspace,
+            must_exist=True,
+            allow_external_exact=True,
+        )
+    with pytest.raises(ResearchOperatorError, match="escapes workspace root"):
+        validate_scoped_path(
+            controller_input,
+            [str(controller_input)],
+            workspace_root=workspace,
+            must_exist=True,
+        )
 
 
 def _request(
@@ -465,7 +501,13 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
     results.append(drafted)
     report = _artifact(tmp_path, drafted)["outputs"]["report"]
     assert report["markdown"].strip()
-    assert len(report["sections"]) == 4
+    assert [section["section_id"] for section in report["sections"]] == [
+        "summary",
+        "findings",
+        "claim_audit",
+        "methods",
+        "limitations",
+    ]
     assert "Bounded treatment outcome" in report["markdown"]
     assert "## Methods" in report["markdown"]
     assert "Bounded controlled comparison" in report["markdown"]
@@ -629,7 +671,11 @@ def test_claim_verification_records_resolved_retained_paper_evidence(
         "resolved": True,
         "resolved_paper_ids": ["paper-reranker"],
         "source_anchor_resolved": True,
+        "exact_quote_resolved": True,
     }
+    assert verdict["verdict"] == "partially_supported"
+    assert verdict["support_classification"] == "source_reported"
+    assert verdict["locally_reproduced"] is False
 
 
 def _explicit_test_method() -> dict:
@@ -1032,6 +1078,405 @@ def test_report_planning_fails_when_claim_has_no_core_source_evidence(tmp_path: 
     assert planned["status"] == "failed"
     assert planned["errors"][0]["error_type"] == "insufficient_evidence"
     assert planned["output_artifacts"] == []
+
+
+def test_claim_verifier_distinguishes_exact_source_report_from_local_reproduction(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    claim_text = "The bounded method reduces retained cache memory by 25 percent."
+    anchor = "paper.tex#results"
+    claim_ref = _external_ref(tmp_path, "source-claim", "research_claims.v1", {
+        "claims": [{
+            "claim_id": "claim-source-001",
+            "text": claim_text,
+            "source_anchor": anchor,
+            "acceptance_criteria": [],
+            "evidence_ids": [anchor],
+        }]
+    })
+    paper_ref = _external_ref(tmp_path, "source-paper", "research_paper.v1", {
+        "paper": {
+            "paper_id": "paper-source-001",
+            "sections": [{
+                "title": "Results",
+                "text": f"In the retained evaluation, {claim_text}",
+                "source_anchor": anchor,
+            }],
+        }
+    })
+
+    verified = execute_operator(
+        _request("claim_verify", refs=[claim_ref, paper_ref]),
+        services={},
+    )
+    verdict = _artifact(tmp_path, verified)["outputs"]["verdicts"][0]
+
+    assert verdict["verdict"] == "partially_supported"
+    assert verdict["support_classification"] == "source_reported"
+    assert verdict["evidence_outcome"] == "source_reported"
+    assert verdict["verification_basis"] == "source_reported_exact_quote"
+    assert verdict["source_grounding"]["exact_quote_resolved"] is True
+    assert verdict["locally_reproduced"] is False
+    assert verdict["evidence_ids"] == ["claim-source-001", anchor]
+    assert "no local reproduction" in verdict["limitations"][0].lower()
+
+
+def test_report_plan_and_draft_preserve_accepted_requirements_without_self_approving(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    verdict_ref = _external_ref(tmp_path, "requirement-verdict", "claim_verdict.v1", {
+        "verdicts": [{
+            "claim_id": "claim-001",
+            "claim_text": "The bounded method reports a source-grounded result.",
+            "verdict": "supported",
+            "support_classification": "supported",
+            "confidence": 0.9,
+            "basis": "The retained source evidence supports the bounded statement.",
+            "evidence_ids": ["source:claim-001"],
+            "limitations": [],
+        }]
+    })
+    requirement_ir = {
+        "schema_version": "solar.requirement_ir.v2",
+        "requirement_ir_id": "requirement-ir-report-test",
+        "requirements": [
+            {
+                "requirement_id": "R1",
+                "statement": "Compare at least four evaluation approaches.",
+                "priority": "must",
+                "check": "check.information_outcome_completeness.v1",
+                "acceptance": {
+                    "kind": "coverage",
+                    "required_values": ["four approaches", "supporting_evidence"],
+                },
+            },
+            {
+                "requirement_id": "R2",
+                "statement": "Do not claim that a benchmark ran unless execution evidence exists.",
+                "priority": "must",
+                "check": "check.intent_constraint_coverage.v1",
+                "acceptance": {
+                    "kind": "coverage",
+                    "required_values": ["tested_vs_not_tested"],
+                },
+            },
+            {
+                "requirement_id": "R3",
+                "statement": "Resolve or explicitly report which benchmark remains unavailable.",
+                "priority": "must",
+                "check": "check.unknown_resolution_trace.v1",
+                "acceptance": {
+                    "kind": "artifact_fields",
+                    "required_values": [
+                        "finding",
+                        "supporting_evidence",
+                        "unresolved_status",
+                    ],
+                },
+            },
+        ],
+    }
+
+    planned = _execute_twice(
+        tmp_path,
+        _request(
+            "report_plan",
+            refs=[verdict_ref],
+            payload={"topic": "RAG evaluation", "requirement_ir": requirement_ir},
+        ),
+        services={},
+    )
+    _validate_evidence(tmp_path, planned)
+    plan = _artifact(tmp_path, planned)["outputs"]["report_plan"]
+    assert [row["requirement_id"] for row in plan["requirement_bindings"]] == ["R1", "R2", "R3"]
+    requirement_section = next(row for row in plan["sections"] if row["section_id"] == "requirements")
+    assert requirement_section["requirement_ids"] == ["R1", "R2", "R3"]
+    unknown_section = next(
+        row for row in plan["sections"] if row["section_id"] == "unknown_resolution"
+    )
+    assert unknown_section["requirement_ids"] == ["R3"]
+    assert plan["supported_claim_ids"] == ["claim-001"]
+    assert plan["reportable_claim_ids"] == ["claim-001"]
+    assert plan["claim_status_mappings"] == [
+        {
+            "claim_id": "claim-001",
+            "verdict": "supported",
+            "support_classification": "supported",
+            "evidence_outcome": "supported",
+            "evidence_ids": ["source:claim-001"],
+            "contradiction_status": "no_recorded_contradiction",
+            "tested_status": "not_tested",
+            "limitations": [],
+        }
+    ]
+    assert plan["unknown_resolution_traces"] == [
+        {
+            "requirement_id": "R3",
+            "finding": (
+                "The available evidence did not establish a defensible resolution; "
+                "the report must preserve this question explicitly: Resolve or explicitly "
+                "report which benchmark remains unavailable."
+            ),
+            "supporting_evidence": ["source:claim-001"],
+            "unresolved_status": "unresolved",
+        }
+    ]
+
+    drafted = _execute_twice(
+        tmp_path,
+        _request("report_draft", refs=[*planned["output_artifacts"], verdict_ref]),
+        services={},
+    )
+    _validate_evidence(tmp_path, drafted)
+    report = _artifact(tmp_path, drafted)["outputs"]["report"]
+    assert report["requirement_evaluation_status"] == "pending_independent_evaluation"
+    assert "R1 [pending independent evaluation]" in report["markdown"]
+    assert "R2 [pending independent evaluation]" in report["markdown"]
+    assert "R3 [unresolved]" in report["markdown"]
+    assert "four approaches" in report["markdown"]
+    assert report["unknown_resolution_traces"] == plan["unknown_resolution_traces"]
+    assert report["claim_status_mappings"] == plan["claim_status_mappings"]
+    assert "experimental_status=not_tested" in report["markdown"]
+    assert all(
+        row["status"] == "pending_independent_evaluation"
+        and row["evidence_ids"] == ["source:claim-001"]
+        for row in report["requirement_bindings"]
+    )
+    assert "## Required coverage and unresolved gaps" in report["markdown"]
+
+
+def test_report_draft_uses_explicit_topic_and_links_verified_input_artifacts(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    verdict_ref = _external_ref(tmp_path, "title-verdict", "claim_verdict.v1", {
+        "verdicts": [{
+            "claim_id": "claim-001",
+            "claim_text": "A source-grounded bounded claim.",
+            "verdict": "supported",
+            "support_classification": "supported",
+            "confidence": 0.9,
+            "basis": "Retained evidence supports the bounded claim.",
+            "evidence_ids": ["source:claim-001"],
+            "limitations": [],
+        }]
+    })
+    planned = execute_operator(
+        _request("report_plan", refs=[verdict_ref], payload={"topic": "Planning instruction"}),
+        services={},
+    )
+    source_path = tmp_path / verdict_ref["path"]
+    drafted = execute_operator(
+        _request(
+            "report_draft",
+            refs=[*planned["output_artifacts"], verdict_ref],
+            payload={
+                "topic": "Requested final report title",
+                "source_artifacts": [{
+                    "path": verdict_ref["path"],
+                    "sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+                }],
+            },
+        ),
+        services={},
+    )
+
+    evidence = _artifact(tmp_path, drafted)
+    assert evidence["outputs"]["report"]["title"] == "Requested final report title"
+    assert evidence["artifacts"] == [{
+        "type": "input_evidence",
+        "path": verdict_ref["path"],
+        "sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+    }]
+
+
+def test_combined_report_renders_exact_experiment_plan_and_measured_result(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    verdict_ref = _external_ref(tmp_path, "combined-verdict", "claim_verdict.v1", {
+        "verdicts": [{
+            "claim_id": "claim-retrieval-001",
+            "claim_text": "The measured retrieval variants differ on the bounded task.",
+            "verdict": "supported",
+            "support_classification": "supported",
+            "confidence": 0.9,
+            "basis": "The retained measured result satisfies the bounded criterion.",
+            "evidence_ids": ["source:retrieval-001", "run:retrieval-001"],
+            "limitations": [],
+        }]
+    })
+    method_ref = _external_ref(tmp_path, "combined-method", "research_method.v1", {
+        "methods": [{
+            "method_id": "method-retrieval-001",
+            "name": "Bounded retrieval comparison",
+            "summary": "Compare two retrieval variants over three retained seeds.",
+            "procedure": ["Run each variant for every seed.", "Aggregate accuracy and latency."],
+            "source_papers": ["paper-retrieval-001"],
+            "evidence_ids": ["source:retrieval-001"],
+            "extraction_basis": "explicit_method_heading",
+            "confidence": 1.0,
+        }]
+    })
+    source_assessment_ref = _external_ref(
+        tmp_path,
+        "combined-source-assessment",
+        "research_source_assessment.v1",
+        {
+            "query": "Dense versus sparse retrieval",
+            "assessments": [
+                    {
+                        "source_id": "paper-retrieval-001",
+                        "title": "Bounded retrieval comparison",
+                        "source_ref": "doi:10.0000/retrieval.001",
+                        "source_channels": ["crossref"],
+                        "relevance": {
+                            "status": "relevant",
+                            "score": 0.92,
+                            "basis": ["The retained paper directly compares dense and sparse retrieval."],
+                        },
+                        "credibility": {
+                            "status": "credible",
+                            "authority_class": "bibliographic",
+                            "score": 0.8,
+                            "basis": ["The source has a traceable DOI and retained bibliographic metadata."],
+                        },
+                        "ingestion": {"status": "parsed", "paper_id": "paper-retrieval-001"},
+                        "decision": "selected",
+                        "evidence_ids": ["source:retrieval-001"],
+                    },
+                    {
+                        "source_id": "paper-retrieval-unresolved",
+                        "title": "Unresolved retrieval benchmark record",
+                        "source_ref": "crossref:unresolved",
+                        "source_channels": ["crossref"],
+                        "relevance": {
+                            "status": "unresolved",
+                            "score": None,
+                            "basis": ["No parsed abstract or body was retained."],
+                        },
+                        "credibility": {
+                            "status": "traceable",
+                            "authority_class": "traceable",
+                            "score": 0.5,
+                            "basis": ["The catalog record is traceable but does not establish scientific truth."],
+                        },
+                        "ingestion": {"status": "not_available", "paper_id": ""},
+                        "decision": "unresolved",
+                        "evidence_ids": ["literature_discovery:paper-retrieval-unresolved"],
+                    },
+                ],
+                "selected_source_ids": ["paper-retrieval-001"],
+                "excluded_source_ids": [],
+                "unresolved_source_ids": ["paper-retrieval-unresolved"],
+                "benchmark_candidates": [
+                    {
+                        "source_id": "paper-retrieval-001",
+                        "title": "Bounded retrieval comparison",
+                        "identification_basis": "The retained source explicitly describes a bounded benchmark comparison.",
+                        "availability_status": "public_reference_present",
+                    }
+                ],
+                "unresolved_questions": [
+                    "The unresolved catalog record needs a parsed source before it can support a claim."
+                ],
+        },
+        limitations=["Metadata credibility does not establish the scientific truth of a source's claims."],
+    )
+    experiment_plan_ref = _external_ref(tmp_path, "combined-plan", "experiment_plan.v1", {
+        "experiment_plan": {
+            "experiment_id": "retrieval-bounded-001",
+            "objective": "Compare dense and sparse retrieval on a bounded question-answering task.",
+            "hypothesis": "The variants have measurably different accuracy or latency.",
+            "variables": ["retrieval variant", "seed"],
+            "metrics": ["accuracy", "latency_ms", "accuracy_variance"],
+            "procedure": ["Prepare the retained dataset.", "Run both variants for seeds 7, 11, and 19."],
+            "approval_required": True,
+            "expected_artifacts": ["raw_results.json", "metrics.json"],
+            "dataset": {"path": "datasets/qa.jsonl", "format": "jsonl", "role": "evaluation"},
+            "variants": [
+                {"name": "dense", "description": "Dense-vector retrieval baseline."},
+                {"name": "sparse", "description": "Sparse lexical retrieval baseline."},
+            ],
+            "seeds": [7, 11, 19],
+        }
+    })
+    experiment_result_ref = _external_ref(
+        tmp_path,
+        "combined-result",
+        "experiment_result.v1",
+        {
+            "result": {
+                "experiment_id": "retrieval-bounded-001",
+                "outcome": "partially_supports",
+                "metrics": [
+                    {"name": "dense_accuracy", "value": 0.74},
+                    {"name": "sparse_accuracy", "value": 0.69},
+                    {"name": "dense_latency", "value": 12.3, "unit": "ms"},
+                    {"name": "accuracy_variance", "value": 0.0021},
+                ],
+                "evidence_ids": ["run:retrieval-001"],
+                "limitations": ["The bounded dataset does not establish broad benchmark generalization."],
+            }
+        },
+        limitations=["Only the retained bounded dataset was executed."],
+    )
+
+    planned = _execute_twice(
+        tmp_path,
+        _request(
+            "report_plan",
+            refs=[
+                verdict_ref,
+                method_ref,
+                source_assessment_ref,
+                experiment_plan_ref,
+                experiment_result_ref,
+            ],
+            payload={"topic": "Dense versus sparse retrieval"},
+        ),
+        services={},
+    )
+    _validate_evidence(tmp_path, planned)
+    report_plan = _artifact(tmp_path, planned)["outputs"]["report_plan"]
+    assert {row["section_id"] for row in report_plan["sections"]}.issuperset(
+        {"source_assessment", "experiment_design", "measured_results"}
+    )
+
+    drafted = _execute_twice(
+        tmp_path,
+        _request(
+            "report_draft",
+            refs=[
+                *planned["output_artifacts"],
+                verdict_ref,
+                method_ref,
+                source_assessment_ref,
+                experiment_plan_ref,
+                experiment_result_ref,
+            ],
+        ),
+        services={},
+    )
+    _validate_evidence(tmp_path, drafted)
+    report = _artifact(tmp_path, drafted)["outputs"]["report"]
+    assert report["experiment"]["experiment_id"] == "retrieval-bounded-001"
+    assert report["experiment"]["outcome"] == "partially_supports"
+    assert "## Experiment design" in report["markdown"]
+    assert "## Measured experiment results" in report["markdown"]
+    assert "## Source relevance, credibility, and benchmark resolution" in report["markdown"]
+    assert "paper-retrieval-001" in report["markdown"]
+    assert "paper-retrieval-unresolved" in report["markdown"]
+    assert "Metadata credibility does not establish the scientific truth" in report["markdown"]
+    assert "dense_accuracy: 0.74" in report["markdown"]
+    assert "run:retrieval-001" in report["evidence_ids"]
+    assert "broad benchmark generalization" in report["markdown"]
 
 
 def test_provider_failure_is_classified_and_no_artifact_is_written(tmp_path: Path, monkeypatch) -> None:

@@ -1019,6 +1019,11 @@ def write_result(
     log_tail: str,
     model_route: Optional[Dict[str, Any]] = None,
     graph_path: str | Path | None = None,
+    error: Optional[Dict[str, Any]] = None,
+    failure_flow_control: Optional[Dict[str, Any]] = None,
+    identifiers: Optional[Dict[str, Any]] = None,
+    effects_receipt: Optional[Dict[str, Any]] = None,
+    provider_invocation_receipt: Optional[Dict[str, Any]] = None,
 ) -> Path:
     """Write the result.json artifact for a completed task.
 
@@ -1049,6 +1054,31 @@ def write_result(
                 result[key] = str(route[key])
     if str(graph_path or "").strip():
         result["graph_path"] = str(Path(graph_path).expanduser().resolve())
+    if identifiers:
+        exact_ids = {
+            key: str(identifiers.get(key) or "").strip()
+            for key in (
+                "dispatch_id",
+                "attempt_id",
+                "correlation_id",
+                "graph_dispatch_id",
+                "scheduler_input_sha256",
+            )
+        }
+        result.update({key: value for key, value in exact_ids.items() if value})
+        candidate_ids = identifiers.get("frozen_candidate_ids")
+        if isinstance(candidate_ids, list):
+            result["frozen_candidate_ids"] = [
+                str(value).strip() for value in candidate_ids if str(value).strip()
+            ]
+    if error:
+        result["error"] = dict(error)
+    if failure_flow_control:
+        result["failure_flow_control"] = dict(failure_flow_control)
+    if effects_receipt:
+        result["effects_receipt"] = dict(effects_receipt)
+    if provider_invocation_receipt:
+        result["provider_invocation_receipt"] = dict(provider_invocation_receipt)
 
     result_path = result_dir / "result.json"
     tmp_path = str(result_path) + ".tmp"

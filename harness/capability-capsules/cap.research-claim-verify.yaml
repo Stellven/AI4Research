@@ -65,7 +65,7 @@ effects:
   write:
     - artifacts/scientific/claim_verdict/
   execute:
-    - plugins/autosci/bin/autosci_bridge.py
+    - plugins/autosci/operators/scientific_lifecycle/action/delivery.py
   network:
     - none by default
   cost:
@@ -89,8 +89,8 @@ verification:
   external_verifier:
     required: true
   pass_conditions:
-    - Passing fixture emits supported or partially_supported verdict with evidence ids.
-    - Failing fixture emits refuted, blocked, not_testable, or inconclusive verdict.
+    - Source-grounded evidence emits a verdict without promoting insufficient evidence to support.
+    - Refuted, blocked, not-testable, and inconclusive outcomes remain distinguishable.
 operator_compatibility:
   preferred:
     - claim_verify_worker

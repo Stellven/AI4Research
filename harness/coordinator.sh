@@ -45,8 +45,9 @@ if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
 fi
 
 HARNESS_DIR="${HARNESS_DIR:-${SOLAR_HARNESS_DIR:-$HOME/.solar/harness}}"
-SPRINTS_DIR="$HARNESS_DIR/sprints"
-export HARNESS_DIR SPRINTS_DIR
+SPRINTS_DIR="${HARNESS_SPRINTS_DIR:-${SOLAR_HARNESS_SPRINTS_DIR:-${SPRINTS_DIR:-$HARNESS_DIR/sprints}}}"
+export HARNESS_DIR SPRINTS_DIR HARNESS_SPRINTS_DIR="$SPRINTS_DIR" SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR"
+CONFIGURED_SPRINTS_DIR="$SPRINTS_DIR"
 SESSION_NAME="${SOLAR_HARNESS_SESSION:-solar-harness}"
 LAB_SESSION_NAME="${SOLAR_HARNESS_LAB_SESSION:-${SESSION_NAME}-lab}"
 HARNESS_MANAGE_LAB="${SOLAR_HARNESS_MANAGE_LAB:-${SOLAR_WATCHDOG_MANAGE_LAB:-0}}"
@@ -98,6 +99,13 @@ export SOLAR_GRAPH_BUILDER_OPERATOR_POOL
 [[ -f "$HARNESS_DIR/lib/prompt-quarantine.sh" ]] && . "$HARNESS_DIR/lib/prompt-quarantine.sh"
 [[ -f "$HARNESS_DIR/lib/portable.sh" ]] && . "$HARNESS_DIR/lib/portable.sh"
 [[ -f "$HARNESS_DIR/lib/optional-hooks.sh" ]] && . "$HARNESS_DIR/lib/optional-hooks.sh"
+
+# Several legacy helper libraries still assign their historical default
+# directly to SPRINTS_DIR while they are sourced.  The coordinator is the
+# runtime authority for the sprint root, so restore the already-resolved
+# external configuration before any dispatch/reconciliation work begins.
+SPRINTS_DIR="$CONFIGURED_SPRINTS_DIR"
+export SPRINTS_DIR HARNESS_SPRINTS_DIR="$SPRINTS_DIR" SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR"
 
 # Coordinator predates strict-mode helper libs and intentionally treats corrupt
 # sprint files as data-plane warnings. Do not let sourced libs' shell options
@@ -5498,6 +5506,27 @@ prune_duplicate_coordinators() {
   done
 }
 
+reconcile_retryable_elastic_planners() {
+  local consumer="$HARNESS_DIR/lib/intent_consumer.py"
+  [[ -f "$consumer" ]] || return 0
+  local output rc attempted
+  output=$(SOLAR_HARNESS_DIR="$HARNESS_DIR" \
+    SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
+    HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
+    python3 "$consumer" retry-planners --limit 1 --json 2>>"$COORD_LOG")
+  rc=$?
+  if [[ "$rc" != "0" ]]; then
+    log "${Y}[planner-retry] reconciliation reported an error: ${output:0:500}${N}"
+    return 0
+  fi
+  attempted=$(printf '%s' "$output" | python3 -c 'import json,sys; print(int(json.load(sys.stdin).get("attempted",0)))' 2>/dev/null || echo 0)
+  [[ "$attempted" =~ ^[0-9]+$ ]] || attempted=0
+  if (( attempted > 0 )); then
+    log "${C}[planner-retry] resubmitted ${attempted} capacity-blocked Planner request(s)${N}"
+  fi
+}
+
+
 run_coordinator() {
   # PID 互斥: 防止多实例
   # Sprint 20260420-082442 D1: 僵尸 pidfile 自愈
@@ -5681,6 +5710,11 @@ with open('$patches_file','w') as f:
     # ── D4: 会话分隔符 ──
     echo "═══════════════════════════════════════════════════" >> "$COORD_LOG"
     echo "[会话] 轮询开始: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$COORD_LOG"
+
+    # Planner capacity is a queue condition, not a terminal request failure.
+    # Reconcile at most one due request per coordinator tick; the Python side
+    # applies durable ownership, deduplication, and exponential backoff.
+    reconcile_retryable_elastic_planners
 
     if type reap_expired_leases &>/dev/null; then
       local reaped_leases

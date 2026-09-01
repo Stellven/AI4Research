@@ -12,6 +12,8 @@ from __future__ import annotations
 import json
 import re
 import copy
+import hashlib
+import os
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -25,6 +27,7 @@ import capsule_composition
 import evaluation_budget
 import evaluation_plan as evaluation_planning
 import plan_validator
+import scheduler_input as scheduler_input_runtime
 from capability_capsules import (
     iter_registry_entries,
     load_capability_capsule_manifest,
@@ -72,7 +75,20 @@ COMPOSITION_SELECTION_SCHEMA = SCHEMA_DIR / "composition-selection.v1.schema.jso
 COMPOSITION_SELECTION_VALIDATION_SCHEMA = SCHEMA_DIR / "composition-selection-validation.v1.schema.json"
 
 MVP_DECISIONS = {"direct_response", "exact_reuse", "generate"}
-MAX_REPAIRS = 1
+
+
+def _configured_max_repairs() -> int:
+    """Return the bounded PlanIR repair budget recorded in run artifacts."""
+
+    raw = str(os.environ.get("SOLAR_PLANNER_MAX_REPAIRS") or "").strip()
+    try:
+        value = int(raw) if raw else 1
+    except ValueError:
+        value = 1
+    return max(0, min(value, 4))
+
+
+MAX_REPAIRS = _configured_max_repairs()
 _SYSTEM_WORKFLOW_INPUTS = {"sid", "sprint_id", "workspace_root", "resolved_root"}
 
 
@@ -301,6 +317,46 @@ def _manifest_contract_shapes(section: Any) -> list[dict[str, str]]:
     return rows
 
 
+def _proof_classes(values: Any) -> set[str]:
+    """Return proof kinds explicitly required by an artifact contract."""
+    classes: set[str] = set()
+    for value in _string_values(values):
+        normalized = re.sub(r"[^a-z0-9]+", "_", str(value).lower()).strip("_")
+        if "patch" in normalized or normalized.endswith("_diff") or normalized == "diff":
+            classes.add("patch_proof")
+    return classes
+
+
+def _node_proof_classes(node: dict[str, Any]) -> set[str]:
+    outputs = [value for value in node.get("produces") or [] if isinstance(value, dict)]
+    return _proof_classes(
+        [
+            *[str(value.get("artifact_type") or "") for value in outputs],
+            *[
+                verifier_id
+                for output in outputs
+                for verifier_id in output.get("verifier_ids") or []
+            ],
+        ]
+    )
+
+
+def _capsule_mandatory_proof_classes(capsule: dict[str, Any]) -> set[str]:
+    contract = capsule.get("contract") if isinstance(capsule.get("contract"), dict) else {}
+    verification = (
+        capsule.get("verification")
+        if isinstance(capsule.get("verification"), dict)
+        else {}
+    )
+    return _proof_classes(
+        [
+            contract.get("required_outputs") or [],
+            verification.get("self_checks") or [],
+            verification.get("pass_conditions") or [],
+        ]
+    )
+
+
 def _capsule_summaries(
     capsule_registry_path: Path = CAPSULE_REGISTRY_PATH,
     physical_operators_path: Path = PHYSICAL_OPERATORS_PATH,
@@ -421,8 +477,44 @@ def build_planning_catalog_snapshot(
     capsule_registry_path: Path = CAPSULE_REGISTRY_PATH,
     physical_operators_path: Path = PHYSICAL_OPERATORS_PATH,
 ) -> dict[str, Any]:
-    workflow_rows = _workflow_summaries(workflows_dir)
     logical_rows = _logical_operator_summaries(logical_operators_path)
+    known_logical_operators = {
+        str(row.get("logical_operator") or "")
+        for row in logical_rows
+        if str(row.get("logical_operator") or "")
+    }
+    workflow_rows = _workflow_summaries(workflows_dir)
+    for workflow in workflow_rows:
+        missing_operators = sorted(
+            {
+                str(stage.get("logical_operator") or "")
+                for stage in workflow.get("stages") or []
+                if isinstance(stage, dict)
+                and str(stage.get("logical_operator") or "")
+                not in known_logical_operators
+            }
+        )
+        blockers: list[dict[str, Any]] = []
+        if str(workflow.get("stages_mode") or "fixed") == "planner_generated":
+            blockers.append(
+                {
+                    "code": "PLANNER_GENERATED_TOPOLOGY",
+                    "detail": "The workflow has no fixed topology to reuse.",
+                }
+            )
+        if missing_operators:
+            blockers.append(
+                {
+                    "code": "UNREGISTERED_LOGICAL_OPERATORS",
+                    "detail": (
+                        "The workflow references logical operators that are absent "
+                        "from the current planning registry."
+                    ),
+                    "logical_operators": missing_operators,
+                }
+            )
+        workflow["planner_reusable"] = not blockers
+        workflow["reuse_blockers"] = blockers
     capsule_rows = _capsule_summaries(capsule_registry_path, physical_operators_path)
     physical_payload = _load_json(physical_operators_path)
     physical_rows = physical_payload.get("operators") or {}
@@ -544,7 +636,9 @@ def _decision_prompt(
 You are Solar's Elastic Planner strategy chooser. Choose the smallest sufficient MVP strategy.
 Use direct_response only when no retrieval, external effect, execution, multi-artifact dependency,
 long-running work, or workflow is required. Use exact_reuse only when one registered workflow covers
-every requirement without topology changes. Otherwise use generate. Parameterize, extend, and compose
+every requirement without topology changes and its planner_reusable field is true. Workflows with
+planner_reusable=false are retained only as audit records; never select them. Otherwise use generate.
+Parameterize, extend, and compose
 are not supported. List every RequirementIR identifier exactly once in requirement_ids.
 When planner_hints.preferred_outcome is direct_answer and runtime_handoff_allowed is false, choose
 direct_response unless the admitted requirements contradict those hints. Do not upgrade a bounded
@@ -567,7 +661,11 @@ invalidates planning and returns to the Requirement Compiler. Do not create a DA
         "requirement_ir": requirement_ir,
         "upstream_artifacts": planning_inputs,
         "planning_catalog": {
-            "workflows": catalog.get("workflows", []),
+            "workflows": [
+                row
+                for row in catalog.get("workflows", [])
+                if isinstance(row, dict) and row.get("planner_reusable") is True
+            ],
             "catalog_sha256": catalog.get("catalog_sha256"),
         },
     }
@@ -636,6 +734,7 @@ def validate_planning_decision(
     decision: dict[str, Any],
     catalog: dict[str, Any],
     planning_context: dict[str, Any] | None = None,
+    planning_inputs: dict[str, dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     errors = _schema_errors(decision, DECISION_SCHEMA)
     rid = requirement_ir_id(requirement_ir)
@@ -664,6 +763,17 @@ def validate_planning_decision(
     strategy = str(decision.get("decision") or "")
     if strategy not in MVP_DECISIONS:
         errors.append(_error("STRATEGY_UNSUPPORTED", "decision", f"Unsupported MVP strategy: {strategy!r}."))
+    if strategy == "direct_response" and _accepted_inputs_declare_workspace_io(
+        planning_inputs or {}
+    ):
+        errors.append(
+            _error(
+                "DIRECT_RESPONSE_WORKSPACE_IO_UNRESOLVED",
+                "decision",
+                "Accepted compiler artifacts declare workspace read/write effects that require a governed plan.",
+                repairable=True,
+            )
+        )
     planner_hints = (
         requirement_ir.get("planner_hints")
         if isinstance(requirement_ir.get("planner_hints"), dict)
@@ -806,6 +916,42 @@ def validate_planning_decision(
             }
         )
     return errors
+
+
+def _accepted_inputs_declare_workspace_io(
+    planning_inputs: dict[str, dict[str, Any]],
+) -> bool:
+    """Read only explicit compiler fields; never infer effects from prose."""
+    intent_ir = planning_inputs.get("intent_ir") or {}
+    if any(
+        str(row.get("class") or "") in {"execution", "deployment"}
+        for row in intent_ir.get("outcomes") or []
+        if isinstance(row, dict)
+    ):
+        return True
+    raw_intent = planning_inputs.get("raw_intent") or {}
+    raw = raw_intent.get("raw") if isinstance(raw_intent.get("raw"), dict) else {}
+    if any(isinstance(row, dict) and bool(row) for row in raw.get("attachments") or []):
+        return True
+    explicit_fields = {
+        "workspace_reads",
+        "workspace_writes",
+        "workspace_inputs",
+        "workspace_outputs",
+    }
+
+    def has_explicit_workspace_io(value: Any) -> bool:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if str(key) in explicit_fields and bool(child):
+                    return True
+                if has_explicit_workspace_io(child):
+                    return True
+        elif isinstance(value, list):
+            return any(has_explicit_workspace_io(child) for child in value)
+        return False
+
+    return any(has_explicit_workspace_io(value) for value in planning_inputs.values())
 
 
 def _workflow_input_map(
@@ -997,11 +1143,22 @@ scope/evidence-coverage requirements that define what evidence it must retrieve;
 final-answer, publication, or delivery requirement. Preserve the exact named subjects, comparison
 dimensions, constraints, and required coverage values from those requirements in the discovery node's
 objective so the physical operator receives the full research query, not a generic topic summary. Assign
+a discovery node only requirements that can be decided from its candidate-acquisition artifact. A
+requirement to determine whether a source reliably supports a claim, compare methods, resolve scientific
+disagreements, or recommend an evaluation belongs to a downstream ingestion, verification, synthesis, or
+delivery node whose artifact can actually prove that conclusion; discovery may only preserve it as query
+context. Assign
 a requirement only to a node whose produced artifact can actually be judged by that requirement's check.
 Keep implementation-only support steps out of PlanIR. A single logical node may be implemented by a
 multi-capsule chain, so declare that node's external input/output boundary and let capsule composition
 insert internal artifacts such as a report plan. Add a separate logical node only when it represents a
 distinct user-visible operation, independently owned requirement, effect boundary, or dependency.
+The logical operator must describe work that is actually performed at the node boundary. Do not label an
+ingestion/extraction/verification-only node as synthesis or assign it cross-source comparison, disagreement,
+or recommendation requirements merely because it prepares evidence. Either give those requirements to the
+downstream report-planning/report node that can prove them, or declare an explicit synthesis output that an
+admitted capsule composition can produce. Raw paper, method, claim, and claim-verdict outputs alone do not
+prove that comparative synthesis occurred.
 For every requirement it owns, the matching produced artifact must list that requirement's exact
 check/verification identifier in verifier_ids. For artifact_type checks, the output artifact_type must
 appear in that check's artifact_types. Support outputs should use their compatible auto-apply artifact
@@ -1014,8 +1171,10 @@ policy. Do not name or select capsules in PlanIR; a later binding pass owns that
 `schema:<path>` and `artifact.<name>` are different identities unless a manifest explicitly declares
 the same identity; never infer equivalence from similar words or filenames.
 A produced artifact must declare how it materializes inside that node's isolated workspace: a safe
-relative file or directory path. Never use an absolute path, '..', or a shared path owned by another
-node. Code work must name a real code-file output, not only a patch/report placeholder.
+relative file or directory path and an explicit route. Use workspace_publish only for a requested
+product deliverable that may be published after its independent gate passes; use sprint_private for
+evaluation, receipt, proof, and intermediate artifacts. Never use an absolute path, '..', or a shared
+path owned by another node. Code work must name a real code-file output, not only a patch/report placeholder.
 When a compatible capsule contract marks an output as type `collection`, materialize that output as a
 directory. The directory may contain multiple independently schema-valid artifacts of the declared
 artifact_type; do not invent a collection wrapper schema.
@@ -1025,6 +1184,11 @@ compiled requirements. Use schema:request-envelope.schema.json when the selected
 controller's normalized request envelope. Every value in consumes is an artifact_type identifier, never
 a materialization file path and never `node_id:path`.
 materialization.path is only the relative file/directory location inside the producer node workspace.
+Declare workspace_reads as exact safe relative files in the controller-bound user workspace. Directory
+reads are unsupported in this bounded contract. Do not use '.', absolute paths, or '..'. An empty array
+means no user-workspace read. workspace_reads may name only files that already exist in the source
+workspace before this run. Never use workspace_reads for an artifact generated by another PlanIR node;
+declare that upstream artifact's exact artifact_type in consumes and depend on its producer instead.
 Effects must be explicit. `operator_requirements.effects` is the permission envelope for the capsule
 composition that will implement the node, not merely a description of the user's requested outcome.
 For every viable capsule chain, include every `active_effects` value used by that chain. In particular,
@@ -1037,6 +1201,14 @@ when the node must produce scientific results from a real dataset/code execution
 lineage, schema, or exit-code-only evidence never satisfies measured_execution. Use evidence_transform
 only when the catalog explicitly offers that trust class; otherwise use any when execution authenticity
 is irrelevant.
+When the request requires a real measured experiment and no controller input already supplies its exact
+dataset, model, runner code, and hashes, represent experiment-package preparation as a distinct logical
+node. That node must consume governed claims, require network for attributable public acquisition, and
+produce the exact dataset-manifest artifact offered by the capsule ABI catalog. The experiment-design node
+must consume both the governed claim and that manifest. The later experiment-run node remains a separate
+measured_execution boundary and must consume an exact plan plus approval. Never replace this chain with a
+proposed experiment, lineage replay, synthetic result, or a single opaque node that hides data/code
+preparation inside execution.
 """.strip()
     payload: dict[str, Any] = {
         "instruction": instruction,
@@ -1189,23 +1361,29 @@ def compile_exact_reuse_plan(
                 if requirement_id in requirement_verifiers
             }
         ) or [str((stage.get("evaluator_gate") or {}).get("kind") or stage.get("gate_family") or "workflow_gate")]
-        outputs = [
-            {
+        outputs = []
+        for index, output in enumerate(stage.get("outputs") or [], start=1):
+            if not isinstance(output, dict):
+                continue
+            raw_output_path = str(output.get("path") or "")
+            workspace_publish = raw_output_path.startswith("workspace/")
+            relative_path = (
+                raw_output_path[len("workspace/") :]
+                if workspace_publish
+                else relative_materialization_path(raw_output_path, f"output-{index}.json")
+            )
+            outputs.append({
                 "artifact_type": (
                     f"workflow.{workflow_id}.{stage_id}.output.{index}."
                     f"{str(output.get('type') or 'artifact')}"
                 ),
                 "verifier_ids": stage_verifiers,
                 "materialization": {
-                    "kind": "directory" if str(output.get("path") or "").endswith("/") else "file",
-                    "path": relative_materialization_path(
-                        str(output.get("path") or ""), f"output-{index}.json"
-                    ),
+                    "kind": "directory" if raw_output_path.endswith("/") else "file",
+                    "path": relative_path,
+                    "route": "workspace_publish" if workspace_publish else "sprint_private",
                 },
-            }
-            for index, output in enumerate(stage.get("outputs") or [], start=1)
-            if isinstance(output, dict)
-        ]
+            })
         if not outputs:
             outputs.append(
                 {
@@ -1214,6 +1392,7 @@ def compile_exact_reuse_plan(
                     "materialization": {
                         "kind": "file",
                         "path": f"{_safe_name(stage_id)}-completion.md",
+                        "route": "sprint_private",
                     },
                 }
             )
@@ -1265,6 +1444,19 @@ def compile_exact_reuse_plan(
             if stage_requires_network
             else "forbidden" if request_network == "forbidden" else "optional"
         )
+        workspace_reads: list[dict[str, str]] = []
+        for value in stage.get("read_scope") or []:
+            raw_read = str(value).replace("\\", "/")
+            if not raw_read.startswith("workspace/"):
+                continue
+            relative_read = raw_read[len("workspace/") :].rstrip("/")
+            read_kind = "directory" if raw_read.endswith("/") else "file"
+            defect = _workspace_read_error(relative_read, read_kind)
+            if defect:
+                raise ElasticPlannerError(
+                    f"exact-reuse stage {stage_id!r} workspace read {raw_read!r}: {defect}"
+                )
+            workspace_reads.append({"kind": "file", "path": relative_read})
         nodes.append(
             {
                 "node_id": stage_id,
@@ -1273,6 +1465,7 @@ def compile_exact_reuse_plan(
                 "depends_on": dependencies,
                 "consumes": consumes,
                 "produces": outputs,
+                "workspace_reads": workspace_reads,
                 "requirement_ids": sorted(set(stage_requirement_ids)),
                 "operator_requirements": {
                     "capabilities": required_capabilities,
@@ -1401,11 +1594,11 @@ def _preserve_discovery_requirement_scope(
     requirement_ir: dict[str, Any],
     body: dict[str, Any],
 ) -> dict[str, Any]:
-    """Keep accepted research scope intact at the Planner-to-operator boundary.
+    """Expose already-owned discovery scope at the operator boundary.
 
-    Requirement ownership remains precise: discovery receives only requirements
-    whose acceptance contract defines scope/evidence coverage. Final-answer and
-    publication requirements stay on their downstream artifact owners.
+    The model alone assigns semantic requirement ownership. Deterministic
+    enrichment may make scope already owned by a discovery node explicit in its
+    objective and verifier list, but may never add a requirement identifier.
     """
 
     preserved = copy.deepcopy(body)
@@ -1418,16 +1611,17 @@ def _preserve_discovery_requirement_scope(
     for node in preserved.get("nodes") or []:
         if not isinstance(node, dict) or not _is_discovery_node(node):
             continue
-        scope_ids = [_requirement_id(row) for row in scope_requirements]
-        node["requirement_ids"] = list(
-            dict.fromkeys(
-                [str(value) for value in node.get("requirement_ids") or []]
-                + scope_ids
-            )
-        )
+        owned_ids = {
+            str(value) for value in node.get("requirement_ids") or [] if str(value)
+        }
+        owned_scope_requirements = [
+            row
+            for row in scope_requirements
+            if _requirement_id(row) in owned_ids
+        ]
         scope_lines = [
             f"- [{_requirement_id(row)}] {_scope_requirement_text(row)}"
-            for row in scope_requirements
+            for row in owned_scope_requirements
             if _scope_requirement_text(row)
         ]
         objective = str(node.get("objective") or "").strip()
@@ -1440,7 +1634,7 @@ def _preserve_discovery_requirement_scope(
         scope_verifiers = list(
             dict.fromkeys(
                 _requirement_verifier(row)
-                for row in scope_requirements
+                for row in owned_scope_requirements
                 if _requirement_verifier(row)
             )
         )
@@ -1506,6 +1700,56 @@ def _materialization_error(path_text: str, kind: str) -> str | None:
     if kind == "directory" and path.suffix:
         return "directory materialization may not name a file suffix"
     return None
+
+
+def _workspace_read_error(path_text: str, kind: str) -> str | None:
+    path = Path(path_text)
+    if path.is_absolute():
+        return "workspace read path must be relative"
+    if not path.parts or any(part in {"", ".", ".."} for part in path.parts):
+        return "workspace read path must name an exact file"
+    if path.parts[0] in {"workspace", "workdir", "sprints"}:
+        return "workspace read path is relative to the bound workspace already"
+    if kind != "file":
+        return "workspace directory reads are unsupported in the bounded v1 contract"
+    return None
+
+
+def _workspace_source_file_state(
+    workspace_authority: dict[str, Any] | None,
+    relative: str,
+) -> tuple[str, str]:
+    """Inspect one pre-run source file under the frozen workspace authority."""
+    if not isinstance(workspace_authority, dict):
+        return "authority_missing", "workspace read requires frozen workspace authority"
+    raw_root = str(workspace_authority.get("workspace_root") or "")
+    root_path = Path(raw_root).expanduser()
+    if not root_path.is_absolute():
+        return "authority_invalid", "workspace authority root must be absolute"
+    try:
+        root = root_path.resolve(strict=True)
+    except OSError:
+        return "authority_invalid", "workspace authority root is unavailable"
+    if not root.is_dir() or root_path.is_symlink():
+        return "authority_invalid", "workspace authority root is unavailable or unsafe"
+    cursor = root
+    for part in Path(relative).parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            return "unsafe", "workspace read contains a symlink"
+    try:
+        source = (root / relative).resolve(strict=True)
+    except FileNotFoundError:
+        return "missing", "source file does not exist in the frozen workspace"
+    except OSError:
+        return "unsafe", "workspace source file could not be resolved safely"
+    try:
+        source.relative_to(root)
+    except ValueError:
+        return "unsafe", "workspace read escapes frozen workspace authority"
+    if not source.is_file():
+        return "unsafe", "workspace read does not resolve to a regular file"
+    return "present", ""
 
 
 def _has_cycle(nodes: dict[str, dict[str, Any]]) -> bool:
@@ -1761,11 +2005,135 @@ def _dependency_expanded_into_repaired_subgraph(
     return True
 
 
+def _dependency_consolidated_after_duplicate_producer_repair(
+    *,
+    removed_dependency_id: str,
+    repaired_node_id: str,
+    previous_plan: dict[str, Any],
+    previous_nodes: dict[str, dict[str, Any]],
+    repaired_nodes: dict[str, dict[str, Any]],
+    repair_defects: list[dict[str, Any]] | None,
+) -> bool:
+    """Prove a reviewer-requested duplicate producer was safely consolidated.
+
+    Plan validation reports the later duplicate producer by its exact node
+    index.  A repair may remove that requirement-free support node only when
+    every typed output it supplied is still consumed by the downstream node,
+    has exactly one surviving producer in the downstream ancestry, and that
+    producer retains the removed node's upstream order and execution trust.
+    This is deliberately narrower than permitting dependency deletion merely
+    because another node happens to emit a similarly named artifact.
+    """
+    removed = previous_nodes.get(removed_dependency_id)
+    downstream = repaired_nodes.get(repaired_node_id)
+    if (
+        removed is None
+        or downstream is None
+        or removed_dependency_id in repaired_nodes
+        or any(str(value) for value in removed.get("requirement_ids") or [])
+    ):
+        return False
+
+    previous_rows = previous_plan.get("nodes") or []
+    authorized_removed_ids: set[str] = set()
+    for defect in repair_defects or []:
+        if (
+            defect.get("repairable") is not True
+            or str(defect.get("code") or "") != "ARTIFACT_PRODUCER_DUPLICATE"
+        ):
+            continue
+        path = str(defect.get("path") or "").removeprefix("$.")
+        match = re.fullmatch(
+            r"(?:plan_ir\.)?nodes(?:\[(\d+)\]|\.(\d+))\.produces",
+            path,
+        )
+        if not match:
+            continue
+        index = int(match.group(1) or match.group(2))
+        if index >= len(previous_rows) or not isinstance(previous_rows[index], dict):
+            continue
+        node_id = str(previous_rows[index].get("node_id") or "")
+        if node_id:
+            authorized_removed_ids.add(node_id)
+    if removed_dependency_id not in authorized_removed_ids:
+        return False
+
+    removed_outputs = {
+        str(output.get("artifact_type") or "")
+        for output in removed.get("produces") or []
+        if isinstance(output, dict) and str(output.get("artifact_type") or "")
+    }
+    before_downstream = previous_nodes.get(repaired_node_id) or {}
+    before_inputs = {
+        str(value) for value in before_downstream.get("consumes") or [] if str(value)
+    }
+    after_inputs = {
+        str(value) for value in downstream.get("consumes") or [] if str(value)
+    }
+    if (
+        not removed_outputs
+        or not removed_outputs.issubset(before_inputs)
+        or not removed_outputs.issubset(after_inputs)
+    ):
+        return False
+
+    downstream_ancestors = _ancestors(repaired_node_id, repaired_nodes)
+    surviving_producer_ids: set[str] = set()
+    for artifact_type in removed_outputs:
+        producers = {
+            node_id
+            for node_id in downstream_ancestors
+            if artifact_type
+            in {
+                str(output.get("artifact_type") or "")
+                for output in repaired_nodes[node_id].get("produces") or []
+                if isinstance(output, dict)
+            }
+        }
+        if len(producers) != 1:
+            return False
+        surviving_producer_ids.update(producers)
+
+    removed_upstream = {
+        str(value) for value in removed.get("depends_on") or [] if str(value)
+    }
+    for producer_id in surviving_producer_ids:
+        if not removed_upstream.issubset(_ancestors(producer_id, repaired_nodes)):
+            return False
+
+    removed_trust = str(
+        (removed.get("operator_requirements") or {}).get("execution_trust") or "any"
+    )
+    trust_rank = capsule_composition.PLANNER_EXECUTION_TRUST_RANK
+    if removed_trust not in trust_rank:
+        return False
+    return all(
+        str(
+            (repaired_nodes[producer_id].get("operator_requirements") or {}).get(
+                "execution_trust"
+            )
+            or "any"
+        )
+        in trust_rank
+        and trust_rank[
+            str(
+                (repaired_nodes[producer_id].get("operator_requirements") or {}).get(
+                    "execution_trust"
+                )
+                or "any"
+            )
+        ]
+        >= trust_rank[removed_trust]
+        for producer_id in surviving_producer_ids
+    )
+
+
 def _repair_preservation_errors(
     previous_plan: dict[str, Any] | None,
     repaired_plan: dict[str, Any],
     known_operators: set[str] | None = None,
     composition_catalog: dict[str, Any] | None = None,
+    repair_defects: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Reject repair-time semantic weakening used only to satisfy the registry."""
     if not previous_plan:
@@ -1786,6 +2154,78 @@ def _repair_preservation_errors(
             repaired_requirement_owners.setdefault(str(requirement_id), set()).add(
                 repaired_node_id
             )
+    authorized_requirement_additions: dict[str, set[str]] = {}
+    previous_rows = previous_plan.get("nodes") or []
+    for defect in repair_defects or []:
+        if defect.get("repairable") is not True:
+            continue
+        requirement_ids = {
+            str(value)
+            for value in defect.get("requirement_ids") or []
+            if str(value)
+        }
+        path = str(defect.get("path") or "").removeprefix("$.")
+        if not requirement_ids:
+            continue
+
+        # Independent reviewers use both numeric JSON paths and stable node-id
+        # selectors.  A node-level requirement-coverage defect is as precise as
+        # an explicit ``.requirement_ids`` path: it names the only node allowed
+        # to receive the exact requirement ids carried by that defect.  Paths
+        # to other fields (for example ``.consumes`` or ``.depends_on``) never
+        # authorize ownership changes.
+        numeric_match = re.fullmatch(
+            r"(?:plan_ir\.)?nodes(?:\[(\d+)\]|\.(\d+))(?:\.requirement_ids)?",
+            path,
+        )
+        if numeric_match:
+            index = int(numeric_match.group(1) or numeric_match.group(2))
+            if index >= len(previous_rows) or not isinstance(previous_rows[index], dict):
+                continue
+            node_id = str(previous_rows[index].get("node_id") or "")
+            if node_id:
+                authorized_requirement_additions.setdefault(node_id, set()).update(
+                    requirement_ids
+                )
+            continue
+
+        # A reviewer can point at a contiguous set of nodes with the ordinary
+        # JSON-path/Python-slice spelling ``nodes[start:end].requirement_ids``.
+        # That is still an exact ownership authorization: only the nodes in
+        # the bounded slice may receive the exact requirement ids named by the
+        # defect.  Treating the slice as unrecognized makes the semantic
+        # reviewer request a valid repair that the deterministic guard then
+        # forbids.
+        slice_match = re.fullmatch(
+            r"(?:plan_ir\.)?nodes\[(\d+):(\d+)\](?:\.requirement_ids)?",
+            path,
+        )
+        if slice_match:
+            start = int(slice_match.group(1))
+            end = int(slice_match.group(2))
+            if start >= end or end > len(previous_rows):
+                continue
+            for index in range(start, end):
+                row = previous_rows[index]
+                if not isinstance(row, dict):
+                    continue
+                node_id = str(row.get("node_id") or "")
+                if node_id:
+                    authorized_requirement_additions.setdefault(
+                        node_id, set()
+                    ).update(requirement_ids)
+            continue
+
+        named_match = re.fullmatch(
+            r"(?:plan_ir\.)?nodes\[([^\[\].]+)\](?:\.requirement_ids)?",
+            path,
+        )
+        if named_match:
+            node_id = named_match.group(1)
+            if node_id in previous_nodes:
+                authorized_requirement_additions.setdefault(node_id, set()).update(
+                    requirement_ids
+                )
     errors: list[dict[str, Any]] = []
     for node_id in sorted(set(previous_nodes) & set(repaired_nodes)):
         before = previous_nodes[node_id]
@@ -1798,6 +2238,13 @@ def _repair_preservation_errors(
             dependency_id
             for dependency_id in removed_dependencies
             if not (
+                # Removing a redundant direct edge is not semantic weakening
+                # when the same upstream node is still an ancestor through a
+                # surviving dependency path.  The scheduler preserves the
+                # order, while the repaired node may legitimately narrow its
+                # direct artifact inputs to match an admitted capsule ABI.
+                dependency_id in _ancestors(node_id, repaired_nodes)
+                or
                 _dependency_folded_into_admitted_composition(
                     removed_dependency_id=dependency_id,
                     repaired_node_id=node_id,
@@ -1810,6 +2257,14 @@ def _repair_preservation_errors(
                     repaired_node_id=node_id,
                     previous_nodes=previous_nodes,
                     repaired_nodes=repaired_nodes,
+                )
+                or _dependency_consolidated_after_duplicate_producer_repair(
+                    removed_dependency_id=dependency_id,
+                    repaired_node_id=node_id,
+                    previous_plan=previous_plan,
+                    previous_nodes=previous_nodes,
+                    repaired_nodes=repaired_nodes,
+                    repair_defects=repair_defects,
                 )
             )
         ]
@@ -1853,19 +2308,27 @@ def _repair_preservation_errors(
             str(value) for value in after.get("requirement_ids") or []
         }
         added_requirements = after_requirements - before_requirements
+        unauthorized_added_requirements = (
+            added_requirements
+            - authorized_requirement_additions.get(node_id, set())
+        )
         removed_requirements = before_requirements - after_requirements
         safely_reassigned = all(
             repaired_requirement_owners.get(requirement_id, set()) - {node_id}
             for requirement_id in removed_requirements
         )
-        if added_requirements or (removed_requirements and not safely_reassigned):
+        if unauthorized_added_requirements or (
+            removed_requirements and not safely_reassigned
+        ):
             errors.append(
                 _error(
                     "REPAIR_REQUIREMENT_OWNERSHIP_CHANGED",
                     f"nodes.{node_id}.requirement_ids",
                     (
                         f"Repair changed requirement ownership for node {node_id!r}: "
-                        f"{sorted(before_requirements)} -> {sorted(after_requirements)}."
+                        f"{sorted(before_requirements)} -> {sorted(after_requirements)}. "
+                        "Only requirement additions explicitly named at this node's "
+                        "requirement_ids path by a repairable defect are permitted."
                     ),
                     repairable=False,
                 )
@@ -1902,6 +2365,8 @@ def validate_plan_ir(
     evaluation_registry: dict[str, Any] | None = None,
     previous_plan: dict[str, Any] | None = None,
     upstream_artifact_types: set[str] | None = None,
+    workspace_authority: dict[str, Any] | None = None,
+    repair_defects: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     evaluation_registry = (
         evaluation_registry or evaluation_planning.load_evaluation_check_registry()
@@ -1930,6 +2395,7 @@ def validate_plan_ir(
             plan_ir,
             _known_logical_operators(catalog),
             composition_catalog,
+            repair_defects,
         )
     )
     if (plan_ir.get("requirement_ir_ref") or {}).get("sha256") != sha256_payload(requirement_ir):
@@ -1967,6 +2433,7 @@ def validate_plan_ir(
         if isinstance(row, dict) and str(row.get("capsule_id") or "")
     }
     materialized_by: dict[tuple[str, str], str] = {}
+    materialized_outputs_by_path: dict[str, list[tuple[str, str]]] = {}
     admitted_upstream_types = _CONTROLLER_INPUT_TYPES | set(
         upstream_artifact_types or set()
     )
@@ -1986,6 +2453,30 @@ def validate_plan_ir(
                 checks["requirement_ownership"].append(_error("REQUIREMENT_UNKNOWN", f"nodes.{index}.requirement_ids", f"Unknown requirement: {req_id!r}."))
             else:
                 owned_requirements.add(req_id)
+        for read_index, workspace_read in enumerate(node.get("workspace_reads") or []):
+            workspace_read = workspace_read if isinstance(workspace_read, dict) else {}
+            defect = _workspace_read_error(
+                str(workspace_read.get("path") or ""),
+                str(workspace_read.get("kind") or ""),
+            )
+            if defect:
+                checks["artifact_handoffs"].append(
+                    _error(
+                        "WORKSPACE_READ_INVALID",
+                        f"nodes.{index}.workspace_reads.{read_index}",
+                        defect,
+                    )
+                )
+        if node.get("workspace_reads") and "read" not in {
+            str(value) for value in (node.get("operator_requirements") or {}).get("effects") or []
+        }:
+            checks["artifact_handoffs"].append(
+                _error(
+                    "WORKSPACE_READ_EFFECT_UNDECLARED",
+                    f"nodes.{index}.operator_requirements.effects",
+                    "A node with workspace_reads must declare the read effect.",
+                )
+            )
         declared_node_verifiers: set[str] = set()
         compatible_auto_verifiers: set[str] = set()
         for output in node.get("produces") or []:
@@ -2052,6 +2543,7 @@ def validate_plan_ir(
             materialization = (output or {}).get("materialization") or {}
             kind = str(materialization.get("kind") or "")
             path_text = str(materialization.get("path") or "")
+            route = str(materialization.get("route") or "")
             defect = _materialization_error(path_text, kind)
             if defect:
                 checks["artifact_handoffs"].append(
@@ -2059,6 +2551,14 @@ def validate_plan_ir(
                         "ARTIFACT_MATERIALIZATION_INVALID",
                         f"nodes.{index}.produces",
                         f"Artifact {artifact_type!r}: {defect}.",
+                    )
+                )
+            if not node.get("requirement_ids") and route == "workspace_publish":
+                checks["artifact_handoffs"].append(
+                    _error(
+                        "INTERNAL_ARTIFACT_PUBLISH_FORBIDDEN",
+                        f"nodes.{index}.produces",
+                        f"Internal/support artifact {artifact_type!r} must remain sprint_private.",
                     )
                 )
             materialized_key = (node_id, path_text)
@@ -2071,6 +2571,10 @@ def validate_plan_ir(
                     )
                 )
             materialized_by[materialized_key] = artifact_type
+            if path_text:
+                materialized_outputs_by_path.setdefault(path_text, []).append(
+                    (node_id, artifact_type)
+                )
             composition_row = composition_by_node.get(node_id) or {}
             admitted_candidate_ids = {
                 str(value)
@@ -2199,6 +2703,85 @@ def validate_plan_ir(
         checks["dependency_graph"].append(_error("GRAPH_CYCLE", "nodes", "PlanIR dependency graph is cyclic."))
     for index, node in enumerate(node_rows):
         ancestors = _ancestors(str(node.get("node_id") or ""), nodes)
+        consumed_types = {str(value) for value in node.get("consumes") or []}
+        for read_index, workspace_read in enumerate(node.get("workspace_reads") or []):
+            if not isinstance(workspace_read, dict):
+                continue
+            read_path = str(workspace_read.get("path") or "")
+            read_kind = str(workspace_read.get("kind") or "")
+            if _workspace_read_error(read_path, read_kind):
+                continue
+            source_state, source_detail = _workspace_source_file_state(
+                workspace_authority,
+                read_path,
+            )
+            if source_state == "present":
+                continue
+            path_matches = materialized_outputs_by_path.get(read_path, [])
+            ancestor_matches = sorted(
+                (producer, artifact_type)
+                for producer, artifact_type in path_matches
+                if producer in ancestors
+            )
+            if source_state == "missing" and ancestor_matches:
+                producer_node_ids = sorted(
+                    {producer for producer, _artifact in ancestor_matches}
+                )
+                generated_artifact_types = sorted(
+                    {artifact_type for _producer, artifact_type in ancestor_matches}
+                )
+                missing_types = sorted(
+                    {
+                        artifact_type
+                        for _producer, artifact_type in ancestor_matches
+                        if artifact_type not in consumed_types
+                    }
+                )
+                required = (
+                    f" Add {missing_types!r} to consumes."
+                    if missing_types
+                    else " The matching artifact_type is already consumed."
+                )
+                defect = _error(
+                    "WORKSPACE_READ_SOURCE_MISSING_USE_ARTIFACT",
+                    f"nodes.{index}.workspace_reads.{read_index}",
+                    (
+                        f"{read_path!r} is generated by dependency node(s) "
+                        f"{producer_node_ids}; remove this workspace_read, keep a depends_on "
+                        f"path to those producer nodes, and ensure consumes contains "
+                        f"{generated_artifact_types}.{required}"
+                    ),
+                )
+                defect["producer_node_ids"] = producer_node_ids
+                defect["required_artifact_types"] = generated_artifact_types
+                defect["required_consumes"] = missing_types
+                checks["artifact_handoffs"].append(defect)
+            elif source_state == "missing":
+                checks["artifact_handoffs"].append(
+                    _error(
+                        "WORKSPACE_READ_SOURCE_MISSING",
+                        f"nodes.{index}.workspace_reads.{read_index}",
+                        (
+                            f"Pre-existing source file {read_path!r} is absent from the frozen "
+                            "workspace; remove the workspace_read or provide the source file."
+                        ),
+                    )
+                )
+            else:
+                code = (
+                    "WORKSPACE_READ_AUTHORITY_MISSING"
+                    if source_state == "authority_missing"
+                    else "WORKSPACE_READ_AUTHORITY_INVALID"
+                    if source_state == "authority_invalid"
+                    else "WORKSPACE_READ_SOURCE_UNSAFE"
+                )
+                checks["artifact_handoffs"].append(
+                    _error(
+                        code,
+                        f"nodes.{index}.workspace_reads.{read_index}",
+                        f"Cannot admit source workspace read {read_path!r}: {source_detail}.",
+                    )
+                )
         for artifact_type in node.get("consumes") or []:
             artifact_type = str(artifact_type)
             if artifact_type in admitted_upstream_types:
@@ -2332,6 +2915,10 @@ when removing it leaves the artifact, effect, verification, and dependency contr
 downstream node consumes a unique output from it. An implementation-only step may instead remain
 inside one logical node's capsule composition; do not reject that internal step merely because it has
 no direct RequirementIR owner.
+Check that each logical operator's defining semantic action is actually represented by its objective and
+produced-artifact boundary. An evidence-preparation node that only ingests, extracts, and verifies cannot
+own cross-source comparison or synthesis requirements; those belong to a downstream synthesis/report node
+unless the preparation node emits an explicit synthesis artifact.
 Honor the declared artifact ABI. A downstream evidence-bearing artifact can carry the semantic content
 needed by the next node. In particular, claim_verdict.v1 carries verified claim_text and evidence_ids;
 do not demand a redundant raw-claims input when the report node consumes that verdict artifact.
@@ -2571,7 +3158,11 @@ def run_semantic_planning_pipeline(
                 decision,
             )
             decision_errors = validate_planning_decision(
-                requirement_ir, decision, catalog, planning_context
+                requirement_ir,
+                decision,
+                catalog,
+                planning_context,
+                planning_inputs,
             )
             if not decision_errors or any(
                 error.get("code") == "REQUIREMENTS_GAP"
@@ -2677,6 +3268,7 @@ def run_semantic_planning_pipeline(
                 upstream_artifact_types=_planning_context_artifact_types(
                     planning_context
                 ),
+                workspace_authority=planning_inputs.get("workspace_authority"),
             )
             if validation.get("status") == "pass":
                 binding_trace = build_binding_trace(requirement_ir, plan_ir)
@@ -2706,9 +3298,9 @@ def run_semantic_planning_pipeline(
                 output_dir / "artifact_conversion_registry.snapshot.json",
                 conversion_registry,
             )
-            for generation in (0, 1):
+            for generation in range(MAX_REPAIRS + 1):
                 defects = _repairable_errors(validation, fidelity)
-                if generation == 1:
+                if generation > 0:
                     if not defects:
                         break
                     repair_attempted = True
@@ -2717,7 +3309,7 @@ def run_semantic_planning_pipeline(
                         {
                             "schema_version": "solar.repair_record.v1",
                             "repair_id": f"plan-repair-{requirement_ir_id(requirement_ir)}",
-                            "generation": 1,
+                            "generation": generation,
                             "defects": defects,
                             "maximum_repairs": MAX_REPAIRS,
                             "status": "requested",
@@ -2758,10 +3350,12 @@ def run_semantic_planning_pipeline(
                     catalog,
                     composition_catalog,
                     evaluation_registry=evaluation_check_registry,
-                    previous_plan=previous if generation == 1 else None,
+                    previous_plan=previous if generation > 0 else None,
                     upstream_artifact_types=_planning_context_artifact_types(
                         planning_context
                     ),
+                    workspace_authority=planning_inputs.get("workspace_authority"),
+                    repair_defects=defects if generation > 0 else None,
                 )
                 write_json(output_dir / f"generation-{generation}" / "plan_validation.json", validation)
                 binding_trace = None
@@ -2807,8 +3401,8 @@ def run_semantic_planning_pipeline(
             write_json(output_dir / filename, payload)
     if repair_attempted and (output_dir / "repair_record.json").exists():
         repair = _load_json(output_dir / "repair_record.json")
-        repaired_artifact = plan_ir if plan_ir and plan_ir.get("generation") == 1 else direct_response
-        repair["status"] = "completed" if repaired_artifact and repaired_artifact.get("generation") == 1 else "failed"
+        repaired_artifact = plan_ir if plan_ir and int(plan_ir.get("generation") or 0) > 0 else direct_response
+        repair["status"] = "completed" if repaired_artifact and int(repaired_artifact.get("generation") or 0) > 0 else "failed"
         repair["result_plan_ir_id"] = plan_ir.get("plan_ir_id") if plan_ir else None
         repair["result_response_id"] = direct_response.get("response_id") if direct_response else None
         write_json(output_dir / "repair_record.json", repair)
@@ -2877,6 +3471,7 @@ def _node_composition_row(
             if str((value or {}).get("artifact_type") or "")
         }
     )
+    node_proof_classes = _node_proof_classes(node)
     operator_requirements = (
         node.get("operator_requirements")
         if isinstance(node.get("operator_requirements"), dict)
@@ -2970,6 +3565,14 @@ def _node_composition_row(
                 for row in catalog.get("capsules") or []
                 if isinstance(row, dict)
             }
+            mandatory_proof_classes: set[str] = set()
+            for step in steps:
+                capsule = capsule_by_id.get(str((step or {}).get("capsule_id") or ""), {})
+                mandatory_proof_classes.update(
+                    _capsule_mandatory_proof_classes(capsule)
+                )
+            if mandatory_proof_classes - node_proof_classes:
+                reasons.append("MANDATORY_PROOF_CLASS_UNSATISFIABLE")
             candidate_trust = max(
                 (
                     trust_rank.get(
@@ -3101,6 +3704,7 @@ def _hard_capsule_candidate_row(
         for value in node.get("produces") or []
         if str((value or {}).get("artifact_type") or "")
     }
+    node_proof_classes = _node_proof_classes(node)
     operator_requirements = (
         node.get("operator_requirements")
         if isinstance(node.get("operator_requirements"), dict)
@@ -3122,12 +3726,21 @@ def _hard_capsule_candidate_row(
         missing_inputs = sorted(capsule_inputs - available_inputs)
         unsupported_node_inputs = sorted(required_capsule_inputs - capsule_inputs)
         missing_outputs = sorted(requested_outputs - set(capsule.get("produces") or []))
+        verification = (
+            capsule.get("verification")
+            if isinstance(capsule.get("verification"), dict)
+            else {}
+        )
+        mandatory_proof_classes = _capsule_mandatory_proof_classes(capsule)
+        unsatisfied_proof_classes = sorted(mandatory_proof_classes - node_proof_classes)
         if missing_inputs:
             reasons.append("REQUIRED_INPUT_UNAVAILABLE")
         if unsupported_node_inputs:
             reasons.append("DECLARED_NODE_INPUT_UNSUPPORTED")
         if missing_outputs:
             reasons.append("REQUIRED_OUTPUT_UNAVAILABLE")
+        if unsatisfied_proof_classes:
+            reasons.append("MANDATORY_PROOF_CLASS_UNSATISFIABLE")
         capsule_effects = (
             capsule.get("effects") if isinstance(capsule.get("effects"), dict) else {}
         )
@@ -3142,11 +3755,6 @@ def _hard_capsule_candidate_row(
             reasons.append("NETWORK_FORBIDDEN")
         if network_policy == "required" and not network_active:
             reasons.append("NETWORK_REQUIRED_BUT_UNDECLARED")
-        verification = (
-            capsule.get("verification")
-            if isinstance(capsule.get("verification"), dict)
-            else {}
-        )
         if not (
             verification.get("self_checks")
             or verification.get("pass_conditions")
@@ -3168,6 +3776,7 @@ def _hard_capsule_candidate_row(
                     "missing_inputs": missing_inputs,
                     "unsupported_node_inputs": unsupported_node_inputs,
                     "missing_outputs": missing_outputs,
+                    "unsatisfied_proof_classes": unsatisfied_proof_classes,
                 }
             )
         else:
@@ -3391,6 +4000,11 @@ def validate_capsule_selection(
             for row in catalog.get("capsules") or []
             if isinstance(row, dict)
         }
+        plan_node_by_id = {
+            str(row.get("node_id") or ""): row
+            for row in plan_ir.get("nodes") or []
+            if isinstance(row, dict)
+        }
         actual_rows = [row for row in selection.get("nodes") or [] if isinstance(row, dict)]
         actual_ids = [str(row.get("node_id") or "") for row in actual_rows]
         if len(actual_ids) != len(set(actual_ids)) or set(actual_ids) != set(expected_nodes):
@@ -3405,6 +4019,28 @@ def validate_capsule_selection(
                 errors.append(_error("CAPSULE_SELECTION_NOT_ELIGIBLE", f"nodes.{node_id}.selected_capsule_id", f"Selected capsule {selected!r} is not an eligible candidate."))
             task_type = str(row.get("dispatch_task_type") or "")
             selected_capsules = [selected, *fallbacks]
+            supported_proof_classes = _node_proof_classes(
+                plan_node_by_id.get(node_id) or {}
+            )
+            for capsule_id in selected_capsules:
+                unsatisfied = sorted(
+                    _capsule_mandatory_proof_classes(
+                        capsule_by_id.get(capsule_id) or {}
+                    )
+                    - supported_proof_classes
+                )
+                if unsatisfied:
+                    errors.append(
+                        _error(
+                            "CAPSULE_MANDATORY_PROOF_CLASS_UNSATISFIABLE",
+                            f"nodes.{node_id}.selected_capsule_id",
+                            (
+                                f"Capsule {capsule_id!r} mandates proof classes "
+                                f"{unsatisfied!r} that the PlanIR node does not declare."
+                            ),
+                            repairable=False,
+                        )
+                    )
             if any(
                 task_type
                 not in ((capsule_by_id.get(capsule_id) or {}).get("task_types") or [])
@@ -4210,8 +4846,11 @@ def _generated_task_graph_proposal(
             artifact_type = str((output or {}).get("artifact_type") or "")
             materialization = (output or {}).get("materialization") or {}
             relative_path = str(materialization.get("path") or "")
+            route = str(materialization.get("route") or "")
             output_paths[artifact_type] = (
-                f"workspace/planning/{_safe_name(node_id)}/{relative_path}"
+                f"workspace/{relative_path}"
+                if route == "workspace_publish"
+                else f"private/{_safe_name(node_id)}/{relative_path}"
             )
     logical_catalog = {
         row["logical_operator"]: row
@@ -4244,6 +4883,7 @@ def _generated_task_graph_proposal(
                 "outputs": outputs,
                 "read_scope": read_scope,
                 "write_scope": outputs,
+                "workspace_reads": copy.deepcopy(plan_node.get("workspace_reads") or []),
                 "requirement_ids": [str(value) for value in plan_node.get("requirement_ids") or []],
                 "required_capabilities": [],
                 "evaluator_gate": {"kind": "llm_eval", "on_fail": "repair_once_then_fail"},
@@ -4310,7 +4950,10 @@ def _generated_composition_task_graph_proposal(
 
     PlanIR remains the semantic plan.  Expansion is a Planner compile step, not
     runtime repair: support steps receive deterministic ids and the terminal
-    step retains the PlanIR node id so requirement ownership stays stable.
+    step retains the PlanIR node id as the composition completion barrier.
+    Runtime requirement checks are placed on the capsule step that emits the
+    PlanIR artifact carrying the matching verifier; semantic ownership remains
+    on the parent PlanIR node.
     """
     proof_by_node = {
         str(row.get("node_id") or ""): row
@@ -4329,13 +4972,21 @@ def _generated_composition_task_graph_proposal(
     }
     final_output_paths: dict[str, str] = {}
     final_output_contracts: dict[tuple[str, str], dict[str, Any]] = {}
+    requirement_verifier_by_id = {
+        _requirement_id(row): _requirement_verifier(row)
+        for row in requirements(requirement_ir)
+        if _requirement_id(row)
+    }
     for plan_node in plan_ir.get("nodes") or []:
         node_id = str(plan_node.get("node_id") or "")
         for output in plan_node.get("produces") or []:
             artifact_type = str((output or {}).get("artifact_type") or "")
-            relative_path = str(((output or {}).get("materialization") or {}).get("path") or "")
+            materialization = (output or {}).get("materialization") or {}
+            relative_path = str(materialization.get("path") or "")
             final_output_paths[artifact_type] = (
-                f"workspace/planning/{_safe_name(node_id)}/{relative_path}"
+                f"workspace/{relative_path}"
+                if str(materialization.get("route") or "") == "workspace_publish"
+                else f"private/{_safe_name(node_id)}/{relative_path}"
             )
             final_output_contracts[(node_id, artifact_type)] = copy.deepcopy(output)
 
@@ -4375,6 +5026,10 @@ def _generated_composition_task_graph_proposal(
         local_paths = dict(final_output_paths)
         producer_by_type: dict[str, str] = {}
         expanded_ids: list[str] = []
+        requirements_placed: set[str] = set()
+        parent_requirement_ids = [
+            str(value) for value in plan_node.get("requirement_ids") or [] if str(value)
+        ]
         for index, (proven_step, selected_step) in enumerate(
             zip(proven_steps, selected_steps)
         ):
@@ -4399,17 +5054,44 @@ def _generated_composition_task_graph_proposal(
                 else:
                     filename = f"{index + 1:02d}-{_safe_name(artifact_type)}.json"
                     path = (
-                        f"workspace/planning/{_safe_name(parent_id)}/composition/{filename}"
+                        f"private/{_safe_name(parent_id)}/composition/{filename}"
                     )
                     contract = {
                         "artifact_type": artifact_type,
                         "verifier_ids": [],
-                        "materialization": {"kind": "file", "path": filename},
+                        "materialization": {
+                            "kind": "file",
+                            "path": filename,
+                            "route": "sprint_private",
+                        },
                     }
                 local_paths[artifact_type] = path
                 producer_by_type[artifact_type] = step_id
                 output_paths.append(path)
                 output_contracts.append(contract)
+            output_verifiers = {
+                str(verifier_id)
+                for contract in output_contracts
+                for verifier_id in contract.get("verifier_ids") or []
+                if str(verifier_id)
+            }
+            step_requirement_ids = [
+                requirement_id
+                for requirement_id in parent_requirement_ids
+                if requirement_verifier_by_id.get(requirement_id)
+                in output_verifiers
+            ]
+            requirements_placed.update(step_requirement_ids)
+            if is_terminal:
+                # Non-machine-checkable or otherwise verifier-less requirements
+                # still need a runtime owner; keep only those unmatched items on
+                # the composition completion barrier.
+                step_requirement_ids.extend(
+                    requirement_id
+                    for requirement_id in parent_requirement_ids
+                    if requirement_id not in requirements_placed
+                )
+                step_requirement_ids = list(dict.fromkeys(step_requirement_ids))
             # The terminal node is the completion barrier for the full selected
             # composition, including independent branches in the candidate.
             if is_terminal:
@@ -4445,11 +5127,12 @@ def _generated_composition_task_graph_proposal(
                 "outputs": output_paths,
                 "read_scope": list(dict.fromkeys(read_scope)),
                 "write_scope": output_paths,
-                "requirement_ids": (
-                    [str(value) for value in plan_node.get("requirement_ids") or []]
-                    if is_terminal
+                "workspace_reads": (
+                    copy.deepcopy(plan_node.get("workspace_reads") or [])
+                    if index == 0
                     else []
                 ),
+                "requirement_ids": step_requirement_ids,
                 "required_capabilities": [],
                 "evaluator_gate": {"kind": "llm_eval", "on_fail": "fail"},
                 "max_repair_attempts": 0,
@@ -4722,6 +5405,209 @@ def _scheduler_attempt_budget(node: dict[str, Any]) -> int:
         return 1
 
 
+def _scheduler_artifact_contract(
+    node: dict[str, Any], capsule_node: dict[str, Any]
+) -> dict[str, list[str]]:
+    """Project a composed capsule node onto its external artifact boundary.
+
+    A composed node can contain several ordered capsule stages. An artifact
+    produced by an earlier stage and consumed by a later stage is internal to
+    that one scheduler node; exposing it as an external input creates a false
+    self-dependency that the runtime correctly rejects. Preserve inputs that
+    are consumed before any stage produces them, including pass-through
+    artifacts that a later stage updates.
+    """
+    # PlanIR's semantic contract is the scheduler-node boundary. Capsule
+    # stages additionally produce lifecycle sidecars (guard decisions,
+    # resource bindings, handoff/eval receipts) inside each node. Publishing
+    # that stage union as graph data makes several nodes appear to produce the
+    # same global artifact even though those files are node-local. Prefer the
+    # admitted semantic ports whenever they are present; capsule stage ports
+    # remain execution detail carried in CapsulePlan.
+    semantic = (
+        node.get("semantic_artifact_contract")
+        if isinstance(node.get("semantic_artifact_contract"), dict)
+        else None
+    )
+    if semantic is not None:
+        semantic_consumes = [
+            str(value) for value in semantic.get("consumes") or [] if str(value)
+        ]
+        semantic_produces = [
+            str(value.get("artifact_type") if isinstance(value, dict) else value)
+            for value in semantic.get("produces") or []
+            if str(value.get("artifact_type") if isinstance(value, dict) else value)
+        ]
+        return {
+            "consumes": list(dict.fromkeys(semantic_consumes)),
+            "produces": list(dict.fromkeys(semantic_produces)),
+        }
+
+    declared = (
+        node.get("artifact_types")
+        if isinstance(node.get("artifact_types"), dict)
+        else {}
+    )
+    consumes = [str(value) for value in declared.get("consumes") or []]
+    produces = [str(value) for value in declared.get("produces") or []]
+    stages = [
+        row
+        for row in capsule_node.get("stages") or []
+        if isinstance(row, dict)
+    ]
+    if not stages:
+        return {"consumes": consumes, "produces": produces}
+
+    produced_so_far: set[str] = set()
+    internal_consumes: set[str] = set()
+    for stage in stages:
+        artifacts = (
+            stage.get("artifact_types")
+            if isinstance(stage.get("artifact_types"), dict)
+            else {}
+        )
+        for value in artifacts.get("consumes") or []:
+            artifact = str(value)
+            if artifact in produced_so_far:
+                internal_consumes.add(artifact)
+        produced_so_far.update(str(value) for value in artifacts.get("produces") or [])
+
+    return {
+        "consumes": [value for value in consumes if value not in internal_consumes],
+        "produces": produces,
+    }
+
+
+def _scheduler_output_routes(
+    node: dict[str, Any],
+    produced_artifact_types: list[str],
+) -> list[dict[str, str]]:
+    semantic = (
+        node.get("semantic_artifact_contract")
+        if isinstance(node.get("semantic_artifact_contract"), dict)
+        else {}
+    )
+    routes: list[dict[str, str]] = []
+    for output in semantic.get("produces") or []:
+        if not isinstance(output, dict):
+            continue
+        materialization = (
+            output.get("materialization")
+            if isinstance(output.get("materialization"), dict)
+            else {}
+        )
+        routes.append(
+            {
+                "artifact_type": str(output.get("artifact_type") or ""),
+                "route_kind": str(materialization.get("route") or ""),
+                "relative_path": str(materialization.get("path") or ""),
+                "materialization_kind": str(materialization.get("kind") or ""),
+            }
+        )
+    if routes:
+        return routes
+    # Registered exact-reuse contracts predate semantic materialization
+    # objects. Project only their explicit workspace/ or node-private paths;
+    # generated PlanIR never uses this compatibility branch.
+    declared_paths = [str(value) for value in node.get("write_scope") or []]
+    for index, artifact_type in enumerate(produced_artifact_types):
+        declared = declared_paths[index] if index < len(declared_paths) else f"{_safe_name(artifact_type)}.json"
+        normalized = declared.replace("\\", "/").lstrip("/")
+        if normalized.startswith("workspace/"):
+            route_kind = "workspace_publish"
+            relative = normalized[len("workspace/") :]
+        else:
+            route_kind = "sprint_private"
+            private_prefix = f"private/{_safe_name(str(node.get('id') or 'node'))}/"
+            relative = normalized[len(private_prefix) :] if normalized.startswith(private_prefix) else normalized
+        routes.append(
+            {
+                "artifact_type": artifact_type,
+                "route_kind": route_kind,
+                "relative_path": relative,
+                "materialization_kind": "directory" if declared.endswith("/") else "file",
+            }
+        )
+    return routes
+
+
+def _bound_workspace_reads(
+    node: dict[str, Any],
+    workspace_authority: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    requested = [
+        row for row in node.get("workspace_reads") or [] if isinstance(row, dict)
+    ]
+    if not requested:
+        return []
+    if not workspace_authority:
+        raise ElasticPlannerError("workspace reads require frozen workspace authority")
+    root = Path(str(workspace_authority.get("workspace_root") or "")).expanduser().resolve()
+    if not root.is_dir() or root.is_symlink():
+        raise ElasticPlannerError("workspace authority root is unavailable or unsafe")
+    result: list[dict[str, str]] = []
+    for row in requested:
+        kind = str(row.get("kind") or "")
+        relative = str(row.get("path") or "")
+        defect = _workspace_read_error(relative, kind)
+        if defect:
+            raise ElasticPlannerError(f"workspace read {relative!r}: {defect}")
+        if kind == "directory":
+            raise ElasticPlannerError(
+                f"workspace directory reads are unsupported in the bounded v1 contract: {relative}"
+            )
+        lexical = root / relative
+        cursor = root
+        for part in Path(relative).parts:
+            cursor = cursor / part
+            if cursor.is_symlink():
+                raise ElasticPlannerError(f"workspace read contains symlink: {relative}")
+        try:
+            path = lexical.resolve(strict=True)
+        except OSError as exc:
+            raise ElasticPlannerError(
+                f"WORKSPACE_READ_SOURCE_UNAVAILABLE:{relative[:256]}"
+            ) from exc
+        try:
+            path.relative_to(root)
+        except ValueError as exc:
+            raise ElasticPlannerError(f"workspace read escapes authority: {relative}") from exc
+        if not path.is_file():
+            raise ElasticPlannerError(f"workspace read kind/path mismatch: {relative}")
+        try:
+            digest = scheduler_input_runtime.file_sha256(path)
+        except OSError as exc:
+            raise ElasticPlannerError(
+                f"WORKSPACE_READ_SOURCE_UNAVAILABLE:{relative[:256]}"
+            ) from exc
+        result.append(
+            {
+                "kind": kind,
+                "relative_path": relative,
+                "sha256": digest,
+            }
+        )
+    return result
+
+
+def _scheduler_workspace_authority_ref(
+    workspace_authority: dict[str, Any] | None,
+) -> dict[str, str] | None:
+    if not workspace_authority:
+        return None
+    path = Path(str(workspace_authority.get("path") or "")).expanduser().resolve()
+    if not path.is_file():
+        raise ElasticPlannerError("workspace authority source is missing")
+    if json.loads(path.read_text(encoding="utf-8")) != workspace_authority:
+        raise ElasticPlannerError("workspace authority source content mismatch")
+    return {
+        "authority_id": str(workspace_authority.get("authority_id") or ""),
+        "path": str(path),
+        "sha256": scheduler_input_runtime.file_sha256(path),
+        "workspace_root": str(workspace_authority.get("workspace_root") or ""),
+    }
+
+
 def compile_scheduler_input(
     task_graph: dict[str, Any],
     capsule_plan: dict[str, Any],
@@ -4729,6 +5615,7 @@ def compile_scheduler_input(
     evaluation_plan: dict[str, Any],
     *,
     sprint_id: str,
+    workspace_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Serialize admitted Planner output into the scheduler's immutable input.
 
@@ -4777,6 +5664,7 @@ def compile_scheduler_input(
             )
             if capsule_id:
                 capsule_ids = [capsule_id]
+        primary_capsule_id = str(capsule_node.get("capability_capsule_id") or "")
         checks = [row for row in evaluation_node.get("checks") or [] if isinstance(row, dict)]
         deterministic_gate_ids = [
             str(row.get("check_id") or "")
@@ -4810,7 +5698,7 @@ def compile_scheduler_input(
             and str(row.get("operator_id") or "")
             and str(row.get("admission_state") or "READY") in {"READY", "ELIGIBLE"}
         ]
-        artifacts = node.get("artifact_types") if isinstance(node.get("artifact_types"), dict) else {}
+        artifacts = _scheduler_artifact_contract(node, capsule_node)
         requirements = node.get("operator_requirements")
         requirements = requirements if isinstance(requirements, dict) else {}
         declared_effects = [
@@ -4836,6 +5724,7 @@ def compile_scheduler_input(
                 "requirement_ids": [
                     str(value) for value in node.get("requirement_ids") or []
                 ],
+                "capability_capsule_id": primary_capsule_id,
                 "capsule_binding": {
                     "capsule_ids": capsule_ids,
                     "composition_id": node.get("composition_candidate_id"),
@@ -4846,6 +5735,14 @@ def compile_scheduler_input(
                     "consumes": [str(value) for value in artifacts.get("consumes") or []],
                     "produces": [str(value) for value in artifacts.get("produces") or []],
                 },
+                "output_routes": _scheduler_output_routes(
+                    node,
+                    [str(value) for value in artifacts.get("produces") or []],
+                ),
+                "workspace_reads": _bound_workspace_reads(
+                    node,
+                    workspace_authority,
+                ),
                 "evaluation_binding": {
                     "deterministic_gate_ids": deterministic_gate_ids,
                     "semantic_evaluator_ids": semantic_evaluator_ids,
@@ -4877,6 +5774,9 @@ def compile_scheduler_input(
         "scheduler_input_id": f"scheduler-input-{sprint_id}",
         "sprint_id": sprint_id,
         "planning_authority": "frozen_execution_plan_v1",
+        "workspace_authority_ref": _scheduler_workspace_authority_ref(
+            workspace_authority
+        ),
         "graph": {
             "graph_id": str(
                 task_graph.get("workflow_contract_id")
@@ -4887,6 +5787,14 @@ def compile_scheduler_input(
         },
     }
     _assert_schema(scheduler_input, SCHEDULER_INPUT_SCHEMA, "scheduler_input")
+    runtime_validation = scheduler_input_runtime.validate(
+        scheduler_input, require_runtime_authority=True
+    )
+    if not runtime_validation.get("ok"):
+        raise ElasticPlannerError(
+            "scheduler_input_runtime_invalid:"
+            + ";".join(str(value) for value in runtime_validation.get("errors") or [])
+        )
     return scheduler_input
 
 
@@ -5202,6 +6110,9 @@ def compile_and_freeze_execution_bundle(
         physical_plan,
         evaluation_contract,
         sprint_id=sprint_id,
+        workspace_authority=(semantic_result.get("planning_inputs") or {}).get(
+            "workspace_authority"
+        ),
     )
     _assert_schema(scheduler_input, SCHEDULER_INPUT_SCHEMA, "scheduler_input")
     write_json(output_dir / "scheduler_input.json", scheduler_input)
@@ -5899,6 +6810,11 @@ def verify_frozen_execution_chain(
         physical,
         evaluation_contract,
         sprint_id=str(graph.get("sprint_id") or ""),
+        workspace_authority=(
+            _load_json(semantic_dir / "inputs" / "workspace_authority.json")
+            if (semantic_dir / "inputs" / "workspace_authority.json").is_file()
+            else None
+        ),
     )
     if recomputed_scheduler_input != scheduler_input:
         errors.append("scheduler_input.recomputed_mismatch")

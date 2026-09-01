@@ -5,9 +5,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +43,23 @@ def _is_under(path: Path, root: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _write_text(path: Path, value: str) -> str:
+    path.write_text(value, encoding="utf-8")
+    return _sha256(path)
+
+
+def _write_json(path: Path, value: dict[str, Any]) -> str:
+    path.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return _sha256(path)
 
 
 @dataclass
@@ -88,6 +108,88 @@ class BoundedLocalExperimentExecutor:
                     error_type="invalid_input",
                 ) from exc
         return results
+
+    def _recompute_metrics(
+        self,
+        raw: dict[str, Any],
+        reported_metrics: list[dict[str, Any]],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        cases = [item for item in raw.get("case_results") or [] if isinstance(item, dict)]
+        if not cases:
+            raise ResearchOperatorError(
+                "Measured result has no raw per-case rows for independent recomputation",
+                error_type="provider_contract",
+            )
+        reported = {
+            str(item.get("name") or ""): item
+            for item in reported_metrics
+            if isinstance(item, dict) and str(item.get("name") or "").strip()
+        }
+        field_map = {
+            "case_count": None,
+            "mean_context_tokens": "context_tokens",
+            "memory_reduction_ratio_int8": "memory_reduction_ratio_int8",
+            "memory_reduction_ratio_int4": "memory_reduction_ratio_int4",
+            "mean_reconstruction_mse_int8": "mean_reconstruction_mse_int8",
+            "mean_reconstruction_mse_int4": "mean_reconstruction_mse_int4",
+            "mean_reconstruction_cosine_int8": "mean_reconstruction_cosine_int8",
+            "mean_reconstruction_cosine_int4": "mean_reconstruction_cosine_int4",
+            "mean_forward_ms": "forward_ms",
+            "mean_quantize_dequantize_ms_int8": "quantize_dequantize_ms_int8",
+            "mean_quantize_dequantize_ms_int4": "quantize_dequantize_ms_int4",
+        }
+        recomputed: list[dict[str, Any]] = []
+        comparisons: list[dict[str, Any]] = []
+        for name, source_field in field_map.items():
+            if name not in reported:
+                raise ResearchOperatorError(
+                    f"Measured result omitted required metric {name}",
+                    error_type="provider_contract",
+                )
+            if source_field is None:
+                value = float(len(cases))
+            else:
+                try:
+                    values = [float(item[source_field]) for item in cases]
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise ResearchOperatorError(
+                        f"Raw case rows cannot recompute {name}",
+                        error_type="provider_contract",
+                    ) from exc
+                value = sum(values) / len(values)
+            reported_value = reported[name].get("value")
+            try:
+                difference = abs(float(reported_value) - value)
+            except (TypeError, ValueError) as exc:
+                raise ResearchOperatorError(
+                    f"Reported metric {name} is not numeric",
+                    error_type="provider_contract",
+                ) from exc
+            tolerance = max(1e-10, abs(value) * 1e-9)
+            matches = difference <= tolerance
+            recomputed.append(
+                {
+                    "name": name,
+                    "value": value,
+                    "unit": str(reported[name].get("unit") or ""),
+                }
+            )
+            comparisons.append(
+                {
+                    "name": name,
+                    "reported": reported_value,
+                    "recomputed": value,
+                    "absolute_difference": difference,
+                    "tolerance": tolerance,
+                    "matches": matches,
+                }
+            )
+        if not all(item["matches"] for item in comparisons):
+            raise ResearchOperatorError(
+                "Reported experiment metrics do not match independent raw-row recomputation",
+                error_type="provider_contract",
+            )
+        return recomputed, comparisons
 
     def __call__(
         self,
@@ -149,7 +251,16 @@ class BoundedLocalExperimentExecutor:
             "NO_PROXY": "*",
             "no_proxy": "*",
         }
-        command = [sys.executable, str(runner), *resolved_args, str(result_path)]
+        unshare = shutil.which("unshare")
+        if not unshare:
+            raise ResearchOperatorError(
+                "A real network namespace is unavailable for the no-network experiment",
+                error_type="environment_unavailable",
+            )
+        runner_command = [sys.executable, str(runner), *resolved_args, str(result_path)]
+        command = [unshare, "-Urn", "--", *runner_command]
+        started_at = _utc_now()
+        started_ns = time.perf_counter_ns()
         try:
             completed = subprocess.run(
                 command,
@@ -162,6 +273,12 @@ class BoundedLocalExperimentExecutor:
             )
         except subprocess.TimeoutExpired as exc:
             raise ResearchOperatorError("Experiment process exceeded its timeout", error_type="timeout") from exc
+        duration_ms = (time.perf_counter_ns() - started_ns) / 1_000_000
+        finished_at = _utc_now()
+        stdout_path = result_path.parent / "stdout.txt"
+        stderr_path = result_path.parent / "stderr.txt"
+        stdout_hash = _write_text(stdout_path, completed.stdout)
+        stderr_hash = _write_text(stderr_path, completed.stderr)
         captured_bytes = len(completed.stdout.encode("utf-8")) + len(completed.stderr.encode("utf-8"))
         if captured_bytes > max(1, int(max_output_bytes)):
             raise ResearchOperatorError("Experiment process exceeded its output limit", error_type="resource_limit")
@@ -186,11 +303,42 @@ class BoundedLocalExperimentExecutor:
         metrics = raw.get("metrics") if isinstance(raw.get("metrics"), list) else []
         if not metrics:
             raise ResearchOperatorError("Experiment result contains no measured metrics", error_type="provider_contract")
-        criteria_results = self._criteria(plan, metrics)
+        recomputed_metrics, metric_comparisons = self._recompute_metrics(raw, metrics)
+        criteria_results = self._criteria(plan, recomputed_metrics)
         outcome = "supports" if criteria_results and all(criteria_results.values()) else "refutes" if criteria_results else str(raw.get("outcome") or "")
         if outcome not in {"supports", "partially_supports", "refutes", "inconclusive", "failed"}:
             raise ResearchOperatorError("Experiment result has an invalid outcome", error_type="provider_contract")
         result_hash = _sha256(result_path)
+        recomputation_path = result_path.parent / "metric_recomputation.json"
+        recomputation = {
+            "schema": "autosci.metric_recomputation.v1",
+            "raw_result_path": str(result_path.relative_to(self.workspace_root)),
+            "raw_result_sha256": result_hash,
+            "case_count": len(raw.get("case_results") or []),
+            "recomputed_metrics": recomputed_metrics,
+            "comparisons": metric_comparisons,
+            "all_metrics_match": True,
+            "criteria_results": criteria_results,
+        }
+        recomputation_hash = _write_json(recomputation_path, recomputation)
+        receipt_path = result_path.parent / "launch_receipt.json"
+        receipt = {
+            "schema": "autosci.experiment_launch_receipt.v1",
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "duration_ms": duration_ms,
+            "network_namespace": "linux_user_and_network_namespace",
+            "network_enabled": False,
+            "runner_argv": runner_command,
+            "exit_code": completed.returncode,
+            "runner_sha256": expected_runner_hash,
+            "input_sha256s": dict(sorted(input_hashes.items())),
+            "result_path": str(result_path.relative_to(self.workspace_root)),
+            "result_sha256": result_hash,
+            "stdout_sha256": stdout_hash,
+            "stderr_sha256": stderr_hash,
+        }
+        receipt_hash = _write_json(receipt_path, receipt)
         evidence_ids = [str(item) for item in raw.get("evidence_ids") or [] if str(item).strip()]
         evidence_ids.append(f"sha256:{result_hash}")
         return {
@@ -201,7 +349,16 @@ class BoundedLocalExperimentExecutor:
             "limitations": [str(item) for item in payload.get("limitations") or [] if str(item).strip()],
             "runtime": {
                 "exit_code": completed.returncode,
+                "duration_ms": duration_ms,
+                "network_enabled": False,
                 "runner_sha256": expected_runner_hash,
                 "result_sha256": result_hash,
+                "artifacts": [
+                    {"artifact_id": "raw_measurement", "path": str(result_path.relative_to(self.workspace_root)), "sha256": result_hash, "schema": "autosci.kv_cache_quantization_result.v1"},
+                    {"artifact_id": "experiment_stdout", "path": str(stdout_path.relative_to(self.workspace_root)), "sha256": stdout_hash, "schema": "text.stdout"},
+                    {"artifact_id": "experiment_stderr", "path": str(stderr_path.relative_to(self.workspace_root)), "sha256": stderr_hash, "schema": "text.stderr"},
+                    {"artifact_id": "experiment_launch_receipt", "path": str(receipt_path.relative_to(self.workspace_root)), "sha256": receipt_hash, "schema": "autosci.experiment_launch_receipt.v1"},
+                    {"artifact_id": "metric_recomputation", "path": str(recomputation_path.relative_to(self.workspace_root)), "sha256": recomputation_hash, "schema": "autosci.metric_recomputation.v1"},
+                ],
             },
         }

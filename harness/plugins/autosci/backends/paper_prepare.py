@@ -41,6 +41,10 @@ ARXIV_URL_PATTERN = re.compile(
     r"https?://(?:www\.)?arxiv\.org/(?:abs|pdf|e-print)/([^?#\s]+)",
     re.IGNORECASE,
 )
+ARXIV_DOI_URL_PATTERN = re.compile(
+    r"https?://(?:dx\.)?doi\.org/10\.48550/arxiv\.([^?#\s]+)",
+    re.IGNORECASE,
+)
 MAX_SOURCE_ARCHIVE_BYTES = 250_000_000
 MAX_PARSED_SECTION_CHARS = 160_000
 
@@ -542,8 +546,14 @@ def prepare_paper_source(
     raw_tmp = raw_root / "tmp" / "papers"
     raw_tmp.mkdir(parents=True, exist_ok=True)
     source_text = str(source)
+    arxiv_doi = ARXIV_DOI_URL_PATTERN.search(source_text)
+    if arxiv_doi:
+        source_text = (
+            "https://arxiv.org/abs/"
+            + normalize_arxiv_id(arxiv_doi.group(1))
+        )
     source_is_arxiv = bool(ARXIV_URL_PATTERN.search(source_text))
-    source_path = _resolve_source(source, roots) if not source_is_arxiv else Path(source_text)
+    source_path = _resolve_source(source_text, roots) if not source_is_arxiv else Path(source_text)
     source_display = source_text if source_is_arxiv else _display_path(source_path, roots)
     source_slug = slugify(arxiv_id or title or source_path.name)
     warnings: list[str] = []

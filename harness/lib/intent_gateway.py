@@ -815,6 +815,8 @@ def _planner_workflow_candidates(request: str, lane: str) -> list[dict[str, Any]
 
 
 def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: dict[str, Any]) -> dict[str, Any]:
+    from requirement_compiler import requirement_ir_id_for_intent
+
     context = raw_intent.get("context", {}) if isinstance(raw_intent.get("context"), dict) else {}
     raw_block = raw_intent.get("raw", {}) if isinstance(raw_intent.get("raw"), dict) else {}
     research = raw_intent.get("research") if isinstance(raw_intent.get("research"), dict) else None
@@ -862,8 +864,19 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
     if lane == "direct_answer":
         planner_hints["preferred_outcome"] = "direct_answer"
         planner_hints["runtime_handoff_allowed"] = False
+    raw_request = str(raw_block.get("text") or "").strip()
+    objective = str(rewritten.get("objective") or raw_request).strip()
+    acceptance = [
+        str(item).strip()
+        for item in rewritten.get("acceptance") or []
+        if str(item).strip()
+    ]
+    if not acceptance:
+        outcome = str(rewritten.get("outcome") or objective).strip()
+        acceptance = [outcome] if outcome else []
     return {
         "schema_version": "solar.requirement_ir.v1",
+        "id": requirement_ir_id_for_intent(intent_id),
         "intent_id": intent_id,
         "source": raw_intent.get("source", {}),
         "source_inputs": source_inputs,
@@ -874,6 +887,16 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
         "constraints": rewritten.get("constraints", []),
         "non_goals": rewritten.get("non_goals", []),
         "acceptance": rewritten.get("acceptance", []),
+        "requirements": [
+            {
+                "id": "REQ-001",
+                "origin": "user:raw_intent",
+                "source_text": raw_request or objective,
+                "success_criteria": acceptance,
+                "verification_method": "not_machine_checkable",
+                "priority": "P1",
+            }
+        ],
         "lane": lane,
         "logical_operators": rewritten.get("suggested_logical_operators", []),
         "planner_hints": planner_hints,
@@ -941,7 +964,10 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         },
         "context": {
             "repo": args.repo or "",
-            "cwd": str(Path.cwd()),
+            # Dashboard/CLI harness callers provide the user workspace
+            # explicitly. Keep Path.cwd() only as a compatibility value for
+            # older direct callers; it is never publication authority.
+            "cwd": args.cwd or str(Path.cwd()),
             "related_sprints": [],
             "knowledge_query": args.knowledge_query or "",
         },
@@ -1122,6 +1148,8 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
             "readiness_status": acceptance["decision"],
             "clarification_questions": acceptance["clarification_questions"],
             "rewrite_method": "intent_ir_v3",
+            "compiler_mode": "semantic",
+            "warnings": [],
             "raw_intent": str(base / "raw_intent.json"),
             "intent_ir": str(base / "intent" / "intent_ir.json"),
             "intent_validation": str(base / "intent" / "intent_validation.json"),
@@ -1181,6 +1209,11 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         "readiness_status": requirement_ir["readiness"]["status"],
         "clarification_questions": requirement_ir["readiness"]["questions"],
         "rewrite_method": rewritten.get("rewrite_method"),
+        "compiler_mode": "legacy_deterministic",
+        "warnings": [
+            "intent_compiler_unconfigured: SOLAR_INTENT_COMPILER_PROVIDER is unset; "
+            "no semantic validation ran"
+        ],
         "raw_intent": str(base / "raw_intent.json"),
         "rewritten_intent": str(base / "rewritten_intent.json"),
         "requirement_ir": str(base / "requirement_ir.json"),
@@ -1305,6 +1338,7 @@ def main(argv: list[str] | None = None) -> int:
     cap.add_argument("--session-id", default="")
     cap.add_argument("--thread-ref", default="")
     cap.add_argument("--repo", default="")
+    cap.add_argument("--cwd", default="")
     cap.add_argument("--knowledge-query", default="")
     cap.add_argument("--urgency", default="normal")
     cap.add_argument("--mode", default="")

@@ -544,6 +544,70 @@ def test_failed_submission_releases_planner_claim_without_waiting_for_ttl(tmp_pa
     assert payload["reason"] == "planner_submission_failed_before_lease"
 
 
+def test_finalized_elastic_planner_blocks_legacy_n0_recovery(tmp_path: Path) -> None:
+    harness = _minimal_harness(tmp_path)
+    (harness / "lib").mkdir(exist_ok=True)
+    shutil.copy2(_HARNESS / "lib" / "planner_operator_gate.py", harness / "lib")
+    sid = "sprint-elastic-finalized"
+    elastic = harness / "sprints" / sid / "elastic-planner"
+    elastic.mkdir(parents=True)
+    (elastic / "owner.json").write_text(
+        json.dumps({"state": "finalized", "sprint_id": sid}), encoding="utf-8"
+    )
+    (elastic / "finalization.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "solar.elastic_planner_finalization.v1",
+                "sprint_id": sid,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (elastic / "planner_operator_result.json").write_text(
+        json.dumps(
+            {
+                "status": "accepted",
+                "sprint_id": sid,
+                "task_id": f"pm-{sid}-elastic-planner-2",
+            }
+        ),
+        encoding="utf-8",
+    )
+    legacy = harness / "run" / "pm-inbox" / f"pm-{sid}-N0-late.json"
+    legacy.write_text(
+        json.dumps(
+            {
+                "task_id": legacy.stem,
+                "requested_role": "planner",
+                "node_id": "N0",
+                "status": "submitted",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(harness / "lib" / "planner_operator_gate.py"),
+            "state",
+            sid,
+            "--harness-dir",
+            str(harness),
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "completed"
+    assert payload["reason"] == "elastic_planner_already_finalized"
+    assert payload["task_id"] == f"pm-{sid}-elastic-planner-2"
+
+
 def test_coordinator_retries_failed_drafting_without_fingerprint_change() -> None:
     source = _COORDINATOR.read_text(encoding="utf-8")
 

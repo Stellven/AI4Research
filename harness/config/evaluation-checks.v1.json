@@ -180,6 +180,14 @@
       "semantic": null
     },
     {
+      "check_id": "check.scientific.research_source_assessment.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/research_source_assessment.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate source relevance, credibility, selection, and unresolved-question evidence.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.source_assessment_gate:evaluate"},
+      "semantic": null
+    },
+    {
       "check_id": "check.scientific.research_memory_update.v1",
       "mode": "deterministic",
       "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/research_memory_update.v1.schema.json"], "auto_apply": true},
@@ -233,6 +241,14 @@
       "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/idea_evaluation.v1.schema.json"], "auto_apply": true},
       "decision": "Validate idea-evaluation evidence against the existing scientific gate.",
       "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.idea_gate:evaluate"},
+      "semantic": null
+    },
+    {
+      "check_id": "check.scientific.dataset_manifest.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/dataset_manifest.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate that the retained public dataset/model/runner package is complete and hash-bound.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.dataset_manifest_gate:evaluate"},
       "semantic": null
     },
     {

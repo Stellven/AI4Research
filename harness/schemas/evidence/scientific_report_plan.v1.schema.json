@@ -36,13 +36,106 @@
                   "section_id": {"type": "string", "minLength": 1},
                   "title": {"type": "string", "minLength": 1},
                   "purpose": {"type": "string", "minLength": 1},
-                  "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+                  "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                  "requirement_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "uniqueItems": true
+                  }
                 }
               }
             },
-            "supported_claim_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "supported_claim_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "reportable_claim_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
             "excluded_claim_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
-            "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+            "evidence_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "requirement_bindings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["requirement_id", "statement", "priority", "check", "acceptance"],
+                "additionalProperties": false,
+                "properties": {
+                  "requirement_id": {"type": "string", "minLength": 1},
+                  "statement": {"type": "string", "minLength": 1},
+                  "priority": {"type": "string", "minLength": 1},
+                  "check": {"type": "string"},
+                  "acceptance": {
+                    "type": "object",
+                    "required": ["kind", "required_values"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {"type": "string"},
+                      "required_values": {
+                        "type": "array",
+                        "items": {"type": "string", "minLength": 1}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "unknown_resolution_traces": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["requirement_id", "finding", "supporting_evidence", "unresolved_status"],
+                "additionalProperties": false,
+                "properties": {
+                  "requirement_id": {"type": "string", "minLength": 1},
+                  "finding": {"type": "string", "minLength": 1},
+                  "supporting_evidence": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "uniqueItems": true
+                  },
+                  "unresolved_status": {
+                    "type": "string",
+                    "enum": ["resolved", "unresolved"]
+                  }
+                }
+              }
+            },
+            "claim_status_mappings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "claim_id",
+                  "verdict",
+                  "support_classification",
+                  "evidence_outcome",
+                  "evidence_ids",
+                  "contradiction_status",
+                  "tested_status",
+                  "limitations"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "claim_id": {"type": "string", "minLength": 1},
+                  "verdict": {"type": "string", "minLength": 1},
+                  "support_classification": {"type": "string", "minLength": 1},
+                  "evidence_outcome": {"type": "string", "minLength": 1},
+                  "evidence_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "uniqueItems": true
+                  },
+                  "contradiction_status": {
+                    "type": "string",
+                    "enum": ["contradicted", "no_recorded_contradiction"]
+                  },
+                  "tested_status": {
+                    "type": "string",
+                    "enum": ["tested", "not_tested"]
+                  },
+                  "limitations": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  }
+                }
+              }
+            }
           }
         }
       }

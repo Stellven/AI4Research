@@ -113,6 +113,33 @@ def test_current_sprint_planner_sidecars_are_exact_read_authority(
     assert all(row.get("exists") is True and row.get("sha256") for row in sidecar_rows)
 
 
+def test_snapshot_metadata_is_restored_after_frozen_graph_projection(
+    sandbox: tuple[Path, Path],
+) -> None:
+    """A scheduler projection may drop transient node metadata, but the exact
+    retained snapshot sidecar remains the evaluator's byte authority."""
+    _harness, sprints = sandbox
+    sid = "sprint-rc10-snapshot-projection-restore"
+    _stage_output(sprints, sid)
+    (sprints / f"{sid}.design.md").write_text("# Design\n", encoding="utf-8")
+    (sprints / f"{sid}.plan.md").write_text("# Plan\n", encoding="utf-8")
+    node = _node(sid)
+    graph = _graph(sid, node)
+    snapshot = gnd._capture_eval_artifact_snapshot(sid, node, graph)
+    assert snapshot["ok"] is True, snapshot
+    eval_payload = {
+        "artifact_snapshot_schema": snapshot["schema"],
+        "artifact_snapshot_path": snapshot["path"],
+        "artifact_snapshot_digest": snapshot["snapshot_digest"],
+    }
+
+    node.pop("eval_artifact_snapshot")
+    result = gnd._validate_eval_artifact_snapshot(sid, node, graph, eval_payload)
+
+    assert result["ok"] is True, result
+    assert node["eval_artifact_snapshot"]["snapshot_digest"] == snapshot["snapshot_digest"]
+
+
 def test_both_live_generic_control_plane_read_shapes_are_authorized(
     sandbox: tuple[Path, Path],
 ) -> None:

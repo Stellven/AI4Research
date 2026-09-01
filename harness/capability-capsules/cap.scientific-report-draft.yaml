@@ -62,7 +62,7 @@ effects:
   write:
     - artifacts/scientific/scientific_report/
   execute:
-    - plugins/autosci/bin/autosci_bridge.py
+    - plugins/autosci/operators/scientific_lifecycle/action/delivery.py
   network:
     - none by default
   cost:
@@ -87,7 +87,8 @@ verification:
   external_verifier:
     required: true
   pass_conditions:
-    - Fixture draft emits valid scientific_report.v1 evidence.
+    - The real AutoSci report drafter emits valid scientific_report.v1 evidence.
+    - Requirement bindings from the accepted report plan remain visible for independent evaluation.
     - Claims without evidence appear in unsupported_claims or limitations.
 operator_compatibility:
   preferred:

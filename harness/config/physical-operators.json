@@ -2,6 +2,120 @@
   "version": 1,
   "updated_at": "2026-06-02T03:53:03Z",
   "operators": {
+    "solar-elastic-planner": {
+      "display_name": "Solar native Elastic Planner",
+      "plane": "headless",
+      "profile": "elastic-planner",
+      "role": "elastic-planner",
+      "roles": [
+        "elastic-planner"
+      ],
+      "persona": "planner",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/tools/elastic_planner_operator.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "command_path": "python3",
+      "model": "configured-by-elastic-planner",
+      "auth_mode": "subscription",
+      "key_ref": "codex_subscription",
+      "quota_cycle": "provider",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "task_classes": [
+        "elastic_planning"
+      ],
+      "strengths": [
+        "semantic-planning",
+        "capsule-binding",
+        "frozen-contract-generation"
+      ],
+      "preferred_for": [
+        "elastic_planning"
+      ],
+      "avoid_for": [
+        "implementation",
+        "evaluation"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      }
+    },
+    "solar-elastic-planner-2": {
+      "display_name": "Solar native Elastic Planner 2",
+      "plane": "headless",
+      "profile": "elastic-planner",
+      "role": "elastic-planner",
+      "roles": [
+        "elastic-planner"
+      ],
+      "persona": "planner",
+      "provider": "openai",
+      "vendor": "OpenAI",
+      "backend": "command",
+      "command": "python3 \"$HARNESS_DIR/tools/elastic_planner_operator.py\" --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "command_path": "python3",
+      "model": "configured-by-elastic-planner",
+      "auth_mode": "subscription",
+      "key_ref": "codex_subscription",
+      "quota_cycle": "provider",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "task_classes": [
+        "elastic_planning"
+      ],
+      "strengths": [
+        "semantic-planning",
+        "capsule-binding",
+        "frozen-contract-generation"
+      ],
+      "preferred_for": [
+        "elastic_planning"
+      ],
+      "avoid_for": [
+        "implementation",
+        "evaluation"
+      ],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
+      "context_tier": "high",
+      "max_concurrency": 1,
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_prune_reason": null
+      }
+    },
     "mini-claude-opus-planner": {
       "display_name": "Mac mini Claude Opus planner",
       "plane": "headless",
@@ -1313,16 +1427,20 @@
       "state": {
         "availability": "enabled",
         "runtime_state": "idle",
-        "cooldown_until": null
+        "cooldown_until": null,
+        "last_error": null,
+        "last_error_at": "2026-08-28T18:15:08Z",
+        "last_pruned_at": "2026-08-29T00:42:14Z"
       },
       "flow_control": {
-        "last_block_state": "unknown",
-        "last_block_reason": null,
-        "last_block_source": null,
-        "last_block_detected_at": null,
-        "last_block_expires_at": null,
-        "last_block_excerpt": null,
-        "last_prune_reason": null
+        "last_block_state": "auth_expired",
+        "last_block_reason": "auth_expired",
+        "last_block_source": "failure_flow_control",
+        "last_block_detected_at": "2026-08-28T18:15:08Z",
+        "last_block_expires_at": "2026-08-29T00:15:08Z",
+        "last_block_excerpt": "Not logged in · Please run /login",
+        "last_prune_reason": "expired_operator_block",
+        "last_pruned_at": "2026-08-29T00:42:14Z"
       },
       "compat_maps_to": {
         "host_type": "tmux_pane",
@@ -4350,20 +4468,55 @@
       "deprecated": false
     },
     "autosci-literature-discover-worker": {
-      "display_name": "AutoSci literature discover worker",
-      "owner_host": "stub_docker_sandbox",
+      "display_name": "Native AutoSci live literature discovery",
+      "owner_host": "research_operator_registry",
       "role": "scientific-literature-discoverer",
       "persona": "scientific-literature-discoverer",
-      "backend": "command",
-      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action discover_literature --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
       "max_concurrency": 1,
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "network": "required",
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:request-envelope.schema.json"
+        ],
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+        "node_id": "literature_discover",
+        "implementation_operator_id": "autosci-evidence-literature-discover"
+      },
       "compat_maps_to": {
         "host_type": "local_command_worker"
       },
-      "deprecated": false
+      "deprecated": false,
+      "quota_guard_state": "ok",
+      "quota_refresh_at": null,
+      "state": {
+        "availability": "enabled",
+        "runtime_state": "idle",
+        "cooldown_until": null,
+        "last_error": null,
+        "last_error_at": null,
+        "last_pruned_at": "2026-08-29T00:42:14Z"
+      },
+      "flow_control": {
+        "last_block_state": "unknown",
+        "last_block_reason": null,
+        "last_block_source": null,
+        "last_block_detected_at": null,
+        "last_block_expires_at": null,
+        "last_block_excerpt": null,
+        "last_pruned_at": "2026-08-29T00:42:14Z",
+        "last_prune_reason": "expired_operator_block"
+      }
     },
     "autosci-paper-ingest-worker": {
       "display_name": "AutoSci paper ingest worker",
@@ -4435,6 +4588,7 @@
       "role": "scientific-claim-extractor",
       "persona": "scientific-claim-extractor",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
@@ -4451,16 +4605,31 @@
       "deprecated": false
     },
     "autosci-method-extract-worker": {
-      "display_name": "AutoSci method extract worker",
-      "owner_host": "stub_docker_sandbox",
+      "display_name": "Native AutoSci source-grounded method extraction",
+      "owner_host": "research_operator_registry",
       "role": "scientific-claim-extractor",
       "persona": "scientific-claim-extractor",
-      "backend": "command",
-      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action extract_methods --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
       "max_concurrency": 1,
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "network": "forbidden",
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/research_paper.v1.schema.json"
+        ],
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+        "node_id": "method_extract",
+        "implementation_operator_id": "autosci-evidence-method-extract"
+      },
       "compat_maps_to": {
         "host_type": "local_command_worker"
       },
@@ -4635,32 +4804,64 @@
       "deprecated": false
     },
     "autosci-report-plan-worker": {
-      "display_name": "AutoSci report plan worker",
-      "owner_host": "stub_docker_sandbox",
+      "display_name": "Native AutoSci requirement-aware report planning action",
+      "owner_host": "research_operator_registry",
       "role": "scientific-report-writer",
       "persona": "scientific-report-writer",
-      "backend": "command",
-      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action plan_report --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
+      "execution_trust": "evidence_transform",
       "max_concurrency": 1,
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "requirement_ir.v1",
+          "schema:schemas/evidence/claim_verdict.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "report_plan",
+        "implementation_operator_id": "autosci-report-planning-physical"
+      },
       "compat_maps_to": {
         "host_type": "local_command_worker"
       },
       "deprecated": false
     },
     "autosci-report-worker": {
-      "display_name": "AutoSci report draft worker",
-      "owner_host": "stub_docker_sandbox",
+      "display_name": "Native AutoSci scientific report drafting action",
+      "owner_host": "research_operator_registry",
       "role": "scientific-report-writer",
       "persona": "scientific-report-writer",
-      "backend": "command",
-      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action write_report --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
+      "execution_trust": "evidence_transform",
       "max_concurrency": 1,
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/scientific_report_plan.v1.schema.json",
+          "schema:schemas/evidence/claim_verdict.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "report_draft",
+        "implementation_operator_id": "autosci-report-drafting-physical"
+      },
       "compat_maps_to": {
         "host_type": "local_command_worker"
       },
@@ -5112,6 +5313,7 @@
       "role": "builder",
       "persona": "scientific-paper-ingestor",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
@@ -5132,12 +5334,41 @@
       },
       "deprecated": false
     },
+    "source_assess_worker": {
+      "display_name": "Native AutoSci source relevance and credibility assessment",
+      "owner_host": "research_operator_registry",
+      "role": "scientific-source-assessor",
+      "persona": "scientific-source-assessor",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/literature_discovery.v1.schema.json",
+          "schema:schemas/evidence/research_paper.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+        "node_id": "source_assess",
+        "implementation_operator_id": "autosci-evidence-source-assess"
+      },
+      "deprecated": false
+    },
     "idea_evaluate_worker": {
       "display_name": "Native AutoSci scientific idea evaluation action",
       "owner_host": "research_operator_registry",
       "role": "builder",
       "persona": "lab-evaluator",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
@@ -5158,12 +5389,45 @@
       },
       "deprecated": false
     },
+    "dataset_prepare_worker": {
+      "display_name": "Native AutoSci real public dataset and PoC package preparation",
+      "owner_host": "research_operator_registry",
+      "role": "builder",
+      "persona": "scientific-dataset-preparer",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [
+          "experiment_package_builder"
+        ],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/research_claims.v1.schema.json"
+        ],
+        "network": "required",
+        "compute_profiles": [
+          "local_python",
+          "cpu"
+        ]
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "dataset_prepare",
+        "implementation_operator_id": "autosci-dataset-package-preparation-physical"
+      },
+      "deprecated": false
+    },
     "experiment_design_worker": {
       "display_name": "Native AutoSci bounded experiment design action",
       "owner_host": "research_operator_registry",
       "role": "builder",
       "persona": "scientific-experiment-designer",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
@@ -5171,7 +5435,9 @@
       "resource_requirements": {
         "required_services": [],
         "required_authorizations": [],
-        "required_artifact_types": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/research_claims.v1.schema.json"
+        ],
         "network": "forbidden",
         "compute_profiles": []
       },
@@ -5188,6 +5454,7 @@
       "role": "builder",
       "persona": "scientific-experiment-runner",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
@@ -5221,6 +5488,7 @@
       "role": "evaluator",
       "persona": "scientific-experiment-approver",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
@@ -5249,6 +5517,7 @@
       "role": "builder",
       "persona": "scientific-experiment-runner",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
@@ -5276,6 +5545,7 @@
       "role": "builder",
       "persona": "scientific-claim-selector",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
@@ -5302,6 +5572,7 @@
       "role": "evaluator",
       "persona": "scientific-claim-verifier",
       "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",

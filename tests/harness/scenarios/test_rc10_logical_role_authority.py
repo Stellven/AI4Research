@@ -100,6 +100,16 @@ def test_queue_role_comes_from_logical_assignment_not_builder_pane() -> None:
     )
 
 
+def test_scientific_claim_verifier_registry_role_is_evaluator() -> None:
+    node = {
+        "id": "verify_claims",
+        "logical_operator": "ScientificClaimVerifier",
+        "write_scope": ["workspace/claim_verdicts.json"],
+    }
+
+    assert gs.node_dispatch_role(node) == "evaluator"
+
+
 def test_operator_pool_submission_persists_logical_role_and_physical_host(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

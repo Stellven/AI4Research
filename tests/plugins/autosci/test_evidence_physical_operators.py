@@ -238,6 +238,26 @@ def request_for(node_id: str, workspace: Path) -> tuple[dict, dict]:
         discovery_path = workspace / "inputs" / "literature-discovery.json"
         discovery_path.write_text(json.dumps(discovery_evidence(workspace)), encoding="utf-8")
         payload = {"max_sources": 2, "allow_network_fetch": False}
+    elif node_id == "source_assess":
+        discovery = discovery_evidence(workspace)
+        discovery["outputs"]["query"] = "dense sparse retrieval"
+        discovery["outputs"]["candidates"][0]["title"] = "Dense and Sparse Retrieval Benchmark"
+        discovery["outputs"]["candidates"][0]["source_channels"] = ["crossref"]
+        discovery["outputs"]["candidates"][0]["doi"] = "10.0000/bounded"
+        discovery["outputs"]["candidates"][1]["title"] = "Dense Sparse Retrieval Replication"
+        discovery["outputs"]["candidates"][1]["source_channels"] = ["crossref"]
+        discovery["outputs"]["candidates"][1]["doi"] = "10.0000/replication"
+        paper = paper_evidence()
+        paper["outputs"]["paper"]["paper_id"] = "paper-001"
+        paper["outputs"]["paper"]["title"] = "Dense and Sparse Retrieval Benchmark"
+        paper["outputs"]["paper"]["abstract"] = (
+            "A public question-answering benchmark comparing dense and sparse retrieval methods."
+        )
+        paper["outputs"]["paper"]["identifiers"] = {"doi": "10.0000/bounded"}
+        payload = {
+            "discovery_evidence": discovery,
+            "paper_evidence": paper,
+        }
     elif node_id in {
         "paper_analyze",
         "content_analyze",
@@ -346,6 +366,43 @@ def test_discovery_provider_failure_is_classified_as_environment_failure(workspa
     assert artifact["provenance"]["outcome_class"] == "provider_environment_failure"
 
 
+def test_discovery_prefers_production_multi_provider_service(workspace: Path) -> None:
+    request, _services = request_for("literature_discover", workspace)
+    calls: list[dict] = []
+
+    def discover_sources(*, seed_snapshot, payload):
+        calls.append({"seed_snapshot": seed_snapshot, "payload": payload})
+        return {
+            "status": "completed",
+            "query": payload["query"],
+            "candidates": [
+                {
+                    "source_id": "arxiv:2401.00001",
+                    "title": "Traceable KV Cache Study",
+                    "provider": "arxiv",
+                    "url": "https://arxiv.org/abs/2401.00001",
+                }
+            ],
+            "limitations": [],
+        }
+
+    result = execute_operator(
+        request,
+        services={
+            "discover_sources": discover_sources,
+            "discover_literature": pytest.fail,
+        },
+        workspace_root=workspace,
+    )
+
+    assert result["status"] == "completed"
+    assert len(calls) == 1
+    artifact = json.loads(
+        (workspace / result["output_artifacts"][0]["path"]).read_text(encoding="utf-8")
+    )
+    assert artifact["outputs"]["candidates"][0]["candidate_id"] == "arxiv:2401.00001"
+
+
 def test_input_artifact_hash_mismatch_fails_closed(workspace: Path) -> None:
     input_path = workspace / "inputs" / "paper-evidence.json"
     input_path.write_text(json.dumps(paper_evidence()), encoding="utf-8")
@@ -381,7 +438,7 @@ def test_direct_source_content_change_invalidates_idempotent_ingest_reuse(worksp
 
 def test_package_local_registration_is_unique_and_resolvable() -> None:
     entries = registration_entries()
-    assert len(entries) == len(NODE_IDS) == 14
+    assert len(entries) == len(NODE_IDS) == 15
     assert len({item["node_id"] for item in entries}) == len(entries)
     assert len({item["operator_id"] for item in entries}) == len(entries)
     assert all(
@@ -414,6 +471,56 @@ def test_discovery_ingest_emits_multiple_real_papers_and_claims_read_all(
     assert "10 percent" in claim_text
 
 
+def test_claim_extraction_balances_a_bounded_limit_across_papers(
+    workspace: Path,
+) -> None:
+    first = paper_evidence()
+    first["outputs"]["paper"]["paper_id"] = "paper-first"
+    first["outputs"]["paper"]["sections"][1]["text"] = " ".join(
+        f"The first-paper method improves metric {index} by {index + 1} percent compared with baseline."
+        for index in range(8)
+    )
+    second = paper_evidence()
+    second["outputs"]["paper"]["paper_id"] = "paper-second"
+    second["outputs"]["paper"]["sections"][1] = {
+        "section_id": "results",
+        "title": "Results",
+        "text": "The second-paper method reduces latency by 17 percent compared with baseline.",
+        "source_anchor": "inputs/paper-two.md#results",
+    }
+
+    request, services = request_for("claim_extract", workspace)
+    request["typed_inputs"]["payload"] = {
+        "limit": 4,
+        "paper_evidence": [first, second],
+    }
+    result = execute_operator(request, services=services, workspace_root=workspace)
+    claims = validate_result_and_artifact(result, workspace)["outputs"]["claims"]
+
+    assert len(claims) == 4
+    assert any("second-paper" in claim["text"] for claim in claims)
+    assert claims[0]["source_anchor"] == "inputs/paper.md#results"
+    assert claims[1]["source_anchor"] == "inputs/paper-two.md#results"
+
+
+def test_source_assessment_selects_only_relevant_credible_ingested_sources_and_retains_unknowns(
+    workspace: Path,
+) -> None:
+    request, services = request_for("source_assess", workspace)
+
+    result = execute_operator(request, services=services, workspace_root=workspace)
+    artifact = validate_result_and_artifact(result, workspace)
+
+    outputs = artifact["outputs"]
+    assert outputs["selected_source_ids"] == ["paper-001"]
+    assert outputs["unresolved_source_ids"] == ["paper-002"]
+    selected = outputs["assessments"][0]
+    assert selected["relevance"]["status"] == "relevant"
+    assert selected["credibility"]["status"] == "credible"
+    assert selected["ingestion"]["status"] == "parsed"
+    assert outputs["unresolved_questions"]
+
+
 def test_claim_select_one_emits_exactly_one_disclosed_testable_choice(
     workspace: Path,
 ) -> None:
@@ -436,10 +543,13 @@ def test_claim_select_one_emits_exactly_one_disclosed_testable_choice(
         "candidate_count": 2,
         "criteria": [
             "prefer testable over partially_testable, unknown, and not_testable",
+            "prefer greater lexical alignment with the frozen validation objective",
             "prefer more retained evidence identifiers",
             "prefer the more specific claim text when earlier criteria tie",
             "break remaining ties by stable claim identifier",
         ],
+        "priority_objective": "",
+        "selected_objective_term_overlap": 0,
     }
 
 

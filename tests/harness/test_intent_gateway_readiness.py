@@ -131,6 +131,18 @@ def test_requirement_ir_exposes_readiness_contract() -> None:
 
     requirement_ir = gateway.build_requirement_ir("intent-test", raw, _rewritten())
 
+    assert requirement_ir["id"] == "requirement-ir-intent-test"
+    assert gateway.build_requirement_ir("intent-test", raw, _rewritten())["id"] == requirement_ir["id"]
+    assert requirement_ir["requirements"] == [
+        {
+            "id": "REQ-001",
+            "origin": "user:raw_intent",
+            "source_text": "Return JSON only and Markdown only.",
+            "success_criteria": ["Implement the requested capability."],
+            "verification_method": "not_machine_checkable",
+            "priority": "P1",
+        }
+    ]
     assert requirement_ir["readiness"]["ready"] is False
     assert requirement_ir["readiness"]["questions"][0]["field"] == "delivery_format"
     assert requirement_ir["compiler_next"] == "clarification_required"

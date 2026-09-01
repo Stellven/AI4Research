@@ -28,6 +28,7 @@ _ROLE_ALIASES = {
     "judge": "evaluator",
     "reviewer": "evaluator",
     "verifier": "evaluator",
+    "scientific-claim-verifier": "evaluator",
     "product": "pm",
     "product-manager": "pm",
 }

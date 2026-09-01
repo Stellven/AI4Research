@@ -363,17 +363,70 @@ export function humanEvent(event: EventRecord): {
   };
 }
 
+const UNTYPED_FAILURE_CODES = new Set(["failed", "error", "unknown", ""]);
+
+export function failureCodeIsTyped(code?: string | null): boolean {
+  return !UNTYPED_FAILURE_CODES.has(asString(code).trim().toLowerCase());
+}
+
 export function stallCopy(stall?: StallSummary): string {
   if (!stall?.is_stalled) return "";
   const state = asString(stall.state, "stalled").replace(/_/g, " ");
+  const typed = stall.failure;
+  if (typed && failureCodeIsTyped(typed.code)) {
+    const stage = asString(typed.stage).replace(/_/g, " ");
+    return stage
+      ? `${state}: ${typed.code} during ${stage}`
+      : `${state}: ${typed.code}`;
+  }
   const reasons = Array.isArray(stall.reasons)
     ? stall.reasons.map((item) => asString(item)).filter(Boolean)
     : [];
   const reason =
     asString(stall.reason || stall.explanation) ||
-    reasons[0] ||
-    "The harness is waiting on a gate or missing worker capability.";
+    reasons.find((item) => failureCodeIsTyped(item)) ||
+    (typed || reasons.length
+      ? "The runtime reported no typed cause."
+      : "The harness is waiting on a gate or missing worker capability.");
   return `${state}: ${reason}`;
+}
+
+export type FailureFact = { label: string; value: string };
+
+export function typedFailureFacts(stall?: StallSummary): FailureFact[] {
+  const typed = stall?.failure;
+  if (!typed) return [];
+  const facts: FailureFact[] = [];
+  const stage = asString(typed.stage).replace(/_/g, " ");
+  if (stage) facts.push({ label: "stage", value: stage });
+  facts.push({
+    label: "cause",
+    value: failureCodeIsTyped(typed.code)
+      ? asString(typed.code)
+      : "no typed cause reported",
+  });
+  if (typeof typed.before_execution === "boolean") {
+    facts.push({
+      label: "when",
+      value: typed.before_execution ? "before execution" : "during execution",
+    });
+  }
+  if (typeof typed.retry_safe === "boolean") {
+    facts.push({
+      label: "retry",
+      value: typed.retry_safe ? "safe to retry" : "retry will not help",
+    });
+  }
+  if (asString(typed.node_id)) {
+    facts.push({ label: "node", value: asString(typed.node_id) });
+  }
+  if (asString(typed.operator_id)) {
+    facts.push({ label: "operator", value: asString(typed.operator_id) });
+  }
+  if (asString(typed.receipt_ref)) {
+    facts.push({ label: "receipt", value: asString(typed.receipt_ref) });
+  }
+  return facts;
 }
 
 export function mergeEvents(

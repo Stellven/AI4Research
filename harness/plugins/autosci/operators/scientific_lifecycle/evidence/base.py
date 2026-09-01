@@ -126,6 +126,12 @@ def load_evidence_inputs(
         value = context.payload.get(key)
         if isinstance(value, dict) and str(value.get("schema") or "") in allowed:
             loaded.append(value)
+        elif isinstance(value, list):
+            loaded.extend(
+                item
+                for item in value
+                if isinstance(item, dict) and str(item.get("schema") or "") in allowed
+            )
     return loaded
 
 

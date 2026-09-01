@@ -211,7 +211,17 @@ def check_artifact_paths(payload: dict[str, Any], evidence_path: str | Path | No
                 reasons.append(f"artifacts[{index}].path declares unavailable without a reason")
             continue
         path = Path(raw_path).expanduser()
-        candidates = [path] if path.is_absolute() else [evidence_dir / path, ARTIFACT_HARNESS_DIR / path, HARNESS_DIR / path]
+        # Evidence ABIs use workspace-root-relative paths.  A report commonly
+        # lives under ``workspace/deliverables`` while its inputs live under
+        # the sibling ``private`` tree, so also resolve through the enclosing
+        # run root instead of incorrectly requiring report-relative paths.
+        run_root = evidence_dir.parent.parent
+        candidates = [path] if path.is_absolute() else [
+            evidence_dir / path,
+            run_root / path,
+            ARTIFACT_HARNESS_DIR / path,
+            HARNESS_DIR / path,
+        ]
         if not any(candidate.exists() for candidate in candidates):
             reasons.append(f"artifacts[{index}].path does not exist or declare unavailable: {raw_path}")
 

@@ -18,6 +18,7 @@ import argparse
 import copy
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -255,6 +256,63 @@ def _scope_entries(raw: Any) -> List[str]:
     return []
 
 
+def _elastic_private_scope_paths(
+    task_graph: Dict[str, Any],
+    node: Dict[str, Any],
+) -> set[str]:
+    """Return exact node-private paths authorized by an Elastic PlanIR.
+
+    This does not create a general ``private/`` artifact root. The exception
+    applies only to a controller-generated Elastic graph and only to the
+    deterministic projection of an output explicitly routed sprint-private.
+    """
+    if not (
+        task_graph.get("dag_variant")
+        in {"elastic_generated", "elastic_generated_composed"}
+        and task_graph.get("planning_authority")
+        in {"elastic_planner_v1", "frozen_execution_plan_v1"}
+        and isinstance(task_graph.get("plan_ir_ref"), dict)
+    ):
+        return set()
+    semantic = (
+        node.get("semantic_artifact_contract")
+        if isinstance(node.get("semantic_artifact_contract"), dict)
+        else {}
+    )
+    admitted: set[str] = set()
+    for output in semantic.get("produces") or []:
+        if not isinstance(output, dict):
+            continue
+        materialization = (
+            output.get("materialization")
+            if isinstance(output.get("materialization"), dict)
+            else {}
+        )
+        if materialization.get("route") != "sprint_private":
+            continue
+        relative = str(materialization.get("path") or "").strip().replace("\\", "/")
+        parts = relative.split("/")
+        if (
+            not relative
+            or relative.startswith("/")
+            or ".." in parts
+            or any(part in {"", "."} for part in parts)
+        ):
+            continue
+        for declared in _scope_entries(node.get("write_scope")):
+            normalized = str(declared).strip().replace("\\", "/")
+            normalized_parts = normalized.split("/")
+            if (
+                len(normalized_parts) >= 3
+                and normalized_parts[0] == "private"
+                and ".." not in normalized_parts
+                and not any(part in {"", "."} for part in normalized_parts)
+                and normalized.endswith(f"/{relative}")
+            ):
+                admitted.add(normalized)
+    return admitted
+
+
 def validate_plan(
     task_graph: Dict[str, Any],
     capsule_registry: Optional[Dict[str, Dict[str, Any]]],
@@ -280,6 +338,12 @@ def validate_plan(
         policy = (contract or {}).get("provider_policy")
 
     errors: List[Dict[str, Any]] = []
+    elastic_private_paths = {
+        path
+        for candidate in task_graph.get("nodes") or []
+        if isinstance(candidate, dict)
+        for path in _elastic_private_scope_paths(task_graph, candidate)
+    }
     if expected_sprint_id is not None and sprint_id != str(expected_sprint_id).strip():
         errors.append(wc.compile_error(
             ERROR_PLAN_SPRINT_ID_MISMATCH,
@@ -411,6 +475,8 @@ def validate_plan(
         # R2(c): normalize-then-check root containment — the v9 shape:
         # write_scope without any declared root prefix (AC-R2.2, corpus F-051).
         for scope_entry in _scope_entries(node.get("write_scope")):
+            if str(scope_entry) in _elastic_private_scope_paths(task_graph, node):
+                continue
             resolved = wc.resolve_scope_path(str(scope_entry), artifact_roots)
             if resolved is None:
                 errors.append(wc.compile_error(
@@ -431,6 +497,8 @@ def validate_plan(
         for scope_entry in _scope_entries(node.get("read_scope")):
             declared = str(scope_entry or "").strip()
             if wc.resolve_scope_path(declared, artifact_roots) is not None:
+                continue
+            if declared in elastic_private_paths:
                 continue
             if wc.resolve_current_sprint_control_read(
                 declared,

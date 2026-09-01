@@ -499,6 +499,21 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     authoritative_clauses = _authoritative_scope_clauses(intent)
     if authoritative_clauses and not from_page_title:
         query = authoritative_clauses[0]
+        # A bare semicolon list is a coverage checklist, not a useful search
+        # query: it can omit the domain noun that makes every item meaningful
+        # (for example ``KV cache``).  In that shape, search the human scope
+        # descriptions instead and retain all adjacent scope clauses.
+        if ";" in query:
+            descriptions = _authoritative_scope_descriptions(intent)
+            if descriptions:
+                query = " ".join(descriptions)
+                query = re.sub(
+                    r"^(?:the\s+)?(?:systematic\s+)?(?:study|report|analysis|comparison)\s+"
+                    r"(?:(?:must|should|shall)\s+)?(?:cover|compare|evaluate|assess|review)\s+",
+                    "",
+                    query,
+                    flags=re.IGNORECASE,
+                ).strip()
         query = re.sub(
             r"^(?:compare|evaluate|assess|analy[sz]e|investigate|review)\s+",
             "",
@@ -584,6 +599,8 @@ def _relevance_terms(value: Any, *, remove_generic: bool) -> set[str]:
         if remove_generic and term in _RELEVANCE_GENERIC_TERMS:
             continue
         terms.add(term)
+        if term == "llm":
+            terms.update({"large", "language", "model"})
     return terms
 
 
@@ -618,7 +635,15 @@ def _coverage_anchor_items(clause: str) -> list[dict[str, Any]]:
         text,
         flags=re.IGNORECASE,
     )
-    parts = [item.strip(" .;") for item in re.split(r"\s*,\s*|\s+\band\b\s+", text) if item.strip()]
+    # Planner-authored coverage lists commonly use semicolons because each
+    # item is an independent collection-level target.  Treating the complete
+    # list as one phrase made every individual paper responsible for covering
+    # every method, which is impossible for landscape research.
+    parts = [
+        item.strip(" .;")
+        for item in re.split(r"\s*[;,]\s*|\s+\band\b\s+", text)
+        if item.strip()
+    ]
     items: list[dict[str, Any]] = []
     seen: set[tuple[str, ...]] = set()
     for raw in parts:
@@ -642,9 +667,71 @@ def _matched_anchor_items(group: dict[str, Any], candidate_terms: set[str]) -> l
     matched: list[dict[str, Any]] = []
     for item in group.get("anchor_items") or []:
         terms = {str(term) for term in item.get("terms") or []}
-        if terms and terms <= candidate_terms:
+        # Short labels (for example ``quantization`` or ``sodium ion``) stay
+        # exact.  Longer scope phrases may vary grammatically across titles
+        # and abstracts, so require a deterministic majority with at least two
+        # terms instead of exact phrase-token equality.
+        required = len(terms) if len(terms) <= 2 else max(2, math.ceil(len(terms) * 0.60))
+        matched_term_count = sum(
+            1 for term in terms if _coverage_term_variants(term) & candidate_terms
+        )
+        if terms and matched_term_count >= required:
             matched.append({"label": str(item.get("label") or ""), "terms": sorted(terms)})
     return matched
+
+
+def _coverage_term_variants(term: str) -> set[str]:
+    """Return conservative morphology variants for scientific coverage terms.
+
+    Provider metadata often uses an adjective or noun where the request uses a
+    process noun (for example ``sparse``/``sparsity`` versus
+    ``sparsification``).  These are spelling variants of one concept, not a
+    semantic synonym expansion, so they can be matched deterministically.
+    """
+
+    normalized = str(term or "").strip().lower()
+    variants = {normalized} if normalized else set()
+    if len(normalized) > len("ification") and normalized.endswith("ification"):
+        root = normalized[: -len("ification")]
+        variants.update({root + "e", root + "ify", root + "ity"})
+    return variants
+
+
+def _supplemental_coverage_queries(
+    *,
+    missing_label: str,
+    provider_query: str,
+    relevance_query: str,
+) -> list[str]:
+    """Build focused retry queries for one missing authoritative concept."""
+
+    groups = _coverage_anchor_groups(relevance_query)
+    all_anchor_terms = {
+        str(term)
+        for group in groups
+        for item in group.get("anchor_items") or []
+        for term in item.get("terms") or []
+    }
+    label_terms = _relevance_terms(missing_label, remove_generic=True)
+    variants = [missing_label.strip()]
+    if len(label_terms) == 1:
+        variants.extend(sorted(_coverage_term_variants(next(iter(label_terms))) - label_terms))
+
+    context_terms = _relevance_terms(provider_query, remove_generic=True) - all_anchor_terms
+    for group in groups:
+        if any(
+            str(item.get("label") or "").strip() == missing_label.strip()
+            for item in group.get("anchor_items") or []
+        ):
+            continue
+        context_terms.update(str(term) for term in group.get("anchor_terms") or [])
+    context = " ".join(sorted(context_terms)[:12])
+    queries: list[str] = []
+    for variant in variants:
+        query = " ".join(part for part in (variant.strip(), context) if part).strip()
+        if query and query not in queries:
+            queries.append(query[:500])
+    return queries[:3]
 
 
 def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
@@ -707,6 +794,27 @@ def _authoritative_scope_clauses(query: str) -> list[str]:
         if clause:
             clauses.append(clause)
     return clauses
+
+
+def _authoritative_scope_descriptions(query: str) -> list[str]:
+    """Return the human descriptions before ``Required coverage`` markers."""
+
+    text = str(query or "")
+    marker = re.search(r"Authoritative discovery scope\s*:", text, re.IGNORECASE)
+    if not marker:
+        return []
+    descriptions: list[str] = []
+    for raw_line in text[marker.end() :].splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        line = re.sub(r"^-\s*\[[^\]]+\]\s*", "", line)
+        description = re.split(
+            r"\s+Required coverage\s*:\s*", line, maxsplit=1, flags=re.IGNORECASE
+        )[0].strip().rstrip(".;")
+        if description:
+            descriptions.append(description)
+    return descriptions
 
 
 def apply_discovery_relevance_gate(
@@ -813,7 +921,10 @@ def apply_discovery_relevance_gate(
             missing_items = [
                 {"label": str(item.get("label") or ""), "terms": list(item.get("terms") or [])}
                 for item in group.get("anchor_items") or []
-                if not ({str(term) for term in item.get("terms") or []} <= accepted_terms)
+                if not all(
+                    _coverage_term_variants(str(term)) & accepted_terms
+                    for term in item.get("terms") or []
+                )
             ]
             if missing_items:
                 aggregate_missing.append(
@@ -855,6 +966,43 @@ def apply_discovery_relevance_gate(
     # Do not leak a weak partial shortlist to a consumer that treats any
     # non-empty candidate list as final-ready. The audit retains those records.
     return (accepted if gate_passed else []), audit
+
+
+def _coverage_preserving_limit(
+    candidates: list[dict[str, Any]], *, limit: int
+) -> list[dict[str, Any]]:
+    """Bound a relevant shortlist without dropping a rare coverage family."""
+
+    if len(candidates) <= limit:
+        return candidates
+    coverage: list[set[tuple[str, str]]] = []
+    for candidate in candidates:
+        keys: set[tuple[str, str]] = set()
+        gate = candidate.get("relevance_gate") if isinstance(candidate.get("relevance_gate"), dict) else {}
+        for group in gate.get("coverage_group_matches") or []:
+            if not isinstance(group, dict):
+                continue
+            group_id = str(group.get("group_id") or "")
+            for item in group.get("matched_anchor_items") or []:
+                if isinstance(item, dict) and str(item.get("label") or "").strip():
+                    keys.add((group_id, str(item["label"])))
+        coverage.append(keys)
+    remaining = set().union(*coverage) if coverage else set()
+    chosen: list[int] = []
+    available = set(range(len(candidates)))
+    while remaining and available and len(chosen) < limit:
+        index = max(available, key=lambda item: (len(coverage[item] & remaining), -item))
+        if not coverage[index] & remaining:
+            break
+        chosen.append(index)
+        available.remove(index)
+        remaining -= coverage[index]
+    for index in range(len(candidates)):
+        if len(chosen) >= limit:
+            break
+        if index not in chosen:
+            chosen.append(index)
+    return [candidates[index] for index in sorted(chosen)]
 
 
 def _select_candidates(
@@ -899,6 +1047,115 @@ def _select_candidates(
     for index in range(max((len(queue) for queue in queues), default=0)):
         for queue in queues:
             if index < len(queue) and take(queue[index]):
+                return selected
+    return selected
+
+
+def _rank_discovery_candidates(
+    candidates: list[dict[str, Any]],
+    *,
+    query: str,
+) -> list[dict[str, Any]]:
+    """Assign reproducible, candidate-specific shortlist scores.
+
+    Public provider ranks are not comparable across APIs. The production
+    service therefore ranks already-admitted candidates from evidence retained
+    in each record: query-term coverage, named scope-item coverage, source
+    metadata, and summary availability. This is deterministic and
+    domain-neutral; it does not invent method names.
+    """
+
+    query_terms = _relevance_terms(query, remove_generic=True)
+    ranked: list[dict[str, Any]] = []
+    current_year = datetime.now(UTC).year
+    for candidate in candidates:
+        gate = candidate.get("relevance_gate") if isinstance(candidate.get("relevance_gate"), dict) else {}
+        matched_terms = sorted({str(item) for item in gate.get("matched_query_terms") or [] if str(item)})
+        coverage_matches = gate.get("coverage_group_matches") or []
+        matched_scope_items = sorted({
+            str(item.get("label") or "")
+            for group in coverage_matches
+            if isinstance(group, dict)
+            for item in group.get("matched_anchor_items") or []
+            if isinstance(item, dict) and str(item.get("label") or "").strip()
+        })
+        metadata = candidate.get("metadata") if isinstance(candidate.get("metadata"), dict) else {}
+        try:
+            year = int(metadata.get("year") or candidate.get("year") or 0)
+        except (TypeError, ValueError):
+            year = 0
+        try:
+            citations = max(0, int(metadata.get("citation_count") or candidate.get("citation_count") or 0))
+        except (TypeError, ValueError):
+            citations = 0
+        source_channels = {
+            str(item)
+            for item in (
+                candidate.get("source_channels")
+                or metadata.get("source_channels")
+                or [candidate.get("provider") or "unknown"]
+            )
+            if str(item).strip()
+        }
+        topic_coverage = len(matched_terms) / max(len(query_terms), 1)
+        scope_coverage = min(len(matched_scope_items) / 3.0, 1.0)
+        freshness = max(0.0, min(1.0, 1.0 - ((current_year - year) / 12.0))) if year else 0.0
+        citation_signal = min(math.log1p(citations) / math.log1p(2000), 1.0)
+        source_signal = min(len(source_channels) / 3.0, 1.0)
+        summary_signal = 1.0 if str(candidate.get("content_summary") or "").strip() else 0.0
+        score = round(
+            0.45 * topic_coverage
+            + 0.20 * scope_coverage
+            + 0.10 * freshness
+            + 0.10 * citation_signal
+            + 0.05 * source_signal
+            + 0.10 * summary_signal,
+            6,
+        )
+        rationale = (
+            f"Matched {len(matched_terms)}/{len(query_terms)} topic terms"
+            f" ({', '.join(matched_terms[:8]) or 'none'}); "
+            f"covered {len(matched_scope_items)} named scope item(s)"
+            f" ({', '.join(matched_scope_items[:5]) or 'none'}); "
+            f"provider={str(candidate.get('provider') or 'unknown')}; "
+            f"year={year or 'unknown'}; citations={citations}; "
+            f"summary={'present' if summary_signal else 'absent'}."
+        )
+        ranked.append({**candidate, "ranking_score": score, "ranking_rationale": rationale})
+    return sorted(
+        ranked,
+        key=lambda item: (
+            -float(item.get("ranking_score") or 0.0),
+            str(item.get("title") or "").casefold(),
+            str(item.get("source_id") or ""),
+        ),
+    )
+
+
+def _provider_diverse_ranked_limit(
+    ranked: list[dict[str, Any]],
+    *,
+    provider_order: list[str],
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Round-robin ranked provider queues so a large provider cannot crowd out peers."""
+
+    selected: list[dict[str, Any]] = []
+    queues = {
+        provider: [
+            candidate
+            for candidate in ranked
+            if str(candidate.get("provider") or "unknown") == provider
+        ]
+        for provider in provider_order
+    }
+    for index in range(max((len(queue) for queue in queues.values()), default=0)):
+        for provider in provider_order:
+            queue = queues[provider]
+            if index >= len(queue):
+                continue
+            selected.append(queue[index])
+            if len(selected) >= limit:
                 return selected
     return selected
 
@@ -1531,7 +1788,17 @@ class LiteratureDiscoveryService:
             answered[provider] = "completed" if found else "empty"
             if found:
                 contributed.add(provider)
-        selected = _select_candidates(seeded, candidates, limit=self.limit + 1)
+        # Relevance filtering happens after provider fan-in. Keep a bounded
+        # oversample so weak early-provider rows cannot consume the shortlist
+        # before the evidence gate sees the pool.
+        selected = _select_candidates(
+            seeded,
+            candidates,
+            limit=max(
+                self.limit + 1,
+                min((self.limit + 1) * 3, len(seeded) + len(candidates)),
+            ),
+        )
         if not selected:
             raise ResearchOperatorError(
                 "All configured public discovery providers returned no traceable sources",
@@ -1551,6 +1818,91 @@ class LiteratureDiscoveryService:
             selected,
             minimum_relevant_candidates=minimum_relevant,
         )
+        # A landscape query can validly return papers from four method
+        # families while missing a rarer fifth family.  Do not fail the whole
+        # node or weaken the coverage gate: issue a small, evidence-retained
+        # supplemental search for the missing family and re-run the same gate.
+        missing_labels = [
+            str(item.get("label") or "").strip()
+            for group in relevance_audit.get("aggregate_coverage_missing") or []
+            if isinstance(group, dict)
+            for item in group.get("missing_anchor_items") or []
+            if isinstance(item, dict) and str(item.get("label") or "").strip()
+        ]
+        if (
+            relevance_audit.get("status") != "passed"
+            and int(relevance_audit.get("accepted_candidate_count") or 0)
+            >= int(relevance_audit.get("minimum_relevant_candidates") or 1)
+            and missing_labels
+        ):
+            supplemental: list[dict[str, Any]] = []
+            for label in list(dict.fromkeys(missing_labels))[:3]:
+                for supplemental_query in _supplemental_coverage_queries(
+                    missing_label=label,
+                    provider_query=query,
+                    relevance_query=relevance_query,
+                ):
+                    for provider, backend, boundary in (
+                        ("arxiv", self._arxiv, "arXiv"),
+                        ("openalex", self._openalex, "OpenAlex"),
+                    ):
+                        try:
+                            found, trace = backend(supplemental_query)
+                        except ResearchOperatorError as exc:
+                            limitations.append(
+                                f"{boundary} supplemental coverage boundary: {exc.error_type}: {exc}"
+                            )
+                            traces.append(
+                                {
+                                    "provider": provider,
+                                    "status": "failed",
+                                    "error_type": exc.error_type,
+                                    "supplemental_for": label,
+                                    "supplemental_query": supplemental_query,
+                                }
+                            )
+                            continue
+                        supplemental.extend(found)
+                        traces.append(
+                            {
+                                **trace,
+                                "supplemental_for": label,
+                                "supplemental_query": supplemental_query,
+                            }
+                        )
+            expanded = _select_candidates(
+                seeded,
+                candidates + supplemental,
+                limit=max(self.limit + 1, min((self.limit + 1) * 3, len(seeded) + len(candidates) + len(supplemental))),
+            )
+            deduped, relevance_audit = apply_discovery_relevance_gate(
+                relevance_query,
+                expanded,
+                minimum_relevant_candidates=minimum_relevant,
+            )
+            if relevance_audit.get("status") == "passed":
+                bounded = _coverage_preserving_limit(deduped, limit=self.limit + 1)
+                deduped, relevance_audit = apply_discovery_relevance_gate(
+                    relevance_query,
+                    bounded,
+                    minimum_relevant_candidates=minimum_relevant,
+                )
+        provider_order = list(dict.fromkeys(
+            str(item.get("provider") or "unknown") for item in deduped
+        ))
+        deduped = _rank_discovery_candidates(deduped, query=relevance_query)
+        if relevance_audit.get("status") == "passed":
+            diverse = _provider_diverse_ranked_limit(
+                deduped,
+                provider_order=provider_order,
+                limit=self.limit + 1,
+            )
+            bounded = _coverage_preserving_limit(diverse, limit=self.limit + 1)
+            deduped, relevance_audit = apply_discovery_relevance_gate(
+                relevance_query,
+                bounded,
+                minimum_relevant_candidates=minimum_relevant,
+            )
         relevance_audit_hash = stable_json_sha256(relevance_audit)
         relevance_audit_path = (
             self.workspace_root
@@ -2247,8 +2599,10 @@ def production_services_from_environment(
     model = ResearchModelService.from_environment(root)
     idea_generator = ProductionIdeaGenerator(model)
     from .bounded_experiment import BoundedLocalExperimentExecutor
+    from .kv_cache_experiment import KVCacheExperimentPackageBuilder
 
     experiment_executor = BoundedLocalExperimentExecutor(root)
+    experiment_package_builder = KVCacheExperimentPackageBuilder(root)
     active_model_providers = {route.provider for route in model.routes}
     services: dict[str, Any] = {
         "fetch_url": BoundedUrlFetcher(root),
@@ -2257,6 +2611,7 @@ def production_services_from_environment(
         "review_model_generate": model,
         "idea_generator": idea_generator,
         "experiment_executor": experiment_executor,
+        "experiment_package_builder": experiment_package_builder,
         "secret_values": configured_secret_values(active_model_providers=active_model_providers),
         "service_metadata": {
             "fetch_url": {"service_id": FETCH_SERVICE_ID, "version": SERVICE_VERSION},
@@ -2267,6 +2622,10 @@ def production_services_from_environment(
             "experiment_executor": {
                 "service_id": experiment_executor.service_id,
                 "version": experiment_executor.service_version,
+            },
+            "experiment_package_builder": {
+                "service_id": experiment_package_builder.service_id,
+                "version": experiment_package_builder.service_version,
             },
         },
     }

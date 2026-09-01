@@ -53,13 +53,61 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
     record exists, only an explicit successful result unlocks certification.
     """
     harness = Path(harness_dir)
-    prefix = f"pm-{sid}-{node_id}-"
+    sprints_root = Path(
+        os.environ.get("HARNESS_SPRINTS_DIR")
+        or os.environ.get("SOLAR_SPRINTS_DIR")
+        or harness / "sprints"
+    ).expanduser()
+    elastic_root = sprints_root / sid / "elastic-planner"
+    elastic_owner = _read_json(elastic_root / "owner.json")
+    elastic_finalization = _read_json(elastic_root / "finalization.json")
+    elastic_result = _read_json(elastic_root / "planner_operator_result.json")
+    if (
+        elastic_owner.get("state") == "finalized"
+        and elastic_finalization.get("schema_version")
+        == "solar.elastic_planner_finalization.v1"
+        and elastic_finalization.get("sprint_id") == sid
+        and elastic_result.get("status") == "accepted"
+        and elastic_result.get("sprint_id") == sid
+    ):
+        # Finalized Elastic Planner ownership is absorbing for the legacy
+        # coordinator.  A later closeout/reporting failure must not launch an
+        # N0 Planner that can overwrite the already frozen graph.
+        return {
+            "state": "completed",
+            "ready_for_compile": False,
+            "sid": sid,
+            "node_id": "elastic-planner",
+            "task_id": str(elastic_result.get("task_id") or ""),
+            "reason": "elastic_planner_already_finalized",
+            "finalization_path": str(elastic_root / "finalization.json"),
+        }
+    # Legacy Planner tasks use node ``N0`` while the native Elastic Planner
+    # uses the explicit ``elastic-planner`` node/role.  Both are bounded
+    # Planner operator tasks and must hold the same coordinator gate while
+    # their durable result is pending.  Filtering only the legacy filename
+    # made the native task look unmanaged, so the coordinator incorrectly
+    # rolled an actively compiling sprint back to ``missing PRD``.
+    prefix = f"pm-{sid}-"
     inbox_root = harness / "run" / "pm-inbox"
     records: list[tuple[float, str, Path, dict[str, Any]]] = []
     for path in inbox_root.glob(f"{prefix}*.json"):
         payload = _read_json(path)
         task_id = str(payload.get("task_id") or path.stem)
-        if str(payload.get("requested_role") or "planner") != "planner":
+        requested_role = str(payload.get("requested_role") or "planner").strip().lower().replace("_", "-")
+        record_node_id = str(payload.get("node_id") or "").strip().lower().replace("_", "-")
+        closeout_kind = str(payload.get("closeout_kind") or "").strip().lower().replace("_", "-")
+        normalized_task_id = task_id.lower().replace("_", "-")
+        is_legacy_planner = requested_role == "planner" and (
+            record_node_id == str(node_id).lower()
+            or f"-{str(node_id).lower()}-" in normalized_task_id
+        )
+        is_elastic_planner = (
+            requested_role == "elastic-planner"
+            or record_node_id == "elastic-planner"
+            or closeout_kind == "elastic-planner"
+        )
+        if not (is_legacy_planner or is_elastic_planner):
             continue
         try:
             mtime = path.stat().st_mtime
@@ -77,7 +125,7 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
             "reason": "no_operator_pool_planner_task",
         }
 
-    status = _read_json(harness / "sprints" / f"{sid}.status.json")
+    status = _read_json(sprints_root / f"{sid}.status.json")
     claim = status.get("planner_dispatch_claim")
     claimed_task = str(claim.get("task_id") or "") if isinstance(claim, dict) else ""
     selected = next((row for row in records if row[1] == claimed_task), None)

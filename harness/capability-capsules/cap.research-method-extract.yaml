@@ -2,7 +2,7 @@ capability_capsule_id: cap.research-method-extract
 capsule_kind: capability
 metadata:
   name: Scientific Method Extract
-  description: Extract reusable scientific methods with procedures, sources, and evidence grounding.
+  description: Extract a bounded collection of reusable scientific methods across every normalized paper supplied to the invocation, retaining procedures, sources, and evidence grounding.
 applicability:
   task_types:
     - scientific-research
@@ -35,6 +35,8 @@ contract:
   postconditions:
     - check: methods_grounded
       description: Each method has summary, procedure, source papers, and evidence ids.
+    - check: supplied_paper_collection_processed
+      description: Method extraction considers every normalized paper in the supplied collection and deduplicates repeated method descriptions.
   invariants:
     - Does not invent procedure steps not grounded in source evidence.
 composition:
@@ -58,7 +60,7 @@ effects:
   write:
     - artifacts/scientific/research_method/
   execute:
-    - plugins/autosci/bin/autosci_bridge.py
+    - plugins/autosci/operators/scientific_lifecycle/evidence/registry.py
   network:
     - none by default
   cost:
@@ -81,7 +83,7 @@ verification:
   external_verifier:
     required: false
   pass_conditions:
-    - Fixture method extraction emits valid method evidence.
+    - The native AutoSci method extractor emits source-anchored method evidence or an explicit insufficient-evidence result.
     - Ambiguous methods are represented as limitations or rejected candidates.
 operator_compatibility:
   preferred:
@@ -91,3 +93,7 @@ operator_compatibility:
 provenance:
   owner: opensolar
   source_phase: phase2_autosci_solar_native_capsules
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.evidence.registry:execute_method_extract
+  required_services: []

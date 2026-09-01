@@ -9,7 +9,12 @@ from .artifacts import (
     make_artifact_refs,
     sprint_handoff_artifacts,
 )
-from .compiler import RequirementCompilationError, compile_requirement_file, compile_requirement_ir
+from .compiler import (
+    RequirementCompilationError,
+    compile_requirement_file,
+    compile_requirement_ir,
+    requirement_ir_id_for_intent,
+)
 from .evaluator import evaluate_requirement_ir_format
 from .taxonomy import (
     FULL_PRD,
@@ -38,6 +43,7 @@ __all__ = [
     "digest_text",
     "evaluate_requirement_ir_format",
     "make_artifact_refs",
+    "requirement_ir_id_for_intent",
     "RequirementCompilationError",
     "sprint_handoff_artifacts",
 ]

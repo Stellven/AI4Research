@@ -34,6 +34,17 @@
     "planning_authority": {
       "const": "frozen_execution_plan_v1"
     },
+    "workspace_authority_ref": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["authority_id", "path", "sha256", "workspace_root"],
+      "properties": {
+        "authority_id": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "workspace_root": {"type": "string", "minLength": 1}
+      }
+    },
     "graph": {
       "type": "object",
       "additionalProperties": false,
@@ -67,9 +78,12 @@
         "dispatch_task_type",
         "depends_on",
         "requirement_ids",
+        "capability_capsule_id",
         "capsule_binding",
         "physical_candidates",
         "artifact_contract",
+        "output_routes",
+        "workspace_reads",
         "evaluation_binding",
         "resource_requirements",
         "effects",
@@ -108,6 +122,11 @@
             "minLength": 1
           },
           "uniqueItems": true
+        },
+        "capability_capsule_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Primary execution capsule selected by the Planner. It must also appear in capsule_binding.capsule_ids."
         },
         "capsule_binding": {
           "type": "object",
@@ -189,6 +208,34 @@
                 "minLength": 1
               },
               "uniqueItems": true
+            }
+          }
+        },
+        "output_routes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["artifact_type", "route_kind", "relative_path", "materialization_kind"],
+            "properties": {
+              "artifact_type": {"type": "string", "minLength": 1},
+              "route_kind": {"enum": ["sprint_private", "workspace_publish"]},
+              "relative_path": {"type": "string", "minLength": 1},
+              "materialization_kind": {"enum": ["file", "directory"]}
+            }
+          }
+        },
+        "workspace_reads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "relative_path", "sha256"],
+            "properties": {
+              "kind": {"enum": ["file", "directory"]},
+              "relative_path": {"type": "string", "minLength": 1},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
             }
           }
         },

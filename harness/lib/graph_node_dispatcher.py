@@ -73,7 +73,13 @@ def _ledger_enabled() -> bool:
 
 def _graph_is_contracted(graph: dict[str, Any]) -> bool:
     """Contract identity is the safety boundary, independent of flag state."""
-    return bool(str((graph or {}).get("workflow_contract_id") or "").strip())
+    return bool(str((graph or {}).get("workflow_contract_id") or "").strip()) or (
+        str((graph or {}).get("schema_version") or "")
+        == "solar.scheduler_runtime_projection.v1"
+        and str((graph or {}).get("planning_authority") or "")
+        == "frozen_execution_plan_v1"
+        and isinstance((graph or {}).get("scheduler_input_ref"), dict)
+    )
 
 
 def _product_mode_enabled() -> bool:
@@ -329,33 +335,79 @@ def _scheduler_projection_workspace(
     graph: dict[str, Any],
     active_workspace: Path,
 ) -> Path | None:
-    """Bind a verified SchedulerInput projection to its active workspace.
+    """Compatibility wrapper returning only frozen SchedulerInput authority.
 
-    SchedulerInput journeys do not copy legacy ``raw_intent.json`` and
-    ``requirement_ir.json`` files into the runtime directory, so the rc.9
-    resolver cannot establish the workspace through those historical files.
-    The frozen input and runtime work directory are equivalent authorities for
-    this graph kind, but only when the projection verifies and both paths are
-    contained by the already-active workspace.
+    ``active_workspace`` is intentionally ignored: it is an intake selector,
+    never durable authority for an already-frozen scheduler graph.
     """
-    if str((graph or {}).get("schema_version") or "") != "solar.scheduler_runtime_projection.v1":
-        return None
+    del active_workspace
+    sid = str((graph or {}).get("sprint_id") or "")
+    workspace, _check = _scheduler_frozen_workspace(sid, graph)
+    return workspace
+
+
+def _scheduler_frozen_workspace(
+    sid: str,
+    graph: dict[str, Any],
+) -> tuple[Path | None, dict[str, Any]]:
+    """Resolve a verified SchedulerInput graph's immutable workspace authority.
+
+    The cockpit's mutable active-workspace binding is an intake selector.  It
+    must not redirect a previously frozen sprint after another request becomes
+    active.  This resolver therefore accepts only the canonical authority
+    artifact referenced by the verified runtime projection and rechecks its
+    content hash plus all compiler-input hashes before returning its root.
+    """
+    if (
+        _workspace_binding is None
+        or str((graph or {}).get("schema_version") or "")
+        != "solar.scheduler_runtime_projection.v1"
+    ):
+        return None, {"reason": "not_scheduler_projection"}
     try:
         import scheduler_input as _scheduler_input
 
-        if not _scheduler_input.verify_runtime_projection(graph).get("ok"):
-            return None
-        active = Path(active_workspace).expanduser().resolve(strict=True)
-        scheduler_ref = graph.get("scheduler_input_ref")
-        scheduler_path = Path(str((scheduler_ref or {}).get("path") or "")).expanduser().resolve(strict=True)
-        work_dir = Path(str(graph.get("runtime_work_dir") or "")).expanduser().resolve(strict=True)
-        if not scheduler_path.is_file() or not work_dir.is_dir():
-            return None
-        if not scheduler_path.is_relative_to(active) or not work_dir.is_relative_to(active):
-            return None
-    except (OSError, RuntimeError, TypeError, ValueError):
-        return None
-    return active
+        graph_path = SPRINTS_DIR / f"{sid}.task_graph.json"
+        projection = _scheduler_input.verify_runtime_projection(
+            graph,
+            graph_path=graph_path,
+        )
+        if not projection.get("ok"):
+            return None, {
+                "reason": "scheduler_runtime_projection_unverified",
+                "errors": list(projection.get("errors") or []),
+            }
+        ref = graph.get("workspace_authority_ref")
+        if not isinstance(ref, dict):
+            return None, {"reason": "workspace_authority_ref_missing"}
+        authority_path = Path(str(ref.get("path") or "")).expanduser().resolve()
+        canonical = (SPRINTS_DIR / f"{sid}.workspace_authority.json").resolve()
+        if authority_path != canonical:
+            return None, {"reason": "workspace_authority_ref_not_canonical"}
+        if not authority_path.is_file():
+            return None, {"reason": "workspace_authority_missing"}
+        actual_sha = hashlib.sha256(authority_path.read_bytes()).hexdigest()
+        if actual_sha != str(ref.get("sha256") or ""):
+            return None, {"reason": "workspace_authority_hash_mismatch"}
+        authority = _workspace_binding.verify_sprint_workspace_authority(
+            authority_path,
+            sprints_dir=SPRINTS_DIR,
+            harness_dir=Path(str(ref.get("binding_harness_dir") or HARNESS_DIR)),
+            require_active_binding=False,
+        )
+        workspace = Path(str(authority.get("workspace_root") or "")).resolve(strict=True)
+        if str(workspace) != str(ref.get("workspace_root") or ""):
+            return None, {"reason": "workspace_authority_root_mismatch"}
+        return workspace, {
+            "reason": "frozen_workspace_authority",
+            "authority_path": str(authority_path),
+            "authority_sha256": actual_sha,
+        }
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        return None, {
+            "reason": "workspace_authority_invalid",
+            "errors": [f"{type(exc).__name__}: {exc}"],
+        }
 
 
 def _manifest_anchor(
@@ -565,6 +617,40 @@ def _current_operator_dispatch_read(
     attempt = node.get("execution_attempt") if isinstance(node.get("execution_attempt"), dict) else {}
     task_id = str(attempt.get("task_id") or node.get("pm_task_id") or "").strip()
     operator_id = str(attempt.get("operator_id") or node.get("operator_id") or "").strip()
+    # Scheduler-runtime projections deliberately keep the stable TaskGraph
+    # separate from mutable execution state.  Once a direct scientific
+    # operator finishes, the projection clears its assignment before the
+    # evaluator snapshot is captured, so the stable node has neither an
+    # execution_attempt nor pm_task_id.  The node-keyed runstate is the durable
+    # attribution authority for that seam; it records the exact submitted task
+    # and operator and survives assignment cleanup.
+    if not task_id or not operator_id:
+        try:
+            import node_runstate
+
+            runstate = node_runstate.read_snapshot(
+                SPRINTS_DIR,
+                sid,
+                str(node.get("id") or ""),
+            )
+            attribution = (
+                runstate.get("build_attribution")
+                if isinstance(runstate.get("build_attribution"), dict)
+                else {}
+            )
+            if str(attribution.get("dispatch_mode") or "") in {
+                "autosci_operator_direct",
+                "operator_pool",
+            }:
+                task_id = str(
+                    attribution.get("pm_task_id")
+                    or attribution.get("task_id")
+                    or attribution.get("dispatch_id")
+                    or ""
+                ).strip()
+                operator_id = str(attribution.get("operator_id") or "").strip()
+        except Exception:
+            pass
     if not task_id or not operator_id:
         return None
     if any(value in {".", ".."} or Path(value).name != value for value in (task_id, operator_id)):
@@ -650,6 +736,7 @@ def _published_read_snapshot(
     if not (
         isinstance(payload, dict)
         and payload.get("schema") == "solar.workspace_publish.v1"
+        and str(payload.get("state") or "").upper() in {"", "COMMITTED"}
         and payload.get("ok") is True
         and payload.get("required") is True
         and str(payload.get("sid") or "") == sid
@@ -1055,16 +1142,29 @@ def _capture_eval_artifact_snapshot(
 
     workspace: Path | None = None
     if _workspace_binding is not None:
-        active = _workspace_binding.read_active_workspace(HARNESS_DIR)
-        if active is not None:
-            workspace = _workspace_binding.sprint_workspace_root(
-                SPRINTS_DIR,
-                sid,
-                harness_dir=HARNESS_DIR,
-            )
+        if (
+            str((graph or {}).get("schema_version") or "")
+            == "solar.scheduler_runtime_projection.v1"
+        ):
+            workspace, authority_check = _scheduler_frozen_workspace(sid, graph)
             if workspace is None:
-                workspace = _scheduler_projection_workspace(graph, active)
-            if workspace is None:
+                violations.append(
+                    {
+                        "code": "EVAL_SNAPSHOT_WORKSPACE_AUTHORITY_INVALID",
+                        "authority_check": authority_check,
+                    }
+                )
+        else:
+            active = _workspace_binding.read_active_workspace(HARNESS_DIR)
+            if active is None:
+                active = None
+            else:
+                workspace = _workspace_binding.sprint_workspace_root(
+                    SPRINTS_DIR,
+                    sid,
+                    harness_dir=HARNESS_DIR,
+                )
+            if active is not None and workspace is None:
                 violations.append(
                     {
                         "code": "EVAL_SNAPSHOT_WORKSPACE_BINDING_MISMATCH",
@@ -1178,6 +1278,16 @@ def _validate_eval_artifact_snapshot(
     eval_payload: dict[str, Any],
 ) -> dict[str, Any]:
     expected = node.get("eval_artifact_snapshot")
+    # Scheduler runtime projections deliberately keep the frozen node
+    # specification immutable and persist mutable execution state in the
+    # companion ledger.  An evaluator snapshot is therefore authoritative in
+    # its sprint sidecar even when ``save_graph`` has projected its transient
+    # node metadata away.  Restore that metadata before declaring the retained
+    # snapshot missing; validation below still recomputes and compares every
+    # byte, so this does not weaken the integrity gate.
+    if not isinstance(expected, dict):
+        _restore_eval_artifact_snapshot_metadata(sid, node)
+        expected = node.get("eval_artifact_snapshot")
     if not isinstance(expected, dict):
         return {"ok": False, "reason": "eval_artifact_snapshot_missing"}
     expected_path = str(expected.get("path") or "")
@@ -1516,6 +1626,98 @@ def _manifest_matches_eval_snapshot(
     }
 
 
+def _atomic_workspace_publish_journal(path: Path, payload: dict[str, Any]) -> None:
+    """Durably replace the publication journal before/after workspace mutation."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        directory_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _committed_workspace_publication_intact(
+    payload: dict[str, Any],
+    workspace: Path,
+) -> bool:
+    """Revalidate committed visible bytes before trusting a prior journal."""
+    try:
+        root = workspace.resolve(strict=True)
+        if Path(str(payload.get("workspace_root") or "")).resolve(strict=True) != root:
+            return False
+        published = [
+            row for row in payload.get("published") or [] if isinstance(row, dict)
+        ]
+        published_by_path: dict[Path, str] = {}
+        for row in published:
+            target = Path(str(row.get("to") or ""))
+            if not target.is_absolute():
+                return False
+            lexical = Path(os.path.abspath(target))
+            lexical.relative_to(root)
+            cursor = root
+            for part in lexical.relative_to(root).parts:
+                cursor = cursor / part
+                if cursor.is_symlink():
+                    return False
+            resolved = lexical.resolve(strict=True)
+            resolved.relative_to(root)
+            if not resolved.is_file():
+                return False
+            expected = str(row.get("sha256") or "")
+            if not re.fullmatch(r"[0-9a-f]{64}", expected):
+                return False
+            if hashlib.sha256(resolved.read_bytes()).hexdigest() != expected:
+                return False
+            published_by_path[resolved] = expected
+        outputs = [
+            row for row in payload.get("outputs") or [] if isinstance(row, dict)
+        ]
+        if not outputs:
+            return False
+        for output in outputs:
+            if not isinstance(output, dict):
+                return False
+            kind = str(output.get("kind") or "")
+            relative = _workspace_relative_scope(
+                str(payload.get("sid") or ""),
+                str(output.get("rel_path") or output.get("declared") or ""),
+            )
+            if relative is None:
+                return False
+            target = (root / relative).resolve(strict=True)
+            expected = str(output.get("sha256") or "")
+            if kind == "file" and published_by_path.get(target) != expected:
+                return False
+            if kind == "directory":
+                snapshotter = getattr(_artifact_manifest, "_path_snapshot", None)
+                if snapshotter is None:
+                    return False
+                snapshot = snapshotter(target, root=root)
+                if (
+                    snapshot.get("unsafe")
+                    or snapshot.get("kind") != "directory"
+                    or str(snapshot.get("sha256") or "") != expected
+                ):
+                    return False
+            if kind not in {"file", "directory"}:
+                return False
+        return True
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return False
+
+
 def _publish_verified_node_outputs(
     sid: str,
     node: dict[str, Any],
@@ -1531,7 +1733,11 @@ def _publish_verified_node_outputs(
     fails closed so an old or foreign sprint cannot write into the current
     project.
     """
-    if not _graph_is_certified_generic(graph):
+    scheduler_projection = (
+        str(graph.get("schema_version") or "")
+        == "solar.scheduler_runtime_projection.v1"
+    )
+    if not _graph_is_certified_generic(graph) and not scheduler_projection:
         return {"required": False, "ok": True, "skipped": "not_certified_generic"}
     if _artifact_manifest is None or _workspace_binding is None:
         return {
@@ -1539,23 +1745,37 @@ def _publish_verified_node_outputs(
             "ok": False,
             "reason": "workspace_publish_modules_unavailable",
         }
-    active = _workspace_binding.read_active_workspace(HARNESS_DIR)
-    if active is None:
-        return {"required": False, "ok": True, "skipped": "no_active_workspace_binding"}
-
     node_id = str(node.get("id") or "").strip()
-    workspace = _workspace_binding.sprint_workspace_root(
-        SPRINTS_DIR,
-        sid,
-        harness_dir=HARNESS_DIR,
-    )
-    if workspace is None:
-        return {
-            "required": True,
-            "ok": False,
-            "reason": "workspace_binding_mismatch",
-            "active_workspace": str(active),
-        }
+    active = _workspace_binding.read_active_workspace(HARNESS_DIR)
+    if scheduler_projection:
+        workspace, authority_check = _scheduler_frozen_workspace(sid, graph)
+        if workspace is None:
+            return {
+                "required": True,
+                "ok": False,
+                "reason": "workspace_binding_mismatch",
+                "authority_check": authority_check,
+                "active_workspace": str(active or ""),
+            }
+    else:
+        if active is None:
+            return {
+                "required": False,
+                "ok": True,
+                "skipped": "no_active_workspace_binding",
+            }
+        workspace = _workspace_binding.sprint_workspace_root(
+            SPRINTS_DIR,
+            sid,
+            harness_dir=HARNESS_DIR,
+        )
+        if workspace is None:
+            return {
+                "required": True,
+                "ok": False,
+                "reason": "workspace_binding_mismatch",
+                "active_workspace": str(active),
+            }
     manifest = _artifact_manifest.read_manifest(SPRINTS_DIR, sid, node_id)
     recorded_manifest_digest = str(manifest.get("content_digest") or "")
     if (
@@ -1570,6 +1790,74 @@ def _publish_verified_node_outputs(
     rows = manifest.get("rows") if isinstance(manifest.get("rows"), list) else []
     if not rows:
         return {"required": False, "ok": True, "skipped": "no_declared_outputs"}
+    publish_manifest = manifest
+    if scheduler_projection:
+        try:
+            import scheduler_input as _scheduler_input
+
+            projection = _scheduler_input.verify_runtime_projection(
+                graph,
+                graph_path=SPRINTS_DIR / f"{sid}.task_graph.json",
+            )
+        except Exception as exc:
+            return {
+                "required": True,
+                "ok": False,
+                "reason": "workspace_publish_scheduler_authority_invalid",
+                "errors": [f"{type(exc).__name__}: {exc}"],
+            }
+        if not projection.get("ok"):
+            return {
+                "required": True,
+                "ok": False,
+                "reason": "workspace_publish_scheduler_authority_invalid",
+                "errors": list(projection.get("errors") or []),
+            }
+        public_scope = [
+            str(value).strip().replace("\\", "/")
+            for value in node.get("workspace_publish_scope") or []
+            if str(value).strip()
+        ]
+        if not public_scope:
+            return {
+                "required": False,
+                "ok": True,
+                "skipped": "private_outputs_only",
+            }
+        work_dir = Path(str(graph.get("runtime_work_dir") or "")).expanduser().resolve()
+        selected_rows: list[dict[str, Any]] = []
+        for scope in public_scope:
+            relative = _workspace_relative_scope(sid, scope)
+            if relative is None:
+                return {
+                    "required": True,
+                    "ok": False,
+                    "reason": "workspace_publish_scope_invalid",
+                    "scope": scope,
+                }
+            expected_source = (work_dir / "workspace" / relative).resolve(strict=False)
+            matches = [
+                row
+                for row in rows
+                if isinstance(row, dict)
+                and str(row.get("path") or "").strip()
+                and Path(str(row.get("path"))).expanduser().resolve(strict=False)
+                == expected_source
+            ]
+            if len(matches) != 1:
+                return {
+                    "required": True,
+                    "ok": False,
+                    "reason": "workspace_publish_scope_manifest_mismatch",
+                    "scope": scope,
+                    "match_count": len(matches),
+                }
+            selected = deepcopy(matches[0])
+            selected["declared"] = scope
+            selected["rel_path"] = scope
+            selected_rows.append(selected)
+        publish_manifest = deepcopy(manifest)
+        publish_manifest["rows"] = selected_rows
     if dry_run:
         return {
             "required": True,
@@ -1579,36 +1867,109 @@ def _publish_verified_node_outputs(
             "published": [],
         }
 
-    publish = _artifact_manifest.publish_workspace_outputs(manifest, workspace)
-    payload = {
+    sidecar = SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-publish.json"
+    journal_material = {
+        "sid": sid,
+        "node_id": node_id,
+        "workspace_root": str(workspace),
+        "workspace_authority_ref": deepcopy(graph.get("workspace_authority_ref")),
+        "manifest_digest": str(publish_manifest.get("content_digest") or ""),
+        "outputs": [
+            {
+                "path": str(row.get("path") or ""),
+                "declared": str(row.get("declared") or ""),
+                "rel_path": str(row.get("rel_path") or ""),
+                "sha256": str(row.get("sha256") or ""),
+                "kind": str(row.get("kind") or ""),
+            }
+            for row in publish_manifest.get("rows") or []
+            if isinstance(row, dict)
+        ],
+    }
+    journal_id = hashlib.sha256(
+        json.dumps(
+            journal_material,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    existing_journal: dict[str, Any] = {}
+    if sidecar.is_file():
+        try:
+            loaded = json.loads(sidecar.read_text(encoding="utf-8"))
+            existing_journal = loaded if isinstance(loaded, dict) else {}
+        except Exception:
+            return {
+                "required": True,
+                "ok": False,
+                "reason": "workspace_publish_journal_invalid",
+                "sidecar": str(sidecar),
+            }
+        if str(existing_journal.get("journal_id") or "") != journal_id:
+            return {
+                "required": True,
+                "ok": False,
+                "reason": "workspace_publish_journal_conflict",
+                "sidecar": str(sidecar),
+            }
+        if (
+            str(existing_journal.get("state") or "").upper() == "COMMITTED"
+            and existing_journal.get("ok") is True
+            and _committed_workspace_publication_intact(existing_journal, workspace)
+        ):
+            return existing_journal
+
+    prepared = {
         "schema": "solar.workspace_publish.v1",
         "sid": sid,
         "node_id": node_id,
-        "published_at": _utc_now(),
+        "state": "PREPARED",
+        "journal_id": journal_id,
+        "prepared_at": str(existing_journal.get("prepared_at") or _utc_now()),
         "required": True,
-        **publish,
+        "sidecar": str(sidecar),
+        "active_workspace": str(active or ""),
+        "active_binding_matches": bool(active and Path(active).resolve() == workspace),
+        **journal_material,
     }
-    sidecar = SPRINTS_DIR / f"{sid}.{_safe_node_id(node_id)}-publish.json"
     try:
-        sidecar.parent.mkdir(parents=True, exist_ok=True)
-        fd, temporary_name = tempfile.mkstemp(prefix=f".{sidecar.name}.", dir=sidecar.parent)
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                json.dump(payload, handle, ensure_ascii=False, indent=2)
-                handle.write("\n")
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary_name, sidecar)
-        finally:
-            try:
-                Path(temporary_name).unlink(missing_ok=True)
-            except OSError:
-                pass
+        _atomic_workspace_publish_journal(sidecar, prepared)
     except Exception as exc:
-        payload["ok"] = False
-        payload["reason"] = "workspace_publish_sidecar_write_failed"
-        payload.setdefault("errors", []).append(f"{type(exc).__name__}: {exc}")
-        return payload
+        return {
+            **prepared,
+            "ok": False,
+            "reason": "workspace_publish_prepare_failed",
+            "errors": [f"{type(exc).__name__}: {exc}"],
+            "sidecar": str(sidecar),
+        }
+
+    publish = _artifact_manifest.publish_workspace_outputs(publish_manifest, workspace)
+    if not publish.get("ok"):
+        return {
+            **prepared,
+            **publish,
+            "state": "PREPARED",
+            "sidecar": str(sidecar),
+        }
+    payload = {
+        **prepared,
+        **publish,
+        "state": "COMMITTED",
+        "ok": True,
+        "published_at": _utc_now(),
+    }
+    try:
+        _atomic_workspace_publish_journal(sidecar, payload)
+    except Exception as exc:
+        return {
+            **prepared,
+            "ok": False,
+            "reason": "workspace_publish_commit_failed",
+            "errors": [f"{type(exc).__name__}: {exc}"],
+            "sidecar": str(sidecar),
+        }
     payload["sidecar"] = str(sidecar)
     return payload
 
@@ -3676,6 +4037,40 @@ def resume_human_review(
     return result
 
 
+def _failure_policy_cancelled_nodes(sid: str, node_id: str) -> set[str]:
+    """Return nodes cancelled by the latest ``fail_run`` for ``node_id``.
+
+    Failure-policy exhaustion records the exact cancellation set in the
+    append-only dispatch ledger.  That record is the authority for reopening
+    work after an explicit terminal-failure recovery; a bare ``cancelled``
+    status is deliberately insufficient because it may represent a user
+    cancellation.
+    """
+    if not DISPATCH_LEDGER.exists():
+        return set()
+    try:
+        rows = DISPATCH_LEDGER.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError:
+        return set()
+    for raw in reversed(rows):
+        try:
+            record = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if str(record.get("kind") or "") != "scheduler_input_failure_policy_exhausted":
+            continue
+        if str(record.get("sid") or "") != sid or str(record.get("node") or "") != node_id:
+            continue
+        if str(record.get("on_exhausted") or "") != "fail_run":
+            return set()
+        return {
+            str(value)
+            for value in (record.get("cancelled_nodes") or [])
+            if str(value).strip()
+        }
+    return set()
+
+
 def _reopen_mechanically_skipped_descendants(
     graph: dict[str, Any],
     sid: str,
@@ -3692,6 +4087,7 @@ def _reopen_mechanically_skipped_descendants(
     those synthetic skips must not remain terminal work of their own.
     """
     reopened_descendants: list[str] = []
+    failure_policy_cancelled = _failure_policy_cancelled_nodes(sid, node_id)
     reopened = {node_id}
     changed = True
     while changed:
@@ -3700,14 +4096,17 @@ def _reopen_mechanically_skipped_descendants(
             candidate_id = str(candidate.get("id") or "")
             if not candidate_id or candidate_id in reopened:
                 continue
-            if str(node_status(graph, candidate_id) or "").lower() != "skipped":
-                continue
-            if str(candidate.get("skip_reason") or "") != "blocked_by_failed_dependency":
+            prior = str(node_status(graph, candidate_id) or "").lower()
+            dependency_skip = (
+                prior == "skipped"
+                and str(candidate.get("skip_reason") or "") == "blocked_by_failed_dependency"
+            )
+            failure_policy_cancel = prior == "cancelled" and candidate_id in failure_policy_cancelled
+            if not dependency_skip and not failure_policy_cancel:
                 continue
             dependencies = {str(value) for value in (candidate.get("depends_on") or [])}
-            if not dependencies.intersection(reopened):
+            if dependency_skip and not dependencies.intersection(reopened):
                 continue
-            prior = "skipped"
             now = _utc_now()
             candidate["status"] = "pending"
             candidate["updated_at"] = now
@@ -3716,7 +4115,11 @@ def _reopen_mechanically_skipped_descendants(
             graph.setdefault("node_results", {})[candidate_id] = {
                 "status": "pending",
                 "updated_at": now,
-                "note": f"reopened_after_dependency_recovery:{node_id}",
+                "note": (
+                    f"reopened_after_failure_policy_recovery:{node_id}"
+                    if failure_policy_cancel
+                    else f"reopened_after_dependency_recovery:{node_id}"
+                ),
             }
             _ledger_transition(
                 sid,
@@ -4488,6 +4891,275 @@ def _latest_pm_task_record_for(
     return newest[1] if newest else None
 
 
+def _latest_frozen_operator_submit_refusal_for(
+    sid: str,
+    node_id: str,
+    *,
+    operator_id: str,
+    graph_dispatch_id: str,
+) -> dict[str, Any] | None:
+    """Return the exact durable pre-admission refusal for this assignment."""
+    if not operator_id or not graph_dispatch_id:
+        return None
+    root = HARNESS_DIR / "run" / "pm-inbox"
+    if not root.exists():
+        return None
+    newest: tuple[str, dict[str, Any]] | None = None
+    for record_json in root.glob("pm-*.json"):
+        data = _read_json_file_safe(record_json)
+        if str(data.get("sprint_id") or "") != sid:
+            continue
+        if str(data.get("node_id") or "") != node_id:
+            continue
+        if str(data.get("status") or "").strip().lower() != "failed_no_dispatchable_operator":
+            continue
+        if str(data.get("graph_dispatch_id") or "").strip() != graph_dispatch_id:
+            continue
+        if str(data.get("selected_frozen_operator_id") or "").strip() != operator_id:
+            continue
+        role = str(data.get("requested_role") or "").strip().lower()
+        if role and role not in {"builder", "implementation", "implementer", "coder", "dev"}:
+            continue
+        item = dict(data)
+        item["_pm_task_json"] = str(record_json)
+        finished = str(
+            item.get("failed_at")
+            or item.get("updated_at")
+            or item.get("submitted_at")
+            or ""
+        )
+        if newest is None or finished > newest[0]:
+            newest = (finished, item)
+    return newest[1] if newest else None
+
+
+def _safe_frozen_prework_provider_fallback(
+    sid: str,
+    node_id: str,
+    node: dict[str, Any],
+    graph: dict[str, Any],
+    graph_path: str | Path,
+) -> dict[str, Any] | None:
+    """Requeue an effect-free provider refusal without spending work attempts.
+
+    This is deliberately narrower than normal failure repair.  It accepts only
+    wrapper-authored provider admission evidence for the exact current frozen
+    attempt, independently observed zero persistent effects, and a currently
+    selectable alternative already present in the frozen physical plan.
+    """
+    if not _verified_frozen_scheduler_projection(graph, graph_path):
+        return None
+    attempt = current_execution_attempt(node)
+    if attempt is None or not bool(attempt.get("requires_operator_result")):
+        return None
+    task_id = str(attempt.get("task_id") or "").strip()
+    operator_id = str(attempt.get("operator_id") or "").strip()
+    graph_dispatch_id = str(attempt.get("dispatch_id") or "").strip()
+    if not task_id or not operator_id or not graph_dispatch_id:
+        return None
+    if str(node.get("dispatch_id") or "").strip() != graph_dispatch_id:
+        return None
+    if _operator_id_from_pane(str(node.get("assigned_to") or "")) != operator_id:
+        return None
+    result = _latest_operator_result_for(
+        sid,
+        node_id,
+        operator_id=operator_id,
+        task_id=task_id,
+    )
+    if not result:
+        return None
+
+    exact = {
+        "task_id": task_id,
+        "operator_id": operator_id,
+        "sprint_id": sid,
+        "node_id": node_id,
+        "dispatch_id": str(attempt.get("operator_dispatch_id") or "").strip(),
+        "attempt_id": str(attempt.get("operator_attempt_id") or "").strip(),
+        "correlation_id": str(attempt.get("operator_correlation_id") or "").strip(),
+        "graph_dispatch_id": graph_dispatch_id,
+        "scheduler_input_sha256": str(attempt.get("scheduler_input_sha256") or "").strip(),
+    }
+    if any(not value for value in exact.values()):
+        return None
+    if any(str(result.get(key) or "").strip() != value for key, value in exact.items()):
+        return None
+
+    ranked_candidates = sorted(
+        (
+            item
+            for item in node.get("physical_candidates") or []
+            if isinstance(item, dict) and str(item.get("operator_id") or "").strip()
+        ),
+        key=lambda item: (int(item.get("rank") or 0), str(item.get("operator_id") or "")),
+    )
+    candidate_ids = [str(item.get("operator_id") or "") for item in ranked_candidates]
+    if (
+        candidate_ids != list(attempt.get("frozen_candidate_ids") or [])
+        or candidate_ids != list(result.get("frozen_candidate_ids") or [])
+        or operator_id not in candidate_ids
+    ):
+        return None
+    scheduler_ref = graph.get("scheduler_input_ref") if isinstance(graph.get("scheduler_input_ref"), dict) else {}
+    if exact["scheduler_input_sha256"] != str(scheduler_ref.get("sha256") or "").strip():
+        return None
+
+    error = result.get("error") if isinstance(result.get("error"), dict) else {}
+    if (
+        str(error.get("type") or "") not in {"provider_capacity", "provider_quota", "provider_auth"}
+        or str(error.get("phase") or "") not in {"pre_work", "admission"}
+        or error.get("retryable") is not True
+        or str(error.get("retry_scope") or "") != "frozen_operator_alternative"
+    ):
+        return None
+    flow = result.get("failure_flow_control") if isinstance(result.get("failure_flow_control"), dict) else {}
+    if str(flow.get("runtime_state") or "") not in {"cooldown", "quota_exhausted", "auth_expired"}:
+        return None
+    provider_receipt = (
+        result.get("provider_invocation_receipt")
+        if isinstance(result.get("provider_invocation_receipt"), dict)
+        else {}
+    )
+    final_message = (
+        provider_receipt.get("final_assistant_message")
+        if isinstance(provider_receipt.get("final_assistant_message"), dict)
+        else {}
+    )
+    tool_evidence = (
+        provider_receipt.get("tool_evidence")
+        if isinstance(provider_receipt.get("tool_evidence"), dict)
+        else {}
+    )
+    structured_stream = (
+        provider_receipt.get("structured_stream")
+        if isinstance(provider_receipt.get("structured_stream"), dict)
+        else {}
+    )
+    if (
+        provider_receipt.get("provider_admission_refusal") is not True
+        or structured_stream.get("complete") is not True
+        or structured_stream.get("provider_admission_refusal") is not True
+        or structured_stream.get("terminal_failed") is not True
+        or structured_stream.get("turn_completed") is not False
+        or structured_stream.get("agent_message_observed") is not False
+        or structured_stream.get("tool_or_external_event_observed") is not False
+        or final_message.get("present") is not False
+        or tool_evidence.get("observed") is not False
+        or tool_evidence.get("complete") is not True
+    ):
+        return None
+    effects = result.get("effects_receipt") if isinstance(result.get("effects_receipt"), dict) else {}
+    if (
+        effects.get("observed") is not True
+        or effects.get("complete") is not True
+        or effects.get("unknown") is not False
+        or effects.get("effects_started") is not False
+        or effects.get("outputs_changed") is not False
+        or effects.get("outputs_published") is not False
+        or effects.get("publish_attempted") is not False
+        or int(effects.get("changed_path_count") or 0) != 0
+    ):
+        return None
+
+    resources = node.get("resource_requirements") if isinstance(node.get("resource_requirements"), dict) else {}
+    effect_set = {str(value).strip().lower() for value in node.get("effects") or [] if str(value).strip()}
+    if str(resources.get("network") or "").strip().lower() != "forbidden":
+        return None
+    # Local execution is retry-safe only under the surrounding strict proof:
+    # network is forbidden, the provider refused during admission, and the
+    # complete persistent-write snapshot shows that no effects began.
+    if not effect_set or not effect_set.issubset({"read", "write", "compute", "execute"}):
+        return None
+
+    workers = {
+        str(item.get("operator_id") or ""): item
+        for item in _scheduler_input_bound_physical_workers(graph, graph_path)
+        if isinstance(item, dict)
+    }
+    alternatives = [candidate for candidate in candidate_ids if candidate != operator_id]
+    selectable = [
+        candidate
+        for candidate in alternatives
+        if candidate in workers
+        and not bool(workers[candidate].get("busy"))
+        and not str(workers[candidate].get("unavailable_reason") or "").strip()
+    ]
+    pane = str(node.get("assigned_to") or "").strip()
+    if pane:
+        release_lease(pane, graph_dispatch_id, "frozen_provider_prework_refusal")
+    next_candidate_id = selectable[0] if selectable else ""
+    candidate_observations = [
+        {
+            "operator_id": candidate,
+            "busy": bool((workers.get(candidate) or {}).get("busy")),
+            "unavailable_reason": str((workers.get(candidate) or {}).get("unavailable_reason") or ""),
+        }
+        for candidate in alternatives
+    ]
+    refusal = {
+        "operator_id": operator_id,
+        "task_id": task_id,
+        "graph_dispatch_id": graph_dispatch_id,
+        "operator_dispatch_id": exact["dispatch_id"],
+        "result_json": str(result.get("_result_json") or ""),
+        "error": deepcopy(error),
+        "failure_flow_control": deepcopy(flow),
+        "effects_receipt": deepcopy(effects),
+        "next_candidate_id": next_candidate_id,
+        "recorded_at": _utc_now(),
+    }
+    refusals = [item for item in node.get("pre_work_refusals") or [] if isinstance(item, dict)]
+    refusals.append(refusal)
+    node["pre_work_refusals"] = refusals[-8:]
+    for key in (
+        "execution_attempt",
+        "execution_attempt_error",
+        "assigned_to",
+        "dispatch_id",
+        "pm_task_id",
+        "operator_id",
+        "dispatched_via",
+    ):
+        node.pop(key, None)
+    node["status"] = "pending"
+    node["dispatch_retry_reason"] = "frozen_provider_prework_refusal"
+    node["updated_at"] = _utc_now()
+    graph.setdefault("node_results", {})[node_id] = {
+        "status": "pending",
+        "blocking_reason": "frozen_provider_prework_refusal",
+        "retryable": True,
+        "next_candidate_id": next_candidate_id,
+        "candidate_observations": candidate_observations,
+        "pre_work_refusal": deepcopy(refusal),
+        "updated_at": node["updated_at"],
+    }
+    _ledger_transition(
+        sid,
+        node_id,
+        "dispatched",
+        "pending",
+        "_safe_frozen_prework_provider_fallback",
+        note=f"{operator_id}->{next_candidate_id or 'bounded_wait'}",
+    )
+    if not selectable:
+        return {
+            "handled": True,
+            "reason": "frozen_provider_prework_refusal_released_for_bounded_wait",
+            "operator_id": operator_id,
+            "next_candidate_id": "",
+            "candidate_observations": candidate_observations,
+            "result_json": str(result.get("_result_json") or ""),
+        }
+    return {
+        "handled": True,
+        "reason": "frozen_provider_prework_refusal_requeued",
+        "operator_id": operator_id,
+        "next_candidate_id": selectable[0],
+        "result_json": str(result.get("_result_json") or ""),
+    }
+
+
 def _operator_terminal_result_closeout(
     sid: str,
     node_id: str,
@@ -4781,6 +5453,39 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                 "next_action": "dispatch_when_ready",
                 "status": "pending",
             })
+    # A ``fail_run`` policy cancels the rest of the graph immediately.  If the
+    # failed node later passes through the explicit terminal-recovery path, a
+    # scheduler tick must reopen the exact cancellation set even when that PASS
+    # was reconciled by an earlier process.  The dispatch ledger, not the bare
+    # cancelled status, identifies which nodes are safe to reopen.
+    for recovered_node in graph.get("nodes") or []:
+        recovered_id = str(recovered_node.get("id") or "")
+        if not recovered_id or str(node_status(graph, recovered_id) or "").lower() != "passed":
+            continue
+        failure_exhaustion = (
+            recovered_node.get("failure_policy_exhausted")
+            if isinstance(recovered_node.get("failure_policy_exhausted"), dict)
+            else {}
+        )
+        if str(failure_exhaustion.get("on_exhausted") or "") != "fail_run":
+            continue
+        reopened = _reopen_mechanically_skipped_descendants(
+            graph,
+            sid,
+            recovered_id,
+            writer="_reconcile_existing_dispatches",
+            author_type="policy",
+            note="reopened_after_recovered_fail_run",
+        )
+        if reopened:
+            repaired.append(
+                {
+                    "node": recovered_id,
+                    "status": "passed",
+                    "reason": "recovered_fail_run_descendants_reopened",
+                    "reopened_descendants": reopened,
+                }
+            )
     for node in graph.get("nodes", []):
         node_id = str(node.get("id") or "")
         if not node_id:
@@ -5275,6 +5980,29 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             operator_id = str(active_multi_task.get("operator_id") or "").strip()
             result_path = str(active_multi_task.get("result_path") or "").strip()
             current_attempt = current_execution_attempt(node)
+            window = str(active_multi_task.get("window") or "").strip()
+            pane = f"multi-task:{window}" if window else "multi-task"
+            # A scheduler tick may observe the same operatord task many times
+            # while a provider retry/backoff is in flight.  Recovery is only
+            # needed when the durable task identity is absent or different.
+            # Re-applying set_node_status() to an already exact frozen
+            # assignment adds legacy node fields and rewrites the result
+            # mirror, which makes the digest-backed runtime projection look
+            # tampered on the very next admission check.
+            if (
+                dispatch_id
+                and str(node.get("dispatch_id") or "").strip() == dispatch_id
+                and str(node.get("assigned_to") or "").strip() == pane
+                and isinstance(current_attempt, dict)
+                and str(current_attempt.get("task_id") or "").strip() == dispatch_id
+                and str(current_attempt.get("dispatch_id") or "").strip() == dispatch_id
+                and str(current_attempt.get("operator_id") or "").strip() == operator_id
+                and (
+                    not result_path
+                    or str(current_attempt.get("result_path") or "").strip() == result_path
+                )
+            ):
+                continue
             source = str((current_attempt or {}).get("source") or "").strip()
             if not source.startswith("multi_task_"):
                 submit_mode = str(
@@ -5314,8 +6042,6 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
                 result_path=result_path,
                 now=str(active_multi_task.get("updated_at") or _utc_now()),
             )
-            window = str(active_multi_task.get("window") or "").strip()
-            pane = f"multi-task:{window}" if window else "multi-task"
             set_node_status(graph, node_id, "dispatched", pane=pane, dispatch_id=dispatch_id or None)
             node["updated_at"] = _utc_now()
             repaired.append(
@@ -5329,6 +6055,50 @@ def _reconcile_existing_dispatches(graph: dict[str, Any], graph_path: str | Path
             )
             continue
         if status in {"assigned", "dispatched", "in_progress", "running"}:
+            pane = str(node.get("assigned_to") or "").strip()
+            dispatch_id = str(node.get("dispatch_id") or "").strip()
+            operator_id = _operator_id_from_pane(pane)
+            if (
+                pane.startswith("operator:")
+                and dispatch_id
+                and operator_id
+                and _verified_frozen_scheduler_projection(graph, graph_path)
+            ):
+                refusal = _latest_frozen_operator_submit_refusal_for(
+                    sid,
+                    node_id,
+                    operator_id=operator_id,
+                    graph_dispatch_id=dispatch_id,
+                )
+                if refusal:
+                    try:
+                        refusal_returncode = int(refusal.get("exit_code") or 1)
+                    except (TypeError, ValueError):
+                        refusal_returncode = 1
+                    reconciliation = _apply_frozen_operator_submit_refusal(
+                        graph,
+                        sid=sid,
+                        node_id=node_id,
+                        pane=pane,
+                        dispatch_id=dispatch_id,
+                        returncode=refusal_returncode,
+                        failure_record=refusal,
+                    )
+                    reconciliation["source"] = "durable_pm_submit_refusal"
+                    repaired.append(reconciliation)
+                    if reconciliation.get("updated"):
+                        continue
+                prework_fallback = _safe_frozen_prework_provider_fallback(
+                    sid,
+                    node_id,
+                    node,
+                    graph,
+                    graph_path,
+                )
+                if prework_fallback:
+                    repaired.append(prework_fallback)
+                    if prework_fallback.get("handled"):
+                        continue
             closeout = _operator_terminal_result_closeout(sid, node_id, node, graph)
             if closeout:
                 repaired.append(
@@ -9893,8 +10663,78 @@ def _write_route_proof_for_sprint(sid: str) -> dict[str, Any]:
         }
 
 
-def _mark_parent_sprint_passed_if_ready(sid: str, parent: dict[str, Any], dry_run: bool) -> bool:
+def _record_terminal_publication_block(
+    sid: str,
+    *,
+    reason: str,
+    detail: dict[str, Any] | None = None,
+) -> None:
+    """Persist one stable blocked state and append an event only on change."""
+    material = {
+        "reason": str(reason or "graph_terminal_publication_failed"),
+        "detail": detail or {},
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    path = SPRINTS_DIR / f"{sid}.terminal-publication-block.json"
+    existing = _read_json_file_safe(path)
+    if (
+        existing.get("state") == "BLOCKED"
+        and str(existing.get("fingerprint") or "") == fingerprint
+    ):
+        return
+    payload = {
+        "schema": "solar.graph_terminal_publication_block.v1",
+        "sprint_id": sid,
+        "state": "BLOCKED",
+        "error_type": "GRAPH_TERMINAL_PUBLICATION_BLOCKED",
+        "retryable": True,
+        "retry_scope": "same_frozen_graph",
+        "next_action": "reconcile the frozen graph publication after the underlying integrity failure is corrected",
+        "fingerprint": fingerprint,
+        "updated_at": _utc_now(),
+        **material,
+    }
+    try:
+        _atomic_workspace_publish_journal(path, payload)
+    except Exception:
+        return
+    _append_event(sid, {
+        "event": "graph_terminal_publication_blocked",
+        "by": "graph-dispatch",
+        "severity": "error",
+        "data": material,
+    })
+
+
+def _resolve_terminal_publication_block(sid: str) -> None:
+    path = SPRINTS_DIR / f"{sid}.terminal-publication-block.json"
+    existing = _read_json_file_safe(path)
+    if existing.get("state") != "BLOCKED":
+        return
+    existing["state"] = "RESOLVED"
+    existing["resolved_at"] = _utc_now()
+    try:
+        _atomic_workspace_publish_journal(path, existing)
+    except Exception:
+        pass
+
+
+def _mark_parent_sprint_passed_if_ready(
+    sid: str,
+    parent: dict[str, Any],
+    dry_run: bool,
+    *,
+    graph_path: str | Path | None = None,
+    verified_legacy_graph: bool = False,
+) -> bool:
     if dry_run or not parent.get("ready"):
+        return False
+    if graph_path is None and not verified_legacy_graph:
+        # A frozen SchedulerInput graph must never bypass terminal publication
+        # merely because a caller omitted its authority path.  Legacy callers
+        # must opt into their older closeout contract explicitly.
         return False
     status_file = SPRINTS_DIR / f"{sid}.status.json"
     if not status_file.exists():
@@ -9918,6 +10758,48 @@ def _mark_parent_sprint_passed_if_ready(sid: str, parent: dict[str, Any], dry_ru
                 "incomplete_stages": route.get("incomplete_stages", []),
             },
         })
+        return False
+
+    if graph_path is not None:
+        try:
+            durable_graph = load_graph(graph_path)
+            durable_parent = parent_ready_check(durable_graph)
+            if not durable_parent.get("ready"):
+                return False
+            nodes = [
+                row for row in durable_graph.get("nodes") or [] if isinstance(row, dict)
+            ]
+            if not nodes:
+                return False
+            publication = _publish_terminal_graph_outputs(
+                sid,
+                nodes[-1],
+                durable_graph,
+                dry_run=False,
+            )
+            if publication.get("required") and not publication.get("ok"):
+                _record_terminal_publication_block(
+                    sid,
+                    reason=str(publication.get("reason") or "terminal_graph_publication_failed"),
+                    detail={"failed_node": publication.get("failed_node")},
+                )
+                return False
+            # Closeout receipts updated by the publication barrier are part of
+            # the durable scheduler state.  Status may become terminal only
+            # after this save succeeds.  A COMMITTED publication journal makes
+            # a crash/failure here restart-reconcilable without guessing.
+            save_graph(graph_path, durable_graph)
+        except Exception as exc:
+            _record_terminal_publication_block(
+                sid,
+                reason="graph_terminal_publication_reconcile_failed",
+                detail={"error": f"{type(exc).__name__}: {exc}"},
+            )
+            return False
+
+    _resolve_terminal_publication_block(sid)
+
+    if _status_is_terminal_pass(data):
         return False
 
     now = _utc_now()
@@ -9965,6 +10847,13 @@ def _mark_parent_sprint_passed_if_ready(sid: str, parent: dict[str, Any], dry_ru
         "data": {"node_count": parent.get("node_count"), "required_gates": parent.get("required_gates", [])},
     })
     return True
+
+
+def _status_is_terminal_pass(payload: dict[str, Any]) -> bool:
+    return (
+        str(payload.get("status") or "").lower() == "passed"
+        and str(payload.get("phase") or "").lower() == "completed"
+    )
 
 
 def _ensure_lease(pane: str, sid: str, dispatch_id: str, ttl: int, dry_run: bool) -> dict[str, Any]:
@@ -10117,16 +11006,20 @@ def _worker_provider_aliases(worker: dict[str, Any]) -> set[str]:
 def _worker_matches_graph_provider_policy(worker: dict[str, Any], providers: set[str]) -> bool:
     if not providers:
         return True
-    # AutoSci command operators are local, deterministic runtime adapters; they
-    # do not select an LLM provider.  Treating them as provider-less workers
-    # caused an OpenAI-only research graph to discard its exact Scientific*
-    # operator and fall back to a generic Codex builder.  Keep the exemption
-    # explicit and narrowly scoped to the contract-owned AutoSci operator
-    # namespace so ordinary model workers still have to prove their provider.
+    # Explicitly provider-neutral AutoSci adapters and research-registry actions
+    # are local runtime operators; they do not select an LLM provider. Treating
+    # them as provider-less model workers makes an OpenAI-only graph reject its
+    # own exact scientific operator. Keep the exemption tied to both an exact
+    # frozen operator identity and an explicit local-operator contract so an
+    # ordinary model worker still has to prove its provider.
     if worker.get("model_provider_neutral") is True:
         pane = str(worker.get("pane") or "")
         operator_id = str(worker.get("operator_id") or "")
-        if pane == f"operator:{operator_id}" and operator_id.startswith("autosci-"):
+        backend = str(worker.get("backend") or "").strip().lower()
+        if pane == f"operator:{operator_id}" and (
+            operator_id.startswith("autosci-")
+            or backend == "research_operator_registry"
+        ):
             return True
     return bool(_worker_provider_aliases(worker) & providers)
 
@@ -10381,7 +11274,15 @@ def _evaluator_operator_pool_workers() -> list[dict[str, Any]]:
 
 
 def _scheduler_input_bound_evaluators(graph: dict[str, Any]) -> list[dict[str, Any]]:
-    """Expose only the exact evaluators frozen into SchedulerInput nodes."""
+    """Resolve frozen semantic checks onto admitted evaluator operators.
+
+    ``semantic_evaluator_ids`` historically contains two different identities:
+    physical evaluator operator IDs and registered ``check.*`` rubric IDs.
+    A rubric is not an executable operator.  Keep exact physical bindings when
+    present, and route registered semantic checks through the governed
+    evaluator pool so the check remains the review contract instead of being
+    mistaken for a worker name.
+    """
     if not isinstance(graph.get("scheduler_input_ref"), dict):
         return []
     operator_ids: list[str] = []
@@ -10396,6 +11297,7 @@ def _scheduler_input_bound_evaluators(graph: dict[str, Any]) -> list[dict[str, A
             if operator_id and operator_id not in operator_ids:
                 operator_ids.append(operator_id)
     workers: list[dict[str, Any]] = []
+    semantic_check_ids: list[str] = []
     for operator_id in operator_ids:
         try:
             import operator_runtime  # type: ignore
@@ -10403,7 +11305,11 @@ def _scheduler_input_bound_evaluators(graph: dict[str, Any]) -> list[dict[str, A
             config = operator_runtime.get_operator_config(operator_id)
         except Exception:
             config = None
-        if not isinstance(config, dict) or not bool(config.get("enabled", True)):
+        if not isinstance(config, dict):
+            if operator_id.startswith("check."):
+                semantic_check_ids.append(operator_id)
+            continue
+        if not bool(config.get("enabled", True)):
             continue
         state = _operator_runtime_state_for_graph(operator_id)
         busy = state in {"leased", "running", "draining"}
@@ -10423,6 +11329,129 @@ def _scheduler_input_bound_evaluators(graph: dict[str, Any]) -> list[dict[str, A
                 "scheduler_input_binding": True,
             }
         )
+    if semantic_check_ids:
+        for worker in _evaluator_operator_pool_workers():
+            workers.append(
+                {
+                    **worker,
+                    "semantic_check_ids": list(semantic_check_ids),
+                    "resolution_source": "evaluation_check_registry_to_operator_pool",
+                }
+            )
+    return workers
+
+
+def _verified_frozen_scheduler_projection(
+    graph: dict[str, Any],
+    graph_path: str | Path,
+) -> bool:
+    """Admit narrow frozen-runtime behavior only for a verified projection."""
+    if (
+        graph.get("schema_version") != "solar.scheduler_runtime_projection.v1"
+        or str(graph.get("planning_authority") or "") != "frozen_execution_plan_v1"
+        or not isinstance(graph.get("scheduler_input_ref"), dict)
+    ):
+        return False
+    try:
+        import scheduler_input
+
+        verification = scheduler_input.verify_runtime_projection(
+            graph,
+            graph_path=graph_path,
+        )
+    except Exception:
+        return False
+    return bool(verification.get("ok"))
+
+
+def _scheduler_input_bound_physical_workers(
+    graph: dict[str, Any],
+    graph_path: str | Path,
+) -> list[dict[str, Any]]:
+    """Project exact frozen candidates into live operator-runtime workers."""
+    if not _verified_frozen_scheduler_projection(graph, graph_path):
+        return []
+    provider_policy = _provider_aliases(
+        _provider_policy_values_from_env(
+            _broker_env(str(graph.get("sprint_id") or ""))
+        )
+    )
+    ranked_ids: list[tuple[int, int, str]] = []
+    sequence = 0
+    for node in graph.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        candidates = sorted(
+            (
+                item
+                for item in node.get("physical_candidates") or []
+                if isinstance(item, dict)
+            ),
+            key=lambda item: (
+                int(item.get("rank") or 0),
+                str(item.get("operator_id") or ""),
+            ),
+        )
+        for candidate in candidates:
+            operator_id = str(candidate.get("operator_id") or "").strip()
+            if not operator_id:
+                continue
+            ranked_ids.append((int(candidate.get("rank") or 0), sequence, operator_id))
+            sequence += 1
+
+    workers: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for rank, _sequence, operator_id in ranked_ids:
+        if operator_id in seen:
+            continue
+        seen.add(operator_id)
+        spec = _physical_operator_spec(operator_id)
+        runtime_state = _operator_runtime_state_for_graph(operator_id)
+        busy = runtime_state in {"leased", "running", "draining"}
+        unavailable_reason = ""
+        if not spec:
+            unavailable_reason = "physical_operator_not_registered"
+        elif not bool(spec.get("enabled", True)):
+            unavailable_reason = "physical_operator_disabled"
+        elif not bool(spec.get("available", True)):
+            unavailable_reason = "physical_operator_unavailable"
+        elif runtime_state == "disabled":
+            unavailable_reason = "operator_runtime_disabled"
+        elif runtime_state in {"cooldown", "quota_exhausted", "auth_expired"}:
+            unavailable_reason = f"operator_runtime_{runtime_state}"
+        worker = {
+            "pane": f"operator:{operator_id}",
+            "operator_id": operator_id,
+            "candidate_rank": rank,
+            "models": [str(spec.get("model") or "operator-runtime")],
+            "skills": list(spec.get("strengths") or []),
+            "capabilities": list(spec.get("task_classes") or []),
+            "role": str(spec.get("role") or "builder"),
+            "dispatch_role": str(spec.get("role") or "builder"),
+            "host_role": "operator_runtime",
+            "provider": str(spec.get("provider") or "").strip().lower(),
+            "vendor": str(spec.get("vendor") or "").strip().lower(),
+            "backend": str(spec.get("backend") or ""),
+            "model_provider_neutral": bool(spec.get("model_provider_neutral")),
+            "busy": busy,
+            "title": str(spec.get("display_name") or operator_id),
+            "unavailable_reason": unavailable_reason,
+            "runtime_state": runtime_state,
+            "quota_exhausted": runtime_state == "quota_exhausted",
+            "scheduler_input_binding": True,
+            "resolution_source": "frozen_scheduler_physical_candidate",
+        }
+        if (
+            not unavailable_reason
+            and provider_policy
+            and not _worker_matches_graph_provider_policy(worker, provider_policy)
+        ):
+            actual_provider = worker["provider"] or worker["vendor"] or "unknown"
+            worker["unavailable_reason"] = (
+                "physical_operator_provider_incompatible:"
+                f"allowed={','.join(sorted(provider_policy))}:actual={actual_provider}"
+            )
+        workers.append(worker)
     return workers
 
 
@@ -10478,6 +11507,9 @@ def _parse_pm_submit_output(stdout: str) -> dict[str, str]:
     operator_match = re.search(r"operator(?:_id)?\s*=\s*([^\s(]+)", stdout)
     dispatch_match = re.search(r"dispatch\s*=\s*(\S+)", stdout)
     result_match = re.search(r"result\s*=\s*(\S+)", stdout)
+    pm_dispatch_id_match = re.search(r"dispatch_id\s*=\s*(\S+)", stdout)
+    pm_attempt_id_match = re.search(r"attempt_id\s*=\s*(\S+)", stdout)
+    pm_correlation_match = re.search(r"correlation\s*=\s*(\S+)", stdout)
     if task_match:
         parsed["pm_task_id"] = task_match.group(1)
     if operator_match:
@@ -10486,6 +11518,12 @@ def _parse_pm_submit_output(stdout: str) -> dict[str, str]:
         parsed["pm_dispatch_file"] = dispatch_match.group(1)
     if result_match:
         parsed["pm_result_path"] = result_match.group(1)
+    if pm_dispatch_id_match:
+        parsed["pm_dispatch_id"] = pm_dispatch_id_match.group(1)
+    if pm_attempt_id_match:
+        parsed["pm_attempt_id"] = pm_attempt_id_match.group(1)
+    if pm_correlation_match:
+        parsed["pm_correlation_id"] = pm_correlation_match.group(1)
     return parsed
 
 
@@ -10653,6 +11691,193 @@ def _flatten_actorhost_bridge(target: dict[str, Any], actorhost: dict[str, Any])
     return target
 
 
+def _frozen_scheduler_selected_operator_id(
+    payload: dict[str, Any],
+    node: dict[str, Any],
+    pane: str,
+    graph_path: str,
+) -> str:
+    """Return the exact scheduler-selected operator, or fail closed as empty."""
+    assignment = payload.get("assignment") if isinstance(payload.get("assignment"), dict) else {}
+    physical = payload.get("physical_plan_ir") if isinstance(payload.get("physical_plan_ir"), dict) else {}
+    operator_id = _operator_id_from_pane(pane)
+    if (
+        not operator_id
+        or assignment.get("frozen_candidate") is not True
+        or str(assignment.get("operator_id") or "") != operator_id
+        or physical.get("plan_authority") != "frozen_scheduler_input"
+        or str(physical.get("selected_operator_id") or "") != operator_id
+    ):
+        return ""
+    try:
+        graph = load_graph(graph_path)
+    except Exception:
+        return ""
+    if not _verified_frozen_scheduler_projection(graph, graph_path):
+        return ""
+    authoritative = _node_by_id(graph, str(node.get("id") or ""))
+    if not isinstance(authoritative, dict):
+        return ""
+    authoritative_dispatch_id = str(authoritative.get("dispatch_id") or "").strip()
+    authoritative_pane = str(authoritative.get("assigned_to") or "").strip()
+    payload_dispatch_id = str(payload.get("dispatch_id") or "").strip()
+    if authoritative_dispatch_id and authoritative_dispatch_id != payload_dispatch_id:
+        return ""
+    if authoritative_pane and authoritative_pane != pane:
+        return ""
+    declared = {
+        str(item.get("operator_id") or "")
+        for item in authoritative.get("physical_candidates") or []
+        if isinstance(item, dict)
+    }
+    return operator_id if operator_id in declared else ""
+
+
+def _apply_frozen_operator_submit_refusal(
+    graph: dict[str, Any],
+    *,
+    sid: str,
+    node_id: str,
+    pane: str,
+    dispatch_id: str,
+    returncode: int,
+    failure_record: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """CAS-reset only the frozen assignment named by a durable refusal."""
+    node = _node_by_id(graph, node_id)
+    if not isinstance(node, dict):
+        return {"ok": False, "reason": "frozen_scheduler_node_missing"}
+    current_dispatch_id = str(node.get("dispatch_id") or "").strip()
+    current_pane = str(node.get("assigned_to") or "").strip()
+    if current_dispatch_id != dispatch_id or current_pane != pane:
+        return {
+            "ok": True,
+            "updated": False,
+            "reason": "stale_frozen_submit_refusal",
+            "current_dispatch_id": current_dispatch_id,
+            "current_pane": current_pane,
+        }
+    refusal = failure_record if isinstance(failure_record, dict) else {}
+    recorded_operator_id = str(refusal.get("selected_frozen_operator_id") or "").strip()
+    if recorded_operator_id and recorded_operator_id != _operator_id_from_pane(pane):
+        return {
+            "ok": True,
+            "updated": False,
+            "reason": "stale_frozen_submit_refusal_operator_mismatch",
+            "current_dispatch_id": current_dispatch_id,
+            "current_pane": current_pane,
+        }
+
+    release_lease(pane, dispatch_id, "frozen_operator_submit_refused")
+    node.pop("assigned_to", None)
+    node.pop("dispatch_id", None)
+    node["status"] = "queued"
+    node["dispatch_retry_reason"] = "frozen_operator_submit_refused"
+    submission_failure = {
+        "reason": "frozen_operator_submit_refused",
+        "retryable": True,
+        "returncode": int(returncode),
+        "operator_id": _operator_id_from_pane(pane),
+        "dispatch_id": dispatch_id,
+        "recorded_at": _utc_now(),
+    }
+    for source_key, target_key in (
+        ("task_id", "pm_task_id"),
+        ("dispatch_id", "pm_dispatch_id"),
+        ("attempt_id", "attempt_id"),
+        ("correlation_id", "correlation_id"),
+        ("queue_item_id", "queue_item_id"),
+        ("_pm_task_json", "pm_task_json"),
+    ):
+        value = str(refusal.get(source_key) or "").strip()
+        if value:
+            submission_failure[target_key] = value
+    node["last_operator_submission_failure"] = submission_failure
+    node["updated_at"] = _utc_now()
+    graph.setdefault("node_results", {})[node_id] = {
+        "status": "queued",
+        "blocking_reason": "frozen_operator_submit_refused",
+        "retryable": True,
+        "last_operator_submission_failure": submission_failure,
+        "updated_at": node["updated_at"],
+    }
+    _ledger_transition(
+        sid,
+        node_id,
+        "assigned",
+        "queued",
+        "_apply_frozen_operator_submit_refusal",
+        note="frozen_operator_submit_refused",
+    )
+    return {
+        "ok": True,
+        "updated": True,
+        "reason": "frozen_operator_submit_refused",
+        "retryable": True,
+        "dispatch_id": dispatch_id,
+        "operator_id": _operator_id_from_pane(pane),
+        **(
+            {"pm_task_id": submission_failure["pm_task_id"]}
+            if submission_failure.get("pm_task_id")
+            else {}
+        ),
+    }
+
+
+def _reconcile_frozen_operator_submit_refusal(
+    *,
+    graph_path: str,
+    sid: str,
+    node_id: str,
+    pane: str,
+    dispatch_id: str,
+    returncode: int,
+) -> dict[str, Any]:
+    """Release only the exact refused frozen assignment and make it retryable."""
+    try:
+        graph = load_graph(graph_path)
+        if not _verified_frozen_scheduler_projection(graph, graph_path):
+            return {"ok": False, "reason": "frozen_scheduler_authority_invalid"}
+        failure_record = _latest_frozen_operator_submit_refusal_for(
+            sid,
+            node_id,
+            operator_id=_operator_id_from_pane(pane),
+            graph_dispatch_id=dispatch_id,
+        )
+        result = _apply_frozen_operator_submit_refusal(
+            graph,
+            sid=sid,
+            node_id=node_id,
+            pane=pane,
+            dispatch_id=dispatch_id,
+            returncode=returncode,
+            failure_record=failure_record,
+        )
+        if not result.get("updated"):
+            return result
+        save_graph(graph_path, graph)
+        parent = sync_status_cache_from_graph(
+            graph,
+            graph_path,
+            actor="graph_node_dispatcher",
+            event="frozen_operator_submit_refused_projection",
+        )
+        return {
+            **result,
+            "parent_status_sync": {
+                key: parent.get(key)
+                for key in ("ok", "updated", "reason")
+                if key in parent
+            },
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": "frozen_operator_submit_reconcile_failed",
+            "error": f"{type(exc).__name__}:{exc}",
+        }
+
+
 def _submit_builder_to_operator_pool(
     *,
     item: dict[str, Any],
@@ -10671,7 +11896,13 @@ def _submit_builder_to_operator_pool(
     task.  Compatible planner/evaluator work must retain its scheduler-owned
     role through operator selection and evidence.
     """
-    if not _builder_operator_pool_enabled():
+    frozen_operator_id = _frozen_scheduler_selected_operator_id(
+        payload,
+        node,
+        pane,
+        graph_path,
+    )
+    if not _builder_operator_pool_enabled() and not frozen_operator_id:
         return {"ok": False, "reason": "operator_pool_disabled"}
 
     assignment = payload.get("assignment") or {}
@@ -10683,7 +11914,7 @@ def _submit_builder_to_operator_pool(
             "logical_role": logical_role,
         }
     physical_host_role = _graph_queue_physical_host_role(payload, assignment)
-    if pane and not _builder_operator_pool_allowed_for_pane(pane):
+    if pane and not _builder_operator_pool_allowed_for_pane(pane) and not frozen_operator_id:
         return {"ok": False, "reason": "operator_pool_not_enabled_for_pane"}
 
     instruction_file = _dispatch_file(sid, node_id)
@@ -10724,6 +11955,34 @@ def _submit_builder_to_operator_pool(
         f"{dispatch_preview}"
         "\n--- END GRAPH DISPATCH FILE ---"
     )
+    frozen_context: dict[str, Any] = {}
+    if frozen_operator_id:
+        try:
+            frozen_graph = load_graph(graph_path)
+            frozen_node = _node_by_id(frozen_graph, node_id) or {}
+            scheduler_ref = (
+                frozen_graph.get("scheduler_input_ref")
+                if isinstance(frozen_graph.get("scheduler_input_ref"), dict)
+                else {}
+            )
+            ranked_candidates = sorted(
+                (
+                    item
+                    for item in frozen_node.get("physical_candidates") or []
+                    if isinstance(item, dict) and str(item.get("operator_id") or "").strip()
+                ),
+                key=lambda item: (int(item.get("rank") or 0), str(item.get("operator_id") or "")),
+            )
+            frozen_context = {
+                "graph_dispatch_id": dispatch_id,
+                "selected_frozen_operator_id": frozen_operator_id,
+                "scheduler_input_sha256": str(scheduler_ref.get("sha256") or ""),
+                "frozen_candidate_ids": [
+                    str(item.get("operator_id") or "") for item in ranked_candidates
+                ],
+            }
+        except Exception:
+            frozen_context = {}
     context = json.dumps(
         {
             "source": "graph_node_dispatcher",
@@ -10733,6 +11992,7 @@ def _submit_builder_to_operator_pool(
             "logical_role": logical_role,
             "physical_host_role": physical_host_role,
             "queue_item_id": item.get("id", ""),
+            **frozen_context,
         },
         ensure_ascii=False,
     )
@@ -10755,7 +12015,10 @@ def _submit_builder_to_operator_pool(
         "--context",
         context,
     ]
-    _append_planner_operator_alternatives(cmd, node)
+    if frozen_operator_id:
+        cmd.extend(["--operator-alternative", frozen_operator_id])
+    else:
+        _append_planner_operator_alternatives(cmd, node)
     if dry_run:
         cmd.append("--dry-run")
     env = _broker_env(sid)
@@ -10817,17 +12080,46 @@ def _submit_builder_to_operator_pool(
                 "instruction_file": str(instruction_file),
                 **blocked,
             }
+        reconciliation = (
+            _reconcile_frozen_operator_submit_refusal(
+                graph_path=graph_path,
+                sid=sid,
+                node_id=node_id,
+                pane=pane,
+                dispatch_id=dispatch_id,
+                returncode=completed.returncode,
+            )
+            if frozen_operator_id and not dry_run
+            else {"ok": True, "updated": False, "reason": "dry_run_or_non_frozen"}
+        )
         return {
             "ok": False,
             "reason": "operator_pool_submit_failed",
+            "retryable": bool(frozen_operator_id),
             "returncode": completed.returncode,
             "stdout": stdout,
             "stderr": stderr,
             "instruction_file": str(instruction_file),
+            "reconciliation": reconciliation,
+            "suppress_fallback": bool(frozen_operator_id),
         }
 
     parsed = _parse_pm_submit_output(completed.stdout)
     operator_id = parsed.get("operator_id") or "unknown"
+    if frozen_operator_id and operator_id != frozen_operator_id:
+        if not dry_run:
+            _mark_graph_node(graph_path, node_id, "pending", clear_assignment=True)
+        return {
+            "ok": False,
+            "reason": "frozen_operator_identity_mismatch",
+            "expected_operator_id": frozen_operator_id,
+            "operator_id": operator_id,
+            "suppress_fallback": True,
+            "node": node_id,
+            "pane": pane,
+            "dispatch_id": dispatch_id,
+            "instruction_file": str(instruction_file),
+        }
     if not str(parsed.get("pm_task_id") or "").strip():
         reason = "operator_pool_task_id_missing"
         graph_updated = False
@@ -10941,7 +12233,7 @@ def _submit_builder_to_operator_pool(
         graph = load_graph(graph_path)
         graph_node = _node_by_id(graph, node_id)
         if graph_node is not None:
-            activate_execution_attempt(
+            attempt = activate_execution_attempt(
                 graph_node,
                 task_id=str(parsed.get("pm_task_id") or ""),
                 dispatch_id=dispatch_id,
@@ -10955,6 +12247,22 @@ def _submit_builder_to_operator_pool(
                 result_path=str(parsed.get("pm_result_path") or ""),
                 now=_utc_now(),
             )
+            attempt["operator_dispatch_id"] = str(parsed.get("pm_dispatch_id") or "")
+            attempt["operator_attempt_id"] = str(parsed.get("pm_attempt_id") or "")
+            attempt["operator_correlation_id"] = str(parsed.get("pm_correlation_id") or "")
+            scheduler_ref = graph.get("scheduler_input_ref") if isinstance(graph.get("scheduler_input_ref"), dict) else {}
+            attempt["scheduler_input_sha256"] = str(scheduler_ref.get("sha256") or "")
+            attempt["frozen_candidate_ids"] = [
+                str(item.get("operator_id") or "")
+                for item in sorted(
+                    (
+                        item
+                        for item in graph_node.get("physical_candidates") or []
+                        if isinstance(item, dict) and str(item.get("operator_id") or "").strip()
+                    ),
+                    key=lambda item: (int(item.get("rank") or 0), str(item.get("operator_id") or "")),
+                )
+            ]
             graph_node["updated_at"] = _utc_now()
             save_graph(graph_path, graph)
             graph_updated = True
@@ -12158,6 +13466,12 @@ def _build_autosci_operator_envelope(
     payload: dict[str, Any],
     ttl: int,
 ) -> dict[str, Any]:
+    operator_spec = _physical_operator_spec(operator_id)
+    runtime_binding = (
+        deepcopy(operator_spec.get("runtime_binding") or {})
+        if isinstance(operator_spec, dict)
+        else {}
+    )
     output_dir = HARNESS_DIR / "artifacts" / "autosci" / "runs" / sid / node_id
     evidence_path = _autosci_primary_output_path(sid, node)
     expected_schema = _node_expected_schema(node)
@@ -12210,6 +13524,11 @@ def _build_autosci_operator_envelope(
         "capability_native": bool(node.get("capability_native") or node.get("capability_capsule_id")),
         "selected_skills": selected_skills,
         "write_scope": list(node.get("write_scope") or []),
+        "runtime_binding": runtime_binding,
+        "artifact_contract": deepcopy(node.get("artifact_contract") or {}),
+        "artifact_routes": deepcopy(node.get("artifact_routes") or {}),
+        "capsule_binding": deepcopy(node.get("capsule_binding") or {}),
+        "resource_requirements": deepcopy(node.get("resource_requirements") or {}),
         "capsule_plan_ir": capsule_plan_ir,
         "physical_plan_ir": payload.get("physical_plan_ir") if isinstance(payload.get("physical_plan_ir"), dict) else {},
         "plan_artifacts": payload.get("plan_artifacts") if isinstance(payload.get("plan_artifacts"), dict) else {},
@@ -12263,6 +13582,9 @@ def _submit_autosci_node_to_operator(
         graph = load_graph(graph_path)
     except Exception:
         graph = {"sprint_id": sid, "workflow_contract": node.get("workflow_contract"), "nodes": [node]}
+    authoritative_node = _node_by_id(graph, node_id)
+    if isinstance(authoritative_node, dict):
+        node = authoritative_node
     instruction_file = _dispatch_file(sid, node_id)
     text_payload = dict(payload, dispatch_id=dispatch_id, sprint_id=sid)
     text_payload = _ensure_execution_plan_payload(text_payload, graph_path=graph_path, sid=sid, node=node)
@@ -12845,6 +14167,23 @@ def dispatch_queue_item(item: dict[str, Any], dry_run: bool = False, ttl: int = 
             dispatch_id=dispatch_id,
             dry_run=dry_run,
             ttl=ttl,
+        )
+    if _frozen_scheduler_selected_operator_id(
+        payload,
+        node,
+        str(pane),
+        graph_path,
+    ):
+        return _submit_builder_to_operator_pool(
+            item=item,
+            payload=payload,
+            sid=sid,
+            node=node,
+            node_id=node_id,
+            graph_path=graph_path,
+            pane=str(pane),
+            dispatch_id=dispatch_id,
+            dry_run=dry_run,
         )
 
     if not dry_run and not _pane_exists(pane):
@@ -14936,7 +16275,42 @@ def _dispatch_ready_unlocked(graph_path: str, dry_run: bool = False, ttl: int = 
     # valid runtime projection fail its digest-backed verification immediately
     # before enqueue. Only mutable legacy graphs may be enriched here.
     graph = _enrich_dispatch_graph_if_mutable(graph, graph_path)
+    terminal_parent = parent_ready_check(graph)
+    if terminal_parent.get("ready"):
+        if dry_run:
+            return {
+                "ok": True,
+                "status": "terminal_publication_pending",
+                "graph": graph_path,
+                "reconciled": reconciled,
+                "enqueue": {"ok": True, "enqueued": []},
+                "drain": {"ok": True, "processed": 0, "results": []},
+            }
+        # A crash may occur after the final PASS state save but before parent
+        # closeout.  Every ordinary scheduler tick re-enters this idempotent
+        # graph-level barrier; it never dispatches another worker for a graph
+        # whose work is already terminal.
+        save_graph(graph_path, graph)
+        parent_status_updated = _mark_parent_sprint_passed_if_ready(
+            str(sid),
+            terminal_parent,
+            False,
+            graph_path=graph_path,
+        )
+        status_payload = _read_json_file_safe(SPRINTS_DIR / f"{sid}.status.json")
+        converged = _status_is_terminal_pass(status_payload)
+        return {
+            "ok": converged,
+            "status": "completed" if converged else "terminal_publication_pending",
+            "reason": "" if converged else "graph_terminal_publication_not_committed",
+            "graph": graph_path,
+            "reconciled": reconciled,
+            "parent_status_updated": parent_status_updated,
+            "enqueue": {"ok": True, "enqueued": []},
+            "drain": {"ok": True, "processed": 0, "results": []},
+        }
     workers = _discover_workers(dry_run)
+    workers.extend(_scheduler_input_bound_physical_workers(graph, graph_path))
     workers.extend(_fixed_research_operator_workers(graph))
     workers.extend(_autosci_contract_operator_workers(graph))
     active_panes: set[str] = set()
@@ -15122,6 +16496,92 @@ def _node_policy_passed(graph: dict[str, Any], sid: str, node_id: str) -> bool:
     return False
 
 
+def _publication_receipt_summary(publication: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "required": bool(publication.get("required")),
+        "ok": bool(publication.get("ok")),
+        "sidecar": str(publication.get("sidecar") or ""),
+        "published_count": len(publication.get("published") or []),
+        "manifest_digest": str(publication.get("manifest_digest") or ""),
+        "published_digest": str(publication.get("published_digest") or ""),
+    }
+
+
+def _publish_terminal_graph_outputs(
+    sid: str,
+    current_node: dict[str, Any],
+    graph: dict[str, Any],
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Publish user outputs only at the graph's final green closeout barrier.
+
+    A producer may pass before a downstream verifier.  Its staged bytes remain
+    sprint-private until the last node has itself passed all closeout checks.
+    This helper is invoked only from that last node's PASS candidate path and
+    publishes every requested product through the existing per-node publisher.
+    """
+    current_id = str(current_node.get("id") or "")
+    nodes = [row for row in graph.get("nodes") or [] if isinstance(row, dict)]
+    blockers = [
+        str(row.get("id") or "")
+        for row in nodes
+        if node_recorded_status(graph, str(row.get("id") or "")) != "passed"
+    ]
+    if blockers:
+        return {
+            "required": False,
+            "ok": True,
+            "deferred": True,
+            "skipped": "graph_not_terminal",
+            "blocking_nodes": blockers,
+        }
+
+    publications: dict[str, dict[str, Any]] = {}
+    current_result: dict[str, Any] = {
+        "required": False,
+        "ok": True,
+        "skipped": "private_outputs_only",
+    }
+    for candidate in nodes:
+        candidate_id = str(candidate.get("id") or "")
+        publication = _publish_verified_node_outputs(
+            sid,
+            candidate,
+            graph,
+            dry_run=dry_run,
+        )
+        publications[candidate_id] = publication
+        if publication.get("required") and not publication.get("ok"):
+            return {
+                "required": True,
+                "ok": False,
+                "reason": "terminal_graph_publication_failed",
+                "failed_node": candidate_id,
+                "publication": publication,
+                "graph_publications": publications,
+            }
+        if candidate_id == current_id:
+            current_result = publication
+    for candidate in nodes:
+        candidate_id = str(candidate.get("id") or "")
+        publication = publications.get(candidate_id) or {}
+        if not publication.get("required"):
+            continue
+        receipt = (
+            candidate.get("closeout_receipt")
+            if isinstance(candidate.get("closeout_receipt"), dict)
+            else None
+        )
+        if receipt is not None:
+            receipt["publication"] = _publication_receipt_summary(publication)
+            result_row = graph.setdefault("node_results", {}).setdefault(
+                candidate_id, {}
+            )
+            result_row["closeout_receipt"] = receipt
+    return {**current_result, "graph_publications": publications}
+
+
 def _finalize_node_pass(
     sid: str,
     node: dict[str, Any],
@@ -15137,10 +16597,10 @@ def _finalize_node_pass(
 
     Ordering is deliberate: validate a current evaluator verdict candidate,
     persist and validate the manifest, satisfy proof and research-quality
-    gates, publish required user outputs, and only then expose the evaluator
-    PASS as gate-consumable and atomically attach its closeout receipt while
-    the scheduler writes PASS.  Every earlier failure returns without either a
-    consumable PASS record or a PASS status write.
+    gates, then expose the evaluator PASS as gate-consumable and atomically
+    attach its closeout receipt while the scheduler writes PASS.  User output
+    publication is deliberately absent here: the graph-level closeout hook
+    runs only after this node PASS is durable and every other node/gate passed.
     """
     node_id = str(node.get("id") or "")
     contracted = _graph_is_contracted(graph)
@@ -15425,28 +16885,12 @@ def _finalize_node_pass(
                 "research_quality_gate": research_quality_gate,
             }
 
-    workspace_publish = _publish_verified_node_outputs(
-        sid,
-        node,
-        graph,
-        dry_run=dry_run,
-    )
-    if workspace_publish.get("required") and not workspace_publish.get("ok"):
-        _ledger_record(
-            sid,
-            node_id=node_id,
-            kind="gate_check",
-            author={"type": "policy"},
-            verdict="block",
-            note="workspace_publish_failed",
-        )
-        return {
-            "ok": False,
-            "reason": "workspace_publish_failed",
-            "node": node_id,
-            "status": "blocked",
-            "workspace_publish": workspace_publish,
-        }
+    workspace_publish = {
+        "required": False,
+        "ok": True,
+        "deferred": True,
+        "skipped": "graph_terminal_publication_barrier",
+    }
 
     # Do not append a gate-consumable PASS until every byte/proof/publication
     # precondition above has succeeded.  The ledger is append-only, so writing
@@ -15522,14 +16966,7 @@ def _finalize_node_pass(
             "required": bool(research_quality_gate.get("required")),
             "ok": bool(research_quality_gate.get("ok")),
         },
-        "publication": {
-            "required": bool(workspace_publish.get("required")),
-            "ok": bool(workspace_publish.get("ok")),
-            "sidecar": str(workspace_publish.get("sidecar") or ""),
-            "published_count": len(workspace_publish.get("published") or []),
-            "manifest_digest": str(workspace_publish.get("manifest_digest") or ""),
-            "published_digest": str(workspace_publish.get("published_digest") or ""),
-        },
+        "publication": _publication_receipt_summary(workspace_publish),
     }
 
     note_parts = [part for part in (reason, f"eval_json={resolved_eval_json}") if part]
@@ -15930,7 +17367,12 @@ def _node_verdict_unlocked(graph_path: str, node_id: str, verdict: str, reason: 
         downstream = dispatch_ready(graph_path, dry_run=dry_run, ttl=ttl)
     elif status == "passed" and parent.get("ready"):
         downstream = {"ok": True, "skipped": "parent_ready"}
-    parent_status_updated = _mark_parent_sprint_passed_if_ready(sid, parent, dry_run)
+    parent_status_updated = _mark_parent_sprint_passed_if_ready(
+        sid,
+        parent,
+        dry_run,
+        graph_path=graph_path,
+    )
 
     return {
         "ok": bool(downstream.get("ok", True)),

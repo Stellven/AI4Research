@@ -1,0 +1,64 @@
+capability_capsule_id: cap.research-source-assess
+capsule_kind: capability
+metadata:
+  name: Scientific Source Relevance and Credibility Assessment
+  description: Classify discovered and ingested sources as selected, excluded, or unresolved using retained relevance, authority, and parse evidence.
+applicability:
+  task_types: [scientific-research, source-assessment]
+  positive_signals: [assess source relevance, assess source credibility, select credible literature, resolve benchmark candidates]
+  negative_signals: [retrieve sources, claim scientific truth]
+contract:
+  inputs:
+    required:
+      - {name: literature_discovery, schema_ref: schemas/evidence/literature_discovery.v1.schema.json}
+      - {name: research_paper, schema_ref: schemas/evidence/research_paper.v1.schema.json}
+  outputs:
+    required:
+      - {name: research_source_assessment, schema_ref: schemas/evidence/research_source_assessment.v1.schema.json}
+  preconditions:
+    - {check: discovery_and_ingestion_present, description: Ranked discovery candidates and their parsed paper evidence are both available.}
+  postconditions:
+    - {check: source_decisions_complete, description: Every discovery candidate is selected, excluded, or explicitly unresolved with attributable evidence.}
+  invariants:
+    - Metadata authority and traceability are not represented as scientific truth.
+    - Ranked candidates are not silently promoted to credible selected sources.
+    - Missing benchmark evidence remains an explicit unresolved question.
+composition:
+  consumes:
+    - {schema_ref: schemas/evidence/literature_discovery.v1.schema.json, purpose: Candidate identities, query, source channels, and ranking rationale.}
+    - {schema_ref: schemas/evidence/research_paper.v1.schema.json, purpose: Parsed content, identifiers, source references, and ingestion status.}
+  produces:
+    - {schema_ref: schemas/evidence/research_source_assessment.v1.schema.json, purpose: Explicit relevance, credibility, selection, benchmark-candidate, and unresolved-question evidence.}
+  compatible_with: [cap.research-experiment-aware-report-plan, cap.research-method-aware-report-plan]
+  incompatible_with: []
+  requires_after: [cap.research-literature-discover, cap.research-discovery-ingest]
+effects:
+  read: [typed literature discovery evidence, typed parsed paper evidence]
+  write: [artifacts/scientific/research_source_assessment/]
+  execute: [plugins/autosci/operators/scientific_lifecycle/evidence/registry.py]
+  network: [none]
+  cost: [bounded local classification cost]
+  risk: [bibliographic metadata can establish traceability but not scientific correctness]
+bindings:
+  skills: {required: [], optional: [autosci.source_assess]}
+  mcp_capabilities: {}
+  data_refs: [schemas/evidence/research_source_assessment.v1.schema.json]
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against research_source_assessment.v1.schema.json.
+    - Confirm selected, excluded, and unresolved ID sets exactly match the per-source decisions.
+  external_verifier: {required: false}
+  pass_conditions:
+    - Every selected source has relevant, credible, and parsed or partially parsed evidence.
+    - Every unresolved source or benchmark question remains visible to downstream reporting.
+operator_compatibility:
+  preferred: [source_assess_worker]
+  forbidden: [BackendFullWorkflowRunner]
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_source_assessment
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.evidence.registry:execute_source_assess
+  required_services: []
